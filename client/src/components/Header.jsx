@@ -30,7 +30,7 @@ const Header = () => {
           {["Home", "Features", "Pricing", "Support"].map((item) => (
             <a
               key={item}
-              href="#"
+              href={`#${item.toLowerCase()}`}
               className="text-sm font-medium text-[#111418] hover:text-blue-600 transition-colors"
               title={item}
             >

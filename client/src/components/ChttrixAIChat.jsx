@@ -22,7 +22,7 @@ const ChttrixAIChat = ({ onClose }) => {
   return (
     <Rnd
       default={{
-        x: 1400,
+        x: 850,
         y: 80,
         width: 420,
         height: 520,
@@ -35,7 +35,7 @@ const ChttrixAIChat = ({ onClose }) => {
       <div className="flex flex-col h-full bg-white shadow-2xl rounded-lg border border-gray-200">
         {/* Header */}
         <div className="flex justify-between items-center px-4 py-3 bg-[#0c77f2] text-white font-semibold text-sm rounded-t-lg">
-          <span>🤖 ChttrixAI Assistant</span>
+          <span>🤖 ChttrixAI </span>
           <button onClick={onClose} className="text-white hover:text-red-300">✖</button>
         </div>
 
