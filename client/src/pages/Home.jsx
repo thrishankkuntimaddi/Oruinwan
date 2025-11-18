@@ -11,30 +11,29 @@ import ClockWidget from "../components/ClockWidget";
 
 const Home = () => {
   return (
-    <div className="p-6 bg-[#f9fafb] min-h-screen">
+    <div className="w-full h-full flex flex-col space-y-6">
       <HomeHeader />
-
-      {/* Grid Layout: Responsive 2-column layout */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-2 gap-6 mt-6">
-
-        {/* Row 4 */}
+            
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-2 gap-6 mt-4">
+        {/* Row 1 */}
         <WeatherWidget />
         <ClockWidget />
 
-        {/* Row 1 */}
+        {/* Row 4 */}
         <MessagePreview />
         <CalendarWidget />
-
-        {/* Row 2 */}
-        <PersonalTodoList />
-        <SharedTodoList />
-
-        {/* Row 3 */}
-        <TaskStats />
-        <MotivationalQuote />
-
-
       </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
+          {/* Row 2 & 3 */}
+          <PersonalTodoList />
+          <SharedTodoList />
+          <TaskStats />
+      </div>
+
+      {/* Grid Layout: Responsive 2-column layout */}
+      <MotivationalQuote />
+      
     </div>
   );
 };

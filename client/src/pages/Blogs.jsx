@@ -1,7 +1,7 @@
 import { useState } from "react";
 import BlogCard from "../components/BlogCard";
 import BlogDetailModal from "../components/BlogDetailModal";
-import BlogModal from "../components/BlogModal"; 
+import BlogModal from "../components/BlogModal";
 
 const Blogs = () => {
   const [showModal, setShowModal] = useState(false);
@@ -33,8 +33,10 @@ const Blogs = () => {
   };
 
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
+    <div className="bg-white border rounded-lg shadow-md h-full w-full px-4 py-6 flex flex-col">
+      
+      {/* Header */}
+      <div className="flex justify-between items-center mb-6 flex-shrink-0">
         <h1 className="text-3xl font-bold text-gray-800">Blogs</h1>
         <button
           className="bg-blue-600 text-white px-4 py-2 rounded-lg"
@@ -44,13 +46,14 @@ const Blogs = () => {
         </button>
       </div>
 
-      <div className="space-y-6">
+      {/* Scrollable blog list */}
+      <div className="flex-1 overflow-y-auto pr-1 space-y-6">
         {blogPosts.map((blog, index) => (
           <BlogCard key={index} blog={blog} onDoubleClick={setSelectedBlog} />
         ))}
       </div>
 
-      {/* ✅ Use correct blog creation modal */}
+      {/* Blog Create Modal */}
       {showModal && (
         <BlogModal
           onClose={() => setShowModal(false)}
@@ -58,7 +61,7 @@ const Blogs = () => {
         />
       )}
 
-      {/* ✅ View blog detail popup */}
+      {/* Blog Detail Modal */}
       {selectedBlog && (
         <BlogDetailModal
           blog={selectedBlog}

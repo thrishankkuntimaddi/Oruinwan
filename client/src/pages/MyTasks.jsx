@@ -84,7 +84,7 @@ const MyTasks = () => {
         );
 
   return (
-    <div className="bg-white min-h-screen px-4 py-6">
+    <div className="bg-white border rounded-lg shadow-md h-full w-full px-4 py-6 overflow-hidden">
       <TaskHeader onNewTaskClick={() => setShowModal(true)} />
       <TaskTabs activeTab={activeTab} setActiveTab={setActiveTab} />
 

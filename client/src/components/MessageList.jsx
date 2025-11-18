@@ -37,7 +37,8 @@ export default function MessageList({ onSelectChat }) {
   });
 
   return (
-    <div className="w-full">
+    <div className="h-full flex flex-col">
+      {/* Search Bar */}
       <div className="px-4 py-3">
         <div className="flex w-full rounded-lg h-12 bg-[#f0f2f4]">
           <div className="flex items-center justify-center pl-4">
@@ -55,6 +56,7 @@ export default function MessageList({ onSelectChat }) {
         </div>
       </div>
 
+      {/* Tabs */}
       <div className="flex border-b border-[#dce0e5] px-4 gap-8">
         {Tabs.map((tab) => (
           <button
@@ -71,7 +73,8 @@ export default function MessageList({ onSelectChat }) {
         ))}
       </div>
 
-      <div className="mt-4">
+      {/* Messages List (scrollable area) */}
+      <div className="flex-1 overflow-y-auto pt-4">
         {filteredMessages.map((item, idx) => (
           <div
             key={idx}
