@@ -1,0 +1,22 @@
+/* src/components/messageComp/chatWindow/chatWindow.css */
+/* Add any small custom styles here. Tailwind is primary, but these help with popups. */
+
+.chat-popup {
+  z-index: 50;
+}
+
+.chat-scroll-smooth {
+  scroll-behavior: smooth;
+}
+
+/* tweak message bubble max-width for responsiveness */
+@media (min-width: 1024px) {
+  .msg-max-w {
+    max-width: 65%;
+  }
+}
+@media (max-width: 1024px) {
+  .msg-max-w {
+    max-width: 80%;
+  }
+}
