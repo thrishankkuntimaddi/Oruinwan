@@ -1,13 +1,13 @@
 // src/App.jsx
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { useState } from "react";
-import Sidebar from "./components/Sidebar";
+import Sidebar from "./components/SidebarComp/Sidebar";
 import Home from "./pages/Home";
 import Messages from "./pages/Messages";
 import MyTasks from "./pages/MyTasks";
 import Blogs from "./pages/Blogs";
 import LoginPage from "./pages/LoginPage";
-import ChttrixAIChat from "./components/ChttrixAIChat";
+import ChttrixAIChat from "./components/chttrixAIComp/ChttrixAIChat";
 
 function App() {
   const [activePage, setActivePage] = useState("Home");

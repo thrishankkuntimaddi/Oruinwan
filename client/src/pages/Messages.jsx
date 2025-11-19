@@ -1,6 +1,6 @@
 import { useState } from "react";
-import MessageList from "../components/MessageList";
-import ChatWindow from "../components/ChatWindow";
+import MessageList from "../components/messagesComp/MessageList";
+import ChatWindow from "../components/messagesComp/ChatWindow";
 
 export default function Messages() {
   const [selectedChat, setSelectedChat] = useState(null);
