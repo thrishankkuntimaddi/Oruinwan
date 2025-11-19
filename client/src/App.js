@@ -2,11 +2,11 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { useState } from "react";
 import Sidebar from "./components/SidebarComp/Sidebar";
-import Home from "./pages/Home";
-import Messages from "./pages/Messages";
-import MyTasks from "./pages/MyTasks";
-import Blogs from "./pages/Blogs";
-import LoginPage from "./pages/LoginPage";
+import Home from "./pages/SidebarComp/Home";
+import Messages from "./pages/SidebarComp/Messages";
+import MyTasks from "./pages/SidebarComp/MyTasks";
+import Blogs from "./pages/SidebarComp/Blogs";
+import LoginPage from "./pages/LoginPageComp/LoginPage";
 import ChttrixAIChat from "./components/chttrixAIComp/ChttrixAIChat";
 
 function App() {

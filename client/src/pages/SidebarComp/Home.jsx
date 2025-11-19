@@ -1,13 +1,13 @@
 // src/pages/Home.jsx
-import HomeHeader from "../components/homewidgets/HomeHeader";
-import MessagePreview from "../components/homewidgets/MessagePreview";
-import CalendarWidget from "../components/homewidgets/CalendarWidget";
-import PersonalTodoList from "../components/homewidgets/PersonalTodoList";
-import SharedTodoList from "../components/homewidgets/SharedTodoList";
-import TaskStats from "../components/homewidgets/TaskStats";
-import MotivationalQuote from "../components/homewidgets/MotivationalQuote";
-import WeatherWidget from "../components/homewidgets/WeatherWidget";
-import ClockWidget from "../components/homewidgets/ClockWidget";
+import HomeHeader from "../../components/homewidgets/HomeHeader";
+import MessagePreview from "../../components/homewidgets/MessagePreview";
+import CalendarWidget from "../../components/homewidgets/CalendarWidget";
+import PersonalTodoList from "../../components/homewidgets/PersonalTodoList";
+import SharedTodoList from "../../components/homewidgets/SharedTodoList";
+import TaskStats from "../../components/homewidgets/TaskStats";
+import MotivationalQuote from "../../components/homewidgets/MotivationalQuote";
+import WeatherWidget from "../../components/homewidgets/WeatherWidget";
+import ClockWidget from "../../components/homewidgets/ClockWidget";
 
 const Home = () => {
   return (

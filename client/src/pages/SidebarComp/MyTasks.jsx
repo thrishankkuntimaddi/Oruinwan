@@ -1,8 +1,8 @@
 import React, { useState } from "react";
-import TaskModal from "../components/tasksComp/TaskModal";
-import TaskHeader from "../components/tasksComp/TaskHeader";
-import TaskTabs from "../components/tasksComp/TaskTabs";
-import TaskTable from "../components/tasksComp/TaskTable";
+import TaskModal from "../../components/tasksComp/TaskModal";
+import TaskHeader from "../../components/tasksComp/TaskHeader";
+import TaskTabs from "../../components/tasksComp/TaskTabs";
+import TaskTable from "../../components/tasksComp/TaskTable";
 
 const dummyChannels = ["Marketing", "Product Dev", "Design", "Sales"];
 const dummyMembers = ["Sarah Lee", "David Chen", "Emily Wong", "Michael Tan"];

@@ -1,7 +1,7 @@
 import { useState } from "react";
-import BlogCard from "../components/blogsComp/BlogCard";
-import BlogDetailModal from "../components/blogsComp/BlogDetailModal";
-import BlogModal from "../components/blogsComp/BlogModal";
+import BlogCard from "../../components/blogsComp/BlogCard";
+import BlogDetailModal from "../../components/blogsComp/BlogDetailModal";
+import BlogModal from "../../components/blogsComp/BlogModal";
 
 const Blogs = () => {
   const [showModal, setShowModal] = useState(false);
