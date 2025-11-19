@@ -251,7 +251,6 @@ export default function ChatWindow({ chat, onClose, contacts = [] }) {
     };
   }, [onClose, showAttach, showEmoji, showMenu]);
 
-  // textarea auto-grow
   function onTextareaInput(e) {
     setNewMessage(e.target.value);
     const ta = e.target;

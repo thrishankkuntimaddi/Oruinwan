@@ -5,15 +5,18 @@ const messagesData = {
   all: [
     {
       type: "dm",
-      name: "Ethan Carter",
+      name: "Thrishank",
       status: "Active",
-      image: "https://lh3.googleusercontent.com/aida-public/AB6AXuD1XPhwoq1kYGbKf_pawjoh6T_usuI4RKIBCPhr3tZ5GUTnXSViO5HacRtzWtEKZOYjwj134XxoT82ykYZOtUQIC5bd3GGG3eEjfN4JQZaTaeMTPGNBrSqS8iZsdYCJAhyykN-LgYSVu3vMz_Ywi_KstIme3t9wth9Ow0y3ttO0yQjBGUnC75wI1QTSKd4HZTkiyDQ-RwC1VAcF3eGmCEOuR0nLoXnpRAKqWKChVmSBkLLjUYaNIJBKBs0P1JcBL3ScW7PeflNzsPg"
     },
     {
       type: "dm",
-      name: "Sophia Clark",
+      name: "Muzamil",
       status: "Active",
-      image: "https://lh3.googleusercontent.com/aida-public/AB6AXuDrJN_IedwgJdas5FdRLCMTVposuk_BgUomvDt4VaEyc6y-dCw6HPwzdT5ZSZ6Y6injATeE_ts2aZr-JmugLCND3RBeiA7VjvRaA6mQh3FmXbBO78X7AwpcRyM7cbZTz4OBkQWWOzXW4wXi2Vb4UsWqgfYwxX9UESppboR2UuIxApQ3WoZgXBpzLwQ1j7aV7QchDkSXDtx_IdTNVYqIgA4CRLhqIT8ND5_HrP26zPBykLRklTg8u2pZQPpyY37dJSaRvOTOGNdHC3w"
+    },
+    {
+      type: "dm",
+      name: "Preethi",
+      status: "Active",
     },
     { type: "channel", name: "Design Team", status: "Active" },
     { type: "channel", name: "General", status: "Active" },
