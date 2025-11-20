@@ -1,6 +1,14 @@
-import React, { useState, useEffect } from "react";
+// src/components/SidebarComp/ProfileSidebar.jsx
 
-const ProfileSidebar = ({ user, onClose, onSave, onLogout }) => {
+import React, { useState, useEffect } from "react";
+import { useAuth } from "../../contexts/AuthContext";   // ✅ AUTH CONTEXT
+import { useNavigate } from "react-router-dom";         // ✅ For redirect
+
+const ProfileSidebar = ({ user, onClose, onSave }) => {
+
+  const { logout } = useAuth();  // ✅ Access logout function
+  const navigate = useNavigate();
+
   const [formData, setFormData] = useState({
     name: user.name || "",
     email: user.email || "",
@@ -50,10 +58,8 @@ const ProfileSidebar = ({ user, onClose, onSave, onLogout }) => {
       showCompany: formData.showCompany,
     });
 
-    // any profile data changed?
     let changed = original !== current;
 
-    // security changed?
     if (
       formData.oldPassword ||
       formData.newPassword ||
@@ -88,48 +94,50 @@ const ProfileSidebar = ({ user, onClose, onSave, onLogout }) => {
   const handleSave = () => {
     const { oldPassword, newPassword, confirmPassword } = formData;
 
-    // Reset errors
     setErrors({ mismatch: false, samePassword: false, rulesFailed: false });
 
-    // If password fields are empty → only profile update
     if (!oldPassword && !newPassword && !confirmPassword) {
       onSave(formData);
       onClose();
       return;
     }
 
-    // Require all password fields
     if (!oldPassword || !newPassword || !confirmPassword) {
       setErrors((prev) => ({ ...prev, mismatch: true }));
       return;
     }
 
-    // Old password ≠ new password
     if (oldPassword === newPassword) {
       setErrors((prev) => ({ ...prev, samePassword: true }));
       return;
     }
 
-    // Confirm match
     if (newPassword !== confirmPassword) {
       setErrors((prev) => ({ ...prev, mismatch: true }));
       return;
     }
 
-    // Password rules
     if (!isPasswordValid) {
       setErrors((prev) => ({ ...prev, rulesFailed: true }));
       return;
     }
 
-    // SUCCESS
     onSave(formData);
     onClose();
   };
 
+  const handleLogout = async () => {
+    try {
+      await logout();          // Clears refresh token cookie & context
+      navigate("/login");      // Redirect to login
+    } catch (err) {
+      console.error("Logout failed:", err);
+    }
+  };
+
   return (
     <div className="fixed top-0 left-0 z-50 h-full w-64 bg-white shadow-lg border-r border-gray-200 flex flex-col">
-      
+
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b">
         <h2 className="text-lg font-semibold">Profile Settings</h2>
@@ -139,7 +147,7 @@ const ProfileSidebar = ({ user, onClose, onSave, onLogout }) => {
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-4 text-sm">
-        
+
         {/* Name */}
         <div>
           <label className="block font-medium mb-1">Name</label>
@@ -205,7 +213,7 @@ const ProfileSidebar = ({ user, onClose, onSave, onLogout }) => {
           <label className="font-medium">Show Company Field</label>
         </div>
 
-        {/* Company Field (if enabled) */}
+        {/* Company */}
         {formData.showCompany && (
           <div>
             <label className="block font-medium mb-1">Company</label>
@@ -218,7 +226,7 @@ const ProfileSidebar = ({ user, onClose, onSave, onLogout }) => {
           </div>
         )}
 
-        {/* Security Dropdown */}
+        {/* Security */}
         <div className="pt-4 border-t">
           <button
             className="w-full flex justify-between items-center font-semibold text-gray-800"
@@ -291,7 +299,6 @@ const ProfileSidebar = ({ user, onClose, onSave, onLogout }) => {
                 </div>
               </div>
 
-              {/* Errors */}
               {errors.samePassword && (
                 <p className="text-red-600 text-xs">New password cannot be same as old password.</p>
               )}
@@ -304,18 +311,10 @@ const ProfileSidebar = ({ user, onClose, onSave, onLogout }) => {
                 <div className="text-red-600 text-xs space-y-1">
                   <p>Password must include:</p>
                   <ul className="list-disc pl-5">
-                    <li className={!passwordRules.length ? "text-red-600" : "text-green-600"}>
-                      8–16 characters
-                    </li>
-                    <li className={!passwordRules.uppercase ? "text-red-600" : "text-green-600"}>
-                      At least one uppercase letter
-                    </li>
-                    <li className={!passwordRules.number ? "text-red-600" : "text-green-600"}>
-                      At least one number
-                    </li>
-                    <li className={!passwordRules.special ? "text-red-600" : "text-green-600"}>
-                      At least one special character
-                    </li>
+                    <li className={!passwordRules.length ? "text-red-600" : "text-green-600"}>8–16 characters</li>
+                    <li className={!passwordRules.uppercase ? "text-red-600" : "text-green-600"}>Uppercase letter</li>
+                    <li className={!passwordRules.number ? "text-red-600" : "text-green-600"}>Number</li>
+                    <li className={!passwordRules.special ? "text-red-600" : "text-green-600"}>Special character</li>
                   </ul>
                 </div>
               )}
@@ -326,16 +325,15 @@ const ProfileSidebar = ({ user, onClose, onSave, onLogout }) => {
 
       {/* Footer */}
       <div className="px-4 py-3 border-t flex flex-col space-y-2">
-        
-        {/* Logout */}
+
+        {/* Logout Button */}
         <button
-          onClick={onLogout}
+          onClick={handleLogout}   // ← Fully integrated logout
           className="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 py-2 rounded"
         >
           Logout
         </button>
 
-        {/* Cancel + Save */}
         <div className="flex justify-between">
           <button
             onClick={onClose}

@@ -1,4 +1,8 @@
 import { useState } from 'react';
+import { useAuth } from '../../contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
+
+
 
 const LoginForm = ({ onSwitch }) => {
   const [formData, setFormData] = useState({
@@ -17,23 +21,18 @@ const LoginForm = ({ onSwitch }) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+const { login } = useAuth();
+const navigate = useNavigate();
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!isFormValid) return;
-
     try {
-      const res = await fetch("http://localhost:5000/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData)
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Login failed");
-
-      alert("Login successful!");
+        await login({ email: formData.email, password: formData.password });
+        alert('Login successful!');
+        navigate('/');
     } catch (err) {
-      alert(err.message);
+      alert(err.message || 'Login failed');
     }
   };
 

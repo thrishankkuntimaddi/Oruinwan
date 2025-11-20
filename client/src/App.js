@@ -8,6 +8,7 @@ import MyTasks from "./pages/SidebarComp/MyTasks";
 import Blogs from "./pages/SidebarComp/Blogs";
 import LoginPage from "./pages/LoginPageComp/LoginPage";
 import ChttrixAIChat from "./components/chttrixAIComp/ChttrixAIChat";
+import RequireAuth from "./components/RequireAuth";
 
 function App() {
   const [activePage, setActivePage] = useState("Home");
@@ -32,7 +33,7 @@ function App() {
         <Route
           path="/"
           element={
-            <>
+            <RequireAuth>
               <div className="flex h-screen overflow-hidden">
                 <Sidebar
                   onNavigate={setActivePage}
@@ -49,7 +50,7 @@ function App() {
                   onClose={() => setShowAI(false)}
                 />
               )}
-            </>
+            </RequireAuth>
           }
         />
         <Route path="/login" element={<LoginPage />} />
