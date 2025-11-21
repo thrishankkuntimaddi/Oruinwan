@@ -52,8 +52,7 @@ mongoose
   .catch((err) => console.log("MongoDB Error ❌", err));
 
 // Routes
-const authRoutes = require("./routes/auth");
-app.use("/api/auth", authRoutes);
+app.use('/api/auth', require('./routes/auth'));
 
 // Start Server
 const PORT = process.env.PORT || 5000;

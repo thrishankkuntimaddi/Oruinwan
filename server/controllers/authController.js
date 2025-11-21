@@ -10,16 +10,32 @@ const sha256 = (v) => crypto.createHash("sha256").update(v).digest("hex");
 const ACCESS_EXPIRES = process.env.ACCESS_EXPIRES || "15m";
 const REFRESH_TOKEN_DAYS = parseInt(process.env.REFRESH_TOKEN_DAYS || "7", 10);
 
+
 // ---------------------------
-// ACCESS TOKEN
+// ACCESS & REFRESH TOKEN GENERATORS
 // ---------------------------
-function signAccessToken(user) {
+function generateAccessToken(user) {
   return jwt.sign(
-    { sub: String(user._id), roles: user.roles },
+    {
+      sub: String(user._id),
+      roles: user.roles,
+    },
     process.env.ACCESS_TOKEN_SECRET,
     { expiresIn: ACCESS_EXPIRES }
   );
 }
+
+function generateRefreshToken(user) {
+  return jwt.sign(
+    {
+      sub: String(user._id),
+    },
+    process.env.REFRESH_TOKEN_SECRET,
+    { expiresIn: `${REFRESH_TOKEN_DAYS}d` }
+  );
+}
+
+
 
 // ---------------------------
 // SIGNUP
@@ -109,47 +125,42 @@ async function login(req, res) {
   try {
     const { email, password } = req.body;
 
-    if (!email || !password)
-      return res.status(400).json({ message: "Missing email or password" });
-
     const user = await User.findOne({ email });
-    if (!user)
-      return res.status(400).json({ message: "Invalid email or password" });
+    if (!user) return res.status(400).json({ message: "Invalid email or password" });
 
     if (!user.verified)
-      return res
-        .status(403)
-        .json({ message: "Please verify your email before login" });
+      return res.status(403).json({ message: "Please verify your email first" });
 
     const isMatch = await bcrypt.compare(password, user.passwordHash);
     if (!isMatch)
       return res.status(400).json({ message: "Invalid email or password" });
 
-    // ---------------------------
-    // Generate ACCESS token
-    // ---------------------------
-    const accessToken = signAccessToken(user);
+    // Generate tokens
+    const accessToken = generateAccessToken(user);
+    const refreshToken = generateRefreshToken(user);
 
-    // ---------------------------
-    // Generate REFRESH token
-    // ---------------------------
-    const refreshRaw = crypto.randomBytes(40).toString("hex");
-    const refreshHash = sha256(refreshRaw);
+    // Hash refresh token
+    const refreshTokenHash = crypto
+      .createHash("sha256")
+      .update(refreshToken)
+      .digest("hex");
 
-    user.refreshTokens.push({
-      tokenHash: refreshHash,
-      expiresAt: new Date(Date.now() + REFRESH_TOKEN_DAYS * 86400000),
-    });
+    // Store hashed refresh token (for rotation)
+user.refreshTokens.push({
+  tokenHash: refreshTokenHash,
+  expiresAt: new Date(Date.now() + REFRESH_TOKEN_DAYS * 24 * 60 * 60 * 1000),
+  deviceInfo: req.get("User-Agent") || "Unknown"
+});
+
 
     await user.save();
 
     // Set cookie
-    res.cookie("jwt", refreshRaw, {
+    res.cookie("jwt", refreshToken, {
       httpOnly: true,
-      secure: false,
+      secure: false, // change to true in prod
       sameSite: "lax",
-      path: "/",
-      maxAge: REFRESH_TOKEN_DAYS * 86400000,
+      maxAge: 7 * 24 * 60 * 60 * 1000
     });
 
     return res.json({
@@ -159,85 +170,97 @@ async function login(req, res) {
         id: user._id,
         username: user.username,
         email: user.email,
-        verified: user.verified,
         roles: user.roles,
+        verified: user.verified,
       },
     });
+
   } catch (err) {
-    console.error("LOGIN ERROR", err);
+    console.error(err);
     return res.status(500).json({ message: "Server error" });
   }
 }
 
+
 // ---------------------------
-// REFRESH TOKEN
+// REFRESH TOKEN (FIXED FOR YOUR SCHEMA)
+// ---------------------------
+// ---------------------------
+// REFRESH TOKEN (FULLY FIXED)
 // ---------------------------
 async function refresh(req, res) {
   try {
-    const raw = req.cookies.jwt;
-    if (!raw) return res.status(401).json({ message: "No refresh token" });
+    const refreshToken = req.cookies?.jwt;
 
-    const tokenHash = sha256(raw);
+    if (!refreshToken) {
+      return res.status(401).json({ message: "No refresh token provided" });
+    }
 
+    // Hash the incoming refresh token
+    const refreshTokenHash = crypto
+      .createHash("sha256")
+      .update(refreshToken)
+      .digest("hex");
+
+    // Find user whose tokenHash matches
     const user = await User.findOne({
-      "refreshTokens.tokenHash": tokenHash,
+      "refreshTokens.tokenHash": refreshTokenHash,
     });
 
     if (!user) {
-      res.clearCookie("jwt");
-      return res.status(401).json({ message: "Invalid refresh token" });
+      return res.status(403).json({ message: "Invalid refresh token" });
     }
 
-    const record = user.refreshTokens.find((t) => t.tokenHash === tokenHash);
-
-    if (!record || record.expiresAt < Date.now()) {
-      user.refreshTokens = user.refreshTokens.filter(
-        (t) => t.tokenHash !== tokenHash
-      );
-      await user.save();
-      res.clearCookie("jwt");
-      return res.status(401).json({ message: "Expired token" });
+    // Verify signature of refresh token
+    try {
+      jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET);
+    } catch {
+      return res.status(403).json({ message: "Expired refresh token" });
     }
 
-    // ROTATE TOKEN
-    const rawNew = crypto.randomBytes(40).toString("hex");
-    const newHash = sha256(rawNew);
+    // Create new tokens (ROTATION)
+    const newAccessToken = generateAccessToken(user);
+    const newRefreshToken = generateRefreshToken(user);
 
+    // Hash new refresh token
+    const newRefreshTokenHash = crypto
+      .createHash("sha256")
+      .update(newRefreshToken)
+      .digest("hex");
+
+    // Remove old token
     user.refreshTokens = user.refreshTokens.filter(
-      (t) => t.tokenHash !== tokenHash
+      (rt) => rt.tokenHash !== refreshTokenHash
     );
 
+    // Add new refresh token
     user.refreshTokens.push({
-      tokenHash: newHash,
-      expiresAt: new Date(Date.now() + REFRESH_TOKEN_DAYS * 86400000),
+      tokenHash: newRefreshTokenHash,
+      expiresAt: new Date(Date.now() + REFRESH_TOKEN_DAYS * 24 * 60 * 60 * 1000),
+      deviceInfo: req.get("User-Agent") || "Unknown",
     });
 
     await user.save();
 
-    res.cookie("jwt", rawNew, {
+    // Set new cookie
+    res.cookie("jwt", newRefreshToken, {
       httpOnly: true,
-      secure: false,
+      secure: false, // change to true in production
       sameSite: "lax",
-      path: "/",
-      maxAge: REFRESH_TOKEN_DAYS * 86400000,
+      maxAge: 7 * 24 * 60 * 60 * 1000,
     });
-
-    const accessToken = signAccessToken(user);
 
     return res.json({
-      accessToken,
-      user: {
-        id: user._id,
-        username: user.username,
-        email: user.email,
-        profile: user.profile,
-      },
+      accessToken: newAccessToken,
     });
+
   } catch (err) {
     console.error("REFRESH ERROR", err);
-    res.status(500).json({ message: "Server error" });
+    return res.status(500).json({ message: "Server error" });
   }
 }
+
+
 
 // ---------------------------
 // LOGOUT
