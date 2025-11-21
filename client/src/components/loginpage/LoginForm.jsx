@@ -21,20 +21,23 @@ const LoginForm = ({ onSwitch }) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-const { login } = useAuth();
-const navigate = useNavigate();
+  const { login } = useAuth();
+  const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!isFormValid) return;
+
     try {
-        await login({ email: formData.email, password: formData.password });
-        alert('Login successful!');
-        navigate('/');
+      await login(formData); // AuthContext handles fetch + cookies
+      alert("Login successful!");
+      navigate("/");
     } catch (err) {
-      alert(err.message || 'Login failed');
+      alert(err.message || "Login failed");
     }
   };
+
+  
 
   return (
     <div className="space-y-6">

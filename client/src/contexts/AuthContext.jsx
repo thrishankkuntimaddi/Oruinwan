@@ -17,7 +17,7 @@ export function AuthProvider({ children }) {
     let mounted = true;
     async function attemptRefresh() {
       try {
-        const res = await fetch('/api/auth/refresh', {
+        const res = await fetch('http://localhost:5000/api/auth/refresh', {
           method: 'POST',
           credentials: 'include',
           headers: { 'Content-Type': 'application/json' }
@@ -45,7 +45,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   const login = async ({ email, password }) => {
-    const res = await fetch('/api/auth/login', {
+    const res = await fetch('http://localhost:5000/api/auth/login', {
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
@@ -63,7 +63,7 @@ export function AuthProvider({ children }) {
 
   const logout = async () => {
     try {
-      await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+      await fetch('http://localhost:5000/api/auth/logout', { method: 'POST', credentials: 'include' });
     } catch (err) {
       console.error('logout error', err);
     } finally {

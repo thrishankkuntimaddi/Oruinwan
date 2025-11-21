@@ -1,4 +1,6 @@
 // src/App.jsx
+import VerifyEmail from './pages/VerifyEmail';
+
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { useState } from "react";
 import Sidebar from "./components/SidebarComp/Sidebar";
@@ -9,6 +11,7 @@ import Blogs from "./pages/SidebarComp/Blogs";
 import LoginPage from "./pages/LoginPageComp/LoginPage";
 import ChttrixAIChat from "./components/chttrixAIComp/ChttrixAIChat";
 import RequireAuth from "./components/RequireAuth";
+
 
 function App() {
   const [activePage, setActivePage] = useState("Home");
@@ -54,6 +57,7 @@ function App() {
           }
         />
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/verify-email" element={<VerifyEmail />} />
       </Routes>
     </Router>
   );

@@ -1,10 +1,11 @@
 const mongoose = require('mongoose');
 
 const RefreshTokenSchema = new mongoose.Schema({
+  _id: false, // prevent ObjectId creation
   tokenHash: { type: String, required: true },
-  createdAt: { type: Date, default: Date.now },
   expiresAt: { type: Date, required: true },
-  deviceInfo: { type: String } // optional: store user-agent/device info
+  createdAt: { type: Date, default: Date.now },
+  deviceInfo: { type: String }
 });
 
 const UserSchema = new mongoose.Schema({
@@ -12,6 +13,7 @@ const UserSchema = new mongoose.Schema({
   email:    { type: String, required: true, unique: true, lowercase: true },
   phone:    { type: String, unique: true, sparse: true },
   passwordHash: { type: String, required: true },
+
   verified: { type: Boolean, default: false },
 
   verificationTokenHash: String,
@@ -20,7 +22,7 @@ const UserSchema = new mongoose.Schema({
   resetPasswordTokenHash: String,
   resetPasswordExpires: Date,
 
-  refreshTokens: [RefreshTokenSchema],
+  refreshTokens: [RefreshTokenSchema], // Updated schema
 
   roles: { type: [String], default: ['user'] },
 
@@ -39,7 +41,7 @@ const UserSchema = new mongoose.Schema({
   updatedAt: Date
 });
 
-// Indexes to help cleanup queries
-UserSchema.index({ "refreshTokens.expiresAt": 1 }, { expireAfterSeconds: 0 });
+// ❌ Remove invalid TTL index — cannot TTL arrays
+// UserSchema.index({ "refreshTokens.expiresAt": 1 }, { expireAfterSeconds: 0 });
 
 module.exports = mongoose.model('User', UserSchema);

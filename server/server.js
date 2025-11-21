@@ -10,6 +10,14 @@ const rateLimit = require("express-rate-limit");
 // Initialize app
 const app = express();
 
+app.use(cookieParser());
+
+app.use(cors({
+  origin: "http://localhost:3000",
+  credentials: true
+}));
+
+
 
 app.set("trust proxy", 1);
 
@@ -25,6 +33,8 @@ app.use(
     credentials: true,
   })
 );
+app.use(express.json());
+app.use(cookieParser());
 
 // Rate limiting (protect auth endpoints)
 const limiter = rateLimit({

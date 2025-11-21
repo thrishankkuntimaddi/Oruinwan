@@ -1,14 +1,25 @@
 // server/routes/auth.js
-const express = require('express');
-const router = express.Router();
-const ctrl = require('../controllers/authController');
 
-router.post('/signup', ctrl.signup);
-router.get('/verify-email', ctrl.verifyEmail);
-router.post('/login', ctrl.login);
-router.post('/refresh', ctrl.refresh); // path matches cookie path
-router.post('/logout', ctrl.logout);
-router.post('/forgot-password', ctrl.forgotPassword);
-router.post('/reset-password', ctrl.resetPassword);
+const express = require("express");
+const router = express.Router();
+
+const {
+  signup,
+  verifyEmail,
+  login,
+  refresh,
+  logout,
+  forgotPassword,
+  resetPassword
+} = require("../controllers/authController");
+
+// AUTH ROUTES
+router.post("/signup", signup);
+router.get("/verify-email", verifyEmail);
+router.post("/login", login);
+router.post("/refresh", refresh);
+router.post("/logout", logout);
+router.post("/forgot-password", forgotPassword);
+router.post("/reset-password", resetPassword);
 
 module.exports = router;
