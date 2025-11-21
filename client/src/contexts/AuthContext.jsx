@@ -1,88 +1,114 @@
-// client/src/contexts/AuthContext.jsx
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useState, useEffect, useCallback } from "react";
 
-const AuthContext = createContext();
-
-export function useAuth() {
-  return useContext(AuthContext);
-}
+export const AuthContext = createContext();
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
-  const [accessToken, setAccessToken] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState(null);       // user object
+  const [accessToken, setAccessToken] = useState(null); // short lived token
+  const [loading, setLoading] = useState(true); // loading app on startup
 
-  // try silent login on mount (refresh using cookie)
-  useEffect(() => {
-    let mounted = true;
-    async function attemptRefresh() {
-      try {
-        const res = await fetch('http://localhost:5000/api/auth/refresh', {
-          method: 'POST',
-          credentials: 'include',
-          headers: { 'Content-Type': 'application/json' }
-        });
-        if (!res.ok) {
-          setUser(null);
-          setAccessToken(null);
-          return;
-        }
-        const data = await res.json();
-        if (mounted) {
-          setAccessToken(data.accessToken);
-          setUser(data.user);
-        }
-      } catch (err) {
-        console.error('refresh failed', err);
+  // ---------------------------------------------------------
+  // 1) LOGIN FUNCTION
+  // ---------------------------------------------------------
+  const login = async (email, password) => {
+    const res = await fetch("/api/auth/login", {
+      method: "POST",
+      credentials: "include", // IMPORTANT: includes refresh cookie
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || "Login failed");
+
+    setUser(data.user);
+    setAccessToken(data.accessToken);
+    return true;
+  };
+
+  // ---------------------------------------------------------
+  // 2) LOGOUT FUNCTION
+  // ---------------------------------------------------------
+  const logout = async () => {
+    await fetch("/api/auth/logout", {
+      method: "POST",
+      credentials: "include",
+    });
+
+    setUser(null);
+    setAccessToken(null);
+  };
+
+  // ---------------------------------------------------------
+  // 3) AUTO REFRESH TOKEN
+  // called automatically when accessToken expires OR on page load
+  // ---------------------------------------------------------
+  const refreshAccessToken = useCallback(async () => {
+    try {
+      const res = await fetch("/api/auth/refresh", {
+        method: "GET",
+        credentials: "include",
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
         setUser(null);
         setAccessToken(null);
-      } finally {
-        if (mounted) setLoading(false);
+        return null;
       }
-    }
-    attemptRefresh();
-    return () => { mounted = false; };
-  }, []);
 
-  const login = async ({ email, password }) => {
-    const res = await fetch('http://localhost:5000/api/auth/login', {
-      method: 'POST',
-      credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password })
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({ message: 'Login failed' }));
-      throw new Error(err.message || 'Login failed');
-    }
-    const data = await res.json();
-    setAccessToken(data.accessToken);
-    setUser(data.user);
-    return data;
-  };
+      // only refresh token returns the new access token
+      if (data.accessToken) {
+        setAccessToken(data.accessToken);
+      }
 
-  const logout = async () => {
-    try {
-      await fetch('http://localhost:5000/api/auth/logout', { method: 'POST', credentials: 'include' });
+      return data.accessToken;
     } catch (err) {
-      console.error('logout error', err);
-    } finally {
       setUser(null);
       setAccessToken(null);
+      return null;
     }
-  };
+  }, []);
 
-  // helper for API calls that need auth; auto-401 handling could be added
-  const apiFetch = async (url, options = {}) => {
-    const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
-    if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
-    const res = await fetch(url, { credentials: 'include', ...options, headers });
-    // optionally: if 401 try refresh & retry once (not implemented here)
-    return res;
-  };
+  // ---------------------------------------------------------
+  // 4) AUTO LOGIN ON PAGE RELOAD
+  // (App loads → tries refresh endpoint → sets user)
+  // ---------------------------------------------------------
+  useEffect(() => {
+    async function initAuth() {
+      const token = await refreshAccessToken();
 
+      if (token) {
+        // get user details by decoding token OR call a "me" endpoint
+        const payload = JSON.parse(atob(token.split(".")[1]));
+        setUser({
+          id: payload.id || payload.sub,
+          email: payload.email,
+          roles: payload.roles || ["user"],
+          verified: payload.verified
+        });
+      }
+
+      setLoading(false);
+    }
+
+    initAuth();
+  }, [refreshAccessToken]);
+
+  // ---------------------------------------------------------
+  // GLOBAL CONTEXT VALUES
+  // ---------------------------------------------------------
   return (
-    <AuthContext.Provider value={{ user, setUser, accessToken, setAccessToken, login, logout, loading, apiFetch }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        accessToken,
+        login,
+        logout,
+        loading,
+        refreshAccessToken,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

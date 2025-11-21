@@ -9,6 +9,7 @@ const {
   login,
   refresh,
   logout,
+  logoutAll,
   forgotPassword,
   resetPassword
 } = require("../controllers/authController");
@@ -19,6 +20,7 @@ router.get("/verify-email", verifyEmail);
 router.post("/login", login);
 router.get("/refresh", refresh);
 router.post("/logout", logout);
+router.post("/logout-all", logoutAll);
 router.post("/forgot-password", forgotPassword);
 router.post("/reset-password", resetPassword);
 

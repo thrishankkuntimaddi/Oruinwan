@@ -1,12 +1,15 @@
 // src/components/SidebarComp/ProfileSidebar.jsx
 
 import React, { useState, useEffect } from "react";
-import { useAuth } from "../../contexts/AuthContext";   // ✅ AUTH CONTEXT
+import { useContext } from "react";
+import { AuthContext } from "../../contexts/AuthContext";
 import { useNavigate } from "react-router-dom";         // ✅ For redirect
+
 
 const ProfileSidebar = ({ user, onClose, onSave }) => {
 
-  const { logout } = useAuth();  // ✅ Access logout function
+  const { logout } = useContext(AuthContext);
+// ✅ Access logout function
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({

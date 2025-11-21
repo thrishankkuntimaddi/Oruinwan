@@ -1,43 +1,40 @@
-import { useState } from 'react';
-import { useAuth } from '../../contexts/AuthContext';
-import { useNavigate } from 'react-router-dom';
-
-
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useContext } from "react";
+import { AuthContext } from "../../contexts/AuthContext";
 
 const LoginForm = ({ onSwitch }) => {
   const [formData, setFormData] = useState({
-    email: '',
-    password: ''
+    email: "",
+    password: "",
   });
 
   const [showPassword, setShowPassword] = useState(false);
 
+  const { login } = useContext(AuthContext);
+  const navigate = useNavigate();
+
   const isPasswordValid =
     formData.password.length >= 8 && formData.password.length <= 16;
 
-  const isFormValid = formData.email !== '' && isPasswordValid;
+  const isFormValid = formData.email !== "" && isPasswordValid;
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
-
-  const { login } = useAuth();
-  const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!isFormValid) return;
 
     try {
-      await login(formData); // AuthContext handles fetch + cookies
+      await login(formData.email, formData.password); // use AuthContext login
       alert("Login successful!");
-      navigate("/");
+      navigate("/"); // redirect to home/dashboard
     } catch (err) {
       alert(err.message || "Login failed");
     }
   };
-
-  
 
   return (
     <div className="space-y-6">
@@ -49,7 +46,7 @@ const LoginForm = ({ onSwitch }) => {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
-
+        
         {/* Email */}
         <input
           name="email"
@@ -86,7 +83,11 @@ const LoginForm = ({ onSwitch }) => {
           type="submit"
           disabled={!isFormValid}
           className={`w-full py-2 px-4 rounded-md font-medium text-white 
-            ${isFormValid ? "bg-blue-600 hover:bg-blue-700" : "bg-gray-400 cursor-not-allowed"}
+            ${
+              isFormValid
+                ? "bg-blue-600 hover:bg-blue-700"
+                : "bg-gray-400 cursor-not-allowed"
+            }
           `}
         >
           Login

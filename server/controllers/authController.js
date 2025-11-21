@@ -267,22 +267,81 @@ async function refresh(req, res) {
 // ---------------------------
 async function logout(req, res) {
   try {
-    const raw = req.cookies.jwt;
-    if (raw) {
-      const hash = sha256(raw);
-      await User.updateOne(
-        { "refreshTokens.tokenHash": hash },
-        { $pull: { refreshTokens: { tokenHash: hash } } }
-      );
-      res.clearCookie("jwt");
+    const refreshToken = req.cookies?.jwt;
+    if (!refreshToken) {
+      return res.status(200).json({ message: "Logged out successfully" });
     }
 
-    return res.json({ message: "Logged out" });
+    // Hash the refresh token
+    const refreshTokenHash = crypto
+      .createHash("sha256")
+      .update(refreshToken)
+      .digest("hex");
+
+    // Find user who owns this refresh token
+    const user = await User.findOne({ refreshTokens: refreshTokenHash });
+
+    if (user) {
+      // Remove ONLY this refresh token hash
+      user.refreshTokens = user.refreshTokens.filter(
+        (token) => token !== refreshTokenHash
+      );
+      await user.save();
+    }
+
+    // Clear cookie
+    res.clearCookie("jwt", {
+      httpOnly: true,
+      secure: false,
+      sameSite: "lax",
+    });
+
+    return res.json({ message: "Logged out successfully" });
+
   } catch (err) {
-    console.error("LOGOUT ERROR", err);
+    console.error(err);
     res.status(500).json({ message: "Server error" });
   }
 }
+
+async function logoutAll(req, res) {
+  try {
+    const refreshToken = req.cookies?.jwt;
+    if (!refreshToken) {
+      return res.status(200).json({ message: "Logged out from all devices" });
+    }
+
+    // Verify refresh token
+    let decoded;
+    try {
+      decoded = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET);
+    } catch (err) {
+      // Even if invalid, clear cookie
+      res.clearCookie("jwt", {
+        httpOnly: true,
+        secure: false,
+        sameSite: "lax",
+      });
+      return res.json({ message: "Logged out from all devices" });
+    }
+
+    // Clear ALL refresh tokens for this user
+    await User.findByIdAndUpdate(decoded.id, { refreshTokens: [] });
+
+    res.clearCookie("jwt", {
+      httpOnly: true,
+      secure: false,
+      sameSite: "lax",
+    });
+
+    return res.json({ message: "Logged out from all devices" });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+}
+
 
 // ---------------------------
 // FORGOT PASSWORD
