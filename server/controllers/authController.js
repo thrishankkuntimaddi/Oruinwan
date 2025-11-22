@@ -325,6 +325,8 @@ exports.forgotPassword = async (req, res) => {
       html: `Reset your password: <a href="${url}">${url}</a>`,
     });
 
+    console.log("DEV MODE PASSWORD RESET LINK:", url);
+
     return res.json({
       message: "If that email exists, a reset link was sent",
     });

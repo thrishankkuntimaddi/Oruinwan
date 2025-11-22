@@ -11,6 +11,9 @@ import LoginPage from "./pages/LoginPageComp/LoginPage";
 import ChttrixAIChat from "./components/chttrixAIComp/ChttrixAIChat";
 import VerifyEmail from "./pages/VerifyEmail";
 import RequireAuth from "./components/RequireAuth";
+import ForgotPassword from "./pages/LoginPageComp/ForgotPassword";
+import ResetPassword from "./pages/LoginPageComp/ResetPassword";
+
 
 function App() {
   const [showAI, setShowAI] = useState(false);
@@ -45,6 +48,9 @@ function App() {
         {/* PUBLIC ROUTES */}
         <Route path="/login" element={<LoginPage />} />
         <Route path="/verify-email" element={<VerifyEmail />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
+
 
       </Routes>
     </Router>

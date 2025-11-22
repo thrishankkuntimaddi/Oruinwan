@@ -80,6 +80,13 @@ const LoginForm = ({ onSwitch }) => {
           </button>
         </div>
 
+        <p className="text-right text-sm">
+          <a href="/forgot-password" className="text-blue-600 hover:underline">
+            Forgot password?
+          </a>
+        </p>
+
+
         <button
           type="submit"
           disabled={!isFormValid}
