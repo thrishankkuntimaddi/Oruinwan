@@ -2,7 +2,6 @@
 node_modules/
 dist/
 build/
-.env
 .npm/
 .nyc_output/
 .temp/
@@ -11,6 +10,36 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 report-coverage/
+
+# Environment variables and sensitive files
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+.env.staging
+**/.env
+**/.env.local
+**/.env.development
+**/.env.test
+**/.env.production
+**/.env.staging
+
+# Allow .env.example files (templates)
+!.env.example
+!**/.env.example
+
+# Sensitive configuration files
+config/secrets.json
+config/local.json
+secrets.json
+credentials.json
+serviceAccountKey.json
+*.pem
+*.key
+*.cert
+*.crt
+.secrets
 
 # IDE and Editor files
 .idea/
