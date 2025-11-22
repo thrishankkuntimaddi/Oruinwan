@@ -25,7 +25,7 @@ export default function VerifyEmail() {
       setStatus('sending');
       try {
         const res = await fetch(
-          `${process.env.BACKEND_URL}/api/auth/verify-email?token=${encodeURIComponent(
+          `${process.env.REACT_APP_BACKEND_URL}/api/auth/verify-email?token=${encodeURIComponent(
             token
           )}&email=${encodeURIComponent(email)}`,
           { credentials: 'include' }

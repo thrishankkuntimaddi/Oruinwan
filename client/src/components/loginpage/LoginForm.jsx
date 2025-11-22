@@ -103,7 +103,7 @@ const LoginForm = ({ onSwitch }) => {
             onSuccess={async (credentialResponse) => {
               try {
                 const res = await axios.post(
-                  `${process.env.BACKEND_URL}/api/auth/google-login`,
+                  `${process.env.REACT_APP_BACKEND_URL}/api/auth/google-login`,
                   { credential: credentialResponse.credential },
                   { withCredentials: true }
                 );

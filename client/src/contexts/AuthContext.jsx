@@ -14,7 +14,7 @@ export const AuthProvider = ({ children }) => {
   // ------------------------------------------------------------
   const loadUser = async () => {
     try {
-      const res = await fetch(`${process.env.BACKEND_URL}/api/auth/me`, {
+      const res = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/auth/me`, {
         credentials: "include",
       });
 
@@ -42,7 +42,7 @@ export const AuthProvider = ({ children }) => {
   // Login (normal email/password)
   // ------------------------------------------------------------
   const login = async ({ email, password }) => {
-    const res = await fetch(`${process.env.BACKEND_URL}/api/auth/login`, {
+    const res = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/auth/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
@@ -63,7 +63,7 @@ export const AuthProvider = ({ children }) => {
   // Logout
   // ------------------------------------------------------------
   const logout = async () => {
-    await fetch(`${process.env.BACKEND_URL}/api/auth/logout`, {
+    await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/auth/logout`, {
       method: "POST",
       credentials: "include",
     });
@@ -76,7 +76,7 @@ export const AuthProvider = ({ children }) => {
   // Update profile
   // ------------------------------------------------------------
   const updateProfile = async (updates) => {
-    const res = await fetch(`${process.env.BACKEND_URL}/api/auth/me`, {
+    const res = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/auth/me`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
@@ -98,7 +98,7 @@ export const AuthProvider = ({ children }) => {
   // Update password
   // ------------------------------------------------------------
   const updatePassword = async (oldPassword, newPassword) => {
-    const res = await fetch(`${process.env.BACKEND_URL}/api/auth/me/password`, {
+    const res = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/auth/me/password`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",

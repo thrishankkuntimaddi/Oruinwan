@@ -7,7 +7,7 @@ export default function ForgotPassword() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    await fetch(`${process.env.BACKEND_URL}/api/auth/forgot-password`, {
+    await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/auth/forgot-password`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email }),
