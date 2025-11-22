@@ -6,9 +6,6 @@ const ProfileSidebar = ({ onClose }) => {
   const { user, updateProfile, updatePassword, logout } = useAuth();
   const navigate = useNavigate();
 
-  // -----------------------------------------
-  // Form State
-  // -----------------------------------------
   const [formData, setFormData] = useState({
     username: user?.username || "",
     email: user?.email || "",
@@ -35,9 +32,6 @@ const ProfileSidebar = ({ onClose }) => {
 
   const [isChanged, setIsChanged] = useState(false);
 
-  // -----------------------------------------
-  // Detect Changes
-  // -----------------------------------------
   useEffect(() => {
     if (!user) return;
 
@@ -63,16 +57,17 @@ const ProfileSidebar = ({ onClose }) => {
 
     let changed = original !== current;
 
-    if (formData.oldPassword || formData.newPassword || formData.confirmPassword) {
+    if (
+      formData.oldPassword ||
+      formData.newPassword ||
+      formData.confirmPassword
+    ) {
       changed = true;
     }
 
     setIsChanged(changed);
   }, [formData, user]);
 
-  // -----------------------------------------
-  // Password Rules Check
-  // -----------------------------------------
   const passwordRules = {
     length: formData.newPassword.length >= 8 && formData.newPassword.length <= 16,
     uppercase: /[A-Z]/.test(formData.newPassword),
@@ -86,26 +81,15 @@ const ProfileSidebar = ({ onClose }) => {
     passwordRules.number &&
     passwordRules.special;
 
-  // -----------------------------------------
-  // Input Handler
-  // -----------------------------------------
   const handleChange = (field, value) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value,
-    }));
+    setFormData((p) => ({ ...p, [field]: value }));
   };
 
-  // -----------------------------------------
-  // Save Changes
-  // -----------------------------------------
   const handleSave = async () => {
     const { oldPassword, newPassword, confirmPassword } = formData;
-
     setErrors({ mismatch: false, samePassword: false, rulesFailed: false });
 
     try {
-      // 🔵 PROFILE UPDATE ONLY
       if (!oldPassword && !newPassword && !confirmPassword) {
         await updateProfile({
           username: formData.username,
@@ -116,53 +100,32 @@ const ProfileSidebar = ({ onClose }) => {
           showCompany: formData.showCompany,
         });
 
-        alert("Profile updated successfully!");
+        alert("Profile updated!");
         onClose();
         return;
       }
 
-      // 🔴 PASSWORD VALIDATION
-      if (!oldPassword || !newPassword || !confirmPassword) {
-        setErrors(prev => ({ ...prev, mismatch: true }));
-        return;
-      }
+      if (!oldPassword || !newPassword || !confirmPassword)
+        return setErrors((p) => ({ ...p, mismatch: true }));
+      if (oldPassword === newPassword)
+        return setErrors((p) => ({ ...p, samePassword: true }));
+      if (newPassword !== confirmPassword)
+        return setErrors((p) => ({ ...p, mismatch: true }));
+      if (!isPasswordValid)
+        return setErrors((p) => ({ ...p, rulesFailed: true }));
 
-      if (oldPassword === newPassword) {
-        setErrors(prev => ({ ...prev, samePassword: true }));
-        return;
-      }
-
-      if (newPassword !== confirmPassword) {
-        setErrors(prev => ({ ...prev, mismatch: true }));
-        return;
-      }
-
-      if (!isPasswordValid) {
-        setErrors(prev => ({ ...prev, rulesFailed: true }));
-        return;
-      }
-
-      // 🔵 UPDATE PASSWORD API
       await updatePassword(oldPassword, newPassword);
 
-      alert("Password updated successfully!");
+      alert("Password updated!");
       onClose();
-
     } catch (err) {
       alert(err.message || "Update failed");
     }
   };
 
-  // -----------------------------------------
-  // Logout Handler
-  // -----------------------------------------
   const handleLogout = async () => {
-    try {
-      await logout();
-      navigate("/login");
-    } catch (err) {
-      console.error("Logout failed:", err);
-    }
+    await logout();
+    navigate("/login");
   };
 
   if (!user) return null;
@@ -176,17 +139,29 @@ const ProfileSidebar = ({ onClose }) => {
         <button onClick={onClose} className="text-gray-500 hover:text-red-500 text-lg">✖</button>
       </div>
 
-      {/* BODY */}
+      {/* Body */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4 text-sm">
 
-        {/* Username */}
+        {/* Profile Photo */}
+        <div className="w-full flex justify-center mb-4">
+          <div
+            className="h-20 w-20 rounded-full bg-center bg-cover shadow-md"
+            style={{
+              backgroundImage: `url(${
+                user?.profilePicture || "../../assests/kpnbg301.svg"
+              })`,
+            }}
+          />
+        </div>
+
+        {/* Name */}
         <div>
           <label className="block font-medium mb-1">Name</label>
           <input
             type="text"
             className="w-full px-3 py-2 border rounded"
             value={formData.username}
-            onChange={e => handleChange("username", e.target.value)}
+            onChange={(e) => handleChange("username", e.target.value)}
           />
         </div>
 
@@ -208,7 +183,7 @@ const ProfileSidebar = ({ onClose }) => {
             type="text"
             className="w-full px-3 py-2 border rounded"
             value={formData.phone}
-            onChange={e => handleChange("phone", e.target.value)}
+            onChange={(e) => handleChange("phone", e.target.value)}
           />
         </div>
 
@@ -219,7 +194,7 @@ const ProfileSidebar = ({ onClose }) => {
             type="date"
             className="w-full px-3 py-2 border rounded"
             value={formData.dob}
-            onChange={e => handleChange("dob", e.target.value)}
+            onChange={(e) => handleChange("dob", e.target.value)}
           />
         </div>
 
@@ -230,16 +205,16 @@ const ProfileSidebar = ({ onClose }) => {
             type="text"
             className="w-full px-3 py-2 border rounded"
             value={formData.about}
-            onChange={e => handleChange("about", e.target.value)}
+            onChange={(e) => handleChange("about", e.target.value)}
           />
         </div>
 
-        {/* Show Company Toggle */}
+        {/* Show Company */}
         <div className="flex items-center gap-2 mt-2">
           <input
             type="checkbox"
             checked={formData.showCompany}
-            onChange={e => handleChange("showCompany", e.target.checked)}
+            onChange={(e) => handleChange("showCompany", e.target.checked)}
           />
           <label className="font-medium">Show Company Field</label>
         </div>
@@ -252,12 +227,12 @@ const ProfileSidebar = ({ onClose }) => {
               type="text"
               className="w-full px-3 py-2 border rounded"
               value={formData.company}
-              onChange={e => handleChange("company", e.target.value)}
+              onChange={(e) => handleChange("company", e.target.value)}
             />
           </div>
         )}
 
-        {/* SECURITY SECTION */}
+        {/* Security */}
         <div className="pt-4 border-t">
           <button
             className="w-full flex justify-between items-center font-semibold text-gray-800"
@@ -278,7 +253,7 @@ const ProfileSidebar = ({ onClose }) => {
                     type={showOld ? "text" : "password"}
                     className="w-full px-3 py-2 border rounded"
                     value={formData.oldPassword}
-                    onChange={e => handleChange("oldPassword", e.target.value)}
+                    onChange={(e) => handleChange("oldPassword", e.target.value)}
                   />
                   <button
                     type="button"
@@ -298,7 +273,7 @@ const ProfileSidebar = ({ onClose }) => {
                     type={showNew ? "text" : "password"}
                     className="w-full px-3 py-2 border rounded"
                     value={formData.newPassword}
-                    onChange={e => handleChange("newPassword", e.target.value)}
+                    onChange={(e) => handleChange("newPassword", e.target.value)}
                   />
                   <button
                     type="button"
@@ -318,7 +293,7 @@ const ProfileSidebar = ({ onClose }) => {
                     type={showConfirm ? "text" : "password"}
                     className="w-full px-3 py-2 border rounded"
                     value={formData.confirmPassword}
-                    onChange={e => handleChange("confirmPassword", e.target.value)}
+                    onChange={(e) => handleChange("confirmPassword", e.target.value)}
                   />
                   <button
                     type="button"
@@ -362,10 +337,10 @@ const ProfileSidebar = ({ onClose }) => {
         </div>
       </div>
 
-      {/* FOOTER */}
+      {/* Footer */}
       <div className="px-4 py-3 border-t flex flex-col space-y-2">
 
-        {/* Logout Button */}
+        {/* Logout */}
         <button
           onClick={handleLogout}
           className="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 py-2 rounded"
@@ -373,6 +348,7 @@ const ProfileSidebar = ({ onClose }) => {
           Logout
         </button>
 
+        {/* Save + Cancel */}
         <div className="flex justify-between">
           <button
             onClick={onClose}
@@ -384,15 +360,16 @@ const ProfileSidebar = ({ onClose }) => {
           <button
             disabled={!isChanged}
             onClick={handleSave}
-            className={`px-4 py-2 text-sm rounded text-white 
-              ${isChanged ? "bg-blue-600 hover:bg-blue-700" : "bg-gray-400 cursor-not-allowed"}
-            `}
+            className={`px-4 py-2 text-sm rounded text-white ${
+              isChanged
+                ? "bg-blue-600 hover:bg-blue-700"
+                : "bg-gray-400 cursor-not-allowed"
+            }`}
           >
             Save Changes
           </button>
         </div>
       </div>
-
     </div>
   );
 };

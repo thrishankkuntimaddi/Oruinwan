@@ -13,6 +13,8 @@ import VerifyEmail from "./pages/VerifyEmail";
 import RequireAuth from "./components/RequireAuth";
 import ForgotPassword from "./pages/LoginPageComp/ForgotPassword";
 import ResetPassword from "./pages/LoginPageComp/ResetPassword";
+import OAuthSuccess from "./pages/LoginPageComp/OAuthSuccess";
+
 
 
 function App() {
@@ -50,6 +52,8 @@ function App() {
         <Route path="/verify-email" element={<VerifyEmail />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/oauth-success" element={<OAuthSuccess />} />
+
 
 
       </Routes>

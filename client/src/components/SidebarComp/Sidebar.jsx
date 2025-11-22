@@ -16,7 +16,7 @@ const Sidebar = ({ onAIClick }) => {
     <>
       <div className="w-64 min-h-screen bg-white border-r border-gray-200 flex flex-col justify-between shadow-sm">
 
-        {/* Profile */}
+        {/* Profile Section */}
         <div>
           <div
             className="flex items-center space-x-3 px-6 py-6 cursor-pointer"
@@ -24,11 +24,16 @@ const Sidebar = ({ onAIClick }) => {
           >
             <div
               className="h-12 w-12 rounded-full bg-center bg-cover shadow-md"
-              style={{ backgroundImage: "url('../../assests/kpnbg301.svg')" }}
+              style={{
+                backgroundImage: `url(${
+                  user?.profilePicture || "../../assests/kpnbg301.svg"
+                })`,
+              }}
             />
+
             <div>
               <h2 className="text-sm font-bold text-[#0f172a]">
-                {user?.username}
+                {user?.username || "User"}
               </h2>
               <p className="text-xs text-gray-500">{user?.email}</p>
             </div>
@@ -45,12 +50,11 @@ const Sidebar = ({ onAIClick }) => {
               <button
                 key={item.path}
                 onClick={() => navigate(item.path)}
-                className={`w-full px-6 py-3 text-left transition-colors
-                  ${
-                    isActive(item.path)
-                      ? "bg-gray-100 text-[#0c77f2] font-semibold"
-                      : "text-gray-700 hover:bg-gray-100 hover:text-[#0c77f2]"
-                  }`}
+                className={`w-full px-6 py-3 text-left transition-colors ${
+                  isActive(item.path)
+                    ? "bg-gray-100 text-[#0c77f2] font-semibold"
+                    : "text-gray-700 hover:bg-gray-100 hover:text-[#0c77f2]"
+                }`}
               >
                 {item.label}
               </button>
@@ -70,11 +74,7 @@ const Sidebar = ({ onAIClick }) => {
       </div>
 
       {/* Profile Sidebar */}
-      {showProfile && (
-        <ProfileSidebar
-          onClose={() => setShowProfile(false)}
-        />
-      )}
+      {showProfile && <ProfileSidebar onClose={() => setShowProfile(false)} />}
     </>
   );
 };

@@ -1,14 +1,16 @@
+// client/src/contexts/AuthContext.jsx
+
 import React, { createContext, useContext, useState, useEffect } from "react";
 
 export const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);     // logged in user
-  const [loading, setLoading] = useState(true); // loading initial user
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [accessToken, setAccessToken] = useState(null);
 
   // ------------------------------------------------------------
-  // 1. LOAD USER ON APP START (using /me)
+  // Load user on app start
   // ------------------------------------------------------------
   const loadUser = async () => {
     try {
@@ -16,7 +18,6 @@ export const AuthProvider = ({ children }) => {
         credentials: "include",
       });
 
-      // New access token might be sent via header
       const newAT = res.headers.get("x-access-token");
       if (newAT) setAccessToken(newAT);
 
@@ -38,7 +39,7 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   // ------------------------------------------------------------
-  // 2. LOGIN
+  // Login (normal email/password)
   // ------------------------------------------------------------
   const login = async ({ email, password }) => {
     const res = await fetch("http://localhost:5000/api/auth/login", {
@@ -50,9 +51,7 @@ export const AuthProvider = ({ children }) => {
 
     const data = await res.json();
 
-    if (!res.ok) {
-      throw new Error(data.message || "Login failed");
-    }
+    if (!res.ok) throw new Error(data.message || "Login failed");
 
     setAccessToken(data.accessToken);
     setUser(data.user);
@@ -61,7 +60,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   // ------------------------------------------------------------
-  // 3. LOGOUT
+  // Logout
   // ------------------------------------------------------------
   const logout = async () => {
     await fetch("http://localhost:5000/api/auth/logout", {
@@ -74,7 +73,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   // ------------------------------------------------------------
-  // 4. UPDATE PROFILE
+  // Update profile
   // ------------------------------------------------------------
   const updateProfile = async (updates) => {
     const res = await fetch("http://localhost:5000/api/auth/me", {
@@ -91,13 +90,12 @@ export const AuthProvider = ({ children }) => {
 
     if (!res.ok) throw new Error(data.message);
 
-    setUser(data.user);  // update local user
-
+    setUser(data.user);
     return data;
   };
 
   // ------------------------------------------------------------
-  // 5. UPDATE PASSWORD
+  // Update password
   // ------------------------------------------------------------
   const updatePassword = async (oldPassword, newPassword) => {
     const res = await fetch("http://localhost:5000/api/auth/me/password", {
@@ -111,7 +109,6 @@ export const AuthProvider = ({ children }) => {
     });
 
     const data = await res.json();
-
     if (!res.ok) throw new Error(data.message);
 
     return data;
@@ -121,6 +118,7 @@ export const AuthProvider = ({ children }) => {
     <AuthContext.Provider
       value={{
         user,
+        setUser,        // <-- IMPORTANT FIX
         loading,
         accessToken,
         login,

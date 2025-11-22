@@ -1,17 +1,17 @@
-import { useState } from "react";
+// client/src/components/loginpage/LoginForm.jsx
+
+import { useState, useContext } from "react";
 import { useNavigate } from "react-router-dom";
-import { useContext } from "react";
 import { AuthContext } from "../../contexts/AuthContext";
+import { GoogleLogin } from "@react-oauth/google";
+import axios from "axios";
+import { saveAccessToken } from "../../utils/tokenUtils";
 
 const LoginForm = ({ onSwitch }) => {
-  const [formData, setFormData] = useState({
-    email: "",
-    password: "",
-  });
-
+  const [formData, setFormData] = useState({ email: "", password: "" });
   const [showPassword, setShowPassword] = useState(false);
 
-  const { login } = useContext(AuthContext);
+  const { login, setUser } = useContext(AuthContext); // <-- FIXED
   const navigate = useNavigate();
 
   const isPasswordValid =
@@ -20,7 +20,7 @@ const LoginForm = ({ onSwitch }) => {
   const isFormValid = formData.email !== "" && isPasswordValid;
 
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
   const handleSubmit = async (e) => {
@@ -28,7 +28,7 @@ const LoginForm = ({ onSwitch }) => {
     if (!isFormValid) return;
 
     try {
-      await login(formData); // <-- FIXED
+      await login(formData);
       alert("Login successful!");
       navigate("/");
     } catch (err) {
@@ -36,39 +36,37 @@ const LoginForm = ({ onSwitch }) => {
     }
   };
 
-
   return (
     <div className="space-y-6">
       <div className="text-center">
-        <h2 className="text-2xl font-bold text-gray-900">Welcome to Chttrix</h2>
+        <h2 className="text-2xl font-bold">Welcome to Chttrix</h2>
         <p className="mt-2 text-sm text-gray-600">
           Sign in to start collaborating on your next big idea.
         </p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        
         {/* Email */}
         <input
           name="email"
           type="email"
-          value={formData.email}
-          onChange={handleChange}
           placeholder="Enter your email"
           required
-          className="block w-full px-4 py-2 border border-gray-300 rounded-md"
+          value={formData.email}
+          onChange={handleChange}
+          className="block w-full px-4 py-2 border rounded-md"
         />
 
-        {/* Password with show/hide */}
+        {/* Password */}
         <div className="relative">
           <input
             name="password"
             type={showPassword ? "text" : "password"}
-            value={formData.password}
-            onChange={handleChange}
             placeholder="Enter your password"
             required
-            className="block w-full px-4 py-2 border border-gray-300 rounded-md"
+            value={formData.password}
+            onChange={handleChange}
+            className="block w-full px-4 py-2 border rounded-md"
           />
 
           <button
@@ -86,25 +84,49 @@ const LoginForm = ({ onSwitch }) => {
           </a>
         </p>
 
-
+        {/* Login Button */}
         <button
           type="submit"
           disabled={!isFormValid}
-          className={`w-full py-2 px-4 rounded-md font-medium text-white 
-            ${
-              isFormValid
-                ? "bg-blue-600 hover:bg-blue-700"
-                : "bg-gray-400 cursor-not-allowed"
-            }
-          `}
+          className={`w-full py-2 px-4 rounded-md text-white font-medium ${
+            isFormValid
+              ? "bg-blue-600 hover:bg-blue-700"
+              : "bg-gray-400 cursor-not-allowed"
+          }`}
         >
           Login
         </button>
+
+        {/* Google Login */}
+        <div className="mt-4 flex justify-center">
+          <GoogleLogin
+            onSuccess={async (credentialResponse) => {
+              try {
+                const res = await axios.post(
+                  "http://localhost:5000/api/auth/google-login",
+                  { credential: credentialResponse.credential },
+                  { withCredentials: true }
+                );
+
+                saveAccessToken(res.data.accessToken);
+
+                // Directly set user in context
+                setUser(res.data.user);
+
+                navigate("/");
+              } catch (err) {
+                console.error("Google login failed:", err);
+                alert("Google login failed");
+              }
+            }}
+            onError={() => alert("Google login failed")}
+          />
+        </div>
       </form>
 
-      <p className="text-center text-sm text-gray-600">
-        Don't have an account?{" "}
-        <button onClick={onSwitch} className="text-blue-600 hover:underline font-medium">
+      <p className="text-center text-sm">
+        Don’t have an account?{" "}
+        <button onClick={onSwitch} className="text-blue-600 hover:underline">
           Sign Up
         </button>
       </p>

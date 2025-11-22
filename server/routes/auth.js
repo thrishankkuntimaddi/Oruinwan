@@ -3,22 +3,41 @@
 const express = require("express");
 const router = express.Router();
 
-const authController = require("../controllers/authController");
-const authMiddleware = require("../middleware/auth");
+const {
+  signup,
+  login,
+  verifyEmail,
+  refresh,
+  logout,
+  logoutAll,
+  forgotPassword,
+  resetPassword,
+  getMe,
+  updateMe,
+  updatePassword,
+  googleLogin,
+  googleAuth,
+} = require("../controllers/authController");
+
+const requireAuth = require("../middleware/auth");
 
 // AUTH ROUTES
-router.post("/signup", authController.signup);
-router.get("/verify-email", authController.verifyEmail);
-router.post("/login", authController.login);
-router.get("/refresh", authController.refresh);
-router.post("/logout", authController.logout);
-router.post("/logout-all", authController.logoutAll);
-router.post("/forgot-password", authController.forgotPassword);
-router.post("/reset-password", authController.resetPassword);
+router.post("/signup", signup);
+router.get("/verify-email", verifyEmail);
+router.post("/login", login);
+router.get("/refresh", refresh);
+router.post("/logout", logout);
+router.post("/logout-all", logoutAll);
+router.post("/forgot-password", forgotPassword);
+router.post("/reset-password", resetPassword);
 
 // PROFILE ROUTES
-router.get("/me", authMiddleware, authController.getMe);
-router.put("/me", authMiddleware, authController.updateMe);
-router.put("/me/password", authMiddleware, authController.updatePassword);
+router.get("/me", requireAuth, getMe);
+router.put("/me", requireAuth, updateMe);
+router.put("/me/password", requireAuth, updatePassword);
+
+// GOOGLE LOGIN
+router.post("/google-login", googleLogin);
+router.post("/google", googleAuth);  // alias
 
 module.exports = router;
