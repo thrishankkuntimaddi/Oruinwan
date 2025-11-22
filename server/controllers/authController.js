@@ -62,6 +62,7 @@ exports.signup = async (req, res) => {
     await user.save();
 
     const verifyUrl = `${process.env.FRONTEND_URL}/verify-email?token=${rawToken}&email=${encodeURIComponent(email)}`;
+    console.log("Verify URL:", verifyUrl);
 
     await sendEmail({
       to: email,
