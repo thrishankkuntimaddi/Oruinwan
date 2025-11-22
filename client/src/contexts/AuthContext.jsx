@@ -1,36 +1,70 @@
-import React, { createContext, useState, useEffect, useCallback } from "react";
+import React, { createContext, useContext, useState, useEffect } from "react";
 
-export const AuthContext = createContext();
+export const AuthContext = createContext(null);
 
-export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);       // user object
-  const [accessToken, setAccessToken] = useState(null); // short lived token
-  const [loading, setLoading] = useState(true); // loading app on startup
+export const AuthProvider = ({ children }) => {
+  const [user, setUser] = useState(null);     // logged in user
+  const [loading, setLoading] = useState(true); // loading initial user
+  const [accessToken, setAccessToken] = useState(null);
 
-  // ---------------------------------------------------------
-  // 1) LOGIN FUNCTION
-  // ---------------------------------------------------------
-  const login = async (email, password) => {
-    const res = await fetch("/api/auth/login", {
+  // ------------------------------------------------------------
+  // 1. LOAD USER ON APP START (using /me)
+  // ------------------------------------------------------------
+  const loadUser = async () => {
+    try {
+      const res = await fetch("http://localhost:5000/api/auth/me", {
+        credentials: "include",
+      });
+
+      // New access token might be sent via header
+      const newAT = res.headers.get("x-access-token");
+      if (newAT) setAccessToken(newAT);
+
+      if (res.ok) {
+        const data = await res.json();
+        setUser(data);
+      } else {
+        setUser(null);
+      }
+    } catch (err) {
+      setUser(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadUser();
+  }, []);
+
+  // ------------------------------------------------------------
+  // 2. LOGIN
+  // ------------------------------------------------------------
+  const login = async ({ email, password }) => {
+    const res = await fetch("http://localhost:5000/api/auth/login", {
       method: "POST",
-      credentials: "include", // IMPORTANT: includes refresh cookie
       headers: { "Content-Type": "application/json" },
+      credentials: "include",
       body: JSON.stringify({ email, password }),
     });
 
     const data = await res.json();
-    if (!res.ok) throw new Error(data.message || "Login failed");
 
-    setUser(data.user);
+    if (!res.ok) {
+      throw new Error(data.message || "Login failed");
+    }
+
     setAccessToken(data.accessToken);
-    return true;
+    setUser(data.user);
+
+    return data;
   };
 
-  // ---------------------------------------------------------
-  // 2) LOGOUT FUNCTION
-  // ---------------------------------------------------------
+  // ------------------------------------------------------------
+  // 3. LOGOUT
+  // ------------------------------------------------------------
   const logout = async () => {
-    await fetch("/api/auth/logout", {
+    await fetch("http://localhost:5000/api/auth/logout", {
       method: "POST",
       credentials: "include",
     });
@@ -39,77 +73,65 @@ export function AuthProvider({ children }) {
     setAccessToken(null);
   };
 
-  // ---------------------------------------------------------
-  // 3) AUTO REFRESH TOKEN
-  // called automatically when accessToken expires OR on page load
-  // ---------------------------------------------------------
-  const refreshAccessToken = useCallback(async () => {
-    try {
-      const res = await fetch("/api/auth/refresh", {
-        method: "GET",
-        credentials: "include",
-      });
+  // ------------------------------------------------------------
+  // 4. UPDATE PROFILE
+  // ------------------------------------------------------------
+  const updateProfile = async (updates) => {
+    const res = await fetch("http://localhost:5000/api/auth/me", {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
+      credentials: "include",
+      body: JSON.stringify(updates),
+    });
 
-      const data = await res.json();
-      if (!res.ok) {
-        setUser(null);
-        setAccessToken(null);
-        return null;
-      }
+    const data = await res.json();
 
-      // only refresh token returns the new access token
-      if (data.accessToken) {
-        setAccessToken(data.accessToken);
-      }
+    if (!res.ok) throw new Error(data.message);
 
-      return data.accessToken;
-    } catch (err) {
-      setUser(null);
-      setAccessToken(null);
-      return null;
-    }
-  }, []);
+    setUser(data.user);  // update local user
 
-  // ---------------------------------------------------------
-  // 4) AUTO LOGIN ON PAGE RELOAD
-  // (App loads → tries refresh endpoint → sets user)
-  // ---------------------------------------------------------
-  useEffect(() => {
-    async function initAuth() {
-      const token = await refreshAccessToken();
+    return data;
+  };
 
-      if (token) {
-        // get user details by decoding token OR call a "me" endpoint
-        const payload = JSON.parse(atob(token.split(".")[1]));
-        setUser({
-          id: payload.id || payload.sub,
-          email: payload.email,
-          roles: payload.roles || ["user"],
-          verified: payload.verified
-        });
-      }
+  // ------------------------------------------------------------
+  // 5. UPDATE PASSWORD
+  // ------------------------------------------------------------
+  const updatePassword = async (oldPassword, newPassword) => {
+    const res = await fetch("http://localhost:5000/api/auth/me/password", {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
+      credentials: "include",
+      body: JSON.stringify({ oldPassword, newPassword }),
+    });
 
-      setLoading(false);
-    }
+    const data = await res.json();
 
-    initAuth();
-  }, [refreshAccessToken]);
+    if (!res.ok) throw new Error(data.message);
 
-  // ---------------------------------------------------------
-  // GLOBAL CONTEXT VALUES
-  // ---------------------------------------------------------
+    return data;
+  };
+
   return (
     <AuthContext.Provider
       value={{
         user,
+        loading,
         accessToken,
         login,
         logout,
-        loading,
-        refreshAccessToken,
+        updateProfile,
+        updatePassword,
       }}
     >
       {children}
     </AuthContext.Provider>
   );
-}
+};
+
+export const useAuth = () => useContext(AuthContext);

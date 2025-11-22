@@ -1,8 +1,7 @@
 // src/App.jsx
-import VerifyEmail from './pages/VerifyEmail';
-
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { useState } from "react";
+
 import Sidebar from "./components/SidebarComp/Sidebar";
 import Home from "./pages/SidebarComp/Home";
 import Messages from "./pages/SidebarComp/Messages";
@@ -10,54 +9,43 @@ import MyTasks from "./pages/SidebarComp/MyTasks";
 import Blogs from "./pages/SidebarComp/Blogs";
 import LoginPage from "./pages/LoginPageComp/LoginPage";
 import ChttrixAIChat from "./components/chttrixAIComp/ChttrixAIChat";
+import VerifyEmail from "./pages/VerifyEmail";
 import RequireAuth from "./components/RequireAuth";
 
-
 function App() {
-  const [activePage, setActivePage] = useState("Home");
-  const [showAI, setShowAI] = useState(false); 
-
-  const renderPage = () => {
-    switch (activePage) {
-      case "Messages":
-        return <Messages />;
-      case "MyTasks":
-        return <MyTasks />;
-      case "Blogs":
-        return <Blogs />;
-      default:
-        return <Home />;
-    }
-  };
+  const [showAI, setShowAI] = useState(false);
 
   return (
     <Router>
       <Routes>
+        
+        {/* PROTECTED ROUTE */}
         <Route
-          path="/"
+          path="/*"
           element={
             <RequireAuth>
               <div className="flex h-screen overflow-hidden">
-                <Sidebar
-                  onNavigate={setActivePage}
-                  onAIClick={() => setShowAI(true)}
-                />
+                <Sidebar onAIClick={() => setShowAI(true)} />
+
                 <main className="flex-1 overflow-y-auto bg-gray-50 p-6">
-                  {renderPage()}
+                  <Routes>
+                    <Route path="/" element={<Home />} />
+                    <Route path="/messages" element={<Messages />} />
+                    <Route path="/tasks" element={<MyTasks />} />
+                    <Route path="/blogs" element={<Blogs />} />
+                  </Routes>
                 </main>
               </div>
 
-              {/* Draggable/Resizable AI Assistant Chat Popup */}
-              {showAI && (
-                <ChttrixAIChat
-                  onClose={() => setShowAI(false)}
-                />
-              )}
+              {showAI && <ChttrixAIChat onClose={() => setShowAI(false)} />}
             </RequireAuth>
           }
         />
+
+        {/* PUBLIC ROUTES */}
         <Route path="/login" element={<LoginPage />} />
         <Route path="/verify-email" element={<VerifyEmail />} />
+
       </Routes>
     </Router>
   );

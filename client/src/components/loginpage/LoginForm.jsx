@@ -28,13 +28,14 @@ const LoginForm = ({ onSwitch }) => {
     if (!isFormValid) return;
 
     try {
-      await login(formData.email, formData.password); // use AuthContext login
+      await login(formData); // <-- FIXED
       alert("Login successful!");
-      navigate("/"); // redirect to home/dashboard
+      navigate("/");
     } catch (err) {
       alert(err.message || "Login failed");
     }
   };
+
 
   return (
     <div className="space-y-6">
