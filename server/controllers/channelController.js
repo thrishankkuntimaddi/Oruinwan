@@ -67,6 +67,24 @@ exports.getMyChannels = async (req, res) => {
 };
 
 /**
+ * Get all public channels (for discovery)
+ */
+exports.getPublicChannels = async (req, res) => {
+  try {
+    // Return all public channels
+    const channels = await Channel.find({ isPrivate: false })
+      .select("_id name description members createdBy createdAt")
+      .sort({ createdAt: -1 })
+      .lean();
+
+    return res.json({ channels });
+  } catch (err) {
+    console.error("GET PUBLIC CHANNELS ERROR:", err);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+
+/**
  * Invite / add a member to a channel
  * POST /channels/:id/invite  { userId }
  * Only channel members (or createdBy) can invite (simple rule).

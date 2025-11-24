@@ -1,5 +1,5 @@
 // client/src/components/messagesComp/MessageList.jsx
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import axios from "axios";
 import { io } from "socket.io-client";
 import CreateChannelModal from "./CreateChannelModal";
@@ -34,22 +34,96 @@ export default function MessageList({ onSelectChat }) {
   const myId = getMyId();
 
   /* -------------------------------------------------
-     LOAD INITIAL CHAT LIST
+     LOAD INITIAL CHAT LIST + ALL USERS (Slack-style)
   ------------------------------------------------- */
-  useEffect(() => {
-    async function load() {
-      try {
-        const token = localStorage.getItem("accessToken");
-        const headers = token ? { Authorization: `Bearer ${token}` } : {};
-        const res = await axios.get(`${API_BASE}/api/chat/list`, { headers });
+  const loadAllChats = useCallback(async () => {
+    try {
+      const token = localStorage.getItem("accessToken");
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
-        setItems(res.data.chats || []);
-      } catch (err) {
-        console.error("Failed to load chat list:", err);
-      }
+      // Fetch existing chats (DMs & Channels with history)
+      const chatsRes = await axios.get(`${API_BASE}/api/chat/list`, { headers });
+      const existingChats = chatsRes.data.chats || [];
+
+      // Fetch all joined channels (to ensure we show empty channels too)
+      const channelsRes = await axios.get(`${API_BASE}/api/chat/channels`, { headers });
+      const myChannels = channelsRes.data.channels || [];
+
+      // Fetch all users in workspace
+      const usersRes = await axios.get(`${API_BASE}/api/auth/users`, { headers });
+      const allUsers = usersRes.data.users || [];
+
+      // 1. Process Channels
+      const channelMap = new Map();
+      existingChats
+        .filter(c => c.type === "channel")
+        .forEach(c => channelMap.set(String(c.id), c));
+
+      const mergedChannels = myChannels.map(ch => {
+        const existing = channelMap.get(String(ch._id));
+        if (existing) return existing;
+
+        return {
+          type: "channel",
+          id: ch._id,
+          name: ch.name,
+          lastMessage: "",
+          lastMessageAt: ch.createdAt,
+          unreadCount: 0,
+          isChannelEntry: true
+        };
+      });
+
+      // 2. Process DMs
+      const dmMap = new Map();
+      existingChats
+        .filter(c => c.type === "dm")
+        .forEach(c => dmMap.set(String(c.id), c));
+
+      const mergedDMs = allUsers
+        .filter(u => String(u._id) !== String(myId))
+        .map(user => {
+          const existing = dmMap.get(String(user._id));
+          if (existing) return existing;
+
+          return {
+            type: "dm",
+            id: user._id,
+            name: user.username,
+            profilePicture: user.profilePicture,
+            email: user.email,
+            lastMessage: "",
+            lastMessageAt: null,
+            unreadCount: 0,
+            isUserEntry: true
+          };
+        });
+
+      // 3. Combine and Sort
+      const sortedChannels = mergedChannels.sort((a, b) => {
+        const timeA = new Date(a.lastMessageAt || 0);
+        const timeB = new Date(b.lastMessageAt || 0);
+        if (timeA.getTime() !== timeB.getTime()) return timeB - timeA;
+        return a.name.localeCompare(b.name);
+      });
+
+      const sortedDMs = mergedDMs.sort((a, b) => {
+        const timeA = new Date(a.lastMessageAt || 0);
+        const timeB = new Date(b.lastMessageAt || 0);
+        if (!!a.lastMessage !== !!b.lastMessage) return !!b.lastMessage - !!a.lastMessage;
+        if (a.lastMessage && b.lastMessage) return timeB - timeA;
+        return a.name.localeCompare(b.name);
+      });
+
+      setItems([...sortedChannels, ...sortedDMs]);
+    } catch (err) {
+      console.error("Failed to load chat list:", err);
     }
-    load();
-  }, []);
+  }, [myId]);
+
+  useEffect(() => {
+    loadAllChats();
+  }, [loadAllChats]);
 
   /* -------------------------------------------------
      SOCKET: LISTEN FOR NEW MESSAGES
@@ -132,6 +206,7 @@ export default function MessageList({ onSelectChat }) {
             lastMessage: "",
             lastMessageAt: channel.createdAt,
             unreadCount: 0,
+            isChannelEntry: true
           },
           ...prev,
         ];
@@ -150,6 +225,7 @@ export default function MessageList({ onSelectChat }) {
             lastMessage: "",
             lastMessageAt: new Date().toISOString(),
             unreadCount: 0,
+            isChannelEntry: true
           },
           ...prev,
         ];
@@ -245,7 +321,8 @@ export default function MessageList({ onSelectChat }) {
                 name: ch.name,
                 lastMessage: "",
                 lastMessageAt: ch.createdAt,
-                unreadCount: 0
+                unreadCount: 0,
+                isChannelEntry: true
               },
               ...prev
             ]);
@@ -255,20 +332,11 @@ export default function MessageList({ onSelectChat }) {
 
       {showJoin && (
         <JoinChannelModal
+          currentUserId={myId}
           onClose={() => setShowJoin(false)}
           onJoined={() => {
             // Reload chat list after joining
-            async function reload() {
-              try {
-                const token = localStorage.getItem("accessToken");
-                const headers = token ? { Authorization: `Bearer ${token}` } : {};
-                const res = await axios.get(`${API_BASE}/api/chat/list`, { headers });
-                setItems(res.data.chats || []);
-              } catch (err) {
-                console.error("Failed to reload chat list:", err);
-              }
-            }
-            reload();
+            loadAllChats();
           }}
         />
       )}
@@ -291,75 +359,134 @@ export default function MessageList({ onSelectChat }) {
 
       {/* List */}
       <div className="flex-1 overflow-y-auto">
-        {filtered.map((item) => (
-          <div
-            key={`${item.type}_${item.id}`}
-            className="flex items-center gap-4 px-4 py-3 hover:bg-gray-100 cursor-pointer"
-            onClick={async () => {
-              onSelectChat(item);
+        {(() => {
+          // Separate items into sections
+          const channels = filtered.filter(item => item.type === "channel");
+          const dms = filtered.filter(item => item.type === "dm");
 
-              // reset unread server-side
-              try {
-                const token = localStorage.getItem("accessToken");
-                const headers = token ? { Authorization: `Bearer ${token}` } : {};
-                await axios.post(`${API_BASE}/api/chat/reset-unread`, {
-                  type: item.type,
-                  id: item.id
-                }, { headers });
-              } catch (err) {
-                console.error("reset unread failed:", err);
-              }
-
-              // reset local
-              setItems((prev) =>
-                prev.map((i) =>
-                  i.type === item.type && String(i.id) === String(item.id)
-                    ? { ...i, unreadCount: 0 }
-                    : i
-                )
-              );
-            }}
-          >
-            {/* Avatar */}
-            {item.type === "dm" ? (
-              <div
-                className="h-12 w-12 bg-gray-300 rounded-full"
-                style={{
-                  backgroundImage: `url(${item.profilePicture || "/default-avatar.png"})`,
-                  backgroundSize: "cover",
-                }}
-              />
-            ) : (
-              <div className="h-12 w-12 bg-gray-200 rounded-lg flex items-center justify-center">
-                #
-              </div>
-            )}
-
-            {/* Text */}
-            <div className="flex-1">
-              <div className="flex justify-between">
-                <p className="font-medium">{item.name}</p>
-                <p className="text-sm text-gray-500">
-                  {fmtShort(item.lastMessageAt)}
-                </p>
-              </div>
-
-              <div className="flex justify-between items-center">
-                <p className="text-gray-600 text-sm line-clamp-1">
-                  {item.lastMessage || "No messages yet"}
-                </p>
-
-                {item.unreadCount > 0 && (
-                  <div className="bg-blue-600 text-white text-xs rounded-full px-2 py-0.5">
-                    {item.unreadCount}
+          return (
+            <>
+              {/* Channels Section */}
+              {channels.length > 0 && (
+                <>
+                  <div className="px-4 py-2 bg-gray-50 sticky top-0 z-10 flex justify-between items-center group">
+                    <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                      Channels
+                    </p>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowCreate(true);
+                      }}
+                      className="text-gray-400 hover:text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                      title="Create Channel"
+                    >
+                      +
+                    </button>
                   </div>
-                )}
-              </div>
-            </div>
-          </div>
-        ))}
+                  {channels.map((item) => (
+                    <ChatListItem key={`${item.type}_${item.id}`} item={item} />
+                  ))}
+                </>
+              )}
+
+              {/* Direct Messages Section */}
+              {dms.length > 0 && (
+                <>
+                  <div className="px-4 py-2 bg-gray-50 sticky top-0 z-10 mt-2">
+                    <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                      Direct Messages
+                    </p>
+                  </div>
+                  {dms.map((item) => (
+                    <ChatListItem key={`${item.type}_${item.id}`} item={item} />
+                  ))}
+                </>
+              )}
+
+              {/* Empty State */}
+              {filtered.length === 0 && (
+                <div className="flex items-center justify-center h-32">
+                  <p className="text-gray-500 text-sm">No results found</p>
+                </div>
+              )}
+            </>
+          );
+        })()}
       </div>
 
     </div>
   );
+
+  // Helper component for chat list items
+  function ChatListItem({ item }) {
+    return (
+      <div
+        className="flex items-center gap-4 px-4 py-3 hover:bg-gray-100 cursor-pointer"
+        onClick={async () => {
+          onSelectChat(item);
+
+          // reset unread server-side (only if there's message history)
+          if (!item.isUserEntry) {
+            try {
+              const token = localStorage.getItem("accessToken");
+              const headers = token ? { Authorization: `Bearer ${token}` } : {};
+              await axios.post(`${API_BASE}/api/chat/reset-unread`, {
+                type: item.type,
+                id: item.id
+              }, { headers });
+            } catch (err) {
+              console.error("reset unread failed:", err);
+            }
+          }
+
+          // reset local
+          setItems((prev) =>
+            prev.map((i) =>
+              i.type === item.type && String(i.id) === String(item.id)
+                ? { ...i, unreadCount: 0 }
+                : i
+            )
+          );
+        }}
+      >
+        {/* Avatar */}
+        {item.type === "dm" ? (
+          <div
+            className="h-12 w-12 bg-gray-300 rounded-full"
+            style={{
+              backgroundImage: `url(${item.profilePicture || "/default-avatar.png"})`,
+              backgroundSize: "cover",
+            }}
+          />
+        ) : (
+          <div className="h-12 w-12 bg-gray-200 rounded-lg flex items-center justify-center">
+            #
+          </div>
+        )}
+
+        {/* Text */}
+        <div className="flex-1">
+          <div className="flex justify-between">
+            <p className="font-medium">{item.name}</p>
+            <p className="text-sm text-gray-500">
+              {fmtShort(item.lastMessageAt)}
+            </p>
+          </div>
+
+          <div className="flex justify-between items-center">
+            <p className="text-gray-600 text-sm line-clamp-1">
+              {item.lastMessage || (item.isUserEntry ? "Start a conversation" : "No messages yet")}
+            </p>
+
+            {item.unreadCount > 0 && (
+              <div className="bg-blue-600 text-white text-xs rounded-full px-2 py-0.5">
+                {item.unreadCount}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
 }

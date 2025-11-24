@@ -16,7 +16,7 @@ export default function CreateChannelModal({ onClose, onCreated }) {
         try {
             const token = localStorage.getItem("accessToken");
             const headers = token ? { Authorization: `Bearer ${token}` } : {};
-            const res = await axios.post(`${API_BASE}/api/channels`, {
+            const res = await axios.post(`${API_BASE}/api/chat/channel/create`, {
                 name,
                 description,
                 isPrivate,

@@ -1,41 +1,44 @@
-// client/src/components/messagesComp/JoinChannelModal.jsx
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import axios from "axios";
 
 const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
-export default function JoinChannelModal({ onClose, onJoined }) {
+export default function JoinChannelModal({ onClose, onJoined, currentUserId }) {
     const [publicChannels, setPublicChannels] = useState([]);
     const [loading, setLoading] = useState(false);
 
-    useEffect(() => {
-        loadPublicChannels();
-    }, []);
-
-    const loadPublicChannels = async () => {
+    const loadPublicChannels = useCallback(async () => {
         try {
             const token = localStorage.getItem("accessToken");
             const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
-            // Get all channels and filter public ones
-            const res = await axios.get(`${API_BASE}/api/channels/my`, { headers });
-            const myChannels = res.data.channels || [];
+            // Get all public channels
+            const res = await axios.get(`${API_BASE}/api/chat/channels/public`, { headers });
+            const allPublic = res.data.channels || [];
 
-            // For now, show channels user is not a member of
-            // In a real app, you'd have a separate endpoint for public channels
-            setPublicChannels(myChannels.filter(ch => !ch.isPrivate));
+            // Filter out channels where user is already a member
+            const notJoined = allPublic.filter(ch =>
+                !ch.members.some(m => String(m) === String(currentUserId)) &&
+                !ch.members.some(m => String(m._id) === String(currentUserId)) // Handle populated/unpopulated
+            );
+
+            setPublicChannels(notJoined);
         } catch (err) {
             console.error("Load public channels failed:", err);
         }
-    };
+    }, [currentUserId]);
+
+    useEffect(() => {
+        loadPublicChannels();
+    }, [loadPublicChannels]);
 
     const handleJoin = async (channelId) => {
         setLoading(true);
         try {
             const token = localStorage.getItem("accessToken");
-            const headers = token ? { Authorization: `Bearer ${token}` } : {};
+            const headers = token ? { Authorization: `Bearer ${token} ` } : {};
 
-            await axios.post(`${API_BASE}/api/channels/${channelId}/join`, {}, { headers });
+            await axios.post(`${API_BASE} /api/chat / channel / join`, { channelId }, { headers });
 
             alert("Joined channel successfully!");
             onJoined && onJoined();

@@ -36,11 +36,18 @@ router.get("/me", requireAuth, getMe);
 router.put("/me", requireAuth, updateMe);
 router.put("/me/password", requireAuth, updatePassword);
 
-// USERS LIST (for channel invitations)
+// USERS LIST (for DMs and channel invitations)
 router.get("/users", requireAuth, async (req, res) => {
   try {
+    const currentUserId = req.user.sub;
     const User = require("../models/User");
-    const users = await User.find().select("_id username profilePicture").limit(100);
+
+    // Get all users except the current user
+    const users = await User.find({ _id: { $ne: currentUserId } })
+      .select("_id username email profilePicture")
+      .limit(100)
+      .lean();
+
     res.json({ users });
   } catch (err) {
     console.error("GET USERS ERROR:", err);
