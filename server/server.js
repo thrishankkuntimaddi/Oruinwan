@@ -6,18 +6,12 @@ const cors = require("cors");
 const cookieParser = require("cookie-parser");
 const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
+const http = require("http");
+const { Server } = require("socket.io");
+const registerChatHandlers = require("./socket");
 
 // Initialize app
 const app = express();
-
-app.use(cookieParser());
-
-app.use(cors({
-  origin: "http://localhost:3000",
-  credentials: true
-}));
-
-
 
 app.set("trust proxy", 1);
 
@@ -33,8 +27,6 @@ app.use(
     credentials: true,
   })
 );
-app.use(express.json());
-app.use(cookieParser());
 
 // Rate limiting (protect auth endpoints)
 const limiter = rateLimit({
@@ -42,18 +34,70 @@ const limiter = rateLimit({
   max: 20,
 });
 app.use("/api/auth", limiter);
-app.use('/api/auth', require('./routes/auth'));
-
 
 // Connect to MongoDB
 mongoose
   .connect(process.env.MONGO_URI)
   .then(() => console.log("MongoDB Connected ✔"))
-  .catch((err) => console.log("MongoDB Error ❌", err));0
+  .catch((err) => console.log("MongoDB Error ❌", err));
 
 // Routes
-app.use('/api/auth', require('./routes/auth'));
+app.use("/api/auth", require("./routes/auth"));
+app.use("/api/messages", require("./routes/messages"));
+app.use("/api/chat", require("./routes/chatList"));
+app.use("/api/channels", require("./routes/channels"));
 
-// Start Server
+// ---------------------------------------------------------
+// SOCKET.IO SETUP
+// ---------------------------------------------------------
+
+// Create HTTP server wrapper
+const httpServer = http.createServer(app);
+
+// Create Socket.io server
+const io = new Server(httpServer, {
+  cors: {
+    origin: process.env.FRONTEND_URL || "http://localhost:3000",
+    methods: ["GET", "POST"],
+    credentials: true,
+  },
+});
+
+// Make io available to controllers
+app.set("io", io);
+
+// SOCKET AUTH (using Access Token)
+io.use(async (socket, next) => {
+  try {
+    const token = socket.handshake.auth?.token;
+
+    if (!token) {
+      return next(new Error("No token"));
+    }
+
+    const jwt = require("jsonwebtoken");
+    const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
+
+    socket.user = { id: decoded.sub };
+    next();
+  } catch (err) {
+    console.error("SOCKET AUTH ERROR:", err);
+    next(new Error("Authentication failed"));
+  }
+});
+
+// Register socket events
+io.on("connection", (socket) => {
+  console.log("User connected:", socket.user.id);
+
+  registerChatHandlers(io, socket);
+});
+
+// ---------------------------------------------------------
+// START SERVER
+// ---------------------------------------------------------
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
+httpServer.listen(PORT, () =>
+  console.log(`Server (Socket.io + Express) running on port ${PORT}`)
+);

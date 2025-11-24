@@ -282,8 +282,11 @@ exports.forgotPassword = async (req, res) => {
     const { email } = req.body;
 
     const user = await User.findOne({ email });
-    if (!user)
+
+    if (!user) {
+      console.log("NO USER FOUND, sending generic response");
       return res.json({ message: "If that email exists, reset link sent" });
+    }
 
     const raw = crypto.randomBytes(32).toString("hex");
     const hash = sha256(raw);
@@ -293,6 +296,8 @@ exports.forgotPassword = async (req, res) => {
     await user.save();
 
     const url = `${process.env.FRONTEND_URL}/reset-password?token=${raw}&email=${encodeURIComponent(email)}`;
+
+    console.log("RESET URL:", url);
 
     await sendEmail({
       to: email,
@@ -306,6 +311,7 @@ exports.forgotPassword = async (req, res) => {
     return res.status(500).json({ message: "Server error" });
   }
 };
+
 
 // ----------------------------------------------------
 // RESET PASSWORD

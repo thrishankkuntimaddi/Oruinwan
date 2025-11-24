@@ -1,108 +1,365 @@
-// components/MessageList.jsx
-import { useState } from "react";
+// client/src/components/messagesComp/MessageList.jsx
+import { useEffect, useState, useRef } from "react";
+import axios from "axios";
+import { io } from "socket.io-client";
+import CreateChannelModal from "./CreateChannelModal";
+import JoinChannelModal from "./JoinChannelModal";
 
-const messagesData = {
-  all: [
-    {
-      type: "dm",
-      name: "Thrishank",
-      status: "Active",
-    },
-    {
-      type: "dm",
-      name: "Muzamil",
-      status: "Active",
-    },
-    {
-      type: "dm",
-      name: "Preethi",
-      status: "Active",
-    },
-    { type: "channel", name: "Design Team", status: "Active" },
-    { type: "channel", name: "General", status: "Active" },
-    { type: "channel", name: "Random", status: "Active" }
-  ]
-};
+const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
 const Tabs = ["All", "Direct Messages", "Channels"];
 
 export default function MessageList({ onSelectChat }) {
   const [activeTab, setActiveTab] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
+  const [items, setItems] = useState([]);
+  const [showCreate, setShowCreate] = useState(false);
+  const [showJoin, setShowJoin] = useState(false);
 
-  const filteredMessages = messagesData.all.filter((item) => {
-    const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase());
-    if (activeTab === "All") return matchesSearch;
-    if (activeTab === "Direct Messages") return item.type === "dm" && matchesSearch;
-    if (activeTab === "Channels") return item.type === "channel" && matchesSearch;
+  const socketRef = useRef(null);
 
+  /* -------------------------------------------------
+     GET MY USER ID FROM TOKEN
+  ------------------------------------------------- */
+  function getMyId() {
+    try {
+      const t = localStorage.getItem("accessToken");
+      if (!t) return null;
+      const payload = JSON.parse(atob(t.split(".")[1]));
+      return payload.sub || payload.id;
+    } catch (e) {
+      return null;
+    }
+  }
+  const myId = getMyId();
+
+  /* -------------------------------------------------
+     LOAD INITIAL CHAT LIST
+  ------------------------------------------------- */
+  useEffect(() => {
+    async function load() {
+      try {
+        const token = localStorage.getItem("accessToken");
+        const headers = token ? { Authorization: `Bearer ${token}` } : {};
+        const res = await axios.get(`${API_BASE}/api/chat/list`, { headers });
+
+        setItems(res.data.chats || []);
+      } catch (err) {
+        console.error("Failed to load chat list:", err);
+      }
+    }
+    load();
+  }, []);
+
+  /* -------------------------------------------------
+     SOCKET: LISTEN FOR NEW MESSAGES
+  ------------------------------------------------- */
+  useEffect(() => {
+    const token = localStorage.getItem("accessToken");
+    const socket = io(API_BASE, { auth: { token }, transports: ["websocket"] });
+
+    socketRef.current = socket;
+
+    socket.on("new-message", ({ message }) => {
+      if (!message) return;
+
+      const isChannel = !!message.channelId;
+      const chatId = isChannel
+        ? message.channelId
+        : message.senderId === myId
+          ? message.receiverId
+          : message.senderId;
+
+      const type = isChannel ? "channel" : "dm";
+
+      const senderId =
+        typeof message.senderId === "object"
+          ? message.senderId._id
+          : message.senderId;
+
+      const previewText =
+        message.text ||
+        (message.attachments?.length
+          ? `[${message.attachments[0].type}]`
+          : "");
+
+      const now = message.createdAt || new Date().toISOString();
+
+      setItems((prev) => {
+        const arr = [...prev];
+        const idx = arr.findIndex(
+          (it) => it.type === type && String(it.id) === String(chatId)
+        );
+
+        if (idx >= 0) {
+          // update
+          arr[idx].lastMessage = previewText;
+          arr[idx].lastMessageAt = now;
+
+          // unread
+          if (senderId !== myId) {
+            arr[idx].unreadCount = (arr[idx].unreadCount || 0) + 1;
+          }
+
+          // move to top
+          const updated = arr.splice(idx, 1)[0];
+          return [updated, ...arr];
+        }
+
+        // new chat
+        const newItem = {
+          type,
+          id: chatId,
+          name: message.channelName || message.senderName || "User",
+          lastMessage: previewText,
+          lastMessageAt: now,
+          unreadCount: senderId !== myId ? 1 : 0,
+        };
+
+        return [newItem, ...arr];
+      });
+    });
+
+    socket.on("channel-created", (channel) => {
+      setItems((prev) => {
+        // avoid duplicates
+        if (prev.some((it) => String(it.id) === String(channel._id))) return prev;
+        return [
+          {
+            type: "channel",
+            id: channel._id,
+            name: channel.name,
+            lastMessage: "",
+            lastMessageAt: channel.createdAt,
+            unreadCount: 0,
+          },
+          ...prev,
+        ];
+      });
+    });
+
+    socket.on("invited-to-channel", ({ channelId, channelName }) => {
+      // User was invited to a channel, add it to their list
+      setItems((prev) => {
+        if (prev.some((it) => String(it.id) === String(channelId))) return prev;
+        return [
+          {
+            type: "channel",
+            id: channelId,
+            name: channelName,
+            lastMessage: "",
+            lastMessageAt: new Date().toISOString(),
+            unreadCount: 0,
+          },
+          ...prev,
+        ];
+      });
+    });
+
+    socket.on("removed-from-channel", ({ channelId }) => {
+      // User was removed from a channel, remove it from their list
+      setItems((prev) => prev.filter((it) => !(it.type === "channel" && String(it.id) === String(channelId))));
+    });
+
+    return () => {
+      socket.disconnect();
+      socketRef.current = null;
+    };
+  }, [myId]);
+
+  /* -------------------------------------------------
+     FILTER RESULTS
+  ------------------------------------------------- */
+  const filtered = items.filter((item) => {
+    const txt = (item.name + " " + (item.lastMessage || "")).toLowerCase();
+    if (!txt.includes(searchQuery.toLowerCase())) return false;
+    if (activeTab === "All") return true;
+    if (activeTab === "Direct Messages" && item.type === "dm") return true;
+    if (activeTab === "Channels" && item.type === "channel") return true;
     return false;
   });
 
+  /* -------------------------------------------------
+     TIME FORMAT
+  ------------------------------------------------- */
+  function fmtShort(ts) {
+    if (!ts) return "";
+    const d = new Date(ts);
+    const now = new Date();
+    const diff = (now - d) / 1000;
+
+    if (diff < 60) return "now";
+    if (diff < 3600) return `${Math.floor(diff / 60)}m`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)}h`;
+
+    return d.toLocaleDateString();
+  }
+
+  /* -------------------------------------------------
+     RENDER
+  ------------------------------------------------- */
   return (
     <div className="h-full flex flex-col">
-      {/* Search Bar */}
+
+      {/* Search */}
       <div className="px-4 py-3">
         <div className="flex w-full rounded-lg h-12 bg-[#f0f2f4]">
           <div className="flex items-center justify-center pl-4">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 256 256">
-              <path d="M229.66,218.34l-50.07-50.06a88.11,88.11,0,1,0-11.31,11.31l50.06,50.07a8,8,0,0,0,11.32-11.32ZM40,112a72,72,0,1,1,72,72A72.08,72.08,0,0,1,40,112Z"></path>
-            </svg>
+            🔍
           </div>
           <input
             type="text"
             placeholder="Search"
+            className="flex-1 bg-[#f0f2f4] px-4 text-sm focus:outline-none"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="flex-1 bg-[#f0f2f4] focus:outline-none px-4 text-sm"
           />
         </div>
       </div>
 
+      {/* Channel Actions */}
+      <div className="flex items-center justify-end gap-2 px-4 py-2">
+        <button
+          onClick={() => setShowJoin(true)}
+          className="px-3 py-1 bg-green-500 text-white text-sm rounded hover:bg-green-600"
+        >
+          Join Channel
+        </button>
+        <button
+          onClick={() => setShowCreate(true)}
+          className="px-3 py-1 bg-blue-500 text-white text-sm rounded hover:bg-blue-600"
+        >
+          + Create Channel
+        </button>
+      </div>
+
+      {/* Modals */}
+      {showCreate && (
+        <CreateChannelModal
+          onClose={() => setShowCreate(false)}
+          onCreated={(ch) => {
+            setItems(prev => [
+              {
+                type: "channel",
+                id: ch._id,
+                name: ch.name,
+                lastMessage: "",
+                lastMessageAt: ch.createdAt,
+                unreadCount: 0
+              },
+              ...prev
+            ]);
+          }}
+        />
+      )}
+
+      {showJoin && (
+        <JoinChannelModal
+          onClose={() => setShowJoin(false)}
+          onJoined={() => {
+            // Reload chat list after joining
+            async function reload() {
+              try {
+                const token = localStorage.getItem("accessToken");
+                const headers = token ? { Authorization: `Bearer ${token}` } : {};
+                const res = await axios.get(`${API_BASE}/api/chat/list`, { headers });
+                setItems(res.data.chats || []);
+              } catch (err) {
+                console.error("Failed to reload chat list:", err);
+              }
+            }
+            reload();
+          }}
+        />
+      )}
+
       {/* Tabs */}
-      <div className="flex border-b border-[#dce0e5] px-4 gap-8">
-        {Tabs.map((tab) => (
+      <div className="flex border-b border-gray-200 px-4 gap-8">
+        {Tabs.map((t) => (
           <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            className={`flex flex-col items-center justify-center pb-[13px] pt-4 text-sm font-bold tracking-wide ${
-              activeTab === tab
-                ? "text-[#111418] border-b-[3px] border-[#111418]"
-                : "text-[#637488] border-b-[3px] border-transparent"
-            }`}
+            key={t}
+            onClick={() => setActiveTab(t)}
+            className={`pb-3 pt-3 text-sm font-semibold ${activeTab === t
+              ? "text-black border-b-2 border-black"
+              : "text-gray-500"
+              }`}
           >
-            {tab}
+            {t}
           </button>
         ))}
       </div>
 
-      {/* Messages List (scrollable area) */}
-      <div className="flex-1 overflow-y-auto pt-4">
-        {filteredMessages.map((item, idx) => (
+      {/* List */}
+      <div className="flex-1 overflow-y-auto">
+        {filtered.map((item) => (
           <div
-            key={idx}
-            className="flex items-center gap-4 px-4 py-2 min-h-[72px] hover:bg-gray-100 cursor-pointer"
-            onClick={() => onSelectChat(item)}
+            key={`${item.type}_${item.id}`}
+            className="flex items-center gap-4 px-4 py-3 hover:bg-gray-100 cursor-pointer"
+            onClick={async () => {
+              onSelectChat(item);
+
+              // reset unread server-side
+              try {
+                const token = localStorage.getItem("accessToken");
+                const headers = token ? { Authorization: `Bearer ${token}` } : {};
+                await axios.post(`${API_BASE}/api/chat/reset-unread`, {
+                  type: item.type,
+                  id: item.id
+                }, { headers });
+              } catch (err) {
+                console.error("reset unread failed:", err);
+              }
+
+              // reset local
+              setItems((prev) =>
+                prev.map((i) =>
+                  i.type === item.type && String(i.id) === String(item.id)
+                    ? { ...i, unreadCount: 0 }
+                    : i
+                )
+              );
+            }}
           >
+            {/* Avatar */}
             {item.type === "dm" ? (
               <div
-                className="bg-center bg-no-repeat bg-cover rounded-full h-14 w-14"
-                style={{ backgroundImage: `url(${item.image})` }}
-              ></div>
+                className="h-12 w-12 bg-gray-300 rounded-full"
+                style={{
+                  backgroundImage: `url(${item.profilePicture || "/default-avatar.png"})`,
+                  backgroundSize: "cover",
+                }}
+              />
             ) : (
-              <div className="flex items-center justify-center rounded-lg bg-[#f0f2f4] w-12 h-12">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 256 256">
-                  <path d="M224,88H175.4l8.47-46.57a8,8,0,0,0-15.74-2.86l-9,49.43H111.4l8.47-46.57a8,8,0,0,0-15.74-2.86L95.14,88H48a8,8,0,0,0,0,16H92.23L83.5,152H32a8,8,0,0,0,0,16H80.6l-8.47,46.57a8,8,0,0,0,6.44,9.3A7.79,7.79,0,0,0,80,224a8,8,0,0,0,7.86-6.57l9-49.43H144.6l-8.47,46.57a8,8,0,0,0,6.44,9.3A7.79,7.79,0,0,0,144,224a8,8,0,0,0,7.86-6.57l9-49.43H208a8,8,0,0,0,0-16H163.77l8.73-48H224a8,8,0,0,0,0-16Z" />
-                </svg>
+              <div className="h-12 w-12 bg-gray-200 rounded-lg flex items-center justify-center">
+                #
               </div>
             )}
-            <div className="flex flex-col justify-center">
-              <p className="text-[#111418] text-base font-medium line-clamp-1">{item.name}</p>
-              <p className="text-[#637488] text-sm font-normal line-clamp-2">{item.status}</p>
+
+            {/* Text */}
+            <div className="flex-1">
+              <div className="flex justify-between">
+                <p className="font-medium">{item.name}</p>
+                <p className="text-sm text-gray-500">
+                  {fmtShort(item.lastMessageAt)}
+                </p>
+              </div>
+
+              <div className="flex justify-between items-center">
+                <p className="text-gray-600 text-sm line-clamp-1">
+                  {item.lastMessage || "No messages yet"}
+                </p>
+
+                {item.unreadCount > 0 && (
+                  <div className="bg-blue-600 text-white text-xs rounded-full px-2 py-0.5">
+                    {item.unreadCount}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         ))}
       </div>
+
     </div>
   );
 }

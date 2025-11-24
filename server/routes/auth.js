@@ -36,6 +36,18 @@ router.get("/me", requireAuth, getMe);
 router.put("/me", requireAuth, updateMe);
 router.put("/me/password", requireAuth, updatePassword);
 
+// USERS LIST (for channel invitations)
+router.get("/users", requireAuth, async (req, res) => {
+  try {
+    const User = require("../models/User");
+    const users = await User.find().select("_id username profilePicture").limit(100);
+    res.json({ users });
+  } catch (err) {
+    console.error("GET USERS ERROR:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
 // GOOGLE LOGIN
 router.post("/google-login", googleLogin);
 router.post("/google", googleAuth);  // alias

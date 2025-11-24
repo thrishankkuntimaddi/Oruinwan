@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
+import { useContacts } from "../../contexts/ContactsContext";
 
 const ProfileSidebar = ({ onClose }) => {
   const { user, updateProfile, updatePassword, logout } = useAuth();
@@ -67,6 +68,8 @@ const ProfileSidebar = ({ onClose }) => {
 
     setIsChanged(changed);
   }, [formData, user]);
+
+  const { contacts } = useContacts();
 
   const passwordRules = {
     length: formData.newPassword.length >= 8 && formData.newPassword.length <= 16,
@@ -231,6 +234,28 @@ const ProfileSidebar = ({ onClose }) => {
             />
           </div>
         )}
+
+        {/* --- CONTACTS LIST --- */}
+        <div className="pt-4 border-t">
+          <h3 className="font-semibold text-gray-700 mb-2">Contacts</h3>
+
+          <div className="space-y-2 max-h-40 overflow-y-auto pr-2">
+            {contacts?.map((c) => (
+              <div key={c._id} className="flex items-center gap-3 p-2 rounded hover:bg-gray-100">
+                <img
+                  src={c.profilePicture || "/default-avatar.png"}
+                  alt=""
+                  className="h-10 w-10 rounded-full object-cover"
+                />
+                <div className="flex flex-col">
+                  <span className="font-medium">{c.username}</span>
+                  <span className="text-sm text-gray-500">{c.email}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
 
         {/* Security */}
         <div className="pt-4 border-t">

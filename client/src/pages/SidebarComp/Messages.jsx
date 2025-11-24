@@ -7,18 +7,20 @@ export default function Messages() {
 
   return (
     <div className="flex flex-col h-full w-full">
-      {/* Full height container */}
       <div className="flex flex-1 border rounded-lg shadow-md overflow-hidden">
 
-        {/* Left pane: Message List */}
+        {/* Left pane */}
         <div className="w-1/3 border-r border-gray-200 overflow-y-auto">
           <MessageList onSelectChat={setSelectedChat} />
         </div>
 
-        {/* Right pane: Chat Window or Placeholder */}
+        {/* Right pane */}
         <div className="flex-1 flex flex-col">
           {selectedChat ? (
-            <ChatWindow chat={selectedChat} onClose={() => setSelectedChat(null)} />
+            <ChatWindow
+              chat={selectedChat}
+              onClose={() => setSelectedChat(null)}
+            />
           ) : (
             <div className="flex items-center justify-center h-full text-gray-400">
               Select a chat to start messaging

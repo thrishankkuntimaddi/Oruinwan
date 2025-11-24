@@ -6,7 +6,7 @@ const CalendarWidget = () => {
 
   return (
     <div className="bg-white rounded-2xl shadow p-6">
-      <h2 className="text-lg font-semibold text-gray-900 mb-4">Upcoming Events</h2>
+      <h2 className="text-lg font-semibold text-gray-900 mb-4">Calendar Widget</h2>
       <ul className="space-y-2 text-sm text-gray-700">
         {events.map((ev, i) => (
           <li key={i}>

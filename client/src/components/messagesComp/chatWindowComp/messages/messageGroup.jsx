@@ -19,6 +19,9 @@ export default function MessageGroup({
   copyMessage,
   deleteMessage,
   infoMessage,
+  currentUserId,
+  onOpenThread,
+  threadCounts,
 }) {
   // This component just delegates to MessageItem — kept for future grouping logic
   return (
@@ -39,6 +42,9 @@ export default function MessageGroup({
       copyMessage={copyMessage}
       deleteMessage={deleteMessage}
       infoMessage={infoMessage}
+      currentUserId={currentUserId}
+      onOpenThread={onOpenThread}
+      threadCounts={threadCounts}
     />
   );
 }

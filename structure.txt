@@ -37,7 +37,17 @@
 │   │   │   │   └── SignupForm.jsx
 │   │   │   ├── messagesComp
 │   │   │   │   ├── chatWindowComp
-│   │   │   │   └── MessageList.jsx
+│   │   │   │   │   ├── chatWindow.css
+│   │   │   │   │   ├── chatWindow.jsx
+│   │   │   │   │   ├── footer
+│   │   │   │   │   ├── header
+│   │   │   │   │   ├── helpers
+│   │   │   │   │   ├── messages
+│   │   │   │   │   ├── modals
+│   │   │   │   │   ├── pinned
+│   │   │   │   │   └── toolbar
+│   │   │   │   ├── MessageList.jsx
+│   │   │   │   └── structure.txt
 │   │   │   ├── RequireAuth.jsx
 │   │   │   ├── SidebarComp
 │   │   │   │   ├── ProfileSidebar.jsx
@@ -69,28 +79,39 @@
 │   │   ├── setupTests.js
 │   │   └── utils
 │   │       └── tokenUtils.js
-│   └── tailwind.config.js
-├── package-lock.json
-├── package.json
+│   ├── structure.txt
+│   ├── tailwind.config.js
+│   └── yarn.lock
+├── SECURITY_SETUP_COMPLETE.md
 ├── SECURITY.md
 ├── server
 │   ├── controllers
-│   │   └── authController.js
+│   │   ├── authController.js
+│   │   └── messagesController.js
 │   ├── cookies.txt
+│   ├── Dockerfile
 │   ├── middleware
 │   │   └── auth.js
 │   ├── models
+│   │   ├── Channel.js
+│   │   ├── Message.js
 │   │   └── User.js
 │   ├── package-lock.json
 │   ├── package.json
 │   ├── routes
-│   │   └── auth.js
+│   │   ├── auth.js
+│   │   ├── chat.js
+│   │   └── messages.js
 │   ├── scripts
 │   │   └── migrateProfileNames.js
 │   ├── server.js
-│   └── utils
-│       ├── generateTokens.js
-│       └── sendEmail.js
-└── structure.txt
+│   ├── socket
+│   │   └── index.js
+│   ├── utils
+│   │   ├── generateTokens.js
+│   │   └── sendEmail.js
+│   └── yarn.lock
+├── structure.txt
+└── verify-security.sh
 
-26 directories, 68 files
+34 directories, 81 files

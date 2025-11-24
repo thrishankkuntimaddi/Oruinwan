@@ -1,0 +1,85 @@
+.
+├── package-lock.json
+├── package.json
+├── postcss.config.js
+├── public
+│   ├── assests
+│   │   ├── image.jpg
+│   │   ├── kpnbg301.svg
+│   │   └── logio.svg
+│   ├── index.html
+│   ├── logio.svg
+│   └── manifest.json
+├── README.md
+├── src
+│   ├── App.js
+│   ├── App.test.js
+│   ├── components
+│   │   ├── blogsComp
+│   │   │   ├── BlogCard.jsx
+│   │   │   ├── BlogDetailModal.jsx
+│   │   │   └── BlogModal.jsx
+│   │   ├── chttrixAIComp
+│   │   │   └── ChttrixAIChat.jsx
+│   │   ├── homewidgets
+│   │   │   ├── CalendarWidget.jsx
+│   │   │   ├── ClockWidget.jsx
+│   │   │   ├── HomeHeader.jsx
+│   │   │   ├── MessagePreview.jsx
+│   │   │   ├── MotivationalQuote.jsx
+│   │   │   ├── PersonalTodoList.jsx
+│   │   │   ├── SharedTodoList.jsx
+│   │   │   ├── TaskStats.jsx
+│   │   │   └── WeatherWidget.jsx
+│   │   ├── loginpage
+│   │   │   ├── LoginForm.jsx
+│   │   │   └── SignupForm.jsx
+│   │   ├── messagesComp
+│   │   │   ├── chatWindowComp
+│   │   │   │   ├── chatWindow.css
+│   │   │   │   ├── chatWindow.jsx
+│   │   │   │   ├── footer
+│   │   │   │   ├── header
+│   │   │   │   ├── helpers
+│   │   │   │   ├── messages
+│   │   │   │   ├── modals
+│   │   │   │   ├── pinned
+│   │   │   │   └── toolbar
+│   │   │   ├── MessageList.jsx
+│   │   │   └── structure.txt
+│   │   ├── RequireAuth.jsx
+│   │   ├── SidebarComp
+│   │   │   ├── ProfileSidebar.jsx
+│   │   │   └── Sidebar.jsx
+│   │   └── tasksComp
+│   │       ├── TaskHeader.jsx
+│   │       ├── TaskModal.jsx
+│   │       ├── TaskRow.jsx
+│   │       ├── TaskTable.jsx
+│   │       └── TaskTabs.jsx
+│   ├── contexts
+│   │   └── AuthContext.jsx
+│   ├── index.css
+│   ├── index.js
+│   ├── logo.svg
+│   ├── pages
+│   │   ├── LoginPageComp
+│   │   │   ├── ForgotPassword.jsx
+│   │   │   ├── LoginPage.jsx
+│   │   │   ├── OAuthSuccess.jsx
+│   │   │   └── ResetPassword.jsx
+│   │   ├── SidebarComp
+│   │   │   ├── Blogs.jsx
+│   │   │   ├── Home.jsx
+│   │   │   ├── Messages.jsx
+│   │   │   └── MyTasks.jsx
+│   │   └── VerifyEmail.jsx
+│   ├── reportWebVitals.js
+│   ├── setupTests.js
+│   └── utils
+│       └── tokenUtils.js
+├── structure.txt
+├── tailwind.config.js
+└── yarn.lock
+
+25 directories, 58 files

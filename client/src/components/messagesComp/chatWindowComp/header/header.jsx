@@ -12,6 +12,7 @@ export default function Header({
   setShowMenu,
   setSelectMode,
   setShowContactInfo,
+  setShowChannelManagement,
   muted,
   setMuted,
   blocked,
@@ -91,8 +92,16 @@ export default function Header({
 
           {showMenu && (
             <div onClick={(e) => e.stopPropagation()} className="absolute right-0 mt-2 w-48 bg-white border rounded shadow-md p-2 z-40 text-sm">
+              {chat.type === "channel" && setShowChannelManagement && (
+                <>
+                  <button className="w-full text-left px-2 py-1 hover:bg-gray-50 rounded" onClick={() => { setShowChannelManagement(true); setShowMenu(false); }}>
+                    Manage Channel
+                  </button>
+                  <div className="border-t my-1" />
+                </>
+              )}
               <button className="w-full text-left px-2 py-1 hover:bg-gray-50 rounded" onClick={() => { setShowContactInfo(true); setShowMenu(false); }}>
-                Contact Info
+                {chat.type === "channel" ? "Channel Info" : "Contact Info"}
               </button>
               <button className="w-full text-left px-2 py-1 hover:bg-gray-50 rounded" onClick={() => { setSelectMode(true); setShowMenu(false); }}>
                 Select Messages
