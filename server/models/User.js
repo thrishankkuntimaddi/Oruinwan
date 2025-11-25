@@ -44,6 +44,11 @@ const UserSchema = new mongoose.Schema(
 
     profile: ProfileSchema,
 
+    // Google OAuth fields (required by authController.js)
+    googleId: { type: String, unique: true, sparse: true },
+    profilePicture: { type: String },
+    googleAccount: { type: Boolean, default: false },
+
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now }
   },

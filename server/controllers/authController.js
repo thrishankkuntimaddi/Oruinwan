@@ -62,7 +62,13 @@ exports.signup = async (req, res) => {
     await user.save();
 
     const verifyUrl = `${process.env.FRONTEND_URL}/verify-email?token=${rawToken}&email=${encodeURIComponent(email)}`;
+
+    console.log("\n" + "=".repeat(80));
+    console.log("📧 EMAIL VERIFICATION REQUIRED");
+    console.log("User:", username);
+    console.log("Email:", email);
     console.log("Verify URL:", verifyUrl);
+    console.log("=".repeat(80) + "\n");
 
     await sendEmail({
       to: email,
@@ -195,13 +201,27 @@ exports.refresh = async (req, res) => {
     const newAccess = generateAccessToken(user);
     const newRefresh = generateRefreshToken(user);
 
-    user.refreshTokens = user.refreshTokens.filter(t => t.tokenHash !== refreshHash);
+    // CRITICAL FIX: Don't remove old token immediately!
+    // Instead, mark it with a grace period to handle race conditions
+    // (React StrictMode, double requests, etc.)
+    const oldTokenIndex = user.refreshTokens.findIndex(t => t.tokenHash === refreshHash);
 
+    if (oldTokenIndex !== -1) {
+      // Keep old token but mark it as expiring soon (10 second grace period)
+      user.refreshTokens[oldTokenIndex].expiresAt = new Date(Date.now() + 10000);
+    }
+
+    // Add new refresh token
     user.refreshTokens.push({
       tokenHash: sha256(newRefresh),
       expiresAt: new Date(Date.now() + REFRESH_DAYS * 86400000),
       deviceInfo: req.get("User-Agent") || "Unknown"
     });
+
+    // Clean up truly expired tokens
+    user.refreshTokens = user.refreshTokens.filter(
+      t => t.expiresAt > new Date()
+    );
 
     await user.save();
 
@@ -284,7 +304,7 @@ exports.forgotPassword = async (req, res) => {
     const user = await User.findOne({ email });
 
     if (!user) {
-      console.log("NO USER FOUND, sending generic response");
+      console.log("❌ NO USER FOUND for email:", email);
       return res.json({ message: "If that email exists, reset link sent" });
     }
 
@@ -297,7 +317,11 @@ exports.forgotPassword = async (req, res) => {
 
     const url = `${process.env.FRONTEND_URL}/reset-password?token=${raw}&email=${encodeURIComponent(email)}`;
 
-    console.log("RESET URL:", url);
+    console.log("\n" + "=".repeat(80));
+    console.log("🔐 PASSWORD RESET REQUEST");
+    console.log("Email:", email);
+    console.log("Reset URL:", url);
+    console.log("=".repeat(80) + "\n");
 
     await sendEmail({
       to: email,

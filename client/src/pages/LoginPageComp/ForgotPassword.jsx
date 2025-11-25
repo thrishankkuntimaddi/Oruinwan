@@ -1,9 +1,20 @@
 // client/src/pages/LoginPageComp/ForgotPassword.jsx
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useNavigate, Link } from "react-router-dom";
+import { useAuth } from "../../contexts/AuthContext";
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
+  const { user } = useAuth();
+  const navigate = useNavigate();
+
+  // Redirect logged-in users (they should use profile settings to change password)
+  useEffect(() => {
+    if (user) {
+      navigate("/", { replace: true });
+    }
+  }, [user, navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -35,11 +46,25 @@ export default function ForgotPassword() {
           >
             Send Reset Link
           </button>
+          <Link
+            to="/login"
+            className="block text-center text-sm text-blue-600 hover:underline mt-2"
+          >
+            Back to Login
+          </Link>
         </form>
       ) : (
-        <p className="text-green-600 mt-3">
-          If this email exists, a reset link has been sent.
-        </p>
+        <div>
+          <p className="text-green-600 mt-3">
+            If this email exists, a reset link has been sent.
+          </p>
+          <Link
+            to="/login"
+            className="block text-center text-sm text-blue-600 hover:underline mt-4"
+          >
+            Back to Login
+          </Link>
+        </div>
       )}
     </div>
   );

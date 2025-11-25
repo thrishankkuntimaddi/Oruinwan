@@ -46,6 +46,12 @@ module.exports = async function requireAuth(req, res, next) {
           return res.status(401).json({ message: "Invalid refresh token" });
         }
 
+        // Check if this specific token has expired
+        const tokenEntry = user.refreshTokens.find(t => t.tokenHash === refreshHash);
+        if (!tokenEntry || tokenEntry.expiresAt < new Date()) {
+          return res.status(401).json({ message: "Refresh token expired" });
+        }
+
         // Generate NEW access token (auto refresh)
         const newAccess = jwt.sign(
           { sub: user._id, roles: user.roles },

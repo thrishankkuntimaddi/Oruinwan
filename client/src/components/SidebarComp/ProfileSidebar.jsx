@@ -1,11 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from "../../contexts/AuthContext";
-import { useNavigate } from "react-router-dom";
 import { useContacts } from "../../contexts/ContactsContext";
 
 const ProfileSidebar = ({ onClose }) => {
   const { user, updateProfile, updatePassword, logout } = useAuth();
-  const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
     username: user?.username || "",
@@ -128,7 +126,8 @@ const ProfileSidebar = ({ onClose }) => {
 
   const handleLogout = async () => {
     await logout();
-    navigate("/login");
+    // Force full page reload to clear memory/cache and prevent "back button" access
+    window.location.replace("/login");
   };
 
   if (!user) return null;
@@ -150,9 +149,8 @@ const ProfileSidebar = ({ onClose }) => {
           <div
             className="h-20 w-20 rounded-full bg-center bg-cover shadow-md"
             style={{
-              backgroundImage: `url(${
-                user?.profilePicture || "../../assests/kpnbg301.svg"
-              })`,
+              backgroundImage: `url(${user?.profilePicture || "../../assests/kpnbg301.svg"
+                })`,
             }}
           />
         </div>
@@ -385,11 +383,10 @@ const ProfileSidebar = ({ onClose }) => {
           <button
             disabled={!isChanged}
             onClick={handleSave}
-            className={`px-4 py-2 text-sm rounded text-white ${
-              isChanged
-                ? "bg-blue-600 hover:bg-blue-700"
-                : "bg-gray-400 cursor-not-allowed"
-            }`}
+            className={`px-4 py-2 text-sm rounded text-white ${isChanged
+              ? "bg-blue-600 hover:bg-blue-700"
+              : "bg-gray-400 cursor-not-allowed"
+              }`}
           >
             Save Changes
           </button>

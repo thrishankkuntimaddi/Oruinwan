@@ -30,8 +30,22 @@ app.use(
 
 // Rate limiting (protect auth endpoints)
 const limiter = rateLimit({
-  windowMs: 60 * 1000,
-  max: 20,
+  windowMs: 60 * 1000, // 1 minute
+  max: 100, // Increased for development (reduce to 20 in production)
+  standardHeaders: true,
+  legacyHeaders: false,
+  // Skip rate limiting for frequently-called endpoints
+  skip: (req) => {
+    const path = req.path;
+    // Don't rate limit /me, /refresh, /users (used on every page load)
+    return path === '/me' || path === '/refresh' || path === '/users';
+  },
+  // Return JSON instead of plain text
+  handler: (req, res) => {
+    res.status(429).json({
+      message: "Too many requests, please try again later.",
+    });
+  },
 });
 app.use("/api/auth", limiter);
 
