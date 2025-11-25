@@ -1,399 +1,170 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import { useContacts } from "../../contexts/ContactsContext";
 
-const ProfileSidebar = ({ onClose }) => {
+const ProfileMenu = ({ onClose }) => {
   const { user, updateProfile, updatePassword, logout } = useAuth();
-
-  const [formData, setFormData] = useState({
-    username: user?.username || "",
-    email: user?.email || "",
-    phone: user?.phone || "",
-    dob: user?.dob || "",
-    about: user?.about || "",
-    company: user?.company || "",
-    showCompany: user?.showCompany ?? true,
-    oldPassword: "",
-    newPassword: "",
-    confirmPassword: "",
-  });
-
-  const [showSecurity, setShowSecurity] = useState(false);
-  const [showOld, setShowOld] = useState(false);
-  const [showNew, setShowNew] = useState(false);
-  const [showConfirm, setShowConfirm] = useState(false);
-
-  const [errors, setErrors] = useState({
-    mismatch: false,
-    samePassword: false,
-    rulesFailed: false,
-  });
-
-  const [isChanged, setIsChanged] = useState(false);
-
-  useEffect(() => {
-    if (!user) return;
-
-    const original = JSON.stringify({
-      username: user.username || "",
-      email: user.email || "",
-      phone: user.phone || "",
-      dob: user.dob || "",
-      about: user.about || "",
-      company: user.company || "",
-      showCompany: user.showCompany ?? true,
-    });
-
-    const current = JSON.stringify({
-      username: formData.username,
-      email: formData.email,
-      phone: formData.phone,
-      dob: formData.dob,
-      about: formData.about,
-      company: formData.company,
-      showCompany: formData.showCompany,
-    });
-
-    let changed = original !== current;
-
-    if (
-      formData.oldPassword ||
-      formData.newPassword ||
-      formData.confirmPassword
-    ) {
-      changed = true;
-    }
-
-    setIsChanged(changed);
-  }, [formData, user]);
-
   const { contacts } = useContacts();
 
-  const passwordRules = {
-    length: formData.newPassword.length >= 8 && formData.newPassword.length <= 16,
-    uppercase: /[A-Z]/.test(formData.newPassword),
-    number: /\d/.test(formData.newPassword),
-    special: /[!@#$%^&*(),.?":{}|<>]/.test(formData.newPassword),
-  };
+  const [view, setView] = useState("menu"); // menu, profile, security, contacts
+  const [formData, setFormData] = useState({ ...user });
 
-  const isPasswordValid =
-    passwordRules.length &&
-    passwordRules.uppercase &&
-    passwordRules.number &&
-    passwordRules.special;
-
-  const handleChange = (field, value) => {
-    setFormData((p) => ({ ...p, [field]: value }));
-  };
-
-  const handleSave = async () => {
-    const { oldPassword, newPassword, confirmPassword } = formData;
-    setErrors({ mismatch: false, samePassword: false, rulesFailed: false });
-
-    try {
-      if (!oldPassword && !newPassword && !confirmPassword) {
-        await updateProfile({
-          username: formData.username,
-          phone: formData.phone,
-          dob: formData.dob,
-          about: formData.about,
-          company: formData.company,
-          showCompany: formData.showCompany,
-        });
-
-        alert("Profile updated!");
-        onClose();
-        return;
-      }
-
-      if (!oldPassword || !newPassword || !confirmPassword)
-        return setErrors((p) => ({ ...p, mismatch: true }));
-      if (oldPassword === newPassword)
-        return setErrors((p) => ({ ...p, samePassword: true }));
-      if (newPassword !== confirmPassword)
-        return setErrors((p) => ({ ...p, mismatch: true }));
-      if (!isPasswordValid)
-        return setErrors((p) => ({ ...p, rulesFailed: true }));
-
-      await updatePassword(oldPassword, newPassword);
-
-      alert("Password updated!");
-      onClose();
-    } catch (err) {
-      alert(err.message || "Update failed");
-    }
-  };
+  // Password State
+  const [passData, setPassData] = useState({ old: "", new: "", confirm: "" });
 
   const handleLogout = async () => {
     await logout();
-    // Force full page reload to clear memory/cache and prevent "back button" access
     window.location.replace("/login");
   };
 
-  if (!user) return null;
+  const handleSaveProfile = async () => {
+    try {
+      await updateProfile(formData);
+      alert("Profile updated!");
+      setView("menu");
+    } catch (err) {
+      alert(err.message);
+    }
+  };
 
-  return (
-    <div className="fixed top-0 left-0 z-50 h-full w-64 bg-white shadow-lg border-r border-gray-200 flex flex-col">
+  const handleSavePassword = async () => {
+    if (passData.new !== passData.confirm) return alert("Passwords do not match");
+    try {
+      await updatePassword(passData.old, passData.new);
+      alert("Password updated!");
+      setView("menu");
+    } catch (err) {
+      alert(err.message);
+    }
+  };
 
+  // --- SUB-COMPONENTS ---
+
+  const MainMenu = () => (
+    <div className="w-64 bg-white rounded-lg shadow-xl border border-gray-200 overflow-hidden flex flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b">
-        <h2 className="text-lg font-semibold">Profile Settings</h2>
-        <button onClick={onClose} className="text-gray-500 hover:text-red-500 text-lg">✖</button>
-      </div>
-
-      {/* Body */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 text-sm">
-
-        {/* Profile Photo */}
-        <div className="w-full flex justify-center mb-4">
-          <div
-            className="h-20 w-20 rounded-full bg-center bg-cover shadow-md"
-            style={{
-              backgroundImage: `url(${user?.profilePicture || "../../assests/kpnbg301.svg"
-                })`,
-            }}
-          />
-        </div>
-
-        {/* Name */}
+      <div className="p-4 border-b border-gray-100 flex items-center space-x-3 bg-gray-50">
+        <div className="w-10 h-10 rounded-full bg-gray-300 bg-cover bg-center" style={{ backgroundImage: `url(${user?.profilePicture || "https://ui-avatars.com/api/?name=" + user?.username})` }}></div>
         <div>
-          <label className="block font-medium mb-1">Name</label>
-          <input
-            type="text"
-            className="w-full px-3 py-2 border rounded"
-            value={formData.username}
-            onChange={(e) => handleChange("username", e.target.value)}
-          />
-        </div>
-
-        {/* Email */}
-        <div>
-          <label className="block font-medium mb-1">Email (read-only)</label>
-          <input
-            type="email"
-            className="w-full px-3 py-2 border rounded bg-gray-100 text-gray-600"
-            value={formData.email}
-            readOnly
-          />
-        </div>
-
-        {/* Phone */}
-        <div>
-          <label className="block font-medium mb-1">Phone Number</label>
-          <input
-            type="text"
-            className="w-full px-3 py-2 border rounded"
-            value={formData.phone}
-            onChange={(e) => handleChange("phone", e.target.value)}
-          />
-        </div>
-
-        {/* DOB */}
-        <div>
-          <label className="block font-medium mb-1">Date of Birth</label>
-          <input
-            type="date"
-            className="w-full px-3 py-2 border rounded"
-            value={formData.dob}
-            onChange={(e) => handleChange("dob", e.target.value)}
-          />
-        </div>
-
-        {/* About */}
-        <div>
-          <label className="block font-medium mb-1">About</label>
-          <input
-            type="text"
-            className="w-full px-3 py-2 border rounded"
-            value={formData.about}
-            onChange={(e) => handleChange("about", e.target.value)}
-          />
-        </div>
-
-        {/* Show Company */}
-        <div className="flex items-center gap-2 mt-2">
-          <input
-            type="checkbox"
-            checked={formData.showCompany}
-            onChange={(e) => handleChange("showCompany", e.target.checked)}
-          />
-          <label className="font-medium">Show Company Field</label>
-        </div>
-
-        {/* Company */}
-        {formData.showCompany && (
-          <div>
-            <label className="block font-medium mb-1">Company</label>
-            <input
-              type="text"
-              className="w-full px-3 py-2 border rounded"
-              value={formData.company}
-              onChange={(e) => handleChange("company", e.target.value)}
-            />
+          <div className="font-bold text-gray-900 text-sm">{user?.username}</div>
+          <div className="text-xs text-green-600 flex items-center">
+            <span className="w-2 h-2 bg-green-500 rounded-full mr-1"></span> Active
           </div>
-        )}
-
-        {/* --- CONTACTS LIST --- */}
-        <div className="pt-4 border-t">
-          <h3 className="font-semibold text-gray-700 mb-2">Contacts</h3>
-
-          <div className="space-y-2 max-h-40 overflow-y-auto pr-2">
-            {contacts?.map((c) => (
-              <div key={c._id} className="flex items-center gap-3 p-2 rounded hover:bg-gray-100">
-                <img
-                  src={c.profilePicture || "/default-avatar.png"}
-                  alt=""
-                  className="h-10 w-10 rounded-full object-cover"
-                />
-                <div className="flex flex-col">
-                  <span className="font-medium">{c.username}</span>
-                  <span className="text-sm text-gray-500">{c.email}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-
-        {/* Security */}
-        <div className="pt-4 border-t">
-          <button
-            className="w-full flex justify-between items-center font-semibold text-gray-800"
-            onClick={() => setShowSecurity(!showSecurity)}
-          >
-            <span>Security</span>
-            <span>{showSecurity ? "▲" : "▼"}</span>
-          </button>
-
-          {showSecurity && (
-            <div className="mt-3 space-y-3">
-
-              {/* Old Password */}
-              <div>
-                <label className="block font-medium mb-1">Old Password</label>
-                <div className="relative">
-                  <input
-                    type={showOld ? "text" : "password"}
-                    className="w-full px-3 py-2 border rounded"
-                    value={formData.oldPassword}
-                    onChange={(e) => handleChange("oldPassword", e.target.value)}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowOld(!showOld)}
-                    className="absolute right-2 top-2 text-gray-500"
-                  >
-                    {showOld ? "🙈" : "👁️"}
-                  </button>
-                </div>
-              </div>
-
-              {/* New Password */}
-              <div>
-                <label className="block font-medium mb-1">New Password</label>
-                <div className="relative">
-                  <input
-                    type={showNew ? "text" : "password"}
-                    className="w-full px-3 py-2 border rounded"
-                    value={formData.newPassword}
-                    onChange={(e) => handleChange("newPassword", e.target.value)}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowNew(!showNew)}
-                    className="absolute right-2 top-2 text-gray-500"
-                  >
-                    {showNew ? "🙈" : "👁️"}
-                  </button>
-                </div>
-              </div>
-
-              {/* Confirm Password */}
-              <div>
-                <label className="block font-medium mb-1">Confirm New Password</label>
-                <div className="relative">
-                  <input
-                    type={showConfirm ? "text" : "password"}
-                    className="w-full px-3 py-2 border rounded"
-                    value={formData.confirmPassword}
-                    onChange={(e) => handleChange("confirmPassword", e.target.value)}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowConfirm(!showConfirm)}
-                    className="absolute right-2 top-2 text-gray-500"
-                  >
-                    {showConfirm ? "🙈" : "👁️"}
-                  </button>
-                </div>
-              </div>
-
-              {/* Errors */}
-              {errors.samePassword && (
-                <p className="text-red-600 text-xs">New password cannot be same as old password.</p>
-              )}
-              {errors.mismatch && (
-                <p className="text-red-600 text-xs">Passwords do not match.</p>
-              )}
-              {errors.rulesFailed && (
-                <div className="text-red-600 text-xs space-y-1">
-                  <p>Password must include:</p>
-                  <ul className="list-disc pl-5">
-                    <li className={!passwordRules.length ? "text-red-600" : "text-green-600"}>
-                      8–16 characters
-                    </li>
-                    <li className={!passwordRules.uppercase ? "text-red-600" : "text-green-600"}>
-                      At least one uppercase letter
-                    </li>
-                    <li className={!passwordRules.number ? "text-red-600" : "text-green-600"}>
-                      At least one number
-                    </li>
-                    <li className={!passwordRules.special ? "text-red-600" : "text-green-600"}>
-                      At least one special character
-                    </li>
-                  </ul>
-                </div>
-              )}
-
-            </div>
-          )}
         </div>
       </div>
 
-      {/* Footer */}
-      <div className="px-4 py-3 border-t flex flex-col space-y-2">
-
-        {/* Logout */}
-        <button
-          onClick={handleLogout}
-          className="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 py-2 rounded"
-        >
-          Logout
+      {/* Menu Items */}
+      <div className="py-2">
+        <button onClick={() => setView("profile")} className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 flex items-center">
+          <span className="mr-3">👤</span> Edit Profile
         </button>
-
-        {/* Save + Cancel */}
-        <div className="flex justify-between">
-          <button
-            onClick={onClose}
-            className="text-gray-600 hover:text-red-500 text-sm font-medium"
-          >
-            Cancel
-          </button>
-
-          <button
-            disabled={!isChanged}
-            onClick={handleSave}
-            className={`px-4 py-2 text-sm rounded text-white ${isChanged
-              ? "bg-blue-600 hover:bg-blue-700"
-              : "bg-gray-400 cursor-not-allowed"
-              }`}
-          >
-            Save Changes
-          </button>
-        </div>
+        <button onClick={() => setView("security")} className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 flex items-center">
+          <span className="mr-3">🔒</span> Security
+        </button>
+        <button onClick={() => setView("contacts")} className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 flex items-center">
+          <span className="mr-3">👥</span> Contacts Info
+        </button>
+        <div className="border-t border-gray-100 my-1"></div>
+        <button onClick={handleLogout} className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center">
+          <span className="mr-3">🚪</span> Sign Out
+        </button>
       </div>
     </div>
   );
+
+  const ProfileView = () => (
+    <div className="w-72 bg-white rounded-lg shadow-xl border border-gray-200 overflow-hidden flex flex-col max-h-[500px]">
+      <div className="p-3 border-b border-gray-100 flex items-center justify-between bg-gray-50">
+        <button onClick={() => setView("menu")} className="text-gray-500 hover:text-gray-900">← Back</button>
+        <span className="font-semibold text-sm">Edit Profile</span>
+        <div className="w-8"></div>
+      </div>
+      <div className="p-4 overflow-y-auto space-y-3 flex-1">
+        <div>
+          <label className="text-xs font-medium text-gray-500">Full Name</label>
+          <input type="text" value={formData.username} onChange={e => setFormData({ ...formData, username: e.target.value })} className="w-full border rounded px-2 py-1.5 text-sm mt-1" />
+        </div>
+        <div>
+          <label className="text-xs font-medium text-gray-500">Phone</label>
+          <input type="text" value={formData.phone || ""} onChange={e => setFormData({ ...formData, phone: e.target.value })} className="w-full border rounded px-2 py-1.5 text-sm mt-1" />
+        </div>
+        <div>
+          <label className="text-xs font-medium text-gray-500">About</label>
+          <textarea value={formData.about || ""} onChange={e => setFormData({ ...formData, about: e.target.value })} className="w-full border rounded px-2 py-1.5 text-sm mt-1" rows="2" />
+        </div>
+      </div>
+      <div className="p-3 border-t bg-gray-50 flex justify-end">
+        <button onClick={handleSaveProfile} className="bg-blue-600 text-white px-3 py-1.5 rounded text-sm hover:bg-blue-700">Save</button>
+      </div>
+    </div>
+  );
+
+  const SecurityView = () => (
+    <div className="w-72 bg-white rounded-lg shadow-xl border border-gray-200 overflow-hidden flex flex-col">
+      <div className="p-3 border-b border-gray-100 flex items-center justify-between bg-gray-50">
+        <button onClick={() => setView("menu")} className="text-gray-500 hover:text-gray-900">← Back</button>
+        <span className="font-semibold text-sm">Security</span>
+        <div className="w-8"></div>
+      </div>
+      <div className="p-4 space-y-3">
+        <div>
+          <label className="text-xs font-medium text-gray-500">Current Password</label>
+          <input type="password" value={passData.old} onChange={e => setPassData({ ...passData, old: e.target.value })} className="w-full border rounded px-2 py-1.5 text-sm mt-1" />
+        </div>
+        <div>
+          <label className="text-xs font-medium text-gray-500">New Password</label>
+          <input type="password" value={passData.new} onChange={e => setPassData({ ...passData, new: e.target.value })} className="w-full border rounded px-2 py-1.5 text-sm mt-1" />
+        </div>
+        <div>
+          <label className="text-xs font-medium text-gray-500">Confirm Password</label>
+          <input type="password" value={passData.confirm} onChange={e => setPassData({ ...passData, confirm: e.target.value })} className="w-full border rounded px-2 py-1.5 text-sm mt-1" />
+        </div>
+      </div>
+      <div className="p-3 border-t bg-gray-50 flex justify-end">
+        <button onClick={handleSavePassword} className="bg-blue-600 text-white px-3 py-1.5 rounded text-sm hover:bg-blue-700">Update Password</button>
+      </div>
+    </div>
+  );
+
+  const ContactsView = () => (
+    <div className="w-72 bg-white rounded-lg shadow-xl border border-gray-200 overflow-hidden flex flex-col max-h-[400px]">
+      <div className="p-3 border-b border-gray-100 flex items-center justify-between bg-gray-50">
+        <button onClick={() => setView("menu")} className="text-gray-500 hover:text-gray-900">← Back</button>
+        <span className="font-semibold text-sm">Contacts</span>
+        <div className="w-8"></div>
+      </div>
+      <div className="p-2 overflow-y-auto flex-1">
+        {contacts.length === 0 ? (
+          <p className="text-center text-gray-400 text-sm py-4">No contacts found.</p>
+        ) : (
+          contacts.map(c => (
+            <div key={c._id} className="flex items-center p-2 hover:bg-gray-50 rounded">
+              <div className="w-8 h-8 rounded-full bg-gray-200 mr-3"></div>
+              <div>
+                <div className="text-sm font-medium">{c.username}</div>
+                <div className="text-xs text-gray-500">{c.email}</div>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+
+  return (
+    <>
+      {/* Backdrop to close */}
+      <div className="fixed inset-0 z-40" onClick={onClose}></div>
+
+      {/* Popover Positioned Bottom-Left */}
+      <div className="fixed bottom-16 left-16 z-50 animate-fade-in-up">
+        {view === "menu" && <MainMenu />}
+        {view === "profile" && <ProfileView />}
+        {view === "security" && <SecurityView />}
+        {view === "contacts" && <ContactsView />}
+      </div>
+    </>
+  );
 };
 
-export default ProfileSidebar;
+export default ProfileMenu;

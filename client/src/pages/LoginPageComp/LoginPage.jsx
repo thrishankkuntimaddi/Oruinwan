@@ -13,7 +13,7 @@ const LoginPage = () => {
   useEffect(() => {
     if (!loading && user) {
       console.log("✅ User already logged in, redirecting to home");
-      navigate("/", { replace: true });
+      navigate("/workspaces", { replace: true });
     }
   }, [user, loading, navigate]);
 

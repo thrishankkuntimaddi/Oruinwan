@@ -34,7 +34,7 @@ const Blogs = () => {
 
   return (
     <div className="bg-white border rounded-lg shadow-md h-full w-full px-4 py-6 flex flex-col">
-      
+
       {/* Header */}
       <div className="flex justify-between items-center mb-6 flex-shrink-0">
         <h1 className="text-3xl font-bold text-gray-800">Blogs</h1>
@@ -47,10 +47,12 @@ const Blogs = () => {
       </div>
 
       {/* Scrollable blog list */}
-      <div className="flex-1 overflow-y-auto pr-1 space-y-6">
-        {blogPosts.map((blog, index) => (
-          <BlogCard key={index} blog={blog} onDoubleClick={setSelectedBlog} />
-        ))}
+      <div className="flex-1 overflow-y-auto pr-1">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {blogPosts.map((blog, index) => (
+            <BlogCard key={index} blog={blog} onDoubleClick={setSelectedBlog} />
+          ))}
+        </div>
       </div>
 
       {/* Blog Create Modal */}

@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import MessageList from "../../components/messagesComp/MessageList";
 import ChatWindow from "../../components/messagesComp/chatWindowComp/chatWindow";
 import axios from "axios";
 
@@ -40,13 +39,7 @@ export default function Messages() {
 
   return (
     <div className="flex flex-col h-full w-full">
-      <div className="flex flex-1 border rounded-lg shadow-md overflow-hidden">
-
-        {/* LEFT PANE – Slack style thread list */}
-        <div className="w-1/3 border-r border-gray-200 overflow-y-auto">
-          <MessageList onSelectChat={setSelectedChat} />
-        </div>
-
+      <div className="flex flex-1 overflow-hidden">
         {/* RIGHT PANE – Chat window */}
         <div className="flex-1 flex flex-col">
           {selectedChat ? (
@@ -57,7 +50,7 @@ export default function Messages() {
             />
           ) : (
             <div className="flex items-center justify-center h-full text-gray-400">
-              Select a chat to start messaging
+              Select a chat from the sidebar to start messaging
             </div>
           )}
         </div>

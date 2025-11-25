@@ -1,21 +1,25 @@
 // src/App.jsx
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import { useState } from "react";
 
 // Context Providers  
 import { AuthProvider } from "./contexts/AuthContext";
 import ContactsProvider from "./contexts/ContactsContext";
 
 // Layout + Components
-import Sidebar from "./components/SidebarComp/Sidebar";
-import ChttrixAIChat from "./components/chttrixAIComp/ChttrixAIChat";
+import MainLayout from "./components/layout/MainLayout";
+import HomePanel from "./components/layout/panels/HomePanel";
+import MessagesPanel from "./components/layout/panels/MessagesPanel";
+import TasksPanel from "./components/layout/panels/TasksPanel";
+import NotesPanel from "./components/layout/panels/NotesPanel";
 
 
 // Pages (Protected)
 import Home from "./pages/SidebarComp/Home";
 import Messages from "./pages/SidebarComp/Messages";
 import MyTasks from "./pages/SidebarComp/MyTasks";
+import Notes from "./pages/SidebarComp/Notes";
 import Blogs from "./pages/SidebarComp/Blogs";
+import WorkspaceSelect from "./pages/WorkspaceSelect";
 
 // Auth Pages (Public)
 import LoginPage from "./pages/LoginPageComp/LoginPage";
@@ -29,7 +33,6 @@ import RequireAuth from "./components/RequireAuth";
 
 
 function App() {
-  const [showAI, setShowAI] = useState(false);
 
   return (
     <AuthProvider>
@@ -38,28 +41,85 @@ function App() {
           <Routes>
 
             {/* PROTECTED AREA (requires login) */}
+
+            {/* Home Route */}
             <Route
-              path="/*"
+              path="/"
               element={
                 <RequireAuth>
-                  <div className="flex h-screen overflow-hidden">
+                  <MainLayout sidePanel={<HomePanel />}>
+                    <Home />
+                  </MainLayout>
+                </RequireAuth>
+              }
+            />
 
-                    {/* Sidebar / Navigation */}
-                    <Sidebar onAIClick={() => setShowAI(true)} />
+            {/* Messages Route */}
+            <Route
+              path="/messages/*"
+              element={
+                <RequireAuth>
+                  <MainLayout sidePanel={<MessagesPanel />}>
+                    <Messages />
+                  </MainLayout>
+                </RequireAuth>
+              }
+            />
 
-                    {/* Right Panel */}
-                    <main className="flex-1 overflow-y-auto bg-gray-50 p-6">
-                      <Routes>
-                        <Route path="/" element={<Home />} />
-                        <Route path="/messages" element={<Messages />} />
-                        <Route path="/tasks" element={<MyTasks />} />
-                        <Route path="/blogs" element={<Blogs />} />
-                      </Routes>
-                    </main>
-                  </div>
+            {/* Tasks Route (Placeholder Panel for now) */}
+            <Route
+              path="/tasks"
+              element={
+                <RequireAuth>
+                  <MainLayout sidePanel={<TasksPanel />}>
+                    <MyTasks />
+                  </MainLayout>
+                </RequireAuth>
+              }
+            />
 
-                  {/* AI CHAT FLOATING PANEL */}
-                  {showAI && <ChttrixAIChat onClose={() => setShowAI(false)} />}
+            {/* Notes Route */}
+            <Route
+              path="/notes"
+              element={
+                <RequireAuth>
+                  <MainLayout sidePanel={<NotesPanel />}>
+                    <Notes />
+                  </MainLayout>
+                </RequireAuth>
+              }
+            />
+
+            {/* Notes Detail Route */}
+            <Route
+              path="/notes/:id"
+              element={
+                <RequireAuth>
+                  <MainLayout sidePanel={<NotesPanel />}>
+                    <Notes />
+                  </MainLayout>
+                </RequireAuth>
+              }
+            />
+
+            {/* Blogs Route (No Sidebar as requested) */}
+            <Route
+              path="/blogs"
+              element={
+                <RequireAuth>
+                  <MainLayout sidePanel={null}>
+                    <Blogs />
+                  </MainLayout>
+                </RequireAuth>
+              }
+            />
+
+            {/* Workspace Selection (Protected but outside main layout if desired, or inside) */}
+            <Route
+              path="/workspaces"
+              element={
+                <RequireAuth>
+                  <WorkspaceSelect />
                 </RequireAuth>
               }
             />
