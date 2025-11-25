@@ -1,6 +1,32 @@
 import React, { useState } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 
+const PasswordInput = ({ label, value, onChange, show, onToggle, placeholder = "" }) => (
+  <div className="relative">
+    <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wide mb-1">{label}</label>
+    <div className="relative">
+      <input
+        type={show ? "text" : "password"}
+        value={value}
+        onChange={onChange}
+        className="w-full border border-gray-300 rounded-md px-2 py-1.5 text-xs focus:ring-1 focus:ring-blue-500 focus:border-transparent transition-all pr-8"
+        placeholder={placeholder}
+      />
+      <button
+        type="button"
+        onClick={onToggle}
+        className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
+      >
+        {show ? (
+          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" /></svg>
+        ) : (
+          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+        )}
+      </button>
+    </div>
+  </div>
+);
+
 const ProfileMenu = ({ onClose }) => {
   const { user, updateProfile, updatePassword, logout } = useAuth();
 
@@ -10,6 +36,23 @@ const ProfileMenu = ({ onClose }) => {
 
   // Password State
   const [passData, setPassData] = useState({ old: "", new: "", confirm: "" });
+  const [showPasswords, setShowPasswords] = useState({ old: false, new: false, confirm: false });
+
+  // Mock Sessions State
+  const [sessions, setSessions] = useState([
+    { id: 1, device: "MacBook Pro", os: "macOS", location: "San Francisco, US", current: true, lastActive: "Now", icon: "💻" },
+    { id: 2, device: "iPhone 13", os: "iOS", location: "San Francisco, US", current: false, lastActive: "2h ago", icon: "📱" },
+    { id: 3, device: "Windows PC", os: "Windows", location: "New York, US", current: false, lastActive: "1d ago", icon: "🖥️" },
+  ]);
+
+  const handleLogoutSession = (id) => {
+    setSessions(prev => prev.filter(s => s.id !== id));
+  };
+
+  const handleLogoutAllSessions = () => {
+    setSessions(prev => prev.filter(s => s.current));
+    alert("Logged out of all other devices.");
+  };
 
   const handleLogout = async () => {
     await logout();
@@ -28,9 +71,17 @@ const ProfileMenu = ({ onClose }) => {
 
   const handleSavePassword = async () => {
     if (passData.new !== passData.confirm) return alert("Passwords do not match");
+
+    // Password Strength Validation
+    if (passData.new.length < 8) return alert("Password must be at least 8 characters");
+    if (!/[A-Z]/.test(passData.new)) return alert("Password must contain at least one uppercase letter");
+    if (!/\d/.test(passData.new)) return alert("Password must contain at least one number");
+    if (!/[!@#$%^&*(),.?":{}|<>]/.test(passData.new)) return alert("Password must contain at least one special character");
+
     try {
       await updatePassword(passData.old, passData.new);
-      alert("Password updated!");
+      alert("Password updated successfully!");
+      setPassData({ old: "", new: "", confirm: "" });
       setView("menu");
     } catch (err) {
       alert(err.message);
@@ -39,7 +90,7 @@ const ProfileMenu = ({ onClose }) => {
 
   // --- SUB-COMPONENTS ---
 
-  const MainMenu = () => (
+  const renderMainMenu = () => (
     <div className="w-64 bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden flex flex-col animate-fade-in">
       {/* Header */}
       <div className="p-3 border-b border-gray-100 bg-gray-50/50">
@@ -105,7 +156,7 @@ const ProfileMenu = ({ onClose }) => {
     </div>
   );
 
-  const ProfileView = () => (
+  const renderProfileView = () => (
     <div className="w-64 bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden flex flex-col max-h-[500px] animate-fade-in">
       <div className="p-3 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
         <button onClick={() => setView("menu")} className="text-gray-500 hover:text-gray-900 flex items-center text-xs font-medium transition-colors">
@@ -151,7 +202,7 @@ const ProfileMenu = ({ onClose }) => {
     </div>
   );
 
-  const PreferencesView = () => (
+  const renderPreferencesView = () => (
     <div className="w-64 bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden flex flex-col animate-fade-in">
       <div className="p-3 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
         <button onClick={() => setView("menu")} className="text-gray-500 hover:text-gray-900 flex items-center text-xs font-medium transition-colors">
@@ -200,8 +251,8 @@ const ProfileMenu = ({ onClose }) => {
     </div>
   );
 
-  const SecurityView = () => (
-    <div className="w-64 bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden flex flex-col animate-fade-in">
+  const renderSecurityView = () => (
+    <div className="w-72 bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden flex flex-col animate-fade-in max-h-[550px]">
       <div className="p-3 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
         <button onClick={() => setView("menu")} className="text-gray-500 hover:text-gray-900 flex items-center text-xs font-medium transition-colors">
           <span className="mr-1">←</span> Back
@@ -209,24 +260,63 @@ const ProfileMenu = ({ onClose }) => {
         <span className="font-bold text-gray-900 text-sm">Security</span>
         <div className="w-8"></div>
       </div>
-      <div className="p-4 space-y-3">
-        <div>
-          <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wide mb-1">Current Password</label>
-          <input type="password" value={passData.old} onChange={e => setPassData({ ...passData, old: e.target.value })} className="w-full border border-gray-300 rounded-md px-2 py-1.5 text-xs focus:ring-1 focus:ring-blue-500 focus:border-transparent transition-all" />
-        </div>
-        <div>
-          <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wide mb-1">New Password</label>
-          <input type="password" value={passData.new} onChange={e => setPassData({ ...passData, new: e.target.value })} className="w-full border border-gray-300 rounded-md px-2 py-1.5 text-xs focus:ring-1 focus:ring-blue-500 focus:border-transparent transition-all" />
-        </div>
-        <div>
-          <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wide mb-1">Confirm Password</label>
-          <input type="password" value={passData.confirm} onChange={e => setPassData({ ...passData, confirm: e.target.value })} className="w-full border border-gray-300 rounded-md px-2 py-1.5 text-xs focus:ring-1 focus:ring-blue-500 focus:border-transparent transition-all" />
+
+      <div className="p-4 overflow-y-auto custom-scrollbar space-y-6">
+        {/* Password Section */}
+        <div className="space-y-3">
+          <h4 className="text-xs font-bold text-gray-900 uppercase tracking-wide border-b border-gray-100 pb-1">Password</h4>
+
+          <PasswordInput
+            label="Current"
+            value={passData.old}
+            onChange={e => setPassData({ ...passData, old: e.target.value })}
+            show={showPasswords.old}
+            onToggle={() => setShowPasswords(prev => ({ ...prev, old: !prev.old }))}
+          />
+
+          <div>
+            <PasswordInput
+              label="New"
+              value={passData.new}
+              onChange={e => setPassData({ ...passData, new: e.target.value })}
+              show={showPasswords.new}
+              onToggle={() => setShowPasswords(prev => ({ ...prev, new: !prev.new }))}
+            />
+
+            {/* Password Rules Checklist */}
+            <div className="mt-2 grid grid-cols-2 gap-x-2 gap-y-1 bg-gray-50 p-2 rounded border border-gray-100">
+              <div className={`text-[9px] flex items-center ${passData.new.length >= 8 ? "text-green-600 font-bold" : "text-gray-400"}`}>
+                <span className="mr-1.5">{passData.new.length >= 8 ? "✓" : "○"}</span> 8+ chars
+              </div>
+              <div className={`text-[9px] flex items-center ${/[A-Z]/.test(passData.new) ? "text-green-600 font-bold" : "text-gray-400"}`}>
+                <span className="mr-1.5">{/[A-Z]/.test(passData.new) ? "✓" : "○"}</span> Uppercase
+              </div>
+              <div className={`text-[9px] flex items-center ${/\d/.test(passData.new) ? "text-green-600 font-bold" : "text-gray-400"}`}>
+                <span className="mr-1.5">{/\d/.test(passData.new) ? "✓" : "○"}</span> Number
+              </div>
+              <div className={`text-[9px] flex items-center ${/[!@#$%^&*(),.?":{}|<>]/.test(passData.new) ? "text-green-600 font-bold" : "text-gray-400"}`}>
+                <span className="mr-1.5">{/[!@#$%^&*(),.?":{}|<>]/.test(passData.new) ? "✓" : "○"}</span> Special
+              </div>
+            </div>
+          </div>
+
+          <PasswordInput
+            label="Confirm New Password"
+            value={passData.confirm}
+            onChange={e => setPassData({ ...passData, confirm: e.target.value })}
+            show={showPasswords.confirm}
+            onToggle={() => setShowPasswords(prev => ({ ...prev, confirm: !prev.confirm }))}
+          />
+
+          <button onClick={handleSavePassword} className="w-full bg-blue-50 text-blue-600 px-3 py-1.5 rounded-md text-xs font-bold hover:bg-blue-100 transition-all">Update Password</button>
         </div>
 
-        <div className="pt-2 border-t border-gray-100 mt-1">
+        {/* 2FA Section */}
+        <div className="space-y-2">
+          <h4 className="text-xs font-bold text-gray-900 uppercase tracking-wide border-b border-gray-100 pb-1">Two-Factor Auth</h4>
           <div className="flex items-center justify-between py-1">
             <div>
-              <div className="text-xs font-medium text-gray-900">Two-Factor Auth</div>
+              <div className="text-xs font-medium text-gray-900">Enable 2FA</div>
               <div className="text-[10px] text-gray-500">Extra security layer</div>
             </div>
             <button className="bg-gray-200 relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
@@ -234,14 +324,48 @@ const ProfileMenu = ({ onClose }) => {
             </button>
           </div>
         </div>
-      </div>
-      <div className="p-3 border-t border-gray-100 bg-gray-50/50 flex justify-end">
-        <button onClick={handleSavePassword} className="bg-blue-600 text-white px-4 py-1.5 rounded-md text-xs font-bold shadow-sm hover:bg-blue-700 transition-all">Update</button>
+
+        {/* Active Sessions Section */}
+        <div className="space-y-3">
+          <h4 className="text-xs font-bold text-gray-900 uppercase tracking-wide border-b border-gray-100 pb-1">Active Sessions</h4>
+          <div className="space-y-2">
+            {sessions.map((session) => (
+              <div key={session.id} className="flex items-start justify-between p-2 rounded-lg border border-gray-100 bg-gray-50/50 hover:bg-gray-50 transition-colors">
+                <div className="flex items-start gap-2">
+                  <div className="text-lg">{session.icon}</div>
+                  <div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xs font-bold text-gray-900">{session.device}</span>
+                      {session.current && <span className="px-1.5 py-0.5 bg-green-100 text-green-700 text-[9px] font-bold rounded-full">Current</span>}
+                    </div>
+                    <div className="text-[10px] text-gray-500">{session.location} • {session.lastActive}</div>
+                  </div>
+                </div>
+                {!session.current && (
+                  <button
+                    onClick={() => handleLogoutSession(session.id)}
+                    className="text-[10px] font-medium text-red-500 hover:text-red-700 hover:bg-red-50 px-2 py-1 rounded transition-colors"
+                  >
+                    Log Out
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+          {sessions.length > 1 && (
+            <button
+              onClick={handleLogoutAllSessions}
+              className="w-full border border-red-200 text-red-600 px-3 py-1.5 rounded-md text-xs font-bold hover:bg-red-50 transition-all flex items-center justify-center gap-1"
+            >
+              <span>🚪</span> Log Out All Other Devices
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
 
-  const HelpView = () => (
+  const renderHelpView = () => (
     <div className="w-64 bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden flex flex-col animate-fade-in">
       <div className="p-3 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
         <button onClick={() => setView("menu")} className="text-gray-500 hover:text-gray-900 flex items-center text-xs font-medium transition-colors">
@@ -275,7 +399,7 @@ const ProfileMenu = ({ onClose }) => {
     </div>
   );
 
-  const HelpAcademy = () => (
+  const renderHelpAcademy = () => (
     <div className="w-64 bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden flex flex-col max-h-[400px] animate-fade-in">
       <div className="p-3 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
         <button onClick={() => setView("help")} className="text-gray-500 hover:text-gray-900 flex items-center text-xs font-medium transition-colors">
@@ -295,7 +419,7 @@ const ProfileMenu = ({ onClose }) => {
     </div>
   );
 
-  const HelpShortcuts = () => (
+  const renderHelpShortcuts = () => (
     <div className="w-64 bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden flex flex-col animate-fade-in">
       <div className="p-3 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
         <button onClick={() => setView("help")} className="text-gray-500 hover:text-gray-900 flex items-center text-xs font-medium transition-colors">
@@ -320,7 +444,7 @@ const ProfileMenu = ({ onClose }) => {
     </div>
   );
 
-  const HelpBug = () => (
+  const renderHelpBug = () => (
     <div className="w-64 bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden flex flex-col animate-fade-in">
       <div className="p-3 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
         <button onClick={() => setView("help")} className="text-gray-500 hover:text-gray-900 flex items-center text-xs font-medium transition-colors">
@@ -336,7 +460,7 @@ const ProfileMenu = ({ onClose }) => {
     </div>
   );
 
-  const HelpWhatsNew = () => (
+  const renderHelpWhatsNew = () => (
     <div className="w-64 bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden flex flex-col animate-fade-in">
       <div className="p-3 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
         <button onClick={() => setView("help")} className="text-gray-500 hover:text-gray-900 flex items-center text-xs font-medium transition-colors">
@@ -362,7 +486,7 @@ const ProfileMenu = ({ onClose }) => {
     </div>
   );
 
-  const HelpContact = () => (
+  const renderHelpContact = () => (
     <div className="w-64 bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden flex flex-col animate-fade-in">
       <div className="p-3 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
         <button onClick={() => setView("help")} className="text-gray-500 hover:text-gray-900 flex items-center text-xs font-medium transition-colors">
@@ -390,16 +514,16 @@ const ProfileMenu = ({ onClose }) => {
 
       {/* Popover Positioned Bottom-Left */}
       <div className="fixed bottom-16 left-16 z-50 animate-fade-in-up">
-        {view === "menu" && <MainMenu />}
-        {view === "profile" && <ProfileView />}
-        {view === "preferences" && <PreferencesView />}
-        {view === "security" && <SecurityView />}
-        {view === "help" && <HelpView />}
-        {view === "help_academy" && <HelpAcademy />}
-        {view === "help_shortcuts" && <HelpShortcuts />}
-        {view === "help_bug" && <HelpBug />}
-        {view === "help_whatsnew" && <HelpWhatsNew />}
-        {view === "help_contact" && <HelpContact />}
+        {view === "menu" && renderMainMenu()}
+        {view === "profile" && renderProfileView()}
+        {view === "preferences" && renderPreferencesView()}
+        {view === "security" && renderSecurityView()}
+        {view === "help" && renderHelpView()}
+        {view === "help_academy" && renderHelpAcademy()}
+        {view === "help_shortcuts" && renderHelpShortcuts()}
+        {view === "help_bug" && renderHelpBug()}
+        {view === "help_whatsnew" && renderHelpWhatsNew()}
+        {view === "help_contact" && renderHelpContact()}
       </div>
     </>
   );
