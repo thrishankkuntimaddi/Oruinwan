@@ -35,22 +35,32 @@ export default function Header({
         </div>
       </div>
 
-      <div className="flex items-center gap-2">
-        {chat.type === "dm" && (
-          <>
-            <button title="Voice Call" className="p-2 rounded hover:bg-gray-100">📞</button>
-            <button title="Video Call" className="p-2 rounded hover:bg-gray-100">🎥</button>
-          </>
-        )}
-
+      <div className="flex items-center gap-1">
+        {/* Channel Specific Actions */}
         {chat.type === "channel" && (
           <>
-            <button title="Meeting" className="p-2 rounded hover:bg-gray-100">🧑‍💻</button>
-            <button title="Poll" className="p-2 rounded hover:bg-gray-100">📊</button>
+            <button title="Start Meeting" className="p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-700 rounded-md transition-colors">
+              <span className="text-lg">📹</span>
+            </button>
+            <button title="Create Poll" className="p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-700 rounded-md transition-colors">
+              <span className="text-lg">📊</span>
+            </button>
           </>
         )}
 
-        {/* Search */}
+        {/* DM Specific Actions */}
+        {chat.type === "dm" && (
+          <>
+            <button title="Voice Call" className="p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-700 rounded-md transition-colors">
+              <span className="text-lg">📞</span>
+            </button>
+            <button title="Video Call" className="p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-700 rounded-md transition-colors">
+              <span className="text-lg">🎥</span>
+            </button>
+          </>
+        )}
+
+        {/* Common Actions: Search */}
         <div className="relative">
           <button
             onClick={(e) => {
@@ -58,71 +68,81 @@ export default function Header({
               setShowSearch((s) => !s);
               setShowMenu(false);
             }}
-            className="p-2 rounded hover:bg-gray-100"
+            className="p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-700 rounded-md transition-colors"
             title="Search messages"
           >
-            🔎
+            <span className="text-lg">🔍</span>
           </button>
 
           {showSearch && (
-            <div onClick={(e) => e.stopPropagation()} className="absolute right-0 mt-2 w-72 bg-white border rounded shadow-md p-2 z-40">
-              <input
-                className="w-full px-3 py-2 border rounded text-sm"
-                placeholder="Search messages..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-              <p className="text-xs text-gray-500 mt-2">Press Esc to close</p>
+            <div onClick={(e) => e.stopPropagation()} className="absolute right-0 mt-2 w-72 bg-white border border-gray-200 rounded-lg shadow-xl p-3 z-50 animate-fade-in">
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs">🔍</span>
+                <input
+                  className="w-full pl-8 pr-3 py-2 bg-gray-50 border border-gray-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+                  placeholder="Search in conversation..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  autoFocus
+                />
+              </div>
+              <p className="text-xs text-gray-400 mt-2 text-right">Press Esc to close</p>
             </div>
           )}
         </div>
 
-        {/* Global menu */}
+        {/* Global Menu (Three Dots) */}
         <div className="relative">
           <button
             onClick={(e) => {
               e.stopPropagation();
               setShowMenu((s) => !s);
             }}
-            className="p-2 rounded hover:bg-gray-100"
-            title="More"
+            className="p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-700 rounded-md transition-colors"
+            title="More options"
           >
-            ⋯
+            <span className="text-lg">⋮</span>
           </button>
 
           {showMenu && (
-            <div onClick={(e) => e.stopPropagation()} className="absolute right-0 mt-2 w-48 bg-white border rounded shadow-md p-2 z-40 text-sm">
-              {chat.type === "channel" && setShowChannelManagement && (
+            <div onClick={(e) => e.stopPropagation()} className="absolute right-0 mt-2 w-56 bg-white border border-gray-200 rounded-lg shadow-xl py-1 z-50 text-sm animate-fade-in">
+              {chat.type === "channel" && (
                 <>
-                  <button className="w-full text-left px-2 py-1 hover:bg-gray-50 rounded" onClick={() => { setShowChannelManagement(true); setShowMenu(false); }}>
-                    Manage Channel
+                  <div className="px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">Channel Settings</div>
+                  {setShowChannelManagement && (
+                    <button className="w-full text-left px-4 py-2 hover:bg-gray-50 text-gray-700 flex items-center gap-2" onClick={() => { setShowChannelManagement(true); setShowMenu(false); }}>
+                      <span>⚙️</span> Manage Channel
+                    </button>
+                  )}
+                  <button className="w-full text-left px-4 py-2 hover:bg-gray-50 text-gray-700 flex items-center gap-2" onClick={() => { setShowContactInfo(true); setShowMenu(false); }}>
+                    <span>ℹ️</span> Channel Info
                   </button>
-                  <div className="border-t my-1" />
+                  <div className="border-t border-gray-100 my-1" />
                 </>
               )}
-              <button className="w-full text-left px-2 py-1 hover:bg-gray-50 rounded" onClick={() => { setShowContactInfo(true); setShowMenu(false); }}>
-                {chat.type === "channel" ? "Channel Info" : "Contact Info"}
+
+              {chat.type === "dm" && (
+                <>
+                  <div className="px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">Contact Options</div>
+                  <button className="w-full text-left px-4 py-2 hover:bg-gray-50 text-gray-700 flex items-center gap-2" onClick={() => { setShowContactInfo(true); setShowMenu(false); }}>
+                    <span>👤</span> View Profile
+                  </button>
+                  <div className="border-t border-gray-100 my-1" />
+                </>
+              )}
+
+              <button className="w-full text-left px-4 py-2 hover:bg-gray-50 text-gray-700 flex items-center gap-2" onClick={() => { setSelectMode(true); setShowMenu(false); }}>
+                <span>✅</span> Select Messages
               </button>
-              <button className="w-full text-left px-2 py-1 hover:bg-gray-50 rounded" onClick={() => { setSelectMode(true); setShowMenu(false); }}>
-                Select Messages
+              <button className="w-full text-left px-4 py-2 hover:bg-gray-50 text-gray-700 flex items-center gap-2" onClick={() => setMuted((m) => !m)}>
+                <span>{muted ? "🔊" : "🔇"}</span> {muted ? "Unmute Notifications" : "Mute Notifications"}
               </button>
-              <button className="w-full text-left px-2 py-1 hover:bg-gray-50 rounded" onClick={() => setMuted((m) => !m)}>
-                {muted ? "Unmute" : "Mute"}
-              </button>
-              <button className="w-full text-left px-2 py-1 hover:bg-gray-50 rounded" onClick={() => setBlocked((b) => !b)}>
-                {blocked ? "Unblock" : "Block"}
-              </button>
-              <div className="border-t my-1" />
-              <button className="w-full text-left px-2 py-1 hover:bg-gray-50 rounded text-red-600" onClick={onClose}>
-                Close
+              <button className="w-full text-left px-4 py-2 hover:bg-gray-50 text-red-600 flex items-center gap-2" onClick={() => setBlocked((b) => !b)}>
+                <span>{blocked ? "⭕" : "🚫"}</span> {blocked ? "Unblock User" : "Block User"}
               </button>
             </div>
           )}
         </div>
-
-        <button onClick={onClose} className="ml-2 text-sm text-blue-500 hover:underline">
-          Close
-        </button>
       </div>
     </div>
   );

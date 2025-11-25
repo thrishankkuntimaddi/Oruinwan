@@ -57,7 +57,31 @@ function App() {
                 }
               />
 
-              {/* Messages Route */}
+              {/* Channel Route (Home Context) */}
+              <Route
+                path="/channel/:id"
+                element={
+                  <RequireAuth>
+                    <MainLayout sidePanel={<HomePanel />}>
+                      <Home />
+                    </MainLayout>
+                  </RequireAuth>
+                }
+              />
+
+              {/* DM Route (Home Context) */}
+              <Route
+                path="/dm/:id"
+                element={
+                  <RequireAuth>
+                    <MainLayout sidePanel={<HomePanel />}>
+                      <Home />
+                    </MainLayout>
+                  </RequireAuth>
+                }
+              />
+
+              {/* Messages Route (Legacy/Fallback) */}
               <Route
                 path="/messages/*"
                 element={

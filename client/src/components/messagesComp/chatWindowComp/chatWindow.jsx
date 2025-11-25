@@ -414,7 +414,7 @@ export default function ChatWindow({ chat, onClose, contacts = [] }) {
       RENDER
   --------------------------------------------------------- */
   return (
-    <div className="flex flex-col h-full w-full bg-white border rounded shadow-sm relative">
+    <div className="flex flex-col h-full w-full bg-white relative">
 
       <Header
         chat={chat}

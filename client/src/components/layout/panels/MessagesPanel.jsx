@@ -8,7 +8,7 @@ const MessagesPanel = () => {
     const contacts = [
         { id: 1, name: "Sarah Connor", status: "online", unread: 0 },
         { id: 2, name: "John Doe", status: "offline", unread: 0 },
-        { id: 3, name: "Alice Smith", status: "online", unread: 2 },
+        { id: 3, name: "Alice Smith", status: "online", unread: 0 },
         { id: 4, name: "Bob Wilson", status: "busy", unread: 0 },
     ];
 
@@ -67,7 +67,7 @@ const MessagesPanel = () => {
                                         {contact.name.charAt(0)}
                                     </div>
                                     <div className={`absolute bottom-0 right-3 w-2.5 h-2.5 rounded-full border-2 border-gray-50 ${contact.status === "online" ? "bg-green-500" :
-                                            contact.status === "busy" ? "bg-red-500" : "bg-gray-400"
+                                        contact.status === "busy" ? "bg-red-500" : "bg-gray-400"
                                         }`}></div>
                                 </div>
                                 <div>
