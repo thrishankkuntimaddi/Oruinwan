@@ -20,6 +20,8 @@ const HomePanel = () => {
     const [activeSettingsTab, setActiveSettingsTab] = useState("General");
     const [newName, setNewName] = useState("");
     const [inviteEmail, setInviteEmail] = useState("");
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [deleteVerification, setDeleteVerification] = useState("");
 
     const toggle = (section) => {
         setExpanded((prev) => ({ ...prev, [section]: !prev[section] }));
@@ -38,6 +40,15 @@ const HomePanel = () => {
             alert(`Invitation sent to ${inviteEmail}`);
             setShowInviteModal(false);
             setInviteEmail("");
+        }
+    };
+
+    const handleDeleteWorkspace = () => {
+        if (deleteVerification === workspaceName) {
+            alert(`Workspace "${workspaceName}" has been deleted.`);
+            setShowDeleteConfirm(false);
+            setShowSettingsModal(false);
+            navigate("/workspaces");
         }
     };
 
@@ -195,30 +206,30 @@ const HomePanel = () => {
 
             {/* Rename Modal */}
             {showRenameModal && (
-                <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center animate-fade-in backdrop-blur-sm">
-                    <div className="bg-white rounded-xl shadow-2xl w-[400px] p-6 transform transition-all scale-100">
+                <div className="fixed inset-0 bg-black/40 z-[60] flex items-center justify-center animate-fade-in backdrop-blur-md">
+                    <div className="bg-white rounded-2xl shadow-2xl w-[420px] p-8 transform transition-all scale-100 border border-gray-100">
                         <h3 className="text-xl font-bold text-gray-900 mb-2">Rename Workspace</h3>
-                        <p className="text-sm text-gray-500 mb-6">This name will be visible to all members of your team.</p>
+                        <p className="text-sm text-gray-500 mb-6 leading-relaxed">Choose a new name for your team's workspace. This will be visible to everyone.</p>
 
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">Workspace Name</label>
+                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Workspace Name</label>
                         <input
                             type="text"
                             value={newName}
                             onChange={(e) => setNewName(e.target.value)}
-                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent mb-6"
+                            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all mb-6 text-gray-900 placeholder-gray-400"
                             placeholder="e.g. Acme Corp"
                             autoFocus
                         />
                         <div className="flex justify-end gap-3">
                             <button
                                 onClick={() => setShowRenameModal(false)}
-                                className="px-5 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                                className="px-5 py-2.5 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-xl transition-colors"
                             >
                                 Cancel
                             </button>
                             <button
                                 onClick={handleRename}
-                                className="px-5 py-2.5 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-md hover:shadow-lg transition-all"
+                                className="px-6 py-2.5 text-sm font-bold text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 rounded-xl shadow-md hover:shadow-lg hover:scale-[1.02] transition-all"
                             >
                                 Save Changes
                             </button>
@@ -229,17 +240,19 @@ const HomePanel = () => {
 
             {/* Workspace Settings Modal */}
             {showSettingsModal && (
-                <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center animate-fade-in backdrop-blur-sm">
-                    <div className="bg-white rounded-xl shadow-2xl w-[700px] h-[500px] flex overflow-hidden transform transition-all scale-100">
+                <div className="fixed inset-0 bg-black/40 z-[60] flex items-center justify-center animate-fade-in backdrop-blur-md">
+                    <div className="bg-white rounded-2xl shadow-2xl w-[800px] h-[600px] flex overflow-hidden transform transition-all scale-100 border border-gray-100">
                         {/* Sidebar */}
-                        <div className="w-48 bg-gray-50 border-r border-gray-200 p-4">
-                            <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4 px-2">Settings</h3>
+                        <div className="w-56 bg-gray-50/80 backdrop-blur-sm border-r border-gray-200 p-6">
+                            <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-6 px-2">Settings</h3>
                             <nav className="space-y-1">
-                                {["General", "Permissions", "Members", "Billing"].map((tab) => (
+                                {["General", "Permissions", "Members", "Billing", "Advanced"].map((tab) => (
                                     <button
                                         key={tab}
                                         onClick={() => setActiveSettingsTab(tab)}
-                                        className={`w-full text-left px-3 py-2 rounded-md text-sm font-medium transition-colors ${activeSettingsTab === tab ? "bg-blue-100 text-blue-700" : "text-gray-600 hover:bg-gray-200"}`}
+                                        className={`w-full text-left px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${activeSettingsTab === tab
+                                            ? "bg-white text-blue-600 shadow-sm ring-1 ring-gray-200"
+                                            : "text-gray-600 hover:bg-gray-200/50 hover:text-gray-900"}`}
                                     >
                                         {tab}
                                     </button>
@@ -248,33 +261,33 @@ const HomePanel = () => {
                         </div>
 
                         {/* Content */}
-                        <div className="flex-1 p-8 overflow-y-auto">
-                            <h2 className="text-2xl font-bold text-gray-900 mb-6">{activeSettingsTab} Settings</h2>
+                        <div className="flex-1 p-10 overflow-y-auto bg-white">
+                            <h2 className="text-2xl font-bold text-gray-900 mb-8">{activeSettingsTab}</h2>
 
                             {activeSettingsTab === "General" && (
-                                <div className="space-y-6">
+                                <div className="space-y-8">
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Workspace Icon</label>
-                                        <div className="flex items-center gap-4">
-                                            <div className="w-16 h-16 bg-blue-600 rounded-lg flex items-center justify-center text-white text-2xl font-bold">
+                                        <label className="block text-sm font-semibold text-gray-700 mb-3">Workspace Icon</label>
+                                        <div className="flex items-center gap-6">
+                                            <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center text-white text-3xl font-bold shadow-lg">
                                                 {workspaceName.charAt(0)}
                                             </div>
-                                            <button className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">
-                                                Upload Icon
+                                            <button className="px-5 py-2.5 border border-gray-200 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-all">
+                                                Upload New Icon
                                             </button>
                                         </div>
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Workspace URL</label>
-                                        <div className="flex rounded-md shadow-sm">
-                                            <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-300 bg-gray-50 text-gray-500 text-sm">
+                                        <label className="block text-sm font-semibold text-gray-700 mb-3">Workspace URL</label>
+                                        <div className="flex rounded-xl shadow-sm ring-1 ring-gray-200 overflow-hidden">
+                                            <span className="inline-flex items-center px-4 border-r border-gray-200 bg-gray-50 text-gray-500 text-sm font-medium">
                                                 chttrix.com/
                                             </span>
                                             <input
                                                 type="text"
                                                 disabled
                                                 value={workspaceName.toLowerCase().replace(/\s+/g, '-')}
-                                                className="flex-1 min-w-0 block w-full px-3 py-2 rounded-none rounded-r-md border border-gray-300 bg-gray-50 text-gray-500 sm:text-sm"
+                                                className="flex-1 min-w-0 block w-full px-4 py-3 bg-white text-gray-500 sm:text-sm border-none focus:ring-0"
                                             />
                                         </div>
                                     </div>
@@ -282,39 +295,73 @@ const HomePanel = () => {
                             )}
 
                             {activeSettingsTab === "Permissions" && (
-                                <div className="space-y-4">
-                                    <div className="flex items-center justify-between py-3 border-b border-gray-100">
+                                <div className="space-y-6">
+                                    <div className="flex items-center justify-between py-4 border-b border-gray-100">
                                         <div>
-                                            <h4 className="text-sm font-medium text-gray-900">Channel Creation</h4>
-                                            <p className="text-sm text-gray-500">Allow members to create new channels</p>
+                                            <h4 className="text-sm font-bold text-gray-900">Channel Creation</h4>
+                                            <p className="text-sm text-gray-500 mt-1">Allow members to create new channels</p>
                                         </div>
-                                        <input type="checkbox" defaultChecked className="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500" />
+                                        <div className="relative inline-block w-12 mr-2 align-middle select-none transition duration-200 ease-in">
+                                            <input type="checkbox" name="toggle" id="toggle1" defaultChecked className="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer" />
+                                            <label htmlFor="toggle1" className="toggle-label block overflow-hidden h-6 rounded-full bg-blue-600 cursor-pointer"></label>
+                                        </div>
                                     </div>
-                                    <div className="flex items-center justify-between py-3 border-b border-gray-100">
+                                    <div className="flex items-center justify-between py-4 border-b border-gray-100">
                                         <div>
-                                            <h4 className="text-sm font-medium text-gray-900">Invite Members</h4>
-                                            <p className="text-sm text-gray-500">Allow members to invite new people</p>
+                                            <h4 className="text-sm font-bold text-gray-900">Invite Members</h4>
+                                            <p className="text-sm text-gray-500 mt-1">Allow members to invite new people</p>
                                         </div>
-                                        <input type="checkbox" defaultChecked className="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500" />
+                                        <div className="relative inline-block w-12 mr-2 align-middle select-none transition duration-200 ease-in">
+                                            <input type="checkbox" name="toggle" id="toggle2" defaultChecked className="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer" />
+                                            <label htmlFor="toggle2" className="toggle-label block overflow-hidden h-6 rounded-full bg-blue-600 cursor-pointer"></label>
+                                        </div>
                                     </div>
                                 </div>
                             )}
 
                             {activeSettingsTab === "Members" && (
                                 <div>
-                                    <p className="text-sm text-gray-500 mb-4">Manage who has access to this workspace.</p>
-                                    <div className="bg-gray-50 rounded-lg p-4 text-center text-gray-500">
-                                        Member list placeholder...
+                                    <p className="text-sm text-gray-500 mb-6">Manage who has access to this workspace.</p>
+                                    <div className="bg-gray-50 rounded-xl p-8 text-center border border-gray-200 border-dashed">
+                                        <div className="text-gray-400 mb-2">👥</div>
+                                        <p className="text-gray-500 text-sm">Member list integration coming soon...</p>
                                     </div>
                                 </div>
                             )}
 
                             {activeSettingsTab === "Billing" && (
-                                <div className="text-center py-8">
-                                    <div className="text-4xl mb-2">💳</div>
-                                    <h3 className="text-lg font-medium text-gray-900">Pro Plan</h3>
-                                    <p className="text-gray-500 mb-4">You are currently on the Pro plan.</p>
-                                    <button className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700">Manage Subscription</button>
+                                <div className="text-center py-12">
+                                    <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">💳</div>
+                                    <h3 className="text-lg font-bold text-gray-900 mb-2">Pro Plan</h3>
+                                    <p className="text-gray-500 mb-6">You are currently on the Pro plan.</p>
+                                    <button className="px-6 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-bold hover:bg-blue-700 shadow-md hover:shadow-lg transition-all">
+                                        Manage Subscription
+                                    </button>
+                                </div>
+                            )}
+
+                            {activeSettingsTab === "Advanced" && (
+                                <div>
+                                    <div className="bg-red-50/50 border border-red-100 rounded-2xl p-8">
+                                        <h3 className="text-lg font-bold text-red-900 mb-2">Danger Zone</h3>
+                                        <p className="text-sm text-red-700/80 mb-8 leading-relaxed">
+                                            Deleting a workspace is permanent and cannot be undone. All messages, files, and data will be lost forever.
+                                            <br />
+                                            <strong>Only administrators can perform this action.</strong>
+                                        </p>
+                                        <div className="flex items-center justify-between bg-white p-4 rounded-xl border border-red-100 shadow-sm">
+                                            <div>
+                                                <h4 className="text-sm font-bold text-gray-900">Delete this workspace</h4>
+                                                <p className="text-xs text-gray-500 mt-1">Once deleted, it's gone for good.</p>
+                                            </div>
+                                            <button
+                                                onClick={() => setShowDeleteConfirm(true)}
+                                                className="px-5 py-2.5 bg-red-600 text-white text-sm font-bold rounded-xl hover:bg-red-700 shadow-md hover:shadow-lg transition-all"
+                                            >
+                                                Delete Workspace
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
                             )}
                         </div>
@@ -322,7 +369,7 @@ const HomePanel = () => {
                         {/* Close Button */}
                         <button
                             onClick={() => setShowSettingsModal(false)}
-                            className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
+                            className="absolute top-6 right-6 text-gray-400 hover:text-gray-600 bg-white rounded-full p-1 hover:bg-gray-100 transition-colors"
                         >
                             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
                         </button>
@@ -332,10 +379,10 @@ const HomePanel = () => {
 
             {/* Invite Modal */}
             {showInviteModal && (
-                <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center animate-fade-in backdrop-blur-sm">
-                    <div className="bg-white rounded-xl shadow-2xl w-[600px] overflow-hidden transform transition-all scale-100">
+                <div className="fixed inset-0 bg-black/40 z-[60] flex items-center justify-center animate-fade-in backdrop-blur-md">
+                    <div className="bg-white rounded-2xl shadow-2xl w-[600px] overflow-hidden transform transition-all scale-100 border border-gray-100">
                         {/* Header */}
-                        <div className="px-8 py-6 border-b border-gray-100 bg-gray-50/50">
+                        <div className="px-8 py-6 border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white">
                             <h3 className="text-2xl font-bold text-gray-900">Invite people to {workspaceName}</h3>
                             <p className="text-gray-500 mt-1">Bring your team together to collaborate and chat.</p>
                         </div>
@@ -343,9 +390,9 @@ const HomePanel = () => {
                         <div className="p-8">
                             {/* Invite Link Section */}
                             <div className="mb-8">
-                                <label className="block text-sm font-semibold text-gray-700 mb-2 uppercase tracking-wide">Invite Link</label>
+                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Invite Link</label>
                                 <div className="flex gap-2">
-                                    <div className="flex-1 bg-gray-50 border border-gray-300 rounded-lg px-4 py-3 text-gray-600 font-mono text-sm flex items-center select-all">
+                                    <div className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-gray-600 font-mono text-sm flex items-center select-all shadow-inner">
                                         https://chttrix.com/invite/{workspaceName.toLowerCase().replace(/\s+/g, '-')}-{Math.random().toString(36).substr(2, 6)}
                                     </div>
                                     <button
@@ -353,7 +400,7 @@ const HomePanel = () => {
                                             navigator.clipboard.writeText(`https://chttrix.com/invite/${workspaceName.toLowerCase().replace(/\s+/g, '-')}`);
                                             alert("Link copied to clipboard!");
                                         }}
-                                        className="px-6 py-2 bg-white border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 hover:border-gray-400 transition-all shadow-sm active:scale-95"
+                                        className="px-6 py-2 bg-white border border-gray-200 text-gray-700 font-bold rounded-xl hover:bg-gray-50 hover:border-gray-300 transition-all shadow-sm hover:shadow active:scale-95"
                                     >
                                         Copy
                                     </button>
@@ -363,22 +410,22 @@ const HomePanel = () => {
 
                             {/* Email Invite Section */}
                             <div className="mb-8">
-                                <label className="block text-sm font-semibold text-gray-700 mb-2 uppercase tracking-wide">Send via Email</label>
+                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Send via Email</label>
                                 <input
                                     type="email"
                                     value={inviteEmail}
                                     onChange={(e) => setInviteEmail(e.target.value)}
-                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
                                     placeholder="name@example.com, colleague@work.com"
                                 />
                             </div>
 
                             {/* Rules / Info Section */}
-                            <div className="bg-blue-50 rounded-lg p-4 border border-blue-100">
-                                <h4 className="text-sm font-bold text-blue-800 mb-2 flex items-center gap-2">
+                            <div className="bg-blue-50/50 rounded-xl p-5 border border-blue-100">
+                                <h4 className="text-sm font-bold text-blue-900 mb-2 flex items-center gap-2">
                                     <span>ℹ️</span> Quick Rules
                                 </h4>
-                                <ul className="text-sm text-blue-700 space-y-1 list-disc list-inside">
+                                <ul className="text-sm text-blue-800 space-y-1 list-disc list-inside opacity-80">
                                     <li>Be kind and respectful to everyone.</li>
                                     <li>Keep conversations relevant to the channels.</li>
                                     <li>No spamming or sharing sensitive info.</li>
@@ -387,18 +434,74 @@ const HomePanel = () => {
                         </div>
 
                         {/* Footer */}
-                        <div className="px-8 py-4 bg-gray-50 border-t border-gray-100 flex justify-end gap-3">
+                        <div className="px-8 py-5 bg-gray-50 border-t border-gray-100 flex justify-end gap-3">
                             <button
                                 onClick={() => setShowInviteModal(false)}
-                                className="px-6 py-2.5 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-200 rounded-lg transition-colors"
+                                className="px-6 py-2.5 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-200 rounded-xl transition-colors"
                             >
                                 Cancel
                             </button>
                             <button
                                 onClick={handleInvite}
-                                className="px-6 py-2.5 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-md hover:shadow-lg transition-all transform active:scale-95"
+                                className="px-6 py-2.5 text-sm font-bold text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 rounded-xl shadow-md hover:shadow-lg transition-all transform active:scale-[1.02]"
                             >
                                 Send Invitations
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Delete Confirmation Modal */}
+            {showDeleteConfirm && (
+                <div className="fixed inset-0 bg-black/70 z-[70] flex items-center justify-center animate-fade-in backdrop-blur-md">
+                    <div className="bg-white rounded-2xl shadow-2xl w-[480px] p-8 transform transition-all scale-100 border border-gray-100 relative overflow-hidden">
+                        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-red-500 to-orange-500"></div>
+
+                        <div className="flex items-center gap-4 mb-6">
+                            <div className="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center text-red-600">
+                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                            </div>
+                            <div>
+                                <h3 className="text-xl font-bold text-gray-900">Delete Workspace?</h3>
+                                <p className="text-sm text-gray-500">This action is permanent.</p>
+                            </div>
+                        </div>
+
+                        <p className="text-sm text-gray-600 mb-6 leading-relaxed bg-red-50 p-4 rounded-xl border border-red-100">
+                            You are about to permanently delete <strong>{workspaceName}</strong>. This action <strong>cannot</strong> be undone. All channels, messages, and files will be irretrievably lost.
+                        </p>
+
+                        <div className="mb-8">
+                            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">
+                                To confirm, type <span className="text-gray-900 select-all">"{workspaceName}"</span> below:
+                            </label>
+                            <input
+                                type="text"
+                                value={deleteVerification}
+                                onChange={(e) => setDeleteVerification(e.target.value)}
+                                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:bg-white focus:ring-2 focus:ring-red-500/20 focus:border-red-500 font-mono text-sm transition-all"
+                                placeholder={workspaceName}
+                                autoFocus
+                            />
+                        </div>
+
+                        <div className="flex justify-end gap-3">
+                            <button
+                                onClick={() => { setShowDeleteConfirm(false); setDeleteVerification(""); }}
+                                className="px-5 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-xl transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleDeleteWorkspace}
+                                disabled={deleteVerification !== workspaceName}
+                                className={`px-5 py-2.5 text-sm font-bold text-white rounded-xl shadow-md transition-all ${deleteVerification === workspaceName
+                                        ? "bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700 hover:shadow-lg hover:scale-[1.02]"
+                                        : "bg-gray-300 cursor-not-allowed"
+                                    }`}
+                            >
+                                Delete Workspace
                             </button>
                         </div>
                     </div>
