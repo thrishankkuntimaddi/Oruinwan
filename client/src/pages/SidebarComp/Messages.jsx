@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useLocation, useParams } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import ChatWindow from "../../components/messagesComp/chatWindowComp/chatWindow";
 import axios from "axios";
 

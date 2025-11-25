@@ -110,7 +110,7 @@ io.on("connection", (socket) => {
 // ---------------------------------------------------------
 // START SERVER
 // ---------------------------------------------------------
-const PORT = process.env.PORT;
+const PORT = process.env.PORT || 5000;
 
 httpServer.listen(PORT, () =>
   console.log(`Server (Socket.io + Express) running on port ${PORT}`)
