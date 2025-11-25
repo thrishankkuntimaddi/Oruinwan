@@ -32,6 +32,15 @@
 │   │   │   │   ├── SharedTodoList.jsx
 │   │   │   │   ├── TaskStats.jsx
 │   │   │   │   └── WeatherWidget.jsx
+│   │   │   ├── layout
+│   │   │   │   ├── IconSidebar.jsx
+│   │   │   │   ├── MainLayout.jsx
+│   │   │   │   ├── panels
+│   │   │   │   │   ├── HomePanel.jsx
+│   │   │   │   │   ├── MessagesPanel.jsx
+│   │   │   │   │   ├── NotesPanel.jsx
+│   │   │   │   │   └── TasksPanel.jsx
+│   │   │   │   └── SidePanel.jsx
 │   │   │   ├── loginpage
 │   │   │   │   ├── LoginForm.jsx
 │   │   │   │   └── SignupForm.jsx
@@ -66,20 +75,25 @@
 │   │   │   │   ├── CreateChannelModal.jsx
 │   │   │   │   ├── JoinChannelModal.jsx
 │   │   │   │   ├── MessageList.jsx
+│   │   │   │   ├── NewDMModal.jsx
 │   │   │   │   └── structure.txt
 │   │   │   ├── RequireAuth.jsx
 │   │   │   ├── SidebarComp
 │   │   │   │   ├── ProfileSidebar.jsx
 │   │   │   │   └── Sidebar.jsx
-│   │   │   └── tasksComp
-│   │   │       ├── TaskHeader.jsx
-│   │   │       ├── TaskModal.jsx
-│   │   │       ├── TaskRow.jsx
-│   │   │       ├── TaskTable.jsx
-│   │   │       └── TaskTabs.jsx
+│   │   │   ├── tasksComp
+│   │   │   │   ├── TaskHeader.jsx
+│   │   │   │   ├── TaskModal.jsx
+│   │   │   │   ├── TaskRow.jsx
+│   │   │   │   ├── TaskTable.jsx
+│   │   │   │   └── TaskTabs.jsx
+│   │   │   └── ui
+│   │   │       ├── LoadingScreen.jsx
+│   │   │       └── Toast.jsx
 │   │   ├── contexts
 │   │   │   ├── AuthContext.jsx
-│   │   │   └── ContactsContext.jsx
+│   │   │   ├── ContactsContext.jsx
+│   │   │   └── ToastContext.jsx
 │   │   ├── index.css
 │   │   ├── index.js
 │   │   ├── logo.svg
@@ -93,8 +107,10 @@
 │   │   │   │   ├── Blogs.jsx
 │   │   │   │   ├── Home.jsx
 │   │   │   │   ├── Messages.jsx
-│   │   │   │   └── MyTasks.jsx
-│   │   │   └── VerifyEmail.jsx
+│   │   │   │   ├── MyTasks.jsx
+│   │   │   │   └── Notes.jsx
+│   │   │   ├── VerifyEmail.jsx
+│   │   │   └── WorkspaceSelect.jsx
 │   │   ├── reportWebVitals.js
 │   │   ├── setupTests.js
 │   │   └── utils
@@ -111,8 +127,10 @@
 │   ├── SECURITY_SETUP_COMPLETE.md
 │   ├── SECURITY.md
 │   ├── SLACK_STYLE_DMS.md
+│   ├── TESTING_GUIDE.md
 │   └── THREADED_REPLIES.md
 ├── server
+│   ├── check-users.js
 │   ├── controllers
 │   │   ├── authController.js
 │   │   ├── channelController.js
@@ -149,4 +167,4 @@
 ├── structure.txt
 └── verify-security.sh
 
-35 directories, 115 files
+38 directories, 130 files
