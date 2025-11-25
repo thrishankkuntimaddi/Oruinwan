@@ -6,6 +6,7 @@ const bcrypt = require("bcryptjs");
 const User = require("../models/User");
 const sendEmail = require("../utils/sendEmail");
 const { OAuth2Client } = require("google-auth-library");
+const axios = require("axios");
 
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
@@ -464,16 +465,31 @@ exports.updatePassword = async (req, res) => {
 // ----------------------------------------------------
 exports.googleLogin = async (req, res) => {
   try {
-    const { credential } = req.body;
-    if (!credential)
+    const { credential, accessToken: googleAccessToken } = req.body;
+
+    let email, name, picture, googleId;
+
+    if (credential) {
+      const ticket = await client.verifyIdToken({
+        idToken: credential,
+        audience: process.env.GOOGLE_CLIENT_ID,
+      });
+      const payload = ticket.getPayload();
+      email = payload.email;
+      name = payload.name;
+      picture = payload.picture;
+      googleId = payload.sub;
+    } else if (googleAccessToken) {
+      const response = await axios.get("https://www.googleapis.com/oauth2/v3/userinfo", {
+        headers: { Authorization: `Bearer ${googleAccessToken}` },
+      });
+      email = response.data.email;
+      name = response.data.name;
+      picture = response.data.picture;
+      googleId = response.data.sub;
+    } else {
       return res.status(400).json({ message: "Missing Google token" });
-
-    const ticket = await client.verifyIdToken({
-      idToken: credential,
-      audience: process.env.GOOGLE_CLIENT_ID,
-    });
-
-    const { email, name, picture, sub: googleId } = ticket.getPayload();
+    }
 
     let user = await User.findOne({ email });
 
