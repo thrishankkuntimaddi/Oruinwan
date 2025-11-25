@@ -53,8 +53,13 @@ export const AuthProvider = ({ children }) => {
 
     if (!res.ok) throw new Error(data.message || "Login failed");
 
+    // Save to state
     setAccessToken(data.accessToken);
     setUser(data.user);
+
+    // CRITICAL: Save to localStorage so it persists across page refreshes
+    localStorage.setItem("accessToken", data.accessToken);
+    console.log("✅ Token saved to localStorage");
 
     return data;
   };
@@ -70,6 +75,8 @@ export const AuthProvider = ({ children }) => {
 
     setUser(null);
     setAccessToken(null);
+    localStorage.removeItem("accessToken");
+    console.log("✅ Token cleared from localStorage");
   };
 
   // ------------------------------------------------------------

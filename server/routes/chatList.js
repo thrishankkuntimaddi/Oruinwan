@@ -19,4 +19,23 @@ router.post("/channel/join", requireAuth, async (req, res) => {
     return channelCtrl.joinChannel(req, res);
 });
 
+// Contacts endpoint (for DM discovery)
+router.get("/contacts", requireAuth, async (req, res) => {
+    try {
+        const currentUserId = req.user.sub;
+        const User = require("../models/User");
+
+        // Get all users except the current user
+        const users = await User.find({ _id: { $ne: currentUserId } })
+            .select("_id username email profilePicture")
+            .limit(100)
+            .lean();
+
+        res.json({ contacts: users });
+    } catch (err) {
+        console.error("GET CONTACTS ERROR:", err);
+        res.status(500).json({ message: "Server error" });
+    }
+});
+
 module.exports = router;

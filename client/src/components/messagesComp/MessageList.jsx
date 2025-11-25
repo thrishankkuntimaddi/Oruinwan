@@ -4,6 +4,8 @@ import axios from "axios";
 import { io } from "socket.io-client";
 import CreateChannelModal from "./CreateChannelModal";
 import JoinChannelModal from "./JoinChannelModal";
+import NewDMModal from "./NewDMModal";
+
 
 const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
@@ -15,6 +17,7 @@ export default function MessageList({ onSelectChat }) {
   const [items, setItems] = useState([]);
   const [showCreate, setShowCreate] = useState(false);
   const [showJoin, setShowJoin] = useState(false);
+  const [showNewChat, setShowNewChat] = useState(false);
 
   const socketRef = useRef(null);
 
@@ -295,6 +298,14 @@ export default function MessageList({ onSelectChat }) {
 
       {/* Channel Actions */}
       <div className="flex items-center justify-end gap-2 px-4 py-2">
+
+        <button
+          className="px-3 py-1 bg-green-500 text-white text-sm rounded hover:bg-green-600"
+          onClick={() => setShowNewChat(true)}
+        >
+          New Message
+        </button>
+
         <button
           onClick={() => setShowJoin(true)}
           className="px-3 py-1 bg-green-500 text-white text-sm rounded hover:bg-green-600"
@@ -305,7 +316,7 @@ export default function MessageList({ onSelectChat }) {
           onClick={() => setShowCreate(true)}
           className="px-3 py-1 bg-blue-500 text-white text-sm rounded hover:bg-blue-600"
         >
-          + Create Channel
+          Create Channel
         </button>
       </div>
 
@@ -329,6 +340,17 @@ export default function MessageList({ onSelectChat }) {
           }}
         />
       )}
+
+      {showNewChat && (
+  <NewDMModal 
+    onClose={() => setShowNewChat(false)} 
+    onStart={(user) => {
+      onSelectChat({ type: "dm", id: user._id, name: user.username });
+      setShowNewChat(false);
+    }}
+  />
+)}
+
 
       {showJoin && (
         <JoinChannelModal
