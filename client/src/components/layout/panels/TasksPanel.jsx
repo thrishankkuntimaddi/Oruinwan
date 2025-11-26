@@ -1,6 +1,8 @@
 import React from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 
+import { User, Inbox, Send, CheckCircle2 } from "lucide-react";
+
 const TasksPanel = () => {
     const navigate = useNavigate();
     const location = useLocation();
@@ -19,22 +21,43 @@ const TasksPanel = () => {
             <div className="p-4 space-y-2">
                 <button
                     onClick={() => handleNav("my-tasks")}
-                    className={`w-full text-left px-4 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === "my-tasks"
-                            ? "bg-blue-100 text-blue-700"
-                            : "text-gray-700 hover:bg-gray-200"
+                    className={`w-full text-left px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center gap-3 ${activeTab === "my-tasks"
+                        ? "bg-blue-100 text-blue-700"
+                        : "text-gray-700 hover:bg-gray-200"
                         }`}
                 >
-                    📝 My Tasks
+                    <User size={18} /> Personal
                 </button>
                 <button
                     onClick={() => handleNav("shared-tasks")}
-                    className={`w-full text-left px-4 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === "shared-tasks"
-                            ? "bg-blue-100 text-blue-700"
-                            : "text-gray-700 hover:bg-gray-200"
+                    className={`w-full text-left px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center gap-3 ${activeTab === "shared-tasks"
+                        ? "bg-blue-100 text-blue-700"
+                        : "text-gray-700 hover:bg-gray-200"
                         }`}
                 >
-                    👥 Shared Tasks
+                    <Inbox size={18} /> Incoming
                 </button>
+                <button
+                    onClick={() => handleNav("assigned-tasks")}
+                    className={`w-full text-left px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center gap-3 ${activeTab === "assigned-tasks"
+                        ? "bg-blue-100 text-blue-700"
+                        : "text-gray-700 hover:bg-gray-200"
+                        }`}
+                >
+                    <Send size={18} /> Delegated
+                </button>
+
+                <div className="pt-4 mt-2 border-t border-gray-200">
+                    <button
+                        onClick={() => handleNav("completed-tasks")}
+                        className={`w-full text-left px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center gap-3 ${activeTab === "completed-tasks"
+                            ? "bg-green-100 text-green-700"
+                            : "text-gray-600 hover:bg-gray-100"
+                            }`}
+                    >
+                        <CheckCircle2 size={18} /> Completed
+                    </button>
+                </div>
             </div>
         </div>
     );
