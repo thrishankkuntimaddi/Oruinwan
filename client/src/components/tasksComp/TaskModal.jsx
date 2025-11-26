@@ -2,7 +2,6 @@ import React, { useState } from "react";
 import { X, Calendar, User, Flag, Briefcase, AlignLeft, Type } from "lucide-react";
 
 const priorities = ["Emergency", "High", "Medium", "Low"];
-const statuses = ["To Do", "In Progress", "Done", "Completed", "Terminated"];
 
 export default function TaskModal({ onClose, onAddTask, channels = [], teamMembers = [] }) {
   const [title, setTitle] = useState("");

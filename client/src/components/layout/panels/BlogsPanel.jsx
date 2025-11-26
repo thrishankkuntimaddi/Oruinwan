@@ -1,10 +1,8 @@
 import React from "react";
-import { useNavigate } from "react-router-dom";
 import { Layout, User, Bell, Hash, Zap } from "lucide-react";
 import { useBlogs } from "../../../contexts/BlogsContext";
 
 const BlogsPanel = () => {
-    const navigate = useNavigate();
     const { activeFilter, setActiveFilter } = useBlogs();
 
     const filters = [

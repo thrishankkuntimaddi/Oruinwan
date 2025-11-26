@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useBlogs } from "../../contexts/BlogsContext";
-import { Heart, MessageCircle, MoreHorizontal, Send, User, Image as ImageIcon, Flag, Trash2, Copy } from "lucide-react";
+import { Heart, MessageCircle, MoreHorizontal, Send, User, Image as ImageIcon, Flag, Copy } from "lucide-react";
 
 const Blogs = () => {
   const navigate = useNavigate();
