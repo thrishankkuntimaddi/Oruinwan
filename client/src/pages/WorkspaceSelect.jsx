@@ -51,7 +51,7 @@ const WorkspaceSelect = () => {
         <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-6 relative">
             {/* Logo */}
             <div className="absolute top-6 left-6 flex items-center space-x-2">
-                <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-lg">💬</div>
+                <img src="/assets/Logoat.jpg" alt="Chttrix Logo" className="w-8 h-8 rounded-lg object-cover contrast-125 saturate-110 shadow-sm" />
                 <span className="text-xl font-bold text-gray-900 tracking-tight">Chttrix</span>
             </div>
 
@@ -304,8 +304,8 @@ const WorkspaceSelect = () => {
                                     type="submit"
                                     disabled={!newWorkspaceName.trim()}
                                     className={`px-6 py-2.5 text-sm font-bold text-white rounded-xl shadow-md transition-all ${newWorkspaceName.trim()
-                                            ? "bg-blue-600 hover:bg-blue-700 hover:shadow-lg"
-                                            : "bg-gray-300 cursor-not-allowed"
+                                        ? "bg-blue-600 hover:bg-blue-700 hover:shadow-lg"
+                                        : "bg-gray-300 cursor-not-allowed"
                                         }`}
                                 >
                                     Create Workspace
