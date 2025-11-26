@@ -32,7 +32,7 @@ export default function Messages() {
     const path = location.pathname;
 
     if (path.includes("/channel/")) {
-      const channelId = path.split("/channel/")[1];
+      const channelId = decodeURIComponent(path.split("/channel/")[1]);
       // Mock channel data for now since we don't have a backend fetch for single channel yet
       // In a real app, you'd fetch the channel details here
       setSelectedChat({
@@ -42,7 +42,7 @@ export default function Messages() {
         members: [] // Placeholder
       });
     } else if (path.includes("/dm/")) {
-      const dmId = path.split("/dm/")[1];
+      const dmId = decodeURIComponent(path.split("/dm/")[1]);
       // Find contact or create mock
       const contact = contacts.find(c => c.username.toLowerCase() === dmId.toLowerCase()) || {
         id: dmId,

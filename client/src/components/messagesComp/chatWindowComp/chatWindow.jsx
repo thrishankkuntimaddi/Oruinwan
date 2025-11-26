@@ -145,6 +145,12 @@ export default function ChatWindow({ chat, onClose, contacts = [] }) {
             // Specific dummy data for Direct Messages
             dummyMessages = [
               {
+                id: "dm-system",
+                sender: "system",
+                text: `This is the beginning of your direct message history with ${chat.name}.`,
+                ts: new Date(now.getTime() - 1000 * 60 * 60 * 3).toISOString(), // 3 hours ago
+              },
+              {
                 id: "dm-1",
                 sender: "other",
                 senderName: chat.name,
@@ -224,6 +230,7 @@ export default function ChatWindow({ chat, onClose, contacts = [] }) {
         }
         // -------------------------------------
 
+        if (!mounted) return;
         setMessages(loadedMessages);
 
         // Mark as read
@@ -244,6 +251,7 @@ export default function ChatWindow({ chat, onClose, contacts = [] }) {
         }
       } catch (err) {
         console.error("Load messages error:", err);
+        if (!mounted) return;
         // Fallback dummy data on error
         setMessages([
           {
@@ -268,7 +276,7 @@ export default function ChatWindow({ chat, onClose, contacts = [] }) {
 
     loadMessages();
     return () => (mounted = false);
-  }, [chat]);
+  }, [chat, connected]);
 
   /* ---------------------------------------------------------
       OUTSIDE CLICK HANDLER
@@ -277,16 +285,17 @@ export default function ChatWindow({ chat, onClose, contacts = [] }) {
     const handleClickOutside = () => {
       setShowSearch(false);
       setShowMenu(false);
+      setOpenMsgMenuId(null);
     };
 
-    if (showSearch || showMenu) {
+    if (showSearch || showMenu || openMsgMenuId) {
       document.addEventListener("click", handleClickOutside);
     }
 
     return () => {
       document.removeEventListener("click", handleClickOutside);
     };
-  }, [showSearch, showMenu]);
+  }, [showSearch, showMenu, openMsgMenuId]);
 
   /* ---------------------------------------------------------
       SOCKET SETUP

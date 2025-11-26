@@ -71,7 +71,7 @@ const MainLayout = ({ children, sidePanel }) => {
     };
 
     return (
-        <div className="flex flex-col h-screen w-screen overflow-hidden bg-white">
+        <div className="flex flex-col h-screen w-full overflow-hidden bg-white fixed inset-0">
             {/* ... (Top Bar remains same) ... */}
 
             {/* Help Modals */}

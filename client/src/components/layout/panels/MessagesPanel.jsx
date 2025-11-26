@@ -1,9 +1,11 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import NewDMModal from "../../messagesComp/NewDMModal";
 
 const MessagesPanel = () => {
     const navigate = useNavigate();
     const [filter, setFilter] = useState("all"); // all, unread
+    const [showNewDM, setShowNewDM] = useState(false);
 
     const contacts = [
         { id: 1, name: "Sarah Connor", status: "online", unread: 0 },
@@ -12,18 +14,42 @@ const MessagesPanel = () => {
         { id: 4, name: "Bob Wilson", status: "busy", unread: 0 },
     ];
 
+    const handleStartDM = (user) => {
+        setShowNewDM(false);
+        // Navigate to the DM route. 
+        // Note: Messages.jsx expects /dm/:id where id can be username or ID.
+        // We'll use username to match the existing logic in Messages.jsx
+        navigate(`/messages/dm/${user.username}`);
+    };
+
     return (
         <div className="flex flex-col h-full bg-gray-50">
             {/* Header */}
             <div className="h-12 border-b border-gray-200 flex items-center justify-between px-4 font-bold text-gray-900">
                 <span>Direct Messages</span>
-                <button className="text-gray-500 hover:bg-gray-200 p-1 rounded">
+                <button
+                    onClick={() => setShowNewDM(true)}
+                    className="text-gray-500 hover:bg-gray-200 p-1 rounded transition-colors"
+                    title="New Message"
+                >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
                 </button>
             </div>
 
+            {/* Search */}
+            <div className="px-4 pb-2 mt-3">
+                <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs">🔍</span>
+                    <input
+                        type="text"
+                        placeholder="Search contacts..."
+                        className="w-full pl-8 pr-3 py-1.5 bg-white border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    />
+                </div>
+            </div>
+
             {/* Filters */}
-            <div className="px-4 py-3 flex space-x-2">
+            <div className="px-4 py-2 flex space-x-2">
                 <button
                     onClick={() => setFilter("all")}
                     className={`px-3 py-1 text-xs font-medium rounded-full transition-colors ${filter === "all" ? "bg-blue-100 text-blue-700" : "bg-gray-200 text-gray-600 hover:bg-gray-300"}`}
@@ -38,18 +64,6 @@ const MessagesPanel = () => {
                 </button>
             </div>
 
-            {/* Search */}
-            <div className="px-4 pb-2">
-                <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs">🔍</span>
-                    <input
-                        type="text"
-                        placeholder="Search contacts..."
-                        className="w-full pl-8 pr-3 py-1.5 bg-white border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    />
-                </div>
-            </div>
-
             {/* Contact List */}
             <div className="flex-1 overflow-y-auto custom-scrollbar pb-4 mt-2">
                 <div className="px-4 mb-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">Friends</div>
@@ -58,7 +72,7 @@ const MessagesPanel = () => {
                     {contacts.map((contact) => (
                         <div
                             key={contact.id}
-                            onClick={() => navigate(`/messages/dm/${contact.id}`)}
+                            onClick={() => navigate(`/messages/dm/${contact.name}`)}
                             className="px-4 py-2 mx-2 rounded-md cursor-pointer flex items-center justify-between hover:bg-gray-200 group transition-colors"
                         >
                             <div className="flex items-center">
@@ -85,6 +99,14 @@ const MessagesPanel = () => {
                     ))}
                 </div>
             </div>
+
+            {/* New DM Modal */}
+            {showNewDM && (
+                <NewDMModal
+                    onClose={() => setShowNewDM(false)}
+                    onStart={handleStartDM}
+                />
+            )}
         </div>
     );
 };
