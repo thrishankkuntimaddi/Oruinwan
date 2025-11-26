@@ -81,7 +81,7 @@ const LoginForm = ({ onSwitch }) => {
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Email */}
         <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">Email</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
           <input
             name="email"
             type="email"
@@ -96,7 +96,7 @@ const LoginForm = ({ onSwitch }) => {
         {/* Password */}
         <div>
           <div className="flex justify-between items-center mb-1">
-            <label className="block text-xs font-medium text-gray-700">Password</label>
+            <label className="block text-sm font-medium text-gray-700">Password</label>
           </div>
           <div className="relative">
             <input
@@ -119,7 +119,7 @@ const LoginForm = ({ onSwitch }) => {
             </button>
           </div>
           <div className="flex justify-end mt-1">
-            <Link to="/forgot-password" className="text-xs text-blue-600 hover:text-blue-700 font-medium">
+            <Link to="/forgot-password" className="text-sm text-blue-600 hover:text-blue-700 font-medium">
               Forgot password?
             </Link>
           </div>
@@ -144,7 +144,7 @@ const LoginForm = ({ onSwitch }) => {
           <div className="w-full border-t border-gray-200"></div>
         </div>
         <div className="relative flex justify-center text-xs">
-          <span className="px-4 bg-white text-gray-500">or login with</span>
+          <span className="px-4 bg-white text-gray-500 text-sm">or login with</span>
         </div>
       </div>
 
@@ -171,7 +171,7 @@ const LoginForm = ({ onSwitch }) => {
       </div>
 
       {/* Footer */}
-      <p className="text-center mt-6 text-xs text-gray-600">
+      <p className="text-center mt-6 text-sm text-gray-600">
         Don’t have an account?{" "}
         <button onClick={onSwitch} className="text-blue-600 font-semibold hover:underline">
           Sign up

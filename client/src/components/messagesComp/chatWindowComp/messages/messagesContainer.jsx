@@ -29,6 +29,7 @@ export default function MessagesContainer({
   currentUserId, // ★ ADD THIS FOR READ RECEIPTS
   onOpenThread, // ★ THREAD PANEL
   threadCounts, // ★ THREAD COUNTS
+  chatType,
 }) {
   const messagesRef = useRef(null);
 
@@ -95,6 +96,7 @@ export default function MessagesContainer({
                   currentUserId={currentUserId} // ★ PASS DOWN FOR READ RECEIPTS
                   onOpenThread={onOpenThread} // ★ THREAD PANEL
                   threadCounts={threadCounts} // ★ THREAD COUNTS
+                  chatType={chatType}
                 />
               ))}
           </div>

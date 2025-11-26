@@ -277,17 +277,17 @@ const MainLayout = ({ children, sidePanel }) => {
                                 {/* Unique Gradient Header */}
                                 <div className="p-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white">
                                     <h3 className="font-bold text-base">Chttrix Support</h3>
-                                    <p className="text-[10px] text-indigo-100 mt-0.5 opacity-90">We're here to help you collaborate better.</p>
+                                    <p className="text-xs text-indigo-100 mt-0.5 opacity-90">We're here to help you collaborate better.</p>
                                 </div>
 
                                 {/* Search */}
                                 <div className="p-3 border-b border-gray-100">
                                     <div className="relative">
-                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-[10px]">🔍</span>
+                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs">🔍</span>
                                         <input
                                             type="text"
                                             placeholder="Find answers..."
-                                            className="w-full pl-7 pr-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                                            className="w-full pl-7 pr-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
                                         />
                                     </div>
                                 </div>
@@ -299,28 +299,28 @@ const MainLayout = ({ children, sidePanel }) => {
                                         className="flex flex-col items-center justify-center p-2 hover:bg-indigo-50 rounded-lg transition-colors group"
                                     >
                                         <span className="text-xl mb-1 group-hover:scale-110 transition-transform">🎓</span>
-                                        <span className="text-[10px] font-medium text-gray-700">Academy</span>
+                                        <span className="text-xs font-medium text-gray-700">Academy</span>
                                     </button>
                                     <button
                                         onClick={() => { setShowHelp(false); setActiveHelpModal("shortcuts"); }}
                                         className="flex flex-col items-center justify-center p-2 hover:bg-indigo-50 rounded-lg transition-colors group"
                                     >
                                         <span className="text-xl mb-1 group-hover:scale-110 transition-transform">⌨️</span>
-                                        <span className="text-[10px] font-medium text-gray-700">Shortcuts</span>
+                                        <span className="text-xs font-medium text-gray-700">Shortcuts</span>
                                     </button>
                                     <button
                                         onClick={() => { setShowHelp(false); setActiveHelpModal("bug"); }}
                                         className="flex flex-col items-center justify-center p-2 hover:bg-indigo-50 rounded-lg transition-colors group"
                                     >
                                         <span className="text-xl mb-1 group-hover:scale-110 transition-transform">🐛</span>
-                                        <span className="text-[10px] font-medium text-gray-700">Report Bug</span>
+                                        <span className="text-xs font-medium text-gray-700">Report Bug</span>
                                     </button>
                                     <button
                                         onClick={() => { setShowHelp(false); setActiveHelpModal("whatsnew"); }}
                                         className="flex flex-col items-center justify-center p-2 hover:bg-indigo-50 rounded-lg transition-colors group"
                                     >
                                         <span className="text-xl mb-1 group-hover:scale-110 transition-transform">✨</span>
-                                        <span className="text-[10px] font-medium text-gray-700">What's New</span>
+                                        <span className="text-xs font-medium text-gray-700">What's New</span>
                                     </button>
                                 </div>
 
@@ -331,11 +331,11 @@ const MainLayout = ({ children, sidePanel }) => {
                                             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
                                             <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
                                         </span>
-                                        <span className="text-[9px] font-medium text-gray-500 uppercase tracking-wide">All Systems Operational</span>
+                                        <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">All Systems Operational</span>
                                     </div>
                                     <button
                                         onClick={() => { setShowHelp(false); setActiveHelpModal("contact"); }}
-                                        className="text-[10px] text-indigo-600 font-medium hover:underline"
+                                        className="text-xs text-indigo-600 font-medium hover:underline"
                                     >
                                         Contact Us
                                     </button>

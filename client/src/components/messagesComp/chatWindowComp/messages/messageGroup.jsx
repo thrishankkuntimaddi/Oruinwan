@@ -22,6 +22,7 @@ export default function MessageGroup({
   currentUserId,
   onOpenThread,
   threadCounts,
+  chatType,
 }) {
   // This component just delegates to MessageItem — kept for future grouping logic
   return (
@@ -45,6 +46,7 @@ export default function MessageGroup({
       currentUserId={currentUserId}
       onOpenThread={onOpenThread}
       threadCounts={threadCounts}
+      chatType={chatType}
     />
   );
 }

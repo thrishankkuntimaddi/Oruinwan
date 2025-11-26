@@ -10,7 +10,6 @@ import ContactShareModal from "./modals/contactShareModal.jsx";
 import ChannelManagementModal from "../ChannelManagementModal.jsx";
 import ThreadPanel from "./ThreadPanel.jsx";
 import MessagesContainer from "./messages/messagesContainer.jsx";
-import SelectionToolbar from "./toolbar/selectionToolbar.jsx";
 import ReplyPreview from "./messages/replyPreview.jsx";
 import FooterInput from "./footer/footerInput.jsx";
 
@@ -51,7 +50,7 @@ export default function ChatWindow({ chat, onClose, contacts = [] }) {
   const [showContactShare, setShowContactShare] = useState(false);
   const [showChannelManagement, setShowChannelManagement] = useState(false);
 
-  const [activeThreadId, setActiveThreadId] = useState(null);
+  const [activeThread, setActiveThread] = useState(null);
   const [threadCounts, setThreadCounts] = useState({});
 
   const [openMsgMenuId, setOpenMsgMenuId] = useState(null);
@@ -80,19 +79,20 @@ export default function ChatWindow({ chat, onClose, contacts = [] }) {
   };
 
   const mapBackendMsgToUI = (m) => {
-    const senderId =
-      typeof m.senderId === "object"
-        ? m.senderId._id || m.senderId.id || m.senderId
-        : m.senderId;
+    const senderObj = typeof m.senderId === "object" ? m.senderId : {};
+    const senderId = senderObj._id || senderObj.id || m.senderId;
 
-    const me = senderId === currentUserIdRef.current;
+    const me = String(senderId) === String(currentUserIdRef.current);
 
     return {
       id: m._id,
       sender: me ? "you" : "them",
+      senderName: senderObj.username || (me ? "You" : "Unknown"),
+      senderAvatar: senderObj.profilePicture || null,
       text: m.text || "",
       ts: m.createdAt,
       repliedToId: m.replyTo?._id || m.replyTo || null,
+      isPinned: m.isPinned || false,
       backend: m,
     };
   };
@@ -122,35 +122,171 @@ export default function ChatWindow({ chat, onClose, contacts = [] }) {
     let mounted = true;
 
     async function loadMessages() {
-      const token = getAccessToken();
-      const headers = token ? { Authorization: `Bearer ${token}` } : {};
-
-      let url =
-        chat.type === "dm"
-          ? `${API_BASE}/api/messages/dm/${chat.id}`
-          : `${API_BASE}/api/messages/channel/${chat.id}`;
-
       try {
+        const token = getAccessToken();
+        const headers = token ? { Authorization: `Bearer ${token}` } : {};
+
+        let url = "";
+        if (chat.type === "dm") {
+          url = `${API_BASE}/api/messages/dm/${chat.id}`;
+        } else {
+          url = `${API_BASE}/api/messages/channel/${chat.id}`;
+        }
+
         const res = await axios.get(url, { headers });
-        const msgs = res.data.messages.map(mapBackendMsgToUI);
+        let loadedMessages = res.data.messages.map(mapBackendMsgToUI);
 
-        if (mounted) setMessages(msgs);
+        // --- DUMMY DATA INJECTION IF EMPTY ---
+        if (loadedMessages.length === 0) {
+          const now = new Date();
+          let dummyMessages = [];
 
-        // Trigger read receipts
-        if (socketRef.current?.connected) {
-          socketRef.current.emit("mark-chat-read", {
-            type: chat.type,
-            id: chat.id,
-          });
+          if (chat.type === "dm") {
+            // Specific dummy data for Direct Messages
+            dummyMessages = [
+              {
+                id: "dm-1",
+                sender: "other",
+                senderName: chat.name,
+                senderAvatar: chat.image || null,
+                text: `Hey! This is the start of your private conversation with ${chat.name}.`,
+                ts: new Date(now.getTime() - 1000 * 60 * 60 * 2).toISOString(), // 2 hours ago
+              },
+              {
+                id: "dm-2",
+                sender: "me",
+                senderName: "You",
+                text: "Hi! Good to connect here.",
+                ts: new Date(now.getTime() - 1000 * 60 * 60).toISOString(), // 1 hour ago
+                status: "read",
+              },
+              {
+                id: "dm-3",
+                sender: "other",
+                senderName: chat.name,
+                senderAvatar: chat.image || null,
+                text: "Let me know if you need anything specific.",
+                ts: new Date(now.getTime() - 1000 * 60 * 30).toISOString(), // 30 mins ago
+              },
+              {
+                id: "dm-4",
+                sender: "me",
+                senderName: "You",
+                text: "Will do, thanks!",
+                ts: new Date(now.getTime() - 1000 * 60 * 5).toISOString(), // 5 mins ago
+                status: "sent",
+              }
+            ];
+          } else {
+            // Specific dummy data for Channels
+            dummyMessages = [
+              {
+                id: "ch-1",
+                sender: "other",
+                senderName: "Alice",
+                text: `Welcome everyone to #${chat.name}!`,
+                ts: new Date(now.getTime() - 1000 * 60 * 60 * 5).toISOString(),
+                reactions: { "👋": 5 },
+              },
+              {
+                id: "ch-2",
+                sender: "other",
+                senderName: "Bob",
+                text: "Excited to be part of this channel.",
+                ts: new Date(now.getTime() - 1000 * 60 * 60 * 4).toISOString(),
+              },
+              {
+                id: "ch-3",
+                sender: "me",
+                senderName: "You",
+                text: "Hello team! Ready to collaborate.",
+                ts: new Date(now.getTime() - 1000 * 60 * 60).toISOString(),
+                status: "read",
+              },
+              {
+                id: "ch-4",
+                sender: "other",
+                senderName: "Charlie",
+                text: "Does anyone have the latest design specs?",
+                ts: new Date(now.getTime() - 1000 * 60 * 30).toISOString(),
+                isPinned: true, // Example pinned message
+              },
+              {
+                id: "ch-5",
+                sender: "other",
+                senderName: "Alice",
+                text: "I'll upload them to the files tab shortly.",
+                ts: new Date().toISOString(),
+              }
+            ];
+          }
+          loadedMessages = dummyMessages;
+        }
+        // -------------------------------------
+
+        setMessages(loadedMessages);
+
+        // Mark as read
+        if (chat.type === "dm") {
+          axios.post(
+            `${API_BASE}/api/messages/dm/read`,
+            { otherUserId: chat.id },
+            { headers }
+          );
+          // Emit read event
+          const socket = socketRef.current;
+          if (socket && connected) {
+            socket.emit("read-messages", {
+              readerId: currentUserIdRef.current,
+              otherUserId: chat.id,
+            });
+          }
         }
       } catch (err) {
         console.error("Load messages error:", err);
+        // Fallback dummy data on error
+        setMessages([
+          {
+            id: "dummy-1",
+            sender: "other",
+            senderName: chat.type === "dm" ? chat.name : "Alice",
+            text: "Hey there! Welcome to Chttrix.",
+            ts: new Date(Date.now() - 1000 * 60 * 60).toISOString(),
+            reactions: { "👍": 2 },
+          },
+          {
+            id: "dummy-2",
+            sender: "me",
+            senderName: "You",
+            text: "Thanks! Excited to be here.",
+            ts: new Date().toISOString(),
+            status: "read",
+          }
+        ]);
       }
     }
 
     loadMessages();
     return () => (mounted = false);
   }, [chat]);
+
+  /* ---------------------------------------------------------
+      OUTSIDE CLICK HANDLER
+  --------------------------------------------------------- */
+  useEffect(() => {
+    const handleClickOutside = () => {
+      setShowSearch(false);
+      setShowMenu(false);
+    };
+
+    if (showSearch || showMenu) {
+      document.addEventListener("click", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("click", handleClickOutside);
+    };
+  }, [showSearch, showMenu]);
 
   /* ---------------------------------------------------------
       SOCKET SETUP
@@ -392,7 +528,9 @@ export default function ChatWindow({ chat, onClose, contacts = [] }) {
   };
 
   const pinMessage = (id) => {
-    setPinnedId((p) => (p === id ? null : id));
+    setMessages((prev) =>
+      prev.map((m) => (m.id === id ? { ...m, isPinned: !m.isPinned } : m))
+    );
     setOpenMsgMenuId(null);
   };
 
@@ -414,134 +552,135 @@ export default function ChatWindow({ chat, onClose, contacts = [] }) {
       RENDER
   --------------------------------------------------------- */
   return (
-    <div className="flex flex-col h-full w-full bg-white relative">
+    <div className="flex h-full w-full bg-white overflow-hidden">
 
-      <Header
-        chat={chat}
-        onClose={onClose}
-        showSearch={showSearch}
-        setShowSearch={setShowSearch}
-        searchQuery={searchQuery}
-        setSearchQuery={setSearchQuery}
-        showMenu={showMenu}
-        setShowMenu={setShowMenu}
-        setSelectMode={setSelectMode}
-        setShowContactInfo={setShowContactInfo}
-        setShowChannelManagement={setShowChannelManagement}
-        muted={muted}
-        setMuted={setMuted}
-        blocked={blocked}
-        setBlocked={setBlocked}
-      />
-
-      <PinnedMessage
-        pinned={messages.find((m) => m.id === pinnedId)}
-        onUnpin={() => setPinnedId(null)}
-      />
-
-      {showContactInfo && (
-        <ContactInfoModal chat={chat} onClose={() => setShowContactInfo(false)} />
-      )}
-
-      {showContactShare && (
-        <ContactShareModal
-          contacts={contacts}
-          onShare={shareContact}
-          onClose={() => setShowContactShare(false)}
-        />
-      )}
-
-      {showChannelManagement && chat.type === "channel" && (
-        <ChannelManagementModal
-          channel={chat}
-          currentUserId={currentUserIdRef.current}
-          onClose={() => setShowChannelManagement(false)}
-        />
-      )}
-
-      <div className="flex-1 flex flex-col overflow-hidden">
-
-        <MessagesContainer
-          messages={messages}
+      {/* Main Chat Column */}
+      <div className="flex-1 flex flex-col min-w-0 relative">
+        <Header
+          chat={chat}
+          onClose={onClose}
+          showSearch={showSearch}
+          setShowSearch={setShowSearch}
           searchQuery={searchQuery}
+          setSearchQuery={setSearchQuery}
+          showMenu={showMenu}
+          setShowMenu={setShowMenu}
           selectMode={selectMode}
-          selectedIds={selectedIds}
-          toggleSelect={toggleSelect}
-          openMsgMenuId={openMsgMenuId}
-          setOpenMsgMenuId={setOpenMsgMenuId}
-          toggleMsgMenu={(e, id) => {
-            e.stopPropagation();
-            setOpenMsgMenuId((prev) => (prev === id ? null : id));
-          }}
-          reactions={reactions}
-          formatTime={formatTime}
-          addReaction={addReaction}
-          pinMessage={pinMessage}
-          replyToMessage={replyToMessage}
-          forwardMessage={() => setShowContactShare(true)}
-          copyMessage={(id) => {
-            const m = messages.find((x) => x.id === id);
-            if (m) navigator.clipboard.writeText(m.text);
-          }}
-          deleteMessage={(id) =>
-            setMessages((prev) => prev.filter((m) => m.id !== id))
-          }
-          infoMessage={(id) => {
-            const m = messages.find((x) => x.id === id);
-            if (!m) return;
-            alert(`Message info:\n${m.text}`);
-          }}
-          onOpenThread={(msgId) => setActiveThreadId(msgId)}
-          threadCounts={threadCounts}
-          currentUserId={currentUserIdRef.current}
+          setSelectMode={setSelectMode}
+          selectedCount={selectedIds.size}
+          onDeleteSelected={deleteSelected}
+          setShowContactInfo={setShowContactInfo}
+          setShowChannelManagement={setShowChannelManagement}
+          muted={muted}
+          setMuted={setMuted}
+          blocked={blocked}
+          setBlocked={setBlocked}
         />
 
-        {selectMode && (
-          <SelectionToolbar
-            selectedCount={selectedIds.size}
-            onCancel={() => {
-              setSelectMode(false);
-              setSelectedIds(new Set());
-            }}
-            onDelete={deleteSelected}
+        <PinnedMessage
+          pinned={messages.find((m) => m.id === pinnedId)}
+          onUnpin={() => setPinnedId(null)}
+        />
+
+        {showContactInfo && (
+          <ContactInfoModal chat={chat} onClose={() => setShowContactInfo(false)} />
+        )}
+
+        {showContactShare && (
+          <ContactShareModal
+            contacts={contacts}
+            onShare={shareContact}
+            onClose={() => setShowContactShare(false)}
           />
         )}
 
-        <ReplyPreview
-          replyingTo={replyingTo}
-          onCancel={() => setReplyingTo(null)}
-        />
-
-        {/* Typing indicator */}
-        {typingUsers.length > 0 && (
-          <div className="px-4 py-1 text-sm text-gray-500">
-            {typingUsers.length === 1 ? "Typing..." : `${typingUsers.length} typing...`}
-          </div>
+        {showChannelManagement && (
+          <ChannelManagementModal
+            channel={chat}
+            currentUserId={currentUserIdRef.current}
+            onClose={() => setShowChannelManagement(false)}
+          />
         )}
 
-        <FooterInput
-          newMessage={newMessage}
-          onChange={onInputChange}
-          onSend={sendMessage}
-          onAttach={handleAttach}
-          showAttach={showAttach}
-          setShowAttach={setShowAttach}
-          showEmoji={showEmoji}
-          setShowEmoji={setShowEmoji}
-          onPickEmoji={(em) => setNewMessage((m) => m + em)}
-          recording={recording}
-          setRecording={setRecording}
-          blocked={blocked}
-        />
+        <div className="flex-1 flex flex-col overflow-hidden">
+
+          <MessagesContainer
+            messages={messages}
+            searchQuery={searchQuery}
+            selectMode={selectMode}
+            selectedIds={selectedIds}
+            toggleSelect={toggleSelect}
+            openMsgMenuId={openMsgMenuId}
+            setOpenMsgMenuId={setOpenMsgMenuId}
+            toggleMsgMenu={(e, id) => {
+              e.stopPropagation();
+              setOpenMsgMenuId((prev) => (prev === id ? null : id));
+            }}
+            reactions={reactions}
+            formatTime={formatTime}
+            addReaction={addReaction}
+            pinMessage={pinMessage}
+            replyToMessage={replyToMessage}
+            forwardMessage={() => setShowContactShare(true)}
+            copyMessage={(id) => {
+              const m = messages.find((x) => x.id === id);
+              if (m) navigator.clipboard.writeText(m.text);
+            }}
+            deleteMessage={(id) =>
+              setMessages((prev) => prev.filter((m) => m.id !== id))
+            }
+            infoMessage={(id) => {
+              const m = messages.find((x) => x.id === id);
+              if (!m) return;
+              alert(`Message info:\n${m.text}`);
+            }}
+            onOpenThread={(msgId) => {
+              const msg = messages.find((m) => m.id === msgId);
+              if (msg) setActiveThread(msg);
+            }}
+            threadCounts={threadCounts}
+            currentUserId={currentUserIdRef.current}
+            chatType={chat.type}
+          />
+
+          {/* Selection Toolbar removed, moved to header */}
+
+          <ReplyPreview
+            replyingTo={replyingTo}
+            onCancel={() => setReplyingTo(null)}
+          />
+
+          {/* Typing indicator */}
+          {typingUsers.length > 0 && (
+            <div className="px-4 py-1 text-sm text-gray-500">
+              {typingUsers.length === 1 ? "Typing..." : `${typingUsers.length} typing...`}
+            </div>
+          )}
+
+          <FooterInput
+            newMessage={newMessage}
+            onChange={onInputChange}
+            onSend={sendMessage}
+            onAttach={handleAttach}
+            showAttach={showAttach}
+            setShowAttach={setShowAttach}
+            showEmoji={showEmoji}
+            setShowEmoji={setShowEmoji}
+            onPickEmoji={(em) => setNewMessage((m) => m + em)}
+            recording={recording}
+            setRecording={setRecording}
+            blocked={blocked}
+          />
 
 
+        </div>
       </div>
 
       {/* Thread Panel */}
-      {activeThreadId && (
+      {activeThread && (
         <ThreadPanel
-          parentMessageId={activeThreadId}
-          onClose={() => setActiveThreadId(null)}
+          parentMessage={activeThread}
+          onClose={() => setActiveThread(null)}
           socket={socketRef.current}
           currentUserId={currentUserIdRef.current}
         />

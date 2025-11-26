@@ -3,13 +3,13 @@ import { useAuth } from "../../contexts/AuthContext";
 
 const PasswordInput = ({ label, value, onChange, show, onToggle, placeholder = "" }) => (
   <div className="relative">
-    <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wide mb-1">{label}</label>
+    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">{label}</label>
     <div className="relative">
       <input
         type={show ? "text" : "password"}
         value={value}
         onChange={onChange}
-        className="w-full border border-gray-300 rounded-md px-2 py-1.5 text-xs focus:ring-1 focus:ring-blue-500 focus:border-transparent transition-all pr-8"
+        className="w-full border border-gray-300 rounded-md px-2 py-1.5 text-sm focus:ring-1 focus:ring-blue-500 focus:border-transparent transition-all pr-8"
         placeholder={placeholder}
       />
       <button
@@ -101,7 +101,7 @@ const ProfileMenu = ({ onClose }) => {
           <div className="w-10 h-10 rounded-full bg-gray-300 bg-cover bg-center shadow-sm border border-white group-hover:border-blue-100 transition-colors flex-shrink-0" style={{ backgroundImage: `url(${user?.profilePicture || "https://ui-avatars.com/api/?name=" + user?.username})` }}></div>
           <div className="min-w-0 flex-1">
             <div className="font-bold text-gray-900 text-sm truncate group-hover:text-blue-600 transition-colors">{user?.username}</div>
-            <div className="text-[10px] text-gray-500 truncate">{user?.email}</div>
+            <div className="text-xs text-gray-500 truncate">{user?.email}</div>
           </div>
           <div className="opacity-0 group-hover:opacity-100 transition-opacity text-gray-400">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" /></svg>
@@ -133,22 +133,22 @@ const ProfileMenu = ({ onClose }) => {
 
       {/* Menu Items */}
       <div className="p-1.5 space-y-0.5">
-        <button onClick={() => setView("preferences")} className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-100 rounded-md flex items-center transition-colors group">
+        <button onClick={() => setView("preferences")} className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-md flex items-center transition-colors group">
           <span className="mr-2 text-base group-hover:scale-110 transition-transform">⚙️</span>
           <span className="font-medium">Preferences</span>
         </button>
-        <button onClick={() => setView("security")} className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-100 rounded-md flex items-center transition-colors group">
+        <button onClick={() => setView("security")} className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-md flex items-center transition-colors group">
           <span className="mr-2 text-base group-hover:scale-110 transition-transform">🔒</span>
           <span className="font-medium">Security</span>
         </button>
-        <button onClick={() => setView("help")} className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-100 rounded-md flex items-center transition-colors group">
+        <button onClick={() => setView("help")} className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-md flex items-center transition-colors group">
           <span className="mr-2 text-base group-hover:scale-110 transition-transform">❓</span>
           <span className="font-medium">Help & Support</span>
         </button>
 
         <div className="border-t border-gray-100 my-1 mx-2"></div>
 
-        <button onClick={handleLogout} className="w-full text-left px-3 py-2 text-xs text-red-600 hover:bg-red-50 rounded-md flex items-center transition-colors group">
+        <button onClick={handleLogout} className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-md flex items-center transition-colors group">
           <span className="mr-2 text-base group-hover:scale-110 transition-transform">🚪</span>
           <span className="font-medium">Sign Out</span>
         </button>
@@ -176,23 +176,23 @@ const ProfileMenu = ({ onClose }) => {
         </div>
 
         <div>
-          <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wide mb-1">Full Name</label>
-          <input type="text" value={formData.username} onChange={e => setFormData({ ...formData, username: e.target.value })} className="w-full border border-gray-300 rounded-md px-2 py-1.5 text-xs focus:ring-1 focus:ring-blue-500 focus:border-transparent transition-all" />
+          <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Full Name</label>
+          <input type="text" value={formData.username} onChange={e => setFormData({ ...formData, username: e.target.value })} className="w-full border border-gray-300 rounded-md px-2 py-1.5 text-sm focus:ring-1 focus:ring-blue-500 focus:border-transparent transition-all" />
         </div>
 
         <div>
-          <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wide mb-1">Job Title</label>
-          <input type="text" placeholder="e.g. Senior Developer" className="w-full border border-gray-300 rounded-md px-2 py-1.5 text-xs focus:ring-1 focus:ring-blue-500 focus:border-transparent transition-all" />
+          <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Job Title</label>
+          <input type="text" placeholder="e.g. Senior Developer" className="w-full border border-gray-300 rounded-md px-2 py-1.5 text-sm focus:ring-1 focus:ring-blue-500 focus:border-transparent transition-all" />
         </div>
 
         <div>
-          <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wide mb-1">Phone</label>
-          <input type="text" value={formData.phone || ""} onChange={e => setFormData({ ...formData, phone: e.target.value })} className="w-full border border-gray-300 rounded-md px-2 py-1.5 text-xs focus:ring-1 focus:ring-blue-500 focus:border-transparent transition-all" />
+          <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Phone</label>
+          <input type="text" value={formData.phone || ""} onChange={e => setFormData({ ...formData, phone: e.target.value })} className="w-full border border-gray-300 rounded-md px-2 py-1.5 text-sm focus:ring-1 focus:ring-blue-500 focus:border-transparent transition-all" />
         </div>
 
         <div>
-          <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wide mb-1">About</label>
-          <textarea value={formData.about || ""} onChange={e => setFormData({ ...formData, about: e.target.value })} className="w-full border border-gray-300 rounded-md px-2 py-1.5 text-xs focus:ring-1 focus:ring-blue-500 focus:border-transparent transition-all" rows="2" placeholder="Tell us a bit about yourself..." />
+          <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">About</label>
+          <textarea value={formData.about || ""} onChange={e => setFormData({ ...formData, about: e.target.value })} className="w-full border border-gray-300 rounded-md px-2 py-1.5 text-sm focus:ring-1 focus:ring-blue-500 focus:border-transparent transition-all" rows="2" placeholder="Tell us a bit about yourself..." />
         </div>
       </div>
 

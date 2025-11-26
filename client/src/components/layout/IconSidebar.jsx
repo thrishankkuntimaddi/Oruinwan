@@ -59,7 +59,7 @@ const IconSidebar = ({ onProfileClick }) => {
 
                 {/* Dropdown Menu */}
                 {showWorkspaceMenu && (
-                    <div className="absolute left-14 top-0 w-64 bg-white rounded-lg shadow-xl border border-gray-200 z-50 overflow-hidden animate-fade-in">
+                    <div className="absolute left-14 top-0 w-64 bg-white rounded-lg shadow-xl border border-gray-200 z-[100] overflow-hidden animate-fade-in">
                         <div className="p-3 border-b border-gray-100 bg-gray-50">
                             <button
                                 onClick={() => navigate("/workspaces")}

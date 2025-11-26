@@ -174,7 +174,7 @@ const SignupForm = ({ onSwitch }) => {
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Username */}
         <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">Username</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Username</label>
           <input
             name="username"
             value={formData.username}
@@ -188,7 +188,7 @@ const SignupForm = ({ onSwitch }) => {
 
         {/* Email */}
         <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">Email</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
           <input
             name="email"
             type="email"
@@ -203,7 +203,7 @@ const SignupForm = ({ onSwitch }) => {
 
         {/* Phone */}
         <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">Phone</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
           <input
             name="phone"
             type="tel"
@@ -218,7 +218,7 @@ const SignupForm = ({ onSwitch }) => {
 
         {/* Password */}
         <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">Password</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
           <div className="relative">
             <input
               name="password"
@@ -277,7 +277,7 @@ const SignupForm = ({ onSwitch }) => {
 
         {/* Confirm Password */}
         <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">Confirm Password</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Confirm Password</label>
           <div className="relative">
             <input
               name="confirmPassword"
@@ -317,11 +317,11 @@ const SignupForm = ({ onSwitch }) => {
           <div className="w-full border-t border-gray-200"></div>
         </div>
         <div className="relative flex justify-center text-xs">
-          <span className="px-4 bg-white text-gray-500">Already have an account?</span>
+          <span className="px-4 bg-white text-gray-500 text-sm">Already have an account?</span>
         </div>
       </div>
 
-      <p className="text-center text-xs">
+      <p className="text-center text-sm">
         <button onClick={onSwitch} className="text-blue-600 font-semibold hover:underline">
           Log in instead
         </button>

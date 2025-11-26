@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { Search, Bell, HelpCircle, MessageSquare, Hash, MoreVertical, Plus, ChevronDown, ChevronRight, SquarePen } from 'lucide-react';
 
 const HomePanel = () => {
     const navigate = useNavigate();
@@ -22,6 +23,68 @@ const HomePanel = () => {
     const [inviteEmail, setInviteEmail] = useState("");
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [deleteVerification, setDeleteVerification] = useState("");
+    const [showCreateChannelModal, setShowCreateChannelModal] = useState(false);
+    const [showNewDMModal, setShowNewDMModal] = useState(false);
+
+    // Channel Creation State
+    const [newChannelData, setNewChannelData] = useState({ name: "", description: "", isPrivate: false });
+    const [createStep, setCreateStep] = useState(1);
+    const [selectedChannelMembers, setSelectedChannelMembers] = useState([]);
+
+    const MOCK_USERS = [
+        { id: 'u1', name: 'Sarah Connor', status: 'online' },
+        { id: 'u2', name: 'John Doe', status: 'away' },
+        { id: 'u3', name: 'Alice Smith', status: 'online' },
+        { id: 'u4', name: 'Mike Ross', status: 'offline' },
+        { id: 'u5', name: 'Rachel Zane', status: 'busy' },
+        { id: 'u6', name: 'Harvey Specter', status: 'online' },
+        { id: 'u7', name: 'Donna Paulsen', status: 'online' },
+    ];
+
+    const handleCreateChannel = () => {
+        if (!newChannelData.name) return;
+
+        if (newChannelData.isPrivate && createStep === 1) {
+            setCreateStep(2);
+            return;
+        }
+
+        const newChannel = {
+            id: `c-${Date.now()}`,
+            type: 'channel',
+            label: newChannelData.name.toLowerCase().replace(/\s+/g, '-'),
+            path: `/channel/${newChannelData.name.toLowerCase().replace(/\s+/g, '-')}`,
+            isFavorite: false,
+            isPrivate: newChannelData.isPrivate,
+        };
+
+        setItems(prev => [...prev, newChannel]);
+        navigate(newChannel.path);
+
+        // Reset
+        setShowCreateChannelModal(false);
+        setNewChannelData({ name: "", description: "", isPrivate: false });
+        setCreateStep(1);
+        setSelectedChannelMembers([]);
+    };
+
+    const handleStartDM = (user) => {
+        const existingDM = items.find(i => i.type === 'dm' && i.label === user.name);
+        if (existingDM) {
+            navigate(existingDM.path);
+        } else {
+            const newDM = {
+                id: `d-${Date.now()}`,
+                type: 'dm',
+                label: user.name,
+                path: `/dm/${user.name.toLowerCase().replace(/\s+/g, '-')}`,
+                isFavorite: false
+            };
+            setItems(prev => [...prev, newDM]);
+            navigate(newDM.path);
+        }
+        setShowNewDMModal(false);
+    };
 
     const toggle = (section) => {
         setExpanded((prev) => ({ ...prev, [section]: !prev[section] }));
@@ -52,10 +115,30 @@ const HomePanel = () => {
         }
     };
 
+    const [items, setItems] = useState([
+        { id: 'c1', type: 'channel', label: 'general', path: '/channel/general', isFavorite: true },
+        { id: 'c2', type: 'channel', label: 'announcements', path: '/channel/announcements', isFavorite: true },
+        { id: 'c3', type: 'channel', label: 'engineering', path: '/channel/engineering', isFavorite: false },
+        { id: 'c4', type: 'channel', label: 'design', path: '/channel/design', isFavorite: false },
+        { id: 'c5', type: 'channel', label: 'marketing', path: '/channel/marketing', isFavorite: false },
+        { id: 'c6', type: 'channel', label: 'leadership', path: '/channel/leadership', isFavorite: false, isPrivate: true },
+        { id: 'd1', type: 'dm', label: 'Sarah Connor', path: '/dm/sarah', isFavorite: false },
+        { id: 'd2', type: 'dm', label: 'John Doe', path: '/dm/john', isFavorite: false },
+        { id: 'd3', type: 'dm', label: 'Alice Smith', path: '/dm/alice', isFavorite: false },
+    ]);
+
+    const toggleFavorite = (id) => {
+        setItems(prev => prev.map(item =>
+            item.id === id ? { ...item, isFavorite: !item.isFavorite } : item
+        ));
+    };
+
     const SectionHeader = ({ label, isOpen, onClick, onAdd }) => (
         <div className="flex items-center justify-between px-4 py-2 group cursor-pointer hover:text-gray-900 text-gray-500 mt-2">
             <div className="flex items-center" onClick={onClick}>
-                <span className={`mr-2 text-[10px] transition-transform ${isOpen ? "rotate-90" : ""}`}>▶</span>
+                <span className={`mr-1 transition-transform duration-200 ${isOpen ? "rotate-90" : ""}`}>
+                    <ChevronRight size={12} />
+                </span>
                 <span className="uppercase text-xs font-bold tracking-wide">{label}</span>
             </div>
             {onAdd && (
@@ -69,24 +152,52 @@ const HomePanel = () => {
         </div>
     );
 
-    const Item = ({ icon, label, path, hasUnread }) => {
-        const isActive = currentPath === path;
+    const Item = ({ item }) => {
+        const isActive = currentPath === item.path;
+        const Icon = item.isPrivate ? "🔒" : (item.type === 'dm' ? "👤" : "#");
+
         return (
             <div
-                onClick={() => navigate(path)}
+                onClick={() => navigate(item.path)}
                 className={`px-4 py-1.5 mx-2 rounded-md cursor-pointer flex items-center justify-between group transition-colors ${isActive
                     ? "bg-blue-100 text-blue-700 font-medium"
                     : "hover:bg-gray-200 text-gray-600 hover:text-gray-900"
                     }`}
             >
-                <div className="flex items-center truncate">
-                    <span className="mr-2 opacity-70 text-lg">{icon}</span>
-                    <span className="truncate text-sm">{label}</span>
+                <div className="flex items-center truncate flex-1">
+                    <span className="mr-2 opacity-70 text-lg">{Icon}</span>
+                    <span className="truncate text-sm">{item.label}</span>
                 </div>
-                {hasUnread && <div className="w-2 h-2 bg-blue-600 rounded-full"></div>}
+
+                <button
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        toggleFavorite(item.id);
+                    }}
+                    className={`p-1 rounded hover:bg-gray-300 transition-all ${item.isFavorite ? "text-yellow-400 opacity-100" : "text-gray-400 opacity-0 group-hover:opacity-100"}`}
+                    title={item.isFavorite ? "Remove from favorites" : "Add to favorites"}
+                >
+                    <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="14"
+                        height="14"
+                        viewBox="0 0 24 24"
+                        fill={item.isFavorite ? "currentColor" : "none"}
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                    >
+                        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                    </svg>
+                </button>
             </div>
         );
     };
+
+    const favorites = items.filter(i => i.isFavorite);
+    const channels = items.filter(i => !i.isFavorite && i.type === 'channel');
+    const dms = items.filter(i => !i.isFavorite && i.type === 'dm');
 
     return (
         <div className="flex flex-col h-full bg-gray-50 relative">
@@ -97,13 +208,16 @@ const HomePanel = () => {
                     onClick={() => setShowWorkspaceMenu(!showWorkspaceMenu)}
                 >
                     <span className="truncate max-w-[160px]">{workspaceName}</span>
-                    <span className={`ml-2 text-xs text-gray-500 transition-transform ${showWorkspaceMenu ? "rotate-180" : ""}`}>▼</span>
+                    <span className={`ml-2 text-gray-500 transition-transform duration-200 ${showWorkspaceMenu ? "rotate-180" : ""}`}>
+                        <ChevronDown size={14} />
+                    </span>
                 </div>
                 <button
-                    className="text-gray-500 hover:bg-gray-200 p-1 rounded"
-                    onClick={(e) => { e.stopPropagation(); alert("New Message"); }}
+                    className="text-gray-500 hover:bg-gray-200 p-2 rounded-full transition-colors"
+                    title="New Message"
+                    onClick={(e) => { e.stopPropagation(); setShowNewDMModal(true); }}
                 >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                    <SquarePen size={18} />
                 </button>
 
                 {/* Dropdown Menu */}
@@ -164,12 +278,17 @@ const HomePanel = () => {
             <div className="flex-1 overflow-y-auto custom-scrollbar pb-4">
 
                 {/* Favorites */}
-                <SectionHeader label="Favorites" isOpen={expanded.favorites} onClick={() => toggle("favorites")} />
-                {expanded.favorites && (
-                    <div className="space-y-0.5">
-                        <Item icon="⭐" label="general" path="/channel/general" />
-                        <Item icon="⭐" label="announcements" path="/channel/announcements" />
-                    </div>
+                {favorites.length > 0 && (
+                    <>
+                        <SectionHeader label="Favorites" isOpen={expanded.favorites} onClick={() => toggle("favorites")} />
+                        {expanded.favorites && (
+                            <div className="space-y-0.5">
+                                {favorites.map(item => (
+                                    <Item key={item.id} item={item} />
+                                ))}
+                            </div>
+                        )}
+                    </>
                 )}
 
                 {/* Channels */}
@@ -177,14 +296,13 @@ const HomePanel = () => {
                     label="Channels"
                     isOpen={expanded.channels}
                     onClick={() => toggle("channels")}
-                    onAdd={() => alert("Create Channel Modal")}
+                    onAdd={() => setShowCreateChannelModal(true)}
                 />
                 {expanded.channels && (
                     <div className="space-y-0.5">
-                        <Item icon="#" label="engineering" path="/channel/engineering" />
-                        <Item icon="#" label="design" path="/channel/design" />
-                        <Item icon="#" label="marketing" path="/channel/marketing" />
-                        <Item icon="🔒" label="leadership" path="/channel/leadership" />
+                        {channels.map(item => (
+                            <Item key={item.id} item={item} />
+                        ))}
                     </div>
                 )}
 
@@ -193,13 +311,13 @@ const HomePanel = () => {
                     label="Direct Messages"
                     isOpen={expanded.dms}
                     onClick={() => toggle("dms")}
-                    onAdd={() => alert("New DM Modal")}
+                    onAdd={() => setShowNewDMModal(true)}
                 />
                 {expanded.dms && (
                     <div className="space-y-0.5">
-                        <Item icon="👤" label="Sarah Connor" path="/dm/sarah" />
-                        <Item icon="👤" label="John Doe" path="/dm/john" />
-                        <Item icon="👤" label="Alice Smith" path="/dm/alice" />
+                        {dms.map(item => (
+                            <Item key={item.id} item={item} />
+                        ))}
                     </div>
                 )}
             </div>
@@ -503,6 +621,152 @@ const HomePanel = () => {
                             >
                                 Delete Workspace
                             </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+            {/* Create Channel Modal */}
+            {showCreateChannelModal && (
+                <div className="fixed inset-0 bg-black/60 z-[70] flex items-center justify-center animate-fade-in backdrop-blur-sm">
+                    <div className="bg-white rounded-2xl shadow-2xl w-[500px] overflow-hidden transform transition-all scale-100 border border-gray-100">
+                        <div className="px-8 py-6 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center">
+                            <h3 className="text-xl font-bold text-gray-900">
+                                {createStep === 1 ? "Create New Channel" : "Add Members"}
+                            </h3>
+                            <button onClick={() => setShowCreateChannelModal(false)} className="text-gray-400 hover:text-gray-600">✕</button>
+                        </div>
+
+                        {createStep === 1 ? (
+                            <div className="p-8 space-y-6">
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Channel Name</label>
+                                    <div className="relative">
+                                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold">#</span>
+                                        <input
+                                            type="text"
+                                            value={newChannelData.name}
+                                            onChange={(e) => setNewChannelData({ ...newChannelData, name: e.target.value })}
+                                            placeholder="e.g. marketing-updates"
+                                            className="w-full pl-8 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium"
+                                            autoFocus
+                                        />
+                                    </div>
+                                    <p className="text-xs text-gray-400 mt-2">Channels are where your team communicates. They're best when organized around a topic.</p>
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Description <span className="text-gray-300 font-normal">(Optional)</span></label>
+                                    <input
+                                        type="text"
+                                        value={newChannelData.description}
+                                        onChange={(e) => setNewChannelData({ ...newChannelData, description: e.target.value })}
+                                        placeholder="What's this channel about?"
+                                        className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="flex items-center cursor-pointer group p-3 border border-gray-100 rounded-xl hover:bg-gray-50 transition-colors">
+                                        <div className="relative">
+                                            <input
+                                                type="checkbox"
+                                                className="sr-only peer"
+                                                checked={newChannelData.isPrivate}
+                                                onChange={(e) => setNewChannelData({ ...newChannelData, isPrivate: e.target.checked })}
+                                            />
+                                            <div className="w-10 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                        </div>
+                                        <div className="ml-3">
+                                            <span className="block text-sm font-bold text-gray-900">Make Private</span>
+                                            <span className="block text-xs text-gray-500">Only invited members can view this channel.</span>
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="p-0">
+                                <div className="p-4 bg-blue-50 border-b border-blue-100 text-sm text-blue-800 flex items-center gap-2">
+                                    <span>🔒</span>
+                                    <span>Adding members to <strong>#{newChannelData.name}</strong></span>
+                                </div>
+                                <div className="max-h-[300px] overflow-y-auto p-2">
+                                    {MOCK_USERS.map(user => (
+                                        <label key={user.id} className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-xl cursor-pointer transition-colors">
+                                            <div className="flex items-center gap-3">
+                                                <input
+                                                    type="checkbox"
+                                                    className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                                                    checked={selectedChannelMembers.includes(user.id)}
+                                                    onChange={(e) => {
+                                                        if (e.target.checked) {
+                                                            setSelectedChannelMembers([...selectedChannelMembers, user.id]);
+                                                        } else {
+                                                            setSelectedChannelMembers(selectedChannelMembers.filter(id => id !== user.id));
+                                                        }
+                                                    }}
+                                                />
+                                                <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-xs font-bold text-gray-600">
+                                                    {user.name.charAt(0)}
+                                                </div>
+                                                <div>
+                                                    <div className="text-sm font-bold text-gray-900">{user.name}</div>
+                                                    <div className="text-xs text-gray-500">Member</div>
+                                                </div>
+                                            </div>
+                                        </label>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        <div className="px-8 py-5 bg-gray-50 border-t border-gray-100 flex justify-end gap-3">
+                            <button onClick={() => setShowCreateChannelModal(false)} className="px-6 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-200 rounded-xl transition-colors">Cancel</button>
+                            <button
+                                onClick={handleCreateChannel}
+                                disabled={!newChannelData.name}
+                                className="px-6 py-2.5 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-md hover:shadow-lg transition-all transform active:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {createStep === 1 && newChannelData.isPrivate ? "Next: Add Members" : "Create Channel"}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* New DM Modal */}
+            {showNewDMModal && (
+                <div className="fixed inset-0 bg-black/60 z-[70] flex items-center justify-center animate-fade-in backdrop-blur-sm">
+                    <div className="bg-white rounded-2xl shadow-2xl w-[500px] h-[600px] flex flex-col overflow-hidden transform transition-all scale-100 border border-gray-100">
+                        <div className="px-6 py-5 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center">
+                            <h3 className="text-xl font-bold text-gray-900">New Message</h3>
+                            <button onClick={() => setShowNewDMModal(false)} className="text-gray-400 hover:text-gray-600">✕</button>
+                        </div>
+                        <div className="p-4 border-b border-gray-100">
+                            <div className="relative">
+                                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
+                                <input type="text" placeholder="Search for people..." className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all" autoFocus />
+                            </div>
+                        </div>
+                        <div className="flex-1 overflow-y-auto p-2 custom-scrollbar">
+                            <div className="px-4 py-2 text-xs font-bold text-gray-400 uppercase tracking-wide">Suggested</div>
+                            {MOCK_USERS.map((user, i) => (
+                                <div key={i} className="flex items-center gap-3 p-3 hover:bg-blue-50 rounded-xl cursor-pointer transition-colors group">
+                                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-indigo-500 flex items-center justify-center text-white font-bold shadow-sm">
+                                        {user.name.charAt(0)}
+                                    </div>
+                                    <div className="flex-1">
+                                        <div className="font-bold text-gray-900">{user.name}</div>
+                                        <div className="text-xs text-gray-500 flex items-center gap-1">
+                                            <span className={`w-1.5 h-1.5 rounded-full ${user.status === 'online' ? 'bg-green-500' : 'bg-gray-400'}`}></span>
+                                            {user.status.charAt(0).toUpperCase() + user.status.slice(1)}
+                                        </div>
+                                    </div>
+                                    <button
+                                        onClick={() => handleStartDM(user)}
+                                        className="opacity-0 group-hover:opacity-100 px-3 py-1.5 bg-white border border-gray-200 text-blue-600 text-xs font-bold rounded-lg shadow-sm hover:bg-blue-50 transition-all transform active:scale-95"
+                                    >
+                                        Message
+                                    </button>
+                                </div>
+                            ))}
                         </div>
                     </div>
                 </div>
