@@ -12,7 +12,7 @@ const HomePanel = () => {
         dms: true,
     });
 
-    const [workspaceName, setWorkspaceName] = useState("Chttrix HQ");
+    const [workspaceName, setWorkspaceName] = useState(localStorage.getItem("currentWorkspace") || "Chttrix HQ");
     const [showWorkspaceMenu, setShowWorkspaceMenu] = useState(false);
     const [showRenameModal, setShowRenameModal] = useState(false);
     const [showInviteModal, setShowInviteModal] = useState(false);
@@ -497,8 +497,8 @@ const HomePanel = () => {
                                 onClick={handleDeleteWorkspace}
                                 disabled={deleteVerification !== workspaceName}
                                 className={`px-5 py-2.5 text-sm font-bold text-white rounded-xl shadow-md transition-all ${deleteVerification === workspaceName
-                                        ? "bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700 hover:shadow-lg hover:scale-[1.02]"
-                                        : "bg-gray-300 cursor-not-allowed"
+                                    ? "bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700 hover:shadow-lg hover:scale-[1.02]"
+                                    : "bg-gray-300 cursor-not-allowed"
                                     }`}
                             >
                                 Delete Workspace

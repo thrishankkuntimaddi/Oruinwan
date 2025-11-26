@@ -14,11 +14,38 @@ const WorkspaceSelect = () => {
     };
 
     // Mock data for workspaces
-    const workspaces = [
+    const [workspaces, setWorkspaces] = useState([
         { id: 1, name: "Acme Corp", members: 12, icon: "A", color: "bg-blue-600" },
         { id: 2, name: "Project Beta", members: 5, icon: "P", color: "bg-purple-600" },
         { id: 3, name: "Design Team", members: 8, icon: "D", color: "bg-pink-600" },
-    ];
+    ]);
+
+    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+    const [newWorkspaceName, setNewWorkspaceName] = useState("");
+
+    const handleCreateWorkspace = (e) => {
+        e.preventDefault();
+        if (newWorkspaceName.trim()) {
+            const colors = ["bg-blue-600", "bg-purple-600", "bg-pink-600", "bg-green-600", "bg-yellow-600", "bg-red-600"];
+            const randomColor = colors[Math.floor(Math.random() * colors.length)];
+
+            const newWs = {
+                id: workspaces.length + 1,
+                name: newWorkspaceName,
+                members: 1,
+                icon: newWorkspaceName.charAt(0).toUpperCase(),
+                color: randomColor
+            };
+            setWorkspaces([...workspaces, newWs]);
+            setIsCreateModalOpen(false);
+            setNewWorkspaceName("");
+        }
+    };
+
+    const handleLaunch = (ws) => {
+        localStorage.setItem("currentWorkspace", ws.name);
+        navigate("/");
+    };
 
     return (
         <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-6 relative">
@@ -248,6 +275,47 @@ const WorkspaceSelect = () => {
                 </div>
             )}
 
+            {/* Create Workspace Modal */}
+            {isCreateModalOpen && (
+                <div className="fixed inset-0 bg-black/60 z-[200] flex items-center justify-center animate-fade-in backdrop-blur-sm">
+                    <div className="bg-white rounded-xl shadow-2xl w-[480px] p-8 transform transition-all scale-100 border border-gray-100">
+                        <h3 className="text-xl font-bold text-gray-900 mb-2">Create New Workspace</h3>
+                        <p className="text-sm text-gray-500 mb-6">Give your new team a home.</p>
+
+                        <form onSubmit={handleCreateWorkspace}>
+                            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Workspace Name</label>
+                            <input
+                                type="text"
+                                value={newWorkspaceName}
+                                onChange={(e) => setNewWorkspaceName(e.target.value)}
+                                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all mb-6"
+                                placeholder="e.g. Engineering Team"
+                                autoFocus
+                            />
+                            <div className="flex justify-end gap-3">
+                                <button
+                                    type="button"
+                                    onClick={() => setIsCreateModalOpen(false)}
+                                    className="px-5 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-xl transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={!newWorkspaceName.trim()}
+                                    className={`px-6 py-2.5 text-sm font-bold text-white rounded-xl shadow-md transition-all ${newWorkspaceName.trim()
+                                            ? "bg-blue-600 hover:bg-blue-700 hover:shadow-lg"
+                                            : "bg-gray-300 cursor-not-allowed"
+                                        }`}
+                                >
+                                    Create Workspace
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
             <div className="w-full max-w-4xl">
                 {/* Header */}
                 <div className="text-center mb-12">
@@ -277,7 +345,7 @@ const WorkspaceSelect = () => {
                             <p className="text-sm text-gray-500 mb-6">Last active just now</p>
 
                             <button
-                                onClick={() => navigate("/")}
+                                onClick={() => handleLaunch(ws)}
                                 className="w-full py-2.5 rounded-lg bg-gray-50 text-gray-900 font-medium border border-gray-200 group-hover:bg-blue-600 group-hover:text-white group-hover:border-transparent transition-all"
                             >
                                 Launch Workspace
@@ -286,7 +354,10 @@ const WorkspaceSelect = () => {
                     ))}
 
                     {/* Create New Workspace Card */}
-                    <div className="border-2 border-dashed border-gray-300 rounded-xl p-6 flex flex-col items-center justify-center text-center hover:border-blue-500 hover:bg-blue-50 transition-all cursor-pointer group">
+                    <div
+                        onClick={() => setIsCreateModalOpen(true)}
+                        className="border-2 border-dashed border-gray-300 rounded-xl p-6 flex flex-col items-center justify-center text-center hover:border-blue-500 hover:bg-blue-50 transition-all cursor-pointer group"
+                    >
                         <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center text-gray-400 mb-3 group-hover:bg-blue-100 group-hover:text-blue-600 transition-colors">
                             <svg
                                 className="w-6 h-6"

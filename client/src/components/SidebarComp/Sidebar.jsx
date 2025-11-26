@@ -25,9 +25,8 @@ const Sidebar = ({ onAIClick }) => {
             <div
               className="h-12 w-12 rounded-full bg-center bg-cover shadow-md"
               style={{
-                backgroundImage: `url(${
-                  user?.profilePicture || "../../assests/kpnbg301.svg"
-                })`,
+                backgroundImage: `url(${user?.profilePicture || "/assets/kpnbg301.svg"
+                  })`,
               }}
             />
 
@@ -50,11 +49,10 @@ const Sidebar = ({ onAIClick }) => {
               <button
                 key={item.path}
                 onClick={() => navigate(item.path)}
-                className={`w-full px-6 py-3 text-left transition-colors ${
-                  isActive(item.path)
+                className={`w-full px-6 py-3 text-left transition-colors ${isActive(item.path)
                     ? "bg-gray-100 text-[#0c77f2] font-semibold"
                     : "text-gray-700 hover:bg-gray-100 hover:text-[#0c77f2]"
-                }`}
+                  }`}
               >
                 {item.label}
               </button>

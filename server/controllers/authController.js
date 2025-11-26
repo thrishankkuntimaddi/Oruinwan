@@ -58,6 +58,7 @@ exports.signup = async (req, res) => {
       passwordHash,
       verificationTokenHash: tokenHash,
       verificationTokenExpires: Date.now() + 86400000,
+      verified: true, // Auto-verify for testing
     });
 
     await user.save();
@@ -71,11 +72,13 @@ exports.signup = async (req, res) => {
     console.log("Verify URL:", verifyUrl);
     console.log("=".repeat(80) + "\n");
 
+    /*
     await sendEmail({
       to: email,
       subject: "Verify your email",
       html: `Click here to verify: <a href="${verifyUrl}">${verifyUrl}</a>`
     });
+    */
 
     return res.status(201).json({ message: "Signup successful, verify your email." });
   } catch (err) {
