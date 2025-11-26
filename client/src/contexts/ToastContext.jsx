@@ -28,7 +28,7 @@ export const ToastProvider = ({ children }) => {
             {children}
             <div className="fixed top-5 right-5 z-50 flex flex-col gap-3 pointer-events-none">
                 {toasts.map((toast) => (
-                    <div key={toast.id} className="pointer-events-auto animate-in slide-in-from-right duration-30">
+                    <div key={toast.id} className="pointer-events-auto animate-in slide-in-from-right duration-300">
                         <Toast
                             message={toast.message}
                             type={toast.type}

@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import IconSidebar from "./IconSidebar";
 import ProfileMenu from "../SidebarComp/ProfileSidebar";
 import ChttrixAIChat from "../chttrixAIComp/ChttrixAIChat";
+import { Bot } from "lucide-react";
 
 const MainLayout = ({ children, sidePanel }) => {
     const [showProfile, setShowProfile] = useState(false);
@@ -258,12 +259,14 @@ const MainLayout = ({ children, sidePanel }) => {
                     >
                         Help
                     </button>
+
+
                     <button
                         onClick={() => setShowAI(!showAI)}
                         className={`p-1.5 rounded-md transition-colors ${showAI ? "bg-blue-100 text-blue-600" : "text-gray-500 hover:bg-gray-100"}`}
                         title="Toggle Chttrix AI"
                     >
-                        🤖
+                        <Bot size={20} strokeWidth={2} />
                     </button>
 
                     {/* Help Popover */}

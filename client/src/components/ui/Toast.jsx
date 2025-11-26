@@ -12,7 +12,7 @@ const Toast = ({ message, type = 'success', onClose, duration = 150 }) => {
     useEffect(() => {
         const interval = 10;
         const steps = duration / interval;
-        const decrement = 50 / steps;
+        const decrement = 100 / steps;
 
         const timer = setInterval(() => {
             setProgress((prev) => {

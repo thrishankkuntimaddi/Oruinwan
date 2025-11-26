@@ -7,6 +7,7 @@ import { useToast } from "../../contexts/ToastContext";
 import { useGoogleLogin } from "@react-oauth/google";
 import axios from "axios";
 import { saveAccessToken } from "../../utils/tokenUtils";
+import { Eye, EyeOff, Github, Linkedin } from "lucide-react";
 
 
 const GoogleIcon = () => (
@@ -18,8 +19,8 @@ const GoogleIcon = () => (
   </svg>
 );
 
-const GitHubIcon = () => <span>🐙</span>;
-const LinkedInIcon = () => <span>💼</span>;
+const GitHubIcon = () => <Github size={20} />;
+const LinkedInIcon = () => <Linkedin size={20} />;
 
 const LoginForm = ({ onSwitch }) => {
   const [formData, setFormData] = useState({ email: "", password: "" });
@@ -107,12 +108,14 @@ const LoginForm = ({ onSwitch }) => {
               onChange={handleChange}
               className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-sm"
             />
+
+
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
               className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600"
             >
-              {showPassword ? "🙈" : "👁️"}
+              {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
             </button>
           </div>
           <div className="flex justify-end mt-1">

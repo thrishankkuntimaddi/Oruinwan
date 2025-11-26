@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
+import { Home, MessageSquare, CheckSquare, FileText, Newspaper } from "lucide-react";
 
 const IconSidebar = ({ onProfileClick }) => {
     const navigate = useNavigate();
@@ -23,12 +24,14 @@ const IconSidebar = ({ onProfileClick }) => {
 
     const isActive = (path) => location.pathname === path;
 
+
+
     const navItems = [
-        { icon: "🏠", path: "/", label: "Home" },
-        { icon: "💬", path: "/messages", label: "Messages" },
-        { icon: "✅", path: "/tasks", label: "Tasks" },
-        { icon: "📝", path: "/notes", label: "Notes" },
-        { icon: "📰", path: "/blogs", label: "Blogs" },
+        { icon: <Home size={20} strokeWidth={2} />, path: "/", label: "Home" },
+        { icon: <MessageSquare size={20} strokeWidth={2} />, path: "/messages", label: "Messages" },
+        { icon: <CheckSquare size={20} strokeWidth={2} />, path: "/tasks", label: "Tasks" },
+        { icon: <FileText size={20} strokeWidth={2} />, path: "/notes", label: "Notes" },
+        { icon: <Newspaper size={20} strokeWidth={2} />, path: "/blogs", label: "Blogs" },
     ];
 
     const workspaces = [
