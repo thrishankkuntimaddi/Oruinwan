@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Search, Bell, HelpCircle, MessageSquare, Hash, MoreVertical, Plus, ChevronDown, ChevronRight, SquarePen } from 'lucide-react';
+import { ChevronDown, ChevronRight, SquarePen } from 'lucide-react';
 
 const HomePanel = () => {
     const navigate = useNavigate();

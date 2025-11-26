@@ -197,7 +197,7 @@ export default function ThreadPanel({ parentMessage, onClose, socket, currentUse
                                 </div>
                             ) : (
                                 replies.map((reply) => {
-                                    const isMe = String(reply.senderId?._id || reply.senderId) === String(currentUserId);
+                                    // const isMe = String(reply.senderId?._id || reply.senderId) === String(currentUserId);
 
                                     return (
                                         <div key={reply._id} className="flex items-start gap-3 group">
