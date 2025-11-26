@@ -50,7 +50,10 @@ const WorkspaceSelect = () => {
     return (
         <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-6 relative">
             {/* Logo */}
-            <div className="absolute top-6 left-6 flex items-center space-x-2">
+            <div
+                onClick={() => navigate("/features")}
+                className="absolute top-6 left-6 flex items-center space-x-2 cursor-pointer hover:opacity-80 transition-opacity"
+            >
                 <img src="/assets/Logoat.jpg" alt="Chttrix Logo" className="w-8 h-8 rounded-lg object-cover contrast-125 saturate-110 shadow-sm" />
                 <span className="text-xl font-bold text-gray-900 tracking-tight">Chttrix</span>
             </div>

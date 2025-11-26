@@ -24,6 +24,7 @@ import MyTasks from "./pages/SidebarComp/MyTasks";
 import Notes from "./pages/SidebarComp/Notes";
 import Blogs from "./pages/SidebarComp/Blogs";
 import WorkspaceSelect from "./pages/WorkspaceSelect";
+import FeatureShowcase from "./pages/FeatureShowcase";
 
 // Auth Pages (Public)
 import LoginPage from "./pages/LoginPageComp/LoginPage";
@@ -151,6 +152,16 @@ function App() {
                     element={
                       <RequireAuth>
                         <WorkspaceSelect />
+                      </RequireAuth>
+                    }
+                  />
+
+                  {/* Feature Showcase Animation */}
+                  <Route
+                    path="/features"
+                    element={
+                      <RequireAuth>
+                        <FeatureShowcase />
                       </RequireAuth>
                     }
                   />
