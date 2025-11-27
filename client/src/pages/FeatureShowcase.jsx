@@ -159,8 +159,8 @@ const FeatureShowcase = () => {
                     </div>
                 </div>
 
-                {/* Return Hint - Moved to Top Right */}
-                <div className={`absolute bottom-6 center-6 text-gray-400 text-xs font-medium animate-pulse transition-opacity duration-1000 delay-[1500ms] ${isVisible ? "opacity-100" : "opacity-0"}`}>
+                {/* Return Hint - Centered at Bottom */}
+                <div className={`absolute bottom-6 left-1/2 -translate-x-1/2 text-gray-400 text-xs font-medium animate-pulse transition-opacity duration-1000 delay-[1500ms] ${isVisible ? "opacity-100" : "opacity-0"}`}>
                     Click anywhere to return
                 </div>
 
