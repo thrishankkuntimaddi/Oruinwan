@@ -14,7 +14,7 @@ import HomePanel from "./components/layout/panels/HomePanel";
 import MessagesPanel from "./components/layout/panels/MessagesPanel";
 import TasksPanel from "./components/layout/panels/TasksPanel";
 import NotesPanel from "./components/layout/panels/NotesPanel";
-import BlogsPanel from "./components/layout/panels/BlogsPanel";
+import UpdatesPanel from "./components/layout/panels/UpdatesPanel";
 
 
 // Pages (Protected)
@@ -22,7 +22,7 @@ import Home from "./pages/SidebarComp/Home";
 import Messages from "./pages/SidebarComp/Messages";
 import MyTasks from "./pages/SidebarComp/MyTasks";
 import Notes from "./pages/SidebarComp/Notes";
-import Blogs from "./pages/SidebarComp/Blogs";
+import Updates from "./pages/SidebarComp/Updates";
 import WorkspaceSelect from "./pages/WorkspaceSelect";
 import FeatureShowcase from "./pages/FeatureShowcase";
 
@@ -50,9 +50,9 @@ function App() {
 
                   {/* PROTECTED AREA (requires login) */}
 
-                  {/* Home Route */}
+                  {/* Main App Route (was Home) */}
                   <Route
-                    path="/"
+                    path="/app"
                     element={
                       <RequireAuth>
                         <MainLayout sidePanel={<HomePanel />}>
@@ -134,13 +134,13 @@ function App() {
                     }
                   />
 
-                  {/* Blogs Route */}
+                  {/* Updates Route */}
                   <Route
-                    path="/blogs"
+                    path="/updates"
                     element={
                       <RequireAuth>
-                        <MainLayout sidePanel={<BlogsPanel />}>
-                          <Blogs />
+                        <MainLayout sidePanel={<UpdatesPanel />}>
+                          <Updates />
                         </MainLayout>
                       </RequireAuth>
                     }
@@ -156,15 +156,11 @@ function App() {
                     }
                   />
 
-                  {/* Feature Showcase Animation */}
-                  <Route
-                    path="/features"
-                    element={
-                      <RequireAuth>
-                        <FeatureShowcase />
-                      </RequireAuth>
-                    }
-                  />
+                  {/* PUBLIC ROUTES */}
+
+                  {/* Landing Page (Feature Showcase) */}
+                  <Route path="/" element={<FeatureShowcase />} />
+                  <Route path="/features" element={<FeatureShowcase />} />
 
                   {/* PUBLIC ROUTES */}
                   <Route path="/login" element={<LoginPage />} />

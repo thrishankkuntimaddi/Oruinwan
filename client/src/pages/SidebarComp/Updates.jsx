@@ -1,11 +1,15 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useBlogs } from "../../contexts/BlogsContext";
-import { Heart, MessageCircle, MoreHorizontal, Send, User, Image as ImageIcon, Flag, Copy } from "lucide-react";
+import { Heart, MessageCircle, MoreHorizontal, Send, User, Image as ImageIcon, Flag, Link as LinkIcon, Video } from "lucide-react";
+import { useToast } from "../../contexts/ToastContext";
 
-const Blogs = () => {
+const Updates = () => {
   const navigate = useNavigate();
   const { posts, addPost, likePost } = useBlogs();
+  const { showToast } = useToast();
+
+  const [newPostTitle, setNewPostTitle] = useState("");
   const [newPostContent, setNewPostContent] = useState("");
   const [isPosting, setIsPosting] = useState(false);
   const [activeMenuId, setActiveMenuId] = useState(null);
@@ -26,22 +30,33 @@ const Blogs = () => {
     if (!newPostContent.trim()) return;
 
     setIsPosting(true);
+
+    // Extract hashtags
+    const tags = newPostContent.match(/#[a-zA-Z0-9_]+/g)?.map(tag => tag.substring(1)) || [];
+
     setTimeout(() => {
       addPost({
-        title: "Project Update",
+        title: newPostTitle || "Project Update",
         content: newPostContent,
-        tags: [],
-        context: "General"
+        tags: tags,
+        context: "General",
+        workspace: "Engineering" // Mock workspace
       });
+      setNewPostTitle("");
       setNewPostContent("");
       setIsPosting(false);
+      showToast("Update posted successfully!", "success");
     }, 600);
   };
 
   const handleDiscuss = (authorName) => {
-    // Navigate to DM with the author (Mock ID for now)
-    // In a real app, we'd look up the user's ID
-    navigate(`/dm/1?initialMessage=Hi ${authorName}, I saw your update regarding...`);
+    navigate(`/dm/1?initialMessage=Hi ${authorName}, regarding your update "${newPostTitle || '...'}"...`);
+  };
+
+  const handleCopyLink = (postId) => {
+    navigator.clipboard.writeText(`${window.location.origin}/updates/${postId}`);
+    showToast("Link copied to clipboard", "success");
+    setActiveMenuId(null);
   };
 
   const formatTime = (isoString) => {
@@ -66,17 +81,27 @@ const Blogs = () => {
               <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold shrink-0">
                 Y
               </div>
-              <div className="flex-1">
+              <div className="flex-1 space-y-3">
+                <input
+                  type="text"
+                  placeholder="Title (optional)"
+                  className="w-full font-bold text-gray-800 placeholder-gray-400 border-none focus:ring-0 p-0 text-lg outline-none"
+                  value={newPostTitle}
+                  onChange={(e) => setNewPostTitle(e.target.value)}
+                />
                 <textarea
-                  placeholder="Share an achievement or project update..."
-                  className="w-full bg-gray-50 border-none rounded-xl p-3 focus:ring-2 focus:ring-blue-500/20 outline-none resize-none text-gray-700 min-h-[80px]"
+                  placeholder="Share an achievement, project update, or mention @someone..."
+                  className="w-full bg-gray-50 border-none rounded-xl p-3 focus:ring-2 focus:ring-blue-500/20 outline-none resize-none text-gray-700 min-h-[100px]"
                   value={newPostContent}
                   onChange={(e) => setNewPostContent(e.target.value)}
                 />
-                <div className="flex justify-between items-center mt-3">
+                <div className="flex justify-between items-center">
                   <div className="flex gap-2">
-                    <button className="p-2 text-gray-400 hover:bg-gray-100 rounded-full transition-colors" title="Add Image">
+                    <button className="p-2 text-gray-400 hover:bg-gray-100 rounded-full transition-colors" title="Add Photo">
                       <ImageIcon size={20} />
+                    </button>
+                    <button className="p-2 text-gray-400 hover:bg-gray-100 rounded-full transition-colors" title="Add Video">
+                      <Video size={20} />
                     </button>
                   </div>
                   <button
@@ -99,7 +124,7 @@ const Blogs = () => {
           {/* Feed Divider */}
           <div className="flex items-center gap-4">
             <div className="h-px bg-gray-200 flex-1" />
-            <span className="text-xs font-medium text-gray-400 uppercase tracking-wider">Team Updates</span>
+            <span className="text-xs font-medium text-gray-400 uppercase tracking-wider">Latest Updates</span>
             <div className="h-px bg-gray-200 flex-1" />
           </div>
 
@@ -116,7 +141,7 @@ const Blogs = () => {
                   <div>
                     <h3 className="font-bold text-gray-900 text-sm">{post.author.name}</h3>
                     <p className="text-xs text-gray-500 flex items-center gap-1">
-                      {post.author.role} • <span className="text-blue-600 font-medium">{post.context}</span> • {formatTime(post.timestamp)}
+                      {post.author.role} • <span className="text-gray-700 font-medium">{post.workspace || "Workspace"}</span> • {formatTime(post.timestamp)}
                     </p>
                   </div>
                 </div>
@@ -139,10 +164,13 @@ const Blogs = () => {
                         onClick={() => handleDiscuss(post.author.name)}
                         className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2 transition-colors"
                       >
-                        <MessageCircle size={14} className="text-gray-400" /> Message Author
+                        <MessageCircle size={14} className="text-gray-400" /> Discuss
                       </button>
-                      <button className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2 transition-colors">
-                        <Copy size={14} className="text-gray-400" /> Copy Link
+                      <button
+                        onClick={() => handleCopyLink(post.id)}
+                        className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2 transition-colors"
+                      >
+                        <LinkIcon size={14} className="text-gray-400" /> Copy Link
                       </button>
                       <div className="h-px bg-gray-100 my-1" />
                       <button className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 transition-colors">
@@ -155,10 +183,15 @@ const Blogs = () => {
 
               {/* Post Content */}
               <div className="px-4 pb-2">
-                {post.title && <h4 className="font-bold text-gray-800 mb-2">{post.title}</h4>}
+                {post.title && <h4 className="font-bold text-gray-900 mb-2 text-lg">{post.title}</h4>}
                 <p className="text-gray-600 text-sm leading-relaxed whitespace-pre-wrap">
                   {post.content}
                 </p>
+
+                {/* Mock Media Placeholder */}
+                {/* <div className="mt-3 h-48 bg-gray-100 rounded-xl flex items-center justify-center text-gray-400">
+                    <ImageIcon size={32} />
+                </div> */}
 
                 {post.tags && post.tags.length > 0 && (
                   <div className="flex flex-wrap gap-2 mt-3">
@@ -209,4 +242,4 @@ const Blogs = () => {
   );
 };
 
-export default Blogs;
+export default Updates;

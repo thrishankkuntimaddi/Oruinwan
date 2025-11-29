@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { ChevronDown, ChevronRight, SquarePen } from 'lucide-react';
 
-const HomePanel = () => {
+const HomePanel = ({ title }) => {
     const navigate = useNavigate();
     const location = useLocation();
     const currentPath = location.pathname;
@@ -13,7 +13,14 @@ const HomePanel = () => {
         dms: true,
     });
 
-    const [workspaceName, setWorkspaceName] = useState(localStorage.getItem("currentWorkspace") || "Chttrix HQ");
+    const [workspaceName, setWorkspaceName] = useState(title || localStorage.getItem("currentWorkspace") || "Chttrix HQ");
+
+    // Update workspace name when title prop changes
+    React.useEffect(() => {
+        if (title) {
+            setWorkspaceName(title);
+        }
+    }, [title]);
     const [showWorkspaceMenu, setShowWorkspaceMenu] = useState(false);
     const [showRenameModal, setShowRenameModal] = useState(false);
     const [showInviteModal, setShowInviteModal] = useState(false);

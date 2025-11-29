@@ -1,6 +1,6 @@
-// src/pages/VerifyEmail.jsx
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { CheckCircle, XCircle, Loader2, Mail } from 'lucide-react';
 
 export default function VerifyEmail() {
   const [searchParams] = useSearchParams();
@@ -40,7 +40,7 @@ export default function VerifyEmail() {
 
         setStatus('success');
         setMessage(data.message || 'Email verified successfully');
-        setTimeout(() => navigate('/login'), 2000);
+        setTimeout(() => navigate('/login'), 3000);
 
       } catch (err) {
         setStatus('error');
@@ -52,37 +52,65 @@ export default function VerifyEmail() {
   }, [token, email, navigate]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-6 bg-gray-50">
-      <div className="max-w-md w-full bg-white p-6 rounded shadow">
-        <h2 className="text-xl font-semibold mb-4">Email Verification</h2>
+    <div className="min-h-screen flex items-center justify-center p-4 bg-gray-50">
+      <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 border border-gray-100 text-center">
 
-        {status === 'idle' && <p className="text-sm text-gray-600">Preparing verification...</p>}
-        {status === 'sending' && <p className="text-sm text-gray-600">Verifying your email. Please wait...</p>}
+        {/* Header Icon */}
+        <div className="flex justify-center mb-6">
+          <div className={`p-4 rounded-full ${status === 'success' ? 'bg-green-100 text-green-600' :
+            status === 'error' ? 'bg-red-100 text-red-600' :
+              'bg-blue-100 text-blue-600'
+            }`}>
+            {status === 'success' ? <CheckCircle size={48} /> :
+              status === 'error' ? <XCircle size={48} /> :
+                status === 'sending' ? <Loader2 size={48} className="animate-spin" /> :
+                  <Mail size={48} />
+            }
+          </div>
+        </div>
+
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">
+          {status === 'success' ? 'Email Verified!' :
+            status === 'error' ? 'Verification Failed' :
+              'Verifying Email'}
+        </h2>
+
+        <p className="text-gray-500 mb-8">
+          {status === 'idle' && 'Preparing to verify your email address...'}
+          {status === 'sending' && 'Please wait while we verify your email address...'}
+          {status === 'success' && message}
+          {status === 'error' && message}
+        </p>
 
         {status === 'success' && (
-          <div>
-            <p className="text-green-600 font-medium mb-2">{message}</p>
-            <p className="text-sm text-gray-600">Redirecting to login...</p>
-            <div className="mt-4">
-              <button onClick={() => navigate('/login')} className="px-4 py-2 bg-blue-600 text-white rounded">
-                Go to Login
-              </button>
+          <div className="space-y-4">
+            <div className="w-full bg-gray-100 rounded-full h-1.5 mb-4 overflow-hidden">
+              <div className="bg-green-500 h-1.5 rounded-full animate-[progress_3s_ease-in-out_forwards]" style={{ width: '100%' }}></div>
             </div>
+            <p className="text-sm text-gray-400">Redirecting to login automatically...</p>
+            <button
+              onClick={() => navigate('/login')}
+              className="text-blue-600 font-semibold hover:underline text-sm"
+            >
+              Go to Login Now
+            </button>
           </div>
         )}
 
         {status === 'error' && (
-          <div>
-            <p className="text-red-600 font-medium mb-2">Verification failed</p>
-            <p className="text-sm text-gray-600 mb-4">{message}</p>
-            <div className="flex gap-2">
-              <button onClick={() => navigate('/login')} className="px-4 py-2 bg-gray-200 rounded">
-                Go to Login
-              </button>
-              <button onClick={() => window.location.reload()} className="px-4 py-2 bg-blue-600 text-white rounded">
-                Retry
-              </button>
-            </div>
+          <div className="flex flex-col gap-3 items-center">
+            <button
+              onClick={() => window.location.reload()}
+              className="text-blue-600 font-semibold hover:underline text-sm"
+            >
+              Try Again
+            </button>
+            <button
+              onClick={() => navigate('/login')}
+              className="text-gray-500 hover:text-gray-700 hover:underline text-sm"
+            >
+              Back to Login
+            </button>
           </div>
         )}
       </div>

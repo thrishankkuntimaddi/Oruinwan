@@ -72,16 +72,16 @@ const LoginForm = ({ onSwitch }) => {
   });
 
   return (
-    <div className="w-full max-w-sm bg-white rounded-2xl shadow-xl p-6 border border-gray-100">
-      <div className="text-center mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Welcome to Chttrix</h1>
-        <p className="text-gray-500 mt-2 text-sm">Enter your details to access your workspace.</p>
+    <div className="w-full max-w-sm bg-white rounded-2xl shadow-xl p-5 border border-gray-100">
+      <div className="text-center mb-5">
+        <h1 className="text-xl font-bold text-gray-900 tracking-tight">Welcome to Chttrix</h1>
+        <p className="text-gray-500 mt-1.5 text-xs">Enter your details to access your workspace.</p>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-3">
         {/* Email */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+          <label className="block text-xs font-medium text-gray-700 mb-1">Email</label>
           <input
             name="email"
             type="email"
@@ -89,14 +89,14 @@ const LoginForm = ({ onSwitch }) => {
             required
             value={formData.email}
             onChange={handleChange}
-            className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-sm"
+            className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-sm"
           />
         </div>
 
         {/* Password */}
         <div>
           <div className="flex justify-between items-center mb-1">
-            <label className="block text-sm font-medium text-gray-700">Password</label>
+            <label className="block text-xs font-medium text-gray-700">Password</label>
           </div>
           <div className="relative">
             <input
@@ -106,20 +106,20 @@ const LoginForm = ({ onSwitch }) => {
               required
               value={formData.password}
               onChange={handleChange}
-              className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-sm"
+              className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-sm"
             />
 
 
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600"
+              className="absolute right-3 top-2 text-gray-400 hover:text-gray-600"
             >
-              {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
             </button>
           </div>
           <div className="flex justify-end mt-1">
-            <Link to="/forgot-password" className="text-sm text-blue-600 hover:text-blue-700 font-medium">
+            <Link to="/forgot-password" className="text-xs text-blue-600 hover:text-blue-700 font-medium">
               Forgot password?
             </Link>
           </div>
@@ -129,7 +129,7 @@ const LoginForm = ({ onSwitch }) => {
         <button
           type="submit"
           disabled={!isFormValid}
-          className={`w-full py-2.5 rounded-lg text-white font-semibold text-base shadow-md transition-all transform hover:-translate-y-0.5 ${isFormValid
+          className={`w-full py-2 rounded-lg text-white font-semibold text-sm shadow-md transition-all transform hover:-translate-y-0.5 ${isFormValid
             ? "bg-blue-600 hover:bg-blue-700 hover:shadow-lg"
             : "bg-gray-300 cursor-not-allowed"
             }`}
@@ -139,39 +139,39 @@ const LoginForm = ({ onSwitch }) => {
       </form>
 
       {/* Divider */}
-      <div className="relative my-6">
+      <div className="relative my-5">
         <div className="absolute inset-0 flex items-center">
           <div className="w-full border-t border-gray-200"></div>
         </div>
         <div className="relative flex justify-center text-xs">
-          <span className="px-4 bg-white text-gray-500 text-sm">or login with</span>
+          <span className="px-4 bg-white text-gray-500 text-xs">or login with</span>
         </div>
       </div>
 
       {/* OAuth Buttons */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-3 gap-2">
         <div className="flex justify-center">
           {/* Google Button Wrapper to fit design */}
           <button
             type="button"
             onClick={() => googleLogin()}
-            className="flex items-center justify-center w-full h-10 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+            className="flex items-center justify-center w-full h-9 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
           >
             <GoogleIcon />
           </button>
         </div>
 
-        <button className="flex items-center justify-center h-10 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-xl">
+        <button className="flex items-center justify-center h-9 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-lg">
           <GitHubIcon />
         </button>
 
-        <button className="flex items-center justify-center h-10 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-xl text-blue-700">
+        <button className="flex items-center justify-center h-9 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-lg text-blue-700">
           <LinkedInIcon />
         </button>
       </div>
 
       {/* Footer */}
-      <p className="text-center mt-6 text-sm text-gray-600">
+      <p className="text-center mt-5 text-xs text-gray-600">
         Don’t have an account?{" "}
         <button onClick={onSwitch} className="text-blue-600 font-semibold hover:underline">
           Sign up

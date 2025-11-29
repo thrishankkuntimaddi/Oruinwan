@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import { Home, MessageSquare, CheckSquare, FileText, Newspaper } from "lucide-react";
 
-const IconSidebar = ({ onProfileClick }) => {
+const IconSidebar = ({ onProfileClick, activeWorkspace, setActiveWorkspace, workspaces }) => {
     const navigate = useNavigate();
     const location = useLocation();
     const { user } = useAuth();
@@ -22,22 +22,19 @@ const IconSidebar = ({ onProfileClick }) => {
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
-    const isActive = (path) => location.pathname === path;
-
-
+    const isActive = (path) => {
+        if (path === "/app") {
+            return location.pathname === "/app" || location.pathname.startsWith("/channel/") || location.pathname.startsWith("/dm/");
+        }
+        return location.pathname === path || location.pathname.startsWith(path + "/");
+    };
 
     const navItems = [
-        { icon: <Home size={20} strokeWidth={2} />, path: "/", label: "Home" },
+        { icon: <Home size={20} strokeWidth={2} />, path: "/app", label: "Home" },
         { icon: <MessageSquare size={20} strokeWidth={2} />, path: "/messages", label: "Messages" },
         { icon: <CheckSquare size={20} strokeWidth={2} />, path: "/tasks", label: "Tasks" },
         { icon: <FileText size={20} strokeWidth={2} />, path: "/notes", label: "Notes" },
-        { icon: <Newspaper size={20} strokeWidth={2} />, path: "/blogs", label: "Blogs" },
-    ];
-
-    const workspaces = [
-        { id: 1, name: "Acme Corp", icon: "A", color: "bg-blue-600" },
-        { id: 2, name: "Project Beta", icon: "P", color: "bg-purple-600" },
-        { id: 3, name: "Design Team", icon: "D", color: "bg-pink-600" },
+        { icon: <Newspaper size={20} strokeWidth={2} />, path: "/updates", label: "Updates" },
     ];
 
     return (
@@ -49,9 +46,9 @@ const IconSidebar = ({ onProfileClick }) => {
             <div className="relative mb-6" ref={menuRef}>
                 <button
                     onClick={() => setShowWorkspaceMenu(!showWorkspaceMenu)}
-                    className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white font-bold text-xl cursor-pointer hover:bg-blue-500 transition-colors shadow-sm relative"
+                    className={`w-10 h-10 ${activeWorkspace.color} rounded-xl flex items-center justify-center text-white font-bold text-xl cursor-pointer hover:opacity-90 transition-opacity shadow-sm relative`}
                 >
-                    C
+                    {activeWorkspace.icon}
                     <div className="absolute -bottom-1 -right-1 bg-white rounded-full p-0.5 border border-gray-200">
                         <svg className="w-2 h-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M19 9l-7 7-7-7" /></svg>
                     </div>
@@ -72,7 +69,14 @@ const IconSidebar = ({ onProfileClick }) => {
                         <div className="py-2">
                             <div className="px-4 py-1 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Switch to</div>
                             {workspaces.map(ws => (
-                                <button key={ws.id} className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-3 transition-colors">
+                                <button
+                                    key={ws.id}
+                                    onClick={() => {
+                                        setActiveWorkspace(ws);
+                                        setShowWorkspaceMenu(false);
+                                    }}
+                                    className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-3 transition-colors"
+                                >
                                     <div className={`w-6 h-6 rounded ${ws.color} text-white flex items-center justify-center text-xs font-bold`}>{ws.icon}</div>
                                     <span className="text-sm text-gray-700 font-medium">{ws.name}</span>
                                 </button>

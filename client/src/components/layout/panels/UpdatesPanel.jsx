@@ -1,8 +1,8 @@
 import React from "react";
-import { Layout, User, Bell, Hash, Zap } from "lucide-react";
+import { Layout, User, Bell, Hash, Zap, Search } from "lucide-react";
 import { useBlogs } from "../../../contexts/BlogsContext";
 
-const BlogsPanel = () => {
+const UpdatesPanel = () => {
     const { activeFilter, setActiveFilter } = useBlogs();
 
     const filters = [
@@ -21,6 +21,18 @@ const BlogsPanel = () => {
                     <Layout className="text-blue-600" size={20} />
                     Updates
                 </h2>
+            </div>
+
+            {/* Search */}
+            <div className="px-4 pt-4">
+                <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                    <input
+                        type="text"
+                        placeholder="Search updates..."
+                        className="w-full pl-9 pr-4 py-2 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
+                    />
+                </div>
             </div>
 
             {/* Navigation */}
@@ -48,7 +60,7 @@ const BlogsPanel = () => {
                     <Hash size={12} /> Trending Topics
                 </h3>
                 <div className="flex flex-wrap gap-2">
-                    {trendingTags.map(tag => (
+                    {trendingTags.slice(0, 5).map(tag => (
                         <span key={tag} className="px-2 py-1 bg-white border border-gray-200 rounded-lg text-xs text-gray-600 hover:border-blue-300 hover:text-blue-600 cursor-pointer transition-colors">
                             {tag}
                         </span>
@@ -59,4 +71,4 @@ const BlogsPanel = () => {
     );
 };
 
-export default BlogsPanel;
+export default UpdatesPanel;

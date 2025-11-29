@@ -2,17 +2,79 @@ import React, { useState, useRef, useEffect } from "react";
 import IconSidebar from "./IconSidebar";
 import ProfileMenu from "../SidebarComp/ProfileSidebar";
 import ChttrixAIChat from "../chttrixAIComp/ChttrixAIChat";
-import { Bot } from "lucide-react";
+import { Bot, BookOpen, Command, Bug, Sparkles, Search, MessageCircle, X } from "lucide-react";
+
+// Mock Data for Search
+const mockSearchData = {
+    channels: [
+        { id: 'c1', name: 'general', type: 'channel' },
+        { id: 'c2', name: 'engineering', type: 'channel' },
+        { id: 'c3', name: 'design', type: 'channel' },
+        { id: 'c4', name: 'marketing', type: 'channel' },
+        { id: 'c5', name: 'random', type: 'channel' },
+    ],
+    dms: [
+        { id: 'u1', name: 'Alice Smith', type: 'dm' },
+        { id: 'u2', name: 'Bob Jones', type: 'dm' },
+        { id: 'u3', name: 'Charlie Brown', type: 'dm' },
+        { id: 'u4', name: 'Sarah Wilson', type: 'dm' },
+    ],
+    files: [
+        { id: 'f1', name: 'Q4_Report.pdf', type: 'file' },
+        { id: 'f2', name: 'Design_System.fig', type: 'file' },
+        { id: 'f3', name: 'Meeting_Notes.docx', type: 'file' },
+    ]
+};
+
+const workspaces = [
+    { id: 1, name: "Acme Corp", icon: "A", color: "bg-blue-600" },
+    { id: 2, name: "Project Beta", icon: "P", color: "bg-purple-600" },
+    { id: 3, name: "Design Team", icon: "D", color: "bg-pink-600" },
+];
 
 const MainLayout = ({ children, sidePanel }) => {
     const [showProfile, setShowProfile] = useState(false);
     const [showAI, setShowAI] = useState(false);
     const [aiWidth, setAiWidth] = useState(350);
     const [sidePanelWidth, setSidePanelWidth] = useState(270);
+    const [activeWorkspace, setActiveWorkspace] = useState(workspaces[0]);
 
     // Search State
     const [searchQuery, setSearchQuery] = useState("");
     const [showSearchResults, setShowSearchResults] = useState(false);
+    const [searchResults, setSearchResults] = useState({ channels: [], dms: [], files: [] });
+    const [recentSearches, setRecentSearches] = useState([
+        { id: 'r1', name: 'project-alpha', type: 'channel' },
+        { id: 'r2', name: 'marketing-budget.pdf', type: 'file' }
+    ]);
+
+
+
+    // Search Logic
+    useEffect(() => {
+        if (!searchQuery.trim()) {
+            setSearchResults({ channels: [], dms: [], files: [] });
+            return;
+        }
+
+        const query = searchQuery.toLowerCase();
+        const filtered = {
+            channels: mockSearchData.channels.filter(item => item.name.toLowerCase().includes(query)),
+            dms: mockSearchData.dms.filter(item => item.name.toLowerCase().includes(query)),
+            files: mockSearchData.files.filter(item => item.name.toLowerCase().includes(query)),
+        };
+        setSearchResults(filtered);
+    }, [searchQuery]);
+
+    const handleResultClick = (item) => {
+        // Add to recent searches if not already present
+        if (!recentSearches.find(r => r.id === item.id)) {
+            setRecentSearches(prev => [item, ...prev].slice(0, 5)); // Keep last 5
+        }
+        setSearchQuery(""); // Clear input
+        setShowSearchResults(false);
+        // In a real app, navigate to the item here
+    };
 
     // Help State
     const [showHelp, setShowHelp] = useState(false);
@@ -82,13 +144,13 @@ const MainLayout = ({ children, sidePanel }) => {
                             onClick={() => setActiveHelpModal(null)}
                             className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 z-10"
                         >
-                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                            <X size={24} />
                         </button>
 
                         {activeHelpModal === "academy" && (
                             <>
                                 <div className="p-6 bg-indigo-600 text-white">
-                                    <h2 className="text-2xl font-bold flex items-center gap-2">🎓 Chttrix Academy</h2>
+                                    <h2 className="text-2xl font-bold flex items-center gap-2"><BookOpen size={28} /> Chttrix Academy</h2>
                                     <p className="text-indigo-100 mt-1">Master your workflow with these guides.</p>
                                 </div>
                                 <div className="p-6 overflow-y-auto space-y-4">
@@ -105,7 +167,7 @@ const MainLayout = ({ children, sidePanel }) => {
                         {activeHelpModal === "shortcuts" && (
                             <>
                                 <div className="p-6 bg-gray-900 text-white">
-                                    <h2 className="text-2xl font-bold flex items-center gap-2">⌨️ Keyboard Shortcuts</h2>
+                                    <h2 className="text-2xl font-bold flex items-center gap-2"><Command size={28} /> Keyboard Shortcuts</h2>
                                     <p className="text-gray-400 mt-1">Speed up your workflow.</p>
                                 </div>
                                 <div className="p-6 overflow-y-auto">
@@ -134,7 +196,7 @@ const MainLayout = ({ children, sidePanel }) => {
                         {activeHelpModal === "bug" && (
                             <>
                                 <div className="p-6 bg-red-50 border-b border-red-100">
-                                    <h2 className="text-2xl font-bold text-red-700 flex items-center gap-2">🐛 Report a Bug</h2>
+                                    <h2 className="text-2xl font-bold text-red-700 flex items-center gap-2"><Bug size={28} /> Report a Bug</h2>
                                     <p className="text-red-600 mt-1">Found something broken? Let us know.</p>
                                 </div>
                                 <div className="p-6 space-y-4">
@@ -152,7 +214,7 @@ const MainLayout = ({ children, sidePanel }) => {
                         {activeHelpModal === "whatsnew" && (
                             <>
                                 <div className="p-6 bg-gradient-to-r from-pink-500 to-orange-500 text-white">
-                                    <h2 className="text-2xl font-bold flex items-center gap-2">✨ What's New</h2>
+                                    <h2 className="text-2xl font-bold flex items-center gap-2"><Sparkles size={28} /> What's New</h2>
                                     <p className="text-white/90 mt-1">Latest updates and improvements.</p>
                                 </div>
                                 <div className="p-6 overflow-y-auto space-y-6">
@@ -174,7 +236,7 @@ const MainLayout = ({ children, sidePanel }) => {
                         {activeHelpModal === "contact" && (
                             <>
                                 <div className="p-6 bg-blue-50 border-b border-blue-100">
-                                    <h2 className="text-2xl font-bold text-blue-900 flex items-center gap-2">📞 Contact Support</h2>
+                                    <h2 className="text-2xl font-bold text-blue-900 flex items-center gap-2"><MessageCircle size={28} /> Contact Support</h2>
                                     <p className="text-blue-700 mt-1">We're here to help with any questions.</p>
                                 </div>
                                 <div className="p-6 space-y-4">
@@ -209,16 +271,16 @@ const MainLayout = ({ children, sidePanel }) => {
                 {/* Center: Search Bar */}
                 <div className="flex-1 max-w-xl mx-auto relative">
                     <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs">🔍</span>
+                        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                         <input
                             type="text"
                             value={searchQuery}
                             onChange={(e) => {
                                 setSearchQuery(e.target.value);
-                                setShowSearchResults(e.target.value.length > 0);
+                                setShowSearchResults(true);
                             }}
                             onFocus={() => {
-                                if (searchQuery.length > 0) setShowSearchResults(true);
+                                setShowSearchResults(true);
                             }}
                             onBlur={() => setTimeout(() => setShowSearchResults(false), 200)} // Delay to allow clicking results
                             placeholder="Search Chttrix..."
@@ -228,25 +290,103 @@ const MainLayout = ({ children, sidePanel }) => {
 
                     {/* Search Results Dropdown */}
                     {showSearchResults && (
-                        <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-lg shadow-xl border border-gray-200 overflow-hidden z-50 animate-fade-in">
-                            <div className="p-2">
-                                <div className="text-xs font-bold text-gray-500 uppercase px-3 py-1">Recent Searches</div>
-                                <div className="hover:bg-gray-100 px-3 py-2 rounded cursor-pointer text-sm text-gray-700 flex items-center">
-                                    <span className="mr-2">🕒</span> project-alpha
-                                </div>
-                                <div className="hover:bg-gray-100 px-3 py-2 rounded cursor-pointer text-sm text-gray-700 flex items-center">
-                                    <span className="mr-2">🕒</span> marketing-budget.pdf
-                                </div>
-                            </div>
-                            <div className="border-t border-gray-100 p-2">
-                                <div className="text-xs font-bold text-gray-500 uppercase px-3 py-1">Channels</div>
-                                <div className="hover:bg-gray-100 px-3 py-2 rounded cursor-pointer text-sm text-gray-700 flex items-center">
-                                    <span className="mr-2">#</span> engineering
-                                </div>
-                            </div>
-                            <div className="bg-gray-50 px-4 py-2 text-xs text-center text-gray-500 border-t border-gray-100">
-                                Press <strong>Enter</strong> to search for "{searchQuery}"
-                            </div>
+                        <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-lg shadow-xl border border-gray-200 overflow-hidden z-50 animate-fade-in max-h-[400px] overflow-y-auto">
+
+                            {/* Case 1: Search Query is Empty -> Show Recent Searches */}
+                            {!searchQuery.trim() && (
+                                <>
+                                    {recentSearches.length > 0 ? (
+                                        <div className="p-2">
+                                            <div className="text-xs font-bold text-gray-500 uppercase px-3 py-1 mb-1">Recent Searches</div>
+                                            {recentSearches.map(item => (
+                                                <div
+                                                    key={item.id}
+                                                    onClick={() => handleResultClick(item)}
+                                                    className="hover:bg-gray-100 px-3 py-2 rounded-lg cursor-pointer text-sm text-gray-700 flex items-center group transition-colors"
+                                                >
+                                                    <span className="mr-3 text-gray-400 group-hover:text-blue-500">
+                                                        {item.type === 'channel' ? '#' : item.type === 'dm' ? '�' : '📄'}
+                                                    </span>
+                                                    {item.name}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <div className="p-4 text-center text-sm text-gray-500">
+                                            No recent searches
+                                        </div>
+                                    )}
+                                </>
+                            )}
+
+                            {/* Case 2: Search Query Exists -> Show Results */}
+                            {searchQuery.trim() && (
+                                <>
+                                    {/* Channels */}
+                                    {searchResults.channels.length > 0 && (
+                                        <div className="p-2 border-b border-gray-100">
+                                            <div className="text-xs font-bold text-gray-500 uppercase px-3 py-1 mb-1">Channels</div>
+                                            {searchResults.channels.map(item => (
+                                                <div
+                                                    key={item.id}
+                                                    onClick={() => handleResultClick(item)}
+                                                    className="hover:bg-gray-100 px-3 py-2 rounded-lg cursor-pointer text-sm text-gray-700 flex items-center group transition-colors"
+                                                >
+                                                    <span className="mr-3 text-gray-400 group-hover:text-blue-500">#</span>
+                                                    <span className="font-medium">{item.name}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    {/* Direct Messages */}
+                                    {searchResults.dms.length > 0 && (
+                                        <div className="p-2 border-b border-gray-100">
+                                            <div className="text-xs font-bold text-gray-500 uppercase px-3 py-1 mb-1">Direct Messages</div>
+                                            {searchResults.dms.map(item => (
+                                                <div
+                                                    key={item.id}
+                                                    onClick={() => handleResultClick(item)}
+                                                    className="hover:bg-gray-100 px-3 py-2 rounded-lg cursor-pointer text-sm text-gray-700 flex items-center group transition-colors"
+                                                >
+                                                    <span className="mr-3 text-gray-400 group-hover:text-blue-500">👤</span>
+                                                    <span>{item.name}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    {/* Files */}
+                                    {searchResults.files.length > 0 && (
+                                        <div className="p-2 border-b border-gray-100">
+                                            <div className="text-xs font-bold text-gray-500 uppercase px-3 py-1 mb-1">Files</div>
+                                            {searchResults.files.map(item => (
+                                                <div
+                                                    key={item.id}
+                                                    onClick={() => handleResultClick(item)}
+                                                    className="hover:bg-gray-100 px-3 py-2 rounded-lg cursor-pointer text-sm text-gray-700 flex items-center group transition-colors"
+                                                >
+                                                    <span className="mr-3 text-gray-400 group-hover:text-blue-500">📄</span>
+                                                    <span>{item.name}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    {/* No Results Found */}
+                                    {searchResults.channels.length === 0 &&
+                                        searchResults.dms.length === 0 &&
+                                        searchResults.files.length === 0 && (
+                                            <div className="p-8 text-center">
+                                                <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3 text-gray-400">
+                                                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                                                </div>
+                                                <p className="text-gray-900 font-medium">Nothing to show</p>
+                                                <p className="text-xs text-gray-500 mt-1">We couldn't find anything matching "{searchQuery}"</p>
+                                            </div>
+                                        )}
+                                </>
+                            )}
                         </div>
                     )}
                 </div>
@@ -283,11 +423,11 @@ const MainLayout = ({ children, sidePanel }) => {
                                 {/* Search */}
                                 <div className="p-3 border-b border-gray-100">
                                     <div className="relative">
-                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs">🔍</span>
+                                        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                                         <input
                                             type="text"
                                             placeholder="Find answers..."
-                                            className="w-full pl-7 pr-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                                            className="w-full pl-9 pr-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
                                         />
                                     </div>
                                 </div>
@@ -298,28 +438,28 @@ const MainLayout = ({ children, sidePanel }) => {
                                         onClick={() => { setShowHelp(false); setActiveHelpModal("academy"); }}
                                         className="flex flex-col items-center justify-center p-2 hover:bg-indigo-50 rounded-lg transition-colors group"
                                     >
-                                        <span className="text-xl mb-1 group-hover:scale-110 transition-transform">🎓</span>
+                                        <BookOpen size={20} className="mb-1 group-hover:scale-110 transition-transform text-indigo-600" />
                                         <span className="text-xs font-medium text-gray-700">Academy</span>
                                     </button>
                                     <button
                                         onClick={() => { setShowHelp(false); setActiveHelpModal("shortcuts"); }}
                                         className="flex flex-col items-center justify-center p-2 hover:bg-indigo-50 rounded-lg transition-colors group"
                                     >
-                                        <span className="text-xl mb-1 group-hover:scale-110 transition-transform">⌨️</span>
+                                        <Command size={20} className="mb-1 group-hover:scale-110 transition-transform text-gray-700" />
                                         <span className="text-xs font-medium text-gray-700">Shortcuts</span>
                                     </button>
                                     <button
                                         onClick={() => { setShowHelp(false); setActiveHelpModal("bug"); }}
                                         className="flex flex-col items-center justify-center p-2 hover:bg-indigo-50 rounded-lg transition-colors group"
                                     >
-                                        <span className="text-xl mb-1 group-hover:scale-110 transition-transform">🐛</span>
+                                        <Bug size={20} className="mb-1 group-hover:scale-110 transition-transform text-red-600" />
                                         <span className="text-xs font-medium text-gray-700">Report Bug</span>
                                     </button>
                                     <button
                                         onClick={() => { setShowHelp(false); setActiveHelpModal("whatsnew"); }}
                                         className="flex flex-col items-center justify-center p-2 hover:bg-indigo-50 rounded-lg transition-colors group"
                                     >
-                                        <span className="text-xl mb-1 group-hover:scale-110 transition-transform">✨</span>
+                                        <Sparkles size={20} className="mb-1 group-hover:scale-110 transition-transform text-yellow-500" />
                                         <span className="text-xs font-medium text-gray-700">What's New</span>
                                     </button>
                                 </div>
@@ -349,7 +489,13 @@ const MainLayout = ({ children, sidePanel }) => {
             {/* 2. Main Workspace Area (Below Top Bar) */}
             <div className="flex-1 flex overflow-hidden">
                 {/* A. Far Left: Icon Sidebar */}
-                <IconSidebar onProfileClick={() => setShowProfile(true)} />
+                {/* A. Far Left: Icon Sidebar */}
+                <IconSidebar
+                    onProfileClick={() => setShowProfile(true)}
+                    activeWorkspace={activeWorkspace}
+                    setActiveWorkspace={setActiveWorkspace}
+                    workspaces={workspaces}
+                />
 
                 {/* B. Middle Left: Side Panel (Optional & Resizable) */}
                 {sidePanel && (
@@ -358,7 +504,7 @@ const MainLayout = ({ children, sidePanel }) => {
                             style={{ width: sidePanelWidth }}
                             className="flex-shrink-0 bg-gray-50 flex flex-col"
                         >
-                            {sidePanel}
+                            {React.cloneElement(sidePanel, { title: activeWorkspace.name })}
                         </div>
                         {/* SidePanel Drag Handle */}
                         <div

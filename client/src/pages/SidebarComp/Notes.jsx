@@ -2,30 +2,43 @@ import React, { useEffect, useState, useRef } from "react";
 import { useParams } from "react-router-dom";
 import {
     Clock, MoreHorizontal, Trash2, Share2, Star, Sparkles,
-    Copy, Download, Printer, Info, Check
+    Copy, Download, Info, Check, Type, Image as ImageIcon, Video, Mic
 } from "lucide-react";
 import { useNotes } from "../../contexts/NotesContext";
+import { useToast } from "../../contexts/ToastContext";
 import ConfirmationModal from "../../components/ui/ConfirmationModal";
 
 const Notes = () => {
     const { id } = useParams();
     const { notes, updateNote, deleteNote, addNote } = useNotes();
+    const { showToast } = useToast();
 
     // Find active note
     const note = notes.find(n => n.id === id);
 
     const [title, setTitle] = useState("");
-    const [content, setContent] = useState("");
+    const [blocks, setBlocks] = useState([]); // [{ id, type, content }]
     const [showMenu, setShowMenu] = useState(false);
     const [showShareTooltip, setShowShareTooltip] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [showInfoModal, setShowInfoModal] = useState(false);
     const menuRef = useRef(null);
 
     // Sync local state with note data when ID changes
     useEffect(() => {
         if (note) {
             setTitle(note.title);
-            setContent(note.content);
+            try {
+                // Try to parse content as JSON blocks, otherwise treat as single text block
+                const parsed = JSON.parse(note.content);
+                if (Array.isArray(parsed)) {
+                    setBlocks(parsed);
+                } else {
+                    setBlocks([{ id: Date.now(), type: "text", content: note.content }]);
+                }
+            } catch (e) {
+                setBlocks([{ id: Date.now(), type: "text", content: note.content || "" }]);
+            }
         }
     }, [note, id]);
 
@@ -47,35 +60,59 @@ const Notes = () => {
         updateNote(id, { title: newTitle });
     };
 
-    const handleContentChange = (e) => {
-        const newContent = e.target.value;
-        setContent(newContent);
-        updateNote(id, { content: newContent });
+    const updateBlocks = (newBlocks) => {
+        setBlocks(newBlocks);
+        // Persist as JSON string
+        updateNote(id, { content: JSON.stringify(newBlocks) });
+    };
+
+    const handleBlockChange = (blockId, newContent) => {
+        const newBlocks = blocks.map(b => b.id === blockId ? { ...b, content: newContent } : b);
+        updateBlocks(newBlocks);
+    };
+
+    const addBlock = (type) => {
+        const newBlock = { id: Date.now(), type, content: "" };
+        updateBlocks([...blocks, newBlock]);
+    };
+
+    const removeBlock = (blockId) => {
+        const newBlocks = blocks.filter(b => b.id !== blockId);
+        updateBlocks(newBlocks);
     };
 
     const handleShare = () => {
-        // Mock copy link
         navigator.clipboard.writeText(window.location.href);
         setShowShareTooltip(true);
         setTimeout(() => setShowShareTooltip(false), 2000);
+        showToast("Link copied to clipboard", "success");
     };
 
     const handleAI = () => {
-        alert("✨ Chttrix AI is analyzing your note context to generate a summary draft... (Demo)");
+        showToast("AI Draft generation coming soon!", "info");
     };
 
     const handleDuplicate = () => {
         const newNote = addNote();
         updateNote(newNote.id, {
             title: `${title} (Copy)`,
-            content: content
+            content: JSON.stringify(blocks)
         });
+        setShowMenu(false);
+        showToast("Note duplicated", "success");
+    };
+
+    const handleDownloadPDF = () => {
+        showToast("Downloading PDF...", "success");
+        // Mock download
+        setTimeout(() => showToast("Download complete", "success"), 1000);
         setShowMenu(false);
     };
 
     const handleDeleteConfirm = () => {
         deleteNote(id);
         setIsDeleteModalOpen(false);
+        showToast("Note deleted", "success");
     };
 
     if (!id || !note) {
@@ -91,16 +128,11 @@ const Notes = () => {
     }
 
     const formattedDate = new Date(note.updatedAt).toLocaleString("en-US", {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
+        weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
     });
 
     return (
-        <div className="flex flex-col h-full bg-white">
+        <div className="flex flex-col h-full bg-white relative">
             {/* Toolbar / Header */}
             <div className="h-16 px-8 flex items-center justify-between border-b border-gray-100 shrink-0">
                 <div className="flex items-center gap-2 text-xs font-medium text-gray-400">
@@ -109,7 +141,6 @@ const Notes = () => {
                 </div>
 
                 <div className="flex items-center gap-3">
-
                     {/* AI Button */}
                     <button
                         onClick={handleAI}
@@ -130,11 +161,6 @@ const Notes = () => {
                         >
                             {showShareTooltip ? <Check size={18} className="text-green-600" /> : <Share2 size={18} />}
                         </button>
-                        {showShareTooltip && (
-                            <div className="absolute top-full right-0 mt-2 px-2 py-1 bg-gray-800 text-white text-xs rounded shadow-lg whitespace-nowrap z-20">
-                                Link Copied!
-                            </div>
-                        )}
                     </div>
 
                     {/* Delete Button */}
@@ -157,20 +183,14 @@ const Notes = () => {
 
                         {showMenu && (
                             <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-gray-100 py-1 z-20 animate-in fade-in zoom-in-95 duration-100 origin-top-right">
-                                <button
-                                    onClick={handleDuplicate}
-                                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2 transition-colors"
-                                >
+                                <button onClick={handleDuplicate} className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2 transition-colors">
                                     <Copy size={14} className="text-gray-400" /> Duplicate
                                 </button>
-                                <button className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2 transition-colors">
-                                    <Download size={14} className="text-gray-400" /> Export PDF
-                                </button>
-                                <button className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2 transition-colors">
-                                    <Printer size={14} className="text-gray-400" /> Print
+                                <button onClick={handleDownloadPDF} className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2 transition-colors">
+                                    <Download size={14} className="text-gray-400" /> Download PDF
                                 </button>
                                 <div className="h-px bg-gray-100 my-1" />
-                                <button className="w-full text-left px-4 py-2 text-sm text-gray-500 hover:bg-gray-50 flex items-center gap-2 transition-colors">
+                                <button onClick={() => { setShowInfoModal(true); setShowMenu(false); }} className="w-full text-left px-4 py-2 text-sm text-gray-500 hover:bg-gray-50 flex items-center gap-2 transition-colors">
                                     <Info size={14} className="text-gray-400" /> Note Info
                                 </button>
                             </div>
@@ -182,7 +202,6 @@ const Notes = () => {
             {/* Editor Area */}
             <div className="flex-1 overflow-y-auto custom-scrollbar">
                 <div className="max-w-4xl mx-auto px-8 py-10 min-h-full flex flex-col">
-
                     <input
                         type="text"
                         value={title}
@@ -191,15 +210,88 @@ const Notes = () => {
                         placeholder="Untitled Note"
                     />
 
-                    <textarea
-                        value={content}
-                        onChange={handleContentChange}
-                        className="flex-1 w-full resize-none border-none focus:ring-0 text-gray-700 text-lg leading-relaxed p-0 placeholder-gray-300 bg-transparent outline-none"
-                        placeholder="Start typing..."
-                        spellCheck={false}
-                    />
+                    <div className="space-y-4">
+                        {blocks.map((block) => (
+                            <div key={block.id} className="group relative">
+                                {block.type === "text" && (
+                                    <textarea
+                                        value={block.content}
+                                        onChange={(e) => handleBlockChange(block.id, e.target.value)}
+                                        className="w-full resize-none border-none focus:ring-0 text-gray-700 text-lg leading-relaxed p-0 placeholder-gray-300 bg-transparent outline-none min-h-[1.5em] overflow-hidden"
+                                        placeholder="Type something..."
+                                        onInput={(e) => { e.target.style.height = "auto"; e.target.style.height = e.target.scrollHeight + "px"; }}
+                                    />
+                                )}
+                                {block.type === "image" && (
+                                    <div className="rounded-xl overflow-hidden bg-gray-100 border border-gray-200 relative group-hover:shadow-sm transition-all">
+                                        <div className="h-64 flex items-center justify-center text-gray-400">
+                                            {block.content ? <img src={block.content} alt="Note" className="w-full h-full object-cover" /> : <div className="flex flex-col items-center"><ImageIcon size={32} /> <span className="text-sm mt-2">Image Placeholder</span></div>}
+                                        </div>
+                                    </div>
+                                )}
+                                {block.type === "video" && (
+                                    <div className="rounded-xl overflow-hidden bg-gray-900 border border-gray-200 relative">
+                                        <div className="h-64 flex items-center justify-center text-gray-500">
+                                            <div className="flex flex-col items-center"><Video size={32} /> <span className="text-sm mt-2">Video Placeholder</span></div>
+                                        </div>
+                                    </div>
+                                )}
+                                {block.type === "audio" && (
+                                    <div className="rounded-xl bg-gray-50 border border-gray-200 p-4 flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600"><Mic size={20} /></div>
+                                        <div className="h-1 flex-1 bg-gray-200 rounded-full overflow-hidden"><div className="w-1/3 h-full bg-blue-500"></div></div>
+                                        <span className="text-xs font-mono text-gray-500">00:00 / 02:30</span>
+                                    </div>
+                                )}
+
+                                {/* Block Actions (Delete) */}
+                                <button
+                                    onClick={() => removeBlock(block.id)}
+                                    className="absolute -right-8 top-0 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity p-1"
+                                >
+                                    <Trash2 size={16} />
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Add Block Menu */}
+                    <div className="mt-6 flex items-center gap-2 opacity-50 hover:opacity-100 transition-opacity">
+                        <button onClick={() => addBlock("text")} className="p-2 rounded-lg hover:bg-gray-100 text-gray-500 flex items-center gap-2 text-sm"><Type size={16} /> Text</button>
+                        <button onClick={() => addBlock("image")} className="p-2 rounded-lg hover:bg-gray-100 text-gray-500 flex items-center gap-2 text-sm"><ImageIcon size={16} /> Image</button>
+                        <button onClick={() => addBlock("video")} className="p-2 rounded-lg hover:bg-gray-100 text-gray-500 flex items-center gap-2 text-sm"><Video size={16} /> Video</button>
+                        <button onClick={() => addBlock("audio")} className="p-2 rounded-lg hover:bg-gray-100 text-gray-500 flex items-center gap-2 text-sm"><Mic size={16} /> Audio</button>
+                    </div>
                 </div>
             </div>
+
+            {/* Note Info Modal */}
+            {showInfoModal && (
+                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center animate-fade-in">
+                    <div className="bg-white rounded-2xl shadow-2xl p-6 w-80 animate-scale-in">
+                        <h3 className="text-lg font-bold text-gray-900 mb-4">Note Info</h3>
+                        <div className="space-y-3 text-sm">
+                            <div className="flex justify-between">
+                                <span className="text-gray-500">Created</span>
+                                <span className="font-medium text-gray-900">{new Date(note.createdAt).toLocaleDateString()}</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span className="text-gray-500">Last Edited</span>
+                                <span className="font-medium text-gray-900">{new Date(note.updatedAt).toLocaleDateString()}</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span className="text-gray-500">Size</span>
+                                <span className="font-medium text-gray-900">{(JSON.stringify(blocks).length / 1024).toFixed(2)} KB</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span className="text-gray-500">Words</span>
+                                <span className="font-medium text-gray-900">{blocks.filter(b => b.type === 'text').reduce((acc, b) => acc + (b.content?.split(/\s+/).length || 0), 0)}</span>
+                            </div>
+                        </div>
+                        <button onClick={() => setShowInfoModal(false)} className="mt-6 w-full bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold py-2 rounded-xl transition-colors">Close</button>
+                    </div>
+                </div>
+            )}
 
             <ConfirmationModal
                 isOpen={isDeleteModalOpen}

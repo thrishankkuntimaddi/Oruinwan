@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Plus, Search, FileText, Clock } from "lucide-react";
 import { useNotes } from "../../../contexts/NotesContext";
@@ -7,6 +7,7 @@ const NotesPanel = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const { notes, addNote, searchQuery, setSearchQuery } = useNotes();
+    const [sortOrder, setSortOrder] = useState("newest");
 
     // Get active note ID from URL path
     const activeId = location.pathname.split("/").pop();
@@ -15,6 +16,14 @@ const NotesPanel = () => {
         const date = new Date(isoString);
         return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
     };
+
+    const sortedNotes = [...notes].sort((a, b) => {
+        if (sortOrder === "newest") return new Date(b.updatedAt) - new Date(a.updatedAt);
+        if (sortOrder === "oldest") return new Date(a.updatedAt) - new Date(b.updatedAt);
+        if (sortOrder === "a-z") return (a.title || "").localeCompare(b.title || "");
+        if (sortOrder === "z-a") return (b.title || "").localeCompare(a.title || "");
+        return 0;
+    });
 
     return (
         <div className="flex flex-col h-full bg-gray-50/50 border-r border-gray-200">
@@ -30,8 +39,8 @@ const NotesPanel = () => {
                 </button>
             </div>
 
-            {/* Search */}
-            <div className="p-4 shrink-0">
+            {/* Search & Sort */}
+            <div className="p-4 shrink-0 space-y-3">
                 <div className="relative">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
                     <input
@@ -42,17 +51,30 @@ const NotesPanel = () => {
                         onChange={(e) => setSearchQuery(e.target.value)}
                     />
                 </div>
+
+                <div className="flex items-center gap-2">
+                    <select
+                        value={sortOrder}
+                        onChange={(e) => setSortOrder(e.target.value)}
+                        className="w-full p-2 bg-white border border-gray-200 rounded-lg text-xs font-medium text-gray-600 focus:outline-none focus:border-blue-500"
+                    >
+                        <option value="newest">Newest First</option>
+                        <option value="oldest">Oldest First</option>
+                        <option value="a-z">A-Z</option>
+                        <option value="z-a">Z-A</option>
+                    </select>
+                </div>
             </div>
 
             {/* Notes List */}
             <div className="flex-1 overflow-y-auto custom-scrollbar px-3 pb-3 space-y-2">
-                {notes.length === 0 ? (
+                {sortedNotes.length === 0 ? (
                     <div className="text-center py-10 text-gray-400">
                         <FileText size={48} className="mx-auto mb-3 opacity-20" />
                         <p className="text-sm font-medium">No notes found</p>
                     </div>
                 ) : (
-                    notes.map((note) => (
+                    sortedNotes.map((note) => (
                         <div
                             key={note.id}
                             onClick={() => navigate(`/notes/${note.id}`)}
