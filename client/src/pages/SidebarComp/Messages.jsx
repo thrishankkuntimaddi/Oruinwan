@@ -1,12 +1,14 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import ChatWindow from "../../components/messagesComp/chatWindowComp/chatWindow";
+import BroadcastChatWindow from "../../components/messagesComp/BroadcastChatWindow";
 import axios from "axios";
 
 const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
 export default function Messages() {
   const [selectedChat, setSelectedChat] = useState(null);
+  const [currentBroadcast, setCurrentBroadcast] = useState(null);
   const [contacts, setContacts] = useState([]);
   const location = useLocation();
 
@@ -31,19 +33,32 @@ export default function Messages() {
   useEffect(() => {
     const path = location.pathname;
 
-    if (path.includes("/channel/")) {
+    if (path.includes("/broadcast/")) {
+      const broadcastId = path.split("/broadcast/")[1];
+      if (location.state?.broadcast) {
+        setCurrentBroadcast(location.state.broadcast);
+      } else {
+        // Fallback for direct access
+        setCurrentBroadcast({
+          id: broadcastId,
+          name: "Broadcast",
+          recipients: [],
+          lastMessage: "Broadcast details not found.",
+          type: "broadcast"
+        });
+      }
+      setSelectedChat(null);
+    } else if (path.includes("/channel/")) {
       const channelId = decodeURIComponent(path.split("/channel/")[1]);
-      // Mock channel data for now since we don't have a backend fetch for single channel yet
-      // In a real app, you'd fetch the channel details here
       setSelectedChat({
         id: channelId,
-        name: channelId.charAt(0).toUpperCase() + channelId.slice(1), // Capitalize
+        name: channelId.charAt(0).toUpperCase() + channelId.slice(1),
         type: "channel",
-        members: [] // Placeholder
+        members: []
       });
+      setCurrentBroadcast(null);
     } else if (path.includes("/dm/")) {
       const dmId = decodeURIComponent(path.split("/dm/")[1]);
-      // Find contact or create mock
       const contact = contacts.find(c => c.username.toLowerCase() === dmId.toLowerCase()) || {
         id: dmId,
         username: dmId.charAt(0).toUpperCase() + dmId.slice(1),
@@ -55,19 +70,23 @@ export default function Messages() {
         name: contact.username,
         type: "dm",
         avatar: contact.profilePicture,
-        status: "online" // Mock status
+        status: "online"
       });
+      setCurrentBroadcast(null);
     } else {
       setSelectedChat(null);
+      setCurrentBroadcast(null);
     }
-  }, [location.pathname, contacts]);
+  }, [location.pathname, location.state, contacts]);
 
   return (
     <div className="flex flex-col h-full w-full">
       <div className="flex flex-1 overflow-hidden">
         {/* RIGHT PANE – Chat window */}
         <div className="flex-1 flex flex-col">
-          {selectedChat ? (
+          {currentBroadcast ? (
+            <BroadcastChatWindow broadcast={currentBroadcast} />
+          ) : selectedChat ? (
             <ChatWindow
               chat={selectedChat}
               contacts={contacts}

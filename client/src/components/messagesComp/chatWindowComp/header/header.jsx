@@ -7,13 +7,11 @@ import {
   Settings,
   Info,
   User,
-  CheckSquare,
   Bell,
   BellOff,
   Ban,
   Circle,
   BarChart2,
-  Trash2,
   X
 } from "lucide-react";
 
@@ -60,15 +58,6 @@ export default function Header({
           <span className="text-sm font-medium text-blue-600 bg-blue-50 px-3 py-1 rounded-full">
             {selectedCount} selected
           </span>
-          {selectedCount > 0 && (
-            <button
-              onClick={onDeleteSelected}
-              className="p-2 text-red-500 hover:bg-red-50 rounded-md transition-colors"
-              title="Delete Selected"
-            >
-              <Trash2 size={20} />
-            </button>
-          )}
           <button
             onClick={() => setSelectMode(false)}
             className="p-2 text-gray-500 hover:bg-gray-100 rounded-md transition-colors"
@@ -179,9 +168,6 @@ export default function Header({
                   </>
                 )}
 
-                <button className="w-full text-left px-4 py-2 hover:bg-gray-50 text-gray-700 flex items-center gap-3" onClick={() => { setSelectMode(true); setShowMenu(false); }}>
-                  <CheckSquare size={16} /> Select Messages
-                </button>
                 <button className="w-full text-left px-4 py-2 hover:bg-gray-50 text-gray-700 flex items-center gap-3" onClick={() => setMuted((m) => !m)}>
                   {muted ? <Bell size={16} /> : <BellOff size={16} />} {muted ? "Unmute Notifications" : "Mute Notifications"}
                 </button>

@@ -1,6 +1,5 @@
 import React, { useState } from "react";
-import { Smile, MessageSquare, Share, MoreHorizontal, Pin, Trash2, Copy } from "lucide-react";
-import MessageMenu from "./messageMenu";
+import { Smile, MessageSquare, Share, MoreHorizontal, Pin, Copy } from "lucide-react";
 import ReactionBadges from "./reactionBadges";
 
 /* ---------------------------------------------------------
@@ -161,8 +160,6 @@ export default function ChannelMessageItem({
                         <div className="absolute right-0 top-full mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-xl py-1 z-50 text-sm animate-fade-in">
                             <button onClick={() => { copyMessage(msg.id); toggleMsgMenu(null, null); }} className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2"><Copy size={14} /> Copy text</button>
                             <button onClick={() => { pinMessage(msg.id); toggleMsgMenu(null, null); }} className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2"><Pin size={14} /> {msg.isPinned ? "Unpin message" : "Pin message"}</button>
-                            <div className="border-t border-gray-100 my-1"></div>
-                            <button onClick={() => { deleteMessage(msg.id); toggleMsgMenu(null, null); }} className="w-full text-left px-4 py-2 hover:bg-red-50 text-red-600 flex items-center gap-2"><Trash2 size={14} /> Delete message</button>
                         </div>
                     )}
                 </div>

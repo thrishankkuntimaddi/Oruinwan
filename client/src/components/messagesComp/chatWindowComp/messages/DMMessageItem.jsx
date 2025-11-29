@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { MoreHorizontal, Copy, Trash2, Heart, Pin } from "lucide-react";
+import { MoreHorizontal, Copy, Heart, Pin } from "lucide-react";
 import ReactionBadges from "./reactionBadges";
 
 /* ---------------------------------------------------------
@@ -159,13 +159,6 @@ export default function DMMessageItem({
                                             className="w-full text-left px-4 py-2.5 hover:bg-gray-50 flex items-center gap-3 text-gray-700 transition-colors"
                                         >
                                             <Copy size={14} className="text-gray-400" /> Copy text
-                                        </button>
-                                        <div className="border-t border-gray-100 my-1"></div>
-                                        <button
-                                            onClick={(e) => { e.stopPropagation(); deleteMessage(msg.id); toggleMsgMenu({ stopPropagation: () => { } }, null); }}
-                                            className="w-full text-left px-4 py-2.5 hover:bg-red-50 text-red-600 flex items-center gap-3 transition-colors"
-                                        >
-                                            <Trash2 size={14} /> Delete message
                                         </button>
                                     </div>
                                 )}
