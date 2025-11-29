@@ -1,7 +1,7 @@
 import React from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 
-import { User, Inbox, Send, CheckCircle2 } from "lucide-react";
+import { User, Inbox, Send, CheckCircle2, Trash2 } from "lucide-react";
 
 const TasksPanel = () => {
     const navigate = useNavigate();
@@ -47,7 +47,7 @@ const TasksPanel = () => {
                     <Send size={18} /> Delegated
                 </button>
 
-                <div className="pt-4 mt-2 border-t border-gray-200">
+                <div className="pt-4 mt-2 border-t border-gray-200 space-y-2">
                     <button
                         onClick={() => handleNav("completed-tasks")}
                         className={`w-full text-left px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center gap-3 ${activeTab === "completed-tasks"
@@ -56,6 +56,15 @@ const TasksPanel = () => {
                             }`}
                     >
                         <CheckCircle2 size={18} /> Completed
+                    </button>
+                    <button
+                        onClick={() => handleNav("deleted-tasks")}
+                        className={`w-full text-left px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center gap-3 ${activeTab === "deleted-tasks"
+                            ? "bg-red-100 text-red-700"
+                            : "text-gray-600 hover:bg-gray-100"
+                            }`}
+                    >
+                        <Trash2 size={18} /> Deleted
                     </button>
                 </div>
             </div>

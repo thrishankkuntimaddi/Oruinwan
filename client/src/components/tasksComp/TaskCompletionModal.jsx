@@ -1,9 +1,10 @@
 import React, { useState } from "react";
-import { CheckCircle2, X, Send, PartyPopper } from "lucide-react";
+import { CheckCircle2, X, Send, PartyPopper, Trash2 } from "lucide-react";
 
-export default function TaskCompletionModal({ task, onClose, onConfirm }) {
+export default function TaskCompletionModal({ task, onClose, onConfirm, mode = "completion" }) {
     const [note, setNote] = useState("");
     const isPersonal = task.assigner === "Self";
+    const isDeletion = mode === "deletion";
 
     const handleConfirm = () => {
         onConfirm(note);
@@ -14,9 +15,14 @@ export default function TaskCompletionModal({ task, onClose, onConfirm }) {
             <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl transform transition-all scale-100 overflow-hidden border border-gray-100">
 
                 {/* Header */}
-                <div className={`px-6 py-4 border-b border-gray-100 flex justify-between items-center ${isPersonal ? "bg-gradient-to-r from-green-50 to-emerald-50" : "bg-gradient-to-r from-blue-50 to-indigo-50"}`}>
+                <div className={`px-6 py-4 border-b border-gray-100 flex justify-between items-center ${isDeletion ? "bg-gradient-to-r from-red-50 to-orange-50" : isPersonal ? "bg-gradient-to-r from-green-50 to-emerald-50" : "bg-gradient-to-r from-blue-50 to-indigo-50"}`}>
                     <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
-                        {isPersonal ? (
+                        {isDeletion ? (
+                            <>
+                                <Trash2 size={20} className="text-red-600" />
+                                Delete Task?
+                            </>
+                        ) : isPersonal ? (
                             <>
                                 <PartyPopper size={20} className="text-green-600" />
                                 Task Completed!
@@ -35,7 +41,19 @@ export default function TaskCompletionModal({ task, onClose, onConfirm }) {
 
                 {/* Body */}
                 <div className="p-6 space-y-4">
-                    {isPersonal ? (
+                    {isDeletion ? (
+                        <div className="text-center space-y-3">
+                            <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-2">
+                                <Trash2 size={32} />
+                            </div>
+                            <p className="text-gray-600">
+                                Are you sure you want to move <strong>{task.title}</strong> to trash?
+                            </p>
+                            <p className="text-sm text-gray-500">
+                                You can restore it later from the <strong>Deleted</strong> tab.
+                            </p>
+                        </div>
+                    ) : isPersonal ? (
                         <div className="text-center space-y-3">
                             <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-2">
                                 <CheckCircle2 size={32} />
@@ -79,10 +97,14 @@ export default function TaskCompletionModal({ task, onClose, onConfirm }) {
                     <button
                         onClick={handleConfirm}
                         className={`px-5 py-2 rounded-xl text-white font-medium shadow-lg transition-all hover:scale-[1.02] active:scale-95 text-sm flex items-center gap-2
-                ${isPersonal ? "bg-green-600 hover:bg-green-700 shadow-green-500/30" : "bg-blue-600 hover:bg-blue-700 shadow-blue-500/30"}
+                ${isDeletion ? "bg-red-600 hover:bg-red-700 shadow-red-500/30" : isPersonal ? "bg-green-600 hover:bg-green-700 shadow-green-500/30" : "bg-blue-600 hover:bg-blue-700 shadow-blue-500/30"}
             `}
                     >
-                        {isPersonal ? (
+                        {isDeletion ? (
+                            <>
+                                <Trash2 size={16} /> Delete Task
+                            </>
+                        ) : isPersonal ? (
                             <>
                                 <CheckCircle2 size={16} /> Complete Task
                             </>

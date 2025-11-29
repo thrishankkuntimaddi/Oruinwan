@@ -16,7 +16,6 @@ import TasksPanel from "./components/layout/panels/TasksPanel";
 import NotesPanel from "./components/layout/panels/NotesPanel";
 import UpdatesPanel from "./components/layout/panels/UpdatesPanel";
 
-
 // Pages (Protected)
 import Home from "./pages/SidebarComp/Home";
 import Messages from "./pages/SidebarComp/Messages";

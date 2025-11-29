@@ -223,21 +223,21 @@ const Notes = () => {
                                     />
                                 )}
                                 {block.type === "image" && (
-                                    <div className="rounded-xl overflow-hidden bg-gray-100 border border-gray-200 relative group-hover:shadow-sm transition-all">
+                                    <div className="w-1/2 rounded-xl overflow-hidden bg-gray-100 border border-gray-200 relative group-hover:shadow-sm transition-all">
                                         <div className="h-64 flex items-center justify-center text-gray-400">
                                             {block.content ? <img src={block.content} alt="Note" className="w-full h-full object-cover" /> : <div className="flex flex-col items-center"><ImageIcon size={32} /> <span className="text-sm mt-2">Image Placeholder</span></div>}
                                         </div>
                                     </div>
                                 )}
                                 {block.type === "video" && (
-                                    <div className="rounded-xl overflow-hidden bg-gray-900 border border-gray-200 relative">
+                                    <div className="w-1/2 rounded-xl overflow-hidden bg-gray-900 border border-gray-200 relative">
                                         <div className="h-64 flex items-center justify-center text-gray-500">
                                             <div className="flex flex-col items-center"><Video size={32} /> <span className="text-sm mt-2">Video Placeholder</span></div>
                                         </div>
                                     </div>
                                 )}
                                 {block.type === "audio" && (
-                                    <div className="rounded-xl bg-gray-50 border border-gray-200 p-4 flex items-center gap-3">
+                                    <div className="w-1/2 rounded-xl bg-gray-50 border border-gray-200 p-4 flex items-center gap-3">
                                         <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600"><Mic size={20} /></div>
                                         <div className="h-1 flex-1 bg-gray-200 rounded-full overflow-hidden"><div className="w-1/3 h-full bg-blue-500"></div></div>
                                         <span className="text-xs font-mono text-gray-500">00:00 / 02:30</span>

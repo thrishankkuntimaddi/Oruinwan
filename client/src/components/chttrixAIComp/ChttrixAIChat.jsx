@@ -256,7 +256,7 @@ const ChttrixAIChat = ({ onClose, isSidebar = false }) => {
       <div className="flex justify-between items-center px-4 py-3 border-b border-gray-100 bg-white sticky top-0 z-10">
         <div className="flex items-center gap-3">
           <div className="relative">
-            <img src="/assets/Logoat.jpg" alt="AI" className="w-6 h-6 rounded-md object-cover" />
+            <img src="/assets/ChttrixAI-logo.png" alt="AI" className="w-6 h-6 rounded-md object-cover" />
             <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 bg-green-500 border-2 border-white rounded-full"></span>
           </div>
           <div className="flex flex-col">

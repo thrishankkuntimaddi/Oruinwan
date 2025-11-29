@@ -1,8 +1,8 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useRef, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import {
-  Plus, Search, Filter, Calendar, Flag,
-  CheckCircle2, Trash2, User, ArrowUpDown, FileText
+  Plus, Search, Calendar, Flag,
+  CheckCircle2, Trash2, User, ArrowUpDown, FileText, RotateCcw
 } from "lucide-react";
 import TaskModal from "../../components/tasksComp/TaskModal";
 import TaskCompletionModal from "../../components/tasksComp/TaskCompletionModal";
@@ -35,8 +35,24 @@ const MyTasks = () => {
   const activeTab = new URLSearchParams(location.search).get("tab") || "my-tasks";
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [completionTask, setCompletionTask] = useState(null); // Task being completed
+  const [deletionTask, setDeletionTask] = useState(null); // Task being deleted
   const [searchQuery, setSearchQuery] = useState("");
   const { contacts } = useContacts();
+
+  const [sortOrder, setSortOrder] = useState("priority");
+  const [showSortMenu, setShowSortMenu] = useState(false);
+  const sortMenuRef = useRef(null);
+
+  // Close sort menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (sortMenuRef.current && !sortMenuRef.current.contains(event.target)) {
+        setShowSortMenu(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   // Mock Data State
   const [tasks, setTasks] = useState([
@@ -49,7 +65,8 @@ const MyTasks = () => {
       status: "In Progress",
       priority: "High",
       dueDate: "2024-11-30",
-      project: "Design System"
+      project: "Design System",
+      deleted: false
     },
     {
       id: 2,
@@ -62,7 +79,8 @@ const MyTasks = () => {
       dueDate: "2024-11-28",
       project: "Backend",
       completedAt: "2024-11-28T10:00:00Z",
-      completionNote: "Fixed by updating the JWT secret."
+      completionNote: "Fixed by updating the JWT secret.",
+      deleted: false
     },
     {
       id: 3,
@@ -73,7 +91,8 @@ const MyTasks = () => {
       status: "To Do",
       priority: "Medium",
       dueDate: "2024-12-05",
-      project: "Frontend"
+      project: "Frontend",
+      deleted: false
     },
     {
       id: 4,
@@ -84,7 +103,8 @@ const MyTasks = () => {
       status: "In Progress",
       priority: "Low",
       dueDate: "2024-12-01",
-      project: "Docs"
+      project: "Docs",
+      deleted: false
     },
   ]);
 
@@ -93,14 +113,21 @@ const MyTasks = () => {
     let filtered = [];
 
     // Base Filters
-    if (activeTab === "my-tasks") {
-      filtered = tasks.filter(t => t.assignee === "Self" && t.assigner === "Self" && t.status !== "Completed");
-    } else if (activeTab === "shared-tasks") {
-      filtered = tasks.filter(t => t.assignee === "Self" && t.assigner !== "Self" && t.status !== "Completed");
-    } else if (activeTab === "assigned-tasks") {
-      filtered = tasks.filter(t => t.assigner === "Self" && t.assignee !== "Self" && t.status !== "Completed");
-    } else if (activeTab === "completed-tasks") {
-      filtered = tasks.filter(t => t.status === "Completed");
+    if (activeTab === "deleted-tasks") {
+      filtered = tasks.filter(t => t.deleted);
+    } else {
+      // For all other tabs, exclude deleted tasks
+      const activeTasks = tasks.filter(t => !t.deleted);
+
+      if (activeTab === "my-tasks") {
+        filtered = activeTasks.filter(t => t.assignee === "Self" && t.assigner === "Self" && t.status !== "Completed");
+      } else if (activeTab === "shared-tasks") {
+        filtered = activeTasks.filter(t => t.assignee === "Self" && t.assigner !== "Self" && t.status !== "Completed");
+      } else if (activeTab === "assigned-tasks") {
+        filtered = activeTasks.filter(t => t.assigner === "Self" && t.assignee !== "Self" && t.status !== "Completed");
+      } else if (activeTab === "completed-tasks") {
+        filtered = activeTasks.filter(t => t.status === "Completed");
+      }
     }
 
     // Search Filter
@@ -111,23 +138,47 @@ const MyTasks = () => {
       );
     }
 
-    // Sort by Priority (Active) or Date (Completed)
-    if (activeTab === "completed-tasks") {
-      return filtered.sort((a, b) => new Date(b.completedAt || 0) - new Date(a.completedAt || 0));
-    }
-    return filtered.sort((a, b) => PRIORITY_ORDER[b.priority] - PRIORITY_ORDER[a.priority]);
-  }, [tasks, activeTab, searchQuery]);
+    // Sorting Logic
+    return filtered.sort((a, b) => {
+      if (sortOrder === "priority") {
+        return PRIORITY_ORDER[b.priority] - PRIORITY_ORDER[a.priority];
+      } else if (sortOrder === "dueDate") {
+        return new Date(a.dueDate || 0) - new Date(b.dueDate || 0);
+      } else if (sortOrder === "status") {
+        return (a.status || "").localeCompare(b.status || "");
+      } else if (sortOrder === "a-z") {
+        return (a.title || "").localeCompare(b.title || "");
+      }
+      return 0;
+    });
+  }, [tasks, activeTab, searchQuery, sortOrder]);
 
   const handleAddTask = (newTask) => {
     const taskToAdd = {
       ...newTask,
       assigner: "Self",
+      deleted: false
     };
     setTasks([taskToAdd, ...tasks]);
   };
 
   const handleDelete = (id) => {
-    if (window.confirm("Are you sure you want to delete this task?")) {
+    const task = tasks.find(t => t.id === id);
+    setDeletionTask(task);
+  };
+
+  const handleConfirmDeletion = () => {
+    if (!deletionTask) return;
+    setTasks(tasks.map(t => t.id === deletionTask.id ? { ...t, deleted: true } : t));
+    setDeletionTask(null);
+  };
+
+  const handleRestore = (id) => {
+    setTasks(tasks.map(t => t.id === id ? { ...t, deleted: false } : t));
+  };
+
+  const handlePermanentDelete = (id) => {
+    if (window.confirm("Are you sure you want to permanently delete this task? This cannot be undone.")) {
       setTasks(tasks.filter(t => t.id !== id));
     }
   };
@@ -156,10 +207,11 @@ const MyTasks = () => {
   };
 
   // Permission Checks
-  const canEditStatus = activeTab !== "assigned-tasks" && activeTab !== "completed-tasks";
-  const canEditPriority = activeTab !== "shared-tasks" && activeTab !== "completed-tasks";
-  const canEditDueDate = activeTab !== "shared-tasks" && activeTab !== "completed-tasks";
+  const canEditStatus = activeTab !== "assigned-tasks" && activeTab !== "completed-tasks" && activeTab !== "deleted-tasks";
+  const canEditPriority = activeTab !== "shared-tasks" && activeTab !== "completed-tasks" && activeTab !== "deleted-tasks";
+  const canEditDueDate = activeTab !== "shared-tasks" && activeTab !== "completed-tasks" && activeTab !== "deleted-tasks";
   const isCompletedTab = activeTab === "completed-tasks";
+  const isDeletedTab = activeTab === "deleted-tasks";
 
   return (
     <div className="flex flex-col h-full bg-gray-50/50">
@@ -173,15 +225,17 @@ const MyTasks = () => {
               {activeTab === "shared-tasks" && "Incoming Requests"}
               {activeTab === "assigned-tasks" && "Delegated Tasks"}
               {activeTab === "completed-tasks" && <><CheckCircle2 className="text-green-600" /> Completed Tasks</>}
+              {activeTab === "deleted-tasks" && <><Trash2 className="text-red-600" /> Deleted Tasks</>}
             </h1>
             <p className="text-sm text-gray-500 mt-1">
               {activeTab === "my-tasks" && "Manage your personal to-do list and priorities."}
               {activeTab === "shared-tasks" && "Track tasks assigned to you by others."}
               {activeTab === "assigned-tasks" && "Monitor tasks you've assigned to your team."}
               {activeTab === "completed-tasks" && "History of all your finished work and accomplishments."}
+              {activeTab === "deleted-tasks" && "View and restore deleted tasks."}
             </p>
           </div>
-          {activeTab !== "completed-tasks" && (
+          {activeTab !== "completed-tasks" && activeTab !== "deleted-tasks" && (
             <button
               onClick={() => setIsModalOpen(true)}
               className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-medium shadow-lg shadow-blue-500/30 transition-all hover:scale-105 active:scale-95"
@@ -203,13 +257,23 @@ const MyTasks = () => {
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
-          <div className="flex items-center gap-2">
-            <button className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors">
-              <Filter size={18} />
-            </button>
-            <button className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors">
+          <div className="flex items-center gap-2 relative" ref={sortMenuRef}>
+            <button
+              onClick={() => setShowSortMenu(!showSortMenu)}
+              className={`p-2 rounded-lg transition-colors ${showSortMenu ? "bg-gray-100 text-gray-600" : "text-gray-500 hover:bg-gray-100"}`}
+              title="Sort Tasks"
+            >
               <ArrowUpDown size={18} />
             </button>
+
+            {showSortMenu && (
+              <div className="absolute right-0 top-full mt-2 w-40 bg-white rounded-xl shadow-xl border border-gray-100 py-1 z-20 animate-in fade-in zoom-in-95 duration-100 origin-top-right">
+                <button onClick={() => { setSortOrder("priority"); setShowSortMenu(false); }} className={`w-full text-left px-4 py-2 text-xs font-medium hover:bg-gray-50 transition-colors ${sortOrder === "priority" ? "text-blue-600 bg-blue-50" : "text-gray-700"}`}>Priority (High-Low)</button>
+                <button onClick={() => { setSortOrder("dueDate"); setShowSortMenu(false); }} className={`w-full text-left px-4 py-2 text-xs font-medium hover:bg-gray-50 transition-colors ${sortOrder === "dueDate" ? "text-blue-600 bg-blue-50" : "text-gray-700"}`}>Due Date</button>
+                <button onClick={() => { setSortOrder("status"); setShowSortMenu(false); }} className={`w-full text-left px-4 py-2 text-xs font-medium hover:bg-gray-50 transition-colors ${sortOrder === "status" ? "text-blue-600 bg-blue-50" : "text-gray-700"}`}>Status</button>
+                <button onClick={() => { setSortOrder("a-z"); setShowSortMenu(false); }} className={`w-full text-left px-4 py-2 text-xs font-medium hover:bg-gray-50 transition-colors ${sortOrder === "a-z" ? "text-blue-600 bg-blue-50" : "text-gray-700"}`}>Alphabetical (A-Z)</button>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -218,10 +282,11 @@ const MyTasks = () => {
       <div className="flex-1 overflow-auto p-6">
         {filteredTasks.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-64 text-gray-400">
-            <CheckCircle2 size={48} className="mb-4 opacity-20" />
+            {isDeletedTab ? <Trash2 size={48} className="mb-4 opacity-20" /> : <CheckCircle2 size={48} className="mb-4 opacity-20" />}
             <p className="text-lg font-medium">No tasks found</p>
             <p className="text-sm">
-              {activeTab === "completed-tasks" ? "You haven't completed any tasks yet." : "Create a new task to get started."}
+              {activeTab === "completed-tasks" ? "You haven't completed any tasks yet." :
+                activeTab === "deleted-tasks" ? "Trash is empty." : "Create a new task to get started."}
             </p>
           </div>
         ) : (
@@ -229,28 +294,47 @@ const MyTasks = () => {
             {filteredTasks.map((task) => (
               <div
                 key={task.id}
-                className={`group bg-white rounded-xl p-5 border shadow-sm hover:shadow-md transition-all duration-200 flex items-start gap-4 ${isCompletedTab ? "border-green-100 bg-green-50/30" : "border-gray-100"}`}
+                className={`group bg-white rounded-xl p-5 border shadow-sm hover:shadow-md transition-all duration-200 flex items-start gap-4 ${isCompletedTab ? "border-green-100 bg-green-50/30" : isDeletedTab ? "border-red-100 bg-red-50/30" : "border-gray-100"}`}
               >
                 {/* Status Indicator Strip */}
                 <div className={`w-1.5 self-stretch rounded-full ${task.status === "Completed" ? "bg-green-500" :
-                    task.priority === "Emergency" ? "bg-red-500" :
-                      task.priority === "High" ? "bg-orange-500" :
-                        task.priority === "Medium" ? "bg-blue-500" : "bg-gray-300"
+                  task.priority === "Emergency" ? "bg-red-500" :
+                    task.priority === "High" ? "bg-orange-500" :
+                      task.priority === "Medium" ? "bg-blue-500" : "bg-gray-300"
                   }`} />
 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start justify-between mb-1">
-                    <h3 className={`text-lg font-semibold text-gray-900 truncate pr-4 ${isCompletedTab ? "line-through text-gray-500" : ""}`}>{task.title}</h3>
+                    <h3 className={`text-lg font-semibold text-gray-900 truncate pr-4 ${isCompletedTab || isDeletedTab ? "line-through text-gray-500" : ""}`}>{task.title}</h3>
 
                     {/* Actions */}
                     <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button
-                        onClick={() => handleDelete(task.id)}
-                        className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                        title="Delete Task"
-                      >
-                        <Trash2 size={16} />
-                      </button>
+                      {isDeletedTab ? (
+                        <>
+                          <button
+                            onClick={() => handleRestore(task.id)}
+                            className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                            title="Restore Task"
+                          >
+                            <RotateCcw size={16} />
+                          </button>
+                          <button
+                            onClick={() => handlePermanentDelete(task.id)}
+                            className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            title="Delete Permanently"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </>
+                      ) : (
+                        <button
+                          onClick={() => handleDelete(task.id)}
+                          className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          title="Delete Task"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      )}
                     </div>
                   </div>
 
@@ -363,6 +447,16 @@ const MyTasks = () => {
           task={completionTask}
           onClose={() => setCompletionTask(null)}
           onConfirm={handleConfirmCompletion}
+          mode="completion"
+        />
+      )}
+
+      {deletionTask && (
+        <TaskCompletionModal
+          task={deletionTask}
+          onClose={() => setDeletionTask(null)}
+          onConfirm={handleConfirmDeletion}
+          mode="deletion"
         />
       )}
     </div>
