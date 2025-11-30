@@ -1,20 +1,21 @@
 {
-  "name": "My Web App",
-  "short_name": "App",
+  "name": "Chttrix",
+  "short_name": "Chttrix",
   "start_url": ".",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#ffffff",
   "icons": [
     {
-      "src": "assets/logio.svg",
-      "type": "image/svg+xml",
-      "sizes": "512x512"
+      "src": "assets/ChttrixLogo.png",
+      "type": "image/png",
+      "sizes": "192x192"
     },
     {
-      "src": "assets/kpnbg301.svg",
-      "type": "image/svg+xml",
+      "src": "assets/ChttrixLogo.png",
+      "type": "image/png",
       "sizes": "512x512"
     }
   ]
 }
+

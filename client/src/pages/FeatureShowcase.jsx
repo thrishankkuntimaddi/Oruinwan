@@ -86,7 +86,7 @@ const FeatureShowcase = () => {
                 <div className="max-w-7xl mx-auto px-6 h-14 flex items-center justify-between">
                     {/* Logo */}
                     <div className="flex items-center gap-2">
-                        <img src="/assets/Logoat.jpg" alt="Chttrix Logo" className="w-8 h-8 rounded-lg object-cover" />
+                        <img src="/assets/ChttrixLogo.svg" alt="Chttrix Logo" className="w-8 h-8 rounded-lg object-cover" />
                         <span className="text-xl font-black text-gray-900 tracking-tight">Chttrix</span>
                     </div>
 

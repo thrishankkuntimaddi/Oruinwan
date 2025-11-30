@@ -107,7 +107,7 @@ const WorkspaceSelect = () => {
                 onClick={() => navigate("/features")}
                 className="absolute top-6 left-6 flex items-center space-x-2 cursor-pointer hover:opacity-80 transition-opacity"
             >
-                <img src="/assets/Logoat.jpg" alt="Chttrix Logo" className="w-8 h-8 rounded-lg object-cover contrast-125 saturate-110 shadow-sm" />
+                <img src="/assets/ChttrixLogo.svg" alt="Chttrix Logo" className="w-8 h-8 rounded-lg object-cover contrast-125 saturate-110 shadow-sm" />
                 <span className="text-xl font-bold text-gray-900 tracking-tight">Chttrix</span>
             </div>
 
@@ -530,8 +530,8 @@ const WorkspaceSelect = () => {
                                         onClick={handleFinalCreate}
                                         disabled={!createData.invites.trim() && !addMembersLater}
                                         className={`px-8 py-2.5 text-white font-bold rounded-xl shadow-sm transition-all ${(!createData.invites.trim() && !addMembersLater)
-                                                ? "bg-gray-300 cursor-not-allowed"
-                                                : "bg-blue-600 hover:bg-blue-700"
+                                            ? "bg-gray-300 cursor-not-allowed"
+                                            : "bg-blue-600 hover:bg-blue-700"
                                             }`}
                                     >
                                         Finish & Launch
