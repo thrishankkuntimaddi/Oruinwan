@@ -1,5 +1,5 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+
 
 const WorkspaceSettingsModal = ({
     showSettingsModal,
@@ -9,7 +9,7 @@ const WorkspaceSettingsModal = ({
     workspaceName,
     setShowDeleteConfirm
 }) => {
-    const navigate = useNavigate();
+
 
     if (!showSettingsModal) return null;
 

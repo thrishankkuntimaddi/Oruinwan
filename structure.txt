@@ -1,135 +1,156 @@
 .
+├── .gitignore
 ├── client
+│   ├── .env
+│   ├── .env.example
+│   ├── .gitignore
+│   ├── migrate-files.sh
 │   ├── package-lock.json
 │   ├── package.json
 │   ├── postcss.config.js
 │   ├── public
-│   │   ├── assests
-│   │   │   ├── image.jpg
-│   │   │   ├── kpnbg301.svg
-│   │   │   └── logio.svg
+│   │   ├── assets
+│   │   │   ├── ChttrixAI-logo.png
+│   │   │   ├── ChttrixFavico.png
+│   │   │   └── ChttrixLogo.svg
 │   │   ├── index.html
-│   │   ├── logio.svg
 │   │   └── manifest.json
-│   ├── README.md
+│   ├── restructure.sh
 │   ├── src
 │   │   ├── App.js
 │   │   ├── App.test.js
 │   │   ├── components
-│   │   │   ├── blogsComp
-│   │   │   │   ├── BlogCard.jsx
-│   │   │   │   ├── BlogDetailModal.jsx
-│   │   │   │   └── BlogModal.jsx
-│   │   │   ├── chttrixAIComp
-│   │   │   │   └── ChttrixAIChat.jsx
-│   │   │   ├── homewidgets
-│   │   │   │   ├── CalendarWidget.jsx
-│   │   │   │   ├── ClockWidget.jsx
-│   │   │   │   ├── HomeHeader.jsx
-│   │   │   │   ├── MessagePreview.jsx
-│   │   │   │   ├── MotivationalQuote.jsx
-│   │   │   │   ├── PersonalTodoList.jsx
-│   │   │   │   ├── SharedTodoList.jsx
-│   │   │   │   ├── TaskStats.jsx
-│   │   │   │   └── WeatherWidget.jsx
-│   │   │   ├── layout
-│   │   │   │   ├── IconSidebar.jsx
-│   │   │   │   ├── MainLayout.jsx
-│   │   │   │   ├── panels
-│   │   │   │   │   ├── HomePanel.jsx
-│   │   │   │   │   ├── MessagesPanel.jsx
-│   │   │   │   │   ├── NotesPanel.jsx
-│   │   │   │   │   └── TasksPanel.jsx
-│   │   │   │   └── SidePanel.jsx
-│   │   │   ├── loginpage
-│   │   │   │   ├── LoginForm.jsx
-│   │   │   │   └── SignupForm.jsx
-│   │   │   ├── messagesComp
-│   │   │   │   ├── ChannelManagementModal.jsx
-│   │   │   │   ├── chatWindowComp
-│   │   │   │   │   ├── chatWindow.css
-│   │   │   │   │   ├── chatWindow.jsx
-│   │   │   │   │   ├── footer
-│   │   │   │   │   │   ├── attachMenu.jsx
-│   │   │   │   │   │   ├── emojiPicker.jsx
-│   │   │   │   │   │   └── footerInput.jsx
-│   │   │   │   │   ├── header
-│   │   │   │   │   │   └── header.jsx
-│   │   │   │   │   ├── helpers
-│   │   │   │   │   │   └── helpers.js
-│   │   │   │   │   ├── messages
-│   │   │   │   │   │   ├── messageGroup.jsx
-│   │   │   │   │   │   ├── messageItem.jsx
-│   │   │   │   │   │   ├── messageMenu.jsx
-│   │   │   │   │   │   ├── messagesContainer.jsx
-│   │   │   │   │   │   ├── reactionBadges.jsx
-│   │   │   │   │   │   └── replyPreview.jsx
-│   │   │   │   │   ├── modals
-│   │   │   │   │   │   ├── contactInfoModal.jsx
-│   │   │   │   │   │   └── contactShareModal.jsx
-│   │   │   │   │   ├── pinned
-│   │   │   │   │   │   └── pinnedMessage.jsx
-│   │   │   │   │   ├── ThreadPanel.jsx
-│   │   │   │   │   └── toolbar
-│   │   │   │   │       └── selectionToolbar.jsx
-│   │   │   │   ├── CreateChannelModal.jsx
-│   │   │   │   ├── JoinChannelModal.jsx
-│   │   │   │   ├── MessageList.jsx
-│   │   │   │   ├── NewDMModal.jsx
-│   │   │   │   └── structure.txt
 │   │   │   ├── RequireAuth.jsx
 │   │   │   ├── SidebarComp
 │   │   │   │   ├── ProfileSidebar.jsx
 │   │   │   │   └── Sidebar.jsx
+│   │   │   ├── ai
+│   │   │   │   └── ChttrixAIChat
+│   │   │   │       └── ChttrixAIChat.jsx
+│   │   │   ├── home
+│   │   │   │   └── panels
+│   │   │   │       └── HomePanel
+│   │   │   │           ├── ChannelDMModals.jsx
+│   │   │   │           ├── DeleteWorkspaceModal.jsx
+│   │   │   │           ├── ListItem.jsx
+│   │   │   │           ├── SectionHeader.jsx
+│   │   │   │           ├── WorkspaceHeader.jsx
+│   │   │   │           ├── WorkspaceModals.jsx
+│   │   │   │           ├── WorkspaceSettingsModal.jsx
+│   │   │   │           └── index.jsx
+│   │   │   ├── layout
+│   │   │   │   ├── IconSidebar.jsx
+│   │   │   │   ├── MainLayout.jsx
+│   │   │   │   ├── SidePanel.jsx
+│   │   │   │   ├── hooks
+│   │   │   │   │   └── useResizablePanel.js
+│   │   │   │   └── panels
+│   │   │   │       ├── ChannelsPanel.jsx
+│   │   │   │       ├── MessagesPanel.jsx
+│   │   │   │       ├── NotesPanel.jsx
+│   │   │   │       ├── TasksPanel.jsx
+│   │   │   │       └── UpdatesPanel.jsx
+│   │   │   ├── loginpage
+│   │   │   │   ├── LoginForm.jsx
+│   │   │   │   └── SignupForm.jsx
+│   │   │   ├── messages
+│   │   │   │   └── chat
+│   │   │   │       └── ChatWindow
+│   │   │   │           ├── chatUtils.js
+│   │   │   │           ├── index.jsx
+│   │   │   │           └── useSocketConnection.js
+│   │   │   ├── messagesComp
+│   │   │   │   ├── BroadcastChatWindow.jsx
+│   │   │   │   ├── BroadcastModal.jsx
+│   │   │   │   ├── BroadcastView.jsx
+│   │   │   │   ├── ChannelManagementModal.jsx
+│   │   │   │   ├── CreateChannelModal.jsx
+│   │   │   │   ├── JoinChannelModal.jsx
+│   │   │   │   ├── MessageList.jsx
+│   │   │   │   ├── NewDMModal.jsx
+│   │   │   │   └── chatWindowComp
+│   │   │   │       ├── ThreadPanel.jsx
+│   │   │   │       ├── chatWindow.css
+│   │   │   │       ├── chatWindow.jsx
+│   │   │   │       ├── footer
+│   │   │   │       │   ├── attachMenu.jsx
+│   │   │   │       │   ├── emojiPicker.jsx
+│   │   │   │       │   └── footerInput.jsx
+│   │   │   │       ├── header
+│   │   │   │       │   └── header.jsx
+│   │   │   │       ├── helpers
+│   │   │   │       │   └── helpers.js
+│   │   │   │       ├── messages
+│   │   │   │       │   ├── ChannelMessageItem.jsx
+│   │   │   │       │   ├── DMMessageItem.jsx
+│   │   │   │       │   ├── messageGroup.jsx
+│   │   │   │       │   ├── messageItem.jsx
+│   │   │   │       │   ├── messageMenu.jsx
+│   │   │   │       │   ├── messagesContainer.jsx
+│   │   │   │       │   ├── reactionBadges.jsx
+│   │   │   │       │   ├── reactionPicker.jsx
+│   │   │   │       │   └── replyPreview.jsx
+│   │   │   │       ├── modals
+│   │   │   │       │   ├── ForwardMessageModal.jsx
+│   │   │   │       │   ├── contactInfoModal.jsx
+│   │   │   │       │   └── contactShareModal.jsx
+│   │   │   │       ├── pinned
+│   │   │   │       │   └── pinnedMessage.jsx
+│   │   │   │       └── toolbar
+│   │   │   │           └── selectionToolbar.jsx
+│   │   │   ├── modals
+│   │   │   │   └── ConfirmationModal.jsx
 │   │   │   ├── tasksComp
+│   │   │   │   ├── TaskCompletionModal.jsx
 │   │   │   │   ├── TaskHeader.jsx
 │   │   │   │   ├── TaskModal.jsx
 │   │   │   │   ├── TaskRow.jsx
 │   │   │   │   ├── TaskTable.jsx
 │   │   │   │   └── TaskTabs.jsx
 │   │   │   └── ui
+│   │   │       ├── ConfirmationModal.jsx
 │   │   │       ├── LoadingScreen.jsx
 │   │   │       └── Toast.jsx
 │   │   ├── contexts
 │   │   │   ├── AuthContext.jsx
+│   │   │   ├── BlogsContext.jsx
 │   │   │   ├── ContactsContext.jsx
+│   │   │   ├── NotesContext.jsx
 │   │   │   └── ToastContext.jsx
 │   │   ├── index.css
 │   │   ├── index.js
 │   │   ├── logo.svg
 │   │   ├── pages
+│   │   │   ├── FeatureShowcase.jsx
 │   │   │   ├── LoginPageComp
 │   │   │   │   ├── ForgotPassword.jsx
 │   │   │   │   ├── LoginPage.jsx
 │   │   │   │   ├── OAuthSuccess.jsx
 │   │   │   │   └── ResetPassword.jsx
 │   │   │   ├── SidebarComp
-│   │   │   │   ├── Blogs.jsx
 │   │   │   │   ├── Home.jsx
 │   │   │   │   ├── Messages.jsx
 │   │   │   │   ├── MyTasks.jsx
-│   │   │   │   └── Notes.jsx
+│   │   │   │   ├── Notes.jsx
+│   │   │   │   └── Updates.jsx
 │   │   │   ├── VerifyEmail.jsx
-│   │   │   └── WorkspaceSelect.jsx
+│   │   │   ├── WorkspaceSelect.jsx
+│   │   │   ├── auth
+│   │   │   │   └── utils
+│   │   │   │       └── formValidation.js
+│   │   │   └── workspace
+│   │   │       └── WorkspaceSelect
+│   │   │           └── WorkspaceCard.jsx
 │   │   ├── reportWebVitals.js
 │   │   ├── setupTests.js
 │   │   └── utils
 │   │       └── tokenUtils.js
-│   ├── structure.txt
 │   ├── tailwind.config.js
 │   └── yarn.lock
-├── md files
-│   ├── CHANNEL_API_REFERENCE.md
-│   ├── CHANNEL_INTEGRATION_SUMMARY.md
-│   ├── CHANNEL_MANAGEMENT.md
-│   ├── FINAL_IMPLEMENTATION_SUMMARY.md
-│   ├── FINAL_SETUP_GUIDE.md
-│   ├── SECURITY_SETUP_COMPLETE.md
-│   ├── SECURITY.md
-│   ├── SLACK_STYLE_DMS.md
-│   ├── TESTING_GUIDE.md
-│   └── THREADED_REPLIES.md
 ├── server
+│   ├── .env
+│   ├── .env.example
+│   ├── Dockerfile
 │   ├── check-users.js
 │   ├── controllers
 │   │   ├── authController.js
@@ -139,7 +160,6 @@
 │   │   ├── messagesController.js
 │   │   └── threadController.js
 │   ├── cookies.txt
-│   ├── Dockerfile
 │   ├── middleware
 │   │   └── auth.js
 │   ├── models
@@ -167,4 +187,4 @@
 ├── structure.txt
 └── verify-security.sh
 
-38 directories, 130 files
+48 directories, 140 files

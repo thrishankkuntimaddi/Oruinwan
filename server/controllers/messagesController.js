@@ -75,6 +75,11 @@ exports.getDMs = async (req, res) => {
     const userId = req.user.sub;
     const otherUserId = req.params.userId;
 
+    // Validate ObjectId
+    if (!otherUserId.match(/^[0-9a-fA-F]{24}$/)) {
+      return res.status(400).json({ message: "Invalid user ID" });
+    }
+
     const messages = await Message.find({
       $or: [
         { senderId: userId, receiverId: otherUserId },
