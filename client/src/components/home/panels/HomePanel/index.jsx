@@ -1,7 +1,7 @@
 import React, { useState } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { Trash2, X } from 'lucide-react';
-import ConfirmationModal from "../../../common/modals/ConfirmationModal";
+import ConfirmationModal from "../../../modals/ConfirmationModal";
 import { useContacts } from "../../../../contexts/ContactsContext";
 
 // Import sub-components
@@ -15,7 +15,7 @@ import { CreateChannelModal, NewDMModal } from "./ChannelDMModals";
 
 const HomePanel = ({ title }) => {
     const navigate = useNavigate();
-    const location = useLocation();
+
     const { allItems: items, deleteItem, addItem, toggleFavorite } = useContacts();
 
     const [expanded, setExpanded] = useState({

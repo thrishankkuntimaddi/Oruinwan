@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { io } from 'socket.io-client';
 
 const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:5000";
@@ -107,6 +107,7 @@ export const useSocketConnection = (chat, getAccessToken, connected, setConnecte
         return () => {
             socket.disconnect();
         };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [chat]);
 
     return socketRef;

@@ -1,22 +1,22 @@
 // client/src/components/messages/chat/ChatWindow/index.jsx
 
 import React, { useEffect, useRef, useState } from "react";
-import "../chatWindowComp/chatWindow.css";
+import "../../../messagesComp/chatWindowComp/chatWindow.css";
 
-import Header from "../header/header.jsx";
-import PinnedMessage from "../pinned/pinnedMessage.jsx";
+import Header from "../../../messagesComp/chatWindowComp/header/header.jsx";
+import PinnedMessage from "../../../messagesComp/chatWindowComp/pinned/pinnedMessage.jsx";
 import ContactInfoModal from "../../../messagesComp/chatWindowComp/modals/contactInfoModal.jsx";
 import ContactShareModal from "../../../messagesComp/chatWindowComp/modals/contactShareModal.jsx";
-import Toast from "../../../common/ui/Toast.jsx";
+import Toast from "../../../ui/Toast.jsx";
 import ForwardMessageModal from "../../../messagesComp/chatWindowComp/modals/ForwardMessageModal.jsx";
-import ChannelManagementModal from "../../modals/ChannelManagementModal.jsx";
-import ThreadPanel from "../thread/ThreadPanel.jsx";
-import MessagesContainer from "../messages/messagesContainer.jsx";
-import ReplyPreview from "../messages/replyPreview.jsx";
-import FooterInput from "../footer/footerInput.jsx";
+import ChannelManagementModal from "../../../messagesComp/ChannelManagementModal.jsx";
+import ThreadPanel from "../../../messagesComp/chatWindowComp/ThreadPanel.jsx";
+import MessagesContainer from "../../../messagesComp/chatWindowComp/messages/messagesContainer.jsx";
+import ReplyPreview from "../../../messagesComp/chatWindowComp/messages/replyPreview.jsx";
+import FooterInput from "../../../messagesComp/chatWindowComp/footer/footerInput.jsx";
 
-import { pickFile } from "../helpers/helpers.js";
-import { useSocket Connection } from "./useSocketConnection";
+import { pickFile } from "../../../messagesComp/chatWindowComp/helpers/helpers.js";
+import { useSocketConnection } from "./useSocketConnection";
 import {
     formatTime,
     getAccessToken,
@@ -173,6 +173,7 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
 
         loadMessages();
         return () => (mounted = false);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [chat, connected]);
 
     /* OUTSIDE CLICK HANDLER */

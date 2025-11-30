@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import IconSidebar from "./IconSidebar";
 import ProfileMenu from "../SidebarComp/ProfileSidebar";
-import ChttrixAIChat from "../chttrixAIComp/ChttrixAIChat";
+import ChttrixAIChat from "../ai/ChttrixAIChat/ChttrixAIChat";
 import { Bot, BookOpen, Command, Bug, Sparkles, Search, MessageCircle, X } from "lucide-react";
 
 // Mock Data for Search

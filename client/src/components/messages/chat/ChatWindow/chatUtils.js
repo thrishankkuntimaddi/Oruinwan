@@ -1,5 +1,5 @@
 import { jwtDecode } from 'jwt-decode';
-import { formatTime as fmtTime } from '../helpers/helpers.js';
+import { formatTime as fmtTime } from '../../../messagesComp/chatWindowComp/helpers/helpers.js';
 
 export const formatTime = (iso) => fmtTime(iso);
 
