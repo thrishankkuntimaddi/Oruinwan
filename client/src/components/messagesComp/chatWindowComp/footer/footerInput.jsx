@@ -77,7 +77,7 @@ export default function FooterInput({
         newCursorPos = end + 3; // \n- 
         break;
       case 'ai':
-        newText = text.substring(0, start) + `@chttrixAi ` + text.substring(end);
+        newText = text.substring(0, start) + `@ChttrixAI ` + text.substring(end);
         newCursorPos = start + 11;
         break;
       default:
