@@ -161,7 +161,7 @@ const HomePanel = ({ title }) => {
 
     const Item = ({ item }) => {
         const isActive = currentPath === item.path;
-        const Icon = item.isPrivate ? "🔒" : (item.type === 'dm' ? "👤" : "#");
+        const Icon = item.isPrivate ? "#" : (item.type === 'dm' ? "👤" : "#");
 
         return (
             <div
@@ -691,7 +691,7 @@ const HomePanel = ({ title }) => {
                         ) : (
                             <div className="p-0">
                                 <div className="p-4 bg-blue-50 border-b border-blue-100 text-sm text-blue-800 flex items-center gap-2">
-                                    <span>🔒</span>
+                                    <span>#</span>
                                     <span>Adding members to <strong>#{newChannelData.name}</strong></span>
                                 </div>
                                 <div className="max-h-[300px] overflow-y-auto p-2">

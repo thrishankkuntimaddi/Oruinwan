@@ -212,45 +212,81 @@ const Notes = () => {
 
                     <div className="space-y-4">
                         {blocks.map((block) => (
-                            <div key={block.id} className="group relative">
+                            <div key={block.id} className="group relative mb-4">
                                 {block.type === "text" && (
-                                    <textarea
-                                        value={block.content}
-                                        onChange={(e) => handleBlockChange(block.id, e.target.value)}
-                                        className="w-full resize-none border-none focus:ring-0 text-gray-700 text-lg leading-relaxed p-0 placeholder-gray-300 bg-transparent outline-none min-h-[1.5em] overflow-hidden"
-                                        placeholder="Type something..."
-                                        onInput={(e) => { e.target.style.height = "auto"; e.target.style.height = e.target.scrollHeight + "px"; }}
-                                    />
+                                    <div className="relative">
+                                        <textarea
+                                            value={block.content}
+                                            onChange={(e) => handleBlockChange(block.id, e.target.value)}
+                                            className="w-full resize-none border-none focus:ring-0 text-gray-700 text-lg leading-relaxed p-0 placeholder-gray-300 bg-transparent outline-none min-h-[1.5em] overflow-hidden pr-8"
+                                            placeholder="Type something..."
+                                            onInput={(e) => { e.target.style.height = "auto"; e.target.style.height = e.target.scrollHeight + "px"; }}
+                                        />
+                                        <button
+                                            onClick={() => removeBlock(block.id)}
+                                            className="absolute top-0 right-0 p-1 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                                            title="Delete text block"
+                                        >
+                                            <Trash2 size={16} />
+                                        </button>
+                                    </div>
                                 )}
                                 {block.type === "image" && (
                                     <div className="w-1/2 rounded-xl overflow-hidden bg-gray-100 border border-gray-200 relative group-hover:shadow-sm transition-all">
-                                        <div className="h-64 flex items-center justify-center text-gray-400">
-                                            {block.content ? <img src={block.content} alt="Note" className="w-full h-full object-cover" /> : <div className="flex flex-col items-center"><ImageIcon size={32} /> <span className="text-sm mt-2">Image Placeholder</span></div>}
+                                        <div className="h-64 flex items-center justify-center text-gray-400 relative">
+                                            {block.content ? (
+                                                <img src={block.content} alt="Note" className="w-full h-full object-cover" />
+                                            ) : (
+                                                <div className="flex flex-col items-center">
+                                                    <ImageIcon size={32} />
+                                                    <span className="text-sm mt-2">Image Placeholder</span>
+                                                </div>
+                                            )}
+                                            <button
+                                                onClick={() => removeBlock(block.id)}
+                                                className="absolute top-2 right-2 p-1.5 bg-white/80 hover:bg-red-50 text-gray-500 hover:text-red-600 rounded-full shadow-sm opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-sm"
+                                                title="Delete image"
+                                            >
+                                                <Trash2 size={16} />
+                                            </button>
                                         </div>
                                     </div>
                                 )}
                                 {block.type === "video" && (
-                                    <div className="w-1/2 rounded-xl overflow-hidden bg-gray-900 border border-gray-200 relative">
-                                        <div className="h-64 flex items-center justify-center text-gray-500">
-                                            <div className="flex flex-col items-center"><Video size={32} /> <span className="text-sm mt-2">Video Placeholder</span></div>
+                                    <div className="w-1/2 rounded-xl overflow-hidden bg-gray-900 border border-gray-200 relative group">
+                                        <div className="h-64 flex items-center justify-center text-gray-500 relative">
+                                            <div className="flex flex-col items-center">
+                                                <Video size={32} />
+                                                <span className="text-sm mt-2">Video Placeholder</span>
+                                            </div>
+                                            <button
+                                                onClick={() => removeBlock(block.id)}
+                                                className="absolute top-2 right-2 p-1.5 bg-white/10 hover:bg-red-500/20 text-white/70 hover:text-red-400 rounded-full shadow-sm opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-sm"
+                                                title="Delete video"
+                                            >
+                                                <Trash2 size={16} />
+                                            </button>
                                         </div>
                                     </div>
                                 )}
                                 {block.type === "audio" && (
-                                    <div className="w-1/2 rounded-xl bg-gray-50 border border-gray-200 p-4 flex items-center gap-3">
-                                        <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600"><Mic size={20} /></div>
-                                        <div className="h-1 flex-1 bg-gray-200 rounded-full overflow-hidden"><div className="w-1/3 h-full bg-blue-500"></div></div>
+                                    <div className="w-1/2 rounded-xl bg-gray-50 border border-gray-200 p-4 flex items-center gap-3 group">
+                                        <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
+                                            <Mic size={20} />
+                                        </div>
+                                        <div className="h-1 flex-1 bg-gray-200 rounded-full overflow-hidden">
+                                            <div className="w-1/3 h-full bg-blue-500"></div>
+                                        </div>
                                         <span className="text-xs font-mono text-gray-500">00:00 / 02:30</span>
+                                        <button
+                                            onClick={() => removeBlock(block.id)}
+                                            className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                                            title="Delete audio"
+                                        >
+                                            <Trash2 size={16} />
+                                        </button>
                                     </div>
                                 )}
-
-                                {/* Block Actions (Delete) */}
-                                <button
-                                    onClick={() => removeBlock(block.id)}
-                                    className="absolute -right-8 top-0 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity p-1"
-                                >
-                                    <Trash2 size={16} />
-                                </button>
                             </div>
                         ))}
                     </div>

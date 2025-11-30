@@ -3,7 +3,7 @@
 # Security Verification Script
 # This script checks if sensitive files are properly protected
 
-echo "🔒 Security Verification Script"
+echo "Security Verification Script"
 echo "================================"
 echo ""
 

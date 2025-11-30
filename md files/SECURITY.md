@@ -1,4 +1,4 @@
-# 🔒 Environment Variables Security Guide
+# Environment Variables Security Guide
 
 ## Overview
 This project uses environment variables to store sensitive configuration data. These files are protected from being committed to Git.

@@ -97,7 +97,7 @@ export const ChannelList = () => {
                         <Item icon="#" label="engineering" path="/messages/channel/engineering" />
                         <Item icon="#" label="design" path="/messages/channel/design" />
                         <Item icon="#" label="marketing" path="/messages/channel/marketing" />
-                        <Item icon="🔒" label="leadership" path="/messages/channel/leadership" />
+                        <Item icon="#" label="leadership" path="/messages/channel/leadership" />
                     </div>
                 )}
             </div>

@@ -1,4 +1,4 @@
-# 🔒 Security Setup Complete!
+#  Security Setup Complete!
 
 ## ✅ What Was Done
 
