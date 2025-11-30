@@ -2,11 +2,13 @@ import React, { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { ChevronDown, ChevronRight, SquarePen, Trash2, X, CheckSquare, Settings2 } from 'lucide-react';
 import ConfirmationModal from "../../modals/ConfirmationModal";
+import { useContacts } from "../../../contexts/ContactsContext";
 
 const HomePanel = ({ title }) => {
     const navigate = useNavigate();
     const location = useLocation();
     const currentPath = location.pathname;
+    const { allItems: items, deleteItem, addItem, toggleFavorite } = useContacts();
 
     const [expanded, setExpanded] = useState({
         favorites: true,
@@ -62,17 +64,19 @@ const HomePanel = ({ title }) => {
             return;
         }
 
+        const channelId = newChannelData.name.toLowerCase().replace(/\s+/g, '-');
         const newChannel = {
-            id: `c-${Date.now()}`,
+            id: channelId,
             type: 'channel',
             label: newChannelData.name.toLowerCase().replace(/\s+/g, '-'),
-            path: `/channel/${newChannelData.name.toLowerCase().replace(/\s+/g, '-')}`,
+            // path is deprecated/ignored in favor of dynamic path generation
+            path: `/channel/${channelId}`,
             isFavorite: false,
             isPrivate: newChannelData.isPrivate,
         };
 
-        setItems(prev => [...prev, newChannel]);
-        navigate(newChannel.path);
+        addItem(newChannel);
+        navigate(`/channel/${channelId}`);
 
         // Reset
         setShowCreateChannelModal(false);
@@ -84,17 +88,18 @@ const HomePanel = ({ title }) => {
     const handleStartDM = (user) => {
         const existingDM = items.find(i => i.type === 'dm' && i.label === user.name);
         if (existingDM) {
-            navigate(existingDM.path);
+            navigate(`/dm/${existingDM.id}`);
         } else {
+            const dmId = user.name.toLowerCase().replace(/\s+/g, '-');
             const newDM = {
-                id: `d-${Date.now()}`,
+                id: dmId,
                 type: 'dm',
                 label: user.name,
-                path: `/dm/${user.name.toLowerCase().replace(/\s+/g, '-')}`,
+                path: `/dm/${dmId}`,
                 isFavorite: false
             };
-            setItems(prev => [...prev, newDM]);
-            navigate(newDM.path);
+            addItem(newDM);
+            navigate(`/dm/${dmId}`);
         }
         setShowNewDMModal(false);
     };
@@ -129,29 +134,13 @@ const HomePanel = ({ title }) => {
     };
 
     const handleDeleteSelected = () => {
-        setItems(prev => prev.filter(i => !selectedItems.has(i.id)));
+        selectedItems.forEach(id => deleteItem(id));
         setSelectedItems(new Set());
         setIsSelectionMode(false);
         setShowSelectionDeleteConfirm(false);
     };
 
-    const [items, setItems] = useState([
-        { id: 'c1', type: 'channel', label: 'general', path: '/channel/general', isFavorite: true },
-        { id: 'c2', type: 'channel', label: 'announcements', path: '/channel/announcements', isFavorite: true },
-        { id: 'c3', type: 'channel', label: 'engineering', path: '/channel/engineering', isFavorite: false },
-        { id: 'c4', type: 'channel', label: 'design', path: '/channel/design', isFavorite: false },
-        { id: 'c5', type: 'channel', label: 'marketing', path: '/channel/marketing', isFavorite: false },
-        { id: 'c6', type: 'channel', label: 'leadership', path: '/channel/leadership', isFavorite: false, isPrivate: true },
-        { id: 'd1', type: 'dm', label: 'Sarah Connor', path: '/dm/sarah', isFavorite: false },
-        { id: 'd2', type: 'dm', label: 'John Doe', path: '/dm/john', isFavorite: false },
-        { id: 'd3', type: 'dm', label: 'Alice Smith', path: '/dm/alice', isFavorite: false },
-    ]);
-
-    const toggleFavorite = (id) => {
-        setItems(prev => prev.map(item =>
-            item.id === id ? { ...item, isFavorite: !item.isFavorite } : item
-        ));
-    };
+    // Removed local items state
 
     const SectionHeader = ({ label, isOpen, onClick, onAdd }) => (
         <div className="flex items-center justify-between px-4 py-2 group cursor-pointer hover:text-gray-900 text-gray-500 mt-2">
@@ -173,7 +162,9 @@ const HomePanel = ({ title }) => {
     );
 
     const Item = ({ item }) => {
-        const isActive = currentPath === item.path;
+        // Construct path dynamically based on Home context
+        const itemPath = item.type === 'channel' ? `/channel/${item.id}` : `/dm/${item.id}`;
+        const isActive = currentPath === itemPath;
         const Icon = item.isPrivate ? "#" : (item.type === 'dm' ? "👤" : "#");
         const isSelected = selectedItems.has(item.id);
 
@@ -188,7 +179,7 @@ const HomePanel = ({ title }) => {
                 }
                 setSelectedItems(newSelected);
             } else {
-                navigate(item.path);
+                navigate(itemPath);
             }
         };
 
@@ -196,7 +187,7 @@ const HomePanel = ({ title }) => {
             <div
                 onClick={handleClick}
                 className={`px-4 py-1.5 mx-2 rounded-md cursor-pointer flex items-center justify-between group transition-colors ${isSelectionMode && isSelected ? "bg-blue-50 border border-blue-200" :
-                        isActive ? "bg-blue-100 text-blue-700 font-medium" : "hover:bg-gray-200 text-gray-600 hover:text-gray-900"
+                    isActive ? "bg-blue-100 text-blue-700 font-medium" : "hover:bg-gray-200 text-gray-600 hover:text-gray-900"
                     }`}
             >
                 <div className="flex items-center truncate flex-1 gap-2">

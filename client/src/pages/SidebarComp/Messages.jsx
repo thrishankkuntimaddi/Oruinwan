@@ -1,33 +1,15 @@
 import { useState, useEffect } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import ChatWindow from "../../components/messagesComp/chatWindowComp/chatWindow";
 import BroadcastChatWindow from "../../components/messagesComp/BroadcastChatWindow";
-import axios from "axios";
-
-const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:5000";
+import { useContacts } from "../../contexts/ContactsContext";
 
 export default function Messages() {
   const [selectedChat, setSelectedChat] = useState(null);
   const [currentBroadcast, setCurrentBroadcast] = useState(null);
-  const [contacts, setContacts] = useState([]);
+  const { contacts, deleteItem } = useContacts();
   const location = useLocation();
-
-  // Load contacts
-  useEffect(() => {
-    async function loadContacts() {
-      try {
-        const token = localStorage.getItem("accessToken");
-        if (!token) return;
-
-        const headers = { Authorization: `Bearer ${token}` };
-        const res = await axios.get(`${API_BASE}/api/chat/contacts`, { headers });
-        setContacts(res.data.contacts || []);
-      } catch (err) {
-        console.error("Failed to load contacts:", err);
-      }
-    }
-    loadContacts();
-  }, []);
+  const navigate = useNavigate();
 
   // Handle Routing for Selected Chat
   useEffect(() => {
@@ -49,6 +31,7 @@ export default function Messages() {
       }
       setSelectedChat(null);
     } else if (path.includes("/channel/")) {
+      // Should not happen in Messages context usually, but handled just in case
       const channelId = decodeURIComponent(path.split("/channel/")[1]);
       setSelectedChat({
         id: channelId,
@@ -79,6 +62,12 @@ export default function Messages() {
     }
   }, [location.pathname, location.state, contacts]);
 
+  const handleDeleteChat = (chat) => {
+    deleteItem(chat.id);
+    setSelectedChat(null);
+    navigate("/messages"); // Go back to empty state in messages
+  };
+
   return (
     <div className="flex flex-col h-full w-full">
       <div className="flex flex-1 overflow-hidden">
@@ -91,6 +80,7 @@ export default function Messages() {
               chat={selectedChat}
               contacts={contacts}
               onClose={() => setSelectedChat(null)}
+              onDeleteChat={() => handleDeleteChat(selectedChat)}
             />
           ) : (
             <div className="flex flex-col items-center justify-center h-full text-gray-400 bg-white">

@@ -36,12 +36,17 @@ export default function Header({
   setMuted,
   blocked,
   setBlocked,
+  onDeleteChat,
+  showToast,
 }) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const handleDelete = () => {
-    // In a real app, this would call an API to delete the chat/channel
-    onClose();
+    if (onDeleteChat) {
+      onDeleteChat();
+    } else {
+      onClose();
+    }
     setShowDeleteConfirm(false);
   };
 
@@ -96,10 +101,10 @@ export default function Header({
           {/* DM Specific Actions */}
           {chat.type === "dm" && (
             <>
-              <button title="Voice Call" className="p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-700 rounded-md transition-colors">
+              <button title="Voice Call" onClick={() => showToast && showToast("Voice Call coming soon!", "info")} className="p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-700 rounded-md transition-colors">
                 <Phone size={20} />
               </button>
-              <button title="Video Call" className="p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-700 rounded-md transition-colors">
+              <button title="Video Call" onClick={() => showToast && showToast("Video Call coming soon!", "info")} className="p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-700 rounded-md transition-colors">
                 <Video size={20} />
               </button>
             </>
@@ -157,11 +162,11 @@ export default function Header({
                   <>
                     <div className="px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">Channel Settings</div>
                     {setShowChannelManagement && (
-                      <button className="w-full text-left px-4 py-2 hover:bg-gray-50 text-gray-700 flex items-center gap-3" onClick={() => { setShowChannelManagement(true); setShowMenu(false); }}>
+                      <button className="w-full text-left px-4 py-2 hover:bg-gray-50 text-gray-700 flex items-center gap-3" onClick={() => { setShowChannelManagement("settings"); setShowMenu(false); }}>
                         <Settings size={16} /> Manage Channel
                       </button>
                     )}
-                    <button className="w-full text-left px-4 py-2 hover:bg-gray-50 text-gray-700 flex items-center gap-3" onClick={() => { setShowContactInfo(true); setShowMenu(false); }}>
+                    <button className="w-full text-left px-4 py-2 hover:bg-gray-50 text-gray-700 flex items-center gap-3" onClick={() => { setShowChannelManagement("members"); setShowMenu(false); }}>
                       <Info size={16} /> Channel Info
                     </button>
                     <div className="border-t border-gray-100 my-1" />

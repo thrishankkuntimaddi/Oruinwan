@@ -173,7 +173,11 @@ const MessagesPanel = () => {
                             }
                             setSelectedItems(newSelected);
                         } else {
-                            navigate(item.type === "broadcast" ? `/messages/broadcast/${item.id}` : `/messages/dm/${item.name}`, { state: { broadcast: item } });
+                            // Dynamic path generation for Messages context
+                            const path = item.type === "broadcast"
+                                ? `/messages/broadcast/${item.id}`
+                                : `/messages/dm/${item.name}`;
+                            navigate(path, { state: { broadcast: item } });
                         }
                     };
 

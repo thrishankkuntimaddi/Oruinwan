@@ -7,7 +7,11 @@ import Header from "./header/header.jsx";
 import PinnedMessage from "./pinned/pinnedMessage.jsx";
 import ContactInfoModal from "./modals/contactInfoModal.jsx";
 import ContactShareModal from "./modals/contactShareModal.jsx";
+import Toast from "../../ui/Toast.jsx";
+import ForwardMessageModal from "./modals/ForwardMessageModal.jsx";
 import ChannelManagementModal from "../ChannelManagementModal.jsx";
+
+
 import ThreadPanel from "./ThreadPanel.jsx";
 import MessagesContainer from "./messages/messagesContainer.jsx";
 import ReplyPreview from "./messages/replyPreview.jsx";
@@ -21,7 +25,7 @@ import { jwtDecode } from "jwt-decode";
 
 const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
-export default function ChatWindow({ chat, onClose, contacts = [] }) {
+export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat }) {
   /* ---------------------------------------------------------
       STATE
   --------------------------------------------------------- */
@@ -48,7 +52,16 @@ export default function ChatWindow({ chat, onClose, contacts = [] }) {
 
   const [showContactInfo, setShowContactInfo] = useState(false);
   const [showContactShare, setShowContactShare] = useState(false);
-  const [showChannelManagement, setShowChannelManagement] = useState(false);
+  const [channelManagementTab, setChannelManagementTab] = useState(null); // null, "members", "settings"
+  const [toast, setToast] = useState({ message: "", type: "success", visible: false });
+
+  const showToast = (message, type = "success") => {
+    setToast({ message, type, visible: true });
+  };
+
+  // ...
+
+
 
   const [activeThread, setActiveThread] = useState(null);
   const [threadCounts, setThreadCounts] = useState({});
@@ -548,13 +561,71 @@ export default function ChatWindow({ chat, onClose, contacts = [] }) {
     setOpenMsgMenuId(null);
   };
 
+  const [userReactions, setUserReactions] = useState({});
+
   const addReaction = (id, emoji) => {
-    setReactions((prev) => {
-      const next = { ...prev };
-      next[id] = next[id] || {};
-      next[id][emoji] = (next[id][emoji] || 0) + 1;
-      return next;
-    });
+    const previousEmoji = userReactions[id];
+
+    if (previousEmoji === emoji) {
+      // Toggle off
+      setUserReactions(prev => {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      });
+      setReactions(prev => {
+        const next = { ...prev };
+        if (next[id]) {
+          next[id][emoji] = Math.max(0, (next[id][emoji] || 0) - 1);
+          if (next[id][emoji] === 0) delete next[id][emoji];
+        }
+        return next;
+      });
+    } else {
+      // Change or Add
+      setUserReactions(prev => ({ ...prev, [id]: emoji }));
+      setReactions(prev => {
+        const next = { ...prev };
+        next[id] = next[id] || {};
+
+        if (previousEmoji) {
+          next[id][previousEmoji] = Math.max(0, (next[id][previousEmoji] || 0) - 1);
+          if (next[id][previousEmoji] === 0) delete next[id][previousEmoji];
+        }
+
+        next[id][emoji] = (next[id][emoji] || 0) + 1;
+        return next;
+      });
+    }
+  };
+
+  const [showForwardModal, setShowForwardModal] = useState(false);
+  const [forwardingMsgId, setForwardingMsgId] = useState(null);
+
+  const handleForward = (target) => {
+    const msg = messages.find(m => m.id === forwardingMsgId);
+    if (!msg) return;
+
+    // Simulate forwarding
+    console.log(`Forwarding message "${msg.text}" to ${target.label} (${target.type})`);
+
+    if (target.id === chat.id) {
+      const clientTempId = generateTempId();
+      const uiMsg = {
+        id: clientTempId,
+        sender: "you",
+        text: `[Forwarded] ${msg.text}`,
+        ts: new Date().toISOString(),
+        temp: true,
+        sending: true,
+      };
+      setMessages(prev => [...prev, uiMsg]);
+    } else {
+      alert(`Message forwarded to ${target.label}`);
+    }
+
+    setShowForwardModal(false);
+    setForwardingMsgId(null);
   };
 
   /* ---------------------------------------------------------
@@ -579,17 +650,29 @@ export default function ChatWindow({ chat, onClose, contacts = [] }) {
           selectedCount={selectedIds.size}
           onDeleteSelected={deleteSelected}
           setShowContactInfo={setShowContactInfo}
-          setShowChannelManagement={setShowChannelManagement}
+          setShowChannelManagement={setChannelManagementTab}
           muted={muted}
           setMuted={setMuted}
           blocked={blocked}
           setBlocked={setBlocked}
+          onDeleteChat={onDeleteChat}
+          showToast={showToast}
         />
 
         <PinnedMessage
           pinned={messages.find((m) => m.id === pinnedId)}
           onUnpin={() => setPinnedId(null)}
         />
+
+        {toast.visible && (
+          <div className="absolute top-4 right-4 z-[9999]">
+            <Toast
+              message={toast.message}
+              type={toast.type}
+              onClose={() => setToast(prev => ({ ...prev, visible: false }))}
+            />
+          </div>
+        )}
 
         {showContactInfo && (
           <ContactInfoModal chat={chat} onClose={() => setShowContactInfo(false)} />
@@ -603,11 +686,19 @@ export default function ChatWindow({ chat, onClose, contacts = [] }) {
           />
         )}
 
-        {showChannelManagement && (
+        {showForwardModal && (
+          <ForwardMessageModal
+            onClose={() => setShowForwardModal(false)}
+            onForward={handleForward}
+          />
+        )}
+
+        {channelManagementTab && (
           <ChannelManagementModal
             channel={chat}
             currentUserId={currentUserIdRef.current}
-            onClose={() => setShowChannelManagement(false)}
+            initialTab={channelManagementTab}
+            onClose={() => setChannelManagementTab(null)}
           />
         )}
 
@@ -622,7 +713,8 @@ export default function ChatWindow({ chat, onClose, contacts = [] }) {
             openMsgMenuId={openMsgMenuId}
             setOpenMsgMenuId={setOpenMsgMenuId}
             toggleMsgMenu={(e, id) => {
-              e.stopPropagation();
+              // Safe stopPropagation
+              e?.stopPropagation?.();
               setOpenMsgMenuId((prev) => (prev === id ? null : id));
             }}
             reactions={reactions}
@@ -630,14 +722,21 @@ export default function ChatWindow({ chat, onClose, contacts = [] }) {
             addReaction={addReaction}
             pinMessage={pinMessage}
             replyToMessage={replyToMessage}
-            forwardMessage={() => setShowContactShare(true)}
+            forwardMessage={(id) => {
+              setForwardingMsgId(id);
+              setShowForwardModal(true);
+            }}
             copyMessage={(id) => {
               const m = messages.find((x) => x.id === id);
               if (m) navigator.clipboard.writeText(m.text);
             }}
-            deleteMessage={(id) =>
-              setMessages((prev) => prev.filter((m) => m.id !== id))
-            }
+            deleteMessage={(id) => {
+              try {
+                setMessages((prev) => prev.filter((m) => m.id !== id));
+              } catch (err) {
+                console.error("Failed to delete message:", err);
+              }
+            }}
             infoMessage={(id) => {
               const m = messages.find((x) => x.id === id);
               if (!m) return;
@@ -679,6 +778,7 @@ export default function ChatWindow({ chat, onClose, contacts = [] }) {
             recording={recording}
             setRecording={setRecording}
             blocked={blocked}
+            setNewMessage={setNewMessage}
           />
 
 

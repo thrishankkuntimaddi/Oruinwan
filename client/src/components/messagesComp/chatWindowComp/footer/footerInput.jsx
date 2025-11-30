@@ -16,9 +16,11 @@ export default function FooterInput({
   recording,
   setRecording,
   blocked,
+  setNewMessage,
 }) {
   const emojiRef = useRef(null);
   const attachRef = useRef(null);
+  const textareaRef = useRef(null);
 
   /* ---------------------------------------------------------
       OUTSIDE CLICK HANDLER
@@ -47,12 +49,57 @@ export default function FooterInput({
     };
   }, [showEmoji, showAttach, setShowEmoji, setShowAttach]);
 
+  const insertFormat = (type) => {
+    if (!textareaRef.current) return;
+
+    const start = textareaRef.current.selectionStart;
+    const end = textareaRef.current.selectionEnd;
+    const text = newMessage;
+    const selected = text.substring(start, end);
+    let newText = text;
+    let newCursorPos = end;
+
+    switch (type) {
+      case 'bold':
+        newText = text.substring(0, start) + `**${selected}**` + text.substring(end);
+        newCursorPos = end + 4; // ** + **
+        break;
+      case 'italic':
+        newText = text.substring(0, start) + `_${selected}_` + text.substring(end);
+        newCursorPos = end + 2; // _ + _
+        break;
+      case 'link':
+        newText = text.substring(0, start) + `[${selected}](url)` + text.substring(end);
+        newCursorPos = end + 3; // []()
+        break;
+      case 'list':
+        newText = text.substring(0, start) + `\n- ${selected}` + text.substring(end);
+        newCursorPos = end + 3; // \n- 
+        break;
+      case 'ai':
+        newText = text.substring(0, start) + `@chttrixAi ` + text.substring(end);
+        newCursorPos = start + 11;
+        break;
+      default:
+        return;
+    }
+
+    setNewMessage(newText);
+
+    // Restore focus and cursor
+    setTimeout(() => {
+      textareaRef.current.focus();
+      textareaRef.current.setSelectionRange(newCursorPos, newCursorPos);
+    }, 0);
+  };
+
   return (
     <div className="p-4 bg-white border-t border-gray-200">
       <div className="border border-gray-300 rounded-lg shadow-sm focus-within:ring-1 focus-within:ring-blue-500 focus-within:border-blue-500 transition-all bg-white relative">
 
         {/* Text Area */}
         <textarea
+          ref={textareaRef}
           rows={1}
           value={newMessage}
           onChange={onChange}
@@ -72,16 +119,20 @@ export default function FooterInput({
 
           {/* Left: Formatting Tools */}
           <div className="flex items-center gap-1">
-            <button className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors" title="Bold">
+            <button onMouseDown={(e) => e.preventDefault()} onClick={() => insertFormat('ai')} className="p-1 hover:bg-gray-100 rounded transition-colors mr-1" title="Ask Chttrix AI">
+              <img src="/assets/ChttrixAI-logo.png" alt="AI" className="w-5 h-5 object-contain" />
+            </button>
+            <div className="h-4 w-px bg-gray-300 mx-1"></div>
+            <button onMouseDown={(e) => e.preventDefault()} onClick={() => insertFormat('bold')} className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors" title="Bold">
               <Bold size={16} />
             </button>
-            <button className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors" title="Italic">
+            <button onMouseDown={(e) => e.preventDefault()} onClick={() => insertFormat('italic')} className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors" title="Italic">
               <Italic size={16} />
             </button>
-            <button className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors" title="Link">
+            <button onMouseDown={(e) => e.preventDefault()} onClick={() => insertFormat('link')} className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors" title="Link">
               <Link size={16} />
             </button>
-            <button className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors" title="List">
+            <button onMouseDown={(e) => e.preventDefault()} onClick={() => insertFormat('list')} className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors" title="List">
               <List size={16} />
             </button>
           </div>

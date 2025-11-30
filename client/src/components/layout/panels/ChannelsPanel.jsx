@@ -50,17 +50,18 @@ const ChannelsPanel = ({ title }) => {
             return;
         }
 
+        const channelId = newChannelData.name.toLowerCase().replace(/\s+/g, '-');
         const newChannel = {
-            id: `c-${Date.now()}`,
+            id: channelId,
             type: 'channel',
             label: newChannelData.name.toLowerCase().replace(/\s+/g, '-'),
-            path: `/channels/${newChannelData.name.toLowerCase().replace(/\s+/g, '-')}`,
+            path: `/channels/${channelId}`,
             isFavorite: false,
             isPrivate: newChannelData.isPrivate,
         };
 
         setItems(prev => [...prev, newChannel]);
-        navigate(newChannel.path);
+        navigate(`/channels/${channelId}`);
 
         // Reset
         setShowCreateChannelModal(false);
@@ -82,7 +83,9 @@ const ChannelsPanel = ({ title }) => {
     );
 
     const Item = ({ item }) => {
-        const isActive = currentPath === item.path;
+        // Construct path dynamically based on Channels context
+        const itemPath = `/channels/${item.id}`;
+        const isActive = currentPath === itemPath;
         const Icon = item.isPrivate ? "#" : "#";
         const isSelected = selectedItems.has(item.id);
 
@@ -97,7 +100,7 @@ const ChannelsPanel = ({ title }) => {
                 }
                 setSelectedItems(newSelected);
             } else {
-                navigate(item.path);
+                navigate(itemPath);
             }
         };
 

@@ -6,7 +6,7 @@ export default function ReactionBadges({ reactions }) {
     <div className="flex gap-1 mt-2 flex-wrap">
       {Object.entries(reactions).map(([emoji, count]) => (
         <div key={emoji} className="text-xs bg-white border px-2 py-0.5 rounded-full">
-          {emoji} {count}
+          {emoji}
         </div>
       ))}
     </div>

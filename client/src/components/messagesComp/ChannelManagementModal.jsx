@@ -1,15 +1,14 @@
-// client/src/components/messagesComp/ChannelManagementModal.jsx
 import React, { useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import { Trash2, UserPlus, Users, Lock, Unlock, X, AlertTriangle, Eraser } from "lucide-react";
 
 const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
-export default function ChannelManagementModal({ channel, onClose, currentUserId }) {
+export default function ChannelManagementModal({ channel, onClose, currentUserId, initialTab = "members" }) {
     const [members, setMembers] = useState([]);
     const [allUsers, setAllUsers] = useState([]);
     const [loading, setLoading] = useState(false);
-    const [activeTab, setActiveTab] = useState("members"); // members, settings
+    const [activeTab, setActiveTab] = useState(initialTab); // members, settings
     const [privacyVerification, setPrivacyVerification] = useState("");
     const [deleteVerification, setDeleteVerification] = useState("");
 
@@ -130,7 +129,12 @@ export default function ChannelManagementModal({ channel, onClose, currentUserId
                             {channel.isPrivate ? <Lock size={20} className="text-gray-500" /> : <Users size={20} className="text-gray-500" />}
                             {channel.name}
                         </h3>
-                        <p className="text-xs text-gray-500 mt-1">{members.length} members • {channel.isPrivate ? "Private" : "Public"} Channel</p>
+                        <div className="flex flex-col gap-0.5 mt-1">
+                            <p className="text-xs text-gray-500">{members.length} members • {channel.isPrivate ? "Private" : "Public"} Channel</p>
+                            <p className="text-[10px] text-gray-400">
+                                Created on {new Date(channel.createdAt || Date.now()).toLocaleDateString()} by {channel.creatorName || "Admin"}
+                            </p>
+                        </div>
                     </div>
                     <button onClick={onClose} className="p-2 hover:bg-gray-200 rounded-full transition-colors text-gray-500">
                         <X size={20} />

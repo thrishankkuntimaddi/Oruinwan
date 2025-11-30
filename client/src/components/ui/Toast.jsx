@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 
-const Toast = ({ message, type = 'success', onClose, duration = 150 }) => {
+const Toast = ({ message, type = 'success', onClose, duration = 3000 }) => {
     const [progress, setProgress] = useState(100);
     const [isExiting, setIsExiting] = useState(false);
 
@@ -31,30 +31,77 @@ const Toast = ({ message, type = 'success', onClose, duration = 150 }) => {
         };
     }, [duration, handleClose]);
 
+    const getStyles = () => {
+        switch (type) {
+            case 'error': return 'border-red-500';
+            case 'info': return 'border-blue-500';
+            default: return 'border-green-500';
+        }
+    };
+
+    const getIcon = () => {
+        switch (type) {
+            case 'error':
+                return (
+                    <div className="w-6 h-6 rounded-full bg-red-100 flex items-center justify-center">
+                        <span className="text-red-600 text-sm font-bold">!</span>
+                    </div>
+                );
+            case 'info':
+                return (
+                    <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center">
+                        <span className="text-blue-600 text-sm font-bold">i</span>
+                    </div>
+                );
+            default:
+                return (
+                    <div className="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center">
+                        <span className="text-green-600 text-sm font-bold">✓</span>
+                    </div>
+                );
+        }
+    };
+
+    const getTitle = () => {
+        switch (type) {
+            case 'error': return 'Error';
+            case 'info': return 'Info';
+            default: return 'Success';
+        }
+    };
+
+    const getTitleColor = () => {
+        switch (type) {
+            case 'error': return 'text-red-800';
+            case 'info': return 'text-blue-800';
+            default: return 'text-green-800';
+        }
+    };
+
+    const getProgressColor = () => {
+        switch (type) {
+            case 'error': return 'bg-red-500';
+            case 'info': return 'bg-blue-500';
+            default: return 'bg-green-500';
+        }
+    };
+
     return (
         <div
-            className={`relative flex items-center w-80 p-4 rounded-lg shadow-xl bg-white border-l-4 overflow-hidden transition-all duration-300 transform 
+            className={`relative flex items-center w-80 p-4 rounded-lg shadow-xl bg-white border-l-4 overflow-hidden transition-all duration-300 transform z-[9999]
         ${isExiting ? 'translate-x-full opacity-0' : 'translate-x-0 opacity-100'}
-        ${type === 'success' ? 'border-green-500' : 'border-red-500'}
+        ${getStyles()}
       `}
         >
             {/* Icon */}
             <div className="mr-3 flex-shrink-0">
-                {type === 'success' ? (
-                    <div className="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center">
-                        <span className="text-green-600 text-sm font-bold">✓</span>
-                    </div>
-                ) : (
-                    <div className="w-6 h-6 rounded-full bg-red-100 flex items-center justify-center">
-                        <span className="text-red-600 text-sm font-bold">!</span>
-                    </div>
-                )}
+                {getIcon()}
             </div>
 
             {/* Content */}
             <div className="flex-1 min-w-0">
-                <h4 className={`font-semibold text-sm ${type === 'success' ? 'text-green-800' : 'text-red-800'}`}>
-                    {type === 'success' ? 'Success' : 'Error'}
+                <h4 className={`font-semibold text-sm ${getTitleColor()}`}>
+                    {getTitle()}
                 </h4>
                 <p className="text-gray-600 text-xs mt-0.5 truncate">{message}</p>
             </div>
@@ -70,7 +117,7 @@ const Toast = ({ message, type = 'success', onClose, duration = 150 }) => {
             {/* Progress Bar */}
             <div className="absolute bottom-0 left-0 h-1 bg-gray-100 w-full">
                 <div
-                    className={`h-full transition-all ease-linear ${type === 'success' ? 'bg-green-500' : 'bg-red-500'}`}
+                    className={`h-full transition-all ease-linear ${getProgressColor()}`}
                     style={{ width: `${progress}%` }}
                 />
             </div>

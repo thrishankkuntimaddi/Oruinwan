@@ -1,6 +1,7 @@
-import React, { useState } from "react";
-import { MoreHorizontal, Copy, Heart, Pin } from "lucide-react";
+import React, { useState, useRef, useEffect } from "react";
+import { MoreHorizontal, Copy, Heart, Pin, Trash2, Smile } from "lucide-react";
 import ReactionBadges from "./reactionBadges";
+import ReactionPicker from "./reactionPicker";
 
 /* ---------------------------------------------------------
    🔵 Read Receipts (✔✔ icons)
@@ -51,12 +52,30 @@ export default function DMMessageItem({
     addReaction,
     copyMessage,
     deleteMessage,
+    pinMessage, // Ensure this is passed
     currentUserId,
 }) {
     const isMe = msg.sender === "you" || msg.sender === "me";
     const isSystem = msg.sender === "system";
     const isSelected = selectedIds.has(msg.id);
     const [showToolbar, setShowToolbar] = useState(false);
+    const [showReactionPicker, setShowReactionPicker] = useState(false);
+    const reactionPickerRef = useRef(null);
+
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (reactionPickerRef.current && !reactionPickerRef.current.contains(event.target)) {
+                setShowReactionPicker(false);
+            }
+        };
+
+        if (showReactionPicker) {
+            document.addEventListener("mousedown", handleClickOutside);
+        }
+        return () => {
+            document.removeEventListener("mousedown", handleClickOutside);
+        };
+    }, [showReactionPicker]);
 
     // System Message Rendering
     if (isSystem) {
@@ -75,7 +94,7 @@ export default function DMMessageItem({
 
     return (
         <div
-            className={`group flex items-start gap-1.5 px-4 py-1 hover:bg-gray-50/50 relative transition-colors ${isSelected ? "bg-blue-50/50" : ""} w-full`}
+            className={`group flex items-start gap-1.5 px-4 py-1 hover:bg-gray-50/50 relative transition-colors ${isSelected ? "bg-blue-50/50" : ""} w-full ${msg.isPinned ? "bg-yellow-50 border-l-4 border-yellow-400" : "border-l-4 border-transparent"}`}
             onMouseEnter={() => setShowToolbar(true)}
             onMouseLeave={() => setShowToolbar(false)}
         >
@@ -122,15 +141,28 @@ export default function DMMessageItem({
                     <div className="flex items-center gap-3 ml-2 mt-1.5 pl-2">
 
                         {/* Toolbar (Visible on hover or menu open) */}
-                        <div className={`flex items-center gap-1 transition-opacity duration-200 ${showToolbar || openMsgMenuId === msg.id ? "opacity-100 visible" : "opacity-0 invisible"}`}>
-                            {/* Quick Reaction (Heart) */}
-                            <button
-                                onClick={() => addReaction(msg.id, "❤️")}
-                                className="p-1 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-md transition-colors"
-                                title="Like"
-                            >
-                                <Heart size={14} />
-                            </button>
+                        <div className={`flex items-center gap-1 transition-opacity duration-200 ${showToolbar || openMsgMenuId === msg.id || showReactionPicker ? "opacity-100 visible" : "opacity-0 invisible"}`}>
+
+                            {/* Reaction Picker Trigger */}
+                            <div className="relative" ref={reactionPickerRef}>
+                                <button
+                                    onClick={() => setShowReactionPicker(!showReactionPicker)}
+                                    className={`p-1 rounded-md transition-colors ${showReactionPicker ? "bg-gray-100 text-gray-700" : "text-gray-400 hover:text-red-500 hover:bg-red-50"}`}
+                                    title="Like"
+                                >
+                                    {showReactionPicker ? <Smile size={14} /> : <Heart size={14} />}
+                                </button>
+                                {showReactionPicker && (
+                                    <div className="absolute right-0 top-full mt-1 z-50">
+                                        <ReactionPicker
+                                            onSelect={(emoji) => {
+                                                addReaction(msg.id, emoji);
+                                                setShowReactionPicker(false);
+                                            }}
+                                        />
+                                    </div>
+                                )}
+                            </div>
 
                             {/* Menu Button */}
                             <div className="relative">
@@ -149,16 +181,35 @@ export default function DMMessageItem({
                                 {openMsgMenuId === msg.id && (
                                     <div className="absolute right-0 top-full mt-1 w-48 bg-white border border-gray-200 rounded-xl shadow-2xl py-1 z-50 text-sm animate-fade-in origin-top-right">
                                         <button
-                                            onClick={(e) => { e.stopPropagation(); toggleMsgMenu({ stopPropagation: () => { } }, null); alert("Pinned!"); }}
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                if (pinMessage) pinMessage(msg.id);
+                                                toggleMsgMenu({ stopPropagation: () => { } }, null);
+                                            }}
                                             className="w-full text-left px-4 py-2.5 hover:bg-gray-50 flex items-center gap-3 text-gray-700 transition-colors"
                                         >
-                                            <Pin size={14} className="text-gray-400" /> Pin message
+                                            <Pin size={14} className="text-gray-400" /> {msg.isPinned ? "Unpin message" : "Pin message"}
                                         </button>
                                         <button
-                                            onClick={(e) => { e.stopPropagation(); copyMessage(msg.id); toggleMsgMenu({ stopPropagation: () => { } }, null); }}
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                copyMessage(msg.id);
+                                                toggleMsgMenu({ stopPropagation: () => { } }, null);
+                                            }}
                                             className="w-full text-left px-4 py-2.5 hover:bg-gray-50 flex items-center gap-3 text-gray-700 transition-colors"
                                         >
                                             <Copy size={14} className="text-gray-400" /> Copy text
+                                        </button>
+                                        <div className="border-t border-gray-100 my-1"></div>
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                deleteMessage(msg.id);
+                                                toggleMsgMenu({ stopPropagation: () => { } }, null);
+                                            }}
+                                            className="w-full text-left px-4 py-2.5 hover:bg-gray-50 flex items-center gap-3 text-red-600 transition-colors"
+                                        >
+                                            <Trash2 size={14} /> Delete message
                                         </button>
                                     </div>
                                 )}
@@ -179,10 +230,7 @@ export default function DMMessageItem({
                     </div>
                 )}
 
-                {/* Status Indicators (Sending/Failed/Read) - Below bubble if needed, or inline with time? 
-                    User asked for clean look. Let's put it next to time if it fits, or below.
-                    For now, let's keep it minimal.
-                */}
+                {/* Status Indicators */}
                 {(msg.sending || msg.failed || isMe) && (
                     <div className="flex justify-end w-full pr-1 mt-0.5">
                         {msg.sending && <span className="text-[10px] italic text-gray-400">Sending...</span>}

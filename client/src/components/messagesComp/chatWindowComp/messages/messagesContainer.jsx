@@ -42,9 +42,15 @@ export default function MessagesContainer({
   }, [messages]);
 
   /* ---------------------------------------------------------
-     GROUP BY DATE
+     FILTER & GROUP BY DATE
   --------------------------------------------------------- */
-  const grouped = groupByDate(messages);
+  const filteredMessages = messages.filter((m) =>
+    searchQuery
+      ? m.text?.toLowerCase().includes(searchQuery.toLowerCase())
+      : true
+  );
+
+  const grouped = groupByDate(filteredMessages);
 
   return (
     <div
@@ -64,11 +70,6 @@ export default function MessagesContainer({
           {/* --- Messages in Group --- */}
           <div className="space-y-3">
             {grp.items
-              .filter((m) =>
-                searchQuery
-                  ? m.text?.toLowerCase().includes(searchQuery.toLowerCase())
-                  : true
-              )
               .map((msg) => (
                 <MessageGroup
                   key={msg.id}

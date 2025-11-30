@@ -1,6 +1,7 @@
-import React, { useState } from "react";
-import { Smile, MessageSquare, Share, MoreHorizontal, Pin, Copy } from "lucide-react";
+import React, { useState, useRef, useEffect } from "react";
+import { Smile, MessageSquare, Share, MoreHorizontal, Pin, Copy, Trash2 } from "lucide-react";
 import ReactionBadges from "./reactionBadges";
+import ReactionPicker from "./reactionPicker";
 
 /* ---------------------------------------------------------
    🔵 Slack-style Read Receipts (✔✔ icons)
@@ -67,14 +68,31 @@ export default function ChannelMessageItem({
     const isMe = msg.sender === "you" || msg.sender === "me";
     const isSelected = selectedIds.has(msg.id);
     const [showToolbar, setShowToolbar] = useState(false);
+    const [showReactionPicker, setShowReactionPicker] = useState(false);
+    const reactionPickerRef = useRef(null);
 
     // Avatar Logic
     const avatarUrl = msg.senderAvatar || null;
     const initial = msg.senderName ? msg.senderName.charAt(0).toUpperCase() : "?";
 
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (reactionPickerRef.current && !reactionPickerRef.current.contains(event.target)) {
+                setShowReactionPicker(false);
+            }
+        };
+
+        if (showReactionPicker) {
+            document.addEventListener("mousedown", handleClickOutside);
+        }
+        return () => {
+            document.removeEventListener("mousedown", handleClickOutside);
+        };
+    }, [showReactionPicker]);
+
     return (
         <div
-            className={`group flex items-start gap-2 px-5 py-1.5 hover:bg-gray-50 relative transition-colors ${isSelected ? "bg-blue-50/50" : ""} ${msg.isPinned ? "bg-yellow-50/30 animate-pin" : ""}`}
+            className={`group flex items-start gap-2 px-5 py-1.5 hover:bg-gray-50 relative transition-colors ${isSelected ? "bg-blue-50/50" : ""} ${msg.isPinned ? "bg-yellow-50 border-l-4 border-yellow-400" : "border-l-4 border-transparent"}`}
             onMouseEnter={() => setShowToolbar(true)}
             onMouseLeave={() => setShowToolbar(false)}
         >
@@ -150,16 +168,40 @@ export default function ChannelMessageItem({
             </div>
 
             {/* Hover Toolbar */}
-            <div className={`absolute -top-3 right-4 bg-white border border-gray-200 shadow-sm rounded-lg p-0.5 flex items-center gap-0.5 transition-opacity duration-200 ${showToolbar || openMsgMenuId === msg.id ? "opacity-100 visible" : "opacity-0 invisible"}`}>
-                <button onClick={() => addReaction(msg.id, "👍")} className="p-1.5 text-gray-500 hover:bg-gray-100 hover:text-gray-700 rounded-md transition-colors" title="Add reaction"><Smile size={16} /></button>
+            <div className={`absolute -top-3 right-4 bg-white border border-gray-200 shadow-sm rounded-lg p-0.5 flex items-center gap-0.5 transition-opacity duration-200 ${showToolbar || openMsgMenuId === msg.id || showReactionPicker ? "opacity-100 visible" : "opacity-0 invisible"}`}>
+
+                {/* Reaction Picker Trigger */}
+                <div className="relative" ref={reactionPickerRef}>
+                    <button
+                        onClick={() => setShowReactionPicker(!showReactionPicker)}
+                        className={`p-1.5 rounded-md transition-colors ${showReactionPicker ? "bg-gray-100 text-gray-700" : "text-gray-500 hover:bg-gray-100 hover:text-gray-700"}`}
+                        title="Add reaction"
+                    >
+                        <Smile size={16} />
+                    </button>
+                    {showReactionPicker && (
+                        <div className="absolute right-0 top-full mt-1 z-50">
+                            <ReactionPicker
+                                onSelect={(emoji) => {
+                                    addReaction(msg.id, emoji);
+                                    setShowReactionPicker(false);
+                                }}
+                            />
+                        </div>
+                    )}
+                </div>
+
                 <button onClick={() => onOpenThread && onOpenThread(msg.id)} className="p-1.5 text-gray-500 hover:bg-gray-100 hover:text-gray-700 rounded-md transition-colors" title="Reply in thread"><MessageSquare size={16} /></button>
                 <button onClick={() => forwardMessage(msg.id)} className="p-1.5 text-gray-500 hover:bg-gray-100 hover:text-gray-700 rounded-md transition-colors" title="Forward"><Share size={16} /></button>
+
                 <div className="relative">
                     <button onClick={(e) => toggleMsgMenu(e, msg.id)} className={`p-1.5 rounded-md transition-colors ${openMsgMenuId === msg.id ? "bg-gray-100 text-gray-900" : "text-gray-500 hover:bg-gray-100 hover:text-gray-700"}`} title="More actions"><MoreHorizontal size={16} /></button>
                     {openMsgMenuId === msg.id && (
                         <div className="absolute right-0 top-full mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-xl py-1 z-50 text-sm animate-fade-in">
-                            <button onClick={() => { copyMessage(msg.id); toggleMsgMenu(null, null); }} className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2"><Copy size={14} /> Copy text</button>
-                            <button onClick={() => { pinMessage(msg.id); toggleMsgMenu(null, null); }} className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2"><Pin size={14} /> {msg.isPinned ? "Unpin message" : "Pin message"}</button>
+                            <button onClick={() => { copyMessage(msg.id); toggleMsgMenu({ stopPropagation: () => { } }, null); }} className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2"><Copy size={14} /> Copy text</button>
+                            <button onClick={() => { pinMessage(msg.id); toggleMsgMenu({ stopPropagation: () => { } }, null); }} className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2"><Pin size={14} /> {msg.isPinned ? "Unpin message" : "Pin message"}</button>
+                            <div className="border-t border-gray-100 my-1"></div>
+                            <button onClick={() => { deleteMessage(msg.id); toggleMsgMenu({ stopPropagation: () => { } }, null); }} className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2 text-red-600"><Trash2 size={14} /> Delete message</button>
                         </div>
                     )}
                 </div>
