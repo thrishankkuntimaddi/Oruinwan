@@ -10,7 +10,7 @@ import { BlogsProvider } from "./contexts/BlogsContext";
 
 // Layout + Components
 import MainLayout from "./components/layout/MainLayout";
-import HomePanel from "./components/layout/panels/HomePanel";
+import HomePanel from "./components/home/panels/HomePanel";
 import ChannelsPanel from "./components/layout/panels/ChannelsPanel";
 import MessagesPanel from "./components/layout/panels/MessagesPanel";
 import TasksPanel from "./components/layout/panels/TasksPanel";

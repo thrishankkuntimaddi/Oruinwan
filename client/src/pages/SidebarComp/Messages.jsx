@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import ChatWindow from "../../components/messagesComp/chatWindowComp/chatWindow";
+import ChatWindow from "../../components/messages/chat/ChatWindow";
 import BroadcastChatWindow from "../../components/messagesComp/BroadcastChatWindow";
 import { useContacts } from "../../contexts/ContactsContext";
 
