@@ -7,15 +7,14 @@
   "theme_color": "#ffffff",
   "icons": [
     {
-      "src": "assets/ChttrixLogo.png",
+      "src": "assets/ChttrixFavico.png",
       "type": "image/png",
       "sizes": "192x192"
     },
     {
-      "src": "assets/ChttrixLogo.png",
+      "src": "assets/ChttrixFavico.png",
       "type": "image/png",
       "sizes": "512x512"
     }
   ]
 }
-
