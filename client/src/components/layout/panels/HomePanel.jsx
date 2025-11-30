@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { ChevronDown, ChevronRight, SquarePen } from 'lucide-react';
+import { ChevronDown, ChevronRight, SquarePen, Trash2, X, CheckSquare, Settings2 } from 'lucide-react';
+import ConfirmationModal from "../../modals/ConfirmationModal";
 
 const HomePanel = ({ title }) => {
     const navigate = useNavigate();
@@ -28,10 +29,15 @@ const HomePanel = ({ title }) => {
     const [activeSettingsTab, setActiveSettingsTab] = useState("General");
     const [newName, setNewName] = useState("");
     const [inviteEmail, setInviteEmail] = useState("");
-    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false); // For workspace deletion
+    const [showSelectionDeleteConfirm, setShowSelectionDeleteConfirm] = useState(false); // For selection deletion
     const [deleteVerification, setDeleteVerification] = useState("");
     const [showCreateChannelModal, setShowCreateChannelModal] = useState(false);
     const [showNewDMModal, setShowNewDMModal] = useState(false);
+
+    // Selection Mode State
+    const [isSelectionMode, setIsSelectionMode] = useState(false);
+    const [selectedItems, setSelectedItems] = useState(new Set());
 
     // Channel Creation State
     const [newChannelData, setNewChannelData] = useState({ name: "", description: "", isPrivate: false });
@@ -122,6 +128,13 @@ const HomePanel = ({ title }) => {
         }
     };
 
+    const handleDeleteSelected = () => {
+        setItems(prev => prev.filter(i => !selectedItems.has(i.id)));
+        setSelectedItems(new Set());
+        setIsSelectionMode(false);
+        setShowSelectionDeleteConfirm(false);
+    };
+
     const [items, setItems] = useState([
         { id: 'c1', type: 'channel', label: 'general', path: '/channel/general', isFavorite: true },
         { id: 'c2', type: 'channel', label: 'announcements', path: '/channel/announcements', isFavorite: true },
@@ -162,42 +175,64 @@ const HomePanel = ({ title }) => {
     const Item = ({ item }) => {
         const isActive = currentPath === item.path;
         const Icon = item.isPrivate ? "#" : (item.type === 'dm' ? "👤" : "#");
+        const isSelected = selectedItems.has(item.id);
+
+        const handleClick = (e) => {
+            if (isSelectionMode) {
+                e.stopPropagation();
+                const newSelected = new Set(selectedItems);
+                if (newSelected.has(item.id)) {
+                    newSelected.delete(item.id);
+                } else {
+                    newSelected.add(item.id);
+                }
+                setSelectedItems(newSelected);
+            } else {
+                navigate(item.path);
+            }
+        };
 
         return (
             <div
-                onClick={() => navigate(item.path)}
-                className={`px-4 py-1.5 mx-2 rounded-md cursor-pointer flex items-center justify-between group transition-colors ${isActive
-                    ? "bg-blue-100 text-blue-700 font-medium"
-                    : "hover:bg-gray-200 text-gray-600 hover:text-gray-900"
+                onClick={handleClick}
+                className={`px-4 py-1.5 mx-2 rounded-md cursor-pointer flex items-center justify-between group transition-colors ${isSelectionMode && isSelected ? "bg-blue-50 border border-blue-200" :
+                        isActive ? "bg-blue-100 text-blue-700 font-medium" : "hover:bg-gray-200 text-gray-600 hover:text-gray-900"
                     }`}
             >
-                <div className="flex items-center truncate flex-1">
-                    <span className="mr-2 opacity-70 text-lg">{Icon}</span>
+                <div className="flex items-center truncate flex-1 gap-2">
+                    {isSelectionMode && (
+                        <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${isSelected ? "bg-blue-600 border-blue-600" : "border-gray-300 bg-white"}`}>
+                            {isSelected && <CheckSquare size={10} className="text-white" />}
+                        </div>
+                    )}
+                    <span className="opacity-70 text-lg">{Icon}</span>
                     <span className="truncate text-sm">{item.label}</span>
                 </div>
 
-                <button
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        toggleFavorite(item.id);
-                    }}
-                    className={`p-1 rounded hover:bg-gray-300 transition-all ${item.isFavorite ? "text-yellow-400 opacity-100" : "text-gray-400 opacity-0 group-hover:opacity-100"}`}
-                    title={item.isFavorite ? "Remove from favorites" : "Add to favorites"}
-                >
-                    <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        width="14"
-                        height="14"
-                        viewBox="0 0 24 24"
-                        fill={item.isFavorite ? "currentColor" : "none"}
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
+                {!isSelectionMode && (
+                    <button
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            toggleFavorite(item.id);
+                        }}
+                        className={`p-1 rounded hover:bg-gray-300 transition-all ${item.isFavorite ? "text-yellow-400 opacity-100" : "text-gray-400 opacity-0 group-hover:opacity-100"}`}
+                        title={item.isFavorite ? "Remove from favorites" : "Add to favorites"}
                     >
-                        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-                    </svg>
-                </button>
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="14"
+                            height="14"
+                            viewBox="0 0 24 24"
+                            fill={item.isFavorite ? "currentColor" : "none"}
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                        >
+                            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                        </svg>
+                    </button>
+                )}
             </div>
         );
     };
@@ -219,13 +254,22 @@ const HomePanel = ({ title }) => {
                         <ChevronDown size={14} />
                     </span>
                 </div>
-                <button
-                    className="text-gray-500 hover:bg-gray-200 p-2 rounded-full transition-colors"
-                    title="New Message"
-                    onClick={(e) => { e.stopPropagation(); setShowNewDMModal(true); }}
-                >
-                    <SquarePen size={18} />
-                </button>
+                <div className="flex items-center gap-1">
+                    <button
+                        className={`text-gray-500 hover:bg-gray-200 p-2 rounded-full transition-colors ${isSelectionMode ? "bg-blue-100 text-blue-600" : ""}`}
+                        title="Manage Chats"
+                        onClick={(e) => { e.stopPropagation(); setIsSelectionMode(!isSelectionMode); }}
+                    >
+                        <Settings2 size={18} />
+                    </button>
+                    <button
+                        className="text-gray-500 hover:bg-gray-200 p-2 rounded-full transition-colors"
+                        title="New Message"
+                        onClick={(e) => { e.stopPropagation(); setShowNewDMModal(true); }}
+                    >
+                        <SquarePen size={18} />
+                    </button>
+                </div>
 
                 {/* Dropdown Menu */}
                 {showWorkspaceMenu && (
@@ -284,6 +328,33 @@ const HomePanel = ({ title }) => {
             {/* Scrollable Content */}
             <div className="flex-1 overflow-y-auto custom-scrollbar pb-4">
 
+                {/* Selection Mode Header */}
+                {isSelectionMode && (
+                    <div className="px-4 py-2 bg-blue-50 border-b border-blue-100 flex items-center justify-between sticky top-0 z-10">
+                        <span className="text-sm font-bold text-blue-900">{selectedItems.size} selected</span>
+                        <div className="flex gap-2">
+                            <button
+                                onClick={() => setShowSelectionDeleteConfirm(true)}
+                                disabled={selectedItems.size === 0}
+                                className="p-1.5 text-red-600 hover:bg-red-100 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                                title="Delete Selected"
+                            >
+                                <Trash2 size={16} />
+                            </button>
+                            <button
+                                onClick={() => {
+                                    setIsSelectionMode(false);
+                                    setSelectedItems(new Set());
+                                }}
+                                className="p-1.5 text-gray-600 hover:bg-gray-200 rounded-lg"
+                                title="Cancel"
+                            >
+                                <X size={16} />
+                            </button>
+                        </div>
+                    </div>
+                )}
+
                 {/* Favorites */}
                 {favorites.length > 0 && (
                     <>
@@ -328,6 +399,16 @@ const HomePanel = ({ title }) => {
                     </div>
                 )}
             </div>
+
+            {/* Confirmation Modal for Selection Delete */}
+            <ConfirmationModal
+                isOpen={showSelectionDeleteConfirm}
+                onClose={() => setShowSelectionDeleteConfirm(false)}
+                onConfirm={handleDeleteSelected}
+                title="Delete Selected Items?"
+                message={`Are you sure you want to delete ${selectedItems.size} selected item(s)? This action cannot be undone.`}
+                confirmText="Delete Items"
+            />
 
             {/* Rename Modal */}
             {showRenameModal && (

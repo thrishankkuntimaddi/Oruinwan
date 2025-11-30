@@ -1,19 +1,30 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useBlogs } from "../../contexts/BlogsContext";
-import { Heart, MessageCircle, MoreHorizontal, Send, User, Image as ImageIcon, Flag, Link as LinkIcon, Video } from "lucide-react";
+import { Heart, MessageCircle, MoreHorizontal, Send, User, Image as ImageIcon, Flag, Link as LinkIcon, Video, Trash2 } from "lucide-react";
 import { useToast } from "../../contexts/ToastContext";
 
 const Updates = () => {
   const navigate = useNavigate();
-  const { posts, addPost, likePost } = useBlogs();
+  const { posts, addPost, likePost, deletePost } = useBlogs();
   const { showToast } = useToast();
 
   const [newPostTitle, setNewPostTitle] = useState("");
   const [newPostContent, setNewPostContent] = useState("");
   const [isPosting, setIsPosting] = useState(false);
   const [activeMenuId, setActiveMenuId] = useState(null);
+  const [postToDelete, setPostToDelete] = useState(null);
+  const [reportingPostId, setReportingPostId] = useState(null);
+  const [reportReason, setReportReason] = useState("");
   const menuRef = useRef(null);
+
+  const REPORT_REASONS = [
+    "Spam or misleading",
+    "Harassment or hate speech",
+    "Violence or physical harm",
+    "Adult content",
+    "Other"
+  ];
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -40,7 +51,8 @@ const Updates = () => {
         content: newPostContent,
         tags: tags,
         context: "General",
-        workspace: "Engineering" // Mock workspace
+        workspace: "Engineering", // Mock workspace
+        image: null // Placeholder for image logic
       });
       setNewPostTitle("");
       setNewPostContent("");
@@ -57,6 +69,35 @@ const Updates = () => {
     navigator.clipboard.writeText(`${window.location.origin}/updates/${postId}`);
     showToast("Link copied to clipboard", "success");
     setActiveMenuId(null);
+  };
+
+  const handleDeleteClick = (postId) => {
+    setPostToDelete(postId);
+    setActiveMenuId(null);
+  };
+
+  const confirmDelete = () => {
+    if (postToDelete) {
+      deletePost(postToDelete);
+      showToast("Update deleted", "success");
+      setPostToDelete(null);
+    }
+  };
+
+  const handleReportClick = (postId) => {
+    setReportingPostId(postId);
+    setReportReason(""); // Reset reason
+    setActiveMenuId(null);
+  };
+
+  const submitReport = () => {
+    if (!reportReason) {
+      showToast("Please select a reason", "error");
+      return;
+    }
+    // In a real app, send to backend
+    showToast("Report submitted. Thank you for keeping the community safe.", "success");
+    setReportingPostId(null);
   };
 
   const formatTime = (isoString) => {
@@ -135,8 +176,8 @@ const Updates = () => {
               {/* Post Header */}
               <div className="p-4 flex justify-between items-start">
                 <div className="flex gap-3">
-                  <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 font-medium shrink-0">
-                    {post.author.avatar ? <img src={post.author.avatar} alt="" className="w-full h-full rounded-full" /> : <User size={20} />}
+                  <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 font-medium shrink-0 overflow-hidden">
+                    {post.author.avatar ? <img src={post.author.avatar} alt="" className="w-full h-full object-cover" /> : <User size={20} />}
                   </div>
                   <div>
                     <h3 className="font-bold text-gray-900 text-sm">{post.author.name}</h3>
@@ -173,9 +214,20 @@ const Updates = () => {
                         <LinkIcon size={14} className="text-gray-400" /> Copy Link
                       </button>
                       <div className="h-px bg-gray-100 my-1" />
-                      <button className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 transition-colors">
+                      <button
+                        onClick={() => handleReportClick(post.id)}
+                        className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 transition-colors"
+                      >
                         <Flag size={14} /> Report
                       </button>
+                      {post.author.name === "You" && (
+                        <button
+                          onClick={() => handleDeleteClick(post.id)}
+                          className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 transition-colors border-t border-gray-50"
+                        >
+                          <Trash2 size={14} /> Delete
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>
@@ -188,10 +240,12 @@ const Updates = () => {
                   {post.content}
                 </p>
 
-                {/* Mock Media Placeholder */}
-                {/* <div className="mt-3 h-48 bg-gray-100 rounded-xl flex items-center justify-center text-gray-400">
-                    <ImageIcon size={32} />
-                </div> */}
+                {/* Media */}
+                {post.image && (
+                  <div className="mt-3 h-48 bg-gray-100 rounded-xl overflow-hidden flex items-center justify-center text-gray-400">
+                    <img src={post.image} alt="Post attachment" className="w-full h-full object-cover" />
+                  </div>
+                )}
 
                 {post.tags && post.tags.length > 0 && (
                   <div className="flex flex-wrap gap-2 mt-3">
@@ -238,6 +292,79 @@ const Updates = () => {
 
         </div>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {postToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm mx-4 transform scale-100 animate-in zoom-in-95 duration-200">
+            <h3 className="text-lg font-bold text-gray-900 mb-2">Delete Update?</h3>
+            <p className="text-sm text-gray-500 mb-6">
+              Are you sure you want to delete this update? This action cannot be undone.
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setPostToDelete(null)}
+                className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-xl transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDelete}
+                className="px-4 py-2 text-sm font-bold text-white bg-red-600 hover:bg-red-700 rounded-xl shadow-md shadow-red-500/20 transition-colors"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Report Modal */}
+      {reportingPostId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm mx-4 transform scale-100 animate-in zoom-in-95 duration-200">
+            <h3 className="text-lg font-bold text-gray-900 mb-4">Report Update</h3>
+            <p className="text-sm text-gray-500 mb-4">
+              Please select a reason for reporting this content:
+            </p>
+
+            <div className="space-y-2 mb-6">
+              {REPORT_REASONS.map((reason) => (
+                <label key={reason} className="flex items-center p-3 rounded-xl border border-gray-200 hover:bg-gray-50 cursor-pointer transition-colors">
+                  <input
+                    type="radio"
+                    name="reportReason"
+                    value={reason}
+                    checked={reportReason === reason}
+                    onChange={(e) => setReportReason(e.target.value)}
+                    className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                  />
+                  <span className="ml-3 text-sm text-gray-700 font-medium">{reason}</span>
+                </label>
+              ))}
+            </div>
+
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setReportingPostId(null)}
+                className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-xl transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={submitReport}
+                disabled={!reportReason}
+                className={`px-4 py-2 text-sm font-bold text-white rounded-xl shadow-md transition-colors ${reportReason
+                    ? "bg-blue-600 hover:bg-blue-700 shadow-blue-500/20"
+                    : "bg-gray-300 cursor-not-allowed"
+                  }`}
+              >
+                Submit Report
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

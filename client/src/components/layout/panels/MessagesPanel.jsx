@@ -1,8 +1,9 @@
 import React, { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Plus, Search, MessageCircle, Megaphone } from "lucide-react";
+import { Plus, Search, MessageCircle, Megaphone, Trash2, X, CheckSquare, Settings2 } from "lucide-react";
 import NewDMModal from "../../messagesComp/NewDMModal";
 import BroadcastModal from "../../messagesComp/BroadcastModal";
+import ConfirmationModal from "../../modals/ConfirmationModal";
 
 const MessagesPanel = () => {
     const navigate = useNavigate();
@@ -11,17 +12,22 @@ const MessagesPanel = () => {
     const [showNewDM, setShowNewDM] = useState(false);
     const [showBroadcast, setShowBroadcast] = useState(false);
     const [broadcasts, setBroadcasts] = useState([]);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+    // Selection Mode State
+    const [isSelectionMode, setIsSelectionMode] = useState(false);
+    const [selectedItems, setSelectedItems] = useState(new Set());
 
     // Extract active user from URL
     // Assumes route is /messages/dm/:username
     const activeId = location.pathname.split("/").pop();
 
-    const contacts = [
+    const [contacts, setContacts] = useState([
         { id: 1, name: "Sarah Connor", status: "online", unread: 0 },
         { id: 2, name: "John Doe", status: "offline", unread: 0 },
         { id: 3, name: "Alice Smith", status: "online", unread: 0 },
         { id: 4, name: "Bob Wilson", status: "busy", unread: 0 },
-    ];
+    ]);
 
     const displayList = [...broadcasts, ...contacts];
 
@@ -34,18 +40,26 @@ const MessagesPanel = () => {
         setShowBroadcast(true);
     };
 
-    const handleSendBroadcast = (recipients, message) => {
+    const handleCreateBroadcast = (data) => {
         const newBroadcast = {
-            id: `broadcast-${Date.now()}`,
-            name: `Broadcast (${recipients.length})`,
-            recipients: recipients,
-            lastMessage: message,
-            unread: 0,
+            id: `b-${Date.now()}`,
             type: "broadcast",
-            status: "online"
+            name: data.name,
+            recipients: data.recipients,
+            lastMessage: `Broadcast created with ${data.recipients.length} recipients`,
+            unread: 0,
         };
-        setBroadcasts([newBroadcast, ...broadcasts]);
+        setBroadcasts((prev) => [newBroadcast, ...prev]);
         setShowBroadcast(false);
+        navigate(`/messages/broadcast/${newBroadcast.id}`, { state: { broadcast: newBroadcast } });
+    };
+
+    const handleDeleteSelected = () => {
+        setContacts(prev => prev.filter(c => !selectedItems.has(c.id)));
+        setBroadcasts(prev => prev.filter(b => !selectedItems.has(b.id)));
+        setSelectedItems(new Set());
+        setIsSelectionMode(false);
+        setShowDeleteConfirm(false);
     };
 
     return (
@@ -56,13 +70,22 @@ const MessagesPanel = () => {
                     <MessageCircle className="text-blue-600" size={20} />
                     Messages
                 </h2>
-                <button
-                    onClick={() => setShowNewDM(true)}
-                    className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                    title="New Message"
-                >
-                    <Plus size={20} />
-                </button>
+                <div className="flex items-center gap-1">
+                    <button
+                        onClick={() => setIsSelectionMode(!isSelectionMode)}
+                        className={`p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors ${isSelectionMode ? "bg-blue-100 text-blue-600" : ""}`}
+                        title="Manage Messages"
+                    >
+                        <Settings2 size={20} />
+                    </button>
+                    <button
+                        onClick={() => setShowNewDM(true)}
+                        className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                        title="New Message"
+                    >
+                        <Plus size={20} />
+                    </button>
+                </div>
             </div>
 
             {/* Search */}
@@ -103,6 +126,33 @@ const MessagesPanel = () => {
                 </button>
             </div>
 
+            {/* Selection Mode Header */}
+            {isSelectionMode && (
+                <div className="px-4 py-2 bg-blue-50 border-b border-blue-100 flex items-center justify-between sticky top-0 z-10">
+                    <span className="text-sm font-bold text-blue-900">{selectedItems.size} selected</span>
+                    <div className="flex gap-2">
+                        <button
+                            onClick={() => setShowDeleteConfirm(true)}
+                            disabled={selectedItems.size === 0}
+                            className="p-1.5 text-red-600 hover:bg-red-100 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                            title="Delete Selected"
+                        >
+                            <Trash2 size={16} />
+                        </button>
+                        <button
+                            onClick={() => {
+                                setIsSelectionMode(false);
+                                setSelectedItems(new Set());
+                            }}
+                            className="p-1.5 text-gray-600 hover:bg-gray-200 rounded-lg"
+                            title="Cancel"
+                        >
+                            <X size={16} />
+                        </button>
+                    </div>
+                </div>
+            )}
+
             {/* Contact List */}
             <div className="flex-1 overflow-y-auto custom-scrollbar px-3 pb-3 space-y-1">
                 <div className="px-2 mb-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">Recent Conversations</div>
@@ -110,18 +160,40 @@ const MessagesPanel = () => {
                 {displayList.map((item) => {
                     const isActive = decodeURIComponent(activeId) === item.name;
                     const isBroadcast = item.type === "broadcast";
+                    const isSelected = selectedItems.has(item.id);
+
+                    const handleClick = (e) => {
+                        if (isSelectionMode) {
+                            e.stopPropagation();
+                            const newSelected = new Set(selectedItems);
+                            if (newSelected.has(item.id)) {
+                                newSelected.delete(item.id);
+                            } else {
+                                newSelected.add(item.id);
+                            }
+                            setSelectedItems(newSelected);
+                        } else {
+                            navigate(item.type === "broadcast" ? `/messages/broadcast/${item.id}` : `/messages/dm/${item.name}`, { state: { broadcast: item } });
+                        }
+                    };
 
                     return (
                         <div
                             key={item.id}
-                            onClick={() => navigate(item.type === "broadcast" ? `/messages/broadcast/${item.id}` : `/messages/dm/${item.name}`, { state: { broadcast: item } })}
+                            onClick={handleClick}
                             className={`group p-2 rounded-xl cursor-pointer flex items-center justify-between border transition-all duration-200
-                                ${isActive
-                                    ? "bg-blue-50 border-blue-200 shadow-sm"
-                                    : "hover:bg-white hover:shadow-sm border-transparent hover:border-gray-100"
+                                ${isSelectionMode && isSelected ? "bg-blue-50 border-blue-200" :
+                                    isActive
+                                        ? "bg-blue-50 border-blue-200 shadow-sm"
+                                        : "hover:bg-white hover:shadow-sm border-transparent hover:border-gray-100"
                                 }`}
                         >
                             <div className="flex items-center gap-2.5">
+                                {isSelectionMode && (
+                                    <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${isSelected ? "bg-blue-600 border-blue-600" : "border-gray-300 bg-white"}`}>
+                                        {isSelected && <CheckSquare size={10} className="text-white" />}
+                                    </div>
+                                )}
                                 <div className="relative">
                                     <div className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs shadow-inner
                                         ${isActive ? "bg-blue-200 text-blue-700" : isBroadcast ? "bg-purple-100 text-purple-600" : "bg-gradient-to-br from-blue-100 to-indigo-100 text-blue-600"}
@@ -142,7 +214,7 @@ const MessagesPanel = () => {
                                 </div>
                             </div>
 
-                            {item.unread > 0 && (
+                            {item.unread > 0 && !isSelectionMode && (
                                 <div className="w-5 h-5 bg-blue-600 rounded-full flex items-center justify-center text-[10px] text-white font-bold shadow-sm shadow-blue-500/30">
                                     {item.unread}
                                 </div>
@@ -151,6 +223,16 @@ const MessagesPanel = () => {
                     );
                 })}
             </div>
+
+            {/* Confirmation Modal */}
+            <ConfirmationModal
+                isOpen={showDeleteConfirm}
+                onClose={() => setShowDeleteConfirm(false)}
+                onConfirm={handleDeleteSelected}
+                title="Delete Conversations?"
+                message={`Are you sure you want to delete ${selectedItems.size} selected conversation(s)? This action cannot be undone.`}
+                confirmText="Delete Conversations"
+            />
 
             {/* New DM Modal */}
             {showNewDM && (
@@ -163,8 +245,9 @@ const MessagesPanel = () => {
             {/* Broadcast Modal */}
             {showBroadcast && (
                 <BroadcastModal
+                    isOpen={showBroadcast}
                     onClose={() => setShowBroadcast(false)}
-                    onSendBroadcast={handleSendBroadcast}
+                    onCreate={handleCreateBroadcast}
                 />
             )}
         </div>

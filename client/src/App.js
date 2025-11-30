@@ -11,6 +11,7 @@ import { BlogsProvider } from "./contexts/BlogsContext";
 // Layout + Components
 import MainLayout from "./components/layout/MainLayout";
 import HomePanel from "./components/layout/panels/HomePanel";
+import ChannelsPanel from "./components/layout/panels/ChannelsPanel";
 import MessagesPanel from "./components/layout/panels/MessagesPanel";
 import TasksPanel from "./components/layout/panels/TasksPanel";
 import NotesPanel from "./components/layout/panels/NotesPanel";
@@ -67,6 +68,30 @@ function App() {
                     element={
                       <RequireAuth>
                         <MainLayout sidePanel={<HomePanel />}>
+                          <Home />
+                        </MainLayout>
+                      </RequireAuth>
+                    }
+                  />
+
+                  {/* Channels Route */}
+                  <Route
+                    path="/channels"
+                    element={
+                      <RequireAuth>
+                        <MainLayout sidePanel={<ChannelsPanel />}>
+                          <Home />
+                        </MainLayout>
+                      </RequireAuth>
+                    }
+                  />
+
+                  {/* Channel Route (Channels Context) */}
+                  <Route
+                    path="/channels/:id"
+                    element={
+                      <RequireAuth>
+                        <MainLayout sidePanel={<ChannelsPanel />}>
                           <Home />
                         </MainLayout>
                       </RequireAuth>

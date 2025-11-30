@@ -31,8 +31,8 @@ const Home = () => {
   useEffect(() => {
     const path = location.pathname;
 
-    if (path.includes("/channel/")) {
-      const channelId = path.split("/channel/")[1];
+    if (path.includes("/channel/") || path.includes("/channels/")) {
+      const channelId = path.includes("/channels/") ? path.split("/channels/")[1] : path.split("/channel/")[1];
       setSelectedChat({
         id: channelId,
         name: channelId.charAt(0).toUpperCase() + channelId.slice(1),

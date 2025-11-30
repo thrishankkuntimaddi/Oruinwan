@@ -71,6 +71,10 @@ export const BlogsProvider = ({ children }) => {
         ));
     };
 
+    const deletePost = (id) => {
+        setPosts(prev => prev.filter(post => post.id !== id));
+    };
+
     const filteredPosts = posts.filter(post => {
         if (activeFilter === "my-posts") return post.author.name === "You";
         // Add more filters as needed
@@ -83,6 +87,7 @@ export const BlogsProvider = ({ children }) => {
             addPost,
             likePost,
             addComment,
+            deletePost,
             activeFilter,
             setActiveFilter
         }}>

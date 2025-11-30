@@ -172,7 +172,9 @@ const ChttrixAIChat = ({ onClose, isSidebar = false }) => {
   );
 
   const renderContent = () => (
-    <div className={`flex flex-col h-full bg-white relative transition-all duration-300 ease-out transform ${isVisible ? "opacity-100 scale-100 translate-y-0" : "opacity-0 scale-95 translate-y-4"
+    <div className={`flex flex-col h-full bg-white relative transition-all duration-300 ease-out transform ${isSidebar
+        ? (isVisible ? "opacity-100 translate-x-0" : "opacity-0 translate-x-12")
+        : (isVisible ? "opacity-100 scale-100 translate-y-0" : "opacity-0 scale-95 translate-y-4")
       } ${!isSidebar && "shadow-2xl rounded-xl border border-gray-200 overflow-hidden"}`}>
 
       {/* --- Info Modal --- */}

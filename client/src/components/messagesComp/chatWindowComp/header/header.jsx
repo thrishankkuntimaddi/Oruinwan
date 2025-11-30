@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   Phone,
   Video,
@@ -12,8 +12,10 @@ import {
   Ban,
   Circle,
   BarChart2,
-  X
+  X,
+  Trash2
 } from "lucide-react";
+import ConfirmationModal from "../../../modals/ConfirmationModal";
 
 export default function Header({
   chat,
@@ -35,8 +37,16 @@ export default function Header({
   blocked,
   setBlocked,
 }) {
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  const handleDelete = () => {
+    // In a real app, this would call an API to delete the chat/channel
+    onClose();
+    setShowDeleteConfirm(false);
+  };
+
   return (
-    <div className="flex items-center justify-between px-4 py-2 border-b bg-[#f9fafb]">
+    <div className="flex items-center justify-between px-4 py-2 border-b bg-[#f9fafb] relative z-20">
       <div className="flex items-center gap-3 min-w-0">
         {chat.image ? (
           <img src={chat.image} alt={chat.name} className="w-10 h-10 rounded-full object-cover" />
@@ -171,14 +181,35 @@ export default function Header({
                 <button className="w-full text-left px-4 py-2 hover:bg-gray-50 text-gray-700 flex items-center gap-3" onClick={() => setMuted((m) => !m)}>
                   {muted ? <Bell size={16} /> : <BellOff size={16} />} {muted ? "Unmute Notifications" : "Mute Notifications"}
                 </button>
-                <button className="w-full text-left px-4 py-2 hover:bg-gray-50 text-red-600 flex items-center gap-3" onClick={() => setBlocked((b) => !b)}>
-                  {blocked ? <Circle size={16} /> : <Ban size={16} />} {blocked ? "Unblock User" : "Block User"}
+                {chat.type !== "channel" && (
+                  <button className="w-full text-left px-4 py-2 hover:bg-gray-50 text-red-600 flex items-center gap-3" onClick={() => setBlocked((b) => !b)}>
+                    {blocked ? <Circle size={16} /> : <Ban size={16} />} {blocked ? "Unblock User" : "Block User"}
+                  </button>
+                )}
+                <div className="border-t border-gray-100 my-1" />
+                <button
+                  className="w-full text-left px-4 py-2 hover:bg-gray-50 text-red-600 flex items-center gap-3"
+                  onClick={() => {
+                    setShowMenu(false);
+                    setShowDeleteConfirm(true);
+                  }}
+                >
+                  <Trash2 size={16} /> Delete {chat.type === 'channel' ? 'Channel' : 'Chat'}
                 </button>
               </div>
             )}
           </div>
         </div>
       )}
+
+      <ConfirmationModal
+        isOpen={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        onConfirm={handleDelete}
+        title={`Delete ${chat.type === 'channel' ? 'Channel' : 'Chat'}?`}
+        message={`Are you sure you want to delete this ${chat.type === 'channel' ? 'channel' : 'chat'}? This action cannot be undone.`}
+        confirmText="Delete"
+      />
     </div>
   );
 }
