@@ -15,9 +15,8 @@ const WorkspaceSelect = () => {
 
     // Mock data for workspaces
     const [workspaces, setWorkspaces] = useState([
-        { id: 1, name: "Acme Corp", members: 12, icon: "A", color: "#2563eb" }, // blue-600
-        { id: 2, name: "Project Beta", members: 5, icon: "P", color: "#9333ea" }, // purple-600
-        { id: 3, name: "Design Team", members: 8, icon: "D", color: "#db2777" }, // pink-600
+        { id: 1, name: "Design Team", members: 12, icon: "A", color: "#2563eb" }, // blue-600
+        { id: 2, name: "Marketing", members: 8, icon: "D", color: "#db2777" }, // pink-600
     ]);
 
     // Create Workspace Wizard State
