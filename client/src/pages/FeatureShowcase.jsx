@@ -44,7 +44,7 @@ const FeatureShowcase = () => {
         },
         {
             id: 'note',
-            name: 'Chttrix Note',
+            name: 'ChttrixNote',
             icon: <FileText size={32} />,
             desc: 'Collaborative docs that come alive with AI insights.',
             color: 'text-blue-600',
@@ -54,7 +54,7 @@ const FeatureShowcase = () => {
         },
         {
             id: 'task',
-            name: 'Chttrix Task',
+            name: 'ChttrixTask',
             icon: <CheckSquare size={32} />,
             desc: 'Project management that keeps your team in flow.',
             color: 'text-green-600',
