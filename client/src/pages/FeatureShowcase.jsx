@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
+import { useToast } from "../contexts/ToastContext";
 import {
     MessageSquare,
     Users,
@@ -9,29 +10,69 @@ import {
     Bell,
     FileText,
     Bot,
-    ArrowRight
+    ArrowRight,
+    Brain,
+    Sparkles,
+    Zap
 } from "lucide-react";
 
 const FeatureShowcase = () => {
     const navigate = useNavigate();
     const { user } = useAuth();
+    const { showToast } = useToast();
     const [isVisible, setIsVisible] = useState(false);
 
     useEffect(() => {
         setIsVisible(true);
-        // If user is already logged in, we could redirect, but user asked for landing page 
-        // to be visible with a "Go to Workspace" option or similar if authenticated.
-        // However, the specific request was: "if you are authenticated, then we need to redirect page the workspace"
         if (user) {
             navigate("/workspaces");
         }
     }, [user, navigate]);
 
-    // If we are redirecting, we might render nothing or a loader, 
-    // but to prevent flash if the redirect is fast, we can just render the page 
-    // (the useEffect will trigger quickly). 
-    // If we want to strictly prevent showing it, we can return null if user exists.
     if (user) return null;
+
+    const products = [
+        {
+            id: 'ai',
+            name: 'Chttrix.ai',
+            icon: <Bot size={32} />,
+            desc: 'Your intelligent co-pilot. Automate, generate, and analyze.',
+            color: 'text-purple-600',
+            bg: 'bg-purple-50',
+            border: 'border-purple-100',
+            gradient: 'from-purple-500 to-indigo-600'
+        },
+        {
+            id: 'note',
+            name: 'Chttrix Note',
+            icon: <FileText size={32} />,
+            desc: 'Collaborative docs that come alive with AI insights.',
+            color: 'text-blue-600',
+            bg: 'bg-blue-50',
+            border: 'border-blue-100',
+            gradient: 'from-blue-500 to-cyan-500'
+        },
+        {
+            id: 'task',
+            name: 'Chttrix Task',
+            icon: <CheckSquare size={32} />,
+            desc: 'Project management that keeps your team in flow.',
+            color: 'text-green-600',
+            bg: 'bg-green-50',
+            border: 'border-green-100',
+            gradient: 'from-emerald-500 to-green-600'
+        },
+        {
+            id: 'mind',
+            name: 'MindFlush',
+            icon: <Brain size={32} />,
+            desc: 'Unleash creativity with infinite canvas brainstorming.',
+            color: 'text-orange-600',
+            bg: 'bg-orange-50',
+            border: 'border-orange-100',
+            gradient: 'from-orange-500 to-amber-500'
+        }
+    ];
 
     const features = [
         {
@@ -79,25 +120,49 @@ const FeatureShowcase = () => {
     ];
 
     return (
-        <div className={`h-screen w-full bg-white overflow-y-auto overflow-x-hidden transition-opacity duration-500 ${isVisible ? "opacity-100" : "opacity-0"}`}>
+        <div className={`h-screen w-full bg-white overflow-y-auto overflow-x-hidden transition-opacity duration-700 ${isVisible ? "opacity-100" : "opacity-0"}`}>
+
+            {/* Custom Animations */}
+            <style>{`
+                @keyframes float {
+                    0%, 100% { transform: translate(0, 0); }
+                    50% { transform: translate(0, -20px); }
+                }
+                @keyframes float-delayed {
+                    0%, 100% { transform: translate(0, 0); }
+                    50% { transform: translate(0, 20px); }
+                }
+                .animate-float { animation: float 10s ease-in-out infinite; }
+                .animate-float-delayed { animation: float-delayed 12s ease-in-out infinite; }
+                
+                @keyframes text-shimmer {
+                    0% { background-position: 0% 50%; }
+                    50% { background-position: 100% 50%; }
+                    100% { background-position: 0% 50%; }
+                }
+                .animate-text-shimmer {
+                    background-size: 200% auto;
+                    animation: text-shimmer 5s ease infinite;
+                }
+            `}</style>
 
             {/* Navbar */}
-            <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-100">
-                <div className="max-w-7xl mx-auto px-6 h-14 flex items-center justify-between">
+            <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-100 transition-all duration-300">
+                <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
                     {/* Logo */}
-                    <div className="flex items-center gap-2">
-                        <img src="/assets/ChttrixLogo.svg" alt="Chttrix Logo" className="w-8 h-8 rounded-lg object-cover" />
+                    <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate("/")}>
+                        <img src="/assets/ChttrixLogo.svg" alt="Chttrix Logo" className="w-8 h-8 rounded-lg object-cover shadow-sm hover:rotate-3 transition-transform duration-300" />
                         <span className="text-xl font-black text-gray-900 tracking-tight">Chttrix</span>
                     </div>
 
                     {/* Auth Buttons */}
-                    <div className="flex items-center gap-6">
+                    <div className="flex items-center gap-4">
                         <button
                             onClick={() => navigate("/login")}
-                            className="flex items-center gap-2 px-4 py-1.5 bg-gray-50 hover:bg-gray-100 text-gray-700 text-sm font-semibold rounded-full border border-gray-200 transition-all hover:shadow-sm"
+                            className="group flex items-center gap-2 px-5 py-2 bg-gray-900 hover:bg-gray-800 text-white text-sm font-semibold rounded-full transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 active:scale-95"
                         >
                             <span>Sign in</span>
-                            <ArrowRight size={14} className="opacity-50" />
+                            <ArrowRight size={14} className="text-gray-300 group-hover:translate-x-1 transition-transform" />
                         </button>
                     </div>
                 </div>
@@ -105,95 +170,124 @@ const FeatureShowcase = () => {
 
             {/* Background Elements */}
             <div className="fixed inset-0 overflow-hidden pointer-events-none -z-10">
-                <div className="absolute -top-[20%] -left-[10%] w-[50%] h-[50%] rounded-full bg-blue-100/40 blur-[100px] animate-pulse"></div>
-                <div className="absolute top-[40%] -right-[10%] w-[40%] h-[40%] rounded-full bg-purple-100/40 blur-[100px] animate-pulse delay-1000"></div>
-                <div className="absolute -bottom-[10%] left-[20%] w-[30%] h-[30%] rounded-full bg-pink-100/40 blur-[100px] animate-pulse delay-2000"></div>
+                <div className="absolute -top-[20%] -left-[10%] w-[70%] h-[70%] rounded-full bg-gradient-to-br from-blue-100/40 via-purple-50/40 to-transparent blur-[120px] animate-float"></div>
+                <div className="absolute top-[20%] -right-[10%] w-[60%] h-[60%] rounded-full bg-gradient-to-bl from-indigo-100/40 via-pink-50/40 to-transparent blur-[120px] animate-float-delayed"></div>
             </div>
 
-            <div className="relative pt-24 pb-0 px-6 flex flex-col items-center w-full">
+            <div className="relative pt-32 pb-6 px-6 flex flex-col items-center w-full max-w-7xl mx-auto">
 
                 {/* Hero Section */}
-                <div className={`transform transition-all duration-1000 delay-100 flex-shrink-0 mb-16 text-center max-w-4xl mx-auto ${isVisible ? "scale-100 translate-y-0 opacity-100" : "scale-95 translate-y-10 opacity-0"}`}>
-                    <h1 className="text-5xl md:text-7xl font-black text-gray-900 tracking-tight leading-tight mb-6">
-                        Where <span className="text-purple-700">work</span> happens
+                <div className={`transform transition-all duration-1000 delay-100 flex flex-col items-center text-center max-w-4xl mx-auto mb-24 ${isVisible ? "scale-100 translate-y-0 opacity-100" : "scale-95 translate-y-10 opacity-0"}`}>
+                    <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-indigo-50 text-indigo-600 text-xs font-bold uppercase tracking-wider mb-8 border border-indigo-100 shadow-sm hover:shadow-md hover:scale-105 transition-all duration-300 cursor-default">
+                        <Sparkles size={14} className="animate-pulse" />
+                        <span>The Future of Collaboration</span>
+                    </div>
+                    <h1 className="text-5xl md:text-7xl font-black text-gray-900 tracking-tight leading-[1.1] mb-8 drop-shadow-sm">
+                        One Platform.<br />
+                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 animate-text-shimmer">Limitless Possibilities.</span>
                     </h1>
-                    <p className="text-xl text-gray-600 font-medium tracking-wide max-w-2xl mx-auto mb-8">
-                        Share it. Discuss it. Get it done. Side by side with Chttrix AI.
+                    <p className="text-xl text-gray-600 font-medium tracking-wide max-w-2xl mx-auto mb-10 leading-relaxed">
+                        Seamlessly integrated apps for notes, tasks, brainstorming, and AI-driven workflows. Everything you need, all in one place.
                     </p>
-                    <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                        <button
-                            onClick={() => navigate("/login")}
-                            className="group relative px-8 py-4 bg-white text-blue-600 text-sm font-bold rounded-xl border border-blue-100 shadow-lg hover:shadow-blue-200/50 hover:-translate-y-0.5 transition-all uppercase tracking-wide w-full sm:w-auto overflow-hidden"
-                        >
-                            <div className="absolute inset-0 bg-gradient-to-r from-blue-50 to-purple-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                            <span className="relative flex items-center gap-2">
-                                Find Your Workspace <ArrowRight size={16} />
-                            </span>
-                        </button>
+                    <button
+                        onClick={() => navigate("/login")}
+                        className="group relative px-9 py-4 bg-gray-900 text-white text-base font-bold rounded-2xl shadow-xl hover:shadow-2xl hover:shadow-purple-500/20 hover:-translate-y-1 hover:scale-105 transition-all duration-300 overflow-hidden"
+                    >
+                        <div className="absolute inset-0 bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-500 opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-[length:200%_auto] animate-text-shimmer"></div>
+                        <span className="relative flex items-center gap-2">
+                            Get Started for Free <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
+                        </span>
+                    </button>
+                </div>
+
+                {/* Core Platform Features */}
+                <div className="w-full mb-16">
+                    <div className="text-center mb-16">
+                        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white text-gray-800 text-xs font-bold uppercase tracking-wider mb-6 border border-gray-200 shadow-sm">
+                            <Zap size={12} className="text-yellow-500" />
+                            <span>Core Foundation</span>
+                        </div>
+                        <h2 className="text-4xl font-bold text-gray-900 mb-4 tracking-tight">Everything you need to run your team.</h2>
+                        <p className="text-lg text-gray-500 max-w-2xl mx-auto">Built on a robust communication layer that keeps everyone in sync.</p>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full">
+                        {features.map((feature, index) => (
+                            <div
+                                key={index}
+                                className={`transform transition-all duration-700 ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-20"}`}
+                                style={{ transitionDelay: `${400 + (index * 100)}ms` }}
+                            >
+                                <div className="group relative bg-white/60 backdrop-blur-md border border-gray-200 rounded-3xl p-8 shadow-sm hover:shadow-xl hover:border-indigo-100 hover:bg-white transition-all duration-500 h-48 overflow-hidden cursor-default">
+
+                                    {/* Icon & Label */}
+                                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center transition-all duration-500 group-hover:left-8 group-hover:translate-x-0 group-hover:items-start group-hover:max-w-[40%]">
+                                        <div className={`w-16 h-16 rounded-2xl ${feature.bg} ${feature.color} flex items-center justify-center mb-4 shadow-sm transition-all duration-500 group-hover:scale-75 group-hover:origin-top-left group-hover:mb-2`}>
+                                            {feature.icon}
+                                        </div>
+                                        <h3 className="text-xl font-bold text-gray-800 whitespace-nowrap transition-all duration-500 group-hover:text-base group-hover:whitespace-normal group-hover:leading-tight">{feature.label}</h3>
+                                    </div>
+
+                                    {/* Description (Visible on Hover - Right Side) */}
+                                    <div className="absolute top-1/2 right-8 -translate-y-1/2 w-[50%] opacity-0 translate-x-10 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-500 delay-75">
+                                        <p className="text-sm text-gray-600 leading-relaxed font-medium text-left">
+                                            {feature.desc}
+                                        </p>
+                                    </div>
+
+                                </div>
+                            </div>
+                        ))}
                     </div>
                 </div>
 
-                {/* Features Grid (Restored Animation) */}
-                <div id="features-section" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 max-w-6xl w-full px-4 mb-12">
-                    {features.map((feature, index) => (
-                        <div
-                            key={index}
-                            className={`transform transition-all duration-700 ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-20"}`}
-                            style={{ transitionDelay: `${200 + (index * 100)}ms` }}
-                        >
-                            <div className="group relative bg-white/60 backdrop-blur-md border border-gray-200/60 rounded-2xl p-6 shadow-sm hover:shadow-xl hover:bg-white transition-all duration-300 h-40 overflow-hidden cursor-default">
+                {/* The Chttrix Suite */}
+                <div className="w-full mb-24">
+                    <div className="text-center mb-16">
+                        <h2 className="text-4xl font-bold text-gray-900 mb-4 tracking-tight">The Chttrix Suite</h2>
+                        <p className="text-lg text-gray-500 max-w-2xl mx-auto">Powerful standalone apps that work even better together.</p>
+                    </div>
 
-                                {/* Icon & Label */}
-                                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center transition-all duration-500 group-hover:left-6 group-hover:translate-x-0 group-hover:max-w-[40%]">
-                                    <div className={`w-14 h-14 rounded-2xl ${feature.bg} ${feature.color} flex items-center justify-center mb-3 shadow-sm transition-transform duration-300 group-hover:scale-90 origin-top-left`}>
-                                        {feature.icon}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                        {products.map((product, index) => (
+                            <div
+                                key={product.id}
+                                onClick={() => showToast("Coming Soon", "info")}
+                                className={`group relative bg-white/80 backdrop-blur-sm rounded-[2rem] p-8 border border-gray-100 shadow-sm hover:shadow-2xl hover:shadow-indigo-500/10 hover:-translate-y-2 transition-all duration-500 overflow-hidden cursor-pointer ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}
+                                style={{ transitionDelay: `${200 + (index * 100)}ms` }}
+                            >
+                                {/* Hover Gradient Border Effect */}
+                                <div className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-gradient-to-br ${product.gradient} opacity-[0.03]`}></div>
+                                <div className={`absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r ${product.gradient} transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500`}></div>
+
+                                <div className="relative z-10 flex flex-col h-full items-start">
+                                    <div className={`w-16 h-16 rounded-2xl ${product.bg} ${product.color} flex items-center justify-center mb-6 shadow-sm group-hover:scale-110 group-hover:rotate-6 transition-all duration-500`}>
+                                        {product.icon}
                                     </div>
-                                    <h3 className="text-lg font-semibold text-gray-800 whitespace-nowrap transition-all duration-300 group-hover:text-sm group-hover:whitespace-normal group-hover:leading-tight">{feature.label}</h3>
-                                </div>
 
-                                {/* Description (Visible on Hover - Right Side) */}
-                                <div className="absolute top-1/2 right-6 -translate-y-1/2 w-[50%] opacity-0 translate-x-10 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-500 delay-100">
-                                    <p className="text-xs text-gray-600 leading-relaxed font-medium text-left">
-                                        {feature.desc}
+                                    <h3 className="text-2xl font-bold text-gray-900 mb-3 group-hover:text-indigo-600 transition-colors">{product.name}</h3>
+                                    <p className="text-sm text-gray-500 font-medium leading-relaxed mb-6 flex-grow">
+                                        {product.desc}
                                     </p>
+
+                                    <div className="flex items-center text-xs font-bold text-gray-400 group-hover:text-indigo-600 transition-colors uppercase tracking-wider mt-auto">
+                                        <span>Launch App</span>
+                                        <ArrowRight size={12} className="ml-2 transform group-hover:translate-x-1 transition-transform" />
+                                    </div>
                                 </div>
-
                             </div>
-                        </div>
-                    ))}
-                </div>
-
-                {/* AI Section (Restored Animation) */}
-                <div
-                    className={`transform transition-all duration-1000 delay-300 w-full max-w-4xl px-4 mb-12 ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-20"}`}
-                >
-                    <div className="group relative bg-white/60 backdrop-blur-md border border-gray-200/60 rounded-2xl p-6 shadow-sm hover:shadow-xl hover:border-indigo-200 transition-all duration-500 h-32 hover:h-40 overflow-hidden cursor-default">
-
-                        {/* Subtle Gradient Background */}
-                        <div className="absolute inset-0 bg-gradient-to-r from-indigo-50/50 via-purple-50/50 to-pink-50/50 opacity-0 group-hover:opacity-100 transition duration-500"></div>
-
-                        <div className="relative h-full w-full">
-                            {/* Header: Icon + Title */}
-                            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center gap-5 transition-all duration-500 group-hover:left-8 group-hover:translate-x-0">
-                                <div className="w-14 h-14 bg-gradient-to-br from-indigo-600 to-purple-700 rounded-xl flex items-center justify-center shadow-lg text-white flex-shrink-0 group-hover:scale-90 transition-transform duration-500">
-                                    <Bot size={32} />
-                                </div>
-                                <h3 className="text-2xl font-black text-gray-900 tracking-tight whitespace-nowrap">Chttrix AI</h3>
-                            </div>
-
-                            {/* Description (Revealed on Hover - Right Side) */}
-                            <div className="absolute top-1/2 right-8 -translate-y-1/2 w-[55%] opacity-0 translate-x-10 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-500 delay-75 flex items-center">
-                                <p className="text-sm text-gray-700 leading-relaxed font-medium text-left">
-                                    Complete control with total privacy. Mention <span className="font-bold text-indigo-600">@Chttrix</span> to encrypt chats, automate tasks, and get intelligent insights instantly.
-                                </p>
-                            </div>
-                        </div>
+                        ))}
                     </div>
                 </div>
 
                 {/* Footer */}
-                <div className="w-full border-t border-gray-200 py-3 text-center">
-                    <p className="text-gray-400 text-xs">© 2025 Chttrix Inc. All rights reserved.</p>
+                <div className="w-full mt-4 border-t border-gray-100 py-6 text-center">
+                    <div className="flex items-center justify-center gap-2">
+                        <img src="/assets/ChttrixLogo.svg" alt="Logo" className="w-5 h-5 grayscale opacity-70 hover:opacity-100 transition-opacity" />
+                        <span className="text-sm font-bold text-gray-800">Chttrix</span>
+                        <span className="text-gray-300">|</span>
+                        <p className="text-gray-500 text-xs">© 2025 Chttrix Inc. All rights reserved.</p>
+                    </div>
                 </div>
 
             </div>
