@@ -99,7 +99,7 @@ const Home = () => {
           <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
             <span className="text-3xl">👋</span>
           </div>
-          <p className="text-lg font-medium text-gray-500">Welcome to Chttrix HQ</p>
+          <p className="text-lg font-medium text-gray-500">Welcome to Chttrix</p>
           <p className="text-sm text-gray-400 mt-2">Select a channel or direct message to start chatting.</p>
         </div>
       )}

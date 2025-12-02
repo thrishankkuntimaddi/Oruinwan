@@ -24,7 +24,7 @@ const HomePanel = ({ title }) => {
         dms: true,
     });
 
-    const [workspaceName, setWorkspaceName] = useState(title || localStorage.getItem("currentWorkspace") || "Chttrix HQ");
+    const [workspaceName, setWorkspaceName] = useState(title || localStorage.getItem("currentWorkspace") || "Chttrix");
 
     // Update workspace name when title prop changes
     React.useEffect(() => {
