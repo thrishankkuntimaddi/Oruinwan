@@ -1,5 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useToast } from "../../contexts/ToastContext";
+import CreateChannelModal from "../messagesComp/CreateChannelModal";
 
 const SidePanel = ({ title = "Workspace", children }) => {
     return (
@@ -29,6 +31,8 @@ const SidePanel = ({ title = "Workspace", children }) => {
 };
 
 export const ChannelList = () => {
+    const { showToast } = useToast();
+    const [showCreateChannelModal, setShowCreateChannelModal] = useState(false);
     const [expanded, setExpanded] = useState({
         favorites: true,
         channels: true,
@@ -90,7 +94,7 @@ export const ChannelList = () => {
                     label="Channels"
                     isOpen={expanded.channels}
                     onClick={() => toggle("channels")}
-                    onAdd={(e) => { e.stopPropagation(); alert("Create Channel"); }}
+                    onAdd={(e) => { e.stopPropagation(); setShowCreateChannelModal(true); }}
                 />
                 {expanded.channels && (
                     <div className="mt-1 space-y-0.5">
@@ -108,7 +112,7 @@ export const ChannelList = () => {
                     label="Direct Messages"
                     isOpen={expanded.dms}
                     onClick={() => toggle("dms")}
-                    onAdd={(e) => { e.stopPropagation(); alert("New DM"); }}
+                    onAdd={(e) => { e.stopPropagation(); showToast("New DM feature coming soon!", "info"); }}
                 />
                 {expanded.dms && (
                     <div className="mt-1 space-y-0.5">
@@ -118,6 +122,17 @@ export const ChannelList = () => {
                     </div>
                 )}
             </div>
+
+            {/* Modals */}
+            {showCreateChannelModal && (
+                <CreateChannelModal
+                    onClose={() => setShowCreateChannelModal(false)}
+                    onCreated={(channel) => {
+                        // Ideally refresh channel list or navigate to new channel
+                        navigate(`/messages/channel/${channel.name}`);
+                    }}
+                />
+            )}
         </div>
     );
 };

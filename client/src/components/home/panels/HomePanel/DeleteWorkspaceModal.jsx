@@ -1,5 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useToast } from "../../../../contexts/ToastContext";
 
 const DeleteWorkspaceModal = ({
     showDeleteConfirm,
@@ -10,10 +11,11 @@ const DeleteWorkspaceModal = ({
     setShowSettingsModal
 }) => {
     const navigate = useNavigate();
+    const { showToast } = useToast();
 
     const handleDeleteWorkspace = () => {
         if (deleteVerification === workspaceName) {
-            alert(`Workspace "${workspaceName}" has been deleted.`);
+            showToast(`Workspace "${workspaceName}" has been deleted.`);
             setShowDeleteConfirm(false);
             setShowSettingsModal(false);
             navigate("/workspaces");

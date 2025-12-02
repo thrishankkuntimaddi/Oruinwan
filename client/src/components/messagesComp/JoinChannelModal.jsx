@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useCallback } from "react";
 import axios from "axios";
+import { useToast } from "../../contexts/ToastContext";
 
 const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
 export default function JoinChannelModal({ onClose, onJoined, currentUserId }) {
+    const { showToast } = useToast();
     const [publicChannels, setPublicChannels] = useState([]);
     const [loading, setLoading] = useState(false);
 
@@ -38,14 +40,14 @@ export default function JoinChannelModal({ onClose, onJoined, currentUserId }) {
             const token = localStorage.getItem("accessToken");
             const headers = token ? { Authorization: `Bearer ${token} ` } : {};
 
-            await axios.post(`${API_BASE} /api/chat / channel / join`, { channelId }, { headers });
+            await axios.post(`${API_BASE}/api/chat/channel/join`, { channelId }, { headers });
 
-            alert("Joined channel successfully!");
+            showToast("Joined channel successfully!");
             onJoined && onJoined();
             onClose();
         } catch (err) {
             console.error("Join failed:", err);
-            alert(err?.response?.data?.message || "Join failed");
+            showToast(err?.response?.data?.message || "Join failed", "error");
         } finally {
             setLoading(false);
         }

@@ -377,7 +377,7 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
             };
             setMessages(prev => [...prev, uiMsg]);
         } else {
-            alert(`Message forwarded to ${target.label}`);
+            showToast(`Message forwarded to ${target.label}`);
         }
 
         setShowForwardModal(false);
@@ -490,7 +490,7 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
                         infoMessage={(id) => {
                             const m = messages.find((x) => x.id === id);
                             if (!m) return;
-                            alert(`Message info:\n${m.text}`);
+                            showToast(`Message info: ${m.text}`, "info");
                         }}
                         onOpenThread={(msgId) => {
                             const msg = messages.find((m) => m.id === msgId);

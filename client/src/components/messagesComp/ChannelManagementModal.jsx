@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import { Trash2, UserPlus, Users, Lock, Unlock, X, AlertTriangle, Eraser } from "lucide-react";
+import { useToast } from "../../contexts/ToastContext";
 
 const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
 export default function ChannelManagementModal({ channel, onClose, currentUserId, initialTab = "members" }) {
+    const { showToast } = useToast();
     const [members, setMembers] = useState([]);
     const [allUsers, setAllUsers] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -53,7 +55,7 @@ export default function ChannelManagementModal({ channel, onClose, currentUserId
             loadMembers();
         } catch (err) {
             console.error("Invite failed:", err);
-            alert(err?.response?.data?.message || "Invite failed");
+            showToast(err?.response?.data?.message || "Invite failed", "error");
         } finally {
             setLoading(false);
         }
@@ -72,7 +74,7 @@ export default function ChannelManagementModal({ channel, onClose, currentUserId
             loadMembers();
         } catch (err) {
             console.error("Remove failed:", err);
-            alert(err?.response?.data?.message || "Remove failed");
+            showToast(err?.response?.data?.message || "Remove failed", "error");
         } finally {
             setLoading(false);
         }
@@ -82,7 +84,7 @@ export default function ChannelManagementModal({ channel, onClose, currentUserId
         if (channel.isPrivate) {
             // Making Public -> Requires Verification
             if (privacyVerification !== channel.name) {
-                alert("Please type the channel name correctly to make it public.");
+                showToast("Please type the channel name correctly to make it public.", "error");
                 return;
             }
         } else {
@@ -93,17 +95,17 @@ export default function ChannelManagementModal({ channel, onClose, currentUserId
         }
 
         // API call to toggle privacy would go here
-        alert(`Channel is now ${channel.isPrivate ? "Public" : "Private"} (Mock Action)`);
+        showToast(`Channel is now ${channel.isPrivate ? "Public" : "Private"} (Mock Action)`);
         setPrivacyVerification("");
     };
 
     const handleDeleteChannel = async () => {
         if (deleteVerification !== channel.name) {
-            alert("Please type the channel name correctly to delete it.");
+            showToast("Please type the channel name correctly to delete it.", "error");
             return;
         }
         // API call to delete channel
-        alert("Channel Deleted (Mock Action)");
+        showToast("Channel Deleted (Mock Action)");
         onClose();
     };
 
@@ -112,7 +114,7 @@ export default function ChannelManagementModal({ channel, onClose, currentUserId
             return;
         }
         // API call to clear messages
-        alert("Messages Cleared (Mock Action)");
+        showToast("Messages Cleared (Mock Action)");
     };
 
     const nonMembers = allUsers.filter(
@@ -164,34 +166,48 @@ export default function ChannelManagementModal({ channel, onClose, currentUserId
                     {activeTab === "members" && (
                         <div className="space-y-6">
                             {/* Invite Section */}
-                            <div className="bg-blue-50 rounded-xl p-4 border border-blue-100">
-                                <h4 className="text-sm font-bold text-blue-900 mb-3 flex items-center gap-2">
-                                    <UserPlus size={16} /> Invite People
-                                </h4>
-                                <div className="space-y-2 max-h-40 overflow-y-auto pr-2 custom-scrollbar">
-                                    {nonMembers.length === 0 ? (
-                                        <p className="text-xs text-blue-600/70 italic">Everyone is already here!</p>
-                                    ) : (
-                                        nonMembers.map((user) => (
-                                            <div key={user._id} className="flex items-center justify-between p-2 bg-white rounded-lg border border-blue-100 hover:border-blue-300 transition-colors">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-xs">
-                                                        {user.username.charAt(0).toUpperCase()}
+                            {!channel.isPrivate ? (
+                                <div className="bg-blue-50 rounded-xl p-4 border border-blue-100">
+                                    <h4 className="text-sm font-bold text-blue-900 mb-3 flex items-center gap-2">
+                                        <UserPlus size={16} /> Invite People
+                                    </h4>
+                                    <div className="space-y-2 max-h-40 overflow-y-auto pr-2 custom-scrollbar">
+                                        {nonMembers.length === 0 ? (
+                                            <p className="text-xs text-blue-600/70 italic">Everyone is already here!</p>
+                                        ) : (
+                                            nonMembers.map((user) => (
+                                                <div key={user._id} className="flex items-center justify-between p-2 bg-white rounded-lg border border-blue-100 hover:border-blue-300 transition-colors">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-xs">
+                                                            {user.username.charAt(0).toUpperCase()}
+                                                        </div>
+                                                        <span className="text-sm font-medium text-gray-700">{user.username}</span>
                                                     </div>
-                                                    <span className="text-sm font-medium text-gray-700">{user.username}</span>
+                                                    <button
+                                                        onClick={() => handleInvite(user._id)}
+                                                        disabled={loading}
+                                                        className="text-xs font-bold text-blue-600 hover:bg-blue-50 px-3 py-1.5 rounded-md transition-colors"
+                                                    >
+                                                        Add
+                                                    </button>
                                                 </div>
-                                                <button
-                                                    onClick={() => handleInvite(user._id)}
-                                                    disabled={loading}
-                                                    className="text-xs font-bold text-blue-600 hover:bg-blue-50 px-3 py-1.5 rounded-md transition-colors"
-                                                >
-                                                    Add
-                                                </button>
-                                            </div>
-                                        ))
-                                    )}
+                                            ))
+                                        )}
+                                    </div>
                                 </div>
-                            </div>
+                            ) : (
+                                <div className="bg-gray-50 rounded-xl p-4 border border-gray-200 flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-500">
+                                        <Lock size={20} />
+                                    </div>
+                                    <div>
+                                        <h4 className="text-sm font-bold text-gray-900">Private Channel</h4>
+                                        <p className="text-xs text-gray-500 mt-0.5">
+                                            This channel is private. New members cannot be added after creation.
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
 
                             {/* Members List */}
                             <div>

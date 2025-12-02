@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Trash2, X } from 'lucide-react';
 import ConfirmationModal from "../../../modals/ConfirmationModal";
 import { useContacts } from "../../../../contexts/ContactsContext";
+import { useToast } from "../../../../contexts/ToastContext";
 
 // Import sub-components
 import WorkspaceHeader from "./WorkspaceHeader";
@@ -17,6 +18,7 @@ const HomePanel = ({ title }) => {
     const navigate = useNavigate();
 
     const { allItems: items, deleteItem, addItem, toggleFavorite } = useContacts();
+    const { showToast } = useToast();
 
     const [expanded, setExpanded] = useState({
         favorites: true,
@@ -98,7 +100,7 @@ const HomePanel = ({ title }) => {
 
     const handleInvite = () => {
         if (inviteEmail.trim()) {
-            alert(`Invitation sent to ${inviteEmail}`);
+            showToast(`Invitation sent to ${inviteEmail}`);
             setShowInviteModal(false);
             setInviteEmail("");
         }

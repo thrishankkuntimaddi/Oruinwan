@@ -1,9 +1,11 @@
 import React, { useState } from "react";
+import { useToast } from "../../contexts/ToastContext";
 import { X, Calendar, User, Flag, Briefcase, AlignLeft, Type } from "lucide-react";
 
 const priorities = ["Emergency", "High", "Medium", "Low"];
 
 export default function TaskModal({ onClose, onAddTask, channels = [], teamMembers = [] }) {
+  const { showToast } = useToast();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [project, setProject] = useState("");
@@ -14,7 +16,7 @@ export default function TaskModal({ onClose, onAddTask, channels = [], teamMembe
   const [status] = useState("To Do");
 
   const handleAdd = () => {
-    if (!title || !project || !dueDate) return alert("Please fill in all required fields.");
+    if (!title || !project || !dueDate) return showToast("Please fill in all required fields.", "error");
 
     const finalAssignee = assigneeType === "Self" ? "Self" : assignee;
 

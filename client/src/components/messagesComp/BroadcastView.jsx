@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useContext } from "react";
 import axios from "axios";
 import { AuthContext } from "../../contexts/AuthContext";
+import { useToast } from "../../contexts/ToastContext";
 import { Search, X, Send, Users, Check } from "lucide-react";
 
 const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:5000";
@@ -13,6 +14,7 @@ export default function BroadcastView() {
     const [loading, setLoading] = useState(true);
     const [sending, setSending] = useState(false);
     const { accessToken } = useContext(AuthContext);
+    const { showToast } = useToast();
 
     useEffect(() => {
         async function loadContacts() {
@@ -44,7 +46,7 @@ export default function BroadcastView() {
 
         // Simulate sending
         setTimeout(() => {
-            alert(`Broadcast sent to ${selectedUsers.length} recipients!`);
+            showToast(`Broadcast sent to ${selectedUsers.length} recipients!`);
             setSending(false);
             setMessage("");
             setSelectedUsers([]);

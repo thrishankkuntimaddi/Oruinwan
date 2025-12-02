@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import axios from "axios";
 import { formatTime as fmtTime } from "./helpers/helpers";
+import { useToast } from "../../../contexts/ToastContext";
 import { Bold, Italic, Link, List, Smile, Send, X, Paperclip } from "lucide-react";
 
 const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
 export default function ThreadPanel({ parentMessage, onClose, socket, currentUserId }) {
+    const { showToast } = useToast();
     // We use a local state for the parent message in case we fetch a fresher version,
     // but we initialize it with the prop passed from the parent.
     const [parentMessageState, setParentMessageState] = useState(parentMessage);
@@ -110,7 +112,7 @@ export default function ThreadPanel({ parentMessage, onClose, socket, currentUse
             );
         } catch (err) {
             console.error("Send reply failed:", err);
-            alert("Failed to send reply");
+            showToast("Failed to send reply", "error");
         } finally {
             setSending(false);
         }
