@@ -1,10 +1,5 @@
 .
-├── .gitignore
 ├── client
-│   ├── .env
-│   ├── .env.example
-│   ├── .gitignore
-│   ├── migrate-files.sh
 │   ├── package-lock.json
 │   ├── package.json
 │   ├── postcss.config.js
@@ -15,7 +10,6 @@
 │   │   │   └── ChttrixLogo.svg
 │   │   ├── index.html
 │   │   └── manifest.json
-│   ├── restructure.sh
 │   ├── src
 │   │   ├── App.js
 │   │   ├── App.test.js
@@ -148,8 +142,6 @@
 │   ├── tailwind.config.js
 │   └── yarn.lock
 ├── server
-│   ├── .env
-│   ├── .env.example
 │   ├── Dockerfile
 │   ├── check-users.js
 │   ├── controllers
@@ -159,7 +151,6 @@
 │   │   ├── chatListController.js
 │   │   ├── messagesController.js
 │   │   └── threadController.js
-│   ├── cookies.txt
 │   ├── middleware
 │   │   └── auth.js
 │   ├── models
@@ -187,4 +178,4 @@
 ├── structure.txt
 └── verify-security.sh
 
-48 directories, 140 files
+48 directories, 131 files
