@@ -1,5 +1,9 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import {
+    Rocket, Briefcase, Zap, Palette, Microscope, Globe,
+    Shield, TrendingUp, Lightbulb, Flame, Target, Trophy
+} from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 
 const WorkspaceSelect = () => {
@@ -15,8 +19,8 @@ const WorkspaceSelect = () => {
 
     // Mock data for workspaces
     const [workspaces, setWorkspaces] = useState([
-        { id: 1, name: "Design Team", members: 12, icon: "A", color: "#2563eb" }, // blue-600
-        { id: 2, name: "Marketing", members: 8, icon: "D", color: "#db2777" }, // pink-600
+        { id: 1, name: "Design Team", members: 12, icon: "palette", color: "#2563eb" }, // blue-600
+        { id: 2, name: "Marketing", members: 8, icon: "briefcase", color: "#db2777" }, // pink-600
     ]);
 
     // Create Workspace Wizard State
@@ -41,7 +45,7 @@ const WorkspaceSelect = () => {
         setCreateData({
             name: "",
             adminName: "",
-            icon: "🚀",
+            icon: "rocket",
             color: "#2563eb",
             invites: ""
         });
@@ -96,7 +100,27 @@ const WorkspaceSelect = () => {
         navigate("/app");
     };
 
-    const icons = ["🚀", "💼", "⚡", "🎨", "🔬", "🌐", "🛡️", "📈", "💡", "🔥", "🎯", "🏆"];
+    // Lucide Icons Import
+    // Note: In a real project you'd import these at the top. 
+    // For this tool execution, I will assume they are available if I was importing them at file level. 
+    // However, since I am editing the function body here, I cannot add top-level imports easily without replacing the whole file header.
+    // I will use another tool call to add imports.
+
+    // Changing the icons definition:
+    const icons = [
+        { id: 'rocket', component: <Rocket /> },
+        { id: 'briefcase', component: <Briefcase /> },
+        { id: 'zap', component: <Zap /> },
+        { id: 'palette', component: <Palette /> },
+        { id: 'microscope', component: <Microscope /> },
+        { id: 'globe', component: <Globe /> },
+        { id: 'shield', component: <Shield /> },
+        { id: 'trend', component: <TrendingUp /> },
+        { id: 'bulb', component: <Lightbulb /> },
+        { id: 'flame', component: <Flame /> },
+        { id: 'target', component: <Target /> },
+        { id: 'trophy', component: <Trophy /> }
+    ];
     const presetColors = ["#2563eb", "#9333ea", "#db2777", "#16a34a", "#ea580c", "#4f46e5", "#0891b2", "#be123c"];
 
     return (
@@ -401,45 +425,67 @@ const WorkspaceSelect = () => {
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-3">Choose Icon & Color</label>
-                                        <div className="flex gap-4 items-center">
-                                            <div
-                                                className="w-14 h-14 rounded-xl flex items-center justify-center text-2xl text-white shadow-md transition-all"
-                                                style={{ backgroundColor: createData.color }}
-                                            >
-                                                {createData.icon}
+                                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-4">Choose Icon & Color</label>
+                                        <div className="flex gap-6 items-start">
+                                            {/* Left: Preview */}
+                                            <div className="shrink-0">
+                                                <div
+                                                    className="w-24 h-24 rounded-[1.5rem] flex items-center justify-center text-white shadow-xl transition-all duration-300"
+                                                    style={{ backgroundColor: createData.color }}
+                                                >
+                                                    {icons.find(i => i.id === createData.icon)?.component &&
+                                                        React.cloneElement(icons.find(i => i.id === createData.icon).component, { size: 40, strokeWidth: 1.5 })
+                                                    }
+                                                </div>
                                             </div>
-                                            <div className="flex flex-col gap-2">
-                                                <div className="flex gap-2 flex-wrap max-w-[300px]">
-                                                    {icons.map(icon => (
+
+                                            {/* Right: Options */}
+                                            <div className="flex flex-col gap-4">
+                                                {/* Icon Grid */}
+                                                <div className="flex gap-2 flex-wrap">
+                                                    {icons.map(item => (
                                                         <button
-                                                            key={icon}
-                                                            onClick={() => setCreateData({ ...createData, icon })}
-                                                            className={`w-8 h-8 rounded-lg flex items-center justify-center hover:bg-gray-100 border transition-all ${createData.icon === icon ? "border-blue-500 bg-blue-50" : "border-transparent"}`}
+                                                            key={item.id}
+                                                            onClick={() => setCreateData({ ...createData, icon: item.id })}
+                                                            className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-200 ${createData.icon === item.id
+                                                                ? "bg-white border-2 border-blue-500 text-blue-600 shadow-sm"
+                                                                : "bg-transparent border border-transparent text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+                                                                }`}
                                                         >
-                                                            {icon}
+                                                            {React.cloneElement(item.component, { size: 20 })}
                                                         </button>
                                                     ))}
                                                 </div>
-                                                <div className="flex gap-2 items-center">
+
+                                                {/* Divider */}
+                                                <div className="h-px w-full bg-gray-100"></div>
+
+                                                {/* Color Picker */}
+                                                <div className="flex gap-3 items-center">
                                                     {presetColors.map(color => (
                                                         <button
                                                             key={color}
                                                             onClick={() => setCreateData({ ...createData, color })}
-                                                            className={`w-6 h-6 rounded-full ring-2 ring-offset-1 transition-all ${createData.color === color ? "ring-gray-400 scale-110" : "ring-transparent hover:scale-110"}`}
+                                                            className={`w-8 h-8 rounded-full transition-all duration-200 relative ${createData.color === color ? "scale-110" : "hover:scale-110"
+                                                                }`}
                                                             style={{ backgroundColor: color }}
-                                                        />
+                                                        >
+                                                            {createData.color === color && (
+                                                                <div className="absolute inset-0 rounded-full ring-2 ring-offset-2 ring-gray-300"></div>
+                                                            )}
+                                                        </button>
                                                     ))}
-                                                    {/* Custom Color Input - Compact */}
-                                                    <div className="relative group w-6 h-6">
+
+                                                    {/* Custom Color */}
+                                                    <div className="relative w-8 h-8 group">
                                                         <input
                                                             type="color"
                                                             value={createData.color}
                                                             onChange={(e) => setCreateData({ ...createData, color: e.target.value })}
                                                             className="absolute inset-0 opacity-0 w-full h-full cursor-pointer z-10"
                                                         />
-                                                        <div className={`w-full h-full rounded-full border border-dashed border-gray-400 flex items-center justify-center text-gray-500 hover:border-blue-500 hover:text-blue-500 transition-colors ${!presetColors.includes(createData.color) ? "bg-white ring-2 ring-offset-1 ring-blue-500 border-transparent" : "bg-transparent"}`}>
-                                                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" /></svg>
+                                                        <div className={`w-full h-full rounded-full border-2 border-dashed border-gray-300 flex items-center justify-center text-gray-400 hover:border-blue-500 hover:text-blue-500 transition-colors ${!presetColors.includes(createData.color) ? "bg-white ring-2 ring-offset-2 ring-blue-500 border-solid border-transparent" : ""}`}>
+                                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" /></svg>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -561,10 +607,12 @@ const WorkspaceSelect = () => {
                         >
                             <div className="flex items-start justify-between mb-4">
                                 <div
-                                    className="w-12 h-12 rounded-lg flex items-center justify-center text-2xl text-white shadow-sm"
+                                    className="w-12 h-12 rounded-lg flex items-center justify-center text-white shadow-sm"
                                     style={{ backgroundColor: ws.color }}
                                 >
-                                    {ws.icon}
+                                    {icons.find(i => i.id === ws.icon)?.component &&
+                                        React.cloneElement(icons.find(i => i.id === ws.icon).component, { size: 24 })
+                                    }
                                 </div>
                                 <span className="bg-gray-100 text-gray-600 text-xs font-medium px-2.5 py-1 rounded-full">
                                     {ws.members} members
@@ -610,7 +658,7 @@ const WorkspaceSelect = () => {
                     </div>
                 </div>
             </div>
-        </div>
+        </div >
     );
 };
 

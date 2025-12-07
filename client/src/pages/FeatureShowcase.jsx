@@ -13,7 +13,8 @@ import {
     ArrowRight,
     Brain,
     Sparkles,
-    Zap
+    Zap,
+    GitMerge
 } from "lucide-react";
 
 const FeatureShowcase = () => {
@@ -76,47 +77,54 @@ const FeatureShowcase = () => {
 
     const features = [
         {
-            icon: <Layout size={24} />,
-            label: "Workspaces",
-            desc: "Central hubs for teams and projects.",
+            icon: <MessageSquare size={24} />,
+            label: "Channels",
+            desc: "Dedicated spaces that keep projects and teams organized.",
             color: "text-blue-600",
             bg: "bg-blue-50"
         },
         {
-            icon: <MessageSquare size={24} />,
-            label: "Channels",
-            desc: "Organized group discussions.",
+            icon: <GitMerge size={24} />,
+            label: "Directions",
+            desc: "Threaded discussions to maintain focus and context.",
             color: "text-indigo-600",
             bg: "bg-indigo-50"
         },
         {
             icon: <Users size={24} />,
             label: "Direct Messages",
-            desc: "Private, encrypted 1:1 chats.",
+            desc: "Private, encrypted 1:1 communication for instant collaboration.",
             color: "text-purple-600",
             bg: "bg-purple-50"
         },
         {
             icon: <CheckSquare size={24} />,
-            label: "Smart Tasks",
-            desc: "Track and manage to-dos effortlessly.",
+            label: "Tasks",
+            desc: "Seamlessly manage personal, incoming, and delegated to-dos.",
             color: "text-green-600",
             bg: "bg-green-50"
         },
         {
             icon: <FileText size={24} />,
             label: "Notes",
-            desc: "Capture ideas and draft content.",
+            desc: "A unified space for ideas, documentation, and real-time editing.",
             color: "text-orange-600",
             bg: "bg-orange-50"
         },
         {
             icon: <Bell size={24} />,
             label: "Updates",
-            desc: "Share wins and stay in the loop.",
+            desc: "Broadcast announcements and track team pulses in one place.",
             color: "text-pink-600",
             bg: "bg-pink-50"
         },
+        {
+            icon: <Bot size={24} />,
+            label: "Chttrix AI",
+            desc: "Intelligent automation that streamlines your entire workflow.",
+            color: "text-violet-600",
+            bg: "bg-violet-50"
+        }
     ];
 
     return (
@@ -212,32 +220,38 @@ const FeatureShowcase = () => {
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full">
-                        {features.map((feature, index) => (
-                            <div
-                                key={index}
-                                className={`transform transition-all duration-700 ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-20"}`}
-                                style={{ transitionDelay: `${400 + (index * 100)}ms` }}
-                            >
-                                <div className="group relative bg-white/60 backdrop-blur-md border border-gray-200 rounded-3xl p-8 shadow-sm hover:shadow-xl hover:border-indigo-100 hover:bg-white transition-all duration-500 h-48 overflow-hidden cursor-default">
+                        {features.map((feature, index) => {
+                            const isAI = feature.label === "Chttrix AI";
+                            return (
+                                <div
+                                    key={index}
+                                    className={`transform transition-all duration-700 ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-20"} ${isAI ? "md:col-span-2 lg:col-span-1 lg:col-start-2 md:w-3/4 lg:w-full md:justify-self-center" : ""}`}
+                                    style={{ transitionDelay: `${400 + (index * 100)}ms` }}
+                                >
+                                    <div className={`group relative rounded-3xl p-8 shadow-sm transition-all duration-500 h-48 overflow-hidden cursor-default ${isAI
+                                            ? "bg-gradient-to-br from-white to-violet-50/80 border border-violet-200 hover:shadow-2xl hover:shadow-violet-500/10 hover:border-violet-300"
+                                            : "bg-white/60 backdrop-blur-md border border-gray-200 hover:shadow-xl hover:border-indigo-100 hover:bg-white"
+                                        }`}>
 
-                                    {/* Icon & Label */}
-                                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center transition-all duration-500 group-hover:left-8 group-hover:translate-x-0 group-hover:items-start group-hover:max-w-[40%]">
-                                        <div className={`w-16 h-16 rounded-2xl ${feature.bg} ${feature.color} flex items-center justify-center mb-4 shadow-sm transition-all duration-500 group-hover:scale-75 group-hover:origin-top-left group-hover:mb-2`}>
-                                            {feature.icon}
+                                        {/* Icon & Label */}
+                                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center transition-all duration-500 group-hover:left-8 group-hover:translate-x-0 group-hover:items-start group-hover:max-w-[40%]">
+                                            <div className={`w-16 h-16 rounded-2xl ${feature.bg} ${feature.color} flex items-center justify-center mb-4 shadow-sm transition-all duration-500 group-hover:scale-75 group-hover:origin-top-left group-hover:mb-2`}>
+                                                {feature.icon}
+                                            </div>
+                                            <h3 className="text-xl font-bold text-gray-800 whitespace-nowrap transition-all duration-500 group-hover:text-base group-hover:whitespace-normal group-hover:leading-tight">{feature.label}</h3>
                                         </div>
-                                        <h3 className="text-xl font-bold text-gray-800 whitespace-nowrap transition-all duration-500 group-hover:text-base group-hover:whitespace-normal group-hover:leading-tight">{feature.label}</h3>
-                                    </div>
 
-                                    {/* Description (Visible on Hover - Right Side) */}
-                                    <div className="absolute top-1/2 right-8 -translate-y-1/2 w-[50%] opacity-0 translate-x-10 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-500 delay-75">
-                                        <p className="text-sm text-gray-600 leading-relaxed font-medium text-left">
-                                            {feature.desc}
-                                        </p>
-                                    </div>
+                                        {/* Description (Visible on Hover - Right Side) */}
+                                        <div className="absolute top-1/2 right-8 -translate-y-1/2 w-[50%] opacity-0 translate-x-10 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-500 delay-75">
+                                            <p className="text-sm text-gray-600 leading-relaxed font-medium text-left">
+                                                {feature.desc}
+                                            </p>
+                                        </div>
 
+                                    </div>
                                 </div>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 </div>
 
