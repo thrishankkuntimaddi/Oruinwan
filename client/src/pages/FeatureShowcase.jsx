@@ -6,7 +6,6 @@ import {
     MessageSquare,
     Users,
     CheckSquare,
-    Layout,
     Bell,
     FileText,
     Bot,
@@ -37,7 +36,7 @@ const FeatureShowcase = () => {
             id: 'ai',
             name: 'Chttrix.ai',
             icon: <Bot size={32} />,
-            desc: 'Your intelligent co-pilot. Automate, generate, and analyze.',
+            desc: 'Context-aware AI to generate code, summarize chats, and automate workflows.',
             color: 'text-purple-600',
             bg: 'bg-purple-50',
             border: 'border-purple-100',
@@ -47,7 +46,7 @@ const FeatureShowcase = () => {
             id: 'note',
             name: 'ChttrixNote',
             icon: <FileText size={32} />,
-            desc: 'Collaborative docs that come alive with AI insights.',
+            desc: 'Real-time multi-player docs for specs, wikis, and meeting notes.',
             color: 'text-blue-600',
             bg: 'bg-blue-50',
             border: 'border-blue-100',
@@ -57,7 +56,7 @@ const FeatureShowcase = () => {
             id: 'task',
             name: 'ChttrixTask',
             icon: <CheckSquare size={32} />,
-            desc: 'Project management that keeps your team in flow.',
+            desc: 'Track sprints, manage bugs, and visualize progress on Kanban boards.',
             color: 'text-green-600',
             bg: 'bg-green-50',
             border: 'border-green-100',
@@ -67,7 +66,7 @@ const FeatureShowcase = () => {
             id: 'mind',
             name: 'MindFlush',
             icon: <Brain size={32} />,
-            desc: 'Unleash creativity with infinite canvas brainstorming.',
+            desc: 'Infinite whiteboards for diagramming, wireframing, and brainstorming.',
             color: 'text-orange-600',
             bg: 'bg-orange-50',
             border: 'border-orange-100',
@@ -121,7 +120,7 @@ const FeatureShowcase = () => {
         {
             icon: <Bot size={24} />,
             label: "Chttrix AI",
-            desc: "Intelligent automation that streamlines your entire workflow.",
+            desc: "An embedded assistant that connects dots across chats, docs, and tasks.",
             color: "text-violet-600",
             bg: "bg-violet-50"
         }
@@ -188,7 +187,7 @@ const FeatureShowcase = () => {
                 <div className={`transform transition-all duration-1000 delay-100 flex flex-col items-center text-center max-w-4xl mx-auto mb-24 ${isVisible ? "scale-100 translate-y-0 opacity-100" : "scale-95 translate-y-10 opacity-0"}`}>
                     <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-indigo-50 text-indigo-600 text-xs font-bold uppercase tracking-wider mb-8 border border-indigo-100 shadow-sm hover:shadow-md hover:scale-105 transition-all duration-300 cursor-default">
                         <Sparkles size={14} className="animate-pulse" />
-                        <span>The Future of Collaboration</span>
+                        <span>Collaboration Redefined</span>
                     </div>
                     <h1 className="text-5xl md:text-7xl font-black text-gray-900 tracking-tight leading-[1.1] mb-8 drop-shadow-sm">
                         One Platform.<br />
@@ -229,8 +228,8 @@ const FeatureShowcase = () => {
                                     style={{ transitionDelay: `${400 + (index * 100)}ms` }}
                                 >
                                     <div className={`group relative rounded-3xl p-8 shadow-sm transition-all duration-500 h-48 overflow-hidden cursor-default ${isAI
-                                            ? "bg-gradient-to-br from-white to-violet-50/80 border border-violet-200 hover:shadow-2xl hover:shadow-violet-500/10 hover:border-violet-300"
-                                            : "bg-white/60 backdrop-blur-md border border-gray-200 hover:shadow-xl hover:border-indigo-100 hover:bg-white"
+                                        ? "bg-gradient-to-br from-white to-violet-50/80 border border-violet-200 hover:shadow-2xl hover:shadow-violet-500/10 hover:border-violet-300"
+                                        : "bg-white/60 backdrop-blur-md border border-gray-200 hover:shadow-xl hover:border-indigo-100 hover:bg-white"
                                         }`}>
 
                                         {/* Icon & Label */}

@@ -8,7 +8,7 @@ import { useAuth } from "../contexts/AuthContext";
 
 const WorkspaceSelect = () => {
     const navigate = useNavigate();
-    const { logout } = useAuth();
+    const { user, logout } = useAuth();
     const [showHelp, setShowHelp] = useState(false);
     const [activeHelpModal, setActiveHelpModal] = useState(null);
 
@@ -18,10 +18,33 @@ const WorkspaceSelect = () => {
     };
 
     // Mock data for workspaces
-    const [workspaces, setWorkspaces] = useState([
-        { id: 1, name: "Design Team", members: 12, icon: "palette", color: "#2563eb" }, // blue-600
-        { id: 2, name: "Marketing", members: 8, icon: "briefcase", color: "#db2777" }, // pink-600
-    ]);
+    // Mock data for workspaces
+    const [workspaces, setWorkspaces] = useState([]);
+
+    React.useEffect(() => {
+        if (user?.companyId) {
+            fetch(`/api/workspaces/${user.companyId}`, {
+                headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+            })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.workspaces) {
+                        setWorkspaces(data.workspaces.map(ws => ({
+                            id: ws._id,
+                            name: ws.name,
+                            members: ws.members?.length || 1,
+                            icon: "briefcase",
+                            color: "#2563eb"
+                        })));
+                    }
+                })
+                .catch(err => console.error(err));
+        } else {
+            setWorkspaces([
+                { id: 'personal', name: "Personal Workspace", members: 1, icon: "rocket", color: "#4f46e5" }
+            ]);
+        }
+    }, [user]);
 
     // Create Workspace Wizard State
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);

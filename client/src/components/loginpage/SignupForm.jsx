@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useToast } from "../../contexts/ToastContext";
-import { Eye, EyeOff, ChevronDown, Check } from "lucide-react";
+import { Eye, EyeOff, ChevronDown, Check, Building } from "lucide-react";
+import { useEffect } from 'react';
 
 const SignupForm = ({ onSwitch }) => {
   const [formData, setFormData] = useState({
@@ -17,6 +18,31 @@ const SignupForm = ({ onSwitch }) => {
 
   const [showPwd, setShowPwd] = useState(false);
   const [showConfirmPwd, setShowConfirmPwd] = useState(false);
+  const [companyContext, setCompanyContext] = useState(null);
+
+  useEffect(() => {
+    const email = formData.email;
+    if (email && email.includes("@")) {
+      const domain = email.split("@")[1];
+      if (domain && domain.includes(".")) {
+        const timer = setTimeout(async () => {
+          try {
+            const res = await fetch(`/api/companies/check-domain?domain=${domain}`);
+            if (res.ok) {
+              const data = await res.json();
+              setCompanyContext(data.company);
+            } else {
+              setCompanyContext(null);
+            }
+          } catch (e) {
+            // ignore
+          }
+        }, 500);
+        return () => clearTimeout(timer);
+      }
+    }
+    setCompanyContext(null);
+  }, [formData.email]);
 
   const countries = [
     { code: 'IN', name: 'IND', dial_code: '+91', length: 10, flag: '🇮🇳' },
@@ -211,6 +237,12 @@ const SignupForm = ({ onSwitch }) => {
             className={getInputClass("email").replace("py-2.5", "py-2").replace("px-4", "px-3")}
           />
           {errors.email && touched.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
+          {companyContext && (
+            <div className="flex items-center gap-2 mt-2 p-2 bg-indigo-50 border border-indigo-100 rounded-lg text-indigo-700 text-xs font-medium animate-fade-in">
+              <Building size={14} />
+              <span>Looks like you're joining {companyContext.name}</span>
+            </div>
+          )}
         </div>
 
         {/* Phone */}

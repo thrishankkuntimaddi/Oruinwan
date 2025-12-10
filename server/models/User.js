@@ -26,6 +26,11 @@ const UserSchema = new mongoose.Schema(
     email: { type: String, required: true, unique: true, lowercase: true },
     phone: { type: String, unique: true, sparse: true },
     passwordHash: { type: String, required: true },
+    companyId: { type: mongoose.Schema.Types.ObjectId, ref: "Company", default: null },
+    departments: [{ type: mongoose.Schema.Types.ObjectId, ref: "Department" }], // optional
+    rolesPerCompany: { type: mongoose.Schema.Types.Mixed }, // e.g. { "<companyId>": "admin" }
+
+
 
     verified: { type: Boolean, default: false },
 

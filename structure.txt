@@ -155,8 +155,11 @@
 │   │   └── auth.js
 │   ├── models
 │   │   ├── Channel.js
+│   │   ├── Company.js
+│   │   ├── DMSession.js
 │   │   ├── Message.js
-│   │   └── User.js
+│   │   ├── User.js
+│   │   └── Workspace.js
 │   ├── package-lock.json
 │   ├── package.json
 │   ├── routes
@@ -178,4 +181,4 @@
 ├── structure.txt
 └── verify-security.sh
 
-48 directories, 131 files
+48 directories, 134 files

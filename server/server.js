@@ -60,6 +60,8 @@ app.use("/api/auth", require("./routes/auth"));
 app.use("/api/messages", require("./routes/messages"));
 app.use("/api/chat", require("./routes/chatList"));
 app.use("/api/channels", require("./routes/channels"));
+app.use("/api/companies", require("./routes/companies"));
+app.use("/api/workspaces", require("./routes/workspaces"));
 
 // ---------------------------------------------------------
 // SOCKET.IO SETUP

@@ -32,6 +32,8 @@ import VerifyEmail from "./pages/VerifyEmail";
 import ForgotPassword from "./pages/LoginPageComp/ForgotPassword";
 import ResetPassword from "./pages/LoginPageComp/ResetPassword";
 import OAuthSuccess from "./pages/LoginPageComp/OAuthSuccess";
+import AcceptInvite from "./pages/AcceptInvite";
+import CompanyAdmin from "./pages/CompanyAdmin";
 
 // Protected route wrapper
 import RequireAuth from "./components/RequireAuth";
@@ -170,12 +172,21 @@ function App() {
                     }
                   />
 
-                  {/* Workspace Selection (Protected but outside main layout if desired, or inside) */}
                   <Route
                     path="/workspaces"
                     element={
                       <RequireAuth>
                         <WorkspaceSelect />
+                      </RequireAuth>
+                    }
+                  />
+
+                  {/* Company Admin Console */}
+                  <Route
+                    path="/admin/company"
+                    element={
+                      <RequireAuth>
+                        <CompanyAdmin />
                       </RequireAuth>
                     }
                   />
@@ -192,6 +203,7 @@ function App() {
                   <Route path="/forgot-password" element={<ForgotPassword />} />
                   <Route path="/reset-password" element={<ResetPassword />} />
                   <Route path="/oauth-success" element={<OAuthSuccess />} />
+                  <Route path="/accept-invite" element={<AcceptInvite />} />
 
                 </Routes>
               </BlogsProvider>
