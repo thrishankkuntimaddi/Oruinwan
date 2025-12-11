@@ -58,6 +58,36 @@ async function ensureCompanyAdmin(userId, companyId) {
   return (role === "admin" || role === "owner");
 }
 
+
+
+exports.getCompanyMembers = async (req, res) => {
+  try {
+    const companyId = req.params.companyId;
+    const requesterId = req.user?.sub;
+
+    const allowed = await ensureCompanyAdmin(requesterId, companyId);
+    if (!allowed) return res.status(403).json({ message: "Not allowed" });
+
+    const members = await User.find({ companyId })
+      .select("username email rolesPerCompany profilePicture createdAt")
+      .lean();
+
+    const membersWithRole = members.map(m => ({
+      _id: m._id,
+      username: m.username,
+      email: m.email,
+      profilePicture: m.profilePicture,
+      createdAt: m.createdAt,
+      role: m.rolesPerCompany ? m.rolesPerCompany[companyId] : "member"
+    }));
+
+    return res.json({ members: membersWithRole });
+  } catch (err) {
+    console.error("GET MEMBERS ERROR:", err);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+
 exports.inviteToCompany = async (req, res) => {
   try {
     const inviterId = req.user?.sub;
@@ -195,7 +225,7 @@ exports.checkDomain = async (req, res) => {
     const { domain } = req.query;
     if (!domain) return res.status(400).json({ message: "Domain required" });
 
-    const company = await Company.findOne({ domain }).select("name domain logo");
+    const company = await Company.findOne({ domain }).select("name domain logo domainVerified");
     if (!company) return res.status(404).json({ message: "No company found for this domain" });
 
     return res.json({ company });

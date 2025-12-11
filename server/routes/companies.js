@@ -10,6 +10,7 @@ router.post("/", auth, companyController.createCompany);
 
 // Invite to Company
 router.post("/:companyId/invite", auth, companyController.inviteToCompany);
+router.get("/:companyId/members", auth, companyController.getCompanyMembers);
 
 // Check domain (public) - used by SignupForm to hint company
 router.get("/check-domain", companyController.checkDomain);
