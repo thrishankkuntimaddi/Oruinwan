@@ -24,7 +24,7 @@ const MessagesPanel = () => {
 
     const [contacts, setContacts] = useState([
         { id: 1, name: "Sarah Connor", status: "online", unread: 0 },
-        { id: 2, name: "John Doe", status: "offline", unread: 0 },
+        { id: 2, name: "Thrishank", status: "offline", unread: 0 },
         { id: 3, name: "Alice Smith", status: "online", unread: 0 },
         { id: 4, name: "Bob Wilson", status: "busy", unread: 0 },
     ]);

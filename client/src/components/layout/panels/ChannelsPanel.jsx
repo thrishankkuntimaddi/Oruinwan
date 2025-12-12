@@ -23,7 +23,7 @@ const ChannelsPanel = ({ title }) => {
 
     const MOCK_USERS = [
         { id: 'u1', name: 'Sarah Connor', status: 'online' },
-        { id: 'u2', name: 'John Doe', status: 'away' },
+        { id: 'u2', name: 'Thrishank', status: 'away' },
         { id: 'u3', name: 'Alice Smith', status: 'online' },
         { id: 'u4', name: 'Mike Ross', status: 'offline' },
         { id: 'u5', name: 'Rachel Zane', status: 'busy' },

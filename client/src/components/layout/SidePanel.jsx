@@ -117,7 +117,7 @@ export const ChannelList = () => {
                 {expanded.dms && (
                     <div className="mt-1 space-y-0.5">
                         <Item icon="👤" label="Sarah Connor" path="/messages/dm/sarah" active />
-                        <Item icon="👤" label="John Doe" path="/messages/dm/john" />
+                        <Item icon="👤" label="Thrishank" path="/messages/dm/john" />
                         <Item icon="👤" label="Alice Smith" path="/messages/dm/alice" hasUnread />
                     </div>
                 )}

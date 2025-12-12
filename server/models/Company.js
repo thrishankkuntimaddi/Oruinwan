@@ -9,7 +9,7 @@ const CompanySchema = new mongoose.Schema({
   website: { type: String },
 
   // Domain Configuration
-  domain: { type: String, unique: true, sparse: true }, // e.g., "acme.com"
+  domain: { type: String, unique: true, sparse: true }, 
   domainVerified: { type: Boolean, default: false },
   domainVerificationToken: { type: String, default: null },
   domainVerificationExpires: { type: Date, default: null },

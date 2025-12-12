@@ -17,7 +17,7 @@ export const BlogsProvider = ({ children }) => {
                 tags: ["Milestone", "UX", "Design"],
                 likes: 12,
                 comments: [
-                    { id: 1, author: "John Doe", text: "Amazing work, Sarah!", timestamp: new Date(Date.now() - 10000000).toISOString() }
+                    { id: 1, author: "Thrishank", text: "Amazing work, Sarah!", timestamp: new Date(Date.now() - 10000000).toISOString() }
                 ],
                 timestamp: new Date(Date.now() - 86400000).toISOString(),
             },

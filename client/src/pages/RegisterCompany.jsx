@@ -190,7 +190,7 @@ const RegisterCompany = () => {
                                             name="companyName"
                                             value={formData.companyName}
                                             onChange={handleChange}
-                                            placeholder="Acme Corporation"
+                                            placeholder="Chttrix Corp"
                                             className={`w-full px-4 py-3 rounded-lg border ${errors.companyName ? 'border-red-300' : 'border-gray-300'} focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-base`}
                                         />
                                         {errors.companyName && (
@@ -211,7 +211,7 @@ const RegisterCompany = () => {
                                                 name="domain"
                                                 value={formData.domain}
                                                 onChange={handleChange}
-                                                placeholder="acme.com or chttrix.com"
+                                                placeholder="chttrix.com"
                                                 className="w-full pl-10 pr-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-base"
                                             />
                                         </div>
@@ -231,7 +231,7 @@ const RegisterCompany = () => {
                                                 name="adminName"
                                                 value={formData.adminName}
                                                 onChange={handleChange}
-                                                placeholder="John Doe"
+                                                placeholder="Thrishank"
                                                 className={`w-full pl-10 pr-4 py-3 rounded-lg border ${errors.adminName ? 'border-red-300' : 'border-gray-300'} focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-base`}
                                             />
                                         </div>
@@ -267,7 +267,7 @@ const RegisterCompany = () => {
                                                 name="adminEmail"
                                                 value={formData.adminEmail}
                                                 onChange={handleChange}
-                                                placeholder="admin@acme.com"
+                                                placeholder="admin@chttrix.com"
                                                 className={`w-full pl-10 pr-4 py-3 rounded-lg border ${errors.adminEmail ? 'border-red-300' : 'border-gray-300'} focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all text-base`}
                                             />
                                         </div>

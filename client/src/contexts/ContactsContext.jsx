@@ -20,7 +20,7 @@ export default function ContactsProvider({ children }) {
     { id: 'random', type: 'channel', label: 'random', path: '/channels/random', isFavorite: false },
     { id: 'project-alpha', type: 'channel', label: 'project-alpha', path: '/channels/project-alpha', isFavorite: false },
     { id: 'sarah', type: 'dm', label: 'Sarah Connor', path: '/dm/sarah', isFavorite: false },
-    { id: 'john', type: 'dm', label: 'John Doe', path: '/dm/john', isFavorite: false },
+    { id: 'thrishank', type: 'dm', label: 'Thrishank', path: '/dm/john', isFavorite: false },
     { id: 'alice', type: 'dm', label: 'Alice Smith', path: '/dm/alice', isFavorite: false },
   ]);
 

@@ -27,7 +27,7 @@ const mockSearchData = {
 };
 
 const workspaces = [
-    { id: 1, name: "Acme Corp", icon: "A", color: "bg-blue-600" },
+    { id: 1, name: "Chttrix", icon: "A", color: "bg-blue-600" },
     { id: 2, name: "Project Beta", icon: "P", color: "bg-purple-600" },
     { id: 3, name: "Design Team", icon: "D", color: "bg-pink-600" },
 ];

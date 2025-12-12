@@ -3,7 +3,7 @@ import React from "react";
 
 export default function ContactShareModal({ contacts, onShare, onClose }) {
   const list = contacts.length ? contacts : [
-    { name: "John Doe", phone: "999-111-222" },
+    { name: "Thrishank", phone: "999-111-222" },
     { name: "Sarah Lee", phone: "999-222-333" },
     { name: "Ethan Carter", phone: "999-333-444" },
   ];

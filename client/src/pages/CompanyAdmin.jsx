@@ -52,7 +52,7 @@ const CreateCompanyForm = ({ onSuccess }) => {
                         value={name}
                         onChange={(e) => setName(e.target.value)}
                         className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all"
-                        placeholder="Acme Inc."
+                        placeholder="Chttrix."
                         required
                     />
                 </div>
@@ -66,7 +66,7 @@ const CreateCompanyForm = ({ onSuccess }) => {
                         value={domain}
                         onChange={(e) => setDomain(e.target.value)}
                         className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all"
-                        placeholder="acme.com"
+                        placeholder="chttrix.com"
                     />
                 </div>
                 <button
