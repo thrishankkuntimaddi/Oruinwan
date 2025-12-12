@@ -131,7 +131,7 @@ const RegisterCompany = () => {
     const progress = (currentStep / 4) * 100;
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-purple-50 px-4 sm:px-6 lg:px-8 relative">
+        <div className="min-h-screen flex items-center justify-center bg-white px-4 sm:px-6 lg:px-8 relative">
 
             {/* Back to Home Button */}
             <button
@@ -142,190 +142,136 @@ const RegisterCompany = () => {
                 Back to Home
             </button>
 
-            <div className="max-w-2xl w-full">
+            <div className="max-w-md w-full">
                 {/* Header */}
-                <div className="text-center mb-8">
-                    <div className="flex justify-center mb-4">
-                        <div className="p-4 bg-blue-100 rounded-2xl">
-                            <Building2 className="w-10 h-10 text-blue-600" />
-                        </div>
-                    </div>
-                    <h1 className="text-3xl font-bold text-gray-900 mb-2">Register Your Company</h1>
-                    <p className="text-gray-600">Step {currentStep} of 4</p>
+                <div className="text-center mb-6">
+                    <h1 className="text-xl font-bold text-gray-900 tracking-tight">Register Your Company</h1>
+                    <p className="text-gray-500 text-xs mt-1.5">Step {currentStep} of 4</p>
                 </div>
 
-                {/* Progress Bar */}
-                <div className="mb-8">
-                    <div className="flex justify-between items-center mb-2">
-                        <span className="text-xs font-medium text-gray-600">Progress</span>
-                        <span className="text-xs font-medium text-blue-600">{Math.round(progress)}%</span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
+                {/* Progress Bar - Simplified */}
+                <div className="mb-6">
+                    <div className="w-full bg-gray-100 rounded-full h-1.5">
                         <div
-                            className="bg-gradient-to-r from-blue-600 to-purple-600 h-2 rounded-full transition-all duration-500"
+                            className="bg-blue-600 h-1.5 rounded-full transition-all duration-500"
                             style={{ width: `${progress}%` }}
                         />
                     </div>
                 </div>
 
                 {/* Form Card */}
-                <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
+                <div className="bg-white rounded-2xl shadow-xl p-5 border border-gray-100">
 
                     {/* STEP 1: Company & Admin Name */}
                     {currentStep === 1 && (
-                        <div className="space-y-6">
+                        <div className="space-y-3">
+                            <h2 className="text-sm font-semibold text-gray-900 mb-4">Company Information</h2>
+
                             <div>
-                                <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-                                    <Building2 className="w-6 h-6 text-blue-600" />
-                                    Company Information
-                                </h2>
+                                <label className="block text-xs font-medium text-gray-700 mb-1">
+                                    Company Name <span className="text-red-500">*</span>
+                                </label>
+                                <input
+                                    type="text"
+                                    name="companyName"
+                                    value={formData.companyName}
+                                    onChange={handleChange}
+                                    placeholder="Chttrix Corp"
+                                    className={`w-full px-3 py-2 rounded-lg border ${errors.companyName ? 'border-red-300' : 'border-gray-300'} focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-sm`}
+                                />
+                                {errors.companyName && (
+                                    <p className="mt-1 text-xs text-red-600">{errors.companyName}</p>
+                                )}
+                            </div>
 
-                                <div className="space-y-4">
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                                            Company Name <span className="text-red-500">*</span>
-                                        </label>
-                                        <input
-                                            type="text"
-                                            name="companyName"
-                                            value={formData.companyName}
-                                            onChange={handleChange}
-                                            placeholder="Chttrix Corp"
-                                            className={`w-full px-4 py-3 rounded-lg border ${errors.companyName ? 'border-red-300' : 'border-gray-300'} focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-base`}
-                                        />
-                                        {errors.companyName && (
-                                            <p className="mt-1 text-sm text-red-600">{errors.companyName}</p>
-                                        )}
-                                    </div>
+                            <div>
+                                <label className="block text-xs font-medium text-gray-700 mb-1">
+                                    Company Domain <span className="text-gray-400 text-xs">(Optional)</span>
+                                </label>
+                                <input
+                                    type="text"
+                                    name="domain"
+                                    value={formData.domain}
+                                    onChange={handleChange}
+                                    placeholder="chttrix.com"
+                                    className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-sm"
+                                />
+                                <p className="mt-1 text-xs text-gray-500">Verify later for auto-join</p>
+                            </div>
 
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                                            Company Domain <span className="text-gray-400 text-xs">(Optional)</span>
-                                        </label>
-                                        <div className="relative">
-                                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                                <Globe className="h-5 w-5 text-gray-400" />
-                                            </div>
-                                            <input
-                                                type="text"
-                                                name="domain"
-                                                value={formData.domain}
-                                                onChange={handleChange}
-                                                placeholder="chttrix.com"
-                                                className="w-full pl-10 pr-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-base"
-                                            />
-                                        </div>
-                                        <p className="mt-1 text-xs text-gray-500">You can verify your domain later for auto-join</p>
-                                    </div>
-
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                                            Admin Name <span className="text-red-500">*</span>
-                                        </label>
-                                        <div className="relative">
-                                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                                <User className="h-5 w-5 text-gray-400" />
-                                            </div>
-                                            <input
-                                                type="text"
-                                                name="adminName"
-                                                value={formData.adminName}
-                                                onChange={handleChange}
-                                                placeholder="Thrishank"
-                                                className={`w-full pl-10 pr-4 py-3 rounded-lg border ${errors.adminName ? 'border-red-300' : 'border-gray-300'} focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-base`}
-                                            />
-                                        </div>
-                                        {errors.adminName && (
-                                            <p className="mt-1 text-sm text-red-600">{errors.adminName}</p>
-                                        )}
-                                    </div>
-                                </div>
+                            <div>
+                                <label className="block text-xs font-medium text-gray-700 mb-1">
+                                    Admin Name <span className="text-red-500">*</span>
+                                </label>
+                                <input
+                                    type="text"
+                                    name="adminName"
+                                    value={formData.adminName}
+                                    onChange={handleChange}
+                                    placeholder="Thrishank"
+                                    className={`w-full px-3 py-2 rounded-lg border ${errors.adminName ? 'border-red-300' : 'border-gray-300'} focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-sm`}
+                                />
+                                {errors.adminName && (
+                                    <p className="mt-1 text-xs text-red-600">{errors.adminName}</p>
+                                )}
                             </div>
                         </div>
                     )}
 
                     {/* STEP 2: Email & Password */}
                     {currentStep === 2 && (
-                        <div className="space-y-6">
+                        <div className="space-y-3">
+                            <h2 className="text-sm font-semibold text-gray-900 mb-4">Admin Account</h2>
+
                             <div>
-                                <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-                                    <Lock className="w-6 h-6 text-purple-600" />
-                                    Admin Account Security
-                                </h2>
+                                <label className="block text-xs font-medium text-gray-700 mb-1">
+                                    Admin Email <span className="text-red-500">*</span>
+                                </label>
+                                <input
+                                    type="email"
+                                    name="adminEmail"
+                                    value={formData.adminEmail}
+                                    onChange={handleChange}
+                                    placeholder="admin@chttrix.com"
+                                    className={`w-full px-3 py-2 rounded-lg border ${errors.adminEmail ? 'border-red-300' : 'border-gray-300'} focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-sm`}
+                                />
+                                {errors.adminEmail && (
+                                    <p className="mt-1 text-xs text-red-600">{errors.adminEmail}</p>
+                                )}
+                            </div>
 
-                                <div className="space-y-4">
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                                            Admin Email <span className="text-red-500">*</span>
-                                        </label>
-                                        <div className="relative">
-                                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                                <Mail className="h-5 w-5 text-gray-400" />
-                                            </div>
-                                            <input
-                                                type="email"
-                                                name="adminEmail"
-                                                value={formData.adminEmail}
-                                                onChange={handleChange}
-                                                placeholder="admin@chttrix.com"
-                                                className={`w-full pl-10 pr-4 py-3 rounded-lg border ${errors.adminEmail ? 'border-red-300' : 'border-gray-300'} focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all text-base`}
-                                            />
-                                        </div>
-                                        {errors.adminEmail && (
-                                            <p className="mt-1 text-sm text-red-600">{errors.adminEmail}</p>
-                                        )}
-                                    </div>
+                            <div>
+                                <label className="block text-xs font-medium text-gray-700 mb-1">
+                                    Password <span className="text-red-500">*</span>
+                                </label>
+                                <input
+                                    type="password"
+                                    name="adminPassword"
+                                    value={formData.adminPassword}
+                                    onChange={handleChange}
+                                    placeholder="Minimum 8 characters"
+                                    className={`w-full px-3 py-2 rounded-lg border ${errors.adminPassword ? 'border-red-300' : 'border-gray-300'} focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-sm`}
+                                />
+                                {errors.adminPassword && (
+                                    <p className="mt-1 text-xs text-red-600">{errors.adminPassword}</p>
+                                )}
+                            </div>
 
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                                            Password <span className="text-red-500">*</span>
-                                        </label>
-                                        <div className="relative">
-                                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                                <Lock className="h-5 w-5 text-gray-400" />
-                                            </div>
-                                            <input
-                                                type="password"
-                                                name="adminPassword"
-                                                value={formData.adminPassword}
-                                                onChange={handleChange}
-                                                placeholder="Minimum 8 characters"
-                                                className={`w-full pl-10 pr-4 py-3 rounded-lg border ${errors.adminPassword ? 'border-red-300' : 'border-gray-300'} focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all text-base`}
-                                            />
-                                        </div>
-                                        {errors.adminPassword && (
-                                            <p className="mt-1 text-sm text-red-600">{errors.adminPassword}</p>
-                                        )}
-                                    </div>
-
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                                            Confirm Password <span className="text-red-500">*</span>
-                                        </label>
-                                        <div className="relative">
-                                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                                <Lock className="h-5 w-5 text-gray-400" />
-                                            </div>
-                                            <input
-                                                type="password"
-                                                name="confirmPassword"
-                                                value={formData.confirmPassword}
-                                                onChange={handleChange}
-                                                placeholder="Re-enter your password"
-                                                className={`w-full pl-10 pr-4 py-3 rounded-lg border ${errors.confirmPassword ? 'border-red-300' : 'border-gray-300'} focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all text-base`}
-                                            />
-                                        </div>
-                                        {errors.confirmPassword && (
-                                            <p className="mt-1 text-sm text-red-600">{errors.confirmPassword}</p>
-                                        )}
-                                    </div>
-
-                                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                                        <p className="text-sm text-blue-800">
-                                            <strong>Password Requirements:</strong> Minimum 8 characters
-                                        </p>
-                                    </div>
-                                </div>
+                            <div>
+                                <label className="block text-xs font-medium text-gray-700 mb-1">
+                                    Confirm Password <span className="text-red-500">*</span>
+                                </label>
+                                <input
+                                    type="password"
+                                    name="confirmPassword"
+                                    value={formData.confirmPassword}
+                                    onChange={handleChange}
+                                    placeholder="Re-enter password"
+                                    className={`w-full px-3 py-2 rounded-lg border ${errors.confirmPassword ? 'border-red-300' : 'border-gray-300'} focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-sm`}
+                                />
+                                {errors.confirmPassword && (
+                                    <p className="mt-1 text-xs text-red-600">{errors.confirmPassword}</p>
+                                )}
                             </div>
                         </div>
                     )}
@@ -407,13 +353,13 @@ const RegisterCompany = () => {
                     )}
 
                     {/* Navigation Buttons */}
-                    <div className="mt-8 flex justify-between gap-4">
+                    <div className="mt-5 flex justify-between gap-3">
                         {currentStep > 1 && currentStep < 4 && (
                             <button
                                 onClick={handleBack}
-                                className="px-6 py-3 bg-gray-100 text-gray-700 rounded-lg font-semibold hover:bg-gray-200 transition-all flex items-center gap-2"
+                                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-200 transition-all flex items-center gap-2"
                             >
-                                <ArrowLeft className="w-5 h-5" />
+                                <ArrowLeft className="w-4 h-4" />
                                 Back
                             </button>
                         )}
@@ -422,17 +368,17 @@ const RegisterCompany = () => {
                             <button
                                 onClick={handleNext}
                                 disabled={isLoading}
-                                className="ml-auto px-8 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-semibold hover:shadow-lg transition-all flex items-center gap-2 disabled:opacity-50"
+                                className="ml-auto px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold shadow-md hover:shadow-lg transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 {isLoading ? (
                                     <>
-                                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                                         Processing...
                                     </>
                                 ) : (
                                     <>
                                         Next
-                                        <ArrowRight className="w-5 h-5" />
+                                        <ArrowRight className="w-4 h-4" />
                                     </>
                                 )}
                             </button>
@@ -443,8 +389,8 @@ const RegisterCompany = () => {
 
                 {/* Info about next steps */}
                 {currentStep === 1 && (
-                    <div className="mt-6 text-center">
-                        <p className="text-sm text-gray-600">
+                    <div className="mt-5 text-center">
+                        <p className="text-xs text-gray-600">
                             Already have an account?{" "}
                             <button
                                 onClick={() => navigate("/login")}
