@@ -163,7 +163,13 @@ const FeatureShowcase = () => {
                     </div>
 
                     {/* Auth Buttons */}
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-3">
+                        <button
+                            onClick={() => navigate("/register-company")}
+                            className="group flex items-center gap-2 px-5 py-2 bg-white hover:bg-gray-50 text-gray-900 text-sm font-semibold rounded-full border-2 border-gray-900 transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 active:scale-95"
+                        >
+                            <span>Register Company</span>
+                        </button>
                         <button
                             onClick={() => navigate("/login")}
                             className="group flex items-center gap-2 px-5 py-2 bg-gray-900 hover:bg-gray-800 text-white text-sm font-semibold rounded-full transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 active:scale-95"

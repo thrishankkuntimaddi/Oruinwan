@@ -34,6 +34,7 @@ import ResetPassword from "./pages/LoginPageComp/ResetPassword";
 import OAuthSuccess from "./pages/LoginPageComp/OAuthSuccess";
 import AcceptInvite from "./pages/AcceptInvite";
 import CompanyAdmin from "./pages/CompanyAdmin";
+import RegisterCompany from "./pages/RegisterCompany";
 
 // Protected route wrapper
 import RequireAuth from "./components/RequireAuth";
@@ -199,6 +200,7 @@ function App() {
 
                   {/* PUBLIC ROUTES */}
                   <Route path="/login" element={<LoginPage />} />
+                  <Route path="/register-company" element={<RegisterCompany />} />
                   <Route path="/verify-email" element={<VerifyEmail />} />
                   <Route path="/forgot-password" element={<ForgotPassword />} />
                   <Route path="/reset-password" element={<ResetPassword />} />

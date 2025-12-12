@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
+import { useNavigate, useLocation } from "react-router-dom";
+import { ArrowLeft, CheckCircle } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
 import LoginForm from "../../components/loginpage/LoginForm";
 import SignupForm from "../../components/loginpage/SignupForm";
@@ -9,6 +9,11 @@ const LoginPage = () => {
   const [isSignup, setIsSignup] = useState(false);
   const { user, loading } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Get message and email from navigation state (from registration)
+  const registrationMessage = location.state?.message;
+  const prefilledEmail = location.state?.email;
 
   // Redirect to home if already logged in
   useEffect(() => {
@@ -39,11 +44,28 @@ const LoginPage = () => {
         <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
         Back to Home
       </button>
+
       <div className="max-w-md w-full space-y-8">
+        {/* Registration Success Message */}
+        {registrationMessage && (
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-start gap-3 animate-fade-in">
+            <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-medium text-green-800">{registrationMessage}</p>
+              {prefilledEmail && (
+                <p className="text-xs text-green-600 mt-1">Email: {prefilledEmail}</p>
+              )}
+            </div>
+          </div>
+        )}
+
         {isSignup ? (
           <SignupForm onSwitch={() => setIsSignup(false)} />
         ) : (
-          <LoginForm onSwitch={() => setIsSignup(true)} />
+          <LoginForm
+            onSwitch={() => setIsSignup(true)}
+            initialEmail={prefilledEmail}
+          />
         )}
       </div>
     </div>

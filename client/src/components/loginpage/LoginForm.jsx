@@ -22,8 +22,11 @@ const GoogleIcon = () => (
 const GitHubIcon = () => <Github size={20} />;
 const LinkedInIcon = () => <Linkedin size={20} />;
 
-const LoginForm = ({ onSwitch }) => {
-  const [formData, setFormData] = useState({ email: "", password: "" });
+const LoginForm = ({ onSwitch, initialEmail = "" }) => {
+  const [formData, setFormData] = useState({
+    email: initialEmail,
+    password: ""
+  });
   const [showPassword, setShowPassword] = useState(false);
   const { login, setUser } = useContext(AuthContext);
   const { showToast } = useToast();
@@ -41,10 +44,18 @@ const LoginForm = ({ onSwitch }) => {
     if (!isFormValid) return;
 
     try {
-      await login(formData);
+      const response = await login(formData);
       showToast("Login successful!", "success");
-      // Navigate to workspace selection instead of direct home
-      navigate("/workspaces");
+
+      // Check if backend provided redirectTo (from enhanced login)
+      // Or check if user is admin/owner
+      if (response?.redirectTo) {
+        navigate(response.redirectTo);
+      } else if (response?.isAdmin || response?.user?.companyRole === 'owner' || response?.user?.companyRole === 'admin') {
+        navigate("/admin/company");
+      } else {
+        navigate("/workspaces");
+      }
     } catch (err) {
       console.error("🔴 Login Error:", err);
       showToast(err.message || "Login failed", "error");
