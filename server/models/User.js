@@ -22,38 +22,82 @@ const ProfileSchema = new mongoose.Schema(
 
 const UserSchema = new mongoose.Schema(
   {
+    // Basic Info
     username: { type: String, required: true }, // primary display name
     email: { type: String, required: true, unique: true, lowercase: true },
     phone: { type: String, unique: true, sparse: true },
     passwordHash: { type: String, required: true },
+
+    // User Type
+    userType: {
+      type: String,
+      enum: ["personal", "company"],
+      default: "personal"
+    }, // personal users vs company users
+
+    // Company Association
     companyId: { type: mongoose.Schema.Types.ObjectId, ref: "Company", default: null },
-    departments: [{ type: mongoose.Schema.Types.ObjectId, ref: "Department" }], // optional
+
+    // Company Role (within their company)
+    companyRole: {
+      type: String,
+      enum: ["owner", "admin", "manager", "member", "guest"],
+      default: "member"
+    },
+
+    // Departments
+    departments: [{ type: mongoose.Schema.Types.ObjectId, ref: "Department" }],
+
+    // Workspace Memberships
+    workspaces: [{
+      workspace: { type: mongoose.Schema.Types.ObjectId, ref: "Workspace" },
+      role: { type: String, enum: ["owner", "admin", "member"], default: "member" },
+      joinedAt: { type: Date, default: Date.now }
+    }],
+
+    // Personal workspace for personal users
+    personalWorkspace: { type: mongoose.Schema.Types.ObjectId, ref: "Workspace", default: null },
+
+    // Legacy/backward compatibility
     rolesPerCompany: { type: mongoose.Schema.Types.Mixed }, // e.g. { "<companyId>": "admin" }
 
-
-
+    // Verification
     verified: { type: Boolean, default: false },
-
     verificationTokenHash: String,
     verificationTokenExpires: Date,
 
+    // Password Reset
     resetPasswordTokenHash: String,
     resetPasswordExpires: Date,
 
+    // Refresh Tokens
     refreshTokens: [RefreshTokenSchema],
 
+    // System Roles (for platform admin, etc.)
     roles: { type: [String], default: ["user"] },
 
+    // Security
     failedLoginAttempts: { type: Number, default: 0 },
     lockedUntil: Date,
 
+    // Profile
     profile: ProfileSchema,
 
-    // Google OAuth fields (required by authController.js)
+    // Google OAuth fields
     googleId: { type: String, unique: true, sparse: true },
     profilePicture: { type: String },
     googleAccount: { type: Boolean, default: false },
 
+    // Activity Tracking
+    lastLoginAt: { type: Date, default: null },
+    lastActivityAt: { type: Date, default: Date.now },
+    isOnline: { type: Boolean, default: false },
+
+    // Status
+    isActive: { type: Boolean, default: true },
+    deactivatedAt: { type: Date, default: null },
+
+    // Timestamps
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now }
   },

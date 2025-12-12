@@ -34,11 +34,11 @@ function generateRefreshToken(user) {
 }
 
 // ----------------------------------------------------
-// SIGNUP
+// SIGNUP (with Company Assignment Logic)
 // ----------------------------------------------------
 exports.signup = async (req, res) => {
   try {
-    const { username, email, password, phone } = req.body;
+    const { username, email, password, phone, inviteToken } = req.body;
 
     if (!username || !email || !password)
       return res.status(400).json({ message: "Missing required fields" });
@@ -51,24 +51,175 @@ exports.signup = async (req, res) => {
     const rawToken = crypto.randomBytes(32).toString("hex");
     const tokenHash = sha256(rawToken);
 
+    // Initialize user data
+    let userType = "personal";
+    let companyId = null;
+    let companyRole = "member";
+    let workspacesToJoin = [];
+
+    // ==================== COMPANY ASSIGNMENT LOGIC ====================
+
+    const emailLower = email.toLowerCase();
+    const Company = require("../models/Company");
+    const Invite = require("../models/Invite");
+    const Workspace = require("../models/Workspace");
+    const Channel = require("../models/Channel");
+
+    // Helper to extract domain
+    const extractDomain = (email) => {
+      const match = email.match(/@(.+)$/);
+      return match ? match[1].toLowerCase() : null;
+    };
+
+    // 1. Check for pending invite (highest priority)
+    if (inviteToken) {
+      const inviteHash = sha256(inviteToken);
+      const invite = await Invite.findOne({
+        tokenHash: inviteHash,
+        email: emailLower,
+        used: false,
+        expiresAt: { $gt: new Date() }
+      });
+
+      if (invite) {
+        userType = "company";
+        companyId = invite.company;
+        companyRole = invite.role || "member";
+
+        if (invite.workspace) {
+          workspacesToJoin.push(invite.workspace);
+        }
+
+        // Mark invite as used
+        invite.used = true;
+        await invite.save();
+
+        console.log(`✅ Signup via INVITE: ${email} → Company ${companyId}`);
+      }
+    }
+
+    // 2. Check if email is in any company's allowedEmails list
+    if (!companyId) {
+      const companyWithAllowedEmail = await Company.findOne({
+        allowedEmails: emailLower,
+        isActive: true
+      });
+
+      if (companyWithAllowedEmail) {
+        userType = "company";
+        companyId = companyWithAllowedEmail._id;
+        companyRole = companyWithAllowedEmail.invitePolicy?.defaultRole || "member";
+
+        if (companyWithAllowedEmail.defaultWorkspace) {
+          workspacesToJoin.push(companyWithAllowedEmail.defaultWorkspace);
+        }
+
+        console.log(`✅ Signup via ALLOWED EMAIL: ${email} → ${companyWithAllowedEmail.name}`);
+      }
+    }
+
+    // 3. Check for domain-based auto-join (if domain verified + auto-join enabled)
+    if (!companyId) {
+      const domain = extractDomain(emailLower);
+
+      if (domain) {
+        const companyWithDomain = await Company.findOne({
+          domain,
+          domainVerified: true,
+          autoJoinByDomain: true,
+          isActive: true
+        });
+
+        if (companyWithDomain) {
+          userType = "company";
+          companyId = companyWithDomain._id;
+          companyRole = companyWithDomain.invitePolicy?.defaultRole || "member";
+
+          if (companyWithDomain.defaultWorkspace) {
+            workspacesToJoin.push(companyWithDomain.defaultWorkspace);
+          }
+
+          console.log(`✅ Signup via DOMAIN AUTO-JOIN: ${email} → ${companyWithDomain.name} (${domain})`);
+        }
+      }
+    }
+
+    // If no company match, user remains personal
+    if (!companyId) {
+      console.log(`ℹ️  Personal user signup: ${email}`);
+    }
+
+    // ==================== CREATE USER ====================
+
     const user = new User({
       username,
-      email,
+      email: emailLower,
       phone,
       passwordHash,
+      userType,
+      companyId,
+      companyRole,
       verificationTokenHash: tokenHash,
       verificationTokenExpires: Date.now() + 86400000,
-      verified: true, // Auto-verify for testing
+      verified: true // Auto-verify for testing (change in production)
     });
 
     await user.save();
 
+    // ==================== WORKSPACE ASSIGNMENT ====================
+
+    if (companyId && workspacesToJoin.length > 0) {
+      for (const workspaceId of workspacesToJoin) {
+        const workspace = await Workspace.findById(workspaceId);
+
+        if (workspace && !workspace.isMember(user._id)) {
+          // Add user to workspace
+          workspace.members.push({
+            user: user._id,
+            role: "member"
+          });
+          await workspace.save();
+
+          // Add workspace to user's workspaces array
+          user.workspaces.push({
+            workspace: workspaceId,
+            role: "member"
+          });
+
+          // Add to default channels in this workspace
+          const defaultChannels = await Channel.find({
+            workspace: workspaceId,
+            isDefault: true
+          });
+
+          for (const channel of defaultChannels) {
+            if (!channel.members.includes(user._id)) {
+              channel.members.push(user._id);
+              await channel.save();
+              console.log(`   → Added to channel: #${channel.name}`);
+            }
+          }
+
+          console.log(`   → Added to workspace: ${workspace.name}`);
+        }
+      }
+
+      await user.save();
+    }
+
+    // ==================== EMAIL VERIFICATION (OPTIONAL) ====================
+
     const verifyUrl = `${process.env.FRONTEND_URL}/verify-email?token=${rawToken}&email=${encodeURIComponent(email)}`;
 
     console.log("\n" + "=".repeat(80));
-    console.log("📧 EMAIL VERIFICATION REQUIRED");
+    console.log("📧 NEW USER SIGNUP");
     console.log("User:", username);
     console.log("Email:", email);
+    console.log("Type:", userType);
+    if (companyId) {
+      console.log("Company ID:", companyId);
+      console.log("Role:", companyRole);
+    }
     console.log("Verify URL:", verifyUrl);
     console.log("=".repeat(80) + "\n");
 
@@ -80,7 +231,12 @@ exports.signup = async (req, res) => {
     });
     */
 
-    return res.status(201).json({ message: "Signup successful, verify your email." });
+    return res.status(201).json({
+      message: "Signup successful, verify your email.",
+      userType,
+      companyId: companyId || null
+    });
+
   } catch (err) {
     console.error("SIGNUP ERROR:", err);
     return res.status(500).json({ message: "Server error" });
@@ -125,7 +281,7 @@ exports.login = async (req, res) => {
     if (!email || !password)
       return res.status(400).json({ message: "Email and password required" });
 
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email }).populate("companyId", "name domain defaultWorkspace");
 
     if (!user)
       return res.status(400).json({ message: "Invalid email or password" });
@@ -133,17 +289,24 @@ exports.login = async (req, res) => {
     if (!user.verified)
       return res.status(403).json({ message: "Please verify your email first" });
 
-    // If Google account → block password login
-    if (user.googleAccount) {
-      return res.status(400).json({
-        message: "This account uses Google Sign-In. Please login using Google.",
-      });
-    }
-
     // Compare password
     const match = await bcrypt.compare(password, user.passwordHash);
     if (!match)
       return res.status(400).json({ message: "Invalid email or password" });
+
+    // Check if company user
+    if (user.companyId) {
+      const Company = require("../models/Company");
+      const company = await Company.findById(user.companyId);
+
+      if (!company) {
+        return res.status(404).json({ message: "Company not found" });
+      }
+
+      if (!company.isActive) {
+        return res.status(403).json({ message: "Company is inactive" });
+      }
+    }
 
     // Tokens
     const accessToken = generateAccessToken(user);
@@ -156,6 +319,10 @@ exports.login = async (req, res) => {
       deviceInfo: req.get("User-Agent") || "Unknown",
     });
 
+    // Update last login
+    user.lastLoginAt = new Date();
+    user.isOnline = true;
+
     await user.save();
 
     res.cookie("jwt", refreshToken, {
@@ -165,7 +332,8 @@ exports.login = async (req, res) => {
       maxAge: REFRESH_DAYS * 86400000,
     });
 
-    return res.json({
+    // Prepare response based on user type
+    const response = {
       message: "Login successful",
       accessToken,
       user: {
@@ -174,8 +342,37 @@ exports.login = async (req, res) => {
         email: user.email,
         roles: user.roles,
         verified: user.verified,
-      },
-    });
+        userType: user.userType,
+        companyRole: user.companyRole,
+        profilePicture: user.profilePicture
+      }
+    };
+
+    // Add company info if company user
+    if (user.companyId) {
+      response.company = {
+        id: user.companyId._id,
+        name: user.companyId.name,
+        domain: user.companyId.domain,
+        defaultWorkspace: user.companyId.defaultWorkspace
+      };
+
+      // Check if user is admin/owner
+      const isAdmin = user.companyRole === "owner" || user.companyRole === "admin";
+      response.isAdmin = isAdmin;
+
+      // Set redirect URL
+      if (isAdmin) {
+        response.redirectTo = "/admin/dashboard"; // Admin dashboard
+      } else {
+        response.redirectTo = "/workspace"; // Regular workspace view
+      }
+    } else {
+      // Personal user
+      response.redirectTo = "/personal/workspace";
+    }
+
+    return res.json(response);
 
   } catch (err) {
     console.error("LOGIN ERROR:", err);
