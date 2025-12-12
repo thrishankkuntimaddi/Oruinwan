@@ -593,11 +593,142 @@ exports.bulkInviteEmployees = async (req, res) => {
 };
 
 /**
+ * Method 4: Admin Direct Create Employee (No Email Confirmation)
+ * POST /api/companies/:id/employees/create
+ */
+exports.directCreateEmployee = async (req, res) => {
+  try {
+    const companyId = req.params.id;
+    const userId = req.user.sub;
+    const {
+      username,
+      email,
+      password,
+      role = "member",
+      department,
+      jobTitle
+    } = req.body;
+
+    if (!username || !email || !password) {
+      return res.status(400).json({
+        message: "Username, email, and password are required"
+      });
+    }
+
+    const company = await Company.findById(companyId);
+    if (!company) {
+      return res.status(404).json({ message: "Company not found" });
+    }
+
+    // Only admins can directly create employees
+    if (!company.isAdmin(userId)) {
+      return res.status(403).json({
+        message: "Only company admins can create employees directly"
+      });
+    }
+
+    // Check if user exists
+    const existingUser = await User.findOne({ email: email.toLowerCase() });
+    if (existingUser) {
+      return res.status(409).json({
+        message: "Email already in use"
+      });
+    }
+
+    // Create user account
+    const passwordHash = await bcrypt.hash(password, 12);
+
+    const newUser = new User({
+      username,
+      email: email.toLowerCase(),
+      passwordHash,
+      userType: "company",
+      companyId: company._id,
+      companyRole: role,
+      verified: true, // Auto-verified since created by admin
+      jobTitle,
+      departments: department ? [department] : []
+    });
+
+    await newUser.save();
+
+    console.log(`✅ Direct employee created: ${email} by admin`);
+
+    // Add to default workspace
+    if (company.defaultWorkspace) {
+      const workspace = await Workspace.findById(company.defaultWorkspace);
+
+      if (workspace && !workspace.isMember(newUser._id)) {
+        workspace.members.push({
+          user: newUser._id,
+          role: "member"
+        });
+        await workspace.save();
+
+        newUser.workspaces.push({
+          workspace: workspace._id,
+          role: "member"
+        });
+
+        // Add to default channels
+        const defaultChannels = await Channel.find({
+          workspace: workspace._id,
+          isDefault: true
+        });
+
+        for (const channel of defaultChannels) {
+          if (!channel.members.includes(newUser._id)) {
+            channel.members.push(newUser._id);
+            await channel.save();
+            console.log(`   → Added to channel: #${channel.name}`);
+          }
+        }
+
+        await newUser.save();
+        console.log(`   → Added to workspace: ${workspace.name}`);
+      }
+    }
+
+    // Log action
+    await logAction({
+      userId,
+      action: "employee_created_direct",
+      description: `Admin directly created employee: ${username}`,
+      resourceType: "user",
+      resourceId: newUser._id,
+      companyId: company._id,
+      metadata: { email, role },
+      req
+    });
+
+    return res.json({
+      message: "Employee account created successfully",
+      user: {
+        id: newUser._id,
+        username: newUser.username,
+        email: newUser.email,
+        companyRole: newUser.companyRole,
+        verified: newUser.verified
+      },
+      credentials: {
+        email: newUser.email,
+        temporaryPassword: password // Send back so admin can share with employee
+      }
+    });
+
+  } catch (err) {
+    console.error("DIRECT CREATE EMPLOYEE ERROR:", err);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+
+/**
  * Accept company invitation
  * POST /api/companies/accept-invite
  */
 exports.acceptInvite = async (req, res) => {
   try {
+
     const { token, username, password } = req.body;
 
     if (!token || !username || !password) {

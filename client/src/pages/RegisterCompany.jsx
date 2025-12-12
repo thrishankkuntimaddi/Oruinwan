@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, ArrowRight, Building2, User, Mail, Lock, Globe, Shield } from "lucide-react";
+import { ArrowLeft, ArrowRight, Mail, Shield } from "lucide-react";
 import { useToast } from "../contexts/ToastContext";
 import axios from "axios";
 

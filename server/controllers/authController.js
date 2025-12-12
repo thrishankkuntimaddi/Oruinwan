@@ -207,6 +207,72 @@ exports.signup = async (req, res) => {
       await user.save();
     }
 
+    // ==================== PERSONAL WORKSPACE CREATION ====================
+
+    // If personal user, create a personal workspace with default channels
+    if (userType === "personal" && !companyId) {
+      const personalWorkspace = new Workspace({
+        company: null,
+        type: "personal",
+        name: `${username}'s Workspace`,
+        description: "Your personal workspace",
+        createdBy: user._id,
+        members: [{
+          user: user._id,
+          role: "owner"
+        }],
+        settings: {
+          isPrivate: true,
+          allowMemberInvite: true // Allow inviting others to personal workspace
+        }
+      });
+
+      await personalWorkspace.save();
+
+      console.log(`   ✅ Personal workspace created: ${personalWorkspace.name}`);
+
+      // Create default channels (#general and #announcements)
+      const generalChannel = new Channel({
+        workspace: personalWorkspace._id,
+        company: null, // Personal workspace has no company
+        name: "general",
+        description: "General discussion",
+        isPrivate: false,
+        isDefault: true,
+        createdBy: user._id,
+        members: [user._id]
+      });
+
+      const announcementsChannel = new Channel({
+        workspace: personalWorkspace._id,
+        company: null,
+        name: "announcements",
+        description: "Announcements and updates",
+        isPrivate: false,
+        isDefault: true,
+        createdBy: user._id,
+        members: [user._id]
+      });
+
+      await generalChannel.save();
+      await announcementsChannel.save();
+
+      console.log(`   ✅ Default channels created: #general, #announcements`);
+
+      // Update workspace with default channels
+      personalWorkspace.defaultChannels = [generalChannel._id, announcementsChannel._id];
+      await personalWorkspace.save();
+
+      // Update user with personal workspace
+      user.personalWorkspace = personalWorkspace._id;
+      user.workspaces.push({
+        workspace: personalWorkspace._id,
+        role: "owner"
+      });
+
+      await user.save();
+    }
+
     // ==================== EMAIL VERIFICATION (OPTIONAL) ====================
 
     const verifyUrl = `${process.env.FRONTEND_URL}/verify-email?token=${rawToken}&email=${encodeURIComponent(email)}`;

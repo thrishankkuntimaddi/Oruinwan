@@ -5,7 +5,7 @@ const crypto = require("crypto");
 
 /**
  * Generate a domain verification token
- * @returns {Object} { token, txtRecord }
+ * @returns {Object} 
  */
 exports.generateDomainVerificationToken = () => {
     // Generate a short verification code
@@ -19,9 +19,9 @@ exports.generateDomainVerificationToken = () => {
 
 /**
  * Verify domain via TXT record
- * @param {string} domain - Domain to verify (e.g., "example.com")
- * @param {string} expectedToken - Token that should be in TXT record
- * @returns {Promise<boolean>} - True if verified
+ * @param {string} domain 
+ * @param {string} expectedToken 
+ * @returns {Promise<boolean>} 
  */
 exports.verifyDomainTXT = async (domain, expectedToken) => {
     try {

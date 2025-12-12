@@ -3,7 +3,9 @@ import { useNavigate } from "react-router-dom";
 import { Trash2, X } from 'lucide-react';
 import ConfirmationModal from "../../../modals/ConfirmationModal";
 import { useContacts } from "../../../../contexts/ContactsContext";
+import { useAuth } from "../../../../contexts/AuthContext";
 import { useToast } from "../../../../contexts/ToastContext";
+import { useUsers } from "../../../../hooks/useUsers";
 
 // Import sub-components
 import WorkspaceHeader from "./WorkspaceHeader";
@@ -18,7 +20,11 @@ const HomePanel = ({ title }) => {
     const navigate = useNavigate();
 
     const { allItems: items, deleteItem, addItem, toggleFavorite } = useContacts();
+    const { user } = useAuth();
     const { showToast } = useToast();
+
+    // Fetch real users from API
+    const { users } = useUsers(user?.companyId);
 
     const [expanded, setExpanded] = useState({
         favorites: true,
@@ -57,15 +63,7 @@ const HomePanel = ({ title }) => {
     const [createStep, setCreateStep] = useState(1);
     const [selectedChannelMembers, setSelectedChannelMembers] = useState([]);
 
-    const MOCK_USERS = [
-        { id: 'u1', name: 'Sarah Connor', status: 'online' },
-        { id: 'u2', name: 'Thrishank', status: 'away' },
-        { id: 'u3', name: 'Alice Smith', status: 'online' },
-        { id: 'u4', name: 'Mike Ross', status: 'offline' },
-        { id: 'u5', name: 'Rachel Zane', status: 'busy' },
-        { id: 'u6', name: 'Harvey Specter', status: 'online' },
-        { id: 'u7', name: 'Donna Paulsen', status: 'online' },
-    ];
+    // No more MOCK_USERS - using real data from useUsers hook
 
     const handleStartDM = (user) => {
         const existingDM = items.find(i => i.type === 'dm' && i.label === user.name);
@@ -287,7 +285,7 @@ const HomePanel = ({ title }) => {
                 setCreateStep={setCreateStep}
                 selectedChannelMembers={selectedChannelMembers}
                 setSelectedChannelMembers={setSelectedChannelMembers}
-                MOCK_USERS={MOCK_USERS}
+                MOCK_USERS={users}
                 addItem={addItem}
             />
 
@@ -295,7 +293,7 @@ const HomePanel = ({ title }) => {
             <NewDMModal
                 showNewDMModal={showNewDMModal}
                 setShowNewDMModal={setShowNewDMModal}
-                MOCK_USERS={MOCK_USERS}
+                MOCK_USERS={users}
                 handleStartDM={handleStartDM}
             />
         </div>

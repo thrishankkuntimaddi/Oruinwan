@@ -9,7 +9,7 @@ const CompanySchema = new mongoose.Schema({
   website: { type: String },
 
   // Domain Configuration
-  domain: { type: String, unique: true, sparse: true }, 
+  domain: { type: String, unique: true, sparse: true },
   domainVerified: { type: Boolean, default: false },
   domainVerificationToken: { type: String, default: null },
   domainVerificationExpires: { type: Date, default: null },
@@ -72,7 +72,7 @@ const CompanySchema = new mongoose.Schema({
 }, { timestamps: true });
 
 // Indexes
-CompanySchema.index({ domain: 1 });
+// Note: domain index is created automatically by unique: true
 CompanySchema.index({ isActive: 1 });
 CompanySchema.index({ "admins.user": 1 });
 

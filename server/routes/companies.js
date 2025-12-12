@@ -108,4 +108,12 @@ router.post("/:id/invite", requireAuth, companyController.inviteEmployee);
  */
 router.post("/:id/invite/bulk", requireAuth, companyController.bulkInviteEmployees);
 
+/**
+ * @route   POST /api/companies/:id/employees/create
+ * @desc    Admin directly creates employee (Method 4 - No email invite)
+ * @body    username, email, password, role, department, jobTitle
+ * @access  Private (company admin)
+ */
+router.post("/:id/employees/create", requireAuth, companyController.directCreateEmployee);
+
 module.exports = router;
