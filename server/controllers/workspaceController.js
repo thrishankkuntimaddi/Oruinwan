@@ -119,13 +119,20 @@ exports.createWorkspace = async (req, res) => {
 exports.listMyWorkspaces = async (req, res) => {
   try {
     const userId = req.user?.sub;
+    console.log('🔍 listMyWorkspaces called for user:', userId);
 
     const user = await User.findById(userId).populate({
       path: 'workspaces.workspace',
       select: 'name description icon color type company members defaultChannels'
     });
 
-    if (!user) return res.status(404).json({ message: "User not found" });
+    if (!user) {
+      console.log('❌ User not found:', userId);
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    console.log('👤 User found:', user.username);
+    console.log('📋 User workspaces array:', user.workspaces);
 
     // Filter to only return workspaces where user is actually a member
     const workspaces = user.workspaces
@@ -142,6 +149,7 @@ exports.listMyWorkspaces = async (req, res) => {
         isPersonal: ws.workspace.type === 'personal'
       }));
 
+    console.log('✅ Returning workspaces:', workspaces);
     return res.json({ workspaces });
   } catch (err) {
     console.error("LIST MY WORKSPACES ERROR:", err);

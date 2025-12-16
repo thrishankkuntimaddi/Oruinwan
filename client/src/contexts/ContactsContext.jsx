@@ -65,6 +65,13 @@ export default function ContactsProvider({ children }) {
       setDms(dmsData);
       setContacts([...channelsData, ...dmsData]);
 
+      console.log('📡 ContactsContext loaded:', {
+        channels: channelsData.length,
+        dms: dmsData.length,
+        channelsData,
+        dmsData
+      });
+
     } catch (err) {
       console.error("Error loading contacts:", err);
       setError(err.message);

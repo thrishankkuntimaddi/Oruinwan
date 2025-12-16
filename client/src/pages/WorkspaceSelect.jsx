@@ -22,28 +22,43 @@ const WorkspaceSelect = () => {
     const [workspaces, setWorkspaces] = useState([]);
 
     React.useEffect(() => {
-        if (user?.companyId) {
-            fetch(`/api/workspaces/${user.companyId}`, {
-                headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-            })
-                .then(res => res.json())
-                .then(data => {
-                    if (data.workspaces) {
-                        setWorkspaces(data.workspaces.map(ws => ({
-                            id: ws._id,
-                            name: ws.name,
-                            members: ws.members?.length || 1,
-                            icon: "briefcase",
-                            color: "#2563eb"
-                        })));
+        const loadWorkspaces = async () => {
+            try {
+                const token = localStorage.getItem('accessToken');
+                if (!token) return;
+
+                const response = await fetch('/api/workspaces/my', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
                     }
-                })
-                .catch(err => console.error(err));
-        } else {
-            setWorkspaces([
-                { id: 'personal', name: "Personal Workspace", members: 1, icon: "rocket", color: "#4f46e5" }
-            ]);
-        }
+                });
+
+                if (!response.ok) throw new Error('Failed to fetch workspaces');
+
+                const data = await response.json();
+                console.log('📋 Workspaces loaded:', data);
+
+                if (data.workspaces && data.workspaces.length > 0) {
+                    setWorkspaces(data.workspaces.map(ws => ({
+                        id: ws.id,
+                        name: ws.name,
+                        members: ws.memberCount || 1,
+                        icon: ws.icon || "rocket",
+                        color: ws.color || "#4f46e5",
+                        type: ws.type
+                    })));
+                } else {
+                    // No workspaces found
+                    setWorkspaces([]);
+                }
+            } catch (err) {
+                console.error('Error loading workspaces:', err);
+                setWorkspaces([]);
+            }
+        };
+
+        loadWorkspaces();
     }, [user]);
 
     // Create Workspace Wizard State
