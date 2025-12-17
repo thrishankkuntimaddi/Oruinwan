@@ -935,8 +935,7 @@ exports.getCompanyMembers = async (req, res) => {
     }
 
     const members = await User.find({ companyId })
-      .select("username email profilePicture companyRole departments createdAt lastLoginAt isOnline")
-      .populate("departments", "name")
+      .select("username email profilePicture companyRole createdAt lastLoginAt isOnline")
       .lean();
 
     return res.json({ members });

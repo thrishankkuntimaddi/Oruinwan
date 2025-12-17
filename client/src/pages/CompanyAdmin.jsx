@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { useToast } from "../contexts/ToastContext";
-import { Building, Users, Mail, Loader, Shield, CheckCircle, AlertCircle, Trash2, RefreshCw, UserX, Edit } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Building, Users, Mail, Loader, Shield, CheckCircle, AlertCircle, Trash2, RefreshCw, UserX, Edit, ArrowLeft } from "lucide-react";
 
 const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000';
 
@@ -483,6 +484,7 @@ const MemberManagement = ({ companyId }) => {
 
 const CompanyAdmin = () => {
     const { user } = useAuth();
+    const navigate = useNavigate();
     // const [activeTab, setActiveTab] = useState("overview"); 
     const [workspaces, setWorkspaces] = useState([]);
 
@@ -515,9 +517,18 @@ const CompanyAdmin = () => {
         <div className="min-h-screen bg-gray-50 pt-20 pb-12 px-4 sm:px-6 lg:px-8">
             <div className="max-w-6xl mx-auto">
                 <div className="flex items-center justify-between mb-8">
-                    <div>
-                        <h1 className="text-3xl font-bold text-gray-900">Admin Console</h1>
-                        <p className="text-gray-500 mt-1">Manage your organization settings and team.</p>
+                    <div className="flex items-center gap-4">
+                        <button
+                            onClick={() => navigate('/app')}
+                            className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
+                            title="Back to Workspace"
+                        >
+                            <ArrowLeft size={20} className="text-gray-600" />
+                        </button>
+                        <div>
+                            <h1 className="text-3xl font-bold text-gray-900">Admin Console</h1>
+                            <p className="text-gray-500 mt-1">Manage your organization settings and team.</p>
+                        </div>
                     </div>
                     {/* Tabs / Nav can go here */}
                 </div>
