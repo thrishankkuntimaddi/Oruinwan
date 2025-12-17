@@ -47,15 +47,14 @@ const LoginForm = ({ onSwitch, initialEmail = "" }) => {
       const response = await login(formData);
       showToast("Login successful!", "success");
 
-      // Check if backend provided redirectTo (from enhanced login)
-      // Or check if user is admin/owner
-      if (response?.redirectTo) {
-        navigate(response.redirectTo);
-      } else if (response?.isAdmin || response?.user?.companyRole === 'owner' || response?.user?.companyRole === 'admin') {
-        navigate("/admin/company");
-      } else {
-        navigate("/workspaces");
-      }
+      // Determine redirect based on role
+      const isAdmin = response?.isAdmin ||
+        response?.user?.companyRole === 'owner' ||
+        response?.user?.companyRole === 'admin';
+
+      // Admin → Dashboard, Employee → Workspace
+      navigate(isAdmin ? "/admin/company" : "/app");
+
     } catch (err) {
       console.error("🔴 Login Error:", err);
       showToast(err.message || "Login failed", "error");

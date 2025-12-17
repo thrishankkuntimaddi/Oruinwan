@@ -38,6 +38,7 @@ import RegisterCompany from "./pages/RegisterCompany";
 
 // Protected route wrapper
 import RequireAuth from "./components/RequireAuth";
+import RequireAdmin from "./components/RequireAdmin";
 
 
 function App() {
@@ -182,12 +183,14 @@ function App() {
                     }
                   />
 
-                  {/* Company Admin Console */}
+                  {/* Company Admin Console - Admin/Owner Only */}
                   <Route
                     path="/admin/company"
                     element={
                       <RequireAuth>
-                        <CompanyAdmin />
+                        <RequireAdmin>
+                          <CompanyAdmin />
+                        </RequireAdmin>
                       </RequireAuth>
                     }
                   />

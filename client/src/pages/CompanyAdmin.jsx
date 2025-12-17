@@ -1,7 +1,9 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { useToast } from "../contexts/ToastContext";
-import { Building, Users, Mail, Loader, Shield, CheckCircle, AlertCircle, Trash2, RefreshCw } from "lucide-react";
+import { Building, Users, Mail, Loader, Shield, CheckCircle, AlertCircle, Trash2, RefreshCw, UserX, Edit } from "lucide-react";
+
+const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000';
 
 // Components for different admin sections
 const CreateCompanyForm = ({ onSuccess }) => {
@@ -14,11 +16,11 @@ const CreateCompanyForm = ({ onSuccess }) => {
         e.preventDefault();
         setLoading(true);
         try {
-            const res = await fetch("/api/companies", {
+            const res = await fetch(`${API_BASE}/api/companies`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
-                    "Authorization": `Bearer ${localStorage.getItem("token")}`
+                    "Authorization": `Bearer ${localStorage.getItem("accessToken")}`
                 },
                 body: JSON.stringify({ name, domain })
             });
@@ -94,9 +96,9 @@ const DomainVerification = ({ companyId }) => {
     const generateToken = async () => {
         setLoading(true);
         try {
-            const res = await fetch(`/api/companies/${companyId}/domain/generate`, {
+            const res = await fetch(`${API_BASE}/api/companies/${companyId}/domain/generate`, {
                 method: "POST",
-                headers: { "Authorization": `Bearer ${localStorage.getItem("token")}` }
+                headers: { "Authorization": `Bearer ${localStorage.getItem("accessToken")}` }
             });
             const data = await res.json();
             if (!res.ok) throw new Error(data.message);
@@ -113,8 +115,9 @@ const DomainVerification = ({ companyId }) => {
     const checkVerification = async () => {
         setLoading(true);
         try {
-            const res = await fetch(`/api/companies/${companyId}/domain/check`, {
-                headers: { "Authorization": `Bearer ${localStorage.getItem("token")}` }
+            const res = await fetch(`${API_BASE}/api/companies/${companyId}/domain/verify`, {
+                method: "POST",
+                headers: { "Authorization": `Bearer ${localStorage.getItem("accessToken")}` }
             });
             const data = await res.json();
             if (!res.ok) throw new Error(data.message);
@@ -135,9 +138,9 @@ const DomainVerification = ({ companyId }) => {
     const clearVerification = async () => {
         if (!window.confirm("Are you sure? This will remove the verification token.")) return;
         try {
-            await fetch(`/api/companies/${companyId}/domain/clear`, {
+            await fetch(`${API_BASE}/api/companies/${companyId}/domain/clear`, {
                 method: "POST",
-                headers: { "Authorization": `Bearer ${localStorage.getItem("token")}` }
+                headers: { "Authorization": `Bearer ${localStorage.getItem("accessToken")}` }
             });
             setStatus(null);
             setTokenData(null);
@@ -218,11 +221,11 @@ const InviteMemberForm = ({ companyId, workspaces }) => {
         e.preventDefault();
         setLoading(true);
         try {
-            const res = await fetch(`/api/companies/${companyId}/invite`, {
+            const res = await fetch(`${API_BASE}/api/companies/${companyId}/invite`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
-                    "Authorization": `Bearer ${localStorage.getItem("token")}`
+                    "Authorization": `Bearer ${localStorage.getItem("accessToken")}`
                 },
                 body: JSON.stringify({ email, role, workspaceId: workspaceId || null })
             });
@@ -292,16 +295,202 @@ const InviteMemberForm = ({ companyId, workspaces }) => {
     );
 };
 
+const MemberManagement = ({ companyId }) => {
+    const { showToast } = useToast();
+    const [members, setMembers] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [editingMember, setEditingMember] = useState(null);
+    const [newRole, setNewRole] = useState("");
+
+    // Fetch members
+    useEffect(() => {
+        if (!companyId) return;
+
+        const fetchMembers = async () => {
+            try {
+                const res = await fetch(`${API_BASE}/api/companies/${companyId}/members`, {
+                    headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` }
+                });
+                const data = await res.json();
+
+                if (res.ok) {
+                    setMembers(data.members || []);
+                } else {
+                    showToast(data.message || "Failed to load members", "error");
+                }
+            } catch (err) {
+                console.error("Fetch members error:", err);
+                showToast("Failed to load members", "error");
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchMembers();
+    }, [companyId, showToast]);
+
+    // Update member role
+    const handleUpdateRole = async (userId, role) => {
+        try {
+            const res = await fetch(`${API_BASE}/api/companies/${companyId}/members/${userId}/role`, {
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${localStorage.getItem('accessToken')}`
+                },
+                body: JSON.stringify({ role })
+            });
+
+            const data = await res.json();
+
+            if (!res.ok) throw new Error(data.message);
+
+            // Update local state
+            setMembers(prev => prev.map(m =>
+                m._id === userId ? { ...m, companyRole: role } : m
+            ));
+
+            showToast("Role updated successfully", "success");
+            setEditingMember(null);
+        } catch (err) {
+            showToast(err.message, "error");
+        }
+    };
+
+    // Remove member
+    const handleRemoveMember = async (userId, username) => {
+        if (!window.confirm(`Remove ${username} from the company? This cannot be undone.`)) return;
+
+        try {
+            const res = await fetch(`${API_BASE}/api/companies/${companyId}/members/${userId}`, {
+                method: "DELETE",
+                headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` }
+            });
+
+            const data = await res.json();
+
+            if (!res.ok) throw new Error(data.message);
+
+            // Update local state
+            setMembers(prev => prev.filter(m => m._id !== userId));
+            showToast("Member removed successfully", "success");
+        } catch (err) {
+            showToast(err.message, "error");
+        }
+    };
+
+    if (loading) {
+        return (
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+                <div className="flex items-center justify-center py-12">
+                    <Loader className="animate-spin text-gray-400" size={32} />
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+            <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                <Users size={20} className="text-gray-400" />
+                Team Members
+                <span className="ml-auto text-sm font-normal text-gray-500">{members.length} members</span>
+            </h3>
+
+            {members.length === 0 ? (
+                <div className="text-center py-12">
+                    <Users className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                    <p className="text-gray-500 text-sm">No members yet. Invite your team above!</p>
+                </div>
+            ) : (
+                <div className="space-y-2">
+                    {members.map((member) => (
+                        <div
+                            key={member._id}
+                            className="flex items-center justify-between p-4 rounded-lg border border-gray-100 hover:border-gray-200 hover:bg-gray-50 transition-all"
+                        >
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold">
+                                    {member.username?.charAt(0).toUpperCase() || "?"}
+                                </div>
+                                <div>
+                                    <p className="font-semibold text-gray-900">{member.username}</p>
+                                    <p className="text-sm text-gray-500">{member.email}</p>
+                                </div>
+                            </div>
+
+                            <div className="flex items-center gap-3">
+                                {editingMember === member._id ? (
+                                    <div className="flex items-center gap-2">
+                                        <select
+                                            value={newRole}
+                                            onChange={(e) => setNewRole(e.target.value)}
+                                            className="px-3 py-1 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
+                                        >
+                                            <option value="member">Member</option>
+                                            <option value="admin">Admin</option>
+                                            <option value="owner">Owner</option>
+                                        </select>
+                                        <button
+                                            onClick={() => handleUpdateRole(member._id, newRole)}
+                                            className="px-3 py-1 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700"
+                                        >
+                                            Save
+                                        </button>
+                                        <button
+                                            onClick={() => setEditingMember(null)}
+                                            className="px-3 py-1 bg-gray-200 text-gray-700 text-sm rounded-lg hover:bg-gray-300"
+                                        >
+                                            Cancel
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <>
+                                        <span className={`px-3 py-1 text-xs font-semibold rounded-full ${member.companyRole === 'owner' ? 'bg-purple-100 text-purple-700' :
+                                            member.companyRole === 'admin' ? 'bg-blue-100 text-blue-700' :
+                                                'bg-gray-100 text-gray-700'
+                                            }`}>
+                                            {member.companyRole?.toUpperCase() || 'MEMBER'}
+                                        </span>
+                                        <button
+                                            onClick={() => {
+                                                setEditingMember(member._id);
+                                                setNewRole(member.companyRole || 'member');
+                                            }}
+                                            className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
+                                            title="Edit role"
+                                        >
+                                            <Edit size={16} />
+                                        </button>
+                                        <button
+                                            onClick={() => handleRemoveMember(member._id, member.username)}
+                                            className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                                            title="Remove member"
+                                        >
+                                            <UserX size={16} />
+                                        </button>
+                                    </>
+                                )}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+};
+
+
 const CompanyAdmin = () => {
     const { user } = useAuth();
     // const [activeTab, setActiveTab] = useState("overview"); 
     const [workspaces, setWorkspaces] = useState([]);
 
     // Fetch workspaces for dropdown
-    React.useEffect(() => {
+    useEffect(() => {
         if (user?.companyId) {
-            fetch(`/api/workspaces/${user.companyId}`, {
-                headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+            fetch(`${API_BASE}/api/workspaces/${user.companyId}`, {
+                headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` }
             })
                 .then(res => res.json())
                 .then(data => {
@@ -339,14 +528,8 @@ const CompanyAdmin = () => {
                 {/* Invite Section */}
                 <InviteMemberForm companyId={user?.companyId} workspaces={workspaces} />
 
-                {/* Placeholder for Member List */}
-                <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
-                    <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-                        <Users size={20} className="text-gray-400" />
-                        Team Members
-                    </h3>
-                    <p className="text-gray-500 text-sm">Member management list will appear here.</p>
-                </div>
+                {/* Member Management */}
+                <MemberManagement companyId={user?.companyId} />
             </div>
         </div>
     );

@@ -1,40 +1,192 @@
-require("dotenv").config();
-const mongoose = require("mongoose");
-const Channel = require("./models/Channel");
+// server/seed.js
+// Run with: node seed.js
 
-const channels = [
-    { name: "general", description: "General discussion for everyone", isPrivate: false },
-    { name: "random", description: "Random chatter and fun", isPrivate: false },
-    { name: "announcements", description: "Important updates", isPrivate: false },
-    { name: "introductions", description: "Say hello to the team!", isPrivate: false }
-];
+require('dotenv').config();
+const mongoose = require('mongoose');
+const bcrypt = require('bcryptjs');
+const User = require('./models/User');
+const Company = require('./models/Company');
+const Workspace = require('./models/Workspace');
 
-async function seed() {
+const seedData = async () => {
     try {
-        await mongoose.connect(process.env.MONGO_URI);
-        console.log("Connected to MongoDB...");
+        // Connect to MongoDB (use same URI as server)
+        const mongoUri = process.env.MONGO_URI || process.env.MONGODB_URI || 'mongodb://localhost:27017/chttrix';
+        await mongoose.connect(mongoUri);
+        console.log('✅ MongoDB Connected');
 
-        for (const ch of channels) {
-            const exists = await Channel.findOne({ name: ch.name });
-            if (!exists) {
-                await Channel.create({
-                    ...ch,
-                    members: [], // Initially empty, users join manually
-                    createdBy: new mongoose.Types.ObjectId("000000000000000000000000"), // System created
-                    createdAt: new Date()
-                });
-                console.log(`Created channel: #${ch.name}`);
-            } else {
-                console.log(`Channel #${ch.name} already exists.`);
+        // Clear existing data (optional - comment out to keep existing)
+        console.log('🗑️  Clearing existing data...');
+        await User.deleteMany({});
+        await Company.deleteMany({});
+        await Workspace.deleteMany({});
+        console.log('✅ Data cleared');
+
+        // 1. CREATE COMPANY
+        console.log('🏢 Creating company...');
+        const company = await Company.create({
+            name: 'Chttrix Technologies',
+            domain: 'chttrix.com',
+            isActive: true,
+            domainVerified: true,
+            autoJoinByDomain: true,
+            allowedEmails: ['admin@chttrix.com', 'employee@chttrix.com'],
+            settings: {
+                allowSelfRegistration: true,
+                requireEmailVerification: false, // For testing
+                defaultUserRole: 'member',
             }
-        }
+        });
+        console.log(`✅ Company created: ${company.name} (${company._id})`);
 
-        console.log("Seeding complete!");
+        // 2. CREATE ADMIN USER FIRST (needed for workspace createdBy)
+        console.log('👤 Creating admin user...');
+        const adminPassword = await bcrypt.hash('admin123', 12);
+        const adminUser = await User.create({
+            username: 'Admin User',
+            email: 'admin@chttrix.com',
+            passwordHash: adminPassword,
+            verified: true,
+            userType: 'company',
+            companyId: company._id,
+            companyRole: 'owner', // IMPORTANT: owner role
+            workspaces: [], // Will add workspace after it's created
+            profile: {
+                name: 'Admin User',
+                jobTitle: 'System Administrator',
+            }
+        });
+        console.log(`✅ Admin user created: ${adminUser.email}`);
+        console.log(`   📧 Email: admin@chttrix.com`);
+        console.log(`   🔑 Password: admin123`);
+        console.log(`   👑 Role: ${adminUser.companyRole}`);
+
+        // 3. CREATE DEFAULT WORKSPACE (using admin as creator)
+        console.log('🏗️  Creating default workspace...');
+        const workspace = await Workspace.create({
+            name: 'General',
+            description: 'Default workspace for all team members',
+            company: company._id,
+            type: 'company',
+            icon: '🏢',
+            createdBy: adminUser._id, // IMPORTANT: Set creator
+            members: [{
+                user: adminUser._id,
+                role: 'owner',
+                joinedAt: new Date()
+            }],
+        });
+        console.log(`✅ Workspace created: ${workspace.name} (${workspace._id})`);
+
+        // Update company with default workspace
+        company.defaultWorkspace = workspace._id;
+        await company.save();
+
+        // Update admin user with workspace
+        adminUser.workspaces.push({
+            workspace: workspace._id,
+            role: 'owner',
+            joinedAt: new Date(),
+        });
+        await adminUser.save();
+
+        // 4. CREATE REGULAR EMPLOYEE
+        console.log('👤 Creating regular employee...');
+        const employeePassword = await bcrypt.hash('employee123', 12);
+        const employeeUser = await User.create({
+            username: 'John Employee',
+            email: 'employee@chttrix.com',
+            passwordHash: employeePassword,
+            verified: true,
+            userType: 'company',
+            companyId: company._id,
+            companyRole: 'member', // Regular member
+            workspaces: [{
+                workspace: workspace._id,
+                role: 'member',
+                joinedAt: new Date(),
+            }],
+            profile: {
+                name: 'John Employee',
+                jobTitle: 'Software Engineer',
+            }
+        });
+        console.log(`✅ Employee created: ${employeeUser.email}`);
+        console.log(`   📧 Email: employee@chttrix.com`);
+        console.log(`   🔑 Password: employee123`);
+        console.log(`   👤 Role: ${employeeUser.companyRole}`);
+
+        // 5. CREATE ANOTHER ADMIN
+        console.log('👤 Creating another admin...');
+        const admin2Password = await bcrypt.hash('admin456', 12);
+        const admin2User = await User.create({
+            username: 'Jane Admin',
+            email: 'jane@chttrix.com',
+            passwordHash: admin2Password,
+            verified: true,
+            userType: 'company',
+            companyId: company._id,
+            companyRole: 'admin', // Admin role (not owner)
+            workspaces: [{
+                workspace: workspace._id,
+                role: 'admin',
+                joinedAt: new Date(),
+            }],
+            profile: {
+                name: 'Jane Admin',
+                jobTitle: 'Team Lead',
+            }
+        });
+        console.log(`✅ Admin created: ${admin2User.email}`);
+        console.log(`   📧 Email: jane@chttrix.com`);
+        console.log(`   🔑 Password: admin456`);
+        console.log(`   👤 Role: ${admin2User.companyRole}`);
+
+        // 6. UPDATE WORKSPACE WITH NEW MEMBERS (admin already added)
+        workspace.members.push(
+            { user: admin2User._id, role: 'admin', joinedAt: new Date() },
+            { user: employeeUser._id, role: 'member', joinedAt: new Date() }
+        );
+        await workspace.save();
+        console.log(`✅ Workspace members updated`);
+
+        // SUMMARY
+        console.log('\n' + '='.repeat(60));
+        console.log('🎉 DATABASE SEEDED SUCCESSFULLY!');
+        console.log('='.repeat(60));
+        console.log('\n📊 Created:');
+        console.log(`   • 1 Company: ${company.name}`);
+        console.log(`   • 1 Workspace: ${workspace.name}`);
+        console.log(`   • 3 Users (1 owner, 1 admin, 1 employee)`);
+
+        console.log('\n🔐 Login Credentials:');
+        console.log('\n   👑 OWNER (Full Admin Access):');
+        console.log(`      Email: admin@chttrix.com`);
+        console.log(`      Password: admin123`);
+        console.log(`      Can access: /admin/company ✅`);
+
+        console.log('\n   🛡️  ADMIN (Admin Access):');
+        console.log(`      Email: jane@chttrix.com`);
+        console.log(`      Password: admin456`);
+        console.log(`      Can access: /admin/company ✅`);
+
+        console.log('\n   👤 EMPLOYEE (Regular User):');
+        console.log(`      Email: employee@chttrix.com`);
+        console.log(`      Password: employee123`);
+        console.log(`      Can access: /admin/company ❌ (Will be redirected)`);
+
+        console.log('\n🚀 Next Steps:');
+        console.log('   1. Start server: npm start');
+        console.log('   2. Start client: cd client && npm start');
+        console.log('   3. Login with admin@chttrix.com / admin123');
+        console.log('   4. Visit: http://localhost:3000/admin/company');
+        console.log('='.repeat(60) + '\n');
+
         process.exit(0);
     } catch (err) {
-        console.error("Seeding failed:", err);
+        console.error('❌ Seed Error:', err);
         process.exit(1);
     }
-}
+};
 
-seed();
+seedData();

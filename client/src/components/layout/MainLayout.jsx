@@ -48,8 +48,6 @@ const MainLayout = ({ children, sidePanel }) => {
         { id: 'r2', name: 'marketing-budget.pdf', type: 'file' }
     ]);
 
-
-
     // Search Logic
     useEffect(() => {
         if (!searchQuery.trim()) {

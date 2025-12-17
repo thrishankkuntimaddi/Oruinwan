@@ -202,6 +202,17 @@ const ProfileMenu = ({ onClose }) => {
 
         <div className="border-t border-gray-100 my-2 mx-2"></div>
 
+        {/* Admin Dashboard Link (Admin/Owner Only) */}
+        {(user?.companyRole === 'admin' || user?.companyRole === 'owner') && (
+          <button
+            onClick={() => window.location.href = '/admin/company'}
+            className="w-full text-left px-3 py-2.5 text-sm text-indigo-600 hover:bg-indigo-50 rounded-lg flex items-center transition-colors group font-semibold"
+          >
+            <Settings size={18} className="mr-3 group-hover:rotate-90 transition-transform duration-300" />
+            <span>Admin Dashboard</span>
+          </button>
+        )}
+
         <button onClick={handleLogout} className="w-full text-left px-3 py-2.5 text-sm text-red-600 hover:bg-red-50 rounded-lg flex items-center transition-colors group">
           <LogOut size={18} className="mr-3 group-hover:scale-110 transition-transform" />
           <span className="font-medium">Sign Out</span>

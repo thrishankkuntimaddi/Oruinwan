@@ -3,6 +3,8 @@ import { useSearchParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { CheckCircle, AlertCircle, ArrowRight, Loader } from "lucide-react";
 
+const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000';
+
 /**
  * AcceptInvite Page
  * Handles accepting a company/workspace invite.
@@ -11,9 +13,7 @@ import { CheckCircle, AlertCircle, ArrowRight, Loader } from "lucide-react";
 const AcceptInvite = () => {
     const [searchParams] = useSearchParams();
     const navigate = useNavigate();
-    useAuth(); // Keeping hook if it does init logic, else technically unused if we don't grab values. 
-    // Warning said 'login' unused.
-    // We can just remove the destructuring.
+    useAuth();
 
     const token = searchParams.get("token");
     const emailParam = searchParams.get("email");
@@ -24,10 +24,6 @@ const AcceptInvite = () => {
     const [error, setError] = useState("");
     const [success, setSuccess] = useState(false);
     const [loading, setLoading] = useState(false);
-
-    // If user is already logged in, we might want to warn them or handle differently.
-    // For now, assume this is for new users or they must re-auth/merge. 
-    // The prompt implies collecting username/password, so likely for new registration.
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -46,7 +42,7 @@ const AcceptInvite = () => {
         setLoading(true);
 
         try {
-            const res = await fetch("/api/companies/invite/accept", {
+            const res = await fetch(`${API_BASE}/api/companies/accept-invite`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ token, username, password })
