@@ -1,11 +1,12 @@
 import React, { useState, useRef, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation, useParams } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import { Home, MessageSquare, CheckSquare, FileText, Newspaper, Hash } from "lucide-react";
 
 const IconSidebar = ({ onProfileClick, activeWorkspace, setActiveWorkspace, workspaces }) => {
     const navigate = useNavigate();
     const location = useLocation();
+    const { workspaceId } = useParams();
     const { user } = useAuth();
 
     const [showWorkspaceMenu, setShowWorkspaceMenu] = useState(false);
@@ -22,15 +23,22 @@ const IconSidebar = ({ onProfileClick, activeWorkspace, setActiveWorkspace, work
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
-    const isActive = (path) => {
-        if (path === "/app") {
-            return location.pathname === "/app" || location.pathname.startsWith("/channel/") || location.pathname.startsWith("/dm/");
-        }
-        return location.pathname === path || location.pathname.startsWith(path + "/");
+    // Get current workspace ID from URL or localStorage
+    const getCurrentWorkspaceId = () => {
+        if (workspaceId) return workspaceId;
+        return localStorage.getItem("currentWorkspace") || null;
+    };
+
+    const isActive = (basePath) => {
+        const currentWorkspaceId = getCurrentWorkspaceId();
+        if (!currentWorkspaceId) return false;
+
+        const fullPath = `/workspace/${currentWorkspaceId}${basePath}`;
+        return location.pathname === fullPath || location.pathname.startsWith(fullPath + "/");
     };
 
     const navItems = [
-        { icon: <Home size={20} strokeWidth={2} />, path: "/app", label: "Home" },
+        { icon: <Home size={20} strokeWidth={2} />, path: "/home", label: "Home" },
         { icon: <Hash size={20} strokeWidth={2} />, path: "/channels", label: "Channels" },
         { icon: <MessageSquare size={20} strokeWidth={2} />, path: "/messages", label: "Messages" },
         { icon: <CheckSquare size={20} strokeWidth={2} />, path: "/tasks", label: "Tasks" },
@@ -74,7 +82,9 @@ const IconSidebar = ({ onProfileClick, activeWorkspace, setActiveWorkspace, work
                                     key={ws.id}
                                     onClick={() => {
                                         setActiveWorkspace(ws);
+                                        localStorage.setItem("currentWorkspace", ws.id);
                                         setShowWorkspaceMenu(false);
+                                        navigate(`/workspace/${ws.id}/home`);
                                     }}
                                     className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-3 transition-colors"
                                 >
@@ -89,23 +99,30 @@ const IconSidebar = ({ onProfileClick, activeWorkspace, setActiveWorkspace, work
 
             {/* Nav Icons */}
             <div className="flex-1 flex flex-col space-y-4 w-full items-center">
-                {navItems.map((item) => (
-                    <div key={item.path} className="relative group">
-                        <button
-                            onClick={() => navigate(item.path)}
-                            className={`w-10 h-10 rounded-xl flex items-center justify-center text-xl transition-all ${isActive(item.path)
-                                ? "bg-blue-50 text-blue-600"
-                                : "text-gray-500 hover:bg-gray-100 hover:text-gray-900"
-                                }`}
-                        >
-                            {item.icon}
-                        </button>
-                        {/* Tooltip */}
-                        <div className="absolute left-14 top-1/2 -translate-y-1/2 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50 shadow-lg">
-                            {item.label}
+                {navItems.map((item) => {
+                    const currentWorkspaceId = getCurrentWorkspaceId();
+                    const targetPath = currentWorkspaceId
+                        ? `/workspace/${currentWorkspaceId}${item.path}`
+                        : '/workspaces'; // Fallback to workspace selection if no workspace
+
+                    return (
+                        <div key={item.path} className="relative group">
+                            <button
+                                onClick={() => navigate(targetPath)}
+                                className={`w-10 h-10 rounded-xl flex items-center justify-center text-xl transition-all ${isActive(item.path)
+                                    ? "bg-blue-50 text-blue-600"
+                                    : "text-gray-500 hover:bg-gray-100 hover:text-gray-900"
+                                    }`}
+                            >
+                                {item.icon}
+                            </button>
+                            {/* Tooltip */}
+                            <div className="absolute left-14 top-1/2 -translate-y-1/2 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50 shadow-lg">
+                                {item.label}
+                            </div>
                         </div>
-                    </div>
-                ))}
+                    );
+                })}
             </div>
 
             {/* Profile Icon */}

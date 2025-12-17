@@ -8,7 +8,7 @@ import { useAuth } from "../contexts/AuthContext";
 
 const WorkspaceSelect = () => {
     const navigate = useNavigate();
-    const { user, logout } = useAuth();
+    const { user, logout, accessToken } = useAuth();
     const [showHelp, setShowHelp] = useState(false);
     const [activeHelpModal, setActiveHelpModal] = useState(null);
 
@@ -17,24 +17,43 @@ const WorkspaceSelect = () => {
         window.location.replace("/login");
     };
 
-    // Mock data for workspaces
-    // Mock data for workspaces
     const [workspaces, setWorkspaces] = useState([]);
+    const [isLoadingWorkspaces, setIsLoadingWorkspaces] = useState(true);
+    const [loadAttempts, setLoadAttempts] = useState(0);
 
     React.useEffect(() => {
         const loadWorkspaces = async () => {
             try {
-                const token = localStorage.getItem('accessToken');
-                if (!token) return;
+                // Try context token first, then fallback to localStorage
+                const token = accessToken || localStorage.getItem('accessToken');
 
-                const response = await fetch('/api/workspaces/my', {
+                if (!token) {
+                    console.log('⚠️ No access token available yet, attempt:', loadAttempts);
+
+                    // Retry up to 3 times with delay
+                    if (loadAttempts < 3) {
+                        setTimeout(() => {
+                            setLoadAttempts(prev => prev + 1);
+                        }, 500);
+                    } else {
+                        setIsLoadingWorkspaces(false);
+                    }
+                    return;
+                }
+
+                console.log('🔑 Using token for workspace fetch');
+                setIsLoadingWorkspaces(true);
+
+                const response = await fetch(`${process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000'}/api/workspaces/my`, {
                     headers: {
                         'Authorization': `Bearer ${token}`,
                         'Content-Type': 'application/json'
                     }
                 });
 
-                if (!response.ok) throw new Error('Failed to fetch workspaces');
+                if (!response.ok) {
+                    throw new Error('Failed to fetch workspaces');
+                }
 
                 const data = await response.json();
                 console.log('📋 Workspaces loaded:', data);
@@ -46,20 +65,24 @@ const WorkspaceSelect = () => {
                         members: ws.memberCount || 1,
                         icon: ws.icon || "rocket",
                         color: ws.color || "#4f46e5",
-                        type: ws.type
+                        type: ws.type,
+                        role: ws.role // Important: Include role for delete permission
                     })));
                 } else {
                     // No workspaces found
                     setWorkspaces([]);
                 }
+
+                setIsLoadingWorkspaces(false);
             } catch (err) {
                 console.error('Error loading workspaces:', err);
                 setWorkspaces([]);
+                setIsLoadingWorkspaces(false);
             }
         };
 
         loadWorkspaces();
-    }, [user]);
+    }, [accessToken, loadAttempts]);
 
     // Create Workspace Wizard State
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -73,6 +96,10 @@ const WorkspaceSelect = () => {
         invites: ""
     });
 
+    // Delete Workspace State
+    const [deleteWorkspaceId, setDeleteWorkspaceId] = useState(null);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
     const [isCopied, setIsCopied] = useState(false);
 
     const resetCreateModal = () => {
@@ -83,7 +110,7 @@ const WorkspaceSelect = () => {
         setCreateData({
             name: "",
             adminName: "",
-            icon: "rocket",
+            icon: "rocket", // Use lucide icon string
             color: "#2563eb",
             invites: ""
         });
@@ -106,36 +133,145 @@ const WorkspaceSelect = () => {
         setCreateStep(prev => prev - 1);
     };
 
-    const handleFinalCreate = () => {
-        const newWs = {
-            id: workspaces.length + 1,
-            name: createData.name,
-            members: 1, // Just the admin initially
-            icon: createData.icon,
-            color: createData.color
-        };
-        setWorkspaces([...workspaces, newWs]);
-        localStorage.setItem("currentWorkspace", newWs.name);
+    const handleFinalCreate = async () => {
+        try {
+            // Try to get token from context first, fallback to localStorage
+            const token = accessToken || localStorage.getItem('accessToken');
 
-        // Simulate API call and redirect
-        setTimeout(() => {
+            console.log('🔑 Token check:', {
+                fromContext: accessToken ? 'Yes' : 'No',
+                fromLocalStorage: localStorage.getItem('accessToken') ? 'Yes' : 'No',
+                usingToken: token ? 'Yes' : 'No'
+            });
+
+            if (!token) {
+                console.error('❌ No access token found anywhere!');
+                console.log('Available storage:', {
+                    localStorage: Object.keys(localStorage),
+                    cookies: document.cookie
+                });
+                alert('Session expired. Please login again.');
+                navigate('/login');
+                return;
+            }
+
+            console.log('🚀 Creating workspace with data:', {
+                name: createData.name,
+                icon: createData.icon,
+                color: createData.color
+            });
+
+            // Create workspace via API
+            const response = await fetch(`${process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000'}/api/workspaces`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    name: createData.name,
+                    icon: createData.icon,
+                    color: createData.color,
+                    companyId: null // Personal workspace
+                })
+            });
+
+            console.log('📡 API Response status:', response.status);
+
+            if (!response.ok) {
+                const error = await response.json();
+                console.error('❌ API Error:', error);
+                throw new Error(error.message || 'Failed to create workspace');
+            }
+
+            const data = await response.json();
+            console.log('✅ Workspace created:', data);
+
+            // Store current workspace
+            localStorage.setItem("currentWorkspace", data.workspace.id);
+
+            // If user wants to send invites
+            if (createData.invites.trim() && !addMembersLater) {
+                try {
+                    console.log('📧 Sending invites to:', createData.invites);
+                    await fetch(`${process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000'}/api/workspaces/${data.workspace.id}/invite`, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            emails: createData.invites,
+                            inviteType: 'email',
+                            role: 'member'
+                        })
+                    });
+                    console.log('✅ Invites sent');
+                } catch (inviteErr) {
+                    console.error('⚠️ Failed to send invites:', inviteErr);
+                    // Don't block workspace creation if invites fail
+                }
+            }
+
+            // Redirect to workspace home
+            console.log('✅ Redirecting to workspace home:', data.workspace.id);
             resetCreateModal();
-            navigate("/app");
-        }, 500);
+            navigate(`/workspace/${data.workspace.id}/home`);
+        } catch (err) {
+            console.error('❌ Create workspace error:', err);
+            alert(err.message || 'Failed to create workspace. Check console for details.');
+        }
     };
 
 
 
     const copyInviteLink = () => {
-        // Mock copy
         navigator.clipboard.writeText(`https://chttrix.com/join/${createData.name.toLowerCase().replace(/\s+/g, '-')}`);
         setIsCopied(true);
         setTimeout(() => setIsCopied(false), 3000);
     };
 
     const handleLaunch = (ws) => {
-        localStorage.setItem("currentWorkspace", ws.name);
-        navigate("/app");
+        console.log('🚀 Launching workspace:', ws);
+        localStorage.setItem("currentWorkspace", ws.id);
+        navigate(`/workspace/${ws.id}/home`);
+    };
+
+    const handleDeleteWorkspace = async () => {
+        try {
+            const token = accessToken || localStorage.getItem('accessToken');
+            if (!token) {
+                alert('Session expired. Please login again.');
+                return;
+            }
+
+            console.log('🗑️ Deleting workspace:', deleteWorkspaceId);
+
+            const response = await fetch(`${process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000'}/api/workspaces/${deleteWorkspaceId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.message || 'Failed to delete workspace');
+            }
+
+            console.log('✅ Workspace deleted successfully');
+
+            // Remove from local state
+            setWorkspaces(workspaces.filter(ws => ws.id !== deleteWorkspaceId));
+
+            // Close modal
+            setShowDeleteConfirm(false);
+            setDeleteWorkspaceId(null);
+        } catch (err) {
+            console.error('❌ Delete workspace error:', err);
+            alert(err.message || 'Failed to delete workspace');
+        }
     };
 
     // Lucide Icons Import
@@ -632,70 +768,151 @@ const WorkspaceSelect = () => {
             <div className="w-full max-w-4xl">
                 {/* Header */}
                 <div className="text-center mb-12">
-                    <h1 className="text-4xl font-bold text-gray-900 mb-3">Welcome to Chttrix</h1>
+                    <h1 className="text-4xl font-bold text-gray-900 mb-3">
+                        Welcome{user?.username ? `, ${user.username}` : ''}!
+                    </h1>
                     <p className="text-lg text-gray-600">Choose a workspace to launch.</p>
                 </div>
 
+
                 {/* Workspace Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {workspaces.map((ws) => (
-                        <div
-                            key={ws.id}
-                            className="bg-white rounded-xl p-6 shadow-sm border border-gray-200 hover:shadow-md transition-all group"
-                        >
-                            <div className="flex items-start justify-between mb-4">
+                    {isLoadingWorkspaces ? (
+                        // Loading State
+                        <div className="col-span-full flex flex-col items-center justify-center py-20">
+                            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
+                            <p className="text-gray-600 font-medium">Loading your workspaces...</p>
+                        </div>
+                    ) : (
+                        <>
+                            {workspaces.map((ws) => (
                                 <div
-                                    className="w-12 h-12 rounded-lg flex items-center justify-center text-white shadow-sm"
-                                    style={{ backgroundColor: ws.color }}
+                                    key={ws.id}
+                                    className="bg-white rounded-xl p-6 shadow-sm border border-gray-200 hover:shadow-md transition-all group relative"
                                 >
-                                    {icons.find(i => i.id === ws.icon)?.component &&
-                                        React.cloneElement(icons.find(i => i.id === ws.icon).component, { size: 24 })
-                                    }
+                                    {/* Delete Button - Only show if owner */}
+                                    {ws.role === 'owner' && (
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setDeleteWorkspaceId(ws.id);
+                                                setShowDeleteConfirm(true);
+                                            }}
+                                            className="absolute top-4 right-4 p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors opacity-0 group-hover:opacity-100"
+                                            title="Delete Workspace"
+                                        >
+                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                            </svg>
+                                        </button>
+                                    )}
+
+                                    <div className="flex items-start justify-between mb-4">
+                                        <div
+                                            className="w-12 h-12 rounded-lg flex items-center justify-center text-white shadow-sm"
+                                            style={{ backgroundColor: ws.color }}
+                                        >
+                                            {icons.find(i => i.id === ws.icon)?.component &&
+                                                React.cloneElement(icons.find(i => i.id === ws.icon).component, { size: 24 })
+                                            }
+                                        </div>
+                                        <span className="bg-gray-100 text-gray-600 text-xs font-medium px-2.5 py-1 rounded-full">
+                                            {ws.members} members
+                                        </span>
+                                    </div>
+
+                                    <h3 className="text-xl font-bold text-gray-900 mb-1">{ws.name}</h3>
+                                    <p className="text-sm text-gray-500 mb-6">Last active just now</p>
+
+                                    <button
+                                        onClick={() => handleLaunch(ws)}
+                                        className="w-full py-2.5 rounded-lg bg-gray-50 text-gray-900 font-medium border border-gray-200 group-hover:bg-blue-600 group-hover:text-white group-hover:border-transparent transition-all"
+                                    >
+                                        Launch Workspace
+                                    </button>
                                 </div>
-                                <span className="bg-gray-100 text-gray-600 text-xs font-medium px-2.5 py-1 rounded-full">
-                                    {ws.members} members
-                                </span>
+                            ))}
+
+                            {/* Create New Workspace Card */}
+                            <div
+                                onClick={handleCreateOpen}
+                                className="border-2 border-dashed border-gray-300 rounded-xl p-6 flex flex-col items-center justify-center text-center hover:border-blue-500 hover:bg-blue-50 transition-all cursor-pointer group"
+                            >
+                                <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center text-gray-400 mb-3 group-hover:bg-blue-100 group-hover:text-blue-600 transition-colors">
+                                    <svg
+                                        className="w-6 h-6"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            strokeWidth="2"
+                                            d="M12 4v16m8-8H4"
+                                        />
+                                    </svg>
+                                </div>
+                                <h3 className="text-lg font-semibold text-gray-900 mb-1">
+                                    Create Workspace
+                                </h3>
+                                <p className="text-sm text-gray-500">Start a new team</p>
                             </div>
-
-                            <h3 className="text-xl font-bold text-gray-900 mb-1">{ws.name}</h3>
-                            <p className="text-sm text-gray-500 mb-6">Last active just now</p>
-
-                            <button
-                                onClick={() => handleLaunch(ws)}
-                                className="w-full py-2.5 rounded-lg bg-gray-50 text-gray-900 font-medium border border-gray-200 group-hover:bg-blue-600 group-hover:text-white group-hover:border-transparent transition-all"
-                            >
-                                Launch Workspace
-                            </button>
-                        </div>
-                    ))}
-
-                    {/* Create New Workspace Card */}
-                    <div
-                        onClick={handleCreateOpen}
-                        className="border-2 border-dashed border-gray-300 rounded-xl p-6 flex flex-col items-center justify-center text-center hover:border-blue-500 hover:bg-blue-50 transition-all cursor-pointer group"
-                    >
-                        <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center text-gray-400 mb-3 group-hover:bg-blue-100 group-hover:text-blue-600 transition-colors">
-                            <svg
-                                className="w-6 h-6"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                            >
-                                <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth="2"
-                                    d="M12 4v16m8-8H4"
-                                />
-                            </svg>
-                        </div>
-                        <h3 className="text-lg font-semibold text-gray-900 mb-1">
-                            Create Workspace
-                        </h3>
-                        <p className="text-sm text-gray-500">Start a new team</p>
-                    </div>
+                        </>
+                    )}
                 </div>
-            </div>
+
+                {/* Delete Confirmation Modal */}
+                {showDeleteConfirm && (
+                    <div className="fixed inset-0 bg-black/60 z-[200] flex items-center justify-center animate-fade-in backdrop-blur-sm">
+                        <div className="bg-white rounded-xl shadow-2xl w-[450px] overflow-hidden">
+                            <div className="p-6 bg-red-50 border-b border-red-100">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                                        <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <h3 className="text-lg font-bold text-red-900">Delete Workspace?</h3>
+                                        <p className="text-sm text-red-700 mt-0.5">This action cannot be undone</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="p-6">
+                                <p className="text-gray-700 mb-4">
+                                    Are you sure you want to delete <strong>{workspaces.find(ws => ws.id === deleteWorkspaceId)?.name}</strong>?
+                                </p>
+                                <p className="text-sm text-gray-500 bg-gray-50 p-3 rounded-lg">
+                                    ⚠️ This will permanently delete:
+                                    <ul className="list-disc list-inside mt-2 space-y-1">
+                                        <li>All channels and messages</li>
+                                        <li>All files and attachments</li>
+                                        <li>All workspace settings</li>
+                                    </ul>
+                                </p>
+                            </div>
+                            <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex justify-end gap-3">
+                                <button
+                                    onClick={() => {
+                                        setShowDeleteConfirm(false);
+                                        setDeleteWorkspaceId(null);
+                                    }}
+                                    className="px-6 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleDeleteWorkspace}
+                                    className="px-6 py-2.5 text-sm font-bold text-white bg-red-600 rounded-lg hover:bg-red-700 shadow-md hover:shadow-lg transition-all"
+                                >
+                                    Delete Workspace
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </div >
         </div >
     );
 };

@@ -149,100 +149,6 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
         const res = await axios.get(url, { headers });
         let loadedMessages = res.data.messages.map(mapBackendMsgToUI);
 
-        // --- DUMMY DATA INJECTION IF EMPTY ---
-        if (loadedMessages.length === 0) {
-          const now = new Date();
-          let dummyMessages = [];
-
-          if (chat.type === "dm") {
-            // Specific dummy data for Direct Messages
-            dummyMessages = [
-              {
-                id: "dm-system",
-                sender: "system",
-                text: `This is the beginning of your direct message history with ${chat.name}.`,
-                ts: new Date(now.getTime() - 1000 * 60 * 60 * 3).toISOString(), // 3 hours ago
-              },
-              {
-                id: "dm-1",
-                sender: "other",
-                senderName: chat.name,
-                senderAvatar: chat.image || null,
-                text: `Hey! This is the start of your private conversation with ${chat.name}.`,
-                ts: new Date(now.getTime() - 1000 * 60 * 60 * 2).toISOString(), // 2 hours ago
-              },
-              {
-                id: "dm-2",
-                sender: "me",
-                senderName: "You",
-                text: "Hi! Good to connect here.",
-                ts: new Date(now.getTime() - 1000 * 60 * 60).toISOString(), // 1 hour ago
-                status: "read",
-              },
-              {
-                id: "dm-3",
-                sender: "other",
-                senderName: chat.name,
-                senderAvatar: chat.image || null,
-                text: "Let me know if you need anything specific.",
-                ts: new Date(now.getTime() - 1000 * 60 * 30).toISOString(), // 30 mins ago
-              },
-              {
-                id: "dm-4",
-                sender: "me",
-                senderName: "You",
-                text: "Will do, thanks!",
-                ts: new Date(now.getTime() - 1000 * 60 * 5).toISOString(), // 5 mins ago
-                status: "sent",
-              }
-            ];
-          } else {
-            // Specific dummy data for Channels
-            dummyMessages = [
-              {
-                id: "ch-1",
-                sender: "other",
-                senderName: "Alice",
-                text: `Welcome everyone to #${chat.name}!`,
-                ts: new Date(now.getTime() - 1000 * 60 * 60 * 5).toISOString(),
-                reactions: { "👋": 5 },
-              },
-              {
-                id: "ch-2",
-                sender: "other",
-                senderName: "Bob",
-                text: "Excited to be part of this channel.",
-                ts: new Date(now.getTime() - 1000 * 60 * 60 * 4).toISOString(),
-              },
-              {
-                id: "ch-3",
-                sender: "me",
-                senderName: "You",
-                text: "Hello team! Ready to collaborate.",
-                ts: new Date(now.getTime() - 1000 * 60 * 60).toISOString(),
-                status: "read",
-              },
-              {
-                id: "ch-4",
-                sender: "other",
-                senderName: "Charlie",
-                text: "Does anyone have the latest design specs?",
-                ts: new Date(now.getTime() - 1000 * 60 * 30).toISOString(),
-                isPinned: true, // Example pinned message
-              },
-              {
-                id: "ch-5",
-                sender: "other",
-                senderName: "Alice",
-                text: "I'll upload them to the files tab shortly.",
-                ts: new Date().toISOString(),
-              }
-            ];
-          }
-          loadedMessages = dummyMessages;
-        }
-        // -------------------------------------
-
         if (!mounted) return;
         setMessages(loadedMessages);
 
@@ -265,25 +171,7 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
       } catch (err) {
         console.error("Load messages error:", err);
         if (!mounted) return;
-        // Fallback dummy data on error
-        setMessages([
-          {
-            id: "dummy-1",
-            sender: "other",
-            senderName: chat.type === "dm" ? chat.name : "Alice",
-            text: "Hey there! Welcome to Chttrix.",
-            ts: new Date(Date.now() - 1000 * 60 * 60).toISOString(),
-            reactions: { "👍": 2 },
-          },
-          {
-            id: "dummy-2",
-            sender: "me",
-            senderName: "You",
-            text: "Thanks! Excited to be here.",
-            ts: new Date().toISOString(),
-            status: "read",
-          }
-        ]);
+        setMessages([]);
       }
     }
 

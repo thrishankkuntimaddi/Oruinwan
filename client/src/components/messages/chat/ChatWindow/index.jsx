@@ -22,9 +22,7 @@ import {
     getAccessToken,
     getCurrentUserIdFromToken,
     mapBackendMsgToUI,
-    generateTempId,
-    getDummyMessagesForDM,
-    getDummyMessagesForChannel
+    generateTempId
 } from "./chatUtils";
 
 import axios from "axios";
@@ -119,13 +117,6 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
                 const res = await axios.get(url, { headers });
                 let loadedMessages = res.data.messages.map(m => mapBackendMsgToUI(m, currentUserIdRef.current));
 
-                // Dummy data if empty
-                if (loadedMessages.length === 0) {
-                    loadedMessages = chat.type === "dm"
-                        ? getDummyMessagesForDM(chat)
-                        : getDummyMessagesForChannel(chat);
-                }
-
                 if (!mounted) return;
                 setMessages(loadedMessages);
 
@@ -148,26 +139,7 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
             } catch (err) {
                 console.error("Load messages error:", err);
                 if (!mounted) return;
-
-                // Fallback dummy data
-                setMessages([
-                    {
-                        id: "dummy-1",
-                        sender: "other",
-                        senderName: chat.type === "dm" ? chat.name : "Alice",
-                        text: "Hey there! Welcome to Chttrix.",
-                        ts: new Date(Date.now() - 1000 * 60 * 60).toISOString(),
-                        reactions: { "👍": 2 },
-                    },
-                    {
-                        id: "dummy-2",
-                        sender: "me",
-                        senderName: "You",
-                        text: "Thanks! Excited to be here.",
-                        ts: new Date().toISOString(),
-                        status: "read",
-                    }
-                ]);
+                setMessages([]);
             }
         }
 

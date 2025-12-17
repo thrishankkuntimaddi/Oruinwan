@@ -47,13 +47,20 @@ const LoginForm = ({ onSwitch, initialEmail = "" }) => {
       const response = await login(formData);
       showToast("Login successful!", "success");
 
+      // Check if there's a pending invite to redirect to
+      const pendingInvite = localStorage.getItem('pendingInvite');
+      if (pendingInvite) {
+        navigate(`/join-workspace?token=${pendingInvite}`);
+        return;
+      }
+
       // Determine redirect based on role
       const isAdmin = response?.isAdmin ||
         response?.user?.companyRole === 'owner' ||
         response?.user?.companyRole === 'admin';
 
-      // Admin → Dashboard, Employee → Workspace
-      navigate(isAdmin ? "/admin/company" : "/app");
+      // Admin → Dashboard, Regular user → Workspaces
+      navigate(isAdmin ? "/admin/company" : "/workspaces");
 
     } catch (err) {
       console.error("🔴 Login Error:", err);

@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { saveAccessToken } from "../../utils/tokenUtils";
@@ -7,18 +7,60 @@ export default function OAuthSuccess() {
   const { loadUser } = useAuth();
   const [params] = useSearchParams();
   const navigate = useNavigate();
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [loadAttempts, setLoadAttempts] = useState(0);
 
   const access = params.get("access");
 
   useEffect(() => {
-    if (!access) return;
+    if (!access || isProcessing) return;
 
-    // store access token
-    saveAccessToken(access);
+    const handleOAuth = async () => {
+      setIsProcessing(true);
 
-    loadUser();
-    navigate("/");
-  }, [access, loadUser, navigate]);
+      try {
+        // Store access token to localStorage
+        saveAccessToken(access);
+        console.log("✅ OAuth token saved to localStorage:", access.substring(0, 20) + "...");
 
-  return <div className="text-center mt-20">Logging you in...</div>;
+        // Load user data - this updates the AuthContext
+        await loadUser();
+        console.log("✅ loadUser() completed");
+
+        // Wait a bit for context to update
+        await new Promise(resolve => setTimeout(resolve, 500));
+
+        console.log("✅ User loaded after OAuth");
+
+        // Redirect to workspaces page
+        navigate("/workspaces");
+      } catch (error) {
+        console.error("❌ OAuth error:", error);
+
+        // Retry once if first attempt fails
+        if (loadAttempts < 1) {
+          console.log("⚠️ Retrying OAuth flow...");
+          setLoadAttempts(prev => prev + 1);
+          setIsProcessing(false);
+          return;
+        }
+
+        navigate("/login");
+      }
+    };
+
+    handleOAuth();
+  }, [access, loadUser, navigate, isProcessing, loadAttempts]);
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+        <p className="text-gray-600 font-medium">Logging you in...</p>
+        {loadAttempts > 0 && (
+          <p className="text-gray-500 text-sm mt-2">Verifying session...</p>
+        )}
+      </div>
+    </div>
+  );
 }

@@ -33,6 +33,7 @@ import ForgotPassword from "./pages/LoginPageComp/ForgotPassword";
 import ResetPassword from "./pages/LoginPageComp/ResetPassword";
 import OAuthSuccess from "./pages/LoginPageComp/OAuthSuccess";
 import AcceptInvite from "./pages/AcceptInvite";
+import JoinWorkspace from "./pages/JoinWorkspace";
 import CompanyAdmin from "./pages/CompanyAdmin";
 import RegisterCompany from "./pages/RegisterCompany";
 
@@ -54,9 +55,21 @@ function App() {
 
                   {/* PROTECTED AREA (requires login) */}
 
-                  {/* Main App Route (was Home) */}
+                  {/* Workspace Selection - Must select workspace first */}
                   <Route
-                    path="/app"
+                    path="/workspaces"
+                    element={
+                      <RequireAuth>
+                        <WorkspaceSelect />
+                      </RequireAuth>
+                    }
+                  />
+
+                  {/* WORKSPACE-SPECIFIC ROUTES - All require workspaceId */}
+
+                  {/* Home/Main View */}
+                  <Route
+                    path="/workspace/:workspaceId/home"
                     element={
                       <RequireAuth>
                         <MainLayout sidePanel={<HomePanel />}>
@@ -66,21 +79,9 @@ function App() {
                     }
                   />
 
-                  {/* Channel Route (Home Context) */}
+                  {/* Channels View */}
                   <Route
-                    path="/channel/:id"
-                    element={
-                      <RequireAuth>
-                        <MainLayout sidePanel={<HomePanel />}>
-                          <Home />
-                        </MainLayout>
-                      </RequireAuth>
-                    }
-                  />
-
-                  {/* Channels Route */}
-                  <Route
-                    path="/channels"
+                    path="/workspace/:workspaceId/channels"
                     element={
                       <RequireAuth>
                         <MainLayout sidePanel={<ChannelsPanel />}>
@@ -90,21 +91,9 @@ function App() {
                     }
                   />
 
-                  {/* Channel Route (Channels Context) */}
+                  {/* Specific Channel */}
                   <Route
-                    path="/channels/:id"
-                    element={
-                      <RequireAuth>
-                        <MainLayout sidePanel={<ChannelsPanel />}>
-                          <Home />
-                        </MainLayout>
-                      </RequireAuth>
-                    }
-                  />
-
-                  {/* DM Route (Home Context) */}
-                  <Route
-                    path="/dm/:id"
+                    path="/workspace/:workspaceId/channel/:id"
                     element={
                       <RequireAuth>
                         <MainLayout sidePanel={<HomePanel />}>
@@ -114,9 +103,9 @@ function App() {
                     }
                   />
 
-                  {/* Messages Route (Legacy/Fallback) */}
+                  {/* Direct Messages View */}
                   <Route
-                    path="/messages/*"
+                    path="/workspace/:workspaceId/messages"
                     element={
                       <RequireAuth>
                         <MainLayout sidePanel={<MessagesPanel />}>
@@ -126,9 +115,21 @@ function App() {
                     }
                   />
 
-                  {/* Tasks Route (Placeholder Panel for now) */}
+                  {/* Specific DM */}
                   <Route
-                    path="/tasks"
+                    path="/workspace/:workspaceId/dm/:id"
+                    element={
+                      <RequireAuth>
+                        <MainLayout sidePanel={<HomePanel />}>
+                          <Home />
+                        </MainLayout>
+                      </RequireAuth>
+                    }
+                  />
+
+                  {/* Tasks */}
+                  <Route
+                    path="/workspace/:workspaceId/tasks"
                     element={
                       <RequireAuth>
                         <MainLayout sidePanel={<TasksPanel />}>
@@ -138,9 +139,9 @@ function App() {
                     }
                   />
 
-                  {/* Notes Route */}
+                  {/* Notes */}
                   <Route
-                    path="/notes"
+                    path="/workspace/:workspaceId/notes"
                     element={
                       <RequireAuth>
                         <MainLayout sidePanel={<NotesPanel />}>
@@ -150,9 +151,9 @@ function App() {
                     }
                   />
 
-                  {/* Notes Detail Route */}
+                  {/* Specific Note */}
                   <Route
-                    path="/notes/:id"
+                    path="/workspace/:workspaceId/notes/:id"
                     element={
                       <RequireAuth>
                         <MainLayout sidePanel={<NotesPanel />}>
@@ -162,9 +163,9 @@ function App() {
                     }
                   />
 
-                  {/* Updates Route */}
+                  {/* Updates */}
                   <Route
-                    path="/updates"
+                    path="/workspace/:workspaceId/updates"
                     element={
                       <RequireAuth>
                         <MainLayout sidePanel={<UpdatesPanel />}>
@@ -174,14 +175,16 @@ function App() {
                     }
                   />
 
+                  {/* Legacy routes - redirect to workspaces */}
                   <Route
-                    path="/workspaces"
+                    path="/home"
                     element={
                       <RequireAuth>
                         <WorkspaceSelect />
                       </RequireAuth>
                     }
                   />
+                  
 
                   {/* Company Admin Console - Admin/Owner Only */}
                   <Route
@@ -209,6 +212,7 @@ function App() {
                   <Route path="/reset-password" element={<ResetPassword />} />
                   <Route path="/oauth-success" element={<OAuthSuccess />} />
                   <Route path="/accept-invite" element={<AcceptInvite />} />
+                  <Route path="/join-workspace" element={<JoinWorkspace />} />
 
                 </Routes>
               </BlogsProvider>

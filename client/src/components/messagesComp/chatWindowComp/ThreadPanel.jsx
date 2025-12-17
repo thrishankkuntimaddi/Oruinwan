@@ -25,12 +25,6 @@ export default function ThreadPanel({ parentMessage, onClose, socket, currentUse
     }, [parentMessage]);
 
     const loadThread = useCallback(async () => {
-        // If it's a dummy message (id starts with "ch-" or "dm-"), don't fetch from backend
-        if (parentMessage.id && (String(parentMessage.id).startsWith("ch-") || String(parentMessage.id).startsWith("dm-"))) {
-            setReplies([]); // No backend replies for dummy messages
-            return;
-        }
-
         setLoading(true);
         try {
             const token = localStorage.getItem("accessToken");

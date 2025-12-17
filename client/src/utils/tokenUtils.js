@@ -1,18 +1,18 @@
 // client/src/utils/tokenUtils.js
 
-let accessToken = null;
-
-/** Save Access Token */
+/** Save Access Token to localStorage */
 export const saveAccessToken = (token) => {
-  accessToken = token;
+  localStorage.setItem("accessToken", token);
+  console.log("✅ Token saved to localStorage");
 };
 
-/** Get Access Token */
+/** Get Access Token from localStorage */
 export const getAccessToken = () => {
-  return accessToken;
+  return localStorage.getItem("accessToken");
 };
 
-/** Clear Access Token */
+/** Clear Access Token from localStorage */
 export const clearAccessToken = () => {
-  accessToken = null;
+  localStorage.removeItem("accessToken");
+  console.log("✅ Token cleared from localStorage");
 };

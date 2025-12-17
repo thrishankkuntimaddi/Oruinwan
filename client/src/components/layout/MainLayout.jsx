@@ -4,28 +4,6 @@ import ProfileMenu from "../SidebarComp/ProfileSidebar";
 import ChttrixAIChat from "../ai/ChttrixAIChat/ChttrixAIChat";
 import { Bot, BookOpen, Command, Bug, Sparkles, Search, MessageCircle, X } from "lucide-react";
 
-// Mock Data for Search
-const mockSearchData = {
-    channels: [
-        { id: 'c1', name: 'general', type: 'channel' },
-        { id: 'c2', name: 'engineering', type: 'channel' },
-        { id: 'c3', name: 'design', type: 'channel' },
-        { id: 'c4', name: 'marketing', type: 'channel' },
-        { id: 'c5', name: 'random', type: 'channel' },
-    ],
-    dms: [
-        { id: 'u1', name: 'Alice Smith', type: 'dm' },
-        { id: 'u2', name: 'Bob Jones', type: 'dm' },
-        { id: 'u3', name: 'Charlie Brown', type: 'dm' },
-        { id: 'u4', name: 'Sarah Wilson', type: 'dm' },
-    ],
-    files: [
-        { id: 'f1', name: 'Q4_Report.pdf', type: 'file' },
-        { id: 'f2', name: 'Design_System.fig', type: 'file' },
-        { id: 'f3', name: 'Meeting_Notes.docx', type: 'file' },
-    ]
-};
-
 const workspaces = [
     { id: 1, name: "Chttrix", icon: "A", color: "bg-blue-600" },
     { id: 2, name: "Project Beta", icon: "P", color: "bg-purple-600" },
@@ -43,25 +21,18 @@ const MainLayout = ({ children, sidePanel }) => {
     const [searchQuery, setSearchQuery] = useState("");
     const [showSearchResults, setShowSearchResults] = useState(false);
     const [searchResults, setSearchResults] = useState({ channels: [], dms: [], files: [] });
-    const [recentSearches, setRecentSearches] = useState([
-        { id: 'r1', name: 'project-alpha', type: 'channel' },
-        { id: 'r2', name: 'marketing-budget.pdf', type: 'file' }
-    ]);
+    const [recentSearches, setRecentSearches] = useState([]);
 
-    // Search Logic
+    // Search Logic - TODO: Replace with actual API call
     useEffect(() => {
         if (!searchQuery.trim()) {
             setSearchResults({ channels: [], dms: [], files: [] });
             return;
         }
 
-        const query = searchQuery.toLowerCase();
-        const filtered = {
-            channels: mockSearchData.channels.filter(item => item.name.toLowerCase().includes(query)),
-            dms: mockSearchData.dms.filter(item => item.name.toLowerCase().includes(query)),
-            files: mockSearchData.files.filter(item => item.name.toLowerCase().includes(query)),
-        };
-        setSearchResults(filtered);
+        // TODO: Implement actual search API call here
+        // For now, setting empty results
+        setSearchResults({ channels: [], dms: [], files: [] });
     }, [searchQuery]);
 
     const handleResultClick = (item) => {
