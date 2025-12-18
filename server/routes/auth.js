@@ -25,7 +25,7 @@ const requireAuth = require("../middleware/auth");
 router.post("/signup", signup);
 router.get("/verify-email", verifyEmail);
 router.post("/login", login);
-router.get("/refresh", refresh);
+router.post("/refresh", refresh);  // Changed from GET to POST - mutations should use POST
 router.post("/logout", logout);
 router.post("/logout-all", logoutAll);
 router.post("/forgot-password", forgotPassword);

@@ -20,10 +20,25 @@ app.use(express.json());
 app.use(cookieParser());
 app.use(helmet());
 
-// CORS
+// CORS - Allow both common React dev ports
+const allowedOrigins = [
+  'http://localhost:3000',
+  'http://localhost:3001',
+  process.env.FRONTEND_URL
+].filter(Boolean);
+
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL || "http://localhost:3000",
+    origin: (origin, callback) => {
+      // Allow requests with no origin (like mobile apps or curl)
+      if (!origin) return callback(null, true);
+
+      if (allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
     credentials: true,
   })
 );
@@ -66,6 +81,8 @@ app.use("/api/tasks", require("./routes/tasks"));
 app.use("/api/notes", require("./routes/notes"));
 app.use("/api/updates", require("./routes/updates"));
 app.use("/api/dashboard", require("./routes/dashboard"));
+app.use("/api/favorites", require("./routes/favorites"));
+
 
 
 // ---------------------------------------------------------

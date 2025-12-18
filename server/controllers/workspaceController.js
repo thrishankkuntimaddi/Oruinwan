@@ -2,6 +2,7 @@
 const Workspace = require("../models/Workspace");
 const Channel = require("../models/Channel");
 const User = require("../models/User");
+const Message = require("../models/Message");
 const { createInvite } = require("../utils/invite");
 const sendEmail = require("../utils/sendEmail");
 
@@ -35,14 +36,16 @@ exports.createWorkspace = async (req, res) => {
       }
     }
 
-    // Create workspace
+    // Create workspace with icon and color
     const workspace = await Workspace.create({
       company: companyId || null,
       type: isPersonalWorkspace ? "personal" : "company",
       name: name.trim(),
       description: description || "",
-      icon: icon || null,
-      color: color || null,
+      icon: icon || "🚀", // Default icon
+      metadata: {
+        color: color || "#2563eb" // Store color in metadata
+      },
       createdBy: userId,
       members: [{ user: userId, role: "owner" }],
       settings: {
@@ -102,7 +105,7 @@ exports.createWorkspace = async (req, res) => {
         name: workspace.name,
         type: workspace.type,
         icon: workspace.icon,
-        color: workspace.color,
+        color: workspace.metadata?.color,
         defaultChannels: workspace.defaultChannels
       }
     });
@@ -142,7 +145,7 @@ exports.listMyWorkspaces = async (req, res) => {
         name: ws.workspace.name,
         description: ws.workspace.description,
         icon: ws.workspace.icon,
-        color: ws.workspace.color,
+        color: ws.workspace.metadata?.color || "#2563eb",
         type: ws.workspace.type,
         role: ws.role,
         memberCount: ws.workspace.members?.length || 0,
@@ -173,46 +176,301 @@ exports.listWorkspaces = async (req, res) => {
   }
 };
 
+/**
+ * Delete workspace (only owner can delete)
+ * DELETE /api/workspaces/:id
+ */
+exports.deleteWorkspace = async (req, res) => {
+  try {
+    const workspaceId = req.params.id;
+    const userId = req.user?.sub;
+
+    const workspace = await Workspace.findById(workspaceId);
+    if (!workspace) {
+      return res.status(404).json({ message: "Workspace not found" });
+    }
+
+    // Check if user is the owner
+    const memberData = workspace.members.find(m => String(m.user) === String(userId));
+    if (!memberData || memberData.role !== "owner") {
+      return res.status(403).json({ message: "Only workspace owner can delete the workspace" });
+    }
+
+    console.log(`🗑️ Deleting workspace: ${workspace.name}`);
+
+    // Delete all channels in this workspace
+    const deletedChannels = await Channel.deleteMany({ workspace: workspaceId });
+    console.log(`   ✅ Deleted ${deletedChannels.deletedCount} channels`);
+
+    // Delete all messages in this workspace
+    const deletedMessages = await Message.deleteMany({ workspace: workspaceId });
+    console.log(`   ✅ Deleted ${deletedMessages.deletedCount} messages`);
+
+    // Remove workspace from all users
+    await User.updateMany(
+      { "workspaces.workspace": workspaceId },
+      { $pull: { workspaces: { workspace: workspaceId } } }
+    );
+    console.log(`   ✅ Removed workspace from all users`);
+
+    // Remove as personalWorkspace if applicable
+    await User.updateMany(
+      { personalWorkspace: workspaceId },
+      { $unset: { personalWorkspace: "" } }
+    );
+
+    // Delete the workspace itself
+    await Workspace.findByIdAndDelete(workspaceId);
+    console.log(`   ✅ Workspace deleted successfully`);
+
+    return res.json({ message: "Workspace deleted successfully" });
+  } catch (err) {
+    console.error("DELETE WORKSPACE ERROR:", err);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+
+/**
+ * Create workspace invites (supports both email and link-based invites)
+ * POST /api/workspaces/:id/invite
+ */
 exports.inviteToWorkspace = async (req, res) => {
   try {
     const workspaceId = req.params.id;
-    const { email, role = "member", daysValid = 7 } = req.body;
+    const { emails, inviteType = "link", role = "member", daysValid = 7 } = req.body;
     const inviterId = req.user?.sub;
 
-    const ws = await Workspace.findById(workspaceId);
-    if (!ws) return res.status(404).json({ message: "Workspace not found" });
+    const workspace = await Workspace.findById(workspaceId);
+    if (!workspace) return res.status(404).json({ message: "Workspace not found" });
 
-    const inviter = await User.findById(inviterId);
-    if (!inviter || String(inviter.companyId) !== String(ws.company)) return res.status(403).json({ message: "Not allowed" });
-
-    const inviterRoleCompany = inviter.rolesPerCompany ? inviter.rolesPerCompany[ws.company] : null;
-    const isWorkspaceMember = ws.members.some(m => String(m.user) === String(inviterId));
-    if (!(inviterRoleCompany === "admin" || inviterRoleCompany === "owner" || isWorkspaceMember)) {
-      return res.status(403).json({ message: "Not allowed to invite" });
+    // Check if inviter is a member of the workspace
+    const isWorkspaceMember = workspace.members.some(m => String(m.user) === String(inviterId));
+    if (!isWorkspaceMember) {
+      return res.status(403).json({ message: "You must be a member to invite others" });
     }
 
-    const { rawToken, invite } = await createInvite({
-      email,
-      companyId: ws.company,
-      workspaceId: ws._id,
-      role,
-      invitedBy: inviterId,
-      daysValid
-    });
+    const invites = [];
+    const Invite = require("../models/Invite");
+    const crypto = require("crypto");
+    const sha256 = (v) => crypto.createHash("sha256").update(v).digest("hex");
 
-    const inviteLink = `${process.env.FRONTEND_URL}/accept-invite?token=${rawToken}&email=${encodeURIComponent(email)}`;
+    if (inviteType === "email" && emails) {
+      // Email-based invites
+      const emailList = emails.split(',').map(e => e.trim()).filter(Boolean);
 
-    try {
-      await sendEmail({
-        to: email,
-        subject: `Invite to workspace ${ws.name}`,
-        html: `You were invited to workspace ${ws.name}. Click to accept: <a href="${inviteLink}">${inviteLink}</a>`
+      for (const email of emailList) {
+        const raw = crypto.randomBytes(32).toString("hex");
+        const tokenHash = sha256(raw);
+        const expiresAt = new Date(Date.now() + daysValid * 24 * 60 * 60 * 1000);
+
+        const invite = await Invite.create({
+          email,
+          tokenHash,
+          workspace: workspace._id,
+          company: workspace.company,
+          role,
+          invitedBy: inviterId,
+          expiresAt,
+          inviteType: "email"
+        });
+
+        const inviteLink = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/join-workspace?token=${raw}`;
+
+        // Send email
+        try {
+          await sendEmail({
+            to: email,
+            subject: `You're invited to join ${workspace.name} on Chttrix`,
+            html: `
+              <h2>You've been invited to join ${workspace.name}!</h2>
+              <p>Click the link below to accept the invitation:</p>
+              <a href="${inviteLink}" style="display: inline-block; padding: 12px 24px; background-color: #2563eb; color: white; text-decoration: none; border-radius: 8px;">Join Workspace</a>
+              <p style="margin-top: 20px; color: #666;">This link will expire in ${daysValid} days and can only be used once.</p>
+            `
+          });
+        } catch (e) {
+          console.warn("Email send failed:", e?.message || e);
+        }
+
+        invites.push({ email, inviteLink });
+      }
+
+      return res.json({
+        message: "Email invites sent successfully",
+        invites
       });
-    } catch (e) { console.warn("Email send failed:", e?.message || e); }
+    } else {
+      // Link-based invite (one-time use)
+      const raw = crypto.randomBytes(32).toString("hex");
+      const tokenHash = sha256(raw);
+      const expiresAt = new Date(Date.now() + daysValid * 24 * 60 * 60 * 1000);
 
-    return res.json({ message: "Invite created", inviteId: invite._id, inviteLink });
+      const invite = await Invite.create({
+        tokenHash,
+        workspace: workspace._id,
+        company: workspace.company,
+        role,
+        invitedBy: inviterId,
+        expiresAt,
+        inviteType: "link"
+      });
+
+      const inviteLink = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/join-workspace?token=${raw}`;
+
+      return res.json({
+        message: "Invite link generated",
+        inviteLink,
+        expiresAt
+      });
+    }
   } catch (err) {
     console.error("INVITE TO WORKSPACE ERROR:", err);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+
+/**
+ * Get workspace details for invite preview
+ * GET /api/workspaces/invite/:token
+ */
+exports.getInviteDetails = async (req, res) => {
+  try {
+    const { token } = req.params;
+    const crypto = require("crypto");
+    const sha256 = (v) => crypto.createHash("sha256").update(v).digest("hex");
+    const Invite = require("../models/Invite");
+
+    const tokenHash = sha256(token);
+    const invite = await Invite.findOne({ tokenHash })
+      .populate('workspace', 'name description icon metadata')
+      .populate('invitedBy', 'username profilePicture');
+
+    if (!invite) {
+      return res.status(404).json({ message: "Invalid invitation link" });
+    }
+
+    if (invite.used) {
+      return res.status(400).json({ message: "This invitation link has already been used" });
+    }
+
+    if (invite.expiresAt < new Date()) {
+      return res.status(400).json({ message: "This invitation link has expired" });
+    }
+
+    const workspace = await Workspace.findById(invite.workspace);
+    const memberCount = workspace.members.length;
+
+    return res.json({
+      workspaceName: workspace.name,
+      workspaceDescription: workspace.description,
+      workspaceIcon: workspace.icon,
+      workspaceColor: workspace.metadata?.color,
+      invitedBy: invite.invitedBy ? invite.invitedBy.username : 'Someone',
+      memberCount,
+      role: invite.role
+    });
+  } catch (err) {
+    console.error("GET INVITE DETAILS ERROR:", err);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+
+/**
+ * Accept workspace invite and join
+ * POST /api/workspaces/join
+ */
+exports.joinWorkspace = async (req, res) => {
+  try {
+    const { token } = req.body;
+    const userId = req.user?.sub;
+    const crypto = require("crypto");
+    const sha256 = (v) => crypto.createHash("sha256").update(v).digest("hex");
+    const Invite = require("../models/Invite");
+
+    if (!token) {
+      return res.status(400).json({ message: "Invite token is required" });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const tokenHash = sha256(token);
+    const invite = await Invite.findOne({ tokenHash });
+
+    if (!invite) {
+      return res.status(404).json({ message: "Invalid invitation link" });
+    }
+
+    if (invite.used) {
+      return res.status(400).json({ message: "This invitation link has already been used" });
+    }
+
+    if (invite.expiresAt < new Date()) {
+      return res.status(400).json({ message: "This invitation link has expired" });
+    }
+
+    // Get workspace
+    const workspace = await Workspace.findById(invite.workspace);
+    if (!workspace) {
+      return res.status(404).json({ message: "Workspace not found" });
+    }
+
+    // Check if user is already a member
+    const alreadyMember = workspace.members.some(m => String(m.user) === String(userId));
+    if (alreadyMember) {
+      return res.status(400).json({ message: "You are already a member of this workspace" });
+    }
+
+    // Add user to workspace
+    workspace.members.push({
+      user: userId,
+      role: invite.role,
+      joinedAt: new Date()
+    });
+    await workspace.save();
+
+    // Add workspace to user's workspaces
+    user.workspaces.push({
+      workspace: workspace._id,
+      role: invite.role,
+      joinedAt: new Date()
+    });
+    await user.save();
+
+    // Auto-join default channels (#general and #announcements)
+    const defaultChannels = await Channel.find({
+      workspace: workspace._id,
+      isDefault: true
+    });
+
+    for (const channel of defaultChannels) {
+      if (!channel.members.includes(userId)) {
+        channel.members.push(userId);
+        await channel.save();
+      }
+    }
+
+    // Mark invite as used
+    invite.used = true;
+    invite.usedBy = userId;
+    invite.usedAt = new Date();
+    await invite.save();
+
+    console.log(`✅ User ${user.username} joined workspace ${workspace.name}`);
+
+    return res.json({
+      message: "Successfully joined workspace",
+      workspace: {
+        id: workspace._id,
+        name: workspace.name,
+        icon: workspace.icon,
+        color: workspace.metadata?.color
+      }
+    });
+  } catch (err) {
+    console.error("JOIN WORKSPACE ERROR:", err);
     return res.status(500).json({ message: "Server error" });
   }
 };
