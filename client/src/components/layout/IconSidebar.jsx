@@ -1,13 +1,15 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useNavigate, useLocation, useParams } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
+import { useWorkspace } from "../../contexts/WorkspaceContext";
 import { Home, MessageSquare, CheckSquare, FileText, Newspaper, Hash } from "lucide-react";
 
-const IconSidebar = ({ onProfileClick, activeWorkspace, setActiveWorkspace, workspaces }) => {
+const IconSidebar = ({ onProfileClick }) => {
     const navigate = useNavigate();
     const location = useLocation();
     const { workspaceId } = useParams();
     const { user } = useAuth();
+    const { workspaces, activeWorkspace, setActiveWorkspace } = useWorkspace();
 
     const [showWorkspaceMenu, setShowWorkspaceMenu] = useState(false);
     const menuRef = useRef(null);
@@ -23,17 +25,9 @@ const IconSidebar = ({ onProfileClick, activeWorkspace, setActiveWorkspace, work
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
-    // Get current workspace ID from URL or localStorage
-    const getCurrentWorkspaceId = () => {
-        if (workspaceId) return workspaceId;
-        return localStorage.getItem("currentWorkspace") || null;
-    };
-
     const isActive = (basePath) => {
-        const currentWorkspaceId = getCurrentWorkspaceId();
-        if (!currentWorkspaceId) return false;
-
-        const fullPath = `/workspace/${currentWorkspaceId}${basePath}`;
+        if (!workspaceId) return false;
+        const fullPath = `/workspace/${workspaceId}${basePath}`;
         return location.pathname === fullPath || location.pathname.startsWith(fullPath + "/");
     };
 
@@ -83,7 +77,6 @@ const IconSidebar = ({ onProfileClick, activeWorkspace, setActiveWorkspace, work
                                     key={ws.id}
                                     onClick={() => {
                                         setActiveWorkspace(ws);
-                                        localStorage.setItem("currentWorkspace", ws.id);
                                         setShowWorkspaceMenu(false);
                                         navigate(`/workspace/${ws.id}/home`);
                                     }}
@@ -106,9 +99,8 @@ const IconSidebar = ({ onProfileClick, activeWorkspace, setActiveWorkspace, work
             {/* Nav Icons */}
             <div className="flex-1 flex flex-col space-y-4 w-full items-center">
                 {navItems.map((item) => {
-                    const currentWorkspaceId = getCurrentWorkspaceId();
-                    const targetPath = currentWorkspaceId
-                        ? `/workspace/${currentWorkspaceId}${item.path}`
+                    const targetPath = workspaceId
+                        ? `/workspace/${workspaceId}${item.path}`
                         : '/workspaces'; // Fallback to workspace selection if no workspace
 
                     return (

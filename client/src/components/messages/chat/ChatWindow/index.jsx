@@ -1,6 +1,7 @@
 // client/src/components/messages/chat/ChatWindow/index.jsx
 
 import React, { useEffect, useRef, useState } from "react";
+import { useParams } from "react-router-dom";
 import "../../../messagesComp/chatWindowComp/chatWindow.css";
 
 import Header from "../../../messagesComp/chatWindowComp/header/header.jsx";
@@ -29,7 +30,17 @@ import axios from "axios";
 
 const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
-export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat }) {
+// ✅ CORRECT: No chat prop! Derive from URL instead
+export default function ChatWindow({ onClose, contacts = [], onDeleteChat }) {
+    /* ✅ SINGLE SOURCE OF TRUTH: URL PARAMS */
+    const { workspaceId, channelId, dmId } = useParams();
+
+    // ✅ Derive chat from URL params
+    const chat = channelId
+        ? { id: channelId, type: "channel" }
+        : dmId
+            ? { id: dmId, type: "dm" }
+            : null;
     /* STATE */
     const [messages, setMessages] = useState([]);
     const pendingMessagesRef = useRef({});
@@ -102,16 +113,20 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
 
         let mounted = true;
 
+        // ✅ Stable dependency - chatId won't change unless URL changes
+        const chatId = chat.id;
+        const chatType = chat.type;
+
         async function loadMessages() {
             try {
                 const token = getAccessToken();
                 const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
                 let url = "";
-                if (chat.type === "dm") {
-                    url = `${API_BASE}/api/messages/dm/${chat.id}`;
+                if (chatType === "dm") {
+                    url = `${API_BASE}/api/messages/dm/${chatId}`;
                 } else {
-                    url = `${API_BASE}/api/messages/channel/${chat.id}`;
+                    url = `${API_BASE}/api/messages/channel/${chatId}`;
                 }
 
                 const res = await axios.get(url, { headers });
@@ -121,10 +136,10 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
                 setMessages(loadedMessages);
 
                 // Mark as read for DMs
-                if (chat.type === "dm") {
+                if (chatType === "dm") {
                     axios.post(
                         `${API_BASE}/api/messages/dm/read`,
-                        { otherUserId: chat.id },
+                        { otherUserId: chatId },
                         { headers }
                     );
 
@@ -132,7 +147,7 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
                     if (socket && connected) {
                         socket.emit("read-messages", {
                             readerId: currentUserIdRef.current,
-                            otherUserId: chat.id,
+                            otherUserId: chatId,
                         });
                     }
                 }
@@ -145,8 +160,8 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
 
         loadMessages();
         return () => (mounted = false);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [chat, connected]);
+        // ✅ CORRECT: Depend on stable string IDs, not chat object
+    }, [chat?.id, chat?.type, connected]);
 
     /* OUTSIDE CLICK HANDLER */
     useEffect(() => {

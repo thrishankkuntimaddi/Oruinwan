@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation, useParams } from "react-router-dom";
 import { Plus, Hash, Search, Trash2, X, CheckSquare, Settings2 } from 'lucide-react';
+import { useWorkspace } from "../../../contexts/WorkspaceContext";
+import api from "../../../services/api";
 import ConfirmationModal from "../../modals/ConfirmationModal";
 
 const ChannelsPanel = ({ title }) => {
     const navigate = useNavigate();
     const location = useLocation();
-    const { workspaceId } = useParams(); // Get current workspace ID
+    const { workspaceId } = useParams();
+    const { activeWorkspace } = useWorkspace();
     const currentPath = location.pathname;
 
     const [searchQuery, setSearchQuery] = useState("");
@@ -22,21 +25,30 @@ const ChannelsPanel = ({ title }) => {
     const [createStep, setCreateStep] = useState(1);
     const [selectedChannelMembers, setSelectedChannelMembers] = useState([]);
 
-    const MOCK_USERS = [
-        { id: 'u1', name: 'Sarah Connor', status: 'online' },
-        { id: 'u2', name: 'Thrishank', status: 'away' },
-        { id: 'u3', name: 'Alice Smith', status: 'online' },
-        { id: 'u4', name: 'Mike Ross', status: 'offline' },
-        { id: 'u5', name: 'Rachel Zane', status: 'busy' },
-        { id: 'u6', name: 'Harvey Specter', status: 'online' },
-        { id: 'u7', name: 'Donna Paulsen', status: 'online' },
-    ];
+    // Workspace members (for channel creation)
+    const [workspaceMembers, setWorkspaceMembers] = useState([]);
 
-    // Real channels from backend - filtered by workspace
-    const [items, setItems] = useState([]);
+    // Real channels from backend - NO FILTERING NEEDED
+    const [channels, setChannels] = useState([]);
     const [isLoadingChannels, setIsLoadingChannels] = useState(true);
 
-    // Fetch workspace-specific channels
+    // Fetch workspace members for channel creation
+    useEffect(() => {
+        const fetchMembers = async () => {
+            if (!workspaceId) return;
+
+            try {
+                const response = await api.get(`/api/workspaces/${workspaceId}/members`);
+                setWorkspaceMembers(response.data.members || []);
+            } catch (err) {
+                console.error('Error fetching workspace members:', err);
+            }
+        };
+
+        fetchMembers();
+    }, [workspaceId]);
+
+    // Fetch workspace-specific channels (✅ CORRECT ENDPOINT)
     useEffect(() => {
         const fetchChannels = async () => {
             if (!workspaceId) {
@@ -46,45 +58,31 @@ const ChannelsPanel = ({ title }) => {
 
             try {
                 setIsLoadingChannels(true);
-                const token = localStorage.getItem('accessToken');
-
-                if (!token) {
-                    console.error('No access token');
-                    return;
-                }
-
                 console.log('📡 Fetching channels for workspace:', workspaceId);
 
-                const response = await fetch(`${process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000'}/api/channels/my`, {
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    }
-                });
+                // ✅ CORRECT: Use workspace-specific endpoint
+                const response = await api.get(`/api/workspaces/${workspaceId}/channels`);
 
-                if (!response.ok) throw new Error('Failed to fetch channels');
+                console.log('📋 Channels received:', response.data.channels);
 
-                const data = await response.json();
-                console.log('📋 All channels received:', data.channels);
+                // ✅ NO FILTERING NEEDED - Backend already returns only this workspace's channels
+                const mappedChannels = response.data.channels.map(ch => ({
+                    id: ch._id,
+                    type: 'channel',
+                    label: ch.name,
+                    path: `/workspace/${workspaceId}/channel/${ch._id}`, // ✅ CORRECT PATH
+                    isFavorite: ch.isDefault || false,
+                    isPrivate: ch.isPrivate || false,
+                    isDefault: ch.isDefault || false,
+                    description: ch.description || '',
+                    canDelete: !ch.isDefault // ✅ Default channels cannot be deleted
+                }));
 
-                // Filter channels by current workspace
-                const workspaceChannels = data.channels
-                    .filter(ch => ch.workspace && ch.workspace.toString() === workspaceId)
-                    .map(ch => ({
-                        id: ch._id,
-                        type: 'channel',
-                        label: ch.name,
-                        path: `/workspace/${workspaceId}/channels/${ch._id}`,
-                        isFavorite: ch.isDefault || false,
-                        isPrivate: ch.isPrivate || false,
-                        description: ch.description || ''
-                    }));
-
-                console.log(`✅ Filtered ${workspaceChannels.length} channels for workspace ${workspaceId}`);
-                setItems(workspaceChannels);
+                console.log(`✅ Loaded ${mappedChannels.length} channels for workspace ${workspaceId}`);
+                setChannels(mappedChannels);
                 setIsLoadingChannels(false);
             } catch (err) {
-                console.error('Error fetching channels:', err);
+                console.error('❌ Error fetching channels:', err);
                 setIsLoadingChannels(false);
             }
         };
@@ -92,7 +90,8 @@ const ChannelsPanel = ({ title }) => {
         fetchChannels();
     }, [workspaceId]);
 
-    const handleCreateChannel = () => {
+    // ✅ CORRECT: Create channel via backend
+    const handleCreateChannel = async () => {
         if (!newChannelData.name) return;
 
         if (newChannelData.isPrivate && createStep === 1) {
@@ -100,37 +99,87 @@ const ChannelsPanel = ({ title }) => {
             return;
         }
 
-        const channelId = newChannelData.name.toLowerCase().replace(/\s+/g, '-');
-        const newChannel = {
-            id: channelId,
-            type: 'channel',
-            label: newChannelData.name.toLowerCase().replace(/\s+/g, '-'),
-            path: `/ channels / ${channelId} `,
-            isFavorite: false,
-            isPrivate: newChannelData.isPrivate,
-        };
+        try {
+            console.log('📡 Creating channel:', newChannelData.name);
 
-        setItems(prev => [...prev, newChannel]);
-        navigate(`/ channels / ${channelId} `);
+            // ✅ CORRECT: Call backend API
+            const response = await api.post(`/api/workspaces/${workspaceId}/channels`, {
+                name: newChannelData.name,
+                description: newChannelData.description,
+                isPrivate: newChannelData.isPrivate,
+                members: selectedChannelMembers.length > 0 ? selectedChannelMembers : undefined
+            });
 
-        // Reset
-        setShowCreateChannelModal(false);
-        setNewChannelData({ name: "", description: "", isPrivate: false });
-        setCreateStep(1);
-        setSelectedChannelMembers([]);
+            const createdChannel = response.data.channel;
+            console.log('✅ Channel created:', createdChannel);
+
+            // Append real channel to list
+            const newChannel = {
+                id: createdChannel._id,
+                type: 'channel',
+                label: createdChannel.name,
+                path: `/workspace/${workspaceId}/channel/${createdChannel._id}`, // ✅ CORRECT PATH
+                isFavorite: false,
+                isPrivate: createdChannel.isPrivate,
+                isDefault: false,
+                description: createdChannel.description || '',
+                canDelete: true
+            };
+
+            setChannels(prev => [...prev, newChannel]);
+
+            // ✅ CORRECT: Navigate with workspace context
+            navigate(`/workspace/${workspaceId}/channel/${createdChannel._id}`);
+
+            // Reset
+            setShowCreateChannelModal(false);
+            setNewChannelData({ name: "", description: "", isPrivate: false });
+            setCreateStep(1);
+            setSelectedChannelMembers([]);
+        } catch (err) {
+            console.error('❌ Error creating channel:', err);
+            alert(err.response?.data?.message || 'Failed to create channel');
+        }
     };
 
-    const handleDeleteSelected = () => {
-        setItems(prev => prev.filter(i => !selectedItems.has(i.id)));
-        setSelectedItems(new Set());
-        setIsSelectionMode(false);
-        setShowDeleteConfirm(false);
+    // ✅ WARNING: Delete should call backend (TODO: implement DELETE endpoint)
+    const handleDeleteSelected = async () => {
+        try {
+            // Filter out default channels (they cannot be deleted)
+            const deletableChannels = Array.from(selectedItems).filter(id => {
+                const channel = channels.find(ch => ch.id === id);
+                return channel && !channel.isDefault;
+            });
+
+            if (deletableChannels.length === 0) {
+                alert('Cannot delete default channels (#general, #announcements)');
+                setShowDeleteConfirm(false);
+                return;
+            }
+
+            // TODO: Implement DELETE /api/channels/:id endpoint
+            // For now, just remove from frontend
+            console.warn('⚠️ DELETE endpoint not implemented. Removing from frontend only.');
+
+            setChannels(prev => prev.filter(ch => !deletableChannels.includes(ch.id)));
+            setSelectedItems(new Set());
+            setIsSelectionMode(false);
+            setShowDeleteConfirm(false);
+        } catch (err) {
+            console.error('Error deleting channels:', err);
+        }
     };
 
-    const filteredChannels = items.filter(item =>
-        item.type === 'channel' &&
-        item.label.toLowerCase().includes(searchQuery.toLowerCase())
+    const filteredChannels = channels.filter(channel =>
+        channel.label.toLowerCase().includes(searchQuery.toLowerCase())
     );
+
+    // ✅ Default channels first, then user-created
+    const sortedChannels = filteredChannels.sort((a, b) => {
+        if (a.isDefault && !b.isDefault) return -1;
+        if (!a.isDefault && b.isDefault) return 1;
+        return 0;
+    });
 
     const Item = ({ item }) => {
         const isSelected = selectedItems.has(item.id);
@@ -138,6 +187,13 @@ const ChannelsPanel = ({ title }) => {
         const handleClick = (e) => {
             if (isSelectionMode) {
                 e.stopPropagation();
+
+                // ✅ Prevent selection of default channels
+                if (item.isDefault) {
+                    alert('Default channels cannot be deleted');
+                    return;
+                }
+
                 const newSelected = new Set(selectedItems);
                 if (newSelected.has(item.id)) {
                     newSelected.delete(item.id);
@@ -146,10 +202,8 @@ const ChannelsPanel = ({ title }) => {
                 }
                 setSelectedItems(newSelected);
             } else {
-                // Call global openChat function
-                if (window.openChat) {
-                    window.openChat(item);
-                }
+                // ✅ CORRECT: Use React Router navigation
+                navigate(item.path);
             }
         };
 
@@ -162,14 +216,17 @@ const ChannelsPanel = ({ title }) => {
                     }`}
             >
                 <div className="flex items-center truncate flex-1 gap-2">
-                    {isSelectionMode && (
+                    {isSelectionMode && !item.isDefault && (
                         <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${isSelected ? "bg-blue-600 border-blue-600" : "border-gray-300 bg-white"
                             }`}>
                             {isSelected && <CheckSquare size={10} className="text-white" />}
                         </div>
                     )}
                     <span className="opacity-70 text-lg">#</span>
-                    <span className="truncate text-sm">{item.label}</span>
+                    <span className="truncate text-sm font-medium">{item.label}</span>
+                    {item.isDefault && (
+                        <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full font-medium">Default</span>
+                    )}
                 </div>
             </div>
         );
@@ -186,7 +243,8 @@ const ChannelsPanel = ({ title }) => {
                 <div className="flex items-center gap-1">
                     <button
                         onClick={() => setIsSelectionMode(!isSelectionMode)}
-                        className={`p - 2 text - gray - 400 hover: text - blue - 600 hover: bg - blue - 50 rounded - lg transition - colors ${isSelectionMode ? "bg-blue-100 text-blue-600" : ""} `}
+                        className={`p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors ${isSelectionMode ? "bg-blue-100 text-blue-600" : ""
+                            }`}
                         title="Manage Channels"
                     >
                         <Settings2 size={20} />
@@ -223,7 +281,7 @@ const ChannelsPanel = ({ title }) => {
                         <button
                             onClick={() => setShowDeleteConfirm(true)}
                             disabled={selectedItems.size === 0}
-                            className="p-1.5 text-red-600 hover:bg-red-100 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="p-1.5 text-red-600 hover:bg-red-100 rounded-lg disabled:opacity- disabled:cursor-not-allowed"
                             title="Delete Selected"
                         >
                             <Trash2 size={16} />
@@ -244,10 +302,16 @@ const ChannelsPanel = ({ title }) => {
 
             {/* Channel List */}
             <div className="flex-1 overflow-y-auto custom-scrollbar px-2 py-4 space-y-0.5">
-                <div className="px-4 mb-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">All Channels</div>
-                {filteredChannels.length > 0 ? (
-                    filteredChannels.map(item => (
-                        <Item key={item.id} item={item} />
+                <div className="px-4 mb-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                    {activeWorkspace?.name || 'Workspace'} Channels
+                </div>
+                {isLoadingChannels ? (
+                    <div className="px-4 py-8 text-center text-sm text-gray-500">
+                        Loading channels...
+                    </div>
+                ) : sortedChannels.length > 0 ? (
+                    sortedChannels.map(channel => (
+                        <Item key={channel.id} item={channel} />
                     ))
                 ) : (
                     <div className="px-4 py-8 text-center text-sm text-gray-500">
@@ -262,7 +326,7 @@ const ChannelsPanel = ({ title }) => {
                 onClose={() => setShowDeleteConfirm(false)}
                 onConfirm={handleDeleteSelected}
                 title="Delete Channels?"
-                message={`Are you sure you want to delete ${selectedItems.size} selected channel(s) ? This action cannot be undone.`}
+                message={`Are you sure you want to delete ${selectedItems.size} selected channel(s)? This action cannot be undone.`}
                 confirmText="Delete Channels"
             />
 
@@ -329,27 +393,27 @@ const ChannelsPanel = ({ title }) => {
                                     <span>Adding members to <strong>#{newChannelData.name}</strong></span>
                                 </div>
                                 <div className="max-h-[300px] overflow-y-auto p-2">
-                                    {MOCK_USERS.map(user => (
-                                        <label key={user.id} className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-xl cursor-pointer transition-colors">
+                                    {workspaceMembers.map(member => (
+                                        <label key={member.id} className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-xl cursor-pointer transition-colors">
                                             <div className="flex items-center gap-3">
                                                 <input
                                                     type="checkbox"
                                                     className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
-                                                    checked={selectedChannelMembers.includes(user.id)}
+                                                    checked={selectedChannelMembers.includes(member.id)}
                                                     onChange={(e) => {
                                                         if (e.target.checked) {
-                                                            setSelectedChannelMembers([...selectedChannelMembers, user.id]);
+                                                            setSelectedChannelMembers([...selectedChannelMembers, member.id]);
                                                         } else {
-                                                            setSelectedChannelMembers(selectedChannelMembers.filter(id => id !== user.id));
+                                                            setSelectedChannelMembers(selectedChannelMembers.filter(id => id !== member.id));
                                                         }
                                                     }}
                                                 />
                                                 <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-xs font-bold text-gray-600">
-                                                    {user.name.charAt(0)}
+                                                    {member.name.charAt(0)}
                                                 </div>
                                                 <div>
-                                                    <div className="text-sm font-bold text-gray-900">{user.name}</div>
-                                                    <div className="text-xs text-gray-500">Member</div>
+                                                    <div className="text-sm font-bold text-gray-900">{member.name}</div>
+                                                    <div className="text-xs text-gray-500">{member.role}</div>
                                                 </div>
                                             </div>
                                         </label>

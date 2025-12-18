@@ -20,8 +20,14 @@ router.post("/join", auth, workspaceController.joinWorkspace);
 // Get workspace members (for DM filtering)
 router.get("/:workspaceId/members", auth, workspaceController.getWorkspaceMembers);
 
+// Get workspace channels
+router.get("/:workspaceId/channels", auth, workspaceController.getWorkspaceChannels);
+
+// Create channel in workspace
+router.post("/:workspaceId/channels", auth, workspaceController.createWorkspaceChannel);
+
 // Get workspaces by company (legacy/company-specific)
-// This MUST be after /my to avoid matching "my" as companyId
+// This MUST be after /my and specific routes to avoid matching workspace IDs as companyId
 router.get("/:companyId", auth, workspaceController.listWorkspaces);
 
 // Invite to workspace

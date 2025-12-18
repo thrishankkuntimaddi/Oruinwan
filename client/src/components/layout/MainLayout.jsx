@@ -1,83 +1,16 @@
 import React, { useState, useRef, useEffect } from "react";
-import { useParams } from "react-router-dom";
 import IconSidebar from "./IconSidebar";
 import ProfileMenu from "../SidebarComp/ProfileSidebar";
 import ChttrixAIChat from "../ai/ChttrixAIChat/ChttrixAIChat";
+import { useWorkspace } from "../../contexts/WorkspaceContext";
 import { Bot, BookOpen, Command, Bug, Sparkles, Search, MessageCircle, X } from "lucide-react";
 
 const MainLayout = ({ children, sidePanel }) => {
-    const { workspaceId } = useParams();
+    const { activeWorkspace } = useWorkspace();
     const [showProfile, setShowProfile] = useState(false);
     const [showAI, setShowAI] = useState(false);
     const [aiWidth, setAiWidth] = useState(350);
     const [sidePanelWidth, setSidePanelWidth] = useState(270);
-
-    // Workspace State - Fetch from backend
-    const [workspaces, setWorkspaces] = useState([]);
-    const [activeWorkspace, setActiveWorkspace] = useState(null);
-
-    // Fetch user's workspaces
-    useEffect(() => {
-        const fetchWorkspaces = async () => {
-            try {
-                const token = localStorage.getItem('accessToken');
-                if (!token) {
-                    console.log('⚠️ No token available');
-                    return;
-                }
-
-                console.log('🔍 Fetching workspaces for workspaceId:', workspaceId);
-
-                const response = await fetch(`${process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000'}/api/workspaces/my`, {
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    }
-                });
-
-                if (!response.ok) throw new Error('Failed to fetch workspaces');
-
-                const data = await response.json();
-                console.log('📋 Workspaces data received:', data);
-
-                if (data.workspaces && data.workspaces.length > 0) {
-                    // Map workspaces to the format needed for IconSidebar
-                    const mappedWorkspaces = data.workspaces.map(ws => ({
-                        id: ws.id,
-                        name: ws.name,
-                        icon: ws.icon || "🚀",
-                        color: ws.color || "#2563eb"
-                    }));
-
-                    setWorkspaces(mappedWorkspaces);
-
-                    // Set active workspace based on URL param
-                    if (workspaceId) {
-                        // Try to match workspace by ID (handle both string and ObjectId)
-                        const active = mappedWorkspaces.find(ws =>
-                            ws.id === workspaceId || ws.id.toString() === workspaceId
-                        );
-
-                        if (active) {
-                            console.log('✅ Active workspace set:', active);
-                            setActiveWorkspace(active);
-                            localStorage.setItem('currentWorkspace', active.id);
-                        } else {
-                            console.warn('⚠️ Workspace not found in user workspaces:', workspaceId);
-                            // Set first workspace as fallback
-                            if (mappedWorkspaces.length > 0) {
-                                setActiveWorkspace(mappedWorkspaces[0]);
-                            }
-                        }
-                    }
-                }
-            } catch (err) {
-                console.error('❌ Error fetching workspaces:', err);
-            }
-        };
-
-        fetchWorkspaces();
-    }, [workspaceId]);
 
     // Search State
     const [searchQuery, setSearchQuery] = useState("");
@@ -547,13 +480,7 @@ const MainLayout = ({ children, sidePanel }) => {
             {/* 2. Main Workspace Area (Below Top Bar) */}
             <div className="flex-1 flex overflow-hidden">
                 {/* A. Far Left: Icon Sidebar */}
-                {/* A. Far Left: Icon Sidebar */}
-                <IconSidebar
-                    onProfileClick={() => setShowProfile(true)}
-                    activeWorkspace={activeWorkspace}
-                    setActiveWorkspace={setActiveWorkspace}
-                    workspaces={workspaces}
-                />
+                <IconSidebar onProfileClick={() => setShowProfile(true)} />
 
                 {/* B. Middle Left: Side Panel (Optional & Resizable) */}
                 {sidePanel && (

@@ -518,3 +518,111 @@ exports.getWorkspaceMembers = async (req, res) => {
     return res.status(500).json({ message: "Server error" });
   }
 };
+
+/**
+ * Get workspace channels (only channels for this workspace)
+ * GET /api/workspaces/:workspaceId/channels
+ */
+exports.getWorkspaceChannels = async (req, res) => {
+  try {
+    const { workspaceId } = req.params;
+    const userId = req.user?.sub;
+
+    console.log(`📡 Fetching channels for workspace: ${workspaceId}, user: ${userId}`);
+
+    // Verify workspace exists
+    const workspace = await Workspace.findById(workspaceId);
+    if (!workspace) {
+      return res.status(404).json({ message: "Workspace not found" });
+    }
+
+    // Verify user is a member of this workspace
+    const isMember = workspace.members.some(m => String(m.user) === String(userId));
+    if (!isMember) {
+      return res.status(403).json({ message: "You are not a member of this workspace" });
+    }
+
+    // Fetch channels for this workspace only, sorted (default channels first)
+    const channels = await Channel.find({ workspace: workspaceId })
+      .select('name description isPrivate isDefault members createdBy createdAt')
+      .sort({ isDefault: -1, createdAt: 1 }) // Default channels first, then by creation time
+      .lean();
+
+    console.log(`✅ Found ${channels.length} channels for workspace ${workspaceId}`);
+
+    return res.json({ channels });
+  } catch (err) {
+    console.error("GET WORKSPACE CHANNELS ERROR:", err);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+
+/**
+ * Create channel in workspace
+ * POST /api/workspaces/:workspaceId/channels
+ */
+exports.createWorkspaceChannel = async (req, res) => {
+  try {
+    const { workspaceId } = req.params;
+    const { name, description, isPrivate, members: channelMembers } = req.body;
+    const userId = req.user?.sub;
+
+    if (!name) {
+      return res.status(400).json({ message: "Channel name is required" });
+    }
+
+    console.log(`📡 Creating channel "${name}" in workspace: ${workspaceId}`);
+
+    // Verify workspace exists
+    const workspace = await Workspace.findById(workspaceId);
+    if (!workspace) {
+      return res.status(404).json({ message: "Workspace not found" });
+    }
+
+    // Verify user is a member of this workspace
+    const isMember = workspace.members.some(m => String(m.user) === String(userId));
+    if (!isMember) {
+      return res.status(403).json({ message: "You are not a member of this workspace" });
+    }
+
+    // Check if channel name already exists in this workspace
+    const existingChannel = await Channel.findOne({
+      workspace: workspaceId,
+      name: name.toLowerCase().trim()
+    });
+
+    if (existingChannel) {
+      return res.status(400).json({ message: "A channel with this name already exists" });
+    }
+
+    // Create channel
+    const channel = await Channel.create({
+      workspace: workspaceId,
+      company: workspace.company || null,
+      name: name.toLowerCase().trim(),
+      description: description || "",
+      isPrivate: isPrivate || false,
+      isDefault: false, // User-created channels are not default
+      createdBy: userId,
+      members: channelMembers || [userId] // Creator is always a member
+    });
+
+    console.log(`✅ Channel created: #${channel.name}`);
+
+    return res.status(201).json({
+      message: "Channel created successfully",
+      channel: {
+        _id: channel._id,
+        name: channel.name,
+        description: channel.description,
+        isPrivate: channel.isPrivate,
+        isDefault: channel.isDefault,
+        members: channel.members
+      }
+    });
+  } catch (err) {
+    console.error("CREATE WORKSPACE CHANNEL ERROR:", err);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { useToast } from "../../contexts/ToastContext";
 import CreateChannelModal from "../messagesComp/CreateChannelModal";
 
@@ -32,6 +32,8 @@ const SidePanel = ({ title = "Workspace", children }) => {
 
 export const ChannelList = () => {
     const { showToast } = useToast();
+    const navigate = useNavigate();
+    const { workspaceId } = useParams(); // Get workspaceId from URL
     const [showCreateChannelModal, setShowCreateChannelModal] = useState(false);
     const [expanded, setExpanded] = useState({
         favorites: true,
@@ -57,11 +59,9 @@ export const ChannelList = () => {
         </div>
     );
 
-    const navigate = useNavigate();
-
-    const Item = ({ icon, label, path, active, hasUnread }) => (
+    const Item = ({ icon, label, channelPath, active, hasUnread }) => (
         <div
-            onClick={() => navigate(path)}
+            onClick={() => navigate(`/workspace/${workspaceId}${channelPath}`)}
             className={`px-4 py-1 mx-2 rounded cursor-pointer flex items-center justify-between group ${active
                 ? "bg-blue-100 text-blue-700 font-medium"
                 : "hover:bg-gray-200 text-gray-600 hover:text-gray-900"
@@ -82,8 +82,8 @@ export const ChannelList = () => {
                 <SectionHeader label="Favorites" isOpen={expanded.favorites} onClick={() => toggle("favorites")} />
                 {expanded.favorites && (
                     <div className="mt-1 space-y-0.5">
-                        <Item icon="#" label="general" path="/messages/channel/general" />
-                        <Item icon="#" label="announcements" path="/messages/channel/announcements" hasUnread />
+                        <Item icon="#" label="general" channelPath="/channel/general" />
+                        <Item icon="#" label="announcements" channelPath="/channel/announcements" hasUnread />
                     </div>
                 )}
             </div>
@@ -98,10 +98,10 @@ export const ChannelList = () => {
                 />
                 {expanded.channels && (
                     <div className="mt-1 space-y-0.5">
-                        <Item icon="#" label="engineering" path="/messages/channel/engineering" />
-                        <Item icon="#" label="design" path="/messages/channel/design" />
-                        <Item icon="#" label="marketing" path="/messages/channel/marketing" />
-                        <Item icon="#" label="leadership" path="/messages/channel/leadership" />
+                        <Item icon="#" label="engineering" channelPath="/channel/engineering" />
+                        <Item icon="#" label="design" channelPath="/channel/design" />
+                        <Item icon="#" label="marketing" channelPath="/channel/marketing" />
+                        <Item icon="#" label="leadership" channelPath="/channel/leadership" />
                     </div>
                 )}
             </div>
@@ -116,9 +116,9 @@ export const ChannelList = () => {
                 />
                 {expanded.dms && (
                     <div className="mt-1 space-y-0.5">
-                        <Item icon="👤" label="Sarah Connor" path="/messages/dm/sarah" active />
-                        <Item icon="👤" label="Thrishank" path="/messages/dm/john" />
-                        <Item icon="👤" label="Alice Smith" path="/messages/dm/alice" hasUnread />
+                        <Item icon="👤" label="Sarah Connor" channelPath="/dm/sarah" active />
+                        <Item icon="👤" label="Thrishank" channelPath="/dm/john" />
+                        <Item icon="👤" label="Alice Smith" channelPath="/dm/alice" hasUnread />
                     </div>
                 )}
             </div>
@@ -128,8 +128,8 @@ export const ChannelList = () => {
                 <CreateChannelModal
                     onClose={() => setShowCreateChannelModal(false)}
                     onCreated={(channel) => {
-                        // Ideally refresh channel list or navigate to new channel
-                        navigate(`/messages/channel/${channel.name}`);
+                        // Navigate to new channel with workspace context
+                        navigate(`/workspace/${workspaceId}/channel/${channel.name}`);
                     }}
                 />
             )}
