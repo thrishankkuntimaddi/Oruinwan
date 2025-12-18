@@ -544,11 +544,17 @@ exports.getWorkspaceChannels = async (req, res) => {
 
     // Fetch channels for this workspace only, sorted (default channels first)
     const channels = await Channel.find({ workspace: workspaceId })
-      .select('name description isPrivate isDefault members createdBy createdAt')
+      .select('name description isPrivate isDefault members createdBy createdAt workspace')
       .sort({ isDefault: -1, createdAt: 1 }) // Default channels first, then by creation time
       .lean();
 
     console.log(`✅ Found ${channels.length} channels for workspace ${workspaceId}`);
+
+    // 🔍 DEBUG: Log each channel's workspace
+    console.log('\n🔍 CHANNEL DETAILS:');
+    channels.forEach((ch, idx) => {
+      console.log(`${idx + 1}. #${ch.name} - Workspace: ${ch.workspace}`);
+    });
 
     return res.json({ channels });
   } catch (err) {

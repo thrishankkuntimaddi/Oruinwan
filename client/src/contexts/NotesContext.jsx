@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 
 const NotesContext = createContext();
 
@@ -7,6 +7,7 @@ export const useNotes = () => useContext(NotesContext);
 
 export const NotesProvider = ({ children }) => {
     const navigate = useNavigate();
+    const location = useLocation();
     const [notes, setNotes] = useState(() => {
         const saved = localStorage.getItem("chttrix_notes");
         return saved ? JSON.parse(saved) : [
@@ -33,6 +34,12 @@ export const NotesProvider = ({ children }) => {
         localStorage.setItem("chttrix_notes", JSON.stringify(notes));
     }, [notes]);
 
+    // Helper to extract workspaceId from current location
+    const getWorkspaceId = () => {
+        const match = location.pathname.match(/\/workspace\/([^/]+)/);
+        return match ? match[1] : null;
+    };
+
     const addNote = () => {
         const newNote = {
             id: Date.now().toString(),
@@ -42,7 +49,10 @@ export const NotesProvider = ({ children }) => {
             updatedAt: new Date().toISOString(),
         };
         setNotes([newNote, ...notes]);
-        navigate(`/notes/${newNote.id}`);
+        const workspaceId = getWorkspaceId();
+        if (workspaceId) {
+            navigate(`/workspace/${workspaceId}/notes/${newNote.id}`);
+        }
         return newNote;
     };
 
@@ -54,7 +64,10 @@ export const NotesProvider = ({ children }) => {
 
     const deleteNote = (id) => {
         setNotes(prev => prev.filter(n => n.id !== id));
-        navigate("/notes");
+        const workspaceId = getWorkspaceId();
+        if (workspaceId) {
+            navigate(`/workspace/${workspaceId}/notes`);
+        }
     };
 
     const filteredNotes = notes.filter(note =>

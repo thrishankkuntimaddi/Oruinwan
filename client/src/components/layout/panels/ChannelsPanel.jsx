@@ -63,6 +63,16 @@ const ChannelsPanel = ({ title }) => {
 
                 console.log('📋 Channels received:', response.data.channels);
 
+                // 🔍 DEBUG: Check for workspace mismatches
+                console.log('\n🔍 DETAILED CHANNEL DEBUG:');
+                response.data.channels.forEach((ch, idx) => {
+                    console.log(`${idx + 1}. #${ch.name}`);
+                    console.log(`   - Channel ID: ${ch._id}`);
+                    console.log(`   - Workspace ID: ${ch.workspace}`);
+                    console.log(`   - Current Workspace: ${workspaceId}`);
+                    console.log(`   - Match: ${ch.workspace === workspaceId ? '✅' : '❌ MISMATCH!'}`);
+                });
+
                 // ✅ NO FILTERING NEEDED - Backend already returns only this workspace's channels
                 const mappedChannels = response.data.channels.map(ch => ({
                     id: ch._id,
@@ -73,8 +83,17 @@ const ChannelsPanel = ({ title }) => {
                     isPrivate: ch.isPrivate || false,
                     isDefault: ch.isDefault || false,
                     description: ch.description || '',
-                    canDelete: !ch.isDefault // ✅ Default channels cannot be deleted
+                    canDelete: !ch.isDefault, // ✅ Default channels cannot be deleted
+                    workspaceId: ch.workspace // ✅ Keep workspace ID for debugging
                 }));
+
+                // 🔍 DEBUG: Check for duplicate names
+                const names = mappedChannels.map(ch => ch.label);
+                const duplicates = names.filter((name, idx) => names.indexOf(name) !== idx);
+                if (duplicates.length > 0) {
+                    console.error('\n⚠️ DUPLICATE CHANNEL NAMES:', [...new Set(duplicates)]);
+                    console.error('This indicates the backend is returning duplicate channels!');
+                }
 
                 console.log(`✅ Loaded ${mappedChannels.length} channels for workspace ${workspaceId}`);
                 setChannels(mappedChannels);

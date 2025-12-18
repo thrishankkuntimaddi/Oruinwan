@@ -1,15 +1,16 @@
 import React from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation, useParams } from "react-router-dom";
 
 import { User, Inbox, Send, CheckCircle2, Trash2 } from "lucide-react";
 
 const TasksPanel = () => {
     const navigate = useNavigate();
     const location = useLocation();
+    const { workspaceId } = useParams();
     const activeTab = new URLSearchParams(location.search).get("tab") || "my-tasks";
 
     const handleNav = (tab) => {
-        navigate(`/tasks?tab=${tab}`);
+        navigate(`/workspace/${workspaceId}/tasks?tab=${tab}`);
     };
 
     return (

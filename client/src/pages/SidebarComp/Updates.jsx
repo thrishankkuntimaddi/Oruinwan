@@ -1,11 +1,12 @@
 import React, { useState, useRef, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { useBlogs } from "../../contexts/BlogsContext";
 import { Heart, MessageCircle, MoreHorizontal, Send, User, Image as ImageIcon, Flag, Link as LinkIcon, Video, Trash2 } from "lucide-react";
 import { useToast } from "../../contexts/ToastContext";
 
 const Updates = () => {
   const navigate = useNavigate();
+  const { workspaceId } = useParams();
   const { posts, addPost, likePost, deletePost } = useBlogs();
   const { showToast } = useToast();
 
@@ -66,7 +67,7 @@ const Updates = () => {
   };
 
   const handleCopyLink = (postId) => {
-    navigator.clipboard.writeText(`${window.location.origin}/updates/${postId}`);
+    navigator.clipboard.writeText(`${window.location.origin}/workspace/${workspaceId}/updates/${postId}`);
     showToast("Link copied to clipboard", "success");
     setActiveMenuId(null);
   };
@@ -355,8 +356,8 @@ const Updates = () => {
                 onClick={submitReport}
                 disabled={!reportReason}
                 className={`px-4 py-2 text-sm font-bold text-white rounded-xl shadow-md transition-colors ${reportReason
-                    ? "bg-blue-600 hover:bg-blue-700 shadow-blue-500/20"
-                    : "bg-gray-300 cursor-not-allowed"
+                  ? "bg-blue-600 hover:bg-blue-700 shadow-blue-500/20"
+                  : "bg-gray-300 cursor-not-allowed"
                   }`}
               >
                 Submit Report

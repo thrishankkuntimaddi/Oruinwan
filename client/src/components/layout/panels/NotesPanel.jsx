@@ -1,11 +1,12 @@
 import React, { useState, useRef, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation, useParams } from "react-router-dom";
 import { Plus, Search, FileText, Clock, ArrowUpDown } from "lucide-react";
 import { useNotes } from "../../../contexts/NotesContext";
 
 const NotesPanel = () => {
     const navigate = useNavigate();
     const location = useLocation();
+    const { workspaceId } = useParams();
     const { notes, addNote, searchQuery, setSearchQuery } = useNotes();
     const [sortOrder, setSortOrder] = useState("newest");
     const [showSortMenu, setShowSortMenu] = useState(false);
@@ -118,7 +119,7 @@ const NotesPanel = () => {
                     sortedNotes.map((note) => (
                         <div
                             key={note.id}
-                            onClick={() => navigate(`/notes/${note.id}`)}
+                            onClick={() => navigate(`/workspace/${workspaceId}/notes/${note.id}`)}
                             className={`group p-4 rounded-xl cursor-pointer border transition-all duration-200 relative overflow-hidden
                                 ${activeId === note.id
                                     ? "bg-white border-blue-200 shadow-md shadow-blue-500/5 ring-1 ring-blue-500/20"
