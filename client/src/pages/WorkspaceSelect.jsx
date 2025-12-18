@@ -9,7 +9,7 @@ import api from "../services/api";
 
 const WorkspaceSelect = () => {
     const navigate = useNavigate();
-    const { user, logout, accessToken } = useAuth();
+    const { user, logout } = useAuth();
     const [showHelp, setShowHelp] = useState(false);
     const [activeHelpModal, setActiveHelpModal] = useState(null);
 
