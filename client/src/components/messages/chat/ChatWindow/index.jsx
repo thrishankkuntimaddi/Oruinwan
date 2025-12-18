@@ -33,7 +33,7 @@ const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:5000";
 // ✅ CORRECT: No chat prop! Derive from URL instead
 export default function ChatWindow({ onClose, contacts = [], onDeleteChat }) {
     /* ✅ SINGLE SOURCE OF TRUTH: URL PARAMS */
-    const { workspaceId, channelId, dmId } = useParams();
+    const { channelId, dmId } = useParams();
 
     // ✅ Derive chat from URL params
     const chat = channelId
@@ -161,6 +161,7 @@ export default function ChatWindow({ onClose, contacts = [], onDeleteChat }) {
         loadMessages();
         return () => (mounted = false);
         // ✅ CORRECT: Depend on stable string IDs, not chat object
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [chat?.id, chat?.type, connected]);
 
     /* OUTSIDE CLICK HANDLER */

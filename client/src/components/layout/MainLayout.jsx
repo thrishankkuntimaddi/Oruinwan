@@ -67,9 +67,6 @@ const MainLayout = ({ children, sidePanel }) => {
     const [showHelp, setShowHelp] = useState(false);
     const [activeHelpModal, setActiveHelpModal] = useState(null); // academy, shortcuts, bug, whatsnew
 
-    // AI Toggle
-    const toggleAI = () => setShowAI(!showAI);
-
     // Refs for resizing
     const isResizingAIRef = useRef(false);
     const isResizingSidePanelRef = useRef(false);

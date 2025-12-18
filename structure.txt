@@ -1,230 +1,305 @@
-.
-├── client
-│   ├── public
-│   │   ├── assets
+ChttrixCollab/
+├── client/                                    # Frontend React Application
+│   ├── public/                                # Static public assets
+│   │   ├── assets/                           # Brand assets and images
 │   │   │   ├── ChttrixAI-logo.png
 │   │   │   ├── ChttrixFavico.png
 │   │   │   └── ChttrixLogo.svg
-│   │   ├── index.html
-│   │   └── manifest.json
-│   ├── src
-│   │   ├── components
-│   │   │   ├── SidebarComp
-│   │   │   │   ├── ProfileSidebar.jsx
-│   │   │   │   └── Sidebar.jsx
-│   │   │   ├── ai
-│   │   │   │   └── ChttrixAIChat
-│   │   │   │       └── ChttrixAIChat.jsx
-│   │   │   ├── chat
-│   │   │   ├── home
-│   │   │   │   └── panels
-│   │   │   │       └── HomePanel
-│   │   │   │           ├── ChannelDMModals.jsx
-│   │   │   │           ├── DeleteWorkspaceModal.jsx
-│   │   │   │           ├── ListItem.jsx
-│   │   │   │           ├── SectionHeader.jsx
-│   │   │   │           ├── WorkspaceHeader.jsx
-│   │   │   │           ├── WorkspaceModals.jsx
-│   │   │   │           ├── WorkspaceSettingsModal.jsx
-│   │   │   │           └── index.jsx
-│   │   │   ├── layout
-│   │   │   │   ├── hooks
-│   │   │   │   │   └── useResizablePanel.js
-│   │   │   │   ├── panels
-│   │   │   │   │   ├── ChannelsPanel.jsx
-│   │   │   │   │   ├── MessagesPanel.jsx
-│   │   │   │   │   ├── NotesPanel.jsx
-│   │   │   │   │   ├── TasksPanel.jsx
-│   │   │   │   │   └── UpdatesPanel.jsx
-│   │   │   │   ├── IconSidebar.jsx
-│   │   │   │   ├── MainLayout.jsx
-│   │   │   │   └── SidePanel.jsx
-│   │   │   ├── loginpage
+│   │   ├── index.html                        # HTML entry point
+│   │   └── manifest.json                     # PWA manifest
+│   │
+│   ├── src/                                  # Source code
+│   │   ├── components/                       # Reusable React components
+│   │   │   ├── SidebarComp/                 # Sidebar components
+│   │   │   │   ├── ProfileSidebar.jsx       # User profile sidebar
+│   │   │   │   └── Sidebar.jsx              # Main navigation sidebar
+│   │   │   │
+│   │   │   ├── ai/                          # AI-related components
+│   │   │   │   └── ChttrixAIChat/
+│   │   │   │       └── ChttrixAIChat.jsx    # AI chat interface
+│   │   │   │
+│   │   │   ├── chat/                        # Chat feature (deprecated/legacy)
+│   │   │   │
+│   │   │   ├── home/                        # Home/Dashboard components
+│   │   │   │   └── panels/
+│   │   │   │       └── HomePanel/
+│   │   │   │           ├── ChannelDMModals.jsx         # Channel & DM creation modals
+│   │   │   │           ├── DeleteWorkspaceModal.jsx    # Workspace deletion
+│   │   │   │           ├── ListItem.jsx                # Reusable list item
+│   │   │   │           ├── SectionHeader.jsx           # Section headers
+│   │   │   │           ├── WorkspaceHeader.jsx         # Workspace header
+│   │   │   │           ├── WorkspaceModals.jsx         # Workspace management modals
+│   │   │   │           ├── WorkspaceSettingsModal.jsx  # Workspace settings
+│   │   │   │           └── index.jsx                   # Main home panel
+│   │   │   │
+│   │   │   ├── layout/                      # Application layout components
+│   │   │   │   ├── hooks/
+│   │   │   │   │   └── useResizablePanel.js # Panel resize hook
+│   │   │   │   ├── panels/                  # Feature-specific panels
+│   │   │   │   │   ├── ChannelsPanel.jsx   # Channels list panel
+│   │   │   │   │   ├── MessagesPanel.jsx   # Messages panel
+│   │   │   │   │   ├── NotesPanel.jsx      # Notes panel
+│   │   │   │   │   ├── TasksPanel.jsx      # Tasks panel
+│   │   │   │   │   └── UpdatesPanel.jsx    # Updates/news panel
+│   │   │   │   ├── IconSidebar.jsx         # Left icon navigation
+│   │   │   │   ├── MainLayout.jsx          # Main app layout wrapper
+│   │   │   │   └── SidePanel.jsx           # Generic side panel
+│   │   │   │
+│   │   │   ├── loginpage/                   # Login/Signup forms
 │   │   │   │   ├── LoginForm.jsx
 │   │   │   │   └── SignupForm.jsx
-│   │   │   ├── messages
-│   │   │   │   └── chat
-│   │   │   │       └── ChatWindow
-│   │   │   │           ├── chatUtils.js
-│   │   │   │           ├── index.jsx
-│   │   │   │           └── useSocketConnection.js
-│   │   │   ├── messagesComp
-│   │   │   │   ├── chatWindowComp
-│   │   │   │   │   ├── footer
-│   │   │   │   │   │   ├── attachMenu.jsx
-│   │   │   │   │   │   ├── emojiPicker.jsx
-│   │   │   │   │   │   └── footerInput.jsx
-│   │   │   │   │   ├── header
-│   │   │   │   │   │   └── header.jsx
-│   │   │   │   │   ├── helpers
-│   │   │   │   │   │   └── helpers.js
-│   │   │   │   │   ├── messages
-│   │   │   │   │   │   ├── ChannelMessageItem.jsx
-│   │   │   │   │   │   ├── DMMessageItem.jsx
-│   │   │   │   │   │   ├── messageGroup.jsx
-│   │   │   │   │   │   ├── messageItem.jsx
-│   │   │   │   │   │   ├── messageMenu.jsx
-│   │   │   │   │   │   ├── messagesContainer.jsx
-│   │   │   │   │   │   ├── reactionBadges.jsx
-│   │   │   │   │   │   ├── reactionPicker.jsx
-│   │   │   │   │   │   └── replyPreview.jsx
-│   │   │   │   │   ├── modals
-│   │   │   │   │   │   ├── ForwardMessageModal.jsx
-│   │   │   │   │   │   ├── contactInfoModal.jsx
-│   │   │   │   │   │   └── contactShareModal.jsx
-│   │   │   │   │   ├── pinned
-│   │   │   │   │   │   └── pinnedMessage.jsx
-│   │   │   │   │   ├── toolbar
-│   │   │   │   │   │   └── selectionToolbar.jsx
-│   │   │   │   │   ├── ThreadPanel.jsx
-│   │   │   │   │   ├── chatWindow.css
-│   │   │   │   │   └── chatWindow.jsx
-│   │   │   │   ├── BroadcastChatWindow.jsx
-│   │   │   │   ├── BroadcastModal.jsx
-│   │   │   │   ├── BroadcastView.jsx
-│   │   │   │   ├── ChannelManagementModal.jsx
-│   │   │   │   ├── CreateChannelModal.jsx
-│   │   │   │   ├── JoinChannelModal.jsx
-│   │   │   │   ├── MessageList.jsx
-│   │   │   │   └── NewDMModal.jsx
-│   │   │   ├── modals
-│   │   │   │   └── ConfirmationModal.jsx
-│   │   │   ├── tasksComp
-│   │   │   │   ├── TaskCompletionModal.jsx
-│   │   │   │   ├── TaskHeader.jsx
-│   │   │   │   ├── TaskModal.jsx
-│   │   │   │   ├── TaskRow.jsx
-│   │   │   │   ├── TaskTable.jsx
-│   │   │   │   └── TaskTabs.jsx
-│   │   │   ├── ui
-│   │   │   │   ├── ConfirmationModal.jsx
-│   │   │   │   ├── LoadingScreen.jsx
-│   │   │   │   └── Toast.jsx
-│   │   │   ├── InvitePeopleModal.jsx
-│   │   │   ├── RequireAdmin.jsx
-│   │   │   └── RequireAuth.jsx
-│   │   ├── contexts
-│   │   │   ├── AuthContext.jsx
-│   │   │   ├── BlogsContext.jsx
-│   │   │   ├── ContactsContext.jsx
-│   │   │   ├── NotesContext.jsx
-│   │   │   └── ToastContext.jsx
-│   │   ├── hooks
-│   │   │   ├── useChannels.js
-│   │   │   └── useUsers.js
-│   │   ├── pages
-│   │   │   ├── LoginPageComp
-│   │   │   │   ├── ForgotPassword.jsx
-│   │   │   │   ├── LoginPage.jsx
-│   │   │   │   ├── OAuthSuccess.jsx
-│   │   │   │   └── ResetPassword.jsx
-│   │   │   ├── SidebarComp
-│   │   │   │   ├── Home.jsx
-│   │   │   │   ├── Messages.jsx
-│   │   │   │   ├── MyTasks.jsx
-│   │   │   │   ├── Notes.jsx
-│   │   │   │   └── Updates.jsx
-│   │   │   ├── auth
-│   │   │   │   └── utils
-│   │   │   │       └── formValidation.js
-│   │   │   ├── workspace
-│   │   │   │   └── WorkspaceSelect
-│   │   │   │       └── WorkspaceCard.jsx
-│   │   │   ├── AcceptInvite.jsx
-│   │   │   ├── CompanyAdmin.jsx
-│   │   │   ├── FeatureShowcase.jsx
-│   │   │   ├── JoinWorkspace.jsx
-│   │   │   ├── RegisterCompany.jsx
-│   │   │   ├── VerifyEmail.jsx
-│   │   │   └── WorkspaceSelect.jsx
-│   │   ├── services
-│   │   │   ├── api.js
-│   │   │   ├── channelService.js
-│   │   │   ├── messageService.js
-│   │   │   ├── userService.js
-│   │   │   └── workspaceService.js
-│   │   ├── utils
-│   │   │   └── tokenUtils.js
-│   │   ├── App.js
-│   │   ├── index.css
-│   │   └── index.js
-│   ├── .env
-│   ├── .env.example
-│   ├── .gitignore
-│   ├── package-lock.json
-│   ├── package.json
-│   ├── postcss.config.js
-│   ├── tailwind.config.js
-│   └── yarn.lock
-├── server
-│   ├── controllers
-│   │   ├── authController.js
-│   │   ├── channelController.js
-│   │   ├── chatController.js
-│   │   ├── chatListController.js
-│   │   ├── companyController.js
-│   │   ├── dashboardController.js
-│   │   ├── favoriteController.js
-│   │   ├── messagesController.js
-│   │   ├── noteController.js
-│   │   ├── taskController.js
-│   │   ├── threadController.js
-│   │   ├── updateController.js
-│   │   └── workspaceController.js
-│   ├── middleware
-│   │   ├── auth.js
-│   │   └── permissions.js
-│   ├── models
-│   │   ├── AuditLog.js
-│   │   ├── Channel.js
-│   │   ├── Company.js
-│   │   ├── DMSession.js
-│   │   ├── Department.js
-│   │   ├── Favorite.js
-│   │   ├── HistoryLog.js
-│   │   ├── Invite.js
-│   │   ├── Message.js
-│   │   ├── Note.js
-│   │   ├── Permission.js
-│   │   ├── Task.js
-│   │   ├── Update.js
-│   │   ├── User.js
-│   │   └── Workspace.js
-│   ├── routes
-│   │   ├── auth.js
-│   │   ├── channels.js
-│   │   ├── chat.js
-│   │   ├── chatList.js
-│   │   ├── companies.js
-│   │   ├── dashboard.js
-│   │   ├── favorites.js
-│   │   ├── messages.js
-│   │   ├── notes.js
-│   │   ├── tasks.js
-│   │   ├── updates.js
-│   │   └── workspaces.js
-│   ├── scripts
-│   │   └── migrateProfileNames.js
-│   ├── socket
-│   │   └── index.js
-│   ├── utils
-│   │   ├── auditLogger.js
-│   │   ├── domainVerification.js
-│   │   ├── domainVerify.js
-│   │   ├── generateTokens.js
-│   │   ├── historyLogger.js
-│   │   ├── invite.js
-│   │   └── sendEmail.js
-│   ├── .env
-│   ├── .env.example
-│   ├── Dockerfile
-│   ├── package-lock.json
-│   ├── package.json
-│   ├── seed.js
-│   └── server.js
-├── .gitignore
-├── README.md
-├── structure.txt
-└── verify-security.sh
+│   │   │   │
+│   │   │   ├── messages/                    # Modern messaging components
+│   │   │   │   └── chat/
+│   │   │   │       └── ChatWindow/
+│   │   │   │           ├── chatUtils.js            # Chat utility functions
+│   │   │   │           ├── index.jsx               # Main chat window
+│   │   │   │           └── useSocketConnection.js  # Socket.io hook
+│   │   │   │
+│   │   │   ├── messagesComp/                # Enhanced messaging components
+│   │   │   │   ├── chatWindowComp/          # Chat window sub-components
+│   │   │   │   │   ├── footer/              # Message input area
+│   │   │   │   │   │   ├── attachMenu.jsx           # File attachment menu
+│   │   │   │   │   │   ├── emojiPicker.jsx          # Emoji picker
+│   │   │   │   │   │   └── footerInput.jsx          # Message input field
+│   │   │   │   │   ├── header/              # Chat header
+│   │   │   │   │   │   └── header.jsx               # Chat window header
+│   │   │   │   │   ├── helpers/             # Helper utilities
+│   │   │   │   │   │   └── helpers.js               # Chat helper functions
+│   │   │   │   │   ├── messages/            # Message display components
+│   │   │   │   │   │   ├── ChannelMessageItem.jsx   # Channel message item
+│   │   │   │   │   │   ├── DMMessageItem.jsx        # DM message item
+│   │   │   │   │   │   ├── messageGroup.jsx         # Grouped messages
+│   │   │   │   │   │   ├── messageItem.jsx          # Individual message
+│   │   │   │   │   │   ├── messageMenu.jsx          # Message context menu
+│   │   │   │   │   │   ├── messagesContainer.jsx    # Messages container
+│   │   │   │   │   │   ├── reactionBadges.jsx       # Reaction display
+│   │   │   │   │   │   ├── reactionPicker.jsx       # Reaction picker
+│   │   │   │   │   │   └── replyPreview.jsx         # Reply preview
+│   │   │   │   │   ├── modals/              # Chat-related modals
+│   │   │   │   │   │   ├── ForwardMessageModal.jsx  # Forward message
+│   │   │   │   │   │   ├── contactInfoModal.jsx     # Contact info
+│   │   │   │   │   │   └── contactShareModal.jsx    # Contact sharing
+│   │   │   │   │   ├── pinned/              # Pinned messages
+│   │   │   │   │   │   └── pinnedMessage.jsx        # Pinned message display
+│   │   │   │   │   ├── toolbar/             # Message toolbar
+│   │   │   │   │   │   └── selectionToolbar.jsx     # Message selection toolbar
+│   │   │   │   │   ├── ThreadPanel.jsx              # Message threads panel
+│   │   │   │   │   ├── chatWindow.css               # Chat window styles
+│   │   │   │   │   └── chatWindow.jsx               # Main chat window component
+│   │   │   │   ├── BroadcastChatWindow.jsx          # Broadcast message window
+│   │   │   │   ├── BroadcastModal.jsx               # Broadcast creation modal
+│   │   │   │   ├── BroadcastView.jsx                # Broadcast view
+│   │   │   │   ├── ChannelManagementModal.jsx       # Channel management
+│   │   │   │   ├── CreateChannelModal.jsx           # Channel creation
+│   │   │   │   ├── JoinChannelModal.jsx             # Join channel modal
+│   │   │   │   ├── MessageList.jsx                  # Message list view
+│   │   │   │   └── NewDMModal.jsx                   # New direct message
+│   │   │   │
+│   │   │   ├── modals/                      # Generic modal components
+│   │   │   │   └── ConfirmationModal.jsx   # Confirmation dialog
+│   │   │   │
+│   │   │   ├── tasksComp/                   # Task management components
+│   │   │   │   ├── TaskCompletionModal.jsx # Task completion modal
+│   │   │   │   ├── TaskHeader.jsx          # Task view header
+│   │   │   │   ├── TaskModal.jsx           # Task create/edit modal
+│   │   │   │   ├── TaskRow.jsx             # Task table row
+│   │   │   │   ├── TaskTable.jsx           # Task table
+│   │   │   │   └── TaskTabs.jsx            # Task filter tabs
+│   │   │   │
+│   │   │   ├── ui/                          # UI components library
+│   │   │   │   ├── ConfirmationModal.jsx   # Confirmation modal
+│   │   │   │   ├── LoadingScreen.jsx       # Loading screen
+│   │   │   │   └── Toast.jsx               # Toast notifications
+│   │   │   │
+│   │   │   ├── InvitePeopleModal.jsx       # Invite users modal
+│   │   │   ├── RequireAdmin.jsx            # Admin route protection
+│   │   │   ├── RequireAuth.jsx             # Auth route protection
+│   │   │   └── RequireWorkspace.jsx        # Workspace route protection
+│   │   │
+│   │   ├── contexts/                        # React Context providers
+│   │   │   ├── AuthContext.jsx             # Authentication context
+│   │   │   ├── BlogsContext.jsx            # Blogs/updates context
+│   │   │   ├── ContactsContext.jsx         # Contacts context
+│   │   │   ├── NotesContext.jsx            # Notes management
+│   │   │   ├── ToastContext.jsx            # Toast notifications
+│   │   │   └── WorkspaceContext.jsx        # Workspace state management
+│   │   │
+│   │   ├── hooks/                           # Custom React hooks
+│   │   │   ├── useChannels.js              # Channel management hook
+│   │   │   └── useUsers.js                 # User data hook
+│   │   │
+│   │   ├── pages/                           # Page-level components
+│   │   │   ├── LoginPageComp/              # Auth pages
+│   │   │   │   ├── ForgotPassword.jsx      # Password reset request
+│   │   │   │   ├── LoginPage.jsx           # Login page
+│   │   │   │   ├── OAuthSuccess.jsx        # OAuth callback
+│   │   │   │   └── ResetPassword.jsx       # Password reset form
+│   │   │   │
+│   │   │   ├── SidebarComp/                # Main app pages
+│   │   │   │   ├── Home.jsx                # Home/Dashboard
+│   │   │   │   ├── Messages.jsx            # Messages view
+│   │   │   │   ├── MyTasks.jsx             # Tasks view
+│   │   │   │   ├── Notes.jsx               # Notes view
+│   │   │   │   └── Updates.jsx             # Updates/blog view
+│   │   │   │
+│   │   │   ├── auth/                       # Auth utilities
+│   │   │   │   └── utils/
+│   │   │   │       └── formValidation.js   # Form validation helpers
+│   │   │   │
+│   │   │   ├── workspace/                  # Workspace pages
+│   │   │   │   └── WorkspaceSelect/
+│   │   │   │       └── WorkspaceCard.jsx   # Workspace card component
+│   │   │   │
+│   │   │   ├── AcceptInvite.jsx            # Accept workspace invite
+│   │   │   ├── CompanyAdmin.jsx            # Company admin panel
+│   │   │   ├── FeatureShowcase.jsx         # Landing page features
+│   │   │   ├── JoinWorkspace.jsx           # Join workspace page
+│   │   │   ├── RegisterCompany.jsx         # Company registration
+│   │   │   ├── VerifyEmail.jsx             # Email verification
+│   │   │   └── WorkspaceSelect.jsx         # Workspace selection page
+│   │   │
+│   │   ├── services/                        # API service layer
+│   │   │   ├── api.js                      # Axios base configuration
+│   │   │   ├── channelService.js           # Channel API calls
+│   │   │   ├── messageService.js           # Message API calls
+│   │   │   ├── userService.js              # User API calls
+│   │   │   └── workspaceService.js         # Workspace API calls
+│   │   │
+│   │   ├── utils/                           # Utility functions
+│   │   │   └── tokenUtils.js               # JWT token utilities
+│   │   │
+│   │   ├── App.js                          # Main App component
+│   │   ├── index.css                       # Global styles
+│   │   └── index.js                        # App entry point
+│   │
+│   ├── .env                                # Environment variables (git-ignored)
+│   ├── .env.example                        # Environment template
+│   ├── .gitignore                          # Git ignore rules
+│   ├── package-lock.json                   # Dependency lock file
+│   ├── package.json                        # NPM dependencies
+│   ├── postcss.config.js                   # PostCSS configuration
+│   ├── tailwind.config.js                  # Tailwind CSS config
+│   └── yarn.lock                           # Yarn lock file
+│
+├── server/                                  # Backend Node.js/Express Application
+│   ├── controllers/                         # Request handlers
+│   │   ├── authController.js               # Authentication logic
+│   │   ├── channelController.js            # Channel operations
+│   │   ├── chatController.js               # Chat/messaging logic
+│   │   ├── chatListController.js           # Chat list management
+│   │   ├── companyController.js            # Company management
+│   │   ├── dashboardController.js          # Dashboard data
+│   │   ├── favoriteController.js           # Favorites/starred items
+│   │   ├── messagesController.js           # Message CRUD operations
+│   │   ├── noteController.js               # Notes management
+│   │   ├── taskController.js               # Task management
+│   │   ├── threadController.js             # Message threads
+│   │   ├── updateController.js             # Updates/blogs
+│   │   └── workspaceController.js          # Workspace operations
+│   │
+│   ├── middleware/                          # Express middleware
+│   │   ├── auth.js                         # JWT authentication
+│   │   └── permissions.js                  # Role-based access control
+│   │
+│   ├── models/                              # MongoDB/Mongoose schemas
+│   │   ├── AuditLog.js                     # Audit trail schema
+│   │   ├── Channel.js                      # Channel schema
+│   │   ├── Company.js                      # Company/organization schema
+│   │   ├── DMSession.js                    # Direct message sessions
+│   │   ├── Department.js                   # Department schema
+│   │   ├── Favorite.js                     # Favorites schema
+│   │   ├── HistoryLog.js                   # Activity history
+│   │   ├── Invite.js                       # Workspace invites
+│   │   ├── Message.js                      # Message schema
+│   │   ├── Note.js                         # Notes schema
+│   │   ├── Permission.js                   # Permissions schema
+│   │   ├── Task.js                         # Task schema
+│   │   ├── Update.js                       # Updates/blog posts
+│   │   ├── User.js                         # User schema
+│   │   └── Workspace.js                    # Workspace schema
+│   │
+│   ├── routes/                              # API route definitions
+│   │   ├── auth.js                         # Auth endpoints
+│   │   ├── channels.js                     # Channel endpoints
+│   │   ├── chat.js                         # Chat endpoints
+│   │   ├── chatList.js                     # Chat list endpoints
+│   │   ├── companies.js                    # Company endpoints
+│   │   ├── dashboard.js                    # Dashboard endpoints
+│   │   ├── favorites.js                    # Favorites endpoints
+│   │   ├── messages.js                     # Message endpoints
+│   │   ├── notes.js                        # Notes endpoints
+│   │   ├── tasks.js                        # Task endpoints
+│   │   ├── updates.js                      # Updates endpoints
+│   │   └── workspaces.js                   # Workspace endpoints
+│   │
+│   ├── scripts/                             # Utility scripts
+│   │   └── migrateProfileNames.js          # Database migration script
+│   │
+│   ├── socket/                              # WebSocket/Socket.io
+│   │   └── index.js                        # Socket.io event handlers
+│   │
+│   ├── utils/                               # Utility functions
+│   │   ├── auditLogger.js                  # Audit logging utility
+│   │   ├── domainVerification.js           # Email domain verification
+│   │   ├── domainVerify.js                 # Domain verification helper
+│   │   ├── generateTokens.js               # JWT token generation
+│   │   ├── historyLogger.js                # Activity history logger
+│   │   ├── invite.js                       # Invite utilities
+│   │   └── sendEmail.js                    # Email sending service
+│   │
+│   ├── .env                                # Environment variables (git-ignored)
+│   ├── .env.example                        # Environment template
+│   ├── Dockerfile                          # Docker container definition
+│   ├── package-lock.json                   # Dependency lock file
+│   ├── package.json                        # NPM dependencies
+│   ├── seed.js                             # Database seeding script
+│   └── server.js                           # Express server entry point
+│
+├── .gitignore                              # Git ignore rules (root)
+├── README.md                               # Project documentation
+├── structure.txt                           # This file - project structure
+└── verify-security.sh                      # Security verification script
 
-51 directories, 183 files
+═══════════════════════════════════════════════════════════════════════════════
+PROJECT OVERVIEW: ChttrixCollab - AI-Augmented Collaboration Platform
+═══════════════════════════════════════════════════════════════════════════════
+
+TECHNOLOGY STACK:
+─────────────────
+Frontend:  React 18, TailwindCSS, Socket.io-client, Axios
+Backend:   Node.js, Express.js, Socket.io, MongoDB/Mongoose
+Auth:      JWT (Access + Refresh tokens), OAuth
+Real-time: Socket.io for live messaging and notifications
+
+KEY FEATURES:
+─────────────
+✓ Multi-workspace collaboration
+✓ Real-time messaging (DM & Channels)
+✓ Task management with tracking
+✓ Notes and knowledge base
+✓ Company updates/blog system
+✓ AI-powered chat assistance (ChttrixAI)
+✓ Role-based access control (Admin/Member)
+✓ Email invitations and domain verification
+✓ Audit logs and activity history
+✓ Message threading and reactions
+✓ File attachments and media sharing
+
+ARCHITECTURE PATTERNS:
+──────────────────────
+• MVC pattern on backend (Models, Controllers, Routes)
+• Component-based architecture on frontend
+• Context API for global state management
+• Service layer for API abstraction
+• Custom hooks for reusable logic
+• Socket.io for real-time bidirectional communication
+• JWT-based stateless authentication
+
+DIRECTORY STATISTICS:
+─────────────────────
+Total Directories: 51
+Total Files: ~190+
+Lines of Code: 20,000+ (estimated)
+
+Last Updated: December 18, 2024

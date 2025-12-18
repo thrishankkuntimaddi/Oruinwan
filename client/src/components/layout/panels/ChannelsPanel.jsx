@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate, useLocation, useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { Plus, Hash, Search, Trash2, X, CheckSquare, Settings2 } from 'lucide-react';
 import { useWorkspace } from "../../../contexts/WorkspaceContext";
 import api from "../../../services/api";
@@ -7,10 +7,8 @@ import ConfirmationModal from "../../modals/ConfirmationModal";
 
 const ChannelsPanel = ({ title }) => {
     const navigate = useNavigate();
-    const location = useLocation();
     const { workspaceId } = useParams();
     const { activeWorkspace } = useWorkspace();
-    const currentPath = location.pathname;
 
     const [searchQuery, setSearchQuery] = useState("");
     const [showCreateChannelModal, setShowCreateChannelModal] = useState(false);
@@ -211,8 +209,8 @@ const ChannelsPanel = ({ title }) => {
             <div
                 onClick={handleClick}
                 className={`px-4 py-2 mx-2 rounded-md cursor-pointer flex items-center justify-between group transition-colors ${isSelectionMode && isSelected
-                        ? "bg-blue-50 border border-blue-200"
-                        : "hover:bg-gray-200 text-gray-600 hover:text-gray-900"
+                    ? "bg-blue-50 border border-blue-200"
+                    : "hover:bg-gray-200 text-gray-600 hover:text-gray-900"
                     }`}
             >
                 <div className="flex items-center truncate flex-1 gap-2">
