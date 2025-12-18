@@ -24,7 +24,10 @@ const ListItem = ({ item, isSelectionMode, selectedItems, setSelectedItems, togg
             }
             setSelectedItems(newSelected);
         } else {
-            navigate(itemPath);
+            // Call global openChat function from Home component
+            if (window.openChat) {
+                window.openChat(item);
+            }
         }
     };
 

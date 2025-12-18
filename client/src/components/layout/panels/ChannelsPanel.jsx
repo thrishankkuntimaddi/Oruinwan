@@ -1,11 +1,12 @@
-import React, { useState } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { useNavigate, useLocation, useParams } from "react-router-dom";
 import { Plus, Hash, Search, Trash2, X, CheckSquare, Settings2 } from 'lucide-react';
 import ConfirmationModal from "../../modals/ConfirmationModal";
 
 const ChannelsPanel = ({ title }) => {
     const navigate = useNavigate();
     const location = useLocation();
+    const { workspaceId } = useParams(); // Get current workspace ID
     const currentPath = location.pathname;
 
     const [searchQuery, setSearchQuery] = useState("");
@@ -31,16 +32,65 @@ const ChannelsPanel = ({ title }) => {
         { id: 'u7', name: 'Donna Paulsen', status: 'online' },
     ];
 
-    const [items, setItems] = useState([
-        { id: 'c1', type: 'channel', label: 'general', path: '/channels/general', isFavorite: true },
-        { id: 'c2', type: 'channel', label: 'announcements', path: '/channels/announcements', isFavorite: true },
-        { id: 'c3', type: 'channel', label: 'engineering', path: '/channels/engineering', isFavorite: false },
-        { id: 'c4', type: 'channel', label: 'design', path: '/channels/design', isFavorite: false },
-        { id: 'c5', type: 'channel', label: 'marketing', path: '/channels/marketing', isFavorite: false },
-        { id: 'c6', type: 'channel', label: 'leadership', path: '/channels/leadership', isFavorite: false, isPrivate: true },
-        { id: 'c7', type: 'channel', label: 'random', path: '/channels/random', isFavorite: false },
-        { id: 'c8', type: 'channel', label: 'project-alpha', path: '/channels/project-alpha', isFavorite: false },
-    ]);
+    // Real channels from backend - filtered by workspace
+    const [items, setItems] = useState([]);
+    const [isLoadingChannels, setIsLoadingChannels] = useState(true);
+
+    // Fetch workspace-specific channels
+    useEffect(() => {
+        const fetchChannels = async () => {
+            if (!workspaceId) {
+                console.log('⚠️ No workspace ID available');
+                return;
+            }
+
+            try {
+                setIsLoadingChannels(true);
+                const token = localStorage.getItem('accessToken');
+
+                if (!token) {
+                    console.error('No access token');
+                    return;
+                }
+
+                console.log('📡 Fetching channels for workspace:', workspaceId);
+
+                const response = await fetch(`${process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000'}/api/channels/my`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (!response.ok) throw new Error('Failed to fetch channels');
+
+                const data = await response.json();
+                console.log('📋 All channels received:', data.channels);
+
+                // Filter channels by current workspace
+                const workspaceChannels = data.channels
+                    .filter(ch => ch.workspace && ch.workspace.toString() === workspaceId)
+                    .map(ch => ({
+                        id: ch._id,
+                        type: 'channel',
+                        label: ch.name,
+                        path: `/workspace/${workspaceId}/channels/${ch._id}`,
+                        isFavorite: ch.isDefault || false,
+                        isPrivate: ch.isPrivate || false,
+                        description: ch.description || ''
+                    }));
+
+                console.log(`✅ Filtered ${workspaceChannels.length} channels for workspace ${workspaceId}`);
+                setItems(workspaceChannels);
+                setIsLoadingChannels(false);
+            } catch (err) {
+                console.error('Error fetching channels:', err);
+                setIsLoadingChannels(false);
+            }
+        };
+
+        fetchChannels();
+    }, [workspaceId]);
 
     const handleCreateChannel = () => {
         if (!newChannelData.name) return;
@@ -55,13 +105,13 @@ const ChannelsPanel = ({ title }) => {
             id: channelId,
             type: 'channel',
             label: newChannelData.name.toLowerCase().replace(/\s+/g, '-'),
-            path: `/channels/${channelId}`,
+            path: `/ channels / ${channelId} `,
             isFavorite: false,
             isPrivate: newChannelData.isPrivate,
         };
 
         setItems(prev => [...prev, newChannel]);
-        navigate(`/channels/${channelId}`);
+        navigate(`/ channels / ${channelId} `);
 
         // Reset
         setShowCreateChannelModal(false);
@@ -83,10 +133,6 @@ const ChannelsPanel = ({ title }) => {
     );
 
     const Item = ({ item }) => {
-        // Construct path dynamically based on Channels context
-        const itemPath = `/channels/${item.id}`;
-        const isActive = currentPath === itemPath;
-        const Icon = item.isPrivate ? "#" : "#";
         const isSelected = selectedItems.has(item.id);
 
         const handleClick = (e) => {
@@ -100,24 +146,29 @@ const ChannelsPanel = ({ title }) => {
                 }
                 setSelectedItems(newSelected);
             } else {
-                navigate(itemPath);
+                // Call global openChat function
+                if (window.openChat) {
+                    window.openChat(item);
+                }
             }
         };
 
         return (
             <div
                 onClick={handleClick}
-                className={`px-4 py-2 mx-2 rounded-md cursor-pointer flex items-center justify-between group transition-colors ${isSelectionMode && isSelected ? "bg-blue-50 border border-blue-200" :
-                    isActive ? "bg-blue-100 text-blue-700 font-medium" : "hover:bg-gray-200 text-gray-600 hover:text-gray-900"
+                className={`px-4 py-2 mx-2 rounded-md cursor-pointer flex items-center justify-between group transition-colors ${isSelectionMode && isSelected
+                        ? "bg-blue-50 border border-blue-200"
+                        : "hover:bg-gray-200 text-gray-600 hover:text-gray-900"
                     }`}
             >
                 <div className="flex items-center truncate flex-1 gap-2">
                     {isSelectionMode && (
-                        <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${isSelected ? "bg-blue-600 border-blue-600" : "border-gray-300 bg-white"}`}>
+                        <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${isSelected ? "bg-blue-600 border-blue-600" : "border-gray-300 bg-white"
+                            }`}>
                             {isSelected && <CheckSquare size={10} className="text-white" />}
                         </div>
                     )}
-                    <span className="opacity-70 text-lg">{Icon}</span>
+                    <span className="opacity-70 text-lg">#</span>
                     <span className="truncate text-sm">{item.label}</span>
                 </div>
             </div>
@@ -135,7 +186,7 @@ const ChannelsPanel = ({ title }) => {
                 <div className="flex items-center gap-1">
                     <button
                         onClick={() => setIsSelectionMode(!isSelectionMode)}
-                        className={`p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors ${isSelectionMode ? "bg-blue-100 text-blue-600" : ""}`}
+                        className={`p - 2 text - gray - 400 hover: text - blue - 600 hover: bg - blue - 50 rounded - lg transition - colors ${isSelectionMode ? "bg-blue-100 text-blue-600" : ""} `}
                         title="Manage Channels"
                     >
                         <Settings2 size={20} />
@@ -211,7 +262,7 @@ const ChannelsPanel = ({ title }) => {
                 onClose={() => setShowDeleteConfirm(false)}
                 onConfirm={handleDeleteSelected}
                 title="Delete Channels?"
-                message={`Are you sure you want to delete ${selectedItems.size} selected channel(s)? This action cannot be undone.`}
+                message={`Are you sure you want to delete ${selectedItems.size} selected channel(s) ? This action cannot be undone.`}
                 confirmText="Delete Channels"
             />
 

@@ -55,9 +55,10 @@ const IconSidebar = ({ onProfileClick, activeWorkspace, setActiveWorkspace, work
             <div className="relative mb-6" ref={menuRef}>
                 <button
                     onClick={() => setShowWorkspaceMenu(!showWorkspaceMenu)}
-                    className={`w-10 h-10 ${activeWorkspace.color} rounded-xl flex items-center justify-center text-white font-bold text-xl cursor-pointer hover:opacity-90 transition-opacity shadow-sm relative`}
+                    style={{ backgroundColor: activeWorkspace?.color || '#2563eb' }}
+                    className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold text-xl cursor-pointer hover:opacity-90 transition-opacity shadow-sm relative"
                 >
-                    {activeWorkspace.icon}
+                    {activeWorkspace?.icon || '🚀'}
                     <div className="absolute -bottom-1 -right-1 bg-white rounded-full p-0.5 border border-gray-200">
                         <svg className="w-2 h-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M19 9l-7 7-7-7" /></svg>
                     </div>
@@ -88,7 +89,12 @@ const IconSidebar = ({ onProfileClick, activeWorkspace, setActiveWorkspace, work
                                     }}
                                     className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-3 transition-colors"
                                 >
-                                    <div className={`w-6 h-6 rounded ${ws.color} text-white flex items-center justify-center text-xs font-bold`}>{ws.icon}</div>
+                                    <div
+                                        style={{ backgroundColor: ws.color || '#2563eb' }}
+                                        className="w-6 h-6 rounded text-white flex items-center justify-center text-xs font-bold"
+                                    >
+                                        {ws.icon || '🚀'}
+                                    </div>
                                     <span className="text-sm text-gray-700 font-medium">{ws.name}</span>
                                 </button>
                             ))}

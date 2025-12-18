@@ -23,27 +23,53 @@ export const AuthProvider = ({ children }) => {
         setAccessToken(storedToken);
         console.log("✅ Access token loaded from localStorage");
       } else {
-        console.log("ℹ️ No access token in localStorage, will try refresh token");
+        console.log("ℹ️ No access token in localStorage, trying refresh token");
+
+        // Try to get a new access token using refresh token
+        try {
+          const refreshRes = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/auth/refresh`, {
+            method: "POST",  // Use POST for mutations
+            credentials: "include", // Send cookies
+          });
+
+          if (refreshRes.ok) {
+            const refreshData = await refreshRes.json();
+            if (refreshData.accessToken) {
+              setAccessToken(refreshData.accessToken);
+              localStorage.setItem("accessToken", refreshData.accessToken);
+              console.log("✅ New access token obtained from refresh");
+            }
+          } else {
+            console.log("❌ Refresh token failed");
+          }
+        } catch (refreshErr) {
+          console.error("❌ Refresh error:", refreshErr);
+        }
       }
 
-      // Try to fetch user data with stored access token OR refresh token cookie
+      // Now try to fetch user data
+      const token = localStorage.getItem("accessToken");
+      if (!token) {
+        console.log("❌ Still no access token after refresh attempt");
+        setUser(null);
+        setAccessToken(null);
+        return;
+      }
+
+      // Fetch user with access token
       const res = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/auth/me`, {
         credentials: "include",
-        headers: storedToken
-          ? { Authorization: `Bearer ${storedToken}` }
-          : {},
+        headers: {
+          Authorization: `Bearer ${token}`
+        },
       });
 
-      // If backend auto-refreshed, it will send a new access token
-      const newAT = res.headers.get("x-access-token");
-      if (newAT) {
-        setAccessToken(newAT);
-        localStorage.setItem("accessToken", newAT);
-        console.log("✅ New access token received from auto-refresh");
-      }
+      console.log('🔍 /me Response status:', res.status);
 
       if (res.ok) {
         const data = await res.json();
+        console.log('📦 User data:', data);
+
         setUser(data);
         console.log("✅ User loaded:", data.username);
       } else {
@@ -82,13 +108,15 @@ export const AuthProvider = ({ children }) => {
 
     if (!res.ok) throw new Error(data.message || "Login failed");
 
-    // Save to state
+    // CRITICAL FIX: Save to localStorage FIRST to ensure immediate availability
+    localStorage.setItem("accessToken", data.accessToken);
+    console.log("✅ Token saved to localStorage:", data.accessToken.substring(0, 20) + "...");
+
+    // Then update state (this triggers re-renders)
     setAccessToken(data.accessToken);
     setUser(data.user);
 
-    // CRITICAL: Save to localStorage so it persists across page refreshes
-    localStorage.setItem("accessToken", data.accessToken);
-    console.log("✅ Token saved to localStorage");
+    console.log("✅ Token and user set in context");
 
     return data;
   };

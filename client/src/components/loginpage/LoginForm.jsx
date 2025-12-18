@@ -6,8 +6,8 @@ import { AuthContext } from "../../contexts/AuthContext";
 import { useToast } from "../../contexts/ToastContext";
 import { useGoogleLogin } from "@react-oauth/google";
 import axios from "axios";
-import { saveAccessToken } from "../../utils/tokenUtils";
 import { Eye, EyeOff, Github, Linkedin } from "lucide-react";
+
 
 
 const GoogleIcon = () => (
@@ -45,7 +45,12 @@ const LoginForm = ({ onSwitch, initialEmail = "" }) => {
 
     try {
       const response = await login(formData);
+      console.log("✅ Login response:", response);
+
       showToast("Login successful!", "success");
+
+      // Wait a moment for AuthContext to update
+      await new Promise(resolve => setTimeout(resolve, 100));
 
       // Check if there's a pending invite to redirect to
       const pendingInvite = localStorage.getItem('pendingInvite');
@@ -76,8 +81,14 @@ const LoginForm = ({ onSwitch, initialEmail = "" }) => {
           { accessToken: tokenResponse.access_token },
           { withCredentials: true }
         );
-        saveAccessToken(res.data.accessToken);
+
+        // Save to localStorage first
+        localStorage.setItem("accessToken", res.data.accessToken);
+        console.log("✅ Google token saved to localStorage");
+
+        // Then update context
         setUser(res.data.user);
+
         showToast("Google login successful!", "success");
         navigate("/workspaces");
       } catch (err) {

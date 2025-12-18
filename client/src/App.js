@@ -96,7 +96,7 @@ function App() {
                     path="/workspace/:workspaceId/channel/:id"
                     element={
                       <RequireAuth>
-                        <MainLayout sidePanel={<HomePanel />}>
+                        <MainLayout sidePanel={<ChannelsPanel />}>
                           <Home />
                         </MainLayout>
                       </RequireAuth>
@@ -120,7 +120,7 @@ function App() {
                     path="/workspace/:workspaceId/dm/:id"
                     element={
                       <RequireAuth>
-                        <MainLayout sidePanel={<HomePanel />}>
+                        <MainLayout sidePanel={<MessagesPanel />}>
                           <Home />
                         </MainLayout>
                       </RequireAuth>
@@ -184,7 +184,7 @@ function App() {
                       </RequireAuth>
                     }
                   />
-                  
+
 
                   {/* Company Admin Console - Admin/Owner Only */}
                   <Route

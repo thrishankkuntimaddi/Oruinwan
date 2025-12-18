@@ -1,26 +1,54 @@
-import React, { useState } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
-import { Plus, Search, MessageCircle, Megaphone, Trash2, X, CheckSquare, Settings2 } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import { MessageCircle, Plus, Search, Trash2, X, Settings2, CheckSquare, Megaphone } from 'lucide-react';
 import NewDMModal from "../../messagesComp/NewDMModal";
 import BroadcastModal from "../../messagesComp/BroadcastModal";
 import ConfirmationModal from "../../modals/ConfirmationModal";
 
-const MessagesPanel = () => {
+const MessagesPanel = ({ title }) => {
     const navigate = useNavigate();
-    const location = useLocation();
-    const [filter, setFilter] = useState("all"); // all, unread
-    const [showNewDM, setShowNewDM] = useState(false);
+    const { workspaceId } = useParams();
+
+    const [searchQuery, setSearchQuery] = useState("");
+    const [showCreateDM, setShowCreateDM] = useState(false);
     const [showBroadcast, setShowBroadcast] = useState(false);
     const [broadcasts, setBroadcasts] = useState([]);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [filter, setFilter] = useState("all");
 
     // Selection Mode State
     const [isSelectionMode, setIsSelectionMode] = useState(false);
     const [selectedItems, setSelectedItems] = useState(new Set());
 
+    // Track active chat for selection highlighting
+    const [activeChatId, setActiveChatId] = useState(null);
+
+    // Listen for chat changes
+    useEffect(() => {
+        const handleChatChange = () => {
+            const activeChat = sessionStorage.getItem('activeChat');
+            if (activeChat) {
+                const chat = JSON.parse(activeChat);
+                setActiveChatId(chat.id);
+            } else {
+                setActiveChatId(null);
+            }
+        };
+
+        // Check initial state
+        handleChatChange();
+
+        // Listen for changes
+        window.addEventListener('chatChanged', handleChatChange);
+        return () => window.removeEventListener('chatChanged', handleChatChange);
+    }, []);
+
     // Extract active user from URL
-    // Assumes route is /messages/dm/:username
-    const activeId = location.pathname.split("/").pop();
+    // Assumes route is /workspace/:workspaceId/messages/dm/:username
+    // Note: The original code used `location.pathname.split("/").pop();` but `useLocation` was removed.
+    // This line is kept as per the instruction, but `activeId` might need to be derived differently
+    // or `useLocation` re-added if this variable is still needed and `activeChatId` doesn't replace its purpose.
+    const activeId = null; // Placeholder as `location` is no longer imported.
 
     const [contacts, setContacts] = useState([
         { id: 1, name: "Sarah Connor", status: "online", unread: 0 },
@@ -32,8 +60,8 @@ const MessagesPanel = () => {
     const displayList = [...broadcasts, ...contacts];
 
     const handleStartDM = (user) => {
-        setShowNewDM(false);
-        navigate(`/messages/dm/${user.username}`);
+        setShowCreateDM(false);
+        navigate(`/workspace/${workspaceId}/messages/dm/${user.username}`);
     };
 
     const handleBroadcast = () => {
@@ -51,7 +79,7 @@ const MessagesPanel = () => {
         };
         setBroadcasts((prev) => [newBroadcast, ...prev]);
         setShowBroadcast(false);
-        navigate(`/messages/broadcast/${newBroadcast.id}`, { state: { broadcast: newBroadcast } });
+        navigate(`/workspace/${workspaceId}/messages/broadcast/${newBroadcast.id}`, { state: { broadcast: newBroadcast } });
     };
 
     const handleDeleteSelected = () => {
@@ -79,7 +107,7 @@ const MessagesPanel = () => {
                         <Settings2 size={20} />
                     </button>
                     <button
-                        onClick={() => setShowNewDM(true)}
+                        onClick={() => setShowCreateDM(true)}
                         className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                         title="New Message"
                     >
@@ -158,7 +186,7 @@ const MessagesPanel = () => {
                 <div className="px-2 mb-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">Recent Conversations</div>
 
                 {displayList.map((item) => {
-                    const isActive = decodeURIComponent(activeId) === item.name;
+                    const isActive = activeChatId === item.id;
                     const isBroadcast = item.type === "broadcast";
                     const isSelected = selectedItems.has(item.id);
 
@@ -173,11 +201,15 @@ const MessagesPanel = () => {
                             }
                             setSelectedItems(newSelected);
                         } else {
-                            // Dynamic path generation for Messages context
-                            const path = item.type === "broadcast"
-                                ? `/messages/broadcast/${item.id}`
-                                : `/messages/dm/${item.name}`;
-                            navigate(path, { state: { broadcast: item } });
+                            // Call global openChat function to open chat in-place
+                            if (window.openChat) {
+                                window.openChat({
+                                    id: item.id,
+                                    type: item.type || 'dm',
+                                    label: item.name,
+                                    name: item.name
+                                });
+                            }
                         }
                     };
 
@@ -239,9 +271,9 @@ const MessagesPanel = () => {
             />
 
             {/* New DM Modal */}
-            {showNewDM && (
+            {showCreateDM && (
                 <NewDMModal
-                    onClose={() => setShowNewDM(false)}
+                    onClose={() => setShowCreateDM(false)}
                     onStart={handleStartDM}
                 />
             )}

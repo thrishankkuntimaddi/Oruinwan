@@ -1,21 +1,83 @@
 import React, { useState, useRef, useEffect } from "react";
+import { useParams } from "react-router-dom";
 import IconSidebar from "./IconSidebar";
 import ProfileMenu from "../SidebarComp/ProfileSidebar";
 import ChttrixAIChat from "../ai/ChttrixAIChat/ChttrixAIChat";
 import { Bot, BookOpen, Command, Bug, Sparkles, Search, MessageCircle, X } from "lucide-react";
 
-const workspaces = [
-    { id: 1, name: "Chttrix", icon: "A", color: "bg-blue-600" },
-    { id: 2, name: "Project Beta", icon: "P", color: "bg-purple-600" },
-    { id: 3, name: "Design Team", icon: "D", color: "bg-pink-600" },
-];
-
 const MainLayout = ({ children, sidePanel }) => {
+    const { workspaceId } = useParams();
     const [showProfile, setShowProfile] = useState(false);
     const [showAI, setShowAI] = useState(false);
     const [aiWidth, setAiWidth] = useState(350);
     const [sidePanelWidth, setSidePanelWidth] = useState(270);
-    const [activeWorkspace, setActiveWorkspace] = useState(workspaces[0]);
+
+    // Workspace State - Fetch from backend
+    const [workspaces, setWorkspaces] = useState([]);
+    const [activeWorkspace, setActiveWorkspace] = useState(null);
+
+    // Fetch user's workspaces
+    useEffect(() => {
+        const fetchWorkspaces = async () => {
+            try {
+                const token = localStorage.getItem('accessToken');
+                if (!token) {
+                    console.log('⚠️ No token available');
+                    return;
+                }
+
+                console.log('🔍 Fetching workspaces for workspaceId:', workspaceId);
+
+                const response = await fetch(`${process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000'}/api/workspaces/my`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (!response.ok) throw new Error('Failed to fetch workspaces');
+
+                const data = await response.json();
+                console.log('📋 Workspaces data received:', data);
+
+                if (data.workspaces && data.workspaces.length > 0) {
+                    // Map workspaces to the format needed for IconSidebar
+                    const mappedWorkspaces = data.workspaces.map(ws => ({
+                        id: ws.id,
+                        name: ws.name,
+                        icon: ws.icon || "🚀",
+                        color: ws.color || "#2563eb"
+                    }));
+
+                    setWorkspaces(mappedWorkspaces);
+
+                    // Set active workspace based on URL param
+                    if (workspaceId) {
+                        // Try to match workspace by ID (handle both string and ObjectId)
+                        const active = mappedWorkspaces.find(ws =>
+                            ws.id === workspaceId || ws.id.toString() === workspaceId
+                        );
+
+                        if (active) {
+                            console.log('✅ Active workspace set:', active);
+                            setActiveWorkspace(active);
+                            localStorage.setItem('currentWorkspace', active.id);
+                        } else {
+                            console.warn('⚠️ Workspace not found in user workspaces:', workspaceId);
+                            // Set first workspace as fallback
+                            if (mappedWorkspaces.length > 0) {
+                                setActiveWorkspace(mappedWorkspaces[0]);
+                            }
+                        }
+                    }
+                }
+            } catch (err) {
+                console.error('❌ Error fetching workspaces:', err);
+            }
+        };
+
+        fetchWorkspaces();
+    }, [workspaceId]);
 
     // Search State
     const [searchQuery, setSearchQuery] = useState("");
@@ -30,9 +92,32 @@ const MainLayout = ({ children, sidePanel }) => {
             return;
         }
 
-        // TODO: Implement actual search API call here
-        // For now, setting empty results
-        setSearchResults({ channels: [], dms: [], files: [] });
+        // Mock data simulating API search
+        const mockChannels = [
+            { id: 'c1', type: 'channel', name: 'general', icon: '📢' },
+            { id: 'c2', type: 'channel', name: 'announcements', icon: '📣' },
+            { id: 'c3', type: 'channel', name: 'engineering', icon: '⚙️' },
+        ];
+
+        const mockDMs = [
+            { id: 'd1', type: 'dm', name: 'Sarah Connor', avatar: 'SC' },
+            { id: 'd2', type: 'dm', name: 'Alice Smith', avatar: 'AS' },
+        ];
+
+        const mockFiles = [
+            { id: 'f1', type: 'file', name: 'Q4_Report.pdf', uploadedBy: 'Thrishank' },
+            { id: 'f2', type: 'file', name: 'Design_Mockups.fig', uploadedBy: 'Sarah' },
+        ];
+
+        const filteredChannels = mockChannels.filter(ch => ch.name.toLowerCase().includes(searchQuery.toLowerCase()));
+        const filteredDMs = mockDMs.filter(dm => dm.name.toLowerCase().includes(searchQuery.toLowerCase()));
+        const filteredFiles = mockFiles.filter(f => f.name.toLowerCase().includes(searchQuery.toLowerCase()));
+
+        setSearchResults({
+            channels: filteredChannels,
+            dms: filteredDMs,
+            files: filteredFiles
+        });
     }, [searchQuery]);
 
     const handleResultClick = (item) => {
@@ -49,6 +134,10 @@ const MainLayout = ({ children, sidePanel }) => {
     const [showHelp, setShowHelp] = useState(false);
     const [activeHelpModal, setActiveHelpModal] = useState(null); // academy, shortcuts, bug, whatsnew
 
+    // AI Toggle
+    const toggleAI = () => setShowAI(!showAI);
+
+    // Refs for resizing
     const isResizingAIRef = useRef(false);
     const isResizingSidePanelRef = useRef(false);
 
@@ -470,10 +559,10 @@ const MainLayout = ({ children, sidePanel }) => {
                 {sidePanel && (
                     <>
                         <div
-                            style={{ width: sidePanelWidth }}
-                            className="flex-shrink-0 bg-gray-50 flex flex-col"
+                            className="flex-shrink-0 bg-white border-r border-gray-200"
+                            style={{ width: `${sidePanelWidth}px` }}
                         >
-                            {React.cloneElement(sidePanel, { title: activeWorkspace.name })}
+                            {React.cloneElement(sidePanel, { title: activeWorkspace?.name || 'Loading...' })}
                         </div>
                         {/* SidePanel Drag Handle */}
                         <div

@@ -5,6 +5,7 @@ import {
     Shield, TrendingUp, Lightbulb, Flame, Target, Trophy
 } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
+import api from "../services/api";
 
 const WorkspaceSelect = () => {
     const navigate = useNavigate();
@@ -19,70 +20,48 @@ const WorkspaceSelect = () => {
 
     const [workspaces, setWorkspaces] = useState([]);
     const [isLoadingWorkspaces, setIsLoadingWorkspaces] = useState(true);
-    const [loadAttempts, setLoadAttempts] = useState(0);
+    const [loadError, setLoadError] = useState(null);
 
-    React.useEffect(() => {
-        const loadWorkspaces = async () => {
-            try {
-                // Try context token first, then fallback to localStorage
-                const token = accessToken || localStorage.getItem('accessToken');
+    const loadWorkspaces = React.useCallback(async () => {
+        try {
+            setIsLoadingWorkspaces(true);
+            setLoadError(null);
 
-                if (!token) {
-                    console.log('⚠️ No access token available yet, attempt:', loadAttempts);
+            console.log('🔍 Loading workspaces with automatic token refresh...');
 
-                    // Retry up to 3 times with delay
-                    if (loadAttempts < 3) {
-                        setTimeout(() => {
-                            setLoadAttempts(prev => prev + 1);
-                        }, 500);
-                    } else {
-                        setIsLoadingWorkspaces(false);
-                    }
-                    return;
-                }
+            // ✅ Use shared API service - token refresh is handled automatically!
+            const response = await api.get('/api/workspaces/my');
 
-                console.log('🔑 Using token for workspace fetch');
-                setIsLoadingWorkspaces(true);
+            console.log('📋 Workspaces loaded:', response.data);
 
-                const response = await fetch(`${process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000'}/api/workspaces/my`, {
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    }
-                });
-
-                if (!response.ok) {
-                    throw new Error('Failed to fetch workspaces');
-                }
-
-                const data = await response.json();
-                console.log('📋 Workspaces loaded:', data);
-
-                if (data.workspaces && data.workspaces.length > 0) {
-                    setWorkspaces(data.workspaces.map(ws => ({
-                        id: ws.id,
-                        name: ws.name,
-                        members: ws.memberCount || 1,
-                        icon: ws.icon || "rocket",
-                        color: ws.color || "#4f46e5",
-                        type: ws.type,
-                        role: ws.role // Important: Include role for delete permission
-                    })));
-                } else {
-                    // No workspaces found
-                    setWorkspaces([]);
-                }
-
-                setIsLoadingWorkspaces(false);
-            } catch (err) {
-                console.error('Error loading workspaces:', err);
+            if (response.data.workspaces && response.data.workspaces.length > 0) {
+                setWorkspaces(response.data.workspaces.map(ws => ({
+                    id: ws.id,
+                    name: ws.name,
+                    members: ws.memberCount || 1,
+                    icon: ws.icon || "rocket",
+                    color: ws.color || "#4f46e5",
+                    type: ws.type,
+                    role: ws.role
+                })));
+            } else {
                 setWorkspaces([]);
-                setIsLoadingWorkspaces(false);
             }
-        };
 
-        loadWorkspaces();
-    }, [accessToken, loadAttempts]);
+            setIsLoadingWorkspaces(false);
+        } catch (err) {
+            console.error('❌ Error loading workspaces:', err);
+            setLoadError(err.response?.data?.message || err.message || 'Failed to load workspaces');
+            setIsLoadingWorkspaces(false);
+        }
+    }, []);
+
+    // Load workspaces once when component mounts or when user/token changes
+    React.useEffect(() => {
+        if (user) {
+            loadWorkspaces();
+        }
+    }, [user, loadWorkspaces]);
 
     // Create Workspace Wizard State
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -95,10 +74,6 @@ const WorkspaceSelect = () => {
         color: "#2563eb",
         invites: ""
     });
-
-    // Delete Workspace State
-    const [deleteWorkspaceId, setDeleteWorkspaceId] = useState(null);
-    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
     const [isCopied, setIsCopied] = useState(false);
 
@@ -135,76 +110,33 @@ const WorkspaceSelect = () => {
 
     const handleFinalCreate = async () => {
         try {
-            // Try to get token from context first, fallback to localStorage
-            const token = accessToken || localStorage.getItem('accessToken');
-
-            console.log('🔑 Token check:', {
-                fromContext: accessToken ? 'Yes' : 'No',
-                fromLocalStorage: localStorage.getItem('accessToken') ? 'Yes' : 'No',
-                usingToken: token ? 'Yes' : 'No'
-            });
-
-            if (!token) {
-                console.error('❌ No access token found anywhere!');
-                console.log('Available storage:', {
-                    localStorage: Object.keys(localStorage),
-                    cookies: document.cookie
-                });
-                alert('Session expired. Please login again.');
-                navigate('/login');
-                return;
-            }
-
             console.log('🚀 Creating workspace with data:', {
                 name: createData.name,
                 icon: createData.icon,
                 color: createData.color
             });
 
-            // Create workspace via API
-            const response = await fetch(`${process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000'}/api/workspaces`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    name: createData.name,
-                    icon: createData.icon,
-                    color: createData.color,
-                    companyId: null // Personal workspace
-                })
+            // ✅ Create workspace via API service - token refresh is automatic!
+            const response = await api.post('/api/workspaces', {
+                name: createData.name,
+                icon: createData.icon,
+                color: createData.color,
+                companyId: null // Personal workspace
             });
 
-            console.log('📡 API Response status:', response.status);
-
-            if (!response.ok) {
-                const error = await response.json();
-                console.error('❌ API Error:', error);
-                throw new Error(error.message || 'Failed to create workspace');
-            }
-
-            const data = await response.json();
-            console.log('✅ Workspace created:', data);
+            console.log('✅ Workspace created:', response.data);
 
             // Store current workspace
-            localStorage.setItem("currentWorkspace", data.workspace.id);
+            localStorage.setItem("currentWorkspace", response.data.workspace.id);
 
             // If user wants to send invites
             if (createData.invites.trim() && !addMembersLater) {
                 try {
                     console.log('📧 Sending invites to:', createData.invites);
-                    await fetch(`${process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000'}/api/workspaces/${data.workspace.id}/invite`, {
-                        method: 'POST',
-                        headers: {
-                            'Authorization': `Bearer ${token}`,
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            emails: createData.invites,
-                            inviteType: 'email',
-                            role: 'member'
-                        })
+                    await api.post(`/api/workspaces/${response.data.workspace.id}/invite`, {
+                        emails: createData.invites,
+                        inviteType: 'email',
+                        role: 'member'
                     });
                     console.log('✅ Invites sent');
                 } catch (inviteErr) {
@@ -214,12 +146,13 @@ const WorkspaceSelect = () => {
             }
 
             // Redirect to workspace home
-            console.log('✅ Redirecting to workspace home:', data.workspace.id);
+            console.log('✅ Redirecting to workspace home:', response.data.workspace.id);
             resetCreateModal();
-            navigate(`/workspace/${data.workspace.id}/home`);
+            navigate(`/workspace/${response.data.workspace.id}/home`);
         } catch (err) {
             console.error('❌ Create workspace error:', err);
-            alert(err.message || 'Failed to create workspace. Check console for details.');
+            const errorMessage = err.response?.data?.message || err.message || 'Failed to create workspace';
+            alert(errorMessage);
         }
     };
 
@@ -237,42 +170,7 @@ const WorkspaceSelect = () => {
         navigate(`/workspace/${ws.id}/home`);
     };
 
-    const handleDeleteWorkspace = async () => {
-        try {
-            const token = accessToken || localStorage.getItem('accessToken');
-            if (!token) {
-                alert('Session expired. Please login again.');
-                return;
-            }
-
-            console.log('🗑️ Deleting workspace:', deleteWorkspaceId);
-
-            const response = await fetch(`${process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000'}/api/workspaces/${deleteWorkspaceId}`, {
-                method: 'DELETE',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                }
-            });
-
-            if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.message || 'Failed to delete workspace');
-            }
-
-            console.log('✅ Workspace deleted successfully');
-
-            // Remove from local state
-            setWorkspaces(workspaces.filter(ws => ws.id !== deleteWorkspaceId));
-
-            // Close modal
-            setShowDeleteConfirm(false);
-            setDeleteWorkspaceId(null);
-        } catch (err) {
-            console.error('❌ Delete workspace error:', err);
-            alert(err.message || 'Failed to delete workspace');
-        }
-    };
+    // Note: Delete workspace functionality moved to workspace settings
 
     // Lucide Icons Import
     // Note: In a real project you'd import these at the top. 
@@ -783,29 +681,30 @@ const WorkspaceSelect = () => {
                             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
                             <p className="text-gray-600 font-medium">Loading your workspaces...</p>
                         </div>
+                    ) : loadError ? (
+                        // Error State with Retry
+                        <div className="col-span-full flex flex-col items-center justify-center py-20">
+                            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-4">
+                                <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                            </div>
+                            <p className="text-gray-700 font-medium mb-2">Failed to load workspaces</p>
+                            <p className="text-gray-500 text-sm mb-4">{loadError}</p>
+                            <button
+                                onClick={loadWorkspaces}
+                                className="px-6 py-2.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
+                            >
+                                Try Again
+                            </button>
+                        </div>
                     ) : (
                         <>
                             {workspaces.map((ws) => (
                                 <div
                                     key={ws.id}
-                                    className="bg-white rounded-xl p-6 shadow-sm border border-gray-200 hover:shadow-md transition-all group relative"
+                                    className="bg-white rounded-xl p-6 shadow-sm border border-gray-200 hover:shadow-md transition-all group"
                                 >
-                                    {/* Delete Button - Only show if owner */}
-                                    {ws.role === 'owner' && (
-                                        <button
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                setDeleteWorkspaceId(ws.id);
-                                                setShowDeleteConfirm(true);
-                                            }}
-                                            className="absolute top-4 right-4 p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors opacity-0 group-hover:opacity-100"
-                                            title="Delete Workspace"
-                                        >
-                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                            </svg>
-                                        </button>
-                                    )}
 
                                     <div className="flex items-start justify-between mb-4">
                                         <div
@@ -861,57 +760,6 @@ const WorkspaceSelect = () => {
                         </>
                     )}
                 </div>
-
-                {/* Delete Confirmation Modal */}
-                {showDeleteConfirm && (
-                    <div className="fixed inset-0 bg-black/60 z-[200] flex items-center justify-center animate-fade-in backdrop-blur-sm">
-                        <div className="bg-white rounded-xl shadow-2xl w-[450px] overflow-hidden">
-                            <div className="p-6 bg-red-50 border-b border-red-100">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
-                                        <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                                        </svg>
-                                    </div>
-                                    <div>
-                                        <h3 className="text-lg font-bold text-red-900">Delete Workspace?</h3>
-                                        <p className="text-sm text-red-700 mt-0.5">This action cannot be undone</p>
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="p-6">
-                                <p className="text-gray-700 mb-4">
-                                    Are you sure you want to delete <strong>{workspaces.find(ws => ws.id === deleteWorkspaceId)?.name}</strong>?
-                                </p>
-                                <p className="text-sm text-gray-500 bg-gray-50 p-3 rounded-lg">
-                                    ⚠️ This will permanently delete:
-                                    <ul className="list-disc list-inside mt-2 space-y-1">
-                                        <li>All channels and messages</li>
-                                        <li>All files and attachments</li>
-                                        <li>All workspace settings</li>
-                                    </ul>
-                                </p>
-                            </div>
-                            <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex justify-end gap-3">
-                                <button
-                                    onClick={() => {
-                                        setShowDeleteConfirm(false);
-                                        setDeleteWorkspaceId(null);
-                                    }}
-                                    className="px-6 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    onClick={handleDeleteWorkspace}
-                                    className="px-6 py-2.5 text-sm font-bold text-white bg-red-600 rounded-lg hover:bg-red-700 shadow-md hover:shadow-lg transition-all"
-                                >
-                                    Delete Workspace
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                )}
             </div >
         </div >
     );
