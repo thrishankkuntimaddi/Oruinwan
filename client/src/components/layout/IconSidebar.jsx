@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import { useNavigate, useLocation, useParams } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import { useWorkspace } from "../../contexts/WorkspaceContext";
 import { Home, MessageSquare, CheckSquare, FileText, Newspaper, Hash } from "lucide-react";
@@ -7,9 +7,12 @@ import { Home, MessageSquare, CheckSquare, FileText, Newspaper, Hash } from "luc
 const IconSidebar = ({ onProfileClick }) => {
     const navigate = useNavigate();
     const location = useLocation();
-    const { workspaceId } = useParams();
     const { user } = useAuth();
     const { workspaces, activeWorkspace, setActiveWorkspace } = useWorkspace();
+
+    // ✅ CORRECT: Use WorkspaceContext as single source of truth
+    // IconSidebar is not always a direct child of route with :workspaceId
+    const workspaceId = activeWorkspace?.id;
 
     const [showWorkspaceMenu, setShowWorkspaceMenu] = useState(false);
     const menuRef = useRef(null);

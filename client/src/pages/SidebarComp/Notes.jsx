@@ -9,7 +9,9 @@ import { useToast } from "../../contexts/ToastContext";
 import ConfirmationModal from "../../components/ui/ConfirmationModal";
 
 const Notes = () => {
-    const { id } = useParams();
+    // ✅ CORRECT: Extract both workspaceId and note id from params
+    // Note identity = workspace + noteId
+    const { workspaceId, id } = useParams();
     const { notes, updateNote, deleteNote, addNote } = useNotes();
     const { showToast } = useToast();
 
@@ -82,7 +84,9 @@ const Notes = () => {
     };
 
     const handleShare = () => {
-        navigator.clipboard.writeText(window.location.href);
+        // ✅ CORRECT: Use workspace-scoped share link
+        const shareUrl = `${window.location.origin}/workspace/${workspaceId}/notes/${id}`;
+        navigator.clipboard.writeText(shareUrl);
         setShowShareTooltip(true);
         setTimeout(() => setShowShareTooltip(false), 2000);
         showToast("Link copied to clipboard", "success");

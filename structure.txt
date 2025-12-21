@@ -196,7 +196,8 @@ ChttrixCollab/
 │   │   ├── taskController.js               # Task management
 │   │   ├── threadController.js             # Message threads
 │   │   ├── updateController.js             # Updates/blogs
-│   │   └── workspaceController.js          # Workspace operations
+│   │   ├── workspaceController.js          # Workspace operations
+│   │   └── workspaceAdminController.js     # 🔒 Admin operations (invite, members)
 │   │
 │   ├── middleware/                          # Express middleware
 │   │   ├── auth.js                         # JWT authentication
@@ -206,18 +207,18 @@ ChttrixCollab/
 │   │   ├── AuditLog.js                     # Audit trail schema
 │   │   ├── Channel.js                      # Channel schema
 │   │   ├── Company.js                      # Company/organization schema
-│   │   ├── DMSession.js                    # Direct message sessions
+│   │   ├── DMSession.js                    # Direct message sessions (workspace-scoped)
 │   │   ├── Department.js                   # Department schema
 │   │   ├── Favorite.js                     # Favorites schema
 │   │   ├── HistoryLog.js                   # Activity history
-│   │   ├── Invite.js                       # Workspace invites
+│   │   ├── Invite.js                       # 📧 Workspace invites (email+link, status tracking)
 │   │   ├── Message.js                      # Message schema
-│   │   ├── Note.js                         # Notes schema
+│   │   ├── Note.js                         # 📝 Notes (privacy controls, workspace-scoped)
 │   │   ├── Permission.js                   # Permissions schema
-│   │   ├── Task.js                         # Task schema
+│   │   ├── Task.js                         # 📋 Tasks (visibility controls, multi-assign)
 │   │   ├── Update.js                       # Updates/blog posts
 │   │   ├── User.js                         # User schema
-│   │   └── Workspace.js                    # Workspace schema
+│   │   └── Workspace.js                    # Workspace schema (members with roles)
 │   │
 │   ├── routes/                              # API route definitions
 │   │   ├── auth.js                         # Auth endpoints
@@ -234,6 +235,8 @@ ChttrixCollab/
 │   │   └── workspaces.js                   # Workspace endpoints
 │   │
 │   ├── scripts/                             # Utility scripts
+│   │   ├── cleanupChannels.js              # Remove orphaned/duplicate channels
+│   │   ├── fixDefaultChannels.js           # Ensure proper default channels per workspace
 │   │   └── migrateProfileNames.js          # Database migration script
 │   │
 │   ├── socket/                              # WebSocket/Socket.io
@@ -280,7 +283,11 @@ KEY FEATURES:
 ✓ Notes and knowledge base
 ✓ Company updates/blog system
 ✓ AI-powered chat assistance (ChttrixAI)
-✓ Role-based access control (Admin/Member)
+✓ 🔒 Role-based access control (Owner/Admin/Member)
+✓ 📧 Advanced invite system (email + shareable links)
+✓ 🚪 Invite lifecycle management (pending/accepted/revoked)
+✓ 👥 Workspace member management (add/remove)
+✓ 🗑️ Workspace deletion with cascading cleanup
 ✓ Email invitations and domain verification
 ✓ Audit logs and activity history
 ✓ Message threading and reactions
@@ -295,11 +302,125 @@ ARCHITECTURE PATTERNS:
 • Custom hooks for reusable logic
 • Socket.io for real-time bidirectional communication
 • JWT-based stateless authentication
+• Workspace-scoped routing (all features under /workspace/:id/...)
+• Multi-tenant channel isolation (channels belong to single workspace)
+• Admin-only operations with role validation (backend + frontend)
+
+ROUTING STRUCTURE:
+─────────────────
+✓ All workspace features are scoped under /workspace/:workspaceId/...
+✓ Routes:
+  • /workspace/:workspaceId/home              - Dashboard
+  • /workspace/:workspaceId/channels          - Channel list
+  • /workspace/:workspaceId/channel/:id       - Specific channel
+  • /workspace/:workspaceId/messages          - Direct messages
+  • /workspace/:workspaceId/dm/:id            - Specific DM
+  • /workspace/:workspaceId/tasks             - Task management
+  • /workspace/:workspaceId/notes             - Notes
+  • /workspace/:workspaceId/notes/:id         - Specific note
+  • /workspace/:workspaceId/updates           - Company updates
+
+✓ Public routes (outside workspace):
+  • /login, /register-company                 - Authentication
+  • /workspaces                               - Workspace selector
+  • /verify-email, /reset-password            - Account management
+  • /accept-invite, /join-workspace           - Workspace joining
+  • /admin/company                            - Company admin panel
+
+WORKSPACE-CHANNEL ISOLATION:
+────────────────────────────
+✓ Every channel belongs to exactly ONE workspace
+✓ Channels are queried with workspace filter: Channel.find({ workspace: workspaceId })
+✓ Default channels (#general, #announcements) are created per workspace
+✓ No cross-workspace data leakage
+✓ Channel members are subset of workspace members
+
+PERMISSIONS & ROLES:
+───────────────────
+✓ Workspace roles: owner, admin, member
+✓ Owner: Full control (only one per workspace)
+✓ Admin: Can invite, manage members, create channels
+✓ Member: Can view, participate, limited management
+✓ Backend validation on all admin-only operations
+✓ Frontend UI guards for role-specific features
+
+INVITE SYSTEM ARCHITECTURE:
+───────────────────────────
+✓ Email-based invites (multiple recipients, role selection)
+✓ Shareable link invites (one-click join)
+✓ Invite status tracking: pending → accepted/revoked
+✓ 7-day expiration with validation
+✓ SHA-256 token hashing for security
+✓ One-time use enforcement
+✓ Admin-only revocation capability
+✓ Pending invites list in modal
+✓ Auto-join default channels on acceptance
+
+WORKSPACE DELETION:
+──────────────────
+✓ Owner-only operation
+✓ Workspace name confirmation required
+✓ Cascading deletions:
+  • All channels
+  • All messages
+  • All workspace-user associations
+  • All pending invites
+✓ Atomic operation (all-or-nothing)
+✓ Redirect to workspace selector on success
 
 DIRECTORY STATISTICS:
 ─────────────────────
 Total Directories: 51
-Total Files: ~190+
-Lines of Code: 20,000+ (estimated)
+Total Files: ~200+
+Lines of Code: 25,000+ (estimated)
+Database Scripts: 3 maintenance/migration scripts
 
-Last Updated: December 18, 2024
+RECENT UPDATES (December 19, 2024):
+───────────────────────────────────
+✅ INVITE SYSTEM (COMPLETE):
+  ✓ Enhanced InvitePeopleModal with 3 sections:
+    - Email invites (comma-separated, role selector)
+    - Link invites (generate, copy, regenerate)
+    - Pending invites (list with revoke buttons)
+  ✓ Created workspaceAdminController.js:
+    - revokeInvite: Cancel pending invites
+    - getWorkspaceInvites: View all invites (pending/accepted/revoked)
+    - removeMember: Kick users with cascade cleanup
+  ✓ Enhanced Invite model (status field, revocation tracking)
+  ✓ Enhanced Task model (visibility controls, multi-assign)
+  ✓ Enhanced Note model (privacy-first, workspace-scoped)
+  ✓ Added admin-only UI guards throughout
+  ✓ Workspace header "Invite +" button (admin-only, blue)
+  ✓ JoinWorkspace page with login redirect handling
+  ✓ Toast notifications for all invite actions
+
+✅ WORKSPACE MANAGEMENT:
+  ✓ Delete workspace functionality (owner-only)
+  ✓ Workspace name confirmation required
+  ✓ Cascading deletions (channels, messages, users)
+  ✓ Enhanced WorkspaceSettingsModal UI
+  ✓ Role-based menu item visibility
+  
+✅ BACKEND ENHANCEMENTS:
+  ✓ Fixed route order (DELETE before GET to prevent conflicts)
+  ✓ Admin permission middleware enforcement
+  ✓ Atomic workspace operations (join, delete, remove member)
+  ✓ Channel member subset validation
+  ✓ DMSession workspace-scoping
+
+✅ FRONTEND IMPROVEMENTS:
+  ✓ Better error handling (HTML vs JSON detection)
+  ✓ Loading states on all async operations
+  ✓ Debug logging for troubleshooting
+  ✓ Fixed eslint warnings
+
+Previous Updates (December 18, 2024):
+✓ Implemented workspace-scoped routing across entire application
+✓ Fixed workspace-channel isolation to prevent cross-workspace data leakage
+✓ Updated NotesContext, TasksPanel, NotesPanel, and UpdatesPanel for proper workspace routing
+✓ Added comprehensive debug logging for channel queries
+✓ Created database maintenance scripts for channel cleanup
+✓ Ensured all navigation uses workspace context (/workspace/:id/...)
+
+Last Updated: December 19, 2024 - 7:00 AM IST
+

@@ -63,7 +63,8 @@ const Updates = () => {
   };
 
   const handleDiscuss = (authorName) => {
-    navigate(`/dm/1?initialMessage=Hi ${authorName}, regarding your update "${newPostTitle || '...'}"...`);
+    // ✅ CORRECT: Use workspace-scoped DM navigation
+    navigate(`/workspace/${workspaceId}/dm/1?initialMessage=Hi ${authorName}, regarding your update "${newPostTitle || '...'}"...`);
   };
 
   const handleCopyLink = (postId) => {

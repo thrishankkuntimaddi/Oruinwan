@@ -2,6 +2,7 @@
 const express = require("express");
 const router = express.Router();
 const workspaceController = require("../controllers/workspaceController");
+const workspaceAdminController = require("../controllers/workspaceAdminController");
 const auth = require("../middleware/auth");
 
 // Create workspace (personal or company)
@@ -26,15 +27,27 @@ router.get("/:workspaceId/channels", auth, workspaceController.getWorkspaceChann
 // Create channel in workspace
 router.post("/:workspaceId/channels", auth, workspaceController.createWorkspaceChannel);
 
-// Get workspaces by company (legacy/company-specific)
-// This MUST be after /my and specific routes to avoid matching workspace IDs as companyId
-router.get("/:companyId", auth, workspaceController.listWorkspaces);
-
-// Invite to workspace
+// 🔒 ADMIN-ONLY: Invite management
+// Invite to workspace (email or link)
 router.post("/:id/invite", auth, workspaceController.inviteToWorkspace);
 
-// Delete workspace (only owner can delete)
+// Get all invites for workspace (admin-only)
+router.get("/:workspaceId/invites", auth, workspaceAdminController.getWorkspaceInvites);
+
+// Revoke invite (admin-only)
+router.post("/:workspaceId/invites/:inviteId/revoke", auth, workspaceAdminController.revokeInvite);
+
+// 🔒 ADMIN-ONLY: Member management
+// Remove member from workspace (admin-only)
+router.post("/:workspaceId/remove-member", auth, workspaceAdminController.removeMember);
+
+// 🔒 OWNER-ONLY: Delete workspace
+// IMPORTANT: This MUST come BEFORE GET /:companyId to avoid route conflicts
 router.delete("/:id", auth, workspaceController.deleteWorkspace);
+
+// Get workspaces by company (legacy/company-specific)
+// This MUST be after /my, specific routes, and DELETE to avoid matching workspace IDs as companyId
+router.get("/:companyId", auth, workspaceController.listWorkspaces);
 
 module.exports = router;
 

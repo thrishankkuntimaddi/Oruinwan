@@ -1,5 +1,5 @@
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useToast } from "../../../../contexts/ToastContext";
 
 const DeleteWorkspaceModal = ({
@@ -11,14 +11,66 @@ const DeleteWorkspaceModal = ({
     setShowSettingsModal
 }) => {
     const navigate = useNavigate();
+    const { workspaceId } = useParams();
     const { showToast } = useToast();
+    const [deleting, setDeleting] = useState(false);
 
-    const handleDeleteWorkspace = () => {
-        if (deleteVerification === workspaceName) {
-            showToast(`Workspace "${workspaceName}" has been deleted.`);
+    const handleDeleteWorkspace = async () => {
+        // Verify workspace name matches
+        if (deleteVerification !== workspaceName) {
+            showToast('Workspace name does not match', 'error');
+            return;
+        }
+
+        setDeleting(true);
+
+        try {
+            const token = localStorage.getItem('accessToken');
+
+            console.log('=== DELETE WORKSPACE DEBUG ===');
+            console.log('workspaceId from params:', workspaceId);
+            console.log('workspaceName:', workspaceName);
+            console.log('Full URL will be:', `/api/workspaces/${workspaceId}`);
+
+            const response = await fetch(`/api/workspaces/${workspaceId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            console.log('Delete response status:', response.status);
+
+            // Check if response is HTML (error page) instead of JSON
+            const contentType = response.headers.get('content-type');
+            if (contentType && contentType.includes('text/html')) {
+                const htmlText = await response.text();
+                console.error('Received HTML instead of JSON. First 200 chars:', htmlText.substring(0, 200));
+                throw new Error('Server error: The delete workspace endpoint is not responding correctly. Please check the server logs.');
+            }
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.message || 'Failed to delete workspace');
+            }
+
+            const data = await response.json();
+            console.log('Delete successful:', data);
+
+            // Success!
+            showToast(`Workspace "${workspaceName}" has been deleted.`, 'success');
             setShowDeleteConfirm(false);
             setShowSettingsModal(false);
-            navigate("/workspaces");
+            setDeleteVerification('');
+
+            // Redirect to workspaces list
+            navigate('/workspaces');
+        } catch (err) {
+            console.error('Delete workspace error:', err);
+            showToast(err.message || 'Failed to delete workspace', 'error');
+        } finally {
+            setDeleting(false);
         }
     };
 
@@ -66,13 +118,13 @@ const DeleteWorkspaceModal = ({
                     </button>
                     <button
                         onClick={handleDeleteWorkspace}
-                        disabled={deleteVerification !== workspaceName}
-                        className={`px-5 py-2.5 text-sm font-bold text-white rounded-xl shadow-md transition-all ${deleteVerification === workspaceName
+                        disabled={deleteVerification !== workspaceName || deleting}
+                        className={`px-5 py-2.5 text-sm font-bold text-white rounded-xl shadow-md transition-all ${deleteVerification === workspaceName && !deleting
                             ? "bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700 hover:shadow-lg hover:scale-[1.02]"
                             : "bg-gray-300 cursor-not-allowed"
                             }`}
                     >
-                        Delete Workspace
+                        {deleting ? 'Deleting...' : 'Delete Workspace'}
                     </button>
                 </div>
             </div>

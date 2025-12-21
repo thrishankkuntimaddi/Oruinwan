@@ -601,6 +601,31 @@ exports.createWorkspaceChannel = async (req, res) => {
       return res.status(400).json({ message: "A channel with this name already exists" });
     }
 
+    // 🔒 CRITICAL VALIDATION: Channel members must be subset of workspace members
+    // This prevents adding users who are not in the workspace
+    if (channelMembers && channelMembers.length > 0) {
+      const workspaceMemberIds = workspace.members.map(m => String(m.user));
+      const invalidMembers = channelMembers.filter(memberId =>
+        !workspaceMemberIds.includes(String(memberId))
+      );
+
+      if (invalidMembers.length > 0) {
+        console.error('🚨 [createWorkspaceChannel] SECURITY: Attempt to add non-workspace members to channel!', {
+          workspaceId,
+          invalidMembers
+        });
+        return res.status(403).json({
+          message: "Cannot add users who are not workspace members to this channel",
+          invalidMembers
+        });
+      }
+    }
+
+    // Ensure creator is always included in members
+    const finalMembers = channelMembers && channelMembers.length > 0
+      ? [...new Set([userId, ...channelMembers])]
+      : [userId];
+
     // Create channel
     const channel = await Channel.create({
       workspace: workspaceId,
@@ -610,7 +635,7 @@ exports.createWorkspaceChannel = async (req, res) => {
       isPrivate: isPrivate || false,
       isDefault: false, // User-created channels are not default
       createdBy: userId,
-      members: channelMembers || [userId] // Creator is always a member
+      members: finalMembers
     });
 
     console.log(`✅ Channel created: #${channel.name}`);

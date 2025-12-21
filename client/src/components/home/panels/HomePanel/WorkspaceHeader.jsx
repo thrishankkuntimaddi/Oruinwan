@@ -1,7 +1,18 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
-import { ChevronDown, Settings2, SquarePen } from 'lucide-react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { ChevronDown, Settings2, SquarePen, UserPlus } from 'lucide-react';
+import { useWorkspace } from '../../../../contexts/WorkspaceContext';
 
+/**
+ * WorkspaceHeader Component
+ * 
+ * Shows workspace name + actions
+ * 
+ * 👉 PRIMARY ACTION: "Invite +" button
+ *    - Only visible to admins/owners
+ *    - Opens InvitePeopleModal
+ *    - This is THE entry point for inviting
+ */
 const WorkspaceHeader = ({
     workspaceName,
     showWorkspaceMenu,
@@ -15,6 +26,12 @@ const WorkspaceHeader = ({
     setNewName
 }) => {
     const navigate = useNavigate();
+    const { activeWorkspace } = useWorkspace();
+
+    // 🔒 Check if current user is admin/owner
+    const isAdmin = activeWorkspace?.members?.some(
+        m => m.role === 'admin' || m.role === 'owner'
+    ) || false;
 
     return (
         <div className="h-12 flex items-center justify-between px-4 hover:bg-gray-100 transition-colors group relative select-none">
@@ -22,12 +39,28 @@ const WorkspaceHeader = ({
                 className="flex items-center font-bold text-gray-900 cursor-pointer flex-1"
                 onClick={() => setShowWorkspaceMenu(!showWorkspaceMenu)}
             >
-                <span className="truncate max-w-[160px]">{workspaceName}</span>
+                <span className="truncate max-w-[120px]">{workspaceName}</span>
                 <span className={`ml-2 text-gray-500 transition-transform duration-200 ${showWorkspaceMenu ? "rotate-180" : ""}`}>
                     <ChevronDown size={14} />
                 </span>
             </div>
+
             <div className="flex items-center gap-1">
+                {/* 👉 PRIMARY: Invite Button (Admin Only) */}
+                {isAdmin && (
+                    <button
+                        className="flex items-center gap-1 px-2.5 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+                        title="Invite people to this workspace"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            setShowInviteModal(true);
+                        }}
+                    >
+                        <UserPlus size={14} />
+                        <span>Invite</span>
+                    </button>
+                )}
+
                 <button
                     className={`text-gray-500 hover:bg-gray-200 p-2 rounded-full transition-colors ${isSelectionMode ? "bg-blue-100 text-blue-600" : ""}`}
                     title="Manage Chats"
@@ -62,24 +95,28 @@ const WorkspaceHeader = ({
                         </div>
 
                         <div className="py-1">
-                            <button
-                                className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 flex items-center gap-2"
-                                onClick={() => { setShowInviteModal(true); setShowWorkspaceMenu(false); }}
-                            >
-                                <span>👋</span> Invite people to {workspaceName}
-                            </button>
+                            {isAdmin && (
+                                <button
+                                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 flex items-center gap-2"
+                                    onClick={() => { setShowInviteModal(true); setShowWorkspaceMenu(false); }}
+                                >
+                                    <span>👋</span> Invite people to {workspaceName}
+                                </button>
+                            )}
                             <button
                                 className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 flex items-center gap-2"
                                 onClick={() => { setShowSettingsModal(true); setShowWorkspaceMenu(false); }}
                             >
                                 <span>⚙️</span> Workspace Settings
                             </button>
-                            <button
-                                className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 flex items-center gap-2"
-                                onClick={() => { setShowRenameModal(true); setShowWorkspaceMenu(false); setNewName(workspaceName); }}
-                            >
-                                <span>✏️</span> Rename Workspace
-                            </button>
+                            {isAdmin && (
+                                <button
+                                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 flex items-center gap-2"
+                                    onClick={() => { setShowRenameModal(true); setShowWorkspaceMenu(false); setNewName(workspaceName); }}
+                                >
+                                    <span>✏️</span> Rename Workspace
+                                </button>
+                            )}
                         </div>
 
                         <div className="border-t border-gray-100 py-1">

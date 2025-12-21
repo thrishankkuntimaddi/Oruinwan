@@ -1,13 +1,64 @@
-import React, { useState } from "react";
-import { X, Link as LinkIcon, Mail, Copy, Check, Send } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { X, Link as LinkIcon, Mail, Copy, Check, Send, Clock, AlertCircle } from "lucide-react";
+import { useToast } from "../contexts/ToastContext";
 
+/**
+ * InvitePeopleModal - Complete Admin Invite Management
+ * 
+ * Sections:
+ * A. Email Invites (Primary)
+ * B. Link Invites (Secondary)
+ * C. Pending Invites (Admin-only list with revoke)
+ */
 const InvitePeopleModal = ({ isOpen, onClose, workspaceId, workspaceName }) => {
-    const [inviteMethod, setInviteMethod] = useState("link"); // "link" or "email"
+    const { showToast } = useToast();
+
+    // Tab state
+    const [inviteMethod, setInviteMethod] = useState("email"); // "link" or "email"
+
+    // Email invite state
     const [emails, setEmails] = useState("");
-    const [loading, setLoading] = useState(false);
+    const [role, setRole] = useState("member"); // "member" or "admin"
+
+    // Link invite state
     const [inviteLink, setInviteLink] = useState(null);
     const [copied, setCopied] = useState(false);
+
+    // Pending invites state (Section C)
+    const [pendingInvites, setPendingInvites] = useState([]);
+    const [loadingInvites, setLoadingInvites] = useState(false);
+
+    // Loading states
+    const [loading, setLoading] = useState(false);
     const [sent, setSent] = useState(false);
+
+    // 🔒 ADMIN-ONLY: Fetch pending invites when modal opens
+    useEffect(() => {
+        if (!isOpen || !workspaceId) return;
+
+        const fetchPendingInvites = async () => {
+            setLoadingInvites(true);
+            try {
+                const token = localStorage.getItem('accessToken');
+                const response = await fetch(`/api/workspaces/${workspaceId}/invites`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    setPendingInvites(data.pending || []);
+                }
+            } catch (err) {
+                console.error('Failed to fetch invites:', err);
+            } finally {
+                setLoadingInvites(false);
+            }
+        };
+
+        fetchPendingInvites();
+    }, [isOpen, workspaceId]);
 
     if (!isOpen) return null;
 
@@ -66,7 +117,7 @@ const InvitePeopleModal = ({ isOpen, onClose, workspaceId, workspaceName }) => {
                 body: JSON.stringify({
                     emails,
                     inviteType: 'email',
-                    role: 'member'
+                    role // Use selected role
                 })
             });
 
@@ -76,15 +127,55 @@ const InvitePeopleModal = ({ isOpen, onClose, workspaceId, workspaceName }) => {
             }
 
             setSent(true);
+            showToast('Invitations sent successfully!', 'success');
+
+            // Refresh pending invites
+            const refreshResponse = await fetch(`/api/workspaces/${workspaceId}/invites`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (refreshResponse.ok) {
+                const data = await refreshResponse.json();
+                setPendingInvites(data.pending || []);
+            }
+
             setTimeout(() => {
                 setSent(false);
                 setEmails("");
-                onClose();
             }, 2000);
         } catch (err) {
-            alert(err.message);
+            showToast(err.message || 'Failed to send invites', 'error');
         } finally {
             setLoading(false);
+        }
+    };
+
+    // 🔒 ADMIN-ONLY: Revoke invite handler
+    const handleRevokeInvite = async (inviteId) => {
+        if (!confirm('Are you sure you want to revoke this invite?')) return;
+
+        try {
+            const token = localStorage.getItem('accessToken');
+            const response = await fetch(
+                `/api/workspaces/${workspaceId}/invites/${inviteId}/revoke`,
+                {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ reason: 'Revoked by admin' })
+                }
+            );
+
+            if (!response.ok) {
+                throw new Error('Failed to revoke invite');
+            }
+
+            // Remove from list
+            setPendingInvites(prev => prev.filter(inv => inv._id !== inviteId));
+            showToast('Invite revoked successfully', 'success');
+        } catch (err) {
+            showToast(err.message || 'Failed to revoke invite', 'error');
         }
     };
 
@@ -113,8 +204,8 @@ const InvitePeopleModal = ({ isOpen, onClose, workspaceId, workspaceName }) => {
                         <button
                             onClick={() => setInviteMethod("link")}
                             className={`p-4 rounded-xl border-2 transition-all ${inviteMethod === "link"
-                                    ? "border-blue-500 bg-blue-50 text-blue-700"
-                                    : "border-gray-200 bg-white text-gray-700 hover:border-gray-300"
+                                ? "border-blue-500 bg-blue-50 text-blue-700"
+                                : "border-gray-200 bg-white text-gray-700 hover:border-gray-300"
                                 }`}
                         >
                             <LinkIcon className="w-6 h-6 mx-auto mb-2" />
@@ -124,8 +215,8 @@ const InvitePeopleModal = ({ isOpen, onClose, workspaceId, workspaceName }) => {
                         <button
                             onClick={() => setInviteMethod("email")}
                             className={`p-4 rounded-xl border-2 transition-all ${inviteMethod === "email"
-                                    ? "border-blue-500 bg-blue-50 text-blue-700"
-                                    : "border-gray-200 bg-white text-gray-700 hover:border-gray-300"
+                                ? "border-blue-500 bg-blue-50 text-blue-700"
+                                : "border-gray-200 bg-white text-gray-700 hover:border-gray-300"
                                 }`}
                         >
                             <Mail className="w-6 h-6 mx-auto mb-2" />
@@ -171,8 +262,8 @@ const InvitePeopleModal = ({ isOpen, onClose, workspaceId, workspaceName }) => {
                                     <button
                                         onClick={handleCopyLink}
                                         className={`w-full py-3 font-bold rounded-xl transition-all flex items-center justify-center gap-2 ${copied
-                                                ? "bg-green-600 text-white"
-                                                : "bg-blue-600 text-white hover:bg-blue-700"
+                                            ? "bg-green-600 text-white"
+                                            : "bg-blue-600 text-white hover:bg-blue-700"
                                             }`}
                                     >
                                         {copied ? (
@@ -207,6 +298,40 @@ const InvitePeopleModal = ({ isOpen, onClose, workspaceId, workspaceName }) => {
                                 </p>
                             </div>
 
+                            {/* Role Selector */}
+                            <div>
+                                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                    Role
+                                </label>
+                                <div className="flex gap-4">
+                                    <label className="flex items-center gap-2 text-sm cursor-pointer">
+                                        <input
+                                            type="radio"
+                                            name="role"
+                                            value="member"
+                                            checked={role === "member"}
+                                            onChange={(e) => setRole(e.target.value)}
+                                            className="w-4 h-4 text-blue-600"
+                                        />
+                                        <span className="text-gray-700">Member</span>
+                                    </label>
+                                    <label className="flex items-center gap-2 text-sm cursor-pointer">
+                                        <input
+                                            type="radio"
+                                            name="role"
+                                            value="admin"
+                                            checked={role === "admin"}
+                                            onChange={(e) => setRole(e.target.value)}
+                                            className="w-4 h-4 text-blue-600"
+                                        />
+                                        <span className="text-gray-700">Admin</span>
+                                    </label>
+                                </div>
+                                <p className="text-xs text-gray-500 mt-1">
+                                    Admins can invite and manage members
+                                </p>
+                            </div>
+
                             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                                 <p className="text-sm text-blue-800">
                                     Each recipient will receive a unique one-time invitation link via email.
@@ -217,8 +342,8 @@ const InvitePeopleModal = ({ isOpen, onClose, workspaceId, workspaceName }) => {
                                 onClick={handleSendEmails}
                                 disabled={loading || !emails.trim()}
                                 className={`w-full py-3 font-bold rounded-xl transition-all flex items-center justify-center gap-2 ${sent
-                                        ? "bg-green-600 text-white"
-                                        : "bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    ? "bg-green-600 text-white"
+                                    : "bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
                                     }`}
                             >
                                 {loading ? (
@@ -237,6 +362,63 @@ const InvitePeopleModal = ({ isOpen, onClose, workspaceId, workspaceName }) => {
                             </button>
                         </div>
                     )}
+
+                    {/* 🔒 SECTION C: Pending Invites (Admin-only) */}
+                    <div className="mt-6 pt-6 border-t border-gray-200">
+                        <div className="flex items-center gap-2 mb-3">
+                            <Clock className="w-4 h-4 text-gray-600" />
+                            <h3 className="text-sm font-semibold text-gray-700">
+                                Pending Invites
+                            </h3>
+                        </div>
+
+                        {loadingInvites && (
+                            <p className="text-xs text-gray-400">Loading invites...</p>
+                        )}
+
+                        {!loadingInvites && pendingInvites.length === 0 && (
+                            <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg">
+                                <AlertCircle className="w-4 h-4 text-gray-400" />
+                                <p className="text-xs text-gray-500">
+                                    No pending invites
+                                </p>
+                            </div>
+                        )}
+
+                        {!loadingInvites && pendingInvites.length > 0 && (
+                            <div className="space-y-2">
+                                {pendingInvites.map(invite => {
+                                    const expiresDate = new Date(invite.expiresAt);
+                                    const daysUntilExpiration = Math.ceil(
+                                        (expiresDate - new Date()) / (1000 * 60 * 60 * 24)
+                                    );
+
+                                    return (
+                                        <div
+                                            key={invite._id}
+                                            className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200"
+                                        >
+                                            <div className="flex-1">
+                                                <p className="text-sm font-medium text-gray-800">
+                                                    {invite.email || 'Link invite'}
+                                                </p>
+                                                <p className="text-xs text-gray-500 mt-0.5">
+                                                    Role: {invite.role} • Expires in {daysUntilExpiration} days
+                                                </p>
+                                            </div>
+
+                                            <button
+                                                onClick={() => handleRevokeInvite(invite._id)}
+                                                className="px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                            >
+                                                Revoke
+                                            </button>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
         </div>
