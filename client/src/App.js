@@ -83,6 +83,54 @@ function App() {
                   }
                 />
 
+                {/* Home View - Specific Channel */}
+                <Route
+                  path="/workspace/:workspaceId/home/channel/:id"
+                  element={
+                    <RequireAuth>
+                      <WorkspaceProvider>
+                        <RequireWorkspace>
+                          <MainLayout sidePanel={<HomePanel />}>
+                            <Home />
+                          </MainLayout>
+                        </RequireWorkspace>
+                      </WorkspaceProvider>
+                    </RequireAuth>
+                  }
+                />
+
+                {/* Home View - Specific DM */}
+                <Route
+                  path="/workspace/:workspaceId/home/dm/:id"
+                  element={
+                    <RequireAuth>
+                      <WorkspaceProvider>
+                        <RequireWorkspace>
+                          <MainLayout sidePanel={<HomePanel />}>
+                            <Home />
+                          </MainLayout>
+                        </RequireWorkspace>
+                      </WorkspaceProvider>
+                    </RequireAuth>
+                  }
+                />
+
+                {/* Home View - New DM */}
+                <Route
+                  path="/workspace/:workspaceId/home/dm/new/:dmId"
+                  element={
+                    <RequireAuth>
+                      <WorkspaceProvider>
+                        <RequireWorkspace>
+                          <MainLayout sidePanel={<HomePanel />}>
+                            <Home />
+                          </MainLayout>
+                        </RequireWorkspace>
+                      </WorkspaceProvider>
+                    </RequireAuth>
+                  }
+                />
+
                 {/* Channels View */}
                 <Route
                   path="/workspace/:workspaceId/channels"
@@ -134,6 +182,22 @@ function App() {
                 {/* Specific DM */}
                 <Route
                   path="/workspace/:workspaceId/dm/:id"
+                  element={
+                    <RequireAuth>
+                      <WorkspaceProvider>
+                        <RequireWorkspace>
+                          <MainLayout sidePanel={<MessagesPanel />}>
+                            <Home />
+                          </MainLayout>
+                        </RequireWorkspace>
+                      </WorkspaceProvider>
+                    </RequireAuth>
+                  }
+                />
+
+                {/* New DM (Initiation) */}
+                <Route
+                  path="/workspace/:workspaceId/dm/new/:dmId"
                   element={
                     <RequireAuth>
                       <WorkspaceProvider>

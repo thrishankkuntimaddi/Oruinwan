@@ -219,10 +219,7 @@ const ChannelsPanel = ({ title }) => {
                 }
                 setSelectedItems(newSelected);
             } else {
-                // Call window.openChat if available (for Home.jsx)
-                if (window.openChat) {
-                    window.openChat(item);
-                }
+                navigate(item.path);
             }
         };
 

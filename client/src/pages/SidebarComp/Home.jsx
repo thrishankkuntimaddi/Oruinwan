@@ -1,38 +1,81 @@
 import React, { useState, useEffect } from "react";
+import { useParams, useLocation } from "react-router-dom";
 import ChatWindow from "../../components/messagesComp/chatWindowComp/chatWindow";
+import api from "../../services/api";
 
 const Home = () => {
+  const { workspaceId, id, dmId } = useParams();
+  const location = useLocation();
   const [activeChat, setActiveChat] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
 
-  // This function will be called from panels when a channel/DM is clicked
-  const openChat = (item) => {
-    const chatData = {
-      id: item.id,
-      name: item.label || item.name,
-      type: item.type,
-      isPrivate: item.isPrivate
-    };
-    setActiveChat(chatData);
-
-    // Also store in sessionStorage so panels can check what's active
-    sessionStorage.setItem('activeChat', JSON.stringify(chatData));
-  };
-
-  // Expose openChat function globally so panels can call it
   useEffect(() => {
-    window.openChat = openChat;
+    const detectChat = async () => {
+      setIsLoading(true);
+      try {
+        // 1. Check if it's a channel route
+        if (location.pathname.includes("/channel/") && id) {
+          // Fetch channel info to get the name
+          const res = await api.get(`/api/workspaces/${workspaceId}/channels`);
+          const channels = res.data.channels || [];
+          const channel = channels.find(c => String(c._id) === String(id) || c.name === id);
 
-    // Trigger a custom event when chat changes so panels can update
-    window.dispatchEvent(new CustomEvent('chatChanged', { detail: activeChat }));
+          if (channel) {
+            setActiveChat({
+              id: channel._id,
+              name: `#${channel.name}`,
+              type: "channel",
+              workspaceId,
+              isPrivate: channel.isPrivate
+            });
+          } else {
+            setActiveChat({ id, name: "Channel", type: "channel", workspaceId });
+          }
+          return;
+        }
 
-    return () => {
-      delete window.openChat;
+        // 2. Check if it's a DM route
+        if (location.pathname.includes("/dm/") && id) {
+          const targetId = id === "new" ? dmId : id;
+
+          if (targetId) {
+            // Fetch user info to get the name
+            const res = await api.get(`/api/workspaces/${workspaceId}/members`);
+            const members = res.data.members || [];
+            const member = members.find(m => String(m.id) === String(targetId));
+
+            setActiveChat({
+              id: targetId,
+              name: member ? member.name : "User",
+              image: member ? member.avatar : null,
+              status: member ? member.status : "offline",
+              type: "dm",
+              isNew: id === "new",
+              workspaceId
+            });
+          }
+          return;
+        }
+
+        setActiveChat(null);
+      } catch (err) {
+        console.error("Error detecting chat metadata:", err);
+      } finally {
+        setIsLoading(false);
+      }
     };
-  }, [activeChat]);
+
+    detectChat();
+  }, [location.pathname, id, dmId, workspaceId]);
 
   return (
     <div className="w-full h-full flex flex-col">
-      {activeChat ? (
+      {isLoading ? (
+        <div className="flex flex-col items-center justify-center h-full text-gray-400 bg-white">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-4"></div>
+          <p className="text-sm text-gray-500">Loading chat...</p>
+        </div>
+      ) : activeChat ? (
         <ChatWindow
           chat={activeChat}
           onClose={() => {

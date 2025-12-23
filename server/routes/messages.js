@@ -7,14 +7,16 @@ const {
   sendDirectMessage,
   sendChannelMessage,
   getDMs,
-  getChannelMessages
+  getChannelMessages,
+  getWorkspaceDMList
 } = require("../controllers/messagesController");
 
 // -----------------------
-// DIRECT MESSAGES
+// DIRECT MESSAGES (Workspace-scoped)
 // -----------------------
 router.post("/dm/send", requireAuth, sendDirectMessage);
-router.get("/dm/:userId", requireAuth, getDMs);
+router.get("/dm/:workspaceId/:dmSessionId", requireAuth, getDMs);
+router.get("/workspace/:workspaceId/dms", requireAuth, getWorkspaceDMList);
 
 // -----------------------
 // CHANNEL MESSAGES

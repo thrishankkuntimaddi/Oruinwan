@@ -1,13 +1,18 @@
 import React from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { CheckSquare } from 'lucide-react';
 
 const ListItem = ({ item, isSelectionMode, selectedItems, setSelectedItems, toggleFavorite }) => {
     const location = useLocation();
+    const navigate = useNavigate();
+    const { workspaceId } = useParams();
     const currentPath = location.pathname;
 
     // Construct path dynamically based on Home context
-    const itemPath = item.type === 'channel' ? `/channel/${item.id}` : `/dm/${item.id}`;
+    const isHome = location.pathname.includes('/home');
+    const itemPath = item.type === 'channel'
+        ? `/workspace/${workspaceId}${isHome ? '/home' : ''}/channel/${item.id}`
+        : `/workspace/${workspaceId}${isHome ? '/home' : ''}/dm/${item.id}`;
     const isActive = currentPath === itemPath;
     const Icon = item.isPrivate ? "#" : (item.type === 'dm' ? "👤" : "#");
     const isSelected = selectedItems.has(item.id);
@@ -23,10 +28,8 @@ const ListItem = ({ item, isSelectionMode, selectedItems, setSelectedItems, togg
             }
             setSelectedItems(newSelected);
         } else {
-            // Call global openChat function from Home component
-            if (window.openChat) {
-                window.openChat(item);
-            }
+            // Navigate to the item path
+            navigate(itemPath);
         }
     };
 

@@ -92,8 +92,8 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
   };
 
   const mapBackendMsgToUI = (m) => {
-    const senderObj = typeof m.senderId === "object" ? m.senderId : {};
-    const senderId = senderObj._id || senderObj.id || m.senderId;
+    const senderObj = typeof m.sender === "object" ? m.sender : {};
+    const senderId = senderObj._id || senderObj.id || m.sender;
 
     const me = String(senderId) === String(currentUserIdRef.current);
 
@@ -104,7 +104,7 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
       senderAvatar: senderObj.profilePicture || null,
       text: m.text || "",
       ts: m.createdAt,
-      repliedToId: m.replyTo?._id || m.replyTo || null,
+      repliedToId: m.threadParent?._id || m.threadParent || null,
       isPinned: m.isPinned || false,
       backend: m,
     };
@@ -141,7 +141,12 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
 
         let url = "";
         if (chat.type === "dm") {
-          url = `${API_BASE}/api/messages/dm/${chat.id}`;
+          // If it's a "new" DM, we don't have history yet (unless we check for existing session)
+          if (chat.isNew) {
+            setMessages([]);
+            return;
+          }
+          url = `${API_BASE}/api/messages/dm/${chat.workspaceId}/${chat.id}`;
         } else {
           url = `${API_BASE}/api/messages/channel/${chat.id}`;
         }
@@ -152,21 +157,13 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
         if (!mounted) return;
         setMessages(loadedMessages);
 
-        // Mark as read
-        if (chat.type === "dm") {
-          axios.post(
-            `${API_BASE}/api/messages/dm/read`,
-            { otherUserId: chat.id },
-            { headers }
-          );
-          // Emit read event
-          const socket = socketRef.current;
-          if (socket && connected) {
-            socket.emit("read-messages", {
-              readerId: currentUserIdRef.current,
-              otherUserId: chat.id,
-            });
-          }
+        // Mark as read via socket
+        const socket = socketRef.current;
+        if (socket && connected) {
+          socket.emit("mark-chat-read", {
+            type: chat.type,
+            id: chat.id,
+          });
         }
       } catch (err) {
         console.error("Load messages error:", err);
@@ -218,7 +215,11 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
       if (!chat) return;
 
       if (chat.type === "dm") {
-        socket.emit("join-dm", { otherUserId: chat.id });
+        if (chat.isNew) {
+          // No session to join yet
+        } else {
+          socket.emit("join-dm", { dmSessionId: chat.id });
+        }
       } else {
         socket.emit("join-channel", { channelId: chat.id });
       }
@@ -261,12 +262,16 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
     });
 
     /* --- READ RECEIPTS --- */
-    socket.on("read-update", ({ readerId, messageIds }) => {
+    socket.on("read-update", ({ readerId, dmSessionId, channelId }) => {
       setMessages((prev) =>
         prev.map((m) => {
           if (!m.backend) return m;
 
-          if (messageIds.includes(m.backend._id?.toString())) {
+          const isRelevant = dmSessionId
+            ? String(m.backend.dm) === String(dmSessionId)
+            : String(m.backend.channel) === String(channelId);
+
+          if (isRelevant && String(m.senderId) !== String(readerId)) {
             const readBy = new Set(m.backend.readBy || []);
             readBy.add(readerId);
 
@@ -318,7 +323,7 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
     const socket = socketRef.current;
     if (socket && connected) {
       socket.emit("typing", {
-        receiverId: chat.type === "dm" ? chat.id : null,
+        dmSessionId: (chat.type === "dm" && !chat.isNew) ? chat.id : null,
         channelId: chat.type === "channel" ? chat.id : null,
       });
     }
@@ -354,7 +359,9 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
       attachments: [],
       replyTo: uiMsg.repliedToId,
       clientTempId,
-      receiverId: chat.type === "dm" ? chat.id : null,
+      workspaceId: chat.workspaceId,
+      dmSessionId: (chat.type === "dm" && !chat.isNew) ? chat.id : null,
+      receiverId: (chat.type === "dm" && chat.isNew) ? chat.id : null,
       channelId: chat.type === "channel" ? chat.id : null,
     });
 
@@ -380,7 +387,9 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
         attachments: [
           { type: "image", url: URL.createObjectURL(f), name: f.name },
         ],
-        receiverId: chat.type === "dm" ? chat.id : null,
+        workspaceId: chat.workspaceId,
+        dmSessionId: (chat.type === "dm" && !chat.isNew) ? chat.id : null,
+        receiverId: (chat.type === "dm" && chat.isNew) ? chat.id : null,
         channelId: chat.type === "channel" ? chat.id : null,
       });
     }
@@ -394,7 +403,9 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
         attachments: [
           { type: "file", url: URL.createObjectURL(f), name: f.name },
         ],
-        receiverId: chat.type === "dm" ? chat.id : null,
+        workspaceId: chat.workspaceId,
+        dmSessionId: (chat.type === "dm" && !chat.isNew) ? chat.id : null,
+        receiverId: (chat.type === "dm" && chat.isNew) ? chat.id : null,
         channelId: chat.type === "channel" ? chat.id : null,
       });
     }
@@ -413,7 +424,9 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
     socket.emit("send-message", {
       text: `[Contact] ${c.name}`,
       attachments: [{ type: "contact", url: "", name: c.name }],
-      receiverId: chat.type === "dm" ? chat.id : null,
+      workspaceId: chat.workspaceId,
+      dmSessionId: (chat.type === "dm" && !chat.isNew) ? chat.id : null,
+      receiverId: (chat.type === "dm" && chat.isNew) ? chat.id : null,
       channelId: chat.type === "channel" ? chat.id : null,
     });
   };

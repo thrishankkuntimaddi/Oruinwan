@@ -1,10 +1,11 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { MessageCircle, Plus, Search, Trash2, X, Settings2, CheckSquare, Megaphone } from 'lucide-react';
 import { useWorkspace } from "../../../contexts/WorkspaceContext";
 import NewDMModal from "../../messagesComp/NewDMModal";
 import BroadcastModal from "../../messagesComp/BroadcastModal";
 import ConfirmationModal from "../../modals/ConfirmationModal";
+import api from "../../../services/api";
 
 const MessagesPanel = ({ title }) => {
     const navigate = useNavigate();
@@ -26,13 +27,37 @@ const MessagesPanel = ({ title }) => {
     // ✅ CORRECT: Active chat derived from URL (single source of truth)
     const activeChatId = dmId || channelId || null;
 
-    // ⚠️ MOCK DATA: Replace with backend call to GET /api/workspaces/:workspaceId/dms
-    const [contacts, setContacts] = useState([
-        { id: "dm-1", name: "Sarah Connor", status: "online", unread: 0, type: "dm" },
-        { id: "dm-2", name: "Thrishank", status: "offline", unread: 0, type: "dm" },
-        { id: "dm-3", name: "Alice Smith", status: "online", unread: 2, type: "dm" },
-        { id: "dm-4", name: "Bob Wilson", status: "busy", unread: 0, type: "dm" },
-    ]);
+    const [contacts, setContacts] = useState([]);
+    const [isLoading, setIsLoading] = useState(false);
+
+    useEffect(() => {
+        const loadDMs = async () => {
+            if (!workspaceId) return;
+            setIsLoading(true);
+            try {
+                const res = await api.get(`/api/messages/workspace/${workspaceId}/dms`);
+                const formatted = res.data.dms.map(dm => {
+                    const otherUser = dm.participants.find(p => p.id !== activeWorkspace?.currentUserId) || dm.participants[0];
+                    return {
+                        id: dm.id,
+                        name: otherUser?.name || "User",
+                        avatar: otherUser?.avatar,
+                        status: otherUser?.status || "offline",
+                        unread: dm.unreadCount || 0,
+                        lastMessage: dm.lastMessagePreview || "No messages yet",
+                        type: "dm"
+                    };
+                });
+                setContacts(formatted);
+            } catch (err) {
+                console.error("Failed to load DMs:", err);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        loadDMs();
+    }, [workspaceId, activeWorkspace?.currentUserId]);
 
     const displayList = [...broadcasts, ...contacts];
 
@@ -42,10 +67,10 @@ const MessagesPanel = ({ title }) => {
         return matchesSearch && matchesFilter;
     });
 
-    const handleStartDM = (user) => {
+    const handleStartDM = (selectedUser) => {
         setShowCreateDM(false);
-        // ✅ CORRECT: Navigate to workspace-scoped DM route
-        navigate(`/workspace/${workspaceId}/dm/${user.id || user.username}`);
+        // Navigate to the "new" DM route with the target user's ID
+        navigate(`/workspace/${workspaceId}/dm/new/${selectedUser._id || selectedUser.id || selectedUser.username}`);
     };
 
     const handleBroadcast = () => {
@@ -139,7 +164,7 @@ const MessagesPanel = ({ title }) => {
                         </div>
                         {!isBroadcast && (
                             <div className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-white ${item.status === "online" ? "bg-green-500" :
-                                    item.status === "busy" ? "bg-red-500" : "bg-gray-400"
+                                item.status === "busy" ? "bg-red-500" : "bg-gray-400"
                                 }`}></div>
                         )}
                     </div>
@@ -264,7 +289,9 @@ const MessagesPanel = ({ title }) => {
                     {activeWorkspace?.name || 'Workspace'} Conversations
                 </div>
 
-                {filteredList.length > 0 ? (
+                {isLoading ? (
+                    <div className="px-4 py-8 text-center text-sm text-gray-500">Loading...</div>
+                ) : filteredList.length > 0 ? (
                     filteredList.map((item) => <Item key={item.id} item={item} />)
                 ) : (
                     <div className="px-4 py-8 text-center text-sm text-gray-500">

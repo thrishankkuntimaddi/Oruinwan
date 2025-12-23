@@ -1,4 +1,5 @@
 import { useEffect, useState, useContext } from "react";
+import { useParams } from "react-router-dom";
 import axios from "axios";
 import { AuthContext } from "../../contexts/AuthContext";
 
@@ -9,6 +10,7 @@ export default function NewDMModal({ onClose, onStart }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const { accessToken, user } = useContext(AuthContext);
+  const { workspaceId } = useParams();
 
   useEffect(() => {
     async function load() {
@@ -26,20 +28,31 @@ export default function NewDMModal({ onClose, onStart }) {
           return;
         }
 
-        console.log("✅ Token found (or user session active), fetching contacts...");
         const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
-        // Ensure cookies are sent if we are relying on session cookie
-        const res = await axios.get(`${API_BASE}/api/chat/contacts`, {
-          headers,
-          withCredentials: true
-        });
-
-        console.log("📦 Received data:", res.data);
-        const contactsList = res.data.contacts || [];
-        console.log(`✅ Found ${contactsList.length} users:`, contactsList);
-
-        setUsers(contactsList);
+        let res;
+        if (workspaceId) {
+          res = await axios.get(`${API_BASE}/api/workspaces/${workspaceId}/members`, {
+            headers,
+            withCredentials: true
+          });
+          const membersList = res.data.members || [];
+          // Map workspace member format to DM user format
+          const mapped = membersList.map(m => ({
+            _id: m.id,
+            username: m.name,
+            profilePicture: m.avatar,
+            isOnline: m.status === 'online'
+          }));
+          setUsers(mapped);
+        } else {
+          res = await axios.get(`${API_BASE}/api/chat/contacts`, {
+            headers,
+            withCredentials: true
+          });
+          const contactsList = res.data.contacts || [];
+          setUsers(contactsList);
+        }
         setLoading(false);
       } catch (err) {
         console.error("❌ Failed to load users:", err);
@@ -54,7 +67,7 @@ export default function NewDMModal({ onClose, onStart }) {
       }
     }
     load();
-  }, [accessToken, user]);
+  }, [accessToken, user, workspaceId]);
 
   return (
     <div className="fixed inset-0 bg-black/60 z-[70] flex items-center justify-center animate-fade-in backdrop-blur-sm">

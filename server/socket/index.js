@@ -2,15 +2,17 @@
 
 const Message = require("../models/Message");
 const Channel = require("../models/Channel");
+const DMSession = require("../models/DMSession");
+const Workspace = require("../models/Workspace");
 
 module.exports = function registerChatHandlers(io, socket) {
   const userId = socket.user.id; // extracted from JWT
 
   /* ----------------------------------------------------
-     JOIN DIRECT MESSAGE ROOM
+     JOIN DM SESSION ROOM
   ---------------------------------------------------- */
-  socket.on("join-dm", ({ otherUserId }) => {
-    const room = getDMRoom(userId, otherUserId);
+  socket.on("join-dm", ({ dmSessionId }) => {
+    const room = `dm_${dmSessionId}`;
     socket.join(room);
     console.log(`User ${userId} joined DM room: ${room}`);
   });
@@ -30,41 +32,81 @@ module.exports = function registerChatHandlers(io, socket) {
   socket.on("send-message", async (data) => {
     try {
       const {
+        dmSessionId,
         receiverId,
         channelId,
+        workspaceId,
         text = "",
         attachments = [],
         replyTo = null,
         clientTempId
       } = data;
 
-      if (!receiverId && !channelId) {
+      if (!dmSessionId && !channelId && !receiverId) {
         socket.emit("send-error", {
           clientTempId,
-          message: "receiverId or channelId required",
+          message: "dmSessionId, channelId or receiverId required",
         });
         return;
       }
 
+      if (!workspaceId) {
+        socket.emit("send-error", {
+          clientTempId,
+          message: "workspaceId required",
+        });
+        return;
+      }
+
+      let actualDMSessionId = dmSessionId;
+
+      // Handle new DM session creation
+      if (receiverId && !actualDMSessionId) {
+        let dmSession = await DMSession.findOne({
+          workspace: workspaceId,
+          participants: { $all: [userId, receiverId], $size: 2 }
+        });
+
+        if (!dmSession) {
+          const workspace = await Workspace.findById(workspaceId);
+          if (!workspace) throw new Error("Workspace not found");
+
+          dmSession = await DMSession.create({
+            workspace: workspaceId,
+            company: workspace.company || null,
+            participants: [userId, receiverId],
+            lastMessageAt: new Date()
+          });
+        }
+        actualDMSessionId = dmSession._id;
+        // Join the new room
+        socket.join(`dm_${actualDMSessionId}`);
+      }
+
+      // Populate common message data
       const doc = {
-        senderId: userId,
+        sender: userId,
+        workspace: workspaceId,
         text,
         attachments,
-        replyTo: replyTo || null,
+        threadParent: replyTo || null,
       };
 
-      if (receiverId) doc.receiverId = receiverId;
-      if (channelId) doc.channelId = channelId;
+      if (actualDMSessionId) {
+        doc.dm = actualDMSessionId;
+      } else {
+        doc.channel = channelId;
+      }
 
       // Save message
       const saved = await Message.create(doc);
 
       const populated = await Message.findById(saved._id)
-        .populate("senderId", "username profilePicture");
+        .populate("sender", "username profilePicture");
 
       // ---------------- broadcast ----------------
-      if (receiverId) {
-        io.to(getDMRoom(userId, receiverId)).emit("new-message", {
+      if (actualDMSessionId) {
+        io.to(`dm_${actualDMSessionId}`).emit("new-message", {
           message: populated,
           clientTempId,
         });
@@ -82,7 +124,7 @@ module.exports = function registerChatHandlers(io, socket) {
       });
 
     } catch (err) {
-      console.error("SOCKET SEND MESSAGE ERROR:", err);
+      console.error("SOCKET SEND ERROR:", err);
       socket.emit("send-error", {
         clientTempId: data.clientTempId,
         message: "Failed to send message",
@@ -91,65 +133,53 @@ module.exports = function registerChatHandlers(io, socket) {
   });
 
   /* ----------------------------------------------------
-     MARK CHAT READ (BULK)
+     READ RECEIPTS
   ---------------------------------------------------- */
   socket.on("mark-chat-read", async ({ type, id }) => {
     try {
       const readerId = userId;
 
       if (type === "dm") {
-        const otherUserId = id;
+        const dmSessionId = id;
 
         await Message.updateMany(
           {
-            senderId: otherUserId,
-            receiverId: readerId,
+            dm: dmSessionId,
+            sender: { $ne: readerId },
             readBy: { $ne: readerId }
           },
           { $addToSet: { readBy: readerId } }
         );
 
-        const updatedIds = await Message.find({
-          senderId: otherUserId,
-          receiverId: readerId,
-          readBy: readerId
-        }).select("_id");
-
-        io.to(getDMRoom(readerId, otherUserId)).emit("read-update", {
+        io.to(`dm_${dmSessionId}`).emit("read-update", {
           readerId,
-          messageIds: updatedIds.map(m => m._id.toString()),
+          dmSessionId: dmSessionId,
         });
 
       } else if (type === "channel") {
         const channelId = id;
-
         const channel = await Channel.findById(channelId).select("members");
         if (!channel) return;
 
-        if (!channel.members.map(String).includes(String(readerId))) return;
+        if (!channel.members.some(m => String(m) === String(readerId))) return;
 
         await Message.updateMany(
           {
-            channelId,
-            senderId: { $ne: readerId },
+            channel: channelId,
+            sender: { $ne: readerId },
             readBy: { $ne: readerId }
           },
           { $addToSet: { readBy: readerId } }
         );
 
-        const updatedIds = await Message.find({
-          channelId,
-          readBy: readerId
-        }).select("_id");
-
         io.to(`channel_${channelId}`).emit("read-update", {
           readerId,
-          messageIds: updatedIds.map(m => m._id.toString()),
+          channelId: channelId,
         });
       }
 
     } catch (err) {
-      console.error("mark-chat-read ERROR:", err);
+      console.error("MARK READ ERROR:", err);
     }
   });
 
@@ -165,7 +195,7 @@ module.exports = function registerChatHandlers(io, socket) {
       });
 
       const msg = await Message.findById(messageId)
-        .select("channelId receiverId senderId");
+        .select("channelId receiverId senderId dm"); // Added dm to select
 
       if (!msg) return;
 
@@ -174,8 +204,8 @@ module.exports = function registerChatHandlers(io, socket) {
           readerId,
           messageIds: [messageId],
         });
-      } else {
-        io.to(getDMRoom(readerId, msg.senderId.toString())).emit("read-update", {
+      } else if (msg.dm) { // Changed to check for dm
+        io.to(`dm_${msg.dm.toString()}`).emit("read-update", { // Use dm session ID
           readerId,
           messageIds: [messageId],
         });
@@ -189,10 +219,10 @@ module.exports = function registerChatHandlers(io, socket) {
   /* ----------------------------------------------------
      TYPING
   ---------------------------------------------------- */
-  socket.on("typing", ({ receiverId, channelId }) => {
-    if (receiverId) {
-      io.to(getDMRoom(userId, receiverId)).emit("typing", { from: userId });
-    } else {
+  socket.on("typing", ({ dmSessionId, channelId }) => {
+    if (dmSessionId) {
+      io.to(`dm_${dmSessionId}`).emit("typing", { from: userId });
+    } else if (channelId) {
       io.to(`channel_${channelId}`).emit("typing", { from: userId });
     }
   });
@@ -204,12 +234,3 @@ module.exports = function registerChatHandlers(io, socket) {
     console.log(`User disconnected: ${userId}`);
   });
 };
-
-/* ----------------------------------------------------
-   Utility — Stable DM Room ID
----------------------------------------------------- */
-function getDMRoom(user1, user2) {
-  return user1 < user2
-    ? `dm_${user1}_${user2}`
-    : `dm_${user2}_${user1}`;
-}

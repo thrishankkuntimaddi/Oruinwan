@@ -1,5 +1,5 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 
 const CreateChannelModal = ({
     showCreateChannelModal,
@@ -14,6 +14,7 @@ const CreateChannelModal = ({
     addItem
 }) => {
     const navigate = useNavigate();
+    const { workspaceId } = useParams();
 
     const handleCreateChannel = () => {
         if (!newChannelData.name) return;
@@ -28,13 +29,13 @@ const CreateChannelModal = ({
             id: channelId,
             type: 'channel',
             label: newChannelData.name.toLowerCase().replace(/\s+/g, '-'),
-            path: `/channel/${channelId}`,
+            path: `/workspace/${workspaceId}/channel/${channelId}`,
             isFavorite: false,
             isPrivate: newChannelData.isPrivate,
         };
 
         addItem(newChannel);
-        navigate(`/channel/${channelId}`);
+        navigate(`/workspace/${workspaceId}/channel/${channelId}`);
 
         // Reset
         setShowCreateChannelModal(false);

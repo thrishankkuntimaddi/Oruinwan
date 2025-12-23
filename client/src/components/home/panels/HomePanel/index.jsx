@@ -79,21 +79,20 @@ const HomePanel = ({ title }) => {
 
     // No more MOCK_USERS - using real data from useUsers hook
 
-    const handleStartDM = (user) => {
-        const existingDM = items.find(i => i.type === 'dm' && i.label === user.name);
+    const handleStartDM = (selectedUser) => {
+        if (!activeWorkspace?.id) return;
+
+        // Find if we already have a DM with this user in the current workspace
+        const existingDM = items.find(i =>
+            i.type === 'dm' &&
+            (i.id === selectedUser.id || i.label === selectedUser.name)
+        );
+
         if (existingDM) {
-            navigate(`/dm/${existingDM.id}`);
+            navigate(`/workspace/${activeWorkspace.id}/home/dm/${existingDM.id}`);
         } else {
-            const dmId = user.name.toLowerCase().replace(/\s+/g, '-');
-            const newDM = {
-                id: dmId,
-                type: 'dm',
-                label: user.name,
-                path: `/dm/${dmId}`,
-                isFavorite: false
-            };
-            addItem(newDM);
-            navigate(`/dm/${dmId}`);
+            // Navigate to "new" DM route with the target user's ID
+            navigate(`/workspace/${activeWorkspace.id}/home/dm/new/${selectedUser.id || selectedUser._id}`);
         }
         setShowNewDMModal(false);
     };
