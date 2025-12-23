@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { channelService } from "../services/channelService";
 import { messageService } from "../services/messageService";
 
@@ -12,15 +12,7 @@ export default function ContactsProvider({ children }) {
   const [loading, setLoading] = useState(false); // Changed to false initially
   const [error, setError] = useState(null);
 
-  useEffect(() => {
-    // Only load if user has access token (is authenticated)
-    const token = localStorage.getItem('accessToken');
-    if (token) {
-      loadAllData();
-    }
-  }, []);
-
-  const loadAllData = async (workspaceId) => {
+  const loadAllData = useCallback(async (workspaceId) => {
     try {
       setLoading(true);
       setError(null);
@@ -80,7 +72,15 @@ export default function ContactsProvider({ children }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, []); // Empty deps - function doesn't depend on any external values
+
+  useEffect(() => {
+    // Only load if user has access token (is authenticated)
+    const token = localStorage.getItem('accessToken');
+    if (token) {
+      loadAllData();
+    }
+  }, [loadAllData]);
 
   // Combine channels and DMs into allItems
   const allItems = [...channels, ...dms];

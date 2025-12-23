@@ -219,8 +219,10 @@ const ChannelsPanel = ({ title }) => {
                 }
                 setSelectedItems(newSelected);
             } else {
-                // ✅ CORRECT: Use React Router navigation
-                navigate(item.path);
+                // Call window.openChat if available (for Home.jsx)
+                if (window.openChat) {
+                    window.openChat(item);
+                }
             }
         };
 
