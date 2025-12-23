@@ -269,6 +269,9 @@ exports.inviteToWorkspace = async (req, res) => {
       const emailList = emails.split(',').map(e => e.trim()).filter(Boolean);
 
       for (const email of emailList) {
+        // Check if user exists in database
+        const userExists = await User.findOne({ email });
+
         const raw = crypto.randomBytes(32).toString("hex");
         const tokenHash = sha256(raw);
         const expiresAt = new Date(Date.now() + daysValid * 24 * 60 * 60 * 1000);
@@ -298,11 +301,21 @@ exports.inviteToWorkspace = async (req, res) => {
               <p style="margin-top: 20px; color: #666;">This link will expire in ${daysValid} days and can only be used once.</p>
             `
           });
+          console.log(`✅ Invitation email sent to: ${email}${userExists ? ' (existing user)' : ' (new user)'}`);
         } catch (e) {
-          console.warn("Email send failed:", e?.message || e);
+          console.warn("⚠️ SMTP not configured — Email not sent");
+          console.log('\n' + '='.repeat(80));
+          console.log('📧 WORKSPACE INVITATION LINK (Copy and share manually)');
+          console.log('='.repeat(80));
+          console.log(`To: ${email}${userExists ? ' (existing user)' : ' (new user - will create account)'}`);
+          console.log(`Workspace: ${workspace.name}`);
+          console.log(`Role: ${role}`);
+          console.log(`\nInvitation Link:`);
+          console.log(`👉 ${inviteLink}`);
+          console.log('\n' + '='.repeat(80) + '\n');
         }
 
-        invites.push({ email, inviteLink });
+        invites.push({ email, inviteLink, userExists: !!userExists });
       }
 
       return res.json({
@@ -326,6 +339,16 @@ exports.inviteToWorkspace = async (req, res) => {
       });
 
       const inviteLink = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/join-workspace?token=${raw}`;
+
+      console.log('\n' + '='.repeat(80));
+      console.log('🔗 SHAREABLE WORKSPACE INVITATION LINK GENERATED');
+      console.log('='.repeat(80));
+      console.log(`Workspace: ${workspace.name}`);
+      console.log(`Role: ${role}`);
+      console.log(`Expires: ${expiresAt.toLocaleString()}`);
+      console.log(`\nInvitation Link:`);
+      console.log(`👉 ${inviteLink}`);
+      console.log('\n' + '='.repeat(80) + '\n');
 
       return res.json({
         message: "Invite link generated",
@@ -397,7 +420,12 @@ exports.joinWorkspace = async (req, res) => {
     const sha256 = (v) => crypto.createHash("sha256").update(v).digest("hex");
     const Invite = require("../models/Invite");
 
+    console.log('🔍 JOIN WORKSPACE REQUEST:');
+    console.log('  - Token received:', token ? 'Yes' : 'No');
+    console.log('  - User ID:', userId);
+
     if (!token) {
+      console.log('❌ No token provided');
       return res.status(400).json({ message: "Invite token is required" });
     }
 

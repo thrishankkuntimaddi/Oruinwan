@@ -3,8 +3,8 @@ const nodemailer = require('nodemailer');
 
 async function sendEmail({ to, subject, text, html }) {
   if (!process.env.SMTP_HOST) {
-    console.log('SMTP not configured — skipping sending email. Would send to:', to, subject);
-    return;
+    // Throw error so calling code can handle and log invitation links
+    throw new Error('SMTP not configured');
   }
 
   const transporter = nodemailer.createTransport({

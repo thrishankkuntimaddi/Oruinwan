@@ -2,8 +2,253 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useWorkspace } from '../../../../contexts/WorkspaceContext';
 import { useToast } from '../../../../contexts/ToastContext';
 import api from '../../../../services/api';
-import { Crown, Shield, UserCheck, Users, Hash, MessageSquare, Rocket, Briefcase, Zap, Palette, FlaskConical, Globe, ShieldCheck, TrendingUp, Lightbulb, Flame, Target, Trophy } from 'lucide-react';
+import { Crown, Shield, UserCheck, Users, Hash, MessageSquare, Rocket, Briefcase, Zap, Palette, FlaskConical, Globe, ShieldCheck, TrendingUp, Lightbulb, Flame, Target, Trophy, Mail, Clock, CheckCircle, XCircle, RotateCw, Search, MoreVertical, Pause, Play, Trash2 } from 'lucide-react';
 
+// Invitations Tab Component
+const InvitationsTab = ({ activeWorkspace, isAdmin }) => {
+    const { showToast } = useToast();
+    const [invitations, setInvitations] = useState({ pending: [], accepted: [], revoked: [], expired: [] });
+    const [loading, setLoading] = useState(true);
+    const [filter, setFilter] = useState('all');
+    const [searchQuery, setSearchQuery] = useState('');
+    const [actionLoading, setActionLoading] = useState({});
+
+    const fetchInvitations = useCallback(async () => {
+        if (!activeWorkspace?.id) return;
+
+        setLoading(true);
+        try {
+            const response = await api.get(`/api/workspaces/${activeWorkspace.id}/invites`);
+            setInvitations(response.data);
+        } catch (error) {
+            console.error('Error fetching invitations:', error);
+            showToast(error.response?.data?.message || 'Failed to load invitations', 'error');
+        } finally {
+            setLoading(false);
+        }
+    }, [activeWorkspace?.id, showToast]);
+
+    useEffect(() => {
+        fetchInvitations();
+    }, [fetchInvitations]);
+
+    const handleRevoke = async (inviteId) => {
+        setActionLoading(prev => ({ ...prev, [inviteId]: 'revoking' }));
+        try {
+            await api.post(`/api/workspaces/${activeWorkspace.id}/invites/${inviteId}/revoke`);
+            showToast('✅ Invitation revoked successfully', 'success');
+            fetchInvitations();
+        } catch (error) {
+            showToast(error.response?.data?.message || 'Failed to revoke invitation', 'error');
+        } finally {
+            setActionLoading(prev => ({ ...prev, [inviteId]: null }));
+        }
+    };
+
+    const handleResend = async (inviteId) => {
+        setActionLoading(prev => ({ ...prev, [inviteId]: 'resending' }));
+        try {
+            await api.post(`/api/workspaces/${activeWorkspace.id}/invites/${inviteId}/resend`);
+            showToast('✅ Invitation resent successfully', 'success');
+            fetchInvitations();
+        } catch (error) {
+            showToast(error.response?.data?.message || 'Failed to resend invitation', 'error');
+        } finally {
+            setActionLoading(prev => ({ ...prev, [inviteId]: null }));
+        }
+    };
+
+    // Filter and search invitations
+    const allInvites = [
+        ...invitations.pending.map(inv => ({ ...inv, filterStatus: 'pending' })),
+        ...invitations.accepted.map(inv => ({ ...inv, filterStatus: 'accepted' })),
+        ...invitations.expired.map(inv => ({ ...inv, filterStatus: 'expired' })),
+        ...invitations.revoked.map(inv => ({ ...inv, filterStatus: 'revoked' }))
+    ];
+
+    const filteredInvites = allInvites.filter(invite => {
+        const matchesFilter = filter === 'all' || invite.filterStatus === filter;
+        const matchesSearch = !searchQuery ||
+            invite.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            invite.invitedBy?.toLowerCase().includes(searchQuery.toLowerCase());
+        return matchesFilter && matchesSearch;
+    });
+
+    const getStatusBadge = (status) => {
+        const badges = {
+            pending: { text: 'Pending', color: 'bg-yellow-100 text-yellow-700', icon: Clock },
+            accepted: { text: 'Accepted', color: 'bg-green-100 text-green-700', icon: CheckCircle },
+            expired: { text: 'Expired', color: 'bg-gray-100 text-gray-700', icon: XCircle },
+            revoked: { text: 'Revoked', color: 'bg-red-100 text-red-700', icon: XCircle }
+        };
+        const badge = badges[status] || badges.pending;
+        const Icon = badge.icon;
+        return (
+            <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${badge.color}`}>
+                <Icon className="w-3 h-3" />
+                {badge.text}
+            </span>
+        );
+    };
+
+    const getTimeAgo = (date) => {
+        const now = new Date();
+        const past = new Date(date);
+        const diffInMs = now - past;
+        const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
+
+        if (diffInDays === 0) return 'Today';
+        if (diffInDays === 1) return 'Yesterday';
+        if (diffInDays < 7) return `${diffInDays} days ago`;
+        return past.toLocaleDateString();
+    };
+
+    const getExpiresIn = (date) => {
+        const now = new Date();
+        const future = new Date(date);
+        const diffInMs = future - now;
+        const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
+
+        if (diffInMs < 0) return 'Expired';
+        if (diffInDays === 0) return 'Today';
+        if (diffInDays === 1) return '1 day';
+        return `${diffInDays} days`;
+    };
+
+    if (!isAdmin) {
+        return (
+            <div className="flex items-center justify-center h-full">
+                <div className="text-center">
+                    <Shield className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">Admin Access Required</h3>
+                    <p className="text-gray-600">Only workspace admins can manage invitations</p>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="h-full flex flex-col">
+            {/* Header */}
+            <div className="px-8 py-6 border-b border-gray-100">
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">Workspace Invitations</h2>
+                <p className="text-gray-600">Manage pending, accepted, and revoked invitations</p>
+            </div>
+
+            {/* Filters and Search */}
+            <div className="px-8 py-4 border-b border-gray-100 flex items-center gap-4">
+                {/* Status Filter */}
+                <div className="flex gap-2">
+                    {[
+                        { value: 'all', label: 'All', count: allInvites.length },
+                        { value: 'pending', label: 'Pending', count: invitations.pending.length },
+                        { value: 'accepted', label: 'Accepted', count: invitations.accepted.length },
+                        { value: 'expired', label: 'Expired', count: invitations.expired.length },
+                        { value: 'revoked', label: 'Revoked', count: invitations.revoked.length }
+                    ].map(({ value, label, count }) => (
+                        <button
+                            key={value}
+                            onClick={() => setFilter(value)}
+                            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${filter === value
+                                ? 'bg-blue-100 text-blue-700'
+                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                }`}
+                        >
+                            {label} ({count})
+                        </button>
+                    ))}
+                </div>
+
+                {/* Search */}
+                <div className="flex-1 max-w-sm ml-auto">
+                    <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        <input
+                            type="text"
+                            placeholder="Search by email..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                        />
+                    </div>
+                </div>
+            </div>
+
+            {/* Invitations Table */}
+            <div className="flex-1 overflow-auto px-8 py-4">
+                {loading ? (
+                    <div className="text-center py-12">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                        <p className="text-gray-600">Loading invitations...</p>
+                    </div>
+                ) : filteredInvites.length === 0 ? (
+                    <div className="text-center py-12">
+                        <Mail className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                        <p className="text-gray-600">No invitations found</p>
+                    </div>
+                ) : (
+                    <div className="bg-white rounded-xl border border-gray-200 overflow-x-auto">
+                        <table className="w-full min-w-[800px]">
+                            <thead className="bg-gray-50 border-b border-gray-200">
+                                <tr>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Email</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Role</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Invited By</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Sent</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Status</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Expires</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-200">
+                                {filteredInvites.map((invite) => (
+                                    <tr key={invite.id} className="hover:bg-gray-50">
+                                        <td className="px-4 py-3 text-sm text-gray-900">{invite.email}</td>
+                                        <td className="px-4 py-3">
+                                            <span className="px-2 py-1 bg-blue-50 text-blue-700 text-xs font-medium rounded capitalize">
+                                                {invite.role}
+                                            </span>
+                                        </td>
+                                        <td className="px-4 py-3 text-sm text-gray-600">{invite.invitedBy || 'System'}</td>
+                                        <td className="px-4 py-3 text-sm text-gray-600">{getTimeAgo(invite.createdAt)}</td>
+                                        <td className="px-4 py-3">{getStatusBadge(invite.filterStatus)}</td>
+                                        <td className="px-4 py-3 text-sm text-gray-600">{getExpiresIn(invite.expiresAt)}</td>
+                                        <td className="px-4 py-3">
+                                            <div className="flex gap-2">
+                                                {(invite.filterStatus === 'pending' || invite.filterStatus === 'expired') && (
+                                                    <>
+                                                        <button
+                                                            onClick={() => handleResend(invite.id)}
+                                                            disabled={actionLoading[invite.id]}
+                                                            className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors disabled:opacity-50"
+                                                            title="Resend invitation"
+                                                        >
+                                                            <RotateCw className={`w-4 h-4 ${actionLoading[invite.id] === 'resending' ? 'animate-spin' : ''}`} />
+                                                        </button>
+                                                        {invite.filterStatus === 'pending' && (
+                                                            <button
+                                                                onClick={() => handleRevoke(invite.id)}
+                                                                disabled={actionLoading[invite.id]}
+                                                                className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
+                                                                title="Revoke invitation"
+                                                            >
+                                                                <XCircle className="w-4 h-4" />
+                                                            </button>
+                                                        )}
+                                                    </>
+                                                )}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+};
 
 const WorkspaceSettingsModal = ({
     showSettingsModal,
@@ -14,7 +259,7 @@ const WorkspaceSettingsModal = ({
     setWorkspaceName,
     setShowDeleteConfirm
 }) => {
-    const { activeWorkspace } = useWorkspace();
+    const { activeWorkspace, refreshWorkspace } = useWorkspace();
     const { showToast } = useToast();
     const [members, setMembers] = useState([]);
     const [loadingMembers, setLoadingMembers] = useState(false);
@@ -27,16 +272,19 @@ const WorkspaceSettingsModal = ({
         isDiscoverable: false
     });
     const [savingPermissions, setSavingPermissions] = useState(false);
-    const [editingName, setEditingName] = useState(false);
     const [newWorkspaceName, setNewWorkspaceName] = useState(workspaceName);
     const [savingName, setSavingName] = useState(false);
     const [editingIcon, setEditingIcon] = useState(false);
     const [selectedIcon, setSelectedIcon] = useState(activeWorkspace?.icon || 'rocket');
     const [selectedColor, setSelectedColor] = useState(activeWorkspace?.color || '#2563eb');
     const [savingIcon, setSavingIcon] = useState(false);
+    const [memberActionLoading, setMemberActionLoading] = useState({});
+    const [openMemberDropdown, setOpenMemberDropdown] = useState(null);
 
-    // Check if current user is admin/owner
-    const isAdmin = activeWorkspace?.role === 'admin' || activeWorkspace?.role === 'owner';
+
+    // Check if current user is admin/owner (case-insensitive)
+    const userRole = activeWorkspace?.role?.toLowerCase() || '';
+    const isAdmin = userRole === 'admin' || userRole === 'owner';
 
     // Icon options with matching colors
     const iconOptions = [
@@ -107,26 +355,6 @@ const WorkspaceSettingsModal = ({
         }
     }, [activeSettingsTab, showSettingsModal, fetchStats]);
 
-    const getRoleIcon = (role) => {
-        switch (role) {
-            case 'owner':
-                return <Crown size={14} className="text-yellow-500" />;
-            case 'admin':
-                return <Shield size={14} className="text-blue-500" />;
-            default:
-                return <UserCheck size={14} className="text-gray-400" />;
-        }
-    };
-
-    const getRoleBadge = (role) => {
-        const styles = {
-            owner: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-            admin: 'bg-blue-100 text-blue-800 border-blue-200',
-            member: 'bg-gray-100 text-gray-800 border-gray-200'
-        };
-        return styles[role] || styles.member;
-    };
-
     const handlePermissionChange = async (key, value) => {
         setPermissions(prev => ({ ...prev, [key]: value }));
 
@@ -146,48 +374,80 @@ const WorkspaceSettingsModal = ({
         }
     };
 
-    const handleSaveWorkspaceName = async () => {
-        if (!newWorkspaceName.trim()) {
-            showToast('Workspace name cannot be empty', 'error');
+
+
+    const handleSuspendMember = async (userId) => {
+        if (!window.confirm('Are you sure you want to suspend this member? They will lose access to the workspace.')) {
             return;
         }
 
+        setMemberActionLoading(prev => ({ ...prev, [userId]: 'suspending' }));
         try {
-            setSavingName(true);
-            await api.put(`/api/workspaces/${activeWorkspace.id}/rename`, {
-                name: newWorkspaceName.trim()
-            });
-            // Update local state without page reload
-            setWorkspaceName(newWorkspaceName.trim());
-            setEditingName(false);
-            showToast('Workspace renamed successfully');
+            await api.post(`/api/workspaces/${activeWorkspace.id}/members/${userId}/suspend`);
+            showToast('✅ Member suspended successfully', 'success');
+            fetchMembers();
+            setOpenMemberDropdown(null);
         } catch (error) {
-            console.error('Error renaming workspace:', error);
-            showToast(error.response?.data?.message || 'Failed to rename workspace', 'error');
+            showToast(error.response?.data?.message || 'Failed to suspend member', 'error');
         } finally {
-            setSavingName(false);
+            setMemberActionLoading(prev => ({ ...prev, [userId]: null }));
         }
     };
 
-    const handleSaveIcon = async () => {
+    const handleRestoreMember = async (userId) => {
+        setMemberActionLoading(prev => ({ ...prev, [userId]: 'restoring' }));
         try {
-            setSavingIcon(true);
-            await api.put(`/api/workspaces/${activeWorkspace.id}`, {
-                icon: selectedIcon,
-                color: selectedColor
-            });
-            setEditingIcon(false);
-            showToast('Workspace icon updated successfully');
-            // Refresh to update icon everywhere
-            window.location.reload();
+            await api.post(`/api/workspaces/${activeWorkspace.id}/members/${userId}/restore`);
+            showToast('✅ Member restored successfully', 'success');
+            fetchMembers();
+            setOpenMemberDropdown(null);
         } catch (error) {
-            console.error('Error updating icon:', error);
-            showToast(error.response?.data?.message || 'Failed to update icon', 'error');
+            showToast(error.response?.data?.message || 'Failed to restore member', 'error');
         } finally {
-            setSavingIcon(false);
+            setMemberActionLoading(prev => ({ ...prev, [userId]: null }));
         }
     };
 
+    const handleRemoveMember = async (userId) => {
+        if (!window.confirm('Are you sure you want to remove this member? This action cannot be undone.')) {
+            return;
+        }
+
+        setMemberActionLoading(prev => ({ ...prev, [userId]: 'removing' }));
+        try {
+            await api.post(`/api/workspaces/${activeWorkspace.id}/remove-member`, { userId });
+            showToast('✅ Member removed successfully', 'success');
+            fetchMembers();
+            setOpenMemberDropdown(null);
+        } catch (error) {
+            showToast(error.response?.data?.message || 'Failed to remove member', 'error');
+        } finally {
+            setMemberActionLoading(prev => ({ ...prev, [userId]: null }));
+        }
+    };
+
+    const handleChangeRole = async (userId, currentRole) => {
+        const newRole = currentRole === 'admin' ? 'member' : 'admin';
+        const action = newRole === 'admin' ? 'promote to Admin' : 'demote to Member';
+
+        if (!window.confirm(`Are you sure you want to ${action}?`)) {
+            return;
+        }
+
+        setMemberActionLoading(prev => ({ ...prev, [userId]: 'changing' }));
+        try {
+            await api.post(`/api/workspaces/${activeWorkspace.id}/members/${userId}/change-role`, { newRole });
+            showToast(`✅ Member ${newRole === 'admin' ? 'promoted to Admin' : 'demoted to Member'} successfully`, 'success');
+            fetchMembers();
+            // Refresh workspace context to update role in real-time
+            await refreshWorkspace();
+            setOpenMemberDropdown(null);
+        } catch (error) {
+            showToast(error.response?.data?.message || 'Failed to change role', 'error');
+        } finally {
+            setMemberActionLoading(prev => ({ ...prev, [userId]: null }));
+        }
+    };
 
     if (!showSettingsModal) return null;
 
@@ -198,7 +458,7 @@ const WorkspaceSettingsModal = ({
                 <div className="w-56 bg-gray-50/80 backdrop-blur-sm border-r border-gray-200 p-6">
                     <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-6 px-2">Settings</h3>
                     <nav className="space-y-1">
-                        {["General", "Permissions", "Members", "Billing", "Advanced"].map((tab) => (
+                        {["General", "Permissions", "Members", "Invitations", "Billing", "Advanced"].map((tab) => (
                             <button
                                 key={tab}
                                 onClick={() => setActiveSettingsTab(tab)}
@@ -342,7 +602,6 @@ const WorkspaceSettingsModal = ({
                                         <button
                                             onClick={() => {
                                                 setEditingIcon(false);
-                                                setEditingName(false);
                                                 setSelectedIcon(activeWorkspace?.icon || 'rocket');
                                                 setSelectedColor(activeWorkspace?.color || '#2563eb');
                                                 setNewWorkspaceName(workspaceName);
@@ -372,7 +631,6 @@ const WorkspaceSettingsModal = ({
                                                     }
 
                                                     setEditingIcon(false);
-                                                    setEditingName(false);
                                                     showToast('Workspace updated successfully');
 
                                                     // Refresh to update everywhere
@@ -403,7 +661,6 @@ const WorkspaceSettingsModal = ({
                                                 <button
                                                     onClick={() => {
                                                         setEditingIcon(true);
-                                                        setEditingName(true);
                                                         setSelectedIcon(activeWorkspace?.icon || 'rocket');
                                                         setSelectedColor(activeWorkspace?.color || '#2563eb');
                                                         setNewWorkspaceName(workspaceName);
@@ -671,9 +928,63 @@ const WorkspaceSettingsModal = ({
                                                                 </div>
                                                             </div>
                                                             <div className="flex items-center gap-2">
+                                                                {member.memberStatus === 'suspended' && (
+                                                                    <span className="px-2 py-1 bg-yellow-100 text-yellow-700 text-xs font-medium rounded-full flex items-center gap-1">
+                                                                        <Pause className="w-3 h-3" />
+                                                                        Suspended
+                                                                    </span>
+                                                                )}
                                                                 <span className="px-2.5 py-1 rounded-lg text-xs font-semibold border bg-blue-100 text-blue-800 border-blue-200">
                                                                     Admin
                                                                 </span>
+                                                                {isAdmin && !member.isCurrentUser && (
+                                                                    <div className="relative">
+                                                                        <button
+                                                                            onClick={() => setOpenMemberDropdown(openMemberDropdown === member.id ? null : member.id)}
+                                                                            className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
+                                                                            disabled={memberActionLoading[member.id]}
+                                                                        >
+                                                                            <MoreVertical className="w-4 h-4 text-gray-600" />
+                                                                        </button>
+                                                                        {openMemberDropdown === member.id && (
+                                                                            <div className="absolute right-0 top-full mt-1 bg-white rounded-lg shadow-lg border border-gray-200 py-1 min-w-[160px] z-10">
+                                                                                {member.memberStatus === 'suspended' ? (
+                                                                                    <button
+                                                                                        onClick={() => handleRestoreMember(member.id)}
+                                                                                        className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2 text-green-600"
+                                                                                    >
+                                                                                        <Play className="w-4 h-4" />
+                                                                                        Restore Access
+                                                                                    </button>
+                                                                                ) : (
+                                                                                    <>
+                                                                                        <button
+                                                                                            onClick={() => handleChangeRole(member.id, 'admin')}
+                                                                                            className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2 text-blue-600"
+                                                                                        >
+                                                                                            <UserCheck className="w-4 h-4" />
+                                                                                            Demote to Member
+                                                                                        </button>
+                                                                                        <button
+                                                                                            onClick={() => handleSuspendMember(member.id)}
+                                                                                            className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2 text-yellow-700"
+                                                                                        >
+                                                                                            <Pause className="w-4 h-4" />
+                                                                                            Suspend Member
+                                                                                        </button>
+                                                                                        <button
+                                                                                            onClick={() => handleRemoveMember(member.id)}
+                                                                                            className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2 text-red-600"
+                                                                                        >
+                                                                                            <Trash2 className="w-4 h-4" />
+                                                                                            Remove Member
+                                                                                        </button>
+                                                                                    </>
+                                                                                )}
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                )}
                                                             </div>
                                                         </div>
                                                     ))}
@@ -728,9 +1039,63 @@ const WorkspaceSettingsModal = ({
                                                                 </div>
                                                             </div>
                                                             <div className="flex items-center gap-2">
+                                                                {member.memberStatus === 'suspended' && (
+                                                                    <span className="px-2 py-1 bg-yellow-100 text-yellow-700 text-xs font-medium rounded-full flex items-center gap-1">
+                                                                        <Pause className="w-3 h-3" />
+                                                                        Suspended
+                                                                    </span>
+                                                                )}
                                                                 <span className="px-2.5 py-1 rounded-lg text-xs font-semibold border bg-gray-100 text-gray-800 border-gray-200">
                                                                     Member
                                                                 </span>
+                                                                {isAdmin && !member.isCurrentUser && (
+                                                                    <div className="relative">
+                                                                        <button
+                                                                            onClick={() => setOpenMemberDropdown(openMemberDropdown === member.id ? null : member.id)}
+                                                                            className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
+                                                                            disabled={memberActionLoading[member.id]}
+                                                                        >
+                                                                            <MoreVertical className="w-4 h-4 text-gray-600" />
+                                                                        </button>
+                                                                        {openMemberDropdown === member.id && (
+                                                                            <div className="absolute right-0 top-full mt-1 bg-white rounded-lg shadow-lg border border-gray-200 py-1 min-w-[160px] z-10">
+                                                                                {member.memberStatus === 'suspended' ? (
+                                                                                    <button
+                                                                                        onClick={() => handleRestoreMember(member.id)}
+                                                                                        className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2 text-green-600"
+                                                                                    >
+                                                                                        <Play className="w-4 h-4" />
+                                                                                        Restore Access
+                                                                                    </button>
+                                                                                ) : (
+                                                                                    <>
+                                                                                        <button
+                                                                                            onClick={() => handleChangeRole(member.id, 'member')}
+                                                                                            className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2 text-blue-600"
+                                                                                        >
+                                                                                            <Shield className="w-4 h-4" />
+                                                                                            Promote to Admin
+                                                                                        </button>
+                                                                                        <button
+                                                                                            onClick={() => handleSuspendMember(member.id)}
+                                                                                            className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2 text-yellow-700"
+                                                                                        >
+                                                                                            <Pause className="w-4 h-4" />
+                                                                                            Suspend Member
+                                                                                        </button>
+                                                                                        <button
+                                                                                            onClick={() => handleRemoveMember(member.id)}
+                                                                                            className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2 text-red-600"
+                                                                                        >
+                                                                                            <Trash2 className="w-4 h-4" />
+                                                                                            Remove Member
+                                                                                        </button>
+                                                                                    </>
+                                                                                )}
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                )}
                                                             </div>
                                                         </div>
                                                     ))}
@@ -746,6 +1111,13 @@ const WorkspaceSettingsModal = ({
                                 </div>
                             )}
                         </div>
+                    )}
+
+                    {activeSettingsTab === "Invitations" && (
+                        <InvitationsTab
+                            activeWorkspace={activeWorkspace}
+                            isAdmin={isAdmin}
+                        />
                     )}
 
                     {activeSettingsTab === "Billing" && (

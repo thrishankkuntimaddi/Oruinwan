@@ -58,6 +58,10 @@ const HomePanel = ({ title }) => {
     const [activeSettingsTab, setActiveSettingsTab] = useState("General");
     const [newName, setNewName] = useState("");
     const [inviteEmail, setInviteEmail] = useState("");
+    const [selectedRole, setSelectedRole] = useState("member");
+    const [isInviting, setIsInviting] = useState(false);
+    const [inviteLink, setInviteLink] = useState("");
+    const [isGeneratingLink, setIsGeneratingLink] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [showSelectionDeleteConfirm, setShowSelectionDeleteConfirm] = useState(false);
     const [deleteVerification, setDeleteVerification] = useState("");
@@ -127,11 +131,69 @@ const HomePanel = ({ title }) => {
         }
     };
 
-    const handleInvite = () => {
-        if (inviteEmail.trim()) {
-            showToast(`Invitation sent to ${inviteEmail}`);
+    const handleInvite = async () => {
+        if (!inviteEmail.trim()) {
+            showToast("Please enter at least one email address", "error");
+            return;
+        }
+
+        try {
+            setIsInviting(true);
+            const response = await api.post(`/api/workspaces/${activeWorkspace.id}/invite`, {
+                emails: inviteEmail,
+                inviteType: "email",
+                role: selectedRole,
+                daysValid: 7
+            });
+
+            const invites = response.data.invites || [];
+            const existingUsers = invites.filter(inv => inv.userExists).length;
+            const newUsers = invites.filter(inv => !inv.userExists).length;
+
+            let message = "✅ Invitations sent!";
+            if (existingUsers > 0 && newUsers > 0) {
+                message += `\n• ${existingUsers} existing user${existingUsers > 1 ? 's' : ''}\n• ${newUsers} new user${newUsers > 1 ? 's' : ''} (will create account)`;
+            } else if (existingUsers > 0) {
+                message += ` to ${existingUsers} existing user${existingUsers > 1 ? 's' : ''}`;
+            } else if (newUsers > 0) {
+                message += ` to ${newUsers} new user${newUsers > 1 ? 's' : ''} (will create account via link)`;
+            }
+            showToast(message, "success");
+
             setShowInviteModal(false);
             setInviteEmail("");
+            setSelectedRole("member");
+        } catch (error) {
+            console.error("Invitation error:", error);
+            showToast(error.response?.data?.message || "Failed to send invitations", "error");
+        } finally {
+            setIsInviting(false);
+        }
+    };
+
+    const handleGenerateLink = async () => {
+        try {
+            setIsGeneratingLink(true);
+            console.log('🔗 Generating invite link for workspace:', activeWorkspace.id);
+
+            const response = await api.post(`/api/workspaces/${activeWorkspace.id}/invite`, {
+                inviteType: "link",
+                role: selectedRole,
+                daysValid: 7
+            });
+
+            console.log('✅ Link generation response:', response.data);
+            setInviteLink(response.data.inviteLink);
+            showToast("✅ Invitation link generated!", "success");
+        } catch (error) {
+            console.error("❌ Link generation error:", error);
+            console.error("Error response:", error.response);
+            console.error("Error data:", error.response?.data);
+
+            const errorMsg = error.response?.data?.message || error.message || "Failed to generate link";
+            showToast(errorMsg, "error");
+        } finally {
+            setIsGeneratingLink(false);
         }
     };
 
@@ -282,8 +344,15 @@ const HomePanel = ({ title }) => {
                 setShowInviteModal={setShowInviteModal}
                 inviteEmail={inviteEmail}
                 setInviteEmail={setInviteEmail}
+                selectedRole={selectedRole}
+                setSelectedRole={setSelectedRole}
+                isInviting={isInviting}
                 handleInvite={handleInvite}
+                inviteLink={inviteLink}
+                isGeneratingLink={isGeneratingLink}
+                handleGenerateLink={handleGenerateLink}
                 workspaceName={workspaceName}
+                activeWorkspace={activeWorkspace}
             />
 
             {/* Workspace Settings Modal */}

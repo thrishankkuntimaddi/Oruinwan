@@ -79,13 +79,49 @@ export const WorkspaceProvider = ({ children }) => {
         return workspaces.some(ws => ws.id === wsId || ws.id.toString() === wsId);
     };
 
+    // Helper: Refresh workspace data (useful after role changes)
+    const refreshWorkspace = async () => {
+        try {
+            console.log('🔄 [WorkspaceContext] Refreshing workspace data...');
+            const response = await api.get('/api/workspaces/my');
+
+            if (response.data.workspaces && response.data.workspaces.length > 0) {
+                const mapped = response.data.workspaces.map(ws => ({
+                    id: ws.id,
+                    name: ws.name,
+                    icon: ws.icon || "🚀",
+                    color: ws.color || "#2563eb",
+                    type: ws.type,
+                    role: ws.role,
+                    members: ws.members
+                }));
+
+                setWorkspaces(mapped);
+
+                // Update active workspace if it exists
+                if (workspaceId) {
+                    const active = mapped.find(ws =>
+                        ws.id === workspaceId || ws.id.toString() === workspaceId
+                    );
+                    if (active) {
+                        console.log('✅ [WorkspaceContext] Active workspace refreshed with role:', active.role);
+                        setActiveWorkspace(active);
+                    }
+                }
+            }
+        } catch (err) {
+            console.error('❌ [WorkspaceContext] Error refreshing workspace:', err);
+        }
+    };
+
     const value = {
         workspaces,
         activeWorkspace,
         setActiveWorkspace,
         loading,
         error,
-        isMemberOf
+        isMemberOf,
+        refreshWorkspace
     };
 
     return (

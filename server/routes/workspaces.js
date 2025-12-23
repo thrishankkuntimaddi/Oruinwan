@@ -40,7 +40,19 @@ router.get("/:workspaceId/invites", auth, workspaceAdminController.getWorkspaceI
 // Revoke invite (admin-only)
 router.post("/:workspaceId/invites/:inviteId/revoke", auth, workspaceAdminController.revokeInvite);
 
+// Resend invite (admin-only)
+router.post("/:workspaceId/invites/:inviteId/resend", auth, workspaceAdminController.resendInvite);
+
 // 🔒 ADMIN-ONLY: Member management
+// Suspend member (admin-only)
+router.post("/:workspaceId/members/:userId/suspend", auth, workspaceAdminController.suspendMember);
+
+// Restore suspended member (admin-only)
+router.post("/:workspaceId/members/:userId/restore", auth, workspaceAdminController.restoreMember);
+
+// Change member role (admin-only)
+router.post("/:workspaceId/members/:userId/change-role", auth, workspaceAdminController.changeRole);
+
 // Remove member from workspace (admin-only)
 router.post("/:workspaceId/remove-member", auth, workspaceAdminController.removeMember);
 

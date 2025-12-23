@@ -22,7 +22,16 @@ const WorkspaceSchema = new mongoose.Schema({
   members: [{
     user: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     role: { type: String, enum: ["owner", "admin", "member"], default: "member" },
-    joinedAt: { type: Date, default: Date.now }
+    status: {
+      type: String,
+      enum: ["active", "suspended", "removed"],
+      default: "active"
+    },
+    joinedAt: { type: Date, default: Date.now },
+    suspendedAt: { type: Date, default: null },
+    suspendedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
+    removedAt: { type: Date, default: null },
+    removedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null }
   }],
 
   // Default channels created with workspace

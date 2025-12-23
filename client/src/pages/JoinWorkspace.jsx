@@ -2,6 +2,9 @@ import React, { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { Users, CheckCircle, AlertCircle, Loader } from "lucide-react";
+import api from "../services/api";
+
+const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
 const JoinWorkspace = () => {
     const navigate = useNavigate();
@@ -24,7 +27,7 @@ const JoinWorkspace = () => {
         // Fetch workspace details
         const fetchDetails = async () => {
             try {
-                const response = await fetch(`/api/workspaces/invite/${token}`);
+                const response = await fetch(`${API_BASE}/api/workspaces/invite/${token}`);
 
                 if (!response.ok) {
                     const error = await response.json();
@@ -53,22 +56,9 @@ const JoinWorkspace = () => {
 
         setJoining(true);
         try {
-            const accessToken = localStorage.getItem('accessToken');
-            const response = await fetch('/api/workspaces/join', {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${accessToken}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ token })
-            });
+            const response = await api.post('/api/workspaces/join', { token });
 
-            if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.message || "Failed to join workspace");
-            }
-
-            const data = await response.json();
+            const data = response.data;
 
             // Store workspace ID and redirect to workspace home
             localStorage.setItem('currentWorkspace', data.workspace.id);
@@ -80,7 +70,8 @@ const JoinWorkspace = () => {
                 }
             });
         } catch (err) {
-            setError(err.message);
+            console.error('Join workspace error:', err);
+            setError(err.response?.data?.message || err.message || "Failed to join workspace");
             setJoining(false);
         }
     };

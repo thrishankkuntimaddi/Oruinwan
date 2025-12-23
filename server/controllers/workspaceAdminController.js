@@ -1,3 +1,7 @@
+const Workspace = require("../models/Workspace");
+const User = require("../models/User");
+const Channel = require("../models/Channel");
+
 /**
  * Revoke a pending workspace invite
  * POST /api/workspaces/:workspaceId/invites/:inviteId/revoke
@@ -138,6 +142,290 @@ exports.getWorkspaceInvites = async (req, res) => {
         });
     } catch (err) {
         console.error("GET WORKSPACE INVITES ERROR:", err);
+        return res.status(500).json({ message: "Server error" });
+    }
+};
+
+/**
+ * Resend a pending workspace invite
+ * POST /api/workspaces/:workspaceId/invites/:inviteId/resend
+ */
+exports.resendInvite = async (req, res) => {
+    try {
+        const { workspaceId, inviteId } = req.params;
+        const userId = req.user?.sub;
+
+        // Verify workspace exists
+        const workspace = await Workspace.findById(workspaceId);
+        if (!workspace) {
+            return res.status(404).json({ message: "Workspace not found" });
+        }
+
+        // 🔒 Only admins/owners can resend invites
+        const member = workspace.members.find(m => String(m.user) === String(userId));
+        if (!member || (member.role !== "admin" && member.role !== "owner")) {
+            return res.status(403).json({ message: "Only workspace admins can resend invites" });
+        }
+
+        // Find invite
+        const Invite = require("../models/Invite");
+        const invite = await Invite.findById(inviteId);
+
+        if (!invite) {
+            return res.status(404).json({ message: "Invite not found" });
+        }
+
+        // Verify invite belongs to this workspace
+        if (String(invite.workspace) !== String(workspaceId)) {
+            return res.status(403).json({ message: "Invite does not belong to this workspace" });
+        }
+
+        // Can only resend pending or expired invites
+        const now = new Date();
+        const isExpired = invite.expiresAt < now;
+
+        if (invite.status === "accepted") {
+            return res.status(400).json({ message: "Cannot resend an already accepted invite" });
+        }
+
+        if (invite.status === "revoked") {
+            return res.status(400).json({ message: "Cannot resend a revoked invite" });
+        }
+
+        // Generate new token and extend expiry
+        const crypto = require("crypto");
+        const sha256 = (v) => crypto.createHash("sha256").update(v).digest("hex");
+        const raw = crypto.randomBytes(32).toString("hex");
+        const tokenHash = sha256(raw);
+        const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+
+        // Update invite
+        invite.tokenHash = tokenHash;
+        invite.expiresAt = expiresAt;
+        invite.status = "pending"; // Reset to pending if expired
+        await invite.save();
+
+        const inviteLink = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/join-workspace?token=${raw}`;
+
+        // Send email
+        const sendEmail = require("../utils/sendEmail");
+        try {
+            await sendEmail({
+                to: invite.email,
+                subject: `Reminder: Join ${workspace.name} on Chttrix`,
+                html: `
+                    <h2>You've been invited to join ${workspace.name}!</h2>
+                    <p>This is a reminder invitation. Click the link below to accept:</p>
+                    <a href="${inviteLink}" style="display: inline-block; padding: 12px 24px; background-color: #2563eb; color: white; text-decoration: none; border-radius: 8px;">Join Workspace</a>
+                    <p style="margin-top: 20px; color: #666;">This link will expire in 7 days.</p>
+                `
+            });
+            console.log(`✅ Invitation resent to: ${invite.email}`);
+        } catch (e) {
+            console.warn("⚠️ SMTP not configured — Email not sent");
+            console.log('\n' + '='.repeat(80));
+            console.log('📧 RESENT WORKSPACE INVITATION LINK');
+            console.log('='.repeat(80));
+            console.log(`To: ${invite.email}`);
+            console.log(`Workspace: ${workspace.name}`);
+            console.log(`Role: ${invite.role}`);
+            console.log(`\nInvitation Link:`);
+            console.log(`👉 ${inviteLink}`);
+            console.log('\n' + '='.repeat(80) + '\n');
+        }
+
+        return res.json({
+            message: "Invite resent successfully",
+            invite: {
+                id: invite._id,
+                email: invite.email,
+                expiresAt: invite.expiresAt,
+                inviteLink
+            }
+        });
+    } catch (err) {
+        console.error("RESEND INVITE ERROR:", err);
+        return res.status(500).json({ message: "Server error" });
+    }
+};
+
+/**
+ * Suspend a workspace member
+ * POST /api/workspaces/:workspaceId/members/:userId/suspend
+ */
+exports.suspendMember = async (req, res) => {
+    try {
+        const { workspaceId, userId: targetUserId } = req.params;
+        const adminId = req.user?.sub;
+
+        // Get workspace
+        const workspace = await Workspace.findById(workspaceId);
+        if (!workspace) {
+            return res.status(404).json({ message: "Workspace not found" });
+        }
+
+        // 🔒 Only admins/owners can suspend members
+        const admin = workspace.members.find(m => String(m.user) === String(adminId));
+        if (!admin || (admin.role !== "admin" && admin.role !== "owner")) {
+            return res.status(403).json({ message: "Only workspace admins can suspend members" });
+        }
+
+        // Cannot suspend yourself
+        if (String(targetUserId) === String(adminId)) {
+            return res.status(400).json({ message: "You cannot suspend yourself" });
+        }
+
+        // Find target member
+        const targetMember = workspace.members.find(m => String(m.user) === String(targetUserId));
+        if (!targetMember) {
+            return res.status(404).json({ message: "User is not a member of this workspace" });
+        }
+
+        // Cannot suspend owner
+        if (targetMember.role === "owner") {
+            return res.status(403).json({ message: "Cannot suspend workspace owner" });
+        }
+
+        // Check if already suspended
+        if (targetMember.status === "suspended") {
+            return res.status(400).json({ message: "Member is already suspended" });
+        }
+
+        console.log(`⏸️ Suspending user ${targetUserId} in workspace ${workspaceId}`);
+
+        // Suspend member
+        targetMember.status = "suspended";
+        targetMember.suspendedAt = new Date();
+        targetMember.suspendedBy = adminId;
+        await workspace.save();
+
+        console.log(`✅ User ${targetUserId} suspended in workspace ${workspaceId}`);
+
+        return res.json({
+            message: "Member suspended successfully",
+            userId: targetUserId
+        });
+    } catch (err) {
+        console.error("SUSPEND MEMBER ERROR:", err);
+        return res.status(500).json({ message: "Server error" });
+    }
+};
+
+/**
+ * Restore a suspended workspace member
+ * POST /api/workspaces/:workspaceId/members/:userId/restore
+ */
+exports.restoreMember = async (req, res) => {
+    try {
+        const { workspaceId, userId: targetUserId } = req.params;
+        const adminId = req.user?.sub;
+
+        // Get workspace
+        const workspace = await Workspace.findById(workspaceId);
+        if (!workspace) {
+            return res.status(404).json({ message: "Workspace not found" });
+        }
+
+        // 🔒 Only admins/owners can restore members
+        const admin = workspace.members.find(m => String(m.user) === String(adminId));
+        if (!admin || (admin.role !== "admin" && admin.role !== "owner")) {
+            return res.status(403).json({ message: "Only workspace admins can restore members" });
+        }
+
+        // Find target member
+        const targetMember = workspace.members.find(m => String(m.user) === String(targetUserId));
+        if (!targetMember) {
+            return res.status(404).json({ message: "User is not a member of this workspace" });
+        }
+
+        // Check if not suspended
+        if (targetMember.status !== "suspended") {
+            return res.status(400).json({ message: "Member is not suspended" });
+        }
+
+        console.log(`▶️ Restoring user ${targetUserId} in workspace ${workspaceId}`);
+
+        // Restore member
+        targetMember.status = "active";
+        targetMember.suspendedAt = null;
+        targetMember.suspendedBy = null;
+        await workspace.save();
+
+        console.log(`✅ User ${targetUserId} restored in workspace ${workspaceId}`);
+
+        return res.json({
+            message: "Member restored successfully",
+            userId: targetUserId
+        });
+    } catch (err) {
+        console.error("RESTORE MEMBER ERROR:", err);
+        return res.status(500).json({ message: "Server error" });
+    }
+};
+
+/**
+ * Change a member's role
+ * POST /api/workspaces/:workspaceId/members/:userId/change-role
+ */
+exports.changeRole = async (req, res) => {
+    try {
+        const { workspaceId, userId: targetUserId } = req.params;
+        const { newRole } = req.body;
+        const adminId = req.user?.sub;
+
+        // Validate new role
+        if (!['member', 'admin'].includes(newRole)) {
+            return res.status(400).json({ message: "Invalid role. Must be 'member' or 'admin'" });
+        }
+
+        // Get workspace
+        const workspace = await Workspace.findById(workspaceId);
+        if (!workspace) {
+            return res.status(404).json({ message: "Workspace not found" });
+        }
+
+        // 🔒 Only admins/owners can change roles
+        const admin = workspace.members.find(m => String(m.user) === String(adminId));
+        if (!admin || (admin.role !== "admin" && admin.role !== "owner")) {
+            return res.status(403).json({ message: "Only workspace admins can change member roles" });
+        }
+
+        // Cannot change your own role
+        if (String(targetUserId) === String(adminId)) {
+            return res.status(400).json({ message: "You cannot change your own role" });
+        }
+
+        // Find target member
+        const targetMember = workspace.members.find(m => String(m.user) === String(targetUserId));
+        if (!targetMember) {
+            return res.status(404).json({ message: "User is not a member of this workspace" });
+        }
+
+        // Cannot change owner role
+        if (targetMember.role === "owner") {
+            return res.status(403).json({ message: "Cannot change workspace owner's role" });
+        }
+
+        // Check if already has this role
+        if (targetMember.role === newRole) {
+            return res.status(400).json({ message: `Member is already ${newRole}` });
+        }
+
+        console.log(`🔄 Changing user ${targetUserId} role from ${targetMember.role} to ${newRole} in workspace ${workspaceId}`);
+
+        // Change role
+        targetMember.role = newRole;
+        await workspace.save();
+
+        console.log(`✅ User ${targetUserId} role changed to ${newRole} in workspace ${workspaceId}`);
+
+        return res.json({
+            message: "Member role updated successfully",
+            userId: targetUserId,
+            newRole
+        });
+    } catch (err) {
+        console.error("CHANGE ROLE ERROR:", err);
         return res.status(500).json({ message: "Server error" });
     }
 };

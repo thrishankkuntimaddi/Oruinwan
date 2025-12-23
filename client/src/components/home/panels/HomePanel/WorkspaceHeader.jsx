@@ -28,9 +28,12 @@ const WorkspaceHeader = ({
     const navigate = useNavigate();
     const { activeWorkspace } = useWorkspace();
 
+
     // 🔒 Check if current user is admin/owner (using role from activeWorkspace)
     // The role field comes from the user's workspaces array and indicates current user's role
-    const isAdmin = activeWorkspace?.role === 'admin' || activeWorkspace?.role === 'owner';
+    const userRole = activeWorkspace?.role?.toLowerCase() || '';
+    const isAdmin = userRole === 'admin' || userRole === 'owner';
+
 
     return (
         <div className="h-12 flex items-center justify-between px-4 hover:bg-gray-100 transition-colors group relative select-none">
