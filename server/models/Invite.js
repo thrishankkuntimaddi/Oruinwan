@@ -44,7 +44,7 @@ const InviteSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 });
 
-InviteSchema.index({ tokenHash: 1 });
+// InviteSchema.index({ tokenHash: 1 }); // Redundant with unique: true
 InviteSchema.index({ email: 1 });
 InviteSchema.index({ workspace: 1, status: 1 });
 InviteSchema.index({ expiresAt: 1 }); // For cleanup jobs

@@ -1,5 +1,5 @@
 import React from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { ChevronDown, Settings2, SquarePen, UserPlus } from 'lucide-react';
 import { useWorkspace } from '../../../../contexts/WorkspaceContext';
 

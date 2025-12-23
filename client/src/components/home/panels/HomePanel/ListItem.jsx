@@ -1,9 +1,8 @@
 import React from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import { CheckSquare } from 'lucide-react';
 
 const ListItem = ({ item, isSelectionMode, selectedItems, setSelectedItems, toggleFavorite }) => {
-    const navigate = useNavigate();
     const location = useLocation();
     const currentPath = location.pathname;
 
