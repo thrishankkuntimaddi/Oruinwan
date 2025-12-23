@@ -20,17 +20,19 @@ export default function ContactsProvider({ children }) {
     }
   }, []);
 
-  const loadAllData = async () => {
+  const loadAllData = async (workspaceId) => {
     try {
       setLoading(true);
       setError(null);
 
       // Fetch channels and chat list in parallel
       const [channelsRes, chatListRes] = await Promise.all([
-        channelService.getMyChannels().catch(err => {
+        // Only fetch channels if workspaceId is provided
+        workspaceId ? channelService.getMyChannels(workspaceId).catch(err => {
           console.warn("Channels fetch failed:", err);
           return { data: { channels: [] } };
-        }),
+        }) : Promise.resolve({ data: { channels: [] } }),
+
         messageService.getChatList().catch(err => {
           console.warn("Chat list fetch failed:", err);
           return { data: { conversations: [] } };

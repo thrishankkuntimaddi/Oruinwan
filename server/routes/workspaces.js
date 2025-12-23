@@ -21,6 +21,9 @@ router.post("/join", auth, workspaceController.joinWorkspace);
 // Get workspace members (for DM filtering)
 router.get("/:workspaceId/members", auth, workspaceController.getWorkspaceMembers);
 
+// Get ALL workspace members including current user (for settings modal)
+router.get("/:workspaceId/all-members", auth, workspaceController.getAllWorkspaceMembers);
+
 // Get workspace channels
 router.get("/:workspaceId/channels", auth, workspaceController.getWorkspaceChannels);
 
@@ -44,6 +47,15 @@ router.post("/:workspaceId/remove-member", auth, workspaceAdminController.remove
 // 🔒 OWNER-ONLY: Delete workspace
 // IMPORTANT: This MUST come BEFORE GET /:companyId to avoid route conflicts
 router.delete("/:id", auth, workspaceController.deleteWorkspace);
+
+// 🔒 ADMIN/OWNER-ONLY: Rename workspace
+router.put("/:id/rename", auth, workspaceController.renameWorkspace);
+
+// 🔒 ADMIN/OWNER-ONLY: Update workspace settings
+router.put("/:id", auth, workspaceController.updateWorkspace);
+
+// Get workspace statistics
+router.get("/:id/stats", auth, workspaceController.getWorkspaceStats);
 
 // Get workspaces by company (legacy/company-specific)
 // This MUST be after /my, specific routes, and DELETE to avoid matching workspace IDs as companyId

@@ -6,6 +6,8 @@ import { useContacts } from "../../../../contexts/ContactsContext";
 import { useAuth } from "../../../../contexts/AuthContext";
 import { useToast } from "../../../../contexts/ToastContext";
 import { useUsers } from "../../../../hooks/useUsers";
+import { useWorkspace } from "../../../../contexts/WorkspaceContext";
+import api from "../../../../services/api";
 
 // Import sub-components
 import WorkspaceHeader from "./WorkspaceHeader";
@@ -19,9 +21,17 @@ import { CreateChannelModal, NewDMModal } from "./ChannelDMModals";
 const HomePanel = ({ title }) => {
     const navigate = useNavigate();
 
-    const { allItems: items, deleteItem, addItem, toggleFavorite } = useContacts();
+    const { allItems: items, deleteItem, addItem, toggleFavorite, refreshContacts } = useContacts();
     const { user } = useAuth();
     const { showToast } = useToast();
+    const { activeWorkspace } = useWorkspace();
+
+    // Refresh contacts (channels) when active workspace changes
+    React.useEffect(() => {
+        if (activeWorkspace?.id) {
+            refreshContacts(activeWorkspace.id);
+        }
+    }, [activeWorkspace?.id, refreshContacts]);
 
     // Fetch real users from API
     const { users } = useUsers(user?.companyId);
@@ -88,11 +98,32 @@ const HomePanel = ({ title }) => {
         setExpanded((prev) => ({ ...prev, [section]: !prev[section] }));
     };
 
-    const handleRename = () => {
-        if (newName.trim()) {
-            setWorkspaceName(newName);
+    const handleRename = async () => {
+        if (!newName.trim()) {
+            showToast("Workspace name cannot be empty", "error");
+            return;
+        }
+
+        if (!activeWorkspace?.id) {
+            showToast("No active workspace found", "error");
+            return;
+        }
+
+        try {
+            const response = await api.put(`/api/workspaces/${activeWorkspace.id}/rename`, {
+                name: newName.trim()
+            });
+
+            setWorkspaceName(newName.trim());
             setShowRenameModal(false);
             setNewName("");
+            showToast(response.data.message || "Workspace renamed successfully");
+
+            // Refresh the page to update workspace name everywhere
+            window.location.reload();
+        } catch (error) {
+            console.error("Error renaming workspace:", error);
+            showToast(error.response?.data?.message || "Failed to rename workspace", "error");
         }
     };
 
@@ -262,6 +293,7 @@ const HomePanel = ({ title }) => {
                 activeSettingsTab={activeSettingsTab}
                 setActiveSettingsTab={setActiveSettingsTab}
                 workspaceName={workspaceName}
+                setWorkspaceName={setWorkspaceName}
                 setShowDeleteConfirm={setShowDeleteConfirm}
             />
 

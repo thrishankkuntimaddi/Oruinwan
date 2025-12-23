@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import { useWorkspace } from "../../contexts/WorkspaceContext";
-import { Home, MessageSquare, CheckSquare, FileText, Newspaper, Hash } from "lucide-react";
+import { Home, MessageSquare, CheckSquare, FileText, Newspaper, Hash, Rocket, Briefcase, Zap, Palette, Microscope, Globe, Shield, TrendingUp, Lightbulb, Flame, Target, Trophy } from "lucide-react";
 
 const IconSidebar = ({ onProfileClick }) => {
     const navigate = useNavigate();
@@ -55,7 +55,25 @@ const IconSidebar = ({ onProfileClick }) => {
                     style={{ backgroundColor: activeWorkspace?.color || '#2563eb' }}
                     className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold text-xl cursor-pointer hover:opacity-90 transition-opacity shadow-sm relative"
                 >
-                    {activeWorkspace?.icon || '🚀'}
+                    {(() => {
+                        // Icon mapping for Lucide components
+                        const iconMap = {
+                            'rocket': <Rocket size={20} />,
+                            'briefcase': <Briefcase size={20} />,
+                            'zap': <Zap size={20} />,
+                            'palette': <Palette size={20} />,
+                            'microscope': <Microscope size={20} />,
+                            'globe': <Globe size={20} />,
+                            'shield': <Shield size={20} />,
+                            'trend': <TrendingUp size={20} />,
+                            'bulb': <Lightbulb size={20} />,
+                            'flame': <Flame size={20} />,
+                            'target': <Target size={20} />,
+                            'trophy': <Trophy size={20} />
+                        };
+                        const icon = activeWorkspace?.icon || 'rocket';
+                        return iconMap[icon] || iconMap['rocket'];
+                    })()}
                     <div className="absolute -bottom-1 -right-1 bg-white rounded-full p-0.5 border border-gray-200">
                         <svg className="w-2 h-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M19 9l-7 7-7-7" /></svg>
                     </div>
@@ -89,7 +107,23 @@ const IconSidebar = ({ onProfileClick }) => {
                                         style={{ backgroundColor: ws.color || '#2563eb' }}
                                         className="w-6 h-6 rounded text-white flex items-center justify-center text-xs font-bold"
                                     >
-                                        {ws.icon || '🚀'}
+                                        {(() => {
+                                            const iconMap = {
+                                                'rocket': <Rocket size={14} />,
+                                                'briefcase': <Briefcase size={14} />,
+                                                'zap': <Zap size={14} />,
+                                                'palette': <Palette size={14} />,
+                                                'microscope': <Microscope size={14} />,
+                                                'globe': <Globe size={14} />,
+                                                'shield': <Shield size={14} />,
+                                                'trend': <TrendingUp size={14} />,
+                                                'bulb': <Lightbulb size={14} />,
+                                                'flame': <Flame size={14} />,
+                                                'target': <Target size={14} />,
+                                                'trophy': <Trophy size={14} />
+                                            };
+                                            return iconMap[ws.icon] || iconMap['rocket'];
+                                        })()}
                                     </div>
                                     <span className="text-sm text-gray-700 font-medium">{ws.name}</span>
                                 </button>

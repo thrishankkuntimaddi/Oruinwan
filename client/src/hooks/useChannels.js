@@ -2,17 +2,23 @@
 import { useState, useEffect, useCallback } from 'react';
 import { channelService } from '../services/channelService';
 
-export const useChannels = () => {
+export const useChannels = (workspaceId) => {
     const [channels, setChannels] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
     const loadChannels = useCallback(async () => {
+        if (!workspaceId) {
+            console.warn('No workspaceId provided to useChannels hook');
+            setLoading(false);
+            return;
+        }
+
         try {
             setLoading(true);
             setError(null);
 
-            const response = await channelService.getMyChannels();
+            const response = await channelService.getMyChannels(workspaceId);
 
             // Transform to expected format
             const formattedChannels = response.data.channels.map(channel => ({
@@ -33,7 +39,7 @@ export const useChannels = () => {
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [workspaceId]);
 
     useEffect(() => {
         loadChannels();

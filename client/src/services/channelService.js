@@ -2,8 +2,8 @@
 import api from './api';
 
 export const channelService = {
-    // Get user's channels
-    getMyChannels: () => api.get('/api/channels/my'),
+    // Get user's channels for a specific workspace
+    getMyChannels: (workspaceId) => api.get(`/api/channels/my?workspaceId=${workspaceId}`),
 
     // Get all channels (workspace)
     getAllChannels: () => api.get('/api/chat/channels'),

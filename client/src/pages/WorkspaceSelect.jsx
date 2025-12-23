@@ -35,6 +35,8 @@ const WorkspaceSelect = () => {
             console.log('📋 Workspaces loaded:', response.data);
 
             if (response.data.workspaces && response.data.workspaces.length > 0) {
+                console.log('🎨 DEBUG - First workspace color:', response.data.workspaces[0]?.color);
+                console.log('🎨 DEBUG - First workspace full data:', response.data.workspaces[0]);
                 setWorkspaces(response.data.workspaces.map(ws => ({
                     id: ws.id,
                     name: ws.name,
@@ -85,7 +87,7 @@ const WorkspaceSelect = () => {
         setCreateData({
             name: "",
             adminName: "",
-            icon: "rocket", // Use lucide icon string
+            icon: "rocket",
             color: "#2563eb",
             invites: ""
         });
@@ -178,20 +180,20 @@ const WorkspaceSelect = () => {
     // However, since I am editing the function body here, I cannot add top-level imports easily without replacing the whole file header.
     // I will use another tool call to add imports.
 
-    // Changing the icons definition:
+    // Professional Lucide Icons
     const icons = [
-        { id: 'rocket', component: <Rocket /> },
-        { id: 'briefcase', component: <Briefcase /> },
-        { id: 'zap', component: <Zap /> },
-        { id: 'palette', component: <Palette /> },
-        { id: 'microscope', component: <Microscope /> },
-        { id: 'globe', component: <Globe /> },
-        { id: 'shield', component: <Shield /> },
-        { id: 'trend', component: <TrendingUp /> },
-        { id: 'bulb', component: <Lightbulb /> },
-        { id: 'flame', component: <Flame /> },
-        { id: 'target', component: <Target /> },
-        { id: 'trophy', component: <Trophy /> }
+        { id: 'rocket', component: <Rocket />, label: 'Rocket' },
+        { id: 'briefcase', component: <Briefcase />, label: 'Briefcase' },
+        { id: 'zap', component: <Zap />, label: 'Zap' },
+        { id: 'palette', component: <Palette />, label: 'Palette' },
+        { id: 'microscope', component: <Microscope />, label: 'Microscope' },
+        { id: 'globe', component: <Globe />, label: 'Globe' },
+        { id: 'shield', component: <Shield />, label: 'Shield' },
+        { id: 'trend', component: <TrendingUp />, label: 'Trending' },
+        { id: 'bulb', component: <Lightbulb />, label: 'Bulb' },
+        { id: 'flame', component: <Flame />, label: 'Flame' },
+        { id: 'target', component: <Target />, label: 'Target' },
+        { id: 'trophy', component: <Trophy />, label: 'Trophy' }
     ];
     const presetColors = ["#2563eb", "#9333ea", "#db2777", "#16a34a", "#ea580c", "#4f46e5", "#0891b2", "#be123c"];
 
@@ -521,8 +523,9 @@ const WorkspaceSelect = () => {
                                                             onClick={() => setCreateData({ ...createData, icon: item.id })}
                                                             className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-200 ${createData.icon === item.id
                                                                 ? "bg-white border-2 border-blue-500 text-blue-600 shadow-sm"
-                                                                : "bg-transparent border border-transparent text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+                                                                : "bg-transparent border border-gray-200 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
                                                                 }`}
+                                                            title={item.label}
                                                         >
                                                             {React.cloneElement(item.component, { size: 20 })}
                                                         </button>

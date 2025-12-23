@@ -14,6 +14,7 @@ const WorkspaceSchema = new mongoose.Schema({
   name: { type: String, required: true },
   description: { type: String, default: "" },
   icon: { type: String, default: "📁" }, // emoji or icon identifier
+  color: { type: String, default: "#2563eb" }, // workspace brand color
 
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
 
@@ -31,6 +32,9 @@ const WorkspaceSchema = new mongoose.Schema({
   settings: {
     isPrivate: { type: Boolean, default: false },
     allowMemberInvite: { type: Boolean, default: true },
+    allowMemberChannelCreation: { type: Boolean, default: true },
+    requireAdminApproval: { type: Boolean, default: false },
+    isDiscoverable: { type: Boolean, default: false },
     autoArchiveInactiveDays: { type: Number, default: 90 }
   },
 

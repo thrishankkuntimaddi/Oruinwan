@@ -36,6 +36,18 @@ exports.createWorkspace = async (req, res) => {
       }
     }
 
+    // Check if user already has a workspace with this name
+    const existingWorkspace = await Workspace.findOne({
+      name: name.trim(),
+      'members.user': userId
+    });
+
+    if (existingWorkspace) {
+      return res.status(400).json({
+        message: `You already have a workspace named "${name.trim()}". Please choose a different name.`
+      });
+    }
+
     // Create workspace with icon and color
     const workspace = await Workspace.create({
       company: companyId || null,
@@ -43,9 +55,7 @@ exports.createWorkspace = async (req, res) => {
       name: name.trim(),
       description: description || "",
       icon: icon || "🚀", // Default icon
-      metadata: {
-        color: color || "#2563eb" // Store color in metadata
-      },
+      color: color || "#2563eb", // Workspace brand color
       createdBy: userId,
       members: [{ user: userId, role: "owner" }],
       settings: {
@@ -105,7 +115,7 @@ exports.createWorkspace = async (req, res) => {
         name: workspace.name,
         type: workspace.type,
         icon: workspace.icon,
-        color: workspace.metadata?.color,
+        color: workspace.color || "#2563eb",
         defaultChannels: workspace.defaultChannels
       }
     });
@@ -126,7 +136,7 @@ exports.listMyWorkspaces = async (req, res) => {
 
     const user = await User.findById(userId).populate({
       path: 'workspaces.workspace',
-      select: 'name description icon color type company members defaultChannels'
+      select: '-__v'  // Select all fields except __v to ensure metadata is included
     });
 
     if (!user) {
@@ -145,7 +155,7 @@ exports.listMyWorkspaces = async (req, res) => {
         name: ws.workspace.name,
         description: ws.workspace.description,
         icon: ws.workspace.icon,
-        color: ws.workspace.metadata?.color || "#2563eb",
+        color: ws.workspace.color || "#2563eb",
         type: ws.workspace.type,
         role: ws.role,
         memberCount: ws.workspace.members?.length || 0,
@@ -364,7 +374,7 @@ exports.getInviteDetails = async (req, res) => {
       workspaceName: workspace.name,
       workspaceDescription: workspace.description,
       workspaceIcon: workspace.icon,
-      workspaceColor: workspace.metadata?.color,
+      workspaceColor: workspace.color || "#2563eb",
       invitedBy: invite.invitedBy ? invite.invitedBy.username : 'Someone',
       memberCount,
       role: invite.role
@@ -466,7 +476,7 @@ exports.joinWorkspace = async (req, res) => {
         id: workspace._id,
         name: workspace.name,
         icon: workspace.icon,
-        color: workspace.metadata?.color
+        color: workspace.color || "#2563eb"
       }
     });
   } catch (err) {
@@ -657,3 +667,215 @@ exports.createWorkspaceChannel = async (req, res) => {
   }
 };
 
+/**
+ * Get ALL workspace members including current user (for settings modal)
+ * GET /api/workspaces/:workspaceId/all-members
+ */
+exports.getAllWorkspaceMembers = async (req, res) => {
+  try {
+    const { workspaceId } = req.params;
+    const userId = req.user?.sub;
+
+    const workspace = await Workspace.findById(workspaceId).populate({
+      path: 'members.user',
+      select: 'username email profilePicture isOnline lastLoginAt'
+    });
+
+    if (!workspace) {
+      return res.status(404).json({ message: "Workspace not found" });
+    }
+
+    // Verify user is a member of this workspace
+    const isMember = workspace.members.some(m => String(m.user._id) === String(userId));
+    if (!isMember) {
+      return res.status(403).json({ message: "You are not a member of this workspace" });
+    }
+
+    // Return ALL members including current user
+    const members = workspace.members
+      .map(m => ({
+        id: m.user._id,
+        name: m.user.username,
+        email: m.user.email,
+        avatar: m.user.profilePicture,
+        status: m.user.isOnline ? 'online' : 'offline',
+        lastSeen: m.user.lastLoginAt,
+        role: m.role,
+        isCurrentUser: String(m.user._id) === String(userId)
+      }))
+      // Sort by role (owner first, then admin, then members) and then by name
+      .sort((a, b) => {
+        const roleOrder = { owner: 0, admin: 1, member: 2 };
+        const roleCompare = (roleOrder[a.role] || 2) - (roleOrder[b.role] || 2);
+        if (roleCompare !== 0) return roleCompare;
+        return a.name.localeCompare(b.name);
+      });
+
+    return res.json({ members });
+  } catch (err) {
+    console.error("GET ALL WORKSPACE MEMBERS ERROR:", err);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+
+/**
+ * Rename workspace (admin/owner only)
+ * PUT /api/workspaces/:id/rename
+ */
+exports.renameWorkspace = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name } = req.body;
+    const userId = req.user?.sub;
+
+    if (!name || !name.trim()) {
+      return res.status(400).json({ message: "Workspace name is required" });
+    }
+
+    const workspace = await Workspace.findById(id);
+    if (!workspace) {
+      return res.status(404).json({ message: "Workspace not found" });
+    }
+
+    // Check if user is admin or owner
+    const member = workspace.members.find(m => String(m.user) === String(userId));
+    if (!member || (member.role !== 'admin' && member.role !== 'owner')) {
+      return res.status(403).json({ message: "Only admins and owners can rename the workspace" });
+    }
+
+    // Check if user already has another workspace with this name
+    const existingWorkspace = await Workspace.findOne({
+      _id: { $ne: id }, // Exclude current workspace
+      name: name.trim(),
+      'members.user': userId
+    });
+
+    if (existingWorkspace) {
+      return res.status(400).json({
+        message: `You already have a workspace named "${name.trim()}". Please choose a different name.`
+      });
+    }
+
+    // Update workspace name
+    workspace.name = name.trim();
+    await workspace.save();
+
+    console.log(`✅ Workspace renamed to: ${workspace.name}`);
+
+    return res.json({
+      message: "Workspace renamed successfully",
+      workspace: {
+        id: workspace._id,
+        name: workspace.name
+      }
+    });
+  } catch (err) {
+    console.error("RENAME WORKSPACE ERROR:", err);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+
+
+/**
+ * Update workspace settings (admin/owner only)
+ * PUT /api/workspaces/:id
+ */
+exports.updateWorkspace = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { icon, description, settings } = req.body;
+    const userId = req.user?.sub;
+
+    const workspace = await Workspace.findById(id);
+    if (!workspace) {
+      return res.status(404).json({ message: "Workspace not found" });
+    }
+
+    // Check if user is admin or owner
+    const member = workspace.members.find(m => String(m.user) === String(userId));
+    if (!member || (member.role !== 'admin' && member.role !== 'owner')) {
+      return res.status(403).json({ message: "Only admins and owners can update workspace settings" });
+    }
+
+    // Update fields if provided
+    if (icon !== undefined) workspace.icon = icon;
+    if (req.body.color !== undefined) workspace.color = req.body.color;
+    if (description !== undefined) workspace.description = description;
+    if (settings) {
+      if (settings.allowMemberChannelCreation !== undefined) {
+        workspace.settings.allowMemberChannelCreation = settings.allowMemberChannelCreation;
+      }
+      if (settings.allowMemberInvite !== undefined) {
+        workspace.settings.allowMemberInvite = settings.allowMemberInvite;
+      }
+      if (settings.requireAdminApproval !== undefined) {
+        workspace.settings.requireAdminApproval = settings.requireAdminApproval;
+      }
+      if (settings.isDiscoverable !== undefined) {
+        workspace.settings.isDiscoverable = settings.isDiscoverable;
+      }
+    }
+
+    await workspace.save();
+
+    console.log(`✅ Workspace updated: ${workspace.name}`);
+
+    return res.json({
+      message: "Workspace updated successfully",
+      workspace: {
+        id: workspace._id,
+        name: workspace.name,
+        icon: workspace.icon,
+        description: workspace.description,
+        settings: workspace.settings
+      }
+    });
+  } catch (err) {
+    console.error("UPDATE WORKSPACE ERROR:", err);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+
+/**
+ * Get workspace statistics
+ * GET /api/workspaces/:id/stats
+ */
+exports.getWorkspaceStats = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user?.sub;
+
+    const workspace = await Workspace.findById(id).populate('createdBy', 'username email');
+    if (!workspace) {
+      return res.status(404).json({ message: "Workspace not found" });
+    }
+
+    // Verify user is a member
+    const isMember = workspace.members.some(m => String(m.user) === String(userId));
+    if (!isMember) {
+      return res.status(403).json({ message: "You are not a member of this workspace" });
+    }
+
+    // Get channel count
+    const channelCount = await Channel.countDocuments({ workspace: id });
+
+    // Get message count
+    const messageCount = await Message.countDocuments({ workspace: id });
+
+    return res.json({
+      memberCount: workspace.members.length,
+      channelCount,
+      messageCount,
+      createdAt: workspace.createdAt,
+      creator: {
+        username: workspace.createdBy?.username,
+        email: workspace.createdBy?.email
+      },
+      description: workspace.description,
+      settings: workspace.settings
+    });
+  } catch (err) {
+    console.error("GET WORKSPACE STATS ERROR:", err);
+    return res.status(500).json({ message: "Server error" });
+  }
+};

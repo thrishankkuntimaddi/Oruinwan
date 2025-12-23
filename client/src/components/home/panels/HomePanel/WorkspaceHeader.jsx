@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronDown, Settings2, SquarePen, UserPlus } from 'lucide-react';
+import { ChevronDown, Settings2, SquarePen, UserPlus, Settings, Edit3, LogOut, Rocket, Briefcase, Zap, Palette, Microscope, Globe, Shield, TrendingUp, Lightbulb, Flame, Target, Trophy } from 'lucide-react';
 import { useWorkspace } from '../../../../contexts/WorkspaceContext';
 
 /**
@@ -28,10 +28,9 @@ const WorkspaceHeader = ({
     const navigate = useNavigate();
     const { activeWorkspace } = useWorkspace();
 
-    // 🔒 Check if current user is admin/owner
-    const isAdmin = activeWorkspace?.members?.some(
-        m => m.role === 'admin' || m.role === 'owner'
-    ) || false;
+    // 🔒 Check if current user is admin/owner (using role from activeWorkspace)
+    // The role field comes from the user's workspaces array and indicates current user's role
+    const isAdmin = activeWorkspace?.role === 'admin' || activeWorkspace?.role === 'owner';
 
     return (
         <div className="h-12 flex items-center justify-between px-4 hover:bg-gray-100 transition-colors group relative select-none">
@@ -46,21 +45,6 @@ const WorkspaceHeader = ({
             </div>
 
             <div className="flex items-center gap-1">
-                {/* 👉 PRIMARY: Invite Button (Admin Only) */}
-                {isAdmin && (
-                    <button
-                        className="flex items-center gap-1 px-2.5 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
-                        title="Invite people to this workspace"
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            setShowInviteModal(true);
-                        }}
-                    >
-                        <UserPlus size={14} />
-                        <span>Invite</span>
-                    </button>
-                )}
-
                 <button
                     className={`text-gray-500 hover:bg-gray-200 p-2 rounded-full transition-colors ${isSelectionMode ? "bg-blue-100 text-blue-600" : ""}`}
                     title="Manage Chats"
@@ -84,12 +68,32 @@ const WorkspaceHeader = ({
                     <div className="absolute top-10 left-2 w-64 bg-white rounded-lg shadow-xl border border-gray-200 z-50 py-1 animate-fade-in origin-top-left">
                         <div className="px-4 py-3 border-b border-gray-100">
                             <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded bg-blue-600 text-white flex items-center justify-center font-bold text-lg">
-                                    {workspaceName.charAt(0)}
+                                <div
+                                    className="w-10 h-10 rounded-xl text-white flex items-center justify-center font-bold text-lg"
+                                    style={{ backgroundColor: activeWorkspace?.color || '#2563eb' }}
+                                >
+                                    {(() => {
+                                        const iconMap = {
+                                            'rocket': <Rocket size={20} />,
+                                            'briefcase': <Briefcase size={20} />,
+                                            'zap': <Zap size={20} />,
+                                            'palette': <Palette size={20} />,
+                                            'microscope': <Microscope size={20} />,
+                                            'globe': <Globe size={20} />,
+                                            'shield': <Shield size={20} />,
+                                            'trend': <TrendingUp size={20} />,
+                                            'bulb': <Lightbulb size={20} />,
+                                            'flame': <Flame size={20} />,
+                                            'target': <Target size={20} />,
+                                            'trophy': <Trophy size={20} />
+                                        };
+                                        // Get the icon string and render the corresponding component
+                                        const iconKey = activeWorkspace?.icon?.toLowerCase() || 'rocket';
+                                        return iconMap[iconKey] || <Rocket size={20} />;
+                                    })()}
                                 </div>
                                 <div className="flex-1 min-w-0">
                                     <div className="font-bold text-gray-900 truncate">{workspaceName}</div>
-                                    <div className="text-xs text-gray-500">cchtrix.com</div>
                                 </div>
                             </div>
                         </div>
@@ -100,21 +104,21 @@ const WorkspaceHeader = ({
                                     className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 flex items-center gap-2"
                                     onClick={() => { setShowInviteModal(true); setShowWorkspaceMenu(false); }}
                                 >
-                                    <span>👋</span> Invite people to {workspaceName}
+                                    <UserPlus size={16} /> Invite people to {workspaceName}
                                 </button>
                             )}
                             <button
                                 className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 flex items-center gap-2"
                                 onClick={() => { setShowSettingsModal(true); setShowWorkspaceMenu(false); }}
                             >
-                                <span>⚙️</span> Workspace Settings
+                                <Settings size={16} /> Workspace Settings
                             </button>
                             {isAdmin && (
                                 <button
                                     className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 flex items-center gap-2"
                                     onClick={() => { setShowRenameModal(true); setShowWorkspaceMenu(false); setNewName(workspaceName); }}
                                 >
-                                    <span>✏️</span> Rename Workspace
+                                    <Edit3 size={16} /> Rename Workspace
                                 </button>
                             )}
                         </div>
@@ -124,7 +128,7 @@ const WorkspaceHeader = ({
                                 className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
                                 onClick={() => navigate("/workspaces")}
                             >
-                                <span>🚪</span> Sign out of {workspaceName}
+                                <LogOut size={16} /> Sign out of {workspaceName}
                             </button>
                         </div>
                     </div>

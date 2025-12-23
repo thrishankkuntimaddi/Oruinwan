@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { useToast } from "../../../../contexts/ToastContext";
+import api from '../../../../services/api';
 
 const DeleteWorkspaceModal = ({
     showDeleteConfirm,
@@ -10,14 +11,13 @@ const DeleteWorkspaceModal = ({
     setDeleteVerification,
     setShowSettingsModal
 }) => {
-    const navigate = useNavigate();
     const { workspaceId } = useParams();
     const { showToast } = useToast();
     const [deleting, setDeleting] = useState(false);
 
     const handleDeleteWorkspace = async () => {
-        // Verify workspace name matches
-        if (deleteVerification !== workspaceName) {
+        // Verify workspace name matches (Case Insensitive)
+        if (deleteVerification.toLowerCase() !== workspaceName.toLowerCase()) {
             showToast('Workspace name does not match', 'error');
             return;
         }
@@ -25,38 +25,14 @@ const DeleteWorkspaceModal = ({
         setDeleting(true);
 
         try {
-            const token = localStorage.getItem('accessToken');
-
             console.log('=== DELETE WORKSPACE DEBUG ===');
             console.log('workspaceId from params:', workspaceId);
             console.log('workspaceName:', workspaceName);
             console.log('Full URL will be:', `/api/workspaces/${workspaceId}`);
 
-            const response = await fetch(`/api/workspaces/${workspaceId}`, {
-                method: 'DELETE',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                }
-            });
+            const response = await api.delete(`/api/workspaces/${workspaceId}`);
 
-            console.log('Delete response status:', response.status);
-
-            // Check if response is HTML (error page) instead of JSON
-            const contentType = response.headers.get('content-type');
-            if (contentType && contentType.includes('text/html')) {
-                const htmlText = await response.text();
-                console.error('Received HTML instead of JSON. First 200 chars:', htmlText.substring(0, 200));
-                throw new Error('Server error: The delete workspace endpoint is not responding correctly. Please check the server logs.');
-            }
-
-            if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.message || 'Failed to delete workspace');
-            }
-
-            const data = await response.json();
-            console.log('Delete successful:', data);
+            console.log('Delete successful:', response.data);
 
             // Success!
             showToast(`Workspace "${workspaceName}" has been deleted.`, 'success');
@@ -64,11 +40,11 @@ const DeleteWorkspaceModal = ({
             setShowSettingsModal(false);
             setDeleteVerification('');
 
-            // Redirect to workspaces list
-            navigate('/workspaces');
+            // Redirect to workspaces list - FORCE RELOAD to clear context
+            window.location.href = '/workspaces';
         } catch (err) {
             console.error('Delete workspace error:', err);
-            showToast(err.message || 'Failed to delete workspace', 'error');
+            showToast(err.response?.data?.message || err.message || 'Failed to delete workspace', 'error');
         } finally {
             setDeleting(false);
         }
@@ -97,7 +73,7 @@ const DeleteWorkspaceModal = ({
 
                 <div className="mb-8">
                     <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">
-                        To confirm, type <span className="text-gray-900 select-all">"{workspaceName}"</span> below:
+                        To confirm, type <span className="text-gray-900 select-all font-mono bg-gray-100 px-1 rounded">{workspaceName}</span> below:
                     </label>
                     <input
                         type="text"
@@ -118,8 +94,8 @@ const DeleteWorkspaceModal = ({
                     </button>
                     <button
                         onClick={handleDeleteWorkspace}
-                        disabled={deleteVerification !== workspaceName || deleting}
-                        className={`px-5 py-2.5 text-sm font-bold text-white rounded-xl shadow-md transition-all ${deleteVerification === workspaceName && !deleting
+                        disabled={deleteVerification.toLowerCase() !== workspaceName.toLowerCase() || deleting}
+                        className={`px-5 py-2.5 text-sm font-bold text-white rounded-xl shadow-md transition-all ${deleteVerification.toLowerCase() === workspaceName.toLowerCase() && !deleting
                             ? "bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700 hover:shadow-lg hover:scale-[1.02]"
                             : "bg-gray-300 cursor-not-allowed"
                             }`}

@@ -53,12 +53,26 @@ exports.createChannel = async (req, res) => {
 };
 
 /**
- * Get channels the user is a member of
+ * Get channels for a specific workspace that the user is a member of
+ * Query param: workspaceId (required)
  */
 exports.getMyChannels = async (req, res) => {
   try {
     const userId = req.user.sub;
-    const channels = await Channel.find({ members: userId }).select("-__v").lean();
+    const { workspaceId } = req.query;
+
+    if (!workspaceId) {
+      return res.status(400).json({ message: "Workspace ID is required" });
+    }
+
+    // Find channels that belong to the workspace AND where user is a member
+    const channels = await Channel.find({
+      workspace: workspaceId,
+      members: userId
+    })
+      .select("-__v")
+      .lean();
+
     return res.json({ channels });
   } catch (err) {
     console.error("GET MY CHANNELS ERROR:", err);

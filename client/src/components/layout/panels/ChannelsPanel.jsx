@@ -241,9 +241,7 @@ const ChannelsPanel = ({ title }) => {
                     )}
                     <span className="opacity-70 text-lg">#</span>
                     <span className="truncate text-sm font-medium">{item.label}</span>
-                    {item.isDefault && (
-                        <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full font-medium">Default</span>
-                    )}
+                    {/* Default badge removed */}
                 </div>
             </div>
         );
