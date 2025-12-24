@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Trash2, X } from 'lucide-react';
-import ConfirmationModal from "../../../modals/ConfirmationModal";
+import ConfirmationModal from "../../../ui/ConfirmationModal";
 import { useContacts } from "../../../../contexts/ContactsContext";
 import { useAuth } from "../../../../contexts/AuthContext";
 import { useToast } from "../../../../contexts/ToastContext";

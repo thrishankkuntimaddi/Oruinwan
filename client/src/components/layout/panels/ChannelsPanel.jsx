@@ -3,7 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { Plus, Hash, Search, Trash2, X, CheckSquare, Settings2 } from 'lucide-react';
 import { useWorkspace } from "../../../contexts/WorkspaceContext";
 import api from "../../../services/api";
-import ConfirmationModal from "../../modals/ConfirmationModal";
+import ConfirmationModal from "../../ui/ConfirmationModal";
 
 const ChannelsPanel = ({ title }) => {
     const navigate = useNavigate();

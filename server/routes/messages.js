@@ -3,6 +3,8 @@ const express = require("express");
 const router = express.Router();
 
 const requireAuth = require("../middleware/auth");
+const { upload } = require("../utils/fileUpload");
+
 const {
   sendDirectMessage,
   sendChannelMessage,
@@ -10,6 +12,31 @@ const {
   getChannelMessages,
   getWorkspaceDMList
 } = require("../controllers/messagesController");
+
+// -----------------------
+// FILE UPLOAD
+// -----------------------
+router.post("/upload", requireAuth, upload.array('files', 5), (req, res) => {
+  try {
+    if (!req.files || req.files.length === 0) {
+      return res.status(400).json({ message: "No files uploaded" });
+    }
+
+    // Return file URLs
+    const fileUrls = req.files.map(file => ({
+      filename: file.filename,
+      originalName: file.originalname,
+      mimetype: file.mimetype,
+      size: file.size,
+      url: `/uploads/${file.filename}`
+    }));
+
+    return res.json({ files: fileUrls });
+  } catch (err) {
+    console.error("File upload error:", err);
+    return res.status(500).json({ message: "File upload failed" });
+  }
+});
 
 // -----------------------
 // DIRECT MESSAGES (Workspace-scoped)

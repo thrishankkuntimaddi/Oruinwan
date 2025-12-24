@@ -98,11 +98,16 @@ exports.sendChannelMessage = async (req, res) => {
 
 // -----------------------------------------------------
 // GET DIRECT MESSAGES (conversation between 2 users)
+// WITH PAGINATION
 // -----------------------------------------------------
 exports.getDMs = async (req, res) => {
   try {
     const userId = req.user.sub;
     const { workspaceId, dmSessionId } = req.params;
+
+    // Pagination parameters
+    const limit = parseInt(req.query.limit) || 50;
+    const before = req.query.before; // Message ID to load messages before
 
     // Validate DMSession
     const dmSession = await DMSession.findById(dmSessionId);
@@ -113,12 +118,35 @@ exports.getDMs = async (req, res) => {
       return res.status(403).json({ message: "Not a participant in this DM" });
     }
 
-    const messages = await Message.find({ dm: dmSessionId })
-      .sort({ createdAt: 1 })
+    // Build query
+    let query = { dm: dmSessionId };
+
+    // If 'before' is specified, only get messages before that message's timestamp
+    if (before) {
+      const beforeMsg = await Message.findById(before);
+      if (beforeMsg) {
+        query.createdAt = { $lt: beforeMsg.createdAt };
+      }
+    }
+
+    const messages = await Message.find(query)
+      .sort({ createdAt: -1 }) // Get newest first
+      .limit(limit)
       .populate("sender", "username email profilePicture")
       .populate("threadParent");
 
-    return res.json({ messages });
+    // Reverse to get chronological order (oldest to newest)
+    messages.reverse();
+
+    // Check if there are more messages
+    const totalCount = await Message.countDocuments({ dm: dmSessionId });
+    const hasMore = messages.length === limit;
+
+    return res.json({
+      messages,
+      hasMore,
+      total: totalCount
+    });
   } catch (err) {
     console.error("GET DMs ERROR:", err);
     return res.status(500).json({ message: "Server error" });
@@ -126,12 +154,16 @@ exports.getDMs = async (req, res) => {
 };
 
 // -----------------------------------------------------
-// GET CHANNEL MESSAGES
+// GET CHANNEL MESSAGES WITH PAGINATION
 // -----------------------------------------------------
 exports.getChannelMessages = async (req, res) => {
   try {
     const userId = req.user.sub;
     const channelId = req.params.channelId;
+
+    // Pagination parameters
+    const limit = parseInt(req.query.limit) || 50;
+    const before = req.query.before; // Message ID to load messages before
 
     const channel = await Channel.findById(channelId);
     if (!channel)
@@ -146,10 +178,29 @@ exports.getChannelMessages = async (req, res) => {
     if (!isMember)
       return res.status(403).json({ message: "Not a channel member" });
 
-    const messages = await Message.find({ channel: channelId })
-      .sort({ createdAt: 1 })
+    // Build query
+    let query = { channel: channelId };
+
+    // If 'before' is specified, only get messages before that message's timestamp
+    if (before) {
+      const beforeMsg = await Message.findById(before);
+      if (beforeMsg) {
+        query.createdAt = { $lt: beforeMsg.createdAt };
+      }
+    }
+
+    const messages = await Message.find(query)
+      .sort({ createdAt: -1 }) // Get newest first
+      .limit(limit)
       .populate("sender", "username email profilePicture")
       .populate("threadParent");
+
+    // Reverse to get chronological order (oldest to newest)
+    messages.reverse();
+
+    // Check if there are more messages
+    const totalCount = await Message.countDocuments({ channel: channelId });
+    const hasMore = messages.length === limit;
 
     // Get user's join date for timeline marker
     const userJoinedAt = channel.getUserJoinDate(userId);
@@ -175,7 +226,13 @@ exports.getChannelMessages = async (req, res) => {
       })
     );
 
-    return res.json({ messages, userJoinedAt, channelMembers: populatedMembers });
+    return res.json({
+      messages,
+      userJoinedAt,
+      channelMembers: populatedMembers,
+      hasMore,
+      total: totalCount
+    });
   } catch (err) {
     console.error("GET CHANNEL ERROR:", err);
     return res.status(500).json({ message: "Server error" });

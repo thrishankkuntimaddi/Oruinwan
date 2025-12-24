@@ -70,6 +70,9 @@ mongoose
   .then(() => console.log("MongoDB Connected ✔"))
   .catch((err) => console.log("MongoDB Error ❌", err));
 
+// Serve uploaded files as static files
+app.use("/uploads", express.static(require("path").join(__dirname, "uploads")));
+
 // Routes
 app.use("/api/auth", require("./routes/auth"));
 app.use("/api/messages", require("./routes/messages"));

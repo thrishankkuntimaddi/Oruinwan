@@ -15,7 +15,7 @@ import {
   X,
   Trash2
 } from "lucide-react";
-import ConfirmationModal from "../../../modals/ConfirmationModal";
+import ConfirmationModal from "../../../ui/ConfirmationModal";
 
 export default function Header({
   chat,

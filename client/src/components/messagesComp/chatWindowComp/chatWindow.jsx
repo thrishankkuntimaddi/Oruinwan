@@ -37,6 +37,10 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
   const [channelMembersWithJoinDates, setChannelMembersWithJoinDates] = useState([]); // All members with join dates
   const pendingMessagesRef = useRef({});
 
+  // Pagination state
+  const [hasMore, setHasMore] = useState(true); // Are there more messages to load?
+  const [isLoadingMore, setIsLoadingMore] = useState(false); // Loading older messages?
+
   const [newMessage, setNewMessage] = useState("");
   const [showSearch, setShowSearch] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -184,11 +188,12 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
           // If it's a "new" DM, we don't have history yet (unless we check for existing session)
           if (chat.isNew) {
             setMessages([]);
+            setHasMore(false);
             return;
           }
-          url = `/api/messages/dm/${chat.workspaceId}/${chat.id}`;
+          url = `/api/messages/dm/${chat.workspaceId}/${chat.id}?limit=50`;
         } else {
-          url = `/api/messages/channel/${chat.id}`;
+          url = `/api/messages/channel/${chat.id}?limit=50`;
         }
 
         const res = await api.get(url);
@@ -207,6 +212,9 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
           setChannelMembersWithJoinDates(res.data.channelMembers);
         }
 
+        // Update pagination state
+        setHasMore(res.data.hasMore || false);
+
         if (!mounted) return;
         setMessages(loadedMessages);
 
@@ -222,6 +230,7 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
         console.error("Load messages error:", err);
         if (!mounted) return;
         setMessages([]);
+        setHasMore(false);
       }
     }
 
@@ -759,6 +768,44 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
   };
 
   /* ---------------------------------------------------------
+      LOAD MORE MESSAGES (Pagination)
+  --------------------------------------------------------- */
+  const loadMoreMessages = async () => {
+    if (!hasMore || isLoadingMore || messages.length === 0) return;
+
+    setIsLoadingMore(true);
+
+    try {
+      // Get the oldest message ID to use as 'before' parameter
+      const oldestMsg = messages[0];
+      const beforeId = oldestMsg.backend?._id || oldestMsg.id;
+
+      let url = "";
+      if (chat.type === "dm") {
+        url = `/api/messages/dm/${chat.workspaceId}/${chat.id}?limit=50&before=${beforeId}`;
+      } else {
+        url = `/api/messages/channel/${chat.id}?limit=50&before=${beforeId}`;
+      }
+
+      const res = await api.get(url);
+      const olderMessages = res.data.messages
+        .map(mapBackendMsgToUI)
+        .filter((m) => !m.hiddenFor.includes(String(currentUserIdRef.current)));
+
+      // Prepend older messages to the beginning
+      setMessages((prev) => [...olderMessages, ...prev]);
+      setHasMore(res.data.hasMore || false);
+
+      showToast(`Loaded ${olderMessages.length} older messages`, "success");
+    } catch (err) {
+      console.error("Load more messages error:", err);
+      showToast("Failed to load older messages", "error");
+    } finally {
+      setIsLoadingMore(false);
+    }
+  };
+
+  /* ---------------------------------------------------------
       RENDER
   --------------------------------------------------------- */
   return (
@@ -913,6 +960,10 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
             chatType={chat.type}
             userJoinedAt={userJoinedAt}
             channelMembersWithJoinDates={channelMembersWithJoinDates}
+            // Pagination
+            hasMore={hasMore}
+            isLoadingMore={isLoadingMore}
+            onLoadMore={loadMoreMessages}
           />
 
           {/* Selection Toolbar removed, moved to header */}

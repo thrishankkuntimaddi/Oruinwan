@@ -4,7 +4,7 @@ import { MessageCircle, Plus, Search, Trash2, X, Settings2, CheckSquare, Megapho
 import { useWorkspace } from "../../../contexts/WorkspaceContext";
 import NewDMModal from "../../messagesComp/NewDMModal";
 import BroadcastModal from "../../messagesComp/BroadcastModal";
-import ConfirmationModal from "../../modals/ConfirmationModal";
+import ConfirmationModal from "../../ui/ConfirmationModal";
 import api from "../../../services/api";
 
 const MessagesPanel = ({ title }) => {
