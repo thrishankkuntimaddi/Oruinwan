@@ -1,46 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
-import { Smile, MessageSquare, Share, MoreHorizontal, Pin, Copy, Trash2 } from "lucide-react";
+import { Smile, MessageSquare, Share, MoreHorizontal, Pin, Copy, Trash2, Info } from "lucide-react";
 import ReactionBadges from "./reactionBadges";
 import ReactionPicker from "./reactionPicker";
-
-/* ---------------------------------------------------------
-   🔵 Slack-style Read Receipts (✔✔ icons)
---------------------------------------------------------- */
-function ReadReceipts({ msg, currentUserId }) {
-    if (!msg.backend) return null;
-
-    const readBy = Array.isArray(msg.backend.readBy)
-        ? msg.backend.readBy.map(String)
-        : [];
-
-    // remove self
-    const others = readBy.filter((id) => id !== String(currentUserId));
-
-    if (others.length === 0) return null;
-
-    const display = others.slice(0, 3);
-    const overflow = others.length - display.length;
-
-    return (
-        <div className="flex items-center gap-1 mt-1">
-            {display.map((uid) => (
-                <div
-                    key={uid}
-                    className="h-4 w-4 rounded-full bg-gray-300 text-[10px] flex items-center justify-center border border-white"
-                    title="Read by user"
-                >
-                    ✔
-                </div>
-            ))}
-
-            {overflow > 0 && (
-                <div className="h-4 w-4 rounded-full bg-gray-200 text-[10px] px-1 flex items-center justify-center border border-white">
-                    +{overflow}
-                </div>
-            )}
-        </div>
-    );
-}
 
 /* ---------------------------------------------------------
    CHANNEL MessageItem Component (Slack Style)
@@ -52,7 +13,6 @@ export default function ChannelMessageItem({
     toggleSelect,
     openMsgMenuId,
     toggleMsgMenu,
-    reactions,
     formatTime,
     addReaction,
     pinMessage,
@@ -92,44 +52,68 @@ export default function ChannelMessageItem({
 
     return (
         <div
-            className={`group flex items-start gap-2 px-5 py-1.5 hover:bg-gray-50 relative transition-colors ${isSelected ? "bg-blue-50/50" : ""} ${msg.isPinned ? "bg-yellow-50 border-l-4 border-yellow-400" : "border-l-4 border-transparent"}`}
+            className={`group flex items-start gap-3 px-4 py-0.5 hover:bg-gray-50/50 relative ${isSelected ? "bg-blue-50/30" : ""} ${msg.isPinned ? "bg-yellow-50/50 border-l-2 border-yellow-400" : "border-l-2 border-transparent"}`}
             onMouseEnter={() => setShowToolbar(true)}
             onMouseLeave={() => setShowToolbar(false)}
         >
-            {/* Selection Checkbox */}
+            {/* Selection Checkbox (Slim) */}
             {selectMode && (
-                <div className="flex items-center justify-center pt-1 pr-2">
+                <div className="flex items-center justify-center pt-1 pr-1">
                     <input
                         type="checkbox"
                         checked={isSelected}
                         onChange={() => toggleSelect(msg.id)}
-                        className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        className="w-3.5 h-3.5 rounded-sm border-gray-300 text-blue-600 focus:ring-1 focus:ring-blue-500"
                     />
                 </div>
             )}
 
-            {/* Avatar */}
+            {/* Deleted Message State */}
+            {msg.deleted && (
+                <div
+                    className="group flex items-start gap-2 px-4 py-0.5 hover:bg-gray-50/50 relative"
+                    onMouseEnter={() => setShowToolbar(true)} // Re-using showToolbar for this context
+                    onMouseLeave={() => setShowToolbar(false)}
+                >
+                    <div className="flex-shrink-0 pt-1">
+                        <div className="w-7 h-7 rounded bg-gray-200 flex items-center justify-center text-[10px] text-gray-500">
+                            <Trash2 size={12} />
+                        </div>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                        <div className="text-gray-400 text-xs italic py-1">
+                            Message deleted by {msg.deletedByName || "Unknown"}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Avatar (Shrunk) */}
             <div className="flex-shrink-0 pt-0.5">
                 {avatarUrl ? (
-                    <img src={avatarUrl} alt={msg.senderName} className="w-8 h-8 rounded-md object-cover" />
+                    <img src={avatarUrl} alt={msg.senderName} className="w-7 h-7 rounded object-cover" />
                 ) : (
-                    <div className={`w-8 h-8 rounded-md flex items-center justify-center text-xs font-bold text-white ${isMe ? "bg-blue-500" : "bg-gray-400"}`}>
+                    <div className={`w-7 h-7 rounded flex items-center justify-center text-[10px] font-medium text-white ${isMe ? "bg-blue-500/80" : "bg-gray-400/80"}`}>
                         {initial}
                     </div>
                 )}
             </div>
 
-            {/* Content */}
-            <div className="flex-1 min-w-0 group-hover:pr-20">
-                {/* Header: Name + Time */}
-                <div className="flex items-baseline gap-2">
-                    <span className="font-bold text-gray-900 text-sm">{msg.senderName || "Unknown"}</span>
-                    <span className="text-[10px] text-gray-500 hover:underline cursor-pointer">{formatTime(msg.ts)}</span>
-                    {msg.isPinned && <Pin size={12} className="text-gray-400 rotate-45" />}
+            {/* Content (Tightened) */}
+            <div className="flex-1 min-w-0 group-hover:pr-24 relative">
+                {/* Header: Name + Pin */}
+                <div className="flex items-center gap-2 mb-0">
+                    <span className="font-semibold text-gray-900 text-sm leading-tight">{msg.senderName || "Unknown"}</span>
+                    {msg.isPinned && <Pin size={10} className="text-gray-400 rotate-45" />}
                 </div>
 
-                {/* Message Text */}
-                <div className="text-gray-800 text-sm leading-relaxed whitespace-pre-wrap break-words">
+                {/* Timestamp - Positioned at the far right edge */}
+                <span className="absolute top-1 right-4 text-[10px] text-gray-400 select-none">
+                    {formatTime(msg.ts)}
+                </span>
+
+                {/* Message Text (More compact line height) */}
+                <div className="text-gray-800 text-[14px] leading-snug whitespace-pre-wrap break-words">
                     {msg.text}
                 </div>
 
@@ -138,9 +122,9 @@ export default function ChannelMessageItem({
                 {msg.failed && <div className="text-xs text-red-500 font-medium mt-1">Failed to send</div>}
 
                 {/* Reactions */}
-                {reactions[msg.id] && (
+                {msg.reactions && msg.reactions.length > 0 && (
                     <div className="mt-1">
-                        <ReactionBadges reactions={reactions[msg.id]} />
+                        <ReactionBadges reactions={msg.reactions} />
                     </div>
                 )}
 
@@ -163,21 +147,20 @@ export default function ChannelMessageItem({
                     </div>
                 )}
 
-                {/* Read Receipts (My messages only) */}
-                {isMe && <ReadReceipts msg={msg} currentUserId={currentUserId} />}
+
             </div>
 
-            {/* Hover Toolbar */}
-            <div className={`absolute -top-3 right-4 bg-white border border-gray-200 shadow-sm rounded-lg p-0.5 flex items-center gap-0.5 transition-opacity duration-200 ${showToolbar || openMsgMenuId === msg.id || showReactionPicker ? "opacity-100 visible" : "opacity-0 invisible"}`}>
+            {/* Minimalist Hover Toolbar - Vertically aligned in the row, left of timestamp */}
+            <div className={`absolute top-0.5 right-24 bg-white border border-gray-100 shadow-sm rounded p-0.5 flex items-center z-10 ${showToolbar || openMsgMenuId === msg.id || showReactionPicker ? "opacity-100" : "opacity-0 invisible"}`}>
 
                 {/* Reaction Picker Trigger */}
                 <div className="relative" ref={reactionPickerRef}>
                     <button
                         onClick={() => setShowReactionPicker(!showReactionPicker)}
-                        className={`p-1.5 rounded-md transition-colors ${showReactionPicker ? "bg-gray-100 text-gray-700" : "text-gray-500 hover:bg-gray-100 hover:text-gray-700"}`}
-                        title="Add reaction"
+                        className={`p-1 rounded hover:bg-gray-100 ${showReactionPicker ? "text-blue-600" : "text-gray-400"}`}
+                        title="React"
                     >
-                        <Smile size={16} />
+                        <Smile size={14} />
                     </button>
                     {showReactionPicker && (
                         <div className="absolute right-0 top-full mt-1 z-50">
@@ -191,11 +174,12 @@ export default function ChannelMessageItem({
                     )}
                 </div>
 
-                <button onClick={() => onOpenThread && onOpenThread(msg.id)} className="p-1.5 text-gray-500 hover:bg-gray-100 hover:text-gray-700 rounded-md transition-colors" title="Reply in thread"><MessageSquare size={16} /></button>
-                <button onClick={() => forwardMessage(msg.id)} className="p-1.5 text-gray-500 hover:bg-gray-100 hover:text-gray-700 rounded-md transition-colors" title="Forward"><Share size={16} /></button>
+                <button onClick={() => onOpenThread && onOpenThread(msg.id)} className="p-1 text-gray-400 hover:bg-gray-100 rounded" title="Thread"><MessageSquare size={14} /></button>
+                <button onClick={() => forwardMessage(msg.id)} className="p-1 text-gray-400 hover:bg-gray-100 rounded" title="Forward"><Share size={14} /></button>
+                <button onClick={() => infoMessage(msg.id)} className="p-1 text-gray-400 hover:bg-gray-100 rounded" title="Message Info"><Info size={14} /></button>
 
                 <div className="relative">
-                    <button onClick={(e) => toggleMsgMenu(e, msg.id)} className={`p-1.5 rounded-md transition-colors ${openMsgMenuId === msg.id ? "bg-gray-100 text-gray-900" : "text-gray-500 hover:bg-gray-100 hover:text-gray-700"}`} title="More actions"><MoreHorizontal size={16} /></button>
+                    <button onClick={(e) => toggleMsgMenu(e, msg.id)} className={`p-1 rounded ${openMsgMenuId === msg.id ? "bg-gray-100 text-gray-900" : "text-gray-400 hover:bg-gray-100"}`} title="More"><MoreHorizontal size={14} /></button>
                     {openMsgMenuId === msg.id && (
                         <div className="absolute right-0 top-full mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-xl py-1 z-50 text-sm animate-fade-in">
                             <button onClick={() => { copyMessage(msg.id); toggleMsgMenu({ stopPropagation: () => { } }, null); }} className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2"><Copy size={14} /> Copy text</button>

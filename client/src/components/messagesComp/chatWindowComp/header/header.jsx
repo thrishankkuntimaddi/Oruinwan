@@ -51,19 +51,21 @@ export default function Header({
   };
 
   return (
-    <div className="flex items-center justify-between px-4 py-2 border-b bg-[#f9fafb] relative z-20">
-      <div className="flex items-center gap-3 min-w-0">
+    <div className="flex items-center justify-between px-3 py-1.5 border-b border-gray-100 bg-white relative z-20">
+      <div className="flex items-center gap-2 min-w-0">
         {chat.image ? (
-          <img src={chat.image} alt={chat.name} className="w-10 h-10 rounded-full object-cover" />
+          <img src={chat.image} alt={chat.name} className="w-8 h-8 rounded object-cover shadow-sm bg-gray-50" />
         ) : (
-          <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-600">
+          <div className="w-8 h-8 rounded bg-gray-100 flex items-center justify-center text-gray-500 font-medium text-xs">
             {chat.name?.charAt(0)?.toUpperCase() ?? "?"}
           </div>
         )}
 
         <div className="min-w-0">
-          <div className="text-base font-medium truncate">{chat.name}</div>
-          <div className="text-xs text-gray-500 truncate">{chat.status}</div>
+          <div className="text-sm font-semibold truncate text-gray-800">{chat.name}</div>
+          <div className="text-[10px] text-gray-400 truncate flex items-center gap-1">
+            {chat.status}
+          </div>
         </div>
       </div>
 
@@ -85,15 +87,15 @@ export default function Header({
 
       {/* Normal Actions (Hidden in Select Mode) */}
       {!selectMode && (
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-0.5">
           {/* Channel Specific Actions */}
           {chat.type === "channel" && (
             <>
-              <button title="Start Meeting" className="p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-700 rounded-md transition-colors">
-                <Video size={20} />
+              <button title="Meeting" className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded transition-colors">
+                <Video size={16} />
               </button>
-              <button title="Create Poll" className="p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-700 rounded-md transition-colors">
-                <BarChart2 size={20} />
+              <button title="Poll" className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded transition-colors">
+                <BarChart2 size={16} />
               </button>
             </>
           )}
@@ -101,11 +103,11 @@ export default function Header({
           {/* DM Specific Actions */}
           {chat.type === "dm" && (
             <>
-              <button title="Voice Call" onClick={() => showToast && showToast("Voice Call coming soon!", "info")} className="p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-700 rounded-md transition-colors">
-                <Phone size={20} />
+              <button title="Voice" onClick={() => showToast && showToast("Voice Call coming soon!", "info")} className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded transition-colors">
+                <Phone size={16} />
               </button>
-              <button title="Video Call" onClick={() => showToast && showToast("Video Call coming soon!", "info")} className="p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-700 rounded-md transition-colors">
-                <Video size={20} />
+              <button title="Video" onClick={() => showToast && showToast("Video Call coming soon!", "info")} className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded transition-colors">
+                <Video size={16} />
               </button>
             </>
           )}
@@ -118,27 +120,26 @@ export default function Header({
                 setShowSearch((s) => !s);
                 setShowMenu(false);
               }}
-              className="p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-700 rounded-md transition-colors"
-              title="Search messages"
+              className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded transition-colors"
+              title="Search"
             >
-              <Search size={20} />
+              <Search size={16} />
             </button>
 
             {showSearch && (
-              <div onClick={(e) => e.stopPropagation()} className="absolute right-0 mt-2 w-72 bg-white border border-gray-200 rounded-lg shadow-xl p-3 z-50 animate-fade-in">
+              <div onClick={(e) => e.stopPropagation()} className="absolute right-0 mt-2 w-64 bg-white border border-gray-100 shadow-md rounded-lg p-2 z-50 animate-fade-in">
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-                    <Search size={14} />
+                  <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400">
+                    <Search size={12} />
                   </span>
                   <input
-                    className="w-full pl-9 pr-3 py-2 bg-gray-50 border border-gray-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
-                    placeholder="Search in conversation..."
+                    className="w-full pl-8 pr-2 py-1.5 bg-gray-50 border border-gray-200 rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    placeholder="Search..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     autoFocus
                   />
                 </div>
-                <p className="text-xs text-gray-400 mt-2 text-right">Press Esc to close</p>
               </div>
             )}
           </div>
@@ -150,10 +151,10 @@ export default function Header({
                 e.stopPropagation();
                 setShowMenu((s) => !s);
               }}
-              className="p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-700 rounded-md transition-colors"
-              title="More options"
+              className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded transition-colors"
+              title="Options"
             >
-              <MoreVertical size={20} />
+              <MoreVertical size={16} />
             </button>
 
             {showMenu && (

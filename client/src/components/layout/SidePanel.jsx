@@ -126,6 +126,7 @@ export const ChannelList = () => {
             {/* Modals */}
             {showCreateChannelModal && (
                 <CreateChannelModal
+                    workspaceId={workspaceId}
                     onClose={() => setShowCreateChannelModal(false)}
                     onCreated={(channel) => {
                         // Navigate to new channel with workspace context

@@ -3,6 +3,7 @@
 import React, { useEffect, useRef } from "react";
 import { groupByDate } from "../helpers/helpers";
 import MessageGroup from "./messageGroup";
+import JoinMarker from "./JoinMarker";
 
 export default function MessagesContainer({
   messages,
@@ -16,7 +17,6 @@ export default function MessagesContainer({
   selectedIds,
   toggleSelect,
 
-  reactions,
   formatTime,
   addReaction,
   pinMessage,
@@ -30,6 +30,7 @@ export default function MessagesContainer({
   onOpenThread, // ★ THREAD PANEL
   threadCounts, // ★ THREAD COUNTS
   chatType,
+  userJoinedAt, // For channel join timeline marker
 }) {
   const messagesRef = useRef(null);
 
@@ -70,36 +71,45 @@ export default function MessagesContainer({
           {/* --- Messages in Group --- */}
           <div className="space-y-3">
             {grp.items
-              .map((msg) => (
-                <MessageGroup
-                  key={msg.id}
+              .map((msg, idx) => {
+                const prevMsg = grp.items[idx - 1];
+                const shouldShowJoinMarker =
+                  userJoinedAt &&
+                  chatType === 'channel' &&
+                  !prevMsg && // First message in group
+                  new Date(msg.ts) > new Date(userJoinedAt);
 
-                  msg={msg}
+                return (
+                  <React.Fragment key={msg.id}>
+                    {shouldShowJoinMarker && <JoinMarker date={userJoinedAt} />}
+                    <MessageGroup
+                      msg={msg}
 
-                  selectMode={selectMode}
-                  selectedIds={selectedIds}
-                  toggleSelect={toggleSelect}
+                      selectMode={selectMode}
+                      selectedIds={selectedIds}
+                      toggleSelect={toggleSelect}
 
-                  openMsgMenuId={openMsgMenuId}
-                  toggleMsgMenu={toggleMsgMenu}
-                  setOpenMsgMenuId={setOpenMsgMenuId}
+                      openMsgMenuId={openMsgMenuId}
+                      toggleMsgMenu={toggleMsgMenu}
+                      setOpenMsgMenuId={setOpenMsgMenuId}
 
-                  reactions={reactions}
-                  formatTime={formatTime}
-                  addReaction={addReaction}
-                  pinMessage={pinMessage}
-                  replyToMessage={replyToMessage}
-                  forwardMessage={forwardMessage}
-                  copyMessage={copyMessage}
-                  deleteMessage={deleteMessage}
-                  infoMessage={infoMessage}
+                      formatTime={formatTime}
+                      addReaction={addReaction}
+                      pinMessage={pinMessage}
+                      replyToMessage={replyToMessage}
+                      forwardMessage={forwardMessage}
+                      copyMessage={copyMessage}
+                      deleteMessage={deleteMessage}
+                      infoMessage={infoMessage}
 
-                  currentUserId={currentUserId} // ★ PASS DOWN FOR READ RECEIPTS
-                  onOpenThread={onOpenThread} // ★ THREAD PANEL
-                  threadCounts={threadCounts} // ★ THREAD COUNTS
-                  chatType={chatType}
-                />
-              ))}
+                      currentUserId={currentUserId} // ★ PASS DOWN FOR READ RECEIPTS
+                      onOpenThread={onOpenThread} // ★ THREAD PANEL
+                      threadCounts={threadCounts} // ★ THREAD COUNTS
+                      chatType={chatType}
+                    />
+                  </React.Fragment>
+                );
+              })}
           </div>
         </div>
       ))}

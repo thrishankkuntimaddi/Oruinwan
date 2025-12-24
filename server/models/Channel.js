@@ -15,8 +15,11 @@ const ChannelSchema = new mongoose.Schema({
 
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
 
-  // Members (for private channels or explicit membership)
-  members: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+  // Members with join tracking
+  members: [{
+    user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+    joinedAt: { type: Date, default: Date.now }
+  }],
 
   // Activity tracking
   lastMessageAt: { type: Date, default: null },
@@ -38,7 +41,23 @@ ChannelSchema.index({ members: 1 });
 // Helper to check if user is member
 ChannelSchema.methods.isMember = function (userId) {
   if (!this.isPrivate || this.isDefault) return true; // public channels
-  return this.members.some(m => m.toString() === userId.toString());
+
+  // Handle both old format (ObjectId) and new format ({ user, joinedAt })
+  return this.members.some(m => {
+    const memberId = m.user ? m.user.toString() : m.toString();
+    return memberId === userId.toString();
+  });
+};
+
+// Helper to get user's join date
+ChannelSchema.methods.getUserJoinDate = function (userId) {
+  const member = this.members.find(m => {
+    const memberId = m.user ? m.user.toString() : m.toString();
+    return memberId === userId.toString();
+  });
+
+  // Return joinedAt if new format, otherwise return channel creation date
+  return member?.joinedAt || this.createdAt;
 };
 
 module.exports = mongoose.model("Channel", ChannelSchema);

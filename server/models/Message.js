@@ -21,6 +21,17 @@ const MessageSchema = new mongoose.Schema({
   threadParent: { type: mongoose.Schema.Types.ObjectId, ref: "Message", default: null },
   reactions: [ReactionSchema],
   readBy: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+
+  // Pinning
+  isPinned: { type: Boolean, default: false },
+  pinnedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
+  pinnedAt: { type: Date, default: null },
+
+  // Deletion tracking
+  deletedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
+  deletedAt: { type: Date, default: null },
+  isDeletedUniversally: { type: Boolean, default: false },
+  hiddenFor: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }], // Local deletions only
 }, { timestamps: true });
 
 MessageSchema.index({ company: 1, channel: 1, createdAt: -1 });

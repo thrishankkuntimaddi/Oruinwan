@@ -10,6 +10,7 @@ import ContactShareModal from "./modals/contactShareModal.jsx";
 import Toast from "../../ui/Toast.jsx";
 import ForwardMessageModal from "./modals/ForwardMessageModal.jsx";
 import ChannelManagementModal from "../ChannelManagementModal.jsx";
+import MessageInfoModal from "./modals/MessageInfoModal.jsx";
 
 
 import ThreadPanel from "./ThreadPanel.jsx";
@@ -20,7 +21,7 @@ import FooterInput from "./footer/footerInput.jsx";
 import { pickFile, formatTime as fmtTime } from "./helpers/helpers.js";
 
 import { io } from "socket.io-client";
-import axios from "axios";
+import api from "../../../services/api";
 import { jwtDecode } from "jwt-decode";
 import { useAuth } from "../../../contexts/AuthContext";
 
@@ -32,6 +33,7 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
       STATE
   --------------------------------------------------------- */
   const [messages, setMessages] = useState([]);
+  const [userJoinedAt, setUserJoinedAt] = useState(null); // For channel join timeline marker
   const pendingMessagesRef = useRef({});
 
   const [newMessage, setNewMessage] = useState("");
@@ -55,6 +57,8 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
   const [showContactInfo, setShowContactInfo] = useState(false);
   const [showContactShare, setShowContactShare] = useState(false);
   const [channelManagementTab, setChannelManagementTab] = useState(null); // null, "members", "settings"
+  const [inspectedMessage, setInspectedMessage] = useState(null);
+  const [workspaceMembers, setWorkspaceMembers] = useState([]);
   const [toast, setToast] = useState({ message: "", type: "success", visible: false });
 
   const showToast = (message, type = "success") => {
@@ -69,7 +73,7 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
   const [threadCounts, setThreadCounts] = useState({});
 
   const [openMsgMenuId, setOpenMsgMenuId] = useState(null);
-  const [reactions, setReactions] = useState({});
+  // Reactions state removed - now handled via socket events in real-time
 
   const socketRef = useRef(null);
   const typingTimeoutRef = useRef(null);
@@ -102,12 +106,27 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
     return {
       id: m._id,
       sender: me ? "you" : "them",
+      senderId,
       senderName: senderObj.username || (me ? "You" : "Unknown"),
       senderAvatar: senderObj.profilePicture || null,
       text: m.text || "",
       ts: m.createdAt,
       repliedToId: m.threadParent?._id || m.threadParent || null,
+
+      // Reactions
+      reactions: m.reactions || [],
+
+      // Pinning
       isPinned: m.isPinned || false,
+      pinnedBy: m.pinnedBy || null,
+      pinnedAt: m.pinnedAt || null,
+
+      // Deletion
+      isDeletedUniversally: m.isDeletedUniversally || false,
+      deletedBy: m.deletedBy || null,
+      deletedAt: m.deletedAt || null,
+      hiddenFor: m.hiddenFor || [],
+
       backend: m,
     };
   };
@@ -117,14 +136,30 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
   /* ---------------------------------------------------------
       LOAD CURRENT USER FROM TOKEN
   --------------------------------------------------------- */
-  useEffect(() => {
-    const t = getAccessToken();
-    if (!t) return;
+  const fetchWorkspaceMembers = async () => {
+    try {
+      if (!chat || !chat.workspaceId) return;
+      const res = await api.get(`/api/workspaces/${chat.workspaceId}/all-members`);
+      setWorkspaceMembers(res.data.members || []);
+    } catch (err) {
+      console.error("Fetch workspace members failed:", err);
+    }
+  };
 
+  useEffect(() => {
+    fetchWorkspaceMembers();
+  }, [chat?.workspaceId]);
+
+  /* ---------------------------------------------------------
+      LOAD CURRENT USER FROM TOKEN
+  --------------------------------------------------------- */
+  useEffect(() => {
+    // Use context token OR fallback to localStorage
+    const t = accessToken || localStorage.getItem("accessToken");
+    if (!t) return;
     try {
       const d = jwtDecode(t);
-      currentUserIdRef.current =
-        d.sub || d.id || d.userId || null;
+      currentUserIdRef.current = d.sub || d.id || d.userId || null;
     } catch { }
   }, []);
 
@@ -132,14 +167,17 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
       LOAD CHAT HISTORY
   --------------------------------------------------------- */
   useEffect(() => {
-    if (!chat || !accessToken) return;
+    if (!chat) return;
+
+    // CRITICAL FIX: Get token from context OR fallback to localStorage
+    // This prevents race condition on page refresh when AuthContext is still initializing
+    const token = accessToken || localStorage.getItem("accessToken");
+    if (!token) return;
 
     let mounted = true;
 
     async function loadMessages() {
       try {
-        const headers = { Authorization: `Bearer ${accessToken}` };
-
         let url = "";
         if (chat.type === "dm") {
           // If it's a "new" DM, we don't have history yet (unless we check for existing session)
@@ -147,13 +185,21 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
             setMessages([]);
             return;
           }
-          url = `${API_BASE}/api/messages/dm/${chat.workspaceId}/${chat.id}`;
+          url = `/api/messages/dm/${chat.workspaceId}/${chat.id}`;
         } else {
-          url = `${API_BASE}/api/messages/channel/${chat.id}`;
+          url = `/api/messages/channel/${chat.id}`;
         }
 
-        const res = await axios.get(url, { headers });
-        let loadedMessages = res.data.messages.map(mapBackendMsgToUI);
+        const res = await api.get(url);
+        let loadedMessages = res.data.messages
+          .map(mapBackendMsgToUI)
+          // Filter out messages that are hidden for this user
+          .filter((m) => !m.hiddenFor.includes(String(currentUserIdRef.current)));
+
+        // Store user's join date for timeline marker (channels only)
+        if (chat.type === "channel" && res.data.userJoinedAt) {
+          setUserJoinedAt(res.data.userJoinedAt);
+        }
 
         if (!mounted) return;
         setMessages(loadedMessages);
@@ -175,7 +221,7 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
 
     loadMessages();
     return () => (mounted = false);
-  }, [chat, connected, accessToken]);
+  }, [chat, connected, accessToken]); // Note: We keep accessToken in deps to re-run when context updates
 
   /* ---------------------------------------------------------
       OUTSIDE CLICK HANDLER
@@ -200,10 +246,14 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
       SOCKET SETUP
   --------------------------------------------------------- */
   useEffect(() => {
-    if (!accessToken) return;
+    if (!chat) return;
+
+    // Use context token OR fallback to localStorage for socket auth
+    const token = accessToken || localStorage.getItem("accessToken");
+    if (!token) return;
 
     const socket = io(API_BASE, {
-      auth: { token: accessToken },
+      auth: { token },
       transports: ["websocket"],
     });
 
@@ -313,6 +363,66 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
         ...prev,
         [parentId]: (prev[parentId] || 0) + 1,
       }));
+    });
+
+    /* --- REACTIONS --- */
+    socket.on("reaction-added", ({ messageId, userId, emoji, reactions }) => {
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === messageId ? { ...m, reactions } : m
+        )
+      );
+    });
+
+    socket.on("reaction-removed", ({ messageId, userId, reactions }) => {
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === messageId ? { ...m, reactions } : m
+        )
+      );
+    });
+
+    /* --- MESSAGE DELETION --- */
+    socket.on("message-deleted", ({ messageId, deletedBy, deletedByName, isUniversal, isLocal }) => {
+      if (isLocal) {
+        // Local deletion - remove message from UI for this user only
+        setMessages((prev) => prev.filter((m) => m.id !== messageId));
+      } else if (isUniversal) {
+        // Universal deletion - mark as deleted but keep in list
+        setMessages((prev) =>
+          prev.map((m) => {
+            if (m.id !== messageId) return m;
+            return {
+              ...m,
+              isDeletedUniversally: true,
+              deletedBy,
+              deletedByName,
+              deletedAt: new Date().toISOString(),
+            };
+          })
+        );
+      }
+    });
+
+    /* --- MESSAGE PINNING --- */
+    socket.on("message-pinned", ({ messageId, pinnedBy, message }) => {
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === messageId
+            ? { ...m, isPinned: true, pinnedBy, pinnedAt: new Date().toISOString() }
+            : m
+        )
+      );
+    });
+
+    socket.on("message-unpinned", ({ messageId }) => {
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === messageId
+            ? { ...m, isPinned: false, pinnedBy: null, pinnedAt: null }
+            : m
+        )
+      );
     });
 
     return () => {
@@ -471,42 +581,65 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
     setOpenMsgMenuId(null);
   };
 
-  const [userReactions, setUserReactions] = useState({});
+  // User reactions state removed - now handled via socket events in real-time
 
-  const addReaction = (id, emoji) => {
-    const previousEmoji = userReactions[id];
+  /* ---------------------------------------------------------
+      NEW MESSAGE ACTION HANDLERS
+  --------------------------------------------------------- */
 
-    if (previousEmoji === emoji) {
-      // Toggle off
-      setUserReactions(prev => {
-        const next = { ...prev };
-        delete next[id];
-        return next;
-      });
-      setReactions(prev => {
-        const next = { ...prev };
-        if (next[id]) {
-          next[id][emoji] = Math.max(0, (next[id][emoji] || 0) - 1);
-          if (next[id][emoji] === 0) delete next[id][emoji];
-        }
-        return next;
-      });
+  // Add or update reaction to a message
+  // eslint-disable-next-line no-unused-vars
+  const handleAddReaction = (messageId, emoji) => {
+    const socket = socketRef.current;
+    if (!socket || !connected) return;
+
+    if (!emoji) {
+      // Remove reaction
+      socket.emit("remove-reaction", { messageId });
     } else {
-      // Change or Add
-      setUserReactions(prev => ({ ...prev, [id]: emoji }));
-      setReactions(prev => {
-        const next = { ...prev };
-        next[id] = next[id] || {};
-
-        if (previousEmoji) {
-          next[id][previousEmoji] = Math.max(0, (next[id][previousEmoji] || 0) - 1);
-          if (next[id][previousEmoji] === 0) delete next[id][previousEmoji];
-        }
-
-        next[id][emoji] = (next[id][emoji] || 0) + 1;
-        return next;
-      });
+      // Add or update reaction
+      socket.emit("add-reaction", { messageId, emoji });
     }
+  };
+
+  // Delete message with permission checks
+  // eslint-disable-next-line no-unused-vars
+  const handleDeleteMessage = (messageId, isOwnMessage) => {
+    const socket = socketRef.current;
+    if (!socket || !connected) return;
+
+    // Determine delete type based on permissions
+    const channelId = chat.type === "channel" ? chat.id : null;
+    const dmSessionId = chat.type === "dm" && !chat.isNew ? chat.id : null;
+
+    socket.emit("delete-message", {
+      messageId,
+      channelId,
+      dmSessionId
+    });
+  };
+
+  // Pin or unpin message (admin only)
+  // eslint-disable-next-line no-unused-vars
+  const handlePinMessage = (messageId, shouldPin) => {
+    const socket = socketRef.current;
+    if (!socket || !connected) return;
+
+    const channelId = chat.type === "channel" ? chat.id : null;
+    if (!channelId) return; // Only channels support pinning
+
+    if (shouldPin) {
+      socket.emit("pin-message", { messageId, channelId });
+    } else {
+      socket.emit("unpin-message", { messageId, channelId });
+    }
+  };
+
+  /* ---------------------------------------------------------
+      LEGACY REACTION HANDLING (For existing UI)
+  --------------------------------------------------------- */
+  const addReaction = (id, emoji) => {
+    handleAddReaction(id, emoji);
   };
 
   const [showForwardModal, setShowForwardModal] = useState(false);
@@ -612,6 +745,15 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
           />
         )}
 
+        {inspectedMessage && (
+          <MessageInfoModal
+            msg={inspectedMessage}
+            currentUserId={currentUserIdRef.current}
+            onClose={() => setInspectedMessage(null)}
+            workspaceMembers={workspaceMembers}
+          />
+        )}
+
         <div className="flex-1 flex flex-col overflow-hidden">
 
           <MessagesContainer
@@ -627,7 +769,6 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
               e?.stopPropagation?.();
               setOpenMsgMenuId((prev) => (prev === id ? null : id));
             }}
-            reactions={reactions}
             formatTime={formatTime}
             addReaction={addReaction}
             pinMessage={pinMessage}
@@ -640,17 +781,41 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
               const m = messages.find((x) => x.id === id);
               if (m) navigator.clipboard.writeText(m.text);
             }}
-            deleteMessage={(id) => {
+            deleteMessage={(id, deleteType = 'everyone') => {
               try {
-                setMessages((prev) => prev.filter((m) => m.id !== id));
+                // Use the socket-based delete handler
+                const socket = socketRef.current;
+                if (!socket || !connected) {
+                  console.error('Socket not connected');
+                  return;
+                }
+
+                const channelId = chat.type === "channel" ? chat.id : null;
+                const dmSessionId = chat.type === "dm" && !chat.isNew ? chat.id : null;
+
+                if (deleteType === 'me') {
+                  // Local delete - only hide for this user
+                  socket.emit("delete-message", {
+                    messageId: id,
+                    channelId,
+                    dmSessionId,
+                    localOnly: true  // This tells backend to add to hiddenFor array
+                  });
+                } else {
+                  // Universal delete - delete for everyone
+                  socket.emit("delete-message", {
+                    messageId: id,
+                    channelId,
+                    dmSessionId
+                  });
+                }
               } catch (err) {
                 console.error("Failed to delete message:", err);
               }
             }}
             infoMessage={(id) => {
               const m = messages.find((x) => x.id === id);
-              if (!m) return;
-              showToast(`Message info: ${m.text}`, "info");
+              if (m) setInspectedMessage(m);
             }}
             onOpenThread={(msgId) => {
               const msg = messages.find((m) => m.id === msgId);
@@ -659,6 +824,7 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
             threadCounts={threadCounts}
             currentUserId={currentUserIdRef.current}
             chatType={chat.type}
+            userJoinedAt={userJoinedAt}
           />
 
           {/* Selection Toolbar removed, moved to header */}

@@ -11,16 +11,32 @@ const Message = require("../models/Message");
 exports.createChannel = async (req, res) => {
   try {
     const userId = req.user.sub;
-    const { name, description = "", isPrivate = false, memberIds = [] } = req.body;
+    const { name, description = "", isPrivate = false, memberIds = [], workspaceId } = req.body;
+
+    if (!workspaceId) {
+      return res.status(400).json({ message: "Workspace ID is required" });
+    }
 
     if (!name || typeof name !== "string" || name.trim().length === 0) {
       return res.status(400).json({ message: "Channel name required" });
     }
 
-    // normalize members: include creator
-    const members = Array.from(new Set([userId, ...(memberIds || [])].map(String)));
+    // Normalize members: include creator
+    const distinctMemberIds = Array.from(new Set([userId, ...(memberIds || [])].map(String)));
+
+    // ENFORCE MIN 3 RULE
+    if (distinctMemberIds.length < 3) {
+      return res.status(400).json({ message: "At least 3 members are required to create a channel." });
+    }
+
+    // New format: members: [{ user, joinedAt }]
+    const members = distinctMemberIds.map(id => ({
+      user: id,
+      joinedAt: new Date()
+    }));
 
     const channel = await Channel.create({
+      workspace: workspaceId,
       name: name.trim(),
       description,
       members,
@@ -28,7 +44,6 @@ exports.createChannel = async (req, res) => {
       isPrivate,
     });
 
-    // Return channel populated minimally
     const payload = {
       _id: channel._id,
       name: channel.name,
@@ -37,12 +52,19 @@ exports.createChannel = async (req, res) => {
       isPrivate: channel.isPrivate,
       createdBy: channel.createdBy,
       createdAt: channel.createdAt,
+      workspace: channel.workspace,
     };
 
-    // If app has io, broadcast new-channel so clients can update
     const io = req.app?.get("io");
     if (io) {
-      io.emit("channel-created", payload);
+      // Notify only invited members if private, or the whole workspace room if public
+      if (isPrivate) {
+        distinctMemberIds.forEach(mId => {
+          io.to(`user_${mId}`).emit("channel-created", payload);
+        });
+      } else {
+        io.to(`workspace_${workspaceId}`).emit("channel-created", payload);
+      }
     }
 
     return res.status(201).json({ channel: payload });
@@ -65,10 +87,16 @@ exports.getMyChannels = async (req, res) => {
       return res.status(400).json({ message: "Workspace ID is required" });
     }
 
-    // Find channels that belong to the workspace AND where user is a member
+    // Find channels:
+    // 1. Belong to workspace
+    // 2. AND (is NOT private OR user is a member)
     const channels = await Channel.find({
       workspace: workspaceId,
-      members: userId
+      $or: [
+        { isPrivate: false },
+        { members: { $elemMatch: { user: userId } } }, // New format
+        { members: userId } // Legacy support
+      ]
     })
       .select("-__v")
       .lean();
@@ -112,16 +140,29 @@ exports.inviteToChannel = async (req, res) => {
     const channel = await Channel.findById(channelId);
     if (!channel) return res.status(404).json({ message: "Channel not found" });
 
-    // permission: only members can invite
-    if (!channel.members.map(String).includes(String(userId))) {
+    // permission: only members can invite (handle both formats)
+    const isMember = channel.members.some(m => {
+      const memberId = m.user ? m.user.toString() : m.toString();
+      return memberId === userId.toString();
+    });
+
+    if (!isMember) {
       return res.status(403).json({ message: "Not a channel member" });
     }
 
-    if (channel.members.map(String).includes(String(inviteeId))) {
+    const isAlreadyMember = channel.members.some(m => {
+      const memberId = m.user ? m.user.toString() : m.toString();
+      return memberId === inviteeId.toString();
+    });
+
+    if (isAlreadyMember) {
       return res.status(400).json({ message: "User already a member" });
     }
 
-    channel.members.push(inviteeId);
+    channel.members.push({
+      user: inviteeId,
+      joinedAt: new Date()
+    });
     await channel.save();
 
     // optional: emit socket event to channel room or to invitee
@@ -190,8 +231,17 @@ exports.joinChannel = async (req, res) => {
 
     if (channel.isPrivate) return res.status(403).json({ message: "Cannot join private channel" });
 
-    if (!channel.members.map(String).includes(String(userId))) {
-      channel.members.push(userId);
+    // Check if already member (handle both formats)
+    const isAlreadyMember = channel.members.some(m => {
+      const memberId = m.user ? m.user.toString() : m.toString();
+      return memberId === userId.toString();
+    });
+
+    if (!isAlreadyMember) {
+      channel.members.push({
+        user: userId,
+        joinedAt: new Date()
+      });
       await channel.save();
     }
 

@@ -137,8 +137,13 @@ exports.getChannelMessages = async (req, res) => {
     if (!channel)
       return res.status(404).json({ message: "Channel not found" });
 
-    // Ensure user is a member of the workspace at least, or explicitly the channel
-    if (!channel.members.some(m => String(m) === String(userId)))
+    // Ensure user is a member of the channel (handle both formats)
+    const isMember = channel.members.some(m => {
+      const memberId = m.user ? m.user.toString() : m.toString();
+      return memberId === userId.toString();
+    });
+
+    if (!isMember)
       return res.status(403).json({ message: "Not a channel member" });
 
     const messages = await Message.find({ channel: channelId })
@@ -146,7 +151,10 @@ exports.getChannelMessages = async (req, res) => {
       .populate("sender", "username email profilePicture")
       .populate("threadParent");
 
-    return res.json({ messages });
+    // Get user's join date for timeline marker
+    const userJoinedAt = channel.getUserJoinDate(userId);
+
+    return res.json({ messages, userJoinedAt });
   } catch (err) {
     console.error("GET CHANNEL ERROR:", err);
     return res.status(500).json({ message: "Server error" });

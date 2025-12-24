@@ -10,7 +10,6 @@ export default function MessageGroup({
   openMsgMenuId,
   toggleMsgMenu,
   setOpenMsgMenuId,
-  reactions,
   formatTime,
   addReaction,
   pinMessage,
@@ -34,7 +33,6 @@ export default function MessageGroup({
       openMsgMenuId={openMsgMenuId}
       toggleMsgMenu={toggleMsgMenu}
       setOpenMsgMenuId={setOpenMsgMenuId}
-      reactions={reactions}
       formatTime={formatTime}
       addReaction={addReaction}
       pinMessage={pinMessage}

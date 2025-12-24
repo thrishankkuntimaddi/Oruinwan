@@ -94,51 +94,51 @@ export default function FooterInput({
   };
 
   return (
-    <div className="p-4 bg-white border-t border-gray-200">
-      <div className="border border-gray-300 rounded-lg shadow-sm focus-within:ring-1 focus-within:ring-blue-500 focus-within:border-blue-500 transition-all bg-white relative">
+    <div className="px-3 py-2 bg-white border-t border-gray-100">
+      <div className="border border-gray-200 rounded-md transition-all bg-white relative">
 
-        {/* Text Area */}
+        {/* Text Area (Compact) */}
         <textarea
           ref={textareaRef}
           rows={1}
           value={newMessage}
           onChange={onChange}
-          placeholder={blocked ? "Cannot send messages" : "Type a message..."}
+          placeholder={blocked ? "Blocked" : "Message..."}
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey) {
               e.preventDefault();
               onSend();
             }
           }}
-          className="w-full px-3 py-2.5 text-sm resize-none focus:outline-none bg-transparent max-h-32 min-h-[44px]"
+          className="w-full px-2 py-1.5 text-sm resize-none focus:outline-none bg-transparent max-h-32 min-h-[36px]"
           disabled={blocked}
         />
 
-        {/* Toolbar */}
-        <div className="flex items-center justify-between px-2 pb-2 pt-1 bg-white rounded-b-lg">
+        {/* Toolbar (Slim) */}
+        <div className="flex items-center justify-between px-1.5 pb-1 bg-white rounded-b-lg">
 
           {/* Left: Formatting Tools */}
-          <div className="flex items-center gap-1">
-            <button onMouseDown={(e) => e.preventDefault()} onClick={() => insertFormat('ai')} className="p-1 hover:bg-gray-100 rounded transition-colors mr-1" title="Ask Chttrix AI">
-              <img src="/assets/ChttrixAI-logo.png" alt="AI" className="w-5 h-5 object-contain" />
+          <div className="flex items-center gap-0.5">
+            <button onMouseDown={(e) => e.preventDefault()} onClick={() => insertFormat('ai')} className="p-1 hover:bg-gray-100 rounded transition-colors" title="AI">
+              <img src="/assets/ChttrixAI-logo.png" alt="AI" className="w-4 h-4 object-contain opacity-70" />
             </button>
-            <div className="h-4 w-px bg-gray-300 mx-1"></div>
-            <button onMouseDown={(e) => e.preventDefault()} onClick={() => insertFormat('bold')} className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors" title="Bold">
-              <Bold size={16} />
+            <div className="h-3 w-px bg-gray-200 mx-1"></div>
+            <button onMouseDown={(e) => e.preventDefault()} onClick={() => insertFormat('bold')} className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded" title="Bold">
+              <Bold size={14} />
             </button>
-            <button onMouseDown={(e) => e.preventDefault()} onClick={() => insertFormat('italic')} className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors" title="Italic">
-              <Italic size={16} />
+            <button onMouseDown={(e) => e.preventDefault()} onClick={() => insertFormat('italic')} className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded" title="Italic">
+              <Italic size={14} />
             </button>
-            <button onMouseDown={(e) => e.preventDefault()} onClick={() => insertFormat('link')} className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors" title="Link">
-              <Link size={16} />
+            <button onMouseDown={(e) => e.preventDefault()} onClick={() => insertFormat('link')} className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded" title="Link">
+              <Link size={14} />
             </button>
-            <button onMouseDown={(e) => e.preventDefault()} onClick={() => insertFormat('list')} className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors" title="List">
-              <List size={16} />
+            <button onMouseDown={(e) => e.preventDefault()} onClick={() => insertFormat('list')} className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded" title="List">
+              <List size={14} />
             </button>
           </div>
 
           {/* Right: Actions */}
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-0.5">
 
             {/* Emoji */}
             <div className="relative" ref={emojiRef}>
@@ -148,13 +148,13 @@ export default function FooterInput({
                   setShowEmoji(!showEmoji);
                   setShowAttach(false);
                 }}
-                className={`p-1.5 rounded transition-colors ${showEmoji ? "bg-gray-100 text-gray-600" : "text-gray-400 hover:text-gray-600 hover:bg-gray-100"}`}
+                className={`p-1 rounded ${showEmoji ? "text-blue-600 bg-gray-100" : "text-gray-400 hover:text-gray-600"}`}
                 title="Emoji"
               >
-                <Smile size={18} />
+                <Smile size={16} />
               </button>
               {showEmoji && (
-                <div className="absolute bottom-full right-0 mb-2 z-50">
+                <div className="absolute bottom-full right-0 mb-1 z-50">
                   <EmojiPicker onPick={onPickEmoji} />
                 </div>
               )}
@@ -168,40 +168,40 @@ export default function FooterInput({
                   setShowAttach(!showAttach);
                   setShowEmoji(false);
                 }}
-                className={`p-1.5 rounded transition-colors ${showAttach ? "bg-gray-100 text-gray-600" : "text-gray-400 hover:text-gray-600 hover:bg-gray-100"}`}
-                title="Attach file"
+                className={`p-1 rounded ${showAttach ? "text-blue-600 bg-gray-100" : "text-gray-400 hover:text-gray-600"}`}
+                title="Attach"
               >
-                <Paperclip size={18} />
+                <Paperclip size={16} />
               </button>
               {showAttach && (
-                <div className="absolute bottom-full right-0 mb-2 z-50">
+                <div className="absolute bottom-full right-0 mb-1 z-50">
                   <AttachMenu onAttach={onAttach} />
                 </div>
               )}
             </div>
 
-            {/* Voice Recording */}
+            {/* Voice */}
             <button
               onClick={() => {
                 if (!blocked) setRecording(!recording);
               }}
-              className={`p-1.5 rounded transition-colors ${recording ? "bg-red-100 text-red-500" : "text-gray-400 hover:text-gray-600 hover:bg-gray-100"}`}
-              title="Voice message"
+              className={`p-1 rounded ${recording ? "text-red-500 animate-pulse" : "text-gray-400 hover:text-gray-600"}`}
+              title="Voice"
             >
-              <Mic size={18} />
+              <Mic size={16} />
             </button>
 
-            {/* Send Button */}
+            {/* Send */}
             <button
               onClick={onSend}
               disabled={!newMessage.trim() || blocked}
-              className={`ml-1 p-1.5 rounded-md transition-all flex items-center justify-center ${newMessage.trim() && !blocked
-                ? "bg-blue-600 text-white hover:bg-blue-700 shadow-sm"
+              className={`ml-1 px-2 py-0.5 rounded transition-all flex items-center justify-center font-medium text-xs ${newMessage.trim() && !blocked
+                ? "bg-blue-600 text-white hover:bg-blue-700"
                 : "bg-gray-100 text-gray-300 cursor-not-allowed"
                 }`}
               title="Send"
             >
-              <Send size={16} />
+              <Send size={12} className="mr-1" /> Send
             </button>
           </div>
         </div>

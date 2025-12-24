@@ -193,8 +193,17 @@ exports.signup = async (req, res) => {
           });
 
           for (const channel of defaultChannels) {
-            if (!channel.members.includes(user._id)) {
-              channel.members.push(user._id);
+            // Check if already member (handle both old and new format)
+            const isAlreadyMember = channel.members.some(m => {
+              const memberId = m.user ? m.user.toString() : m.toString();
+              return memberId === user._id.toString();
+            });
+
+            if (!isAlreadyMember) {
+              channel.members.push({
+                user: user._id,
+                joinedAt: new Date()
+              });
               await channel.save();
               console.log(`   → Added to channel: #${channel.name}`);
             }

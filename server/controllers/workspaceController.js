@@ -484,8 +484,17 @@ exports.joinWorkspace = async (req, res) => {
     });
 
     for (const channel of defaultChannels) {
-      if (!channel.members.includes(userId)) {
-        channel.members.push(userId);
+      // Check if already member (handle both old and new format)
+      const isAlreadyMember = channel.members.some(m => {
+        const memberId = m.user ? m.user.toString() : m.toString();
+        return memberId === userId.toString();
+      });
+
+      if (!isAlreadyMember) {
+        channel.members.push({
+          user: userId,
+          joinedAt: new Date()
+        });
         await channel.save();
       }
     }

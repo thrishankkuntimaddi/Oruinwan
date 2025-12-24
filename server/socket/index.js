@@ -4,6 +4,7 @@ const Message = require("../models/Message");
 const Channel = require("../models/Channel");
 const DMSession = require("../models/DMSession");
 const Workspace = require("../models/Workspace");
+const User = require("../models/User");
 
 module.exports = function registerChatHandlers(io, socket) {
   const userId = socket.user.id; // extracted from JWT
@@ -252,6 +253,250 @@ module.exports = function registerChatHandlers(io, socket) {
       io.to(`dm_${dmSessionId}`).emit("typing", { from: userId });
     } else if (channelId) {
       io.to(`channel_${channelId}`).emit("typing", { from: userId });
+    }
+  });
+
+  /* ----------------------------------------------------
+     ADD REACTION
+  ---------------------------------------------------- */
+  socket.on("add-reaction", async ({ messageId, emoji }) => {
+    try {
+      const message = await Message.findById(messageId);
+      if (!message) {
+        socket.emit("reaction-error", { messageId, error: "Message not found" });
+        return;
+      }
+
+      // Check if user already reacted
+      const existingReactionIndex = message.reactions.findIndex(
+        (r) => r.userId.toString() === userId
+      );
+
+      if (existingReactionIndex >= 0) {
+        // Update existing reaction
+        message.reactions[existingReactionIndex].emoji = emoji;
+      } else {
+        // Add new reaction
+        message.reactions.push({ emoji, userId });
+      }
+
+      await message.save();
+
+      // Broadcast to appropriate room
+      const room = message.channel
+        ? `channel_${message.channel}`
+        : `dm_${message.dm}`;
+
+      io.to(room).emit("reaction-added", {
+        messageId,
+        userId,
+        emoji,
+        reactions: message.reactions,
+      });
+    } catch (err) {
+      console.error("ADD REACTION ERROR:", err);
+      socket.emit("reaction-error", { messageId, error: err.message });
+    }
+  });
+
+  /* ----------------------------------------------------
+     REMOVE REACTION
+  ---------------------------------------------------- */
+  socket.on("remove-reaction", async ({ messageId }) => {
+    try {
+      const message = await Message.findById(messageId);
+      if (!message) {
+        socket.emit("reaction-error", { messageId, error: "Message not found" });
+        return;
+      }
+
+      // Remove user's reaction
+      message.reactions = message.reactions.filter(
+        (r) => r.userId.toString() !== userId
+      );
+
+      await message.save();
+
+      // Broadcast to appropriate room
+      const room = message.channel
+        ? `channel_${message.channel}`
+        : `dm_${message.dm}`;
+
+      io.to(room).emit("reaction-removed", {
+        messageId,
+        userId,
+        reactions: message.reactions,
+      });
+    } catch (err) {
+      console.error("REMOVE REACTION ERROR:", err);
+      socket.emit("reaction-error", { messageId, error: err.message });
+    }
+  });
+
+  /* ----------------------------------------------------
+     DELETE MESSAGE (with permission logic)
+  ---------------------------------------------------- */
+  socket.on("delete-message", async ({ messageId, channelId, dmSessionId, localOnly = false }) => {
+    try {
+      const message = await Message.findById(messageId).populate("sender");
+      if (!message) {
+        socket.emit("delete-error", { messageId, error: "Message not found" });
+        return;
+      }
+
+      const isOwnMessage = message.sender._id.toString() === userId;
+      let isAdmin = false;
+
+      // Check if user is admin (for channels)
+      if (channelId) {
+        const channel = await Channel.findById(channelId).populate("workspace");
+        if (channel) {
+          const workspace = await Workspace.findById(channel.workspace);
+          const member = workspace.members.find(
+            (m) => m.user.toString() === userId
+          );
+          isAdmin = member && (member.role === "admin" || member.role === "owner");
+        }
+      }
+
+      // Determine deletion type based on localOnly flag
+      if (localOnly) {
+        // Force local deletion - only hide for this user
+        if (!message.hiddenFor.includes(userId)) {
+          message.hiddenFor.push(userId);
+        }
+        await message.save();
+
+        // Only notify the user who deleted it
+        socket.emit("message-deleted", {
+          messageId,
+          isLocal: true,
+        });
+      } else if (isAdmin || isOwnMessage) {
+        // Universal deletion - visible to all as "deleted by [name]"
+        // Get the current user's username (the person deleting the message)
+        console.log("🔍 Fetching user for deletion, userId:", userId);
+        const currentUser = await User.findById(userId);
+        console.log("👤 Found user:", currentUser);
+        const deleterName = currentUser ? currentUser.username : "Unknown";
+        console.log("📝 Deleter name:", deleterName);
+
+        message.isDeletedUniversally = true;
+        message.deletedBy = userId;
+        message.deletedAt = new Date();
+        await message.save();
+
+        // Broadcast to all participants
+        const room = channelId ? `channel_${channelId}` : `dm_${dmSessionId}`;
+        io.to(room).emit("message-deleted", {
+          messageId,
+          deletedBy: userId,
+          deletedByName: deleterName,  // Fixed: now shows who deleted it, not the sender
+          isUniversal: true,
+        });
+      } else {
+        // Local deletion - only hide for this user (fallback for members deleting others' messages)
+        if (!message.hiddenFor.includes(userId)) {
+          message.hiddenFor.push(userId);
+        }
+        await message.save();
+
+        socket.emit("message-deleted", {
+          messageId,
+          isLocal: true,
+        });
+      }
+    } catch (err) {
+      console.error("DELETE MESSAGE ERROR:", err);
+      socket.emit("delete-error", { messageId, error: err.message });
+    }
+  });
+
+  /* ----------------------------------------------------
+     PIN MESSAGE (Admin only)
+  ---------------------------------------------------- */
+  socket.on("pin-message", async ({ messageId, channelId }) => {
+    try {
+      // Check admin permission
+      const channel = await Channel.findById(channelId).populate("workspace");
+      if (!channel) {
+        socket.emit("pin-error", { messageId, error: "Channel not found" });
+        return;
+      }
+
+      const workspace = await Workspace.findById(channel.workspace);
+      const member = workspace.members.find((m) => m.user.toString() === userId);
+      const isAdmin = member && (member.role === "admin" || member.role === "owner");
+
+      if (!isAdmin) {
+        socket.emit("pin-error", {
+          messageId,
+          error: "Only admins can pin messages",
+        });
+        return;
+      }
+
+      // Update message
+      const message = await Message.findByIdAndUpdate(
+        messageId,
+        {
+          isPinned: true,
+          pinnedBy: userId,
+          pinnedAt: new Date(),
+        },
+        { new: true }
+      );
+
+      // Broadcast to channel
+      io.to(`channel_${channelId}`).emit("message-pinned", {
+        messageId,
+        pinnedBy: userId,
+        message,
+      });
+    } catch (err) {
+      console.error("PIN MESSAGE ERROR:", err);
+      socket.emit("pin-error", { messageId, error: err.message });
+    }
+  });
+
+  /* ----------------------------------------------------
+     UNPIN MESSAGE (Admin only)
+  ---------------------------------------------------- */
+  socket.on("unpin-message", async ({ messageId, channelId }) => {
+    try {
+      // Check admin permission
+      const channel = await Channel.findById(channelId).populate("workspace");
+      if (!channel) {
+        socket.emit("pin-error", { messageId, error: "Channel not found" });
+        return;
+      }
+
+      const workspace = await Workspace.findById(channel.workspace);
+      const member = workspace.members.find((m) => m.user.toString() === userId);
+      const isAdmin = member && (member.role === "admin" || member.role === "owner");
+
+      if (!isAdmin) {
+        socket.emit("pin-error", {
+          messageId,
+          error: "Only admins can unpin messages",
+        });
+        return;
+      }
+
+      // Update message
+      await Message.findByIdAndUpdate(messageId, {
+        isPinned: false,
+        pinnedBy: null,
+        pinnedAt: null,
+      });
+
+      // Broadcast to channel
+      io.to(`channel_${channelId}`).emit("message-unpinned", {
+        messageId,
+      });
+    } catch (err) {
+      console.error("UNPIN MESSAGE ERROR:", err);
+      socket.emit("pin-error", { messageId, error: err.message });
     }
   });
 
