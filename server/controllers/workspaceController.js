@@ -75,7 +75,7 @@ exports.createWorkspace = async (req, res) => {
       isPrivate: false,
       isDefault: true,
       createdBy: userId,
-      members: [userId]
+      members: [{ user: userId, joinedAt: new Date() }]
     });
 
     const announcementsChannel = await Channel.create({
@@ -86,7 +86,7 @@ exports.createWorkspace = async (req, res) => {
       isPrivate: false,
       isDefault: true,
       createdBy: userId,
-      members: [userId]
+      members: [{ user: userId, joinedAt: new Date() }]
     });
 
     console.log(`   ✅ Default channels created: #general, #announcements`);
@@ -491,10 +491,24 @@ exports.joinWorkspace = async (req, res) => {
       });
 
       if (!isAlreadyMember) {
+        // 🔧 FIX: Convert all existing members to new format before adding new member
+        // This prevents validation errors when Mongoose validates the entire array
+        channel.members = channel.members.map(m => {
+          // If it's already in new format, keep it
+          if (m.user) return m;
+          // If it's old format (just an ID), convert it
+          return {
+            user: m,
+            joinedAt: channel.createdAt || new Date()
+          };
+        });
+
+        // Now add the new member
         channel.members.push({
           user: userId,
           joinedAt: new Date()
         });
+
         await channel.save();
       }
     }
@@ -680,9 +694,15 @@ exports.createWorkspaceChannel = async (req, res) => {
     }
 
     // Ensure creator is always included in members
-    const finalMembers = channelMembers && channelMembers.length > 0
+    const finalMemberIds = channelMembers && channelMembers.length > 0
       ? [...new Set([userId, ...channelMembers])]
       : [userId];
+
+    // Convert member IDs to proper format
+    const finalMembers = finalMemberIds.map(memberId => ({
+      user: memberId,
+      joinedAt: new Date()
+    }));
 
     // Create channel
     const channel = await Channel.create({

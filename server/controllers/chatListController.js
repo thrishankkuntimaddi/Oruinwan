@@ -57,7 +57,7 @@ exports.getChatList = async (req, res) => {
       }
     ]);
 
-    const dmUsers = await User.find({ 
+    const dmUsers = await User.find({
       _id: { $in: dmPartners.map(x => x._id) }
     }).select("_id username profilePicture");
 
@@ -77,7 +77,7 @@ exports.getChatList = async (req, res) => {
     /* -------------------------------------------------------
        2️⃣ CHANNELS
     -------------------------------------------------------- */
-    const myChannels = await Channel.find({ members: userId });
+    const myChannels = await Channel.find({ 'members.user': userId });
 
     const channelIds = myChannels.map(c => c._id);
 

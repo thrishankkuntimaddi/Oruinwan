@@ -200,6 +200,15 @@ exports.signup = async (req, res) => {
             });
 
             if (!isAlreadyMember) {
+              // 🔧 FIX: Convert all existing members to new format before adding new member
+              channel.members = channel.members.map(m => {
+                if (m.user) return m;
+                return {
+                  user: m,
+                  joinedAt: channel.createdAt || new Date()
+                };
+              });
+
               channel.members.push({
                 user: user._id,
                 joinedAt: new Date()

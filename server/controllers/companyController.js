@@ -677,8 +677,20 @@ exports.directCreateEmployee = async (req, res) => {
         });
 
         for (const channel of defaultChannels) {
-          if (!channel.members.includes(newUser._id)) {
-            channel.members.push(newUser._id);
+          if (!channel.members.some(m => (m.user ? m.user.toString() : m.toString()) === newUser._id.toString())) {
+            // 🔧 FIX: Convert all existing members to new format before adding new member
+            channel.members = channel.members.map(m => {
+              if (m.user) return m;
+              return {
+                user: m,
+                joinedAt: channel.createdAt || new Date()
+              };
+            });
+
+            channel.members.push({
+              user: newUser._id,
+              joinedAt: new Date()
+            });
             await channel.save();
             console.log(`   → Added to channel: #${channel.name}`);
           }
@@ -807,8 +819,20 @@ exports.acceptInvite = async (req, res) => {
         });
 
         for (const channel of defaultChannels) {
-          if (!channel.members.includes(user._id)) {
-            channel.members.push(user._id);
+          if (!channel.members.some(m => (m.user ? m.user.toString() : m.toString()) === user._id.toString())) {
+            // 🔧 FIX: Convert all existing members to new format before adding new member
+            channel.members = channel.members.map(m => {
+              if (m.user) return m;
+              return {
+                user: m,
+                joinedAt: channel.createdAt || new Date()
+              };
+            });
+
+            channel.members.push({
+              user: user._id,
+              joinedAt: new Date()
+            });
             await channel.save();
           }
         }
@@ -835,8 +859,20 @@ exports.acceptInvite = async (req, res) => {
         });
 
         for (const channel of defaultChannels) {
-          if (!channel.members.includes(user._id)) {
-            channel.members.push(user._id);
+          if (!channel.members.some(m => (m.user ? m.user.toString() : m.toString()) === user._id.toString())) {
+            // 🔧 FIX: Convert all existing members to new format before adding new member
+            channel.members = channel.members.map(m => {
+              if (m.user) return m;
+              return {
+                user: m,
+                joinedAt: channel.createdAt || new Date()
+              };
+            });
+
+            channel.members.push({
+              user: user._id,
+              joinedAt: new Date()
+            });
             await channel.save();
           }
         }

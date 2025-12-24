@@ -34,6 +34,7 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
   --------------------------------------------------------- */
   const [messages, setMessages] = useState([]);
   const [userJoinedAt, setUserJoinedAt] = useState(null); // For channel join timeline marker
+  const [channelMembersWithJoinDates, setChannelMembersWithJoinDates] = useState([]); // All members with join dates
   const pendingMessagesRef = useRef({});
 
   const [newMessage, setNewMessage] = useState("");
@@ -201,6 +202,11 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
           setUserJoinedAt(res.data.userJoinedAt);
         }
 
+        // Store all channel members with join dates for personalized join markers
+        if (chat.type === "channel" && res.data.channelMembers) {
+          setChannelMembersWithJoinDates(res.data.channelMembers);
+        }
+
         if (!mounted) return;
         setMessages(loadedMessages);
 
@@ -266,32 +272,88 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
 
       if (!chat) return;
 
+      // Join appropriate room AFTER socket is connected
       if (chat.type === "dm") {
         if (chat.isNew) {
-          // No session to join yet
+          console.log('📝 [ChatWindow] New DM - not joining room yet');
         } else {
+          console.log(`🚪 [ChatWindow] Joining DM room: ${chat.id}`);
           socket.emit("join-dm", { dmSessionId: chat.id });
         }
       } else {
+        console.log(`🚪 [ChatWindow] Joining channel room: ${chat.id}`);
         socket.emit("join-channel", { channelId: chat.id });
       }
     });
 
-    socket.on("connect_error", (err) => {
+    socket.on("connect_error", async (err) => {
       console.error('❌ [ChatWindow] Socket connection error:', err.message);
+      setConnected(false);
+
+      // If authentication failed, try to refresh the token
+      if (err.message.includes('Authentication') || err.message.includes('jwt') || err.message.includes('token')) {
+        console.log('🔄 [ChatWindow] Attempting token refresh due to auth failure...');
+
+        try {
+          // Try to refresh the token
+          // The refresh token is in HTTP-only cookie, so we don't need to pass it
+          // Just make the request with credentials: 'include' to send cookies
+          const response = await api.post('/api/auth/refresh', {}, {
+            withCredentials: true  // This sends the HTTP-only cookie
+          });
+
+          const newAccessToken = response.data.accessToken;
+
+          if (newAccessToken) {
+            localStorage.setItem('accessToken', newAccessToken);
+            console.log('✅ [ChatWindow] Token refreshed successfully');
+
+            // Show success message and reload to reconnect
+            showToast("Reconnecting with fresh session...", "success");
+
+            // Reload page to reinitialize with fresh token
+            setTimeout(() => {
+              window.location.reload();
+            }, 500);
+            return;
+          }
+
+          // If refresh failed, show error
+          showToast("Session expired. Please login again.", "error");
+        } catch (refreshErr) {
+          console.error('❌ [ChatWindow] Token refresh failed:', refreshErr);
+
+          // Check if it's a 401 (no refresh token) or other error
+          if (refreshErr.response?.status === 401) {
+            showToast("Please login to continue.", "info");
+          } else {
+            showToast("Session expired. Please login again.", "error");
+          }
+        }
+      } else {
+        showToast("Connection error. Retrying...", "error");
+      }
     });
 
-    socket.on("disconnect", () => {
+    socket.on("disconnect", (reason) => {
       setConnected(false);
-      console.log('🔌 [ChatWindow] Socket disconnected');
+      console.log('🔌 [ChatWindow] Socket disconnected:', reason);
+
+      if (reason === "io server disconnect") {
+        // Server forced disconnect, need to reconnect manually
+        socket.connect();
+      }
+      showToast("Connection lost. Reconnecting...", "warning");
     });
 
     /* --- NEW MESSAGE --- */
     socket.on("new-message", ({ message, clientTempId }) => {
+      console.log('📨 [ChatWindow] Received new-message:', { messageId: message._id, clientTempId });
       const realMsg = mapBackendMsgToUI(message);
 
       // Replace optimistic message
       if (clientTempId && pendingMessagesRef.current[clientTempId]) {
+        console.log('🔄 [ChatWindow] Replacing optimistic message');
         setMessages((prev) =>
           prev.map((m) =>
             m.id === clientTempId
@@ -305,19 +367,32 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
       }
 
       // Normal incoming message
+      console.log('➕ [ChatWindow] Adding new message to list');
       setMessages((prev) => {
-        if (prev.some((x) => x.id === realMsg.id)) return prev;
+        if (prev.some((x) => x.id === realMsg.id)) {
+          console.log('⚠️ [ChatWindow] Message already exists, skipping');
+          return prev;
+        }
         return [...prev, realMsg];
       });
     });
 
     /* --- SEND ERROR --- */
-    socket.on("send-error", ({ clientTempId }) => {
+    socket.on("send-error", ({ clientTempId, message }) => {
+      console.error('❌ [ChatWindow] Send error:', message);
+
       setMessages((prev) =>
         prev.map((m) =>
           m.id === clientTempId ? { ...m, sending: false, failed: true } : m
         )
       );
+
+      showToast(message || "Failed to send message", "error");
+
+      // Clean up pending message
+      if (pendingMessagesRef.current[clientTempId]) {
+        delete pendingMessagesRef.current[clientTempId];
+      }
     });
 
     /* --- READ RECEIPTS --- */
@@ -454,7 +529,13 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
     if (!newMessage.trim() || blocked) return;
 
     const socket = socketRef.current;
-    if (!socket || !connected) return;
+
+    // Check if socket is connected
+    if (!socket || !connected) {
+      console.error('❌ [ChatWindow] Cannot send message: socket not connected');
+      showToast("Not connected. Please wait...", "error");
+      return;
+    }
 
     const clientTempId = generateTempId();
 
@@ -472,6 +553,12 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
 
     setMessages((prev) => [...prev, uiMsg]);
     pendingMessagesRef.current[clientTempId] = uiMsg;
+
+    console.log('📤 [ChatWindow] Sending message:', {
+      channelId: chat.type === "channel" ? chat.id : null,
+      dmSessionId: (chat.type === "dm" && !chat.isNew) ? chat.id : null,
+      clientTempId
+    });
 
     socket.emit("send-message", {
       text: newMessage.trim(),
@@ -825,6 +912,7 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
             currentUserId={currentUserIdRef.current}
             chatType={chat.type}
             userJoinedAt={userJoinedAt}
+            channelMembersWithJoinDates={channelMembersWithJoinDates}
           />
 
           {/* Selection Toolbar removed, moved to header */}

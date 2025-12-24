@@ -94,8 +94,7 @@ exports.getMyChannels = async (req, res) => {
       workspace: workspaceId,
       $or: [
         { isPrivate: false },
-        { members: { $elemMatch: { user: userId } } }, // New format
-        { members: userId } // Legacy support
+        { 'members.user': userId } // Query using the populated user field
       ]
     })
       .select("-__v")
@@ -158,6 +157,15 @@ exports.inviteToChannel = async (req, res) => {
     if (isAlreadyMember) {
       return res.status(400).json({ message: "User already a member" });
     }
+
+    // 🔧 FIX: Convert all existing members to new format before adding new member
+    channel.members = channel.members.map(m => {
+      if (m.user) return m;
+      return {
+        user: m,
+        joinedAt: channel.createdAt || new Date()
+      };
+    });
 
     channel.members.push({
       user: inviteeId,
@@ -238,6 +246,15 @@ exports.joinChannel = async (req, res) => {
     });
 
     if (!isAlreadyMember) {
+      // 🔧 FIX: Convert all existing members to new format before adding new member
+      channel.members = channel.members.map(m => {
+        if (m.user) return m;
+        return {
+          user: m,
+          joinedAt: channel.createdAt || new Date()
+        };
+      });
+
       channel.members.push({
         user: userId,
         joinedAt: new Date()

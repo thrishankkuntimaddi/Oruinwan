@@ -31,6 +31,7 @@ export default function MessagesContainer({
   threadCounts, // ★ THREAD COUNTS
   chatType,
   userJoinedAt, // For channel join timeline marker
+  channelMembersWithJoinDates = [], // All members with join dates
 }) {
   const messagesRef = useRef(null);
 
@@ -73,15 +74,31 @@ export default function MessagesContainer({
             {grp.items
               .map((msg, idx) => {
                 const prevMsg = grp.items[idx - 1];
-                const shouldShowJoinMarker =
-                  userJoinedAt &&
-                  chatType === 'channel' &&
-                  !prevMsg && // First message in group
-                  new Date(msg.ts) > new Date(userJoinedAt);
+
+                // Determine if we should show a join marker before this message
+                // Find members who joined between the previous message and current message
+                let memberWhoJoined = null;
+
+                if (chatType === 'channel' && channelMembersWithJoinDates.length > 0) {
+                  const currentMsgTime = new Date(msg.ts);
+                  const prevMsgTime = prevMsg ? new Date(prevMsg.ts) : new Date(0);
+
+                  // Find a member whose join date is between prevMsg and currentMsg
+                  memberWhoJoined = channelMembersWithJoinDates.find(member => {
+                    const joinTime = new Date(member.joinedAt);
+                    return joinTime > prevMsgTime && joinTime <= currentMsgTime;
+                  });
+                }
 
                 return (
                   <React.Fragment key={msg.id}>
-                    {shouldShowJoinMarker && <JoinMarker date={userJoinedAt} />}
+                    {memberWhoJoined && (
+                      <JoinMarker
+                        date={memberWhoJoined.joinedAt}
+                        memberInfo={memberWhoJoined}
+                        currentUserId={currentUserId}
+                      />
+                    )}
                     <MessageGroup
                       msg={msg}
 

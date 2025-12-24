@@ -154,7 +154,28 @@ exports.getChannelMessages = async (req, res) => {
     // Get user's join date for timeline marker
     const userJoinedAt = channel.getUserJoinDate(userId);
 
-    return res.json({ messages, userJoinedAt });
+    // Get all members with their join dates for personalized join markers
+    const channelMembers = channel.members.map(m => {
+      const memberId = m.user ? m.user.toString() : m.toString();
+      const joinedAt = m.joinedAt || channel.createdAt;
+      return {
+        userId: memberId,
+        joinedAt: joinedAt
+      };
+    });
+
+    // Populate member usernames
+    const populatedMembers = await Promise.all(
+      channelMembers.map(async (member) => {
+        const user = await require("../models/User").findById(member.userId).select("username");
+        return {
+          ...member,
+          username: user?.username || "Unknown"
+        };
+      })
+    );
+
+    return res.json({ messages, userJoinedAt, channelMembers: populatedMembers });
   } catch (err) {
     console.error("GET CHANNEL ERROR:", err);
     return res.status(500).json({ message: "Server error" });
