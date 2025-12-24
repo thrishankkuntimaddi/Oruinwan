@@ -28,10 +28,33 @@ const IconSidebar = ({ onProfileClick }) => {
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
-    const isActive = (basePath) => {
+    const isActive = (itemPath) => {
         if (!workspaceId) return false;
-        const fullPath = `/workspace/${workspaceId}${basePath}`;
-        return location.pathname === fullPath || location.pathname.startsWith(fullPath + "/");
+
+        const path = location.pathname;
+
+        // Home highlighting: active for /home or /home/... (home-nested routes)
+        if (itemPath === "/home") {
+            return path.includes(`/workspace/${workspaceId}/home`);
+        }
+
+        // Channels highlighting: active for /channels or /channel/:id
+        if (itemPath === "/channels") {
+            return path.includes(`/workspace/${workspaceId}/channels`) ||
+                path.includes(`/workspace/${workspaceId}/channel/`);
+        }
+
+        // Messages highlighting: active for /messages or /dm/:id
+        // Note: we exclude /home/dm paths because they belong to the Home icon
+        if (itemPath === "/messages") {
+            return (path.includes(`/workspace/${workspaceId}/messages`) ||
+                path.includes(`/workspace/${workspaceId}/dm/`)) &&
+                !path.includes("/home/");
+        }
+
+        // Default prefix matching for other items
+        const fullPath = `/workspace/${workspaceId}${itemPath}`;
+        return path === fullPath || path.startsWith(fullPath + "/");
     };
 
     const navItems = [

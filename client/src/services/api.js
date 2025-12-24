@@ -16,6 +16,11 @@ const api = axios.create({
 // ============================================
 let isRefreshing = false;
 let refreshQueue = [];
+let onTokenRefreshed = null;
+
+export const setOnTokenRefreshed = (callback) => {
+    onTokenRefreshed = callback;
+};
 
 // Process queued requests after token refresh
 const processQueue = (error, token = null) => {
@@ -100,6 +105,9 @@ api.interceptors.response.use(
 
             // Process queue with new token
             processQueue(null, accessToken);
+            if (onTokenRefreshed) {
+                onTokenRefreshed(accessToken);
+            }
             isRefreshing = false;
 
             // Retry original request

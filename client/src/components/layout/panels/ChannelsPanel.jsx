@@ -7,7 +7,7 @@ import ConfirmationModal from "../../modals/ConfirmationModal";
 
 const ChannelsPanel = ({ title }) => {
     const navigate = useNavigate();
-    const { workspaceId } = useParams();
+    const { workspaceId, id: channelId } = useParams();
     const { activeWorkspace } = useWorkspace();
 
     const [searchQuery, setSearchQuery] = useState("");
@@ -223,12 +223,16 @@ const ChannelsPanel = ({ title }) => {
             }
         };
 
+        const isActive = channelId === item.id;
+
         return (
             <div
                 onClick={handleClick}
                 className={`px-4 py-2 mx-2 rounded-md cursor-pointer flex items-center justify-between group transition-colors ${isSelectionMode && isSelected
                     ? "bg-blue-50 border border-blue-200"
-                    : "hover:bg-gray-200 text-gray-600 hover:text-gray-900"
+                    : isActive
+                        ? "bg-blue-50 text-blue-600 font-semibold"
+                        : "hover:bg-gray-200 text-gray-600 hover:text-gray-900"
                     }`}
             >
                 <div className="flex items-center truncate flex-1 gap-2">

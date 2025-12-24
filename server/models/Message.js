@@ -6,12 +6,12 @@ const ReactionSchema = new mongoose.Schema({
 }, { _id: false });
 
 const AttachmentSchema = new mongoose.Schema({
-  type: { type: String, enum: ["image","video","file"], required: true },
+  type: { type: String, enum: ["image", "video", "file"], required: true },
   url: String, name: String, size: Number
 }, { _id: false });
 
 const MessageSchema = new mongoose.Schema({
-  company: { type: mongoose.Schema.Types.ObjectId, ref: "Company", required: true },
+  company: { type: mongoose.Schema.Types.ObjectId, ref: "Company", default: null },
   workspace: { type: mongoose.Schema.Types.ObjectId, ref: "Workspace", default: null },
   channel: { type: mongoose.Schema.Types.ObjectId, ref: "Channel", default: null },
   dm: { type: mongoose.Schema.Types.ObjectId, ref: "DMSession", default: null },

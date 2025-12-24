@@ -27,6 +27,15 @@ module.exports = function registerChatHandlers(io, socket) {
   });
 
   /* ----------------------------------------------------
+     JOIN WORKSPACE ROOM (For real-time updates like invites)
+  ---------------------------------------------------- */
+  socket.on("join-workspace", ({ workspaceId }) => {
+    const room = `workspace_${workspaceId}`;
+    socket.join(room);
+    console.log(`User ${userId} joined workspace room: ${room}`);
+  });
+
+  /* ----------------------------------------------------
      SEND MESSAGE (DM or Channel) + ACK
   ---------------------------------------------------- */
   socket.on("send-message", async (data) => {
@@ -84,8 +93,19 @@ module.exports = function registerChatHandlers(io, socket) {
       }
 
       // Populate common message data
+      let companyId = null;
+
+      if (actualDMSessionId) {
+        const dmSession = await DMSession.findById(actualDMSessionId);
+        companyId = dmSession?.company;
+      } else if (channelId) {
+        const channel = await Channel.findById(channelId);
+        companyId = channel?.company;
+      }
+
       const doc = {
         sender: userId,
+        company: companyId,
         workspace: workspaceId,
         text,
         attachments,
@@ -99,6 +119,13 @@ module.exports = function registerChatHandlers(io, socket) {
       }
 
       // Save message
+      console.log(`💾 Saving message for ${actualDMSessionId ? 'DM' : 'Channel'}:`, {
+        workspace: workspaceId,
+        channel: channelId,
+        dm: actualDMSessionId,
+        company: companyId
+      });
+
       const saved = await Message.create(doc);
 
       const populated = await Message.findById(saved._id)
@@ -110,7 +137,8 @@ module.exports = function registerChatHandlers(io, socket) {
           message: populated,
           clientTempId,
         });
-      } else {
+      } else if (channelId) {
+        console.log(`📢 Broadcasting to channel room: channel_${channelId}`);
         io.to(`channel_${channelId}`).emit("new-message", {
           message: populated,
           clientTempId,
@@ -124,10 +152,10 @@ module.exports = function registerChatHandlers(io, socket) {
       });
 
     } catch (err) {
-      console.error("SOCKET SEND ERROR:", err);
+      console.error("❌ SOCKET SEND ERROR:", err);
       socket.emit("send-error", {
         clientTempId: data.clientTempId,
-        message: "Failed to send message",
+        message: err.message || "Failed to send message",
       });
     }
   });

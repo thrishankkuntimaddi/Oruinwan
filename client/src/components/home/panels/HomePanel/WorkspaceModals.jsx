@@ -102,7 +102,16 @@ const WorkspaceModals = ({
                                                 📋 Copy
                                             </button>
                                         </div>
-                                        <p className="text-xs text-green-600 font-medium">✅ Link ready! Copy and share with your team.</p>
+                                        <div className="flex justify-between items-center px-1">
+                                            <p className="text-xs text-green-600 font-medium">✅ Link ready! Share with your team.</p>
+                                            <button
+                                                onClick={handleGenerateLink}
+                                                disabled={isGeneratingLink}
+                                                className="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1 transition-colors hover:underline"
+                                            >
+                                                {isGeneratingLink ? "Regenerating..." : "🔄 Generate New Link"}
+                                            </button>
+                                        </div>
                                     </div>
                                 ) : (
                                     <button

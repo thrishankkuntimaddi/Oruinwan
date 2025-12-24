@@ -3,15 +3,14 @@ import { io } from 'socket.io-client';
 
 const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
-export const useSocketConnection = (chat, getAccessToken, connected, setConnected, currentUserIdRef, mapBackendMsgToUI, setMessages, pendingMessagesRef, setTypingUsers, setThreadCounts) => {
+export const useSocketConnection = (chat, accessToken, connected, setConnected, currentUserIdRef, mapBackendMsgToUI, setMessages, pendingMessagesRef, setTypingUsers, setThreadCounts) => {
     const socketRef = useRef(null);
 
     useEffect(() => {
-        if (!chat) return;
+        if (!chat || !accessToken) return;
 
-        const token = getAccessToken();
         const socket = io(API_BASE, {
-            auth: { token },
+            auth: { token: accessToken },
             transports: ["websocket"],
         });
 
@@ -20,15 +19,27 @@ export const useSocketConnection = (chat, getAccessToken, connected, setConnecte
         /* --- Connection --- */
         socket.on("connect", () => {
             setConnected(true);
+            console.log('✅ [useSocketConnection] Socket connected');
 
             if (chat.type === "dm") {
-                socket.emit("join-dm", { otherUserId: chat.id });
+                if (chat.isNew) {
+                    // No session to join yet
+                } else {
+                    socket.emit("join-dm", { dmSessionId: chat.id });
+                }
             } else {
                 socket.emit("join-channel", { channelId: chat.id });
             }
         });
 
-        socket.on("disconnect", () => setConnected(false));
+        socket.on("connect_error", (err) => {
+            console.error('❌ [useSocketConnection] Socket connection error:', err.message);
+        });
+
+        socket.on("disconnect", () => {
+            setConnected(false);
+            console.log('🔌 [useSocketConnection] Socket disconnected');
+        });
 
         /* --- NEW MESSAGE --- */
         socket.on("new-message", ({ message, clientTempId }) => {
@@ -65,12 +76,16 @@ export const useSocketConnection = (chat, getAccessToken, connected, setConnecte
         });
 
         /* --- READ RECEIPTS --- */
-        socket.on("read-update", ({ readerId, messageIds }) => {
+        socket.on("read-update", ({ readerId, dmSessionId, channelId }) => {
             setMessages((prev) =>
                 prev.map((m) => {
                     if (!m.backend) return m;
 
-                    if (messageIds.includes(m.backend._id?.toString())) {
+                    const isRelevant = dmSessionId
+                        ? String(m.backend.dm) === String(dmSessionId)
+                        : String(m.backend.channel) === String(channelId);
+
+                    if (isRelevant && String(m.senderId) !== String(readerId)) {
                         const readBy = new Set(m.backend.readBy || []);
                         readBy.add(readerId);
 
@@ -108,7 +123,7 @@ export const useSocketConnection = (chat, getAccessToken, connected, setConnecte
             socket.disconnect();
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [chat]);
+    }, [chat?.id, chat?.type, accessToken]);
 
     return socketRef;
 };

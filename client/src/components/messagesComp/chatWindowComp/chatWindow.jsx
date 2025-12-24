@@ -22,10 +22,12 @@ import { pickFile, formatTime as fmtTime } from "./helpers/helpers.js";
 import { io } from "socket.io-client";
 import axios from "axios";
 import { jwtDecode } from "jwt-decode";
+import { useAuth } from "../../../contexts/AuthContext";
 
 const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
 export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat }) {
+  const { accessToken } = useAuth();
   /* ---------------------------------------------------------
       STATE
   --------------------------------------------------------- */
@@ -130,14 +132,13 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
       LOAD CHAT HISTORY
   --------------------------------------------------------- */
   useEffect(() => {
-    if (!chat) return;
+    if (!chat || !accessToken) return;
 
     let mounted = true;
 
     async function loadMessages() {
       try {
-        const token = getAccessToken();
-        const headers = token ? { Authorization: `Bearer ${token}` } : {};
+        const headers = { Authorization: `Bearer ${accessToken}` };
 
         let url = "";
         if (chat.type === "dm") {
@@ -174,7 +175,7 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
 
     loadMessages();
     return () => (mounted = false);
-  }, [chat, connected]);
+  }, [chat, connected, accessToken]);
 
   /* ---------------------------------------------------------
       OUTSIDE CLICK HANDLER
@@ -199,10 +200,10 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
       SOCKET SETUP
   --------------------------------------------------------- */
   useEffect(() => {
-    const token = getAccessToken();
+    if (!accessToken) return;
 
     const socket = io(API_BASE, {
-      auth: { token },
+      auth: { token: accessToken },
       transports: ["websocket"],
     });
 
@@ -211,6 +212,7 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
     /* --- Connection --- */
     socket.on("connect", () => {
       setConnected(true);
+      console.log('✅ [ChatWindow] Socket connected');
 
       if (!chat) return;
 
@@ -225,7 +227,14 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
       }
     });
 
-    socket.on("disconnect", () => setConnected(false));
+    socket.on("connect_error", (err) => {
+      console.error('❌ [ChatWindow] Socket connection error:', err.message);
+    });
+
+    socket.on("disconnect", () => {
+      setConnected(false);
+      console.log('🔌 [ChatWindow] Socket disconnected');
+    });
 
     /* --- NEW MESSAGE --- */
     socket.on("new-message", ({ message, clientTempId }) => {
@@ -309,7 +318,7 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
     return () => {
       socket.disconnect();
     };
-  }, [chat]);
+  }, [chat, accessToken]);
 
   /* ---------------------------------------------------------
       SEND MESSAGE

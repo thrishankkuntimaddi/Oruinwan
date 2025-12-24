@@ -1,6 +1,7 @@
 // client/src/contexts/AuthContext.jsx
 
 import React, { createContext, useContext, useState, useEffect } from "react";
+import { setOnTokenRefreshed } from "../services/api";
 
 export const AuthContext = createContext(null);
 
@@ -90,6 +91,12 @@ export const AuthProvider = ({ children }) => {
   };
 
   useEffect(() => {
+    // Set up token refresh callback
+    setOnTokenRefreshed((newToken) => {
+      setAccessToken(newToken);
+      console.log("🔄 AuthContext synced with refreshed token");
+    });
+
     loadUser();
   }, []);
 

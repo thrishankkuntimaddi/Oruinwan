@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Trash2, X } from 'lucide-react';
 import ConfirmationModal from "../../../modals/ConfirmationModal";
@@ -8,6 +8,7 @@ import { useToast } from "../../../../contexts/ToastContext";
 import { useUsers } from "../../../../hooks/useUsers";
 import { useWorkspace } from "../../../../contexts/WorkspaceContext";
 import api from "../../../../services/api";
+import { io } from "socket.io-client";
 
 // Import sub-components
 import WorkspaceHeader from "./WorkspaceHeader";
@@ -18,11 +19,13 @@ import WorkspaceSettingsModal from "./WorkspaceSettingsModal";
 import DeleteWorkspaceModal from "./DeleteWorkspaceModal";
 import { CreateChannelModal, NewDMModal } from "./ChannelDMModals";
 
+const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:5000";
+
 const HomePanel = ({ title }) => {
     const navigate = useNavigate();
 
     const { allItems: items, deleteItem, addItem, toggleFavorite, refreshContacts } = useContacts();
-    const { user } = useAuth();
+    const { user, accessToken } = useAuth();
     const { showToast } = useToast();
     const { activeWorkspace } = useWorkspace();
 
@@ -130,7 +133,40 @@ const HomePanel = ({ title }) => {
         }
     };
 
-    const handleInvite = async () => {
+    const handleCloseInvite = useCallback(() => {
+        setShowInviteModal(false);
+        setInviteEmail("");
+        setSelectedRole("member");
+        setInviteLink(""); // Clear the link when closing
+    }, []);
+
+    const handleGenerateLink = useCallback(async () => {
+        try {
+            setIsGeneratingLink(true);
+            console.log('🔗 Generating invite link for workspace:', activeWorkspace.id);
+
+            const response = await api.post(`/api/workspaces/${activeWorkspace.id}/invite`, {
+                inviteType: "link",
+                role: selectedRole,
+                daysValid: 7
+            });
+
+            console.log('✅ Link generation response:', response.data);
+            setInviteLink(response.data.inviteLink);
+            showToast("✅ Invitation link generated!", "success");
+        } catch (error) {
+            console.error("❌ Link generation error:", error);
+            console.error("Error response:", error.response);
+            console.error("Error data:", error.response?.data);
+
+            const errorMsg = error.response?.data?.message || error.message || "Failed to generate link";
+            showToast(errorMsg, "error");
+        } finally {
+            setIsGeneratingLink(false);
+        }
+    }, [activeWorkspace?.id, selectedRole, showToast]);
+
+    const handleInvite = useCallback(async () => {
         if (!inviteEmail.trim()) {
             showToast("Please enter at least one email address", "error");
             return;
@@ -159,42 +195,50 @@ const HomePanel = ({ title }) => {
             }
             showToast(message, "success");
 
-            setShowInviteModal(false);
-            setInviteEmail("");
-            setSelectedRole("member");
+            handleCloseInvite();
         } catch (error) {
             console.error("Invitation error:", error);
             showToast(error.response?.data?.message || "Failed to send invitations", "error");
         } finally {
             setIsInviting(false);
         }
-    };
+    }, [activeWorkspace?.id, inviteEmail, selectedRole, showToast, handleCloseInvite]);
 
-    const handleGenerateLink = async () => {
-        try {
-            setIsGeneratingLink(true);
-            console.log('🔗 Generating invite link for workspace:', activeWorkspace.id);
+    // --- Real-time Link Refresh Logic ---
+    React.useEffect(() => {
+        if (!activeWorkspace?.id || !showInviteModal || !accessToken) return;
 
-            const response = await api.post(`/api/workspaces/${activeWorkspace.id}/invite`, {
-                inviteType: "link",
-                role: selectedRole,
-                daysValid: 7
-            });
+        console.log('🔌 [HomePanel] Connecting to workspace socket for real-time joins...');
+        const socket = io(API_BASE, {
+            auth: { token: accessToken },
+            transports: ["websocket"],
+        });
 
-            console.log('✅ Link generation response:', response.data);
-            setInviteLink(response.data.inviteLink);
-            showToast("✅ Invitation link generated!", "success");
-        } catch (error) {
-            console.error("❌ Link generation error:", error);
-            console.error("Error response:", error.response);
-            console.error("Error data:", error.response?.data);
+        socket.on("connect", () => {
+            console.log('✅ [HomePanel] Connected to socket, joining workspace room...');
+            socket.emit("join-workspace", { workspaceId: activeWorkspace.id });
+        });
 
-            const errorMsg = error.response?.data?.message || error.message || "Failed to generate link";
-            showToast(errorMsg, "error");
-        } finally {
-            setIsGeneratingLink(false);
-        }
-    };
+        socket.on("connect_error", (err) => {
+            console.error('❌ [HomePanel] Socket connection error:', err.message);
+        });
+
+        socket.on("workspace-joined", (data) => {
+            console.log('🎉 [HomePanel] Someone joined the workspace!', data);
+            // If the invite modal is open AND a link was generated, refresh it automatically
+            if (inviteLink) {
+                console.log('🔄 [HomePanel] Refreshing invitation link automatically...');
+                handleGenerateLink();
+                showToast(`🔔 ${data.username} joined! Link refreshed.`, "success");
+            }
+        });
+
+        return () => {
+            console.log('🔌 [HomePanel] Disconnecting workspace socket...');
+            socket.disconnect();
+        };
+    }, [activeWorkspace?.id, showInviteModal, inviteLink, handleGenerateLink, showToast, accessToken]);
+
 
     const handleDeleteSelected = () => {
         selectedItems.forEach(id => deleteItem(id));
@@ -340,7 +384,7 @@ const HomePanel = ({ title }) => {
                 setNewName={setNewName}
                 handleRename={handleRename}
                 showInviteModal={showInviteModal}
-                setShowInviteModal={setShowInviteModal}
+                setShowInviteModal={handleCloseInvite}
                 inviteEmail={inviteEmail}
                 setInviteEmail={setInviteEmail}
                 selectedRole={selectedRole}

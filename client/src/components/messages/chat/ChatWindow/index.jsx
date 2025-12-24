@@ -20,11 +20,11 @@ import { pickFile } from "../../../messagesComp/chatWindowComp/helpers/helpers.j
 import { useSocketConnection } from "./useSocketConnection";
 import {
     formatTime,
-    getAccessToken,
     getCurrentUserIdFromToken,
     mapBackendMsgToUI,
     generateTempId
 } from "./chatUtils";
+import { useAuth } from "../../../../contexts/AuthContext";
 
 import axios from "axios";
 
@@ -32,6 +32,7 @@ const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
 // ✅ CORRECT: No chat prop! Derive from URL instead
 export default function ChatWindow({ onClose, contacts = [], onDeleteChat }) {
+    const { accessToken } = useAuth();
     /* ✅ SINGLE SOURCE OF TRUTH: URL PARAMS */
     const { channelId, dmId } = useParams();
 
@@ -96,7 +97,7 @@ export default function ChatWindow({ onClose, contacts = [], onDeleteChat }) {
     /* SOCKET CONNECTION */
     const socketRef = useSocketConnection(
         chat,
-        getAccessToken,
+        accessToken,
         connected,
         setConnected,
         currentUserIdRef,
@@ -109,7 +110,7 @@ export default function ChatWindow({ onClose, contacts = [], onDeleteChat }) {
 
     /* LOAD CHAT HISTORY */
     useEffect(() => {
-        if (!chat) return;
+        if (!chat || !accessToken) return;
 
         let mounted = true;
 
@@ -119,8 +120,7 @@ export default function ChatWindow({ onClose, contacts = [], onDeleteChat }) {
 
         async function loadMessages() {
             try {
-                const token = getAccessToken();
-                const headers = token ? { Authorization: `Bearer ${token}` } : {};
+                const headers = { Authorization: `Bearer ${accessToken}` };
 
                 let url = "";
                 if (chatType === "dm") {
@@ -162,7 +162,7 @@ export default function ChatWindow({ onClose, contacts = [], onDeleteChat }) {
         return () => (mounted = false);
         // ✅ CORRECT: Depend on stable string IDs, not chat object
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [chat?.id, chat?.type, connected]);
+    }, [chat?.id, chat?.type, connected, accessToken]);
 
     /* OUTSIDE CLICK HANDLER */
     useEffect(() => {

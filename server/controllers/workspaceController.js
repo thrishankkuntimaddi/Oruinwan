@@ -496,6 +496,17 @@ exports.joinWorkspace = async (req, res) => {
     invite.usedAt = new Date();
     await invite.save();
 
+    // 📣 Real-time notification: Notify the workspace room that someone joined
+    const io = req.app.get("io");
+    if (io) {
+      io.to(`workspace_${workspace._id.toString()}`).emit("workspace-joined", {
+        workspaceId: workspace._id,
+        userId: userId,
+        username: user.username,
+        role: invite.role
+      });
+    }
+
     console.log(`✅ User ${user.username} joined workspace ${workspace.name}`);
 
     return res.json({
