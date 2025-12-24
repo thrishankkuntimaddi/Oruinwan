@@ -19,7 +19,7 @@ const ChannelsPanel = ({ title }) => {
     const [selectedItems, setSelectedItems] = useState(new Set());
 
     // Channel Creation State 
-    const [newChannelData, setNewChannelData] = useState({ name: "", description: "", isPrivate: false });
+    const [newChannelData, setNewChannelData] = useState({ name: "", description: "" });
     const [createStep, setCreateStep] = useState(1);
     const [selectedChannelMembers, setSelectedChannelMembers] = useState([]);
 
@@ -111,21 +111,27 @@ const ChannelsPanel = ({ title }) => {
     const handleCreateChannel = async () => {
         if (!newChannelData.name) return;
 
-        if (newChannelData.isPrivate && createStep === 1) {
-            setCreateStep(2);
-            return;
-        }
-
         try {
             console.log('📡 Creating channel:', newChannelData.name);
 
-            // ✅ CORRECT: Call backend API
-            const response = await api.post(`/api/workspaces/${workspaceId}/channels`, {
+            // ✨ NEW LOGIC: Backend determines public/private based on members array
+            // - undefined/empty array → PUBLIC (all workspace members)
+            // - array with IDs → PRIVATE (only selected members + creator)
+            const payload = {
                 name: newChannelData.name,
                 description: newChannelData.description,
-                isPrivate: newChannelData.isPrivate,
-                members: selectedChannelMembers.length > 0 ? selectedChannelMembers : undefined
+                members: selectedChannelMembers.length > 0
+                    ? selectedChannelMembers
+                    : undefined // Backend will make it public
+            };
+
+            console.log('📦 Payload:', {
+                ...payload,
+                visibility: selectedChannelMembers.length > 0 ? 'PRIVATE' : 'PUBLIC'
             });
+
+            // ✅ CORRECT: Call backend API
+            const response = await api.post(`/api/workspaces/${workspaceId}/channels`, payload);
 
             const createdChannel = response.data.channel;
             console.log('✅ Channel created:', createdChannel);
@@ -150,7 +156,7 @@ const ChannelsPanel = ({ title }) => {
 
             // Reset
             setShowCreateChannelModal(false);
-            setNewChannelData({ name: "", description: "", isPrivate: false });
+            setNewChannelData({ name: "", description: "" });
             setCreateStep(1);
             setSelectedChannelMembers([]);
         } catch (err) {
@@ -386,29 +392,25 @@ const ChannelsPanel = ({ title }) => {
                                         className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
                                     />
                                 </div>
-                                <div>
-                                    <label className="flex items-center cursor-pointer group p-3 border border-gray-100 rounded-xl hover:bg-gray-50 transition-colors">
-                                        <div className="relative">
-                                            <input
-                                                type="checkbox"
-                                                className="sr-only peer"
-                                                checked={newChannelData.isPrivate}
-                                                onChange={(e) => setNewChannelData({ ...newChannelData, isPrivate: e.target.checked })}
-                                            />
-                                            <div className="w-10 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                                        </div>
-                                        <div className="ml-3">
-                                            <span className="block text-sm font-bold text-gray-900">Make Private</span>
-                                            <span className="block text-xs text-gray-500">Only invited members can view this channel.</span>
-                                        </div>
-                                    </label>
+
+                                {/* ✨ NEW: Channel Visibility Info */}
+                                <div className="bg-blue-50 border border-blue-100 rounded-xl p-4">
+                                    <h4 className="text-sm font-bold text-blue-900 mb-2">Channel Visibility</h4>
+                                    <div className="space-y-2 text-xs text-blue-800">
+                                        <p>
+                                            <span className="font-bold">🌐 Public:</span> Skip member selection - all workspace members can view and join
+                                        </p>
+                                        <p>
+                                            <span className="font-bold">🔒 Private:</span> Select specific members - only they can view and participate
+                                        </p>
+                                    </div>
                                 </div>
                             </div>
                         ) : (
                             <div className="p-0">
                                 <div className="p-4 bg-blue-50 border-b border-blue-100 text-sm text-blue-800 flex items-center gap-2">
                                     <span>#</span>
-                                    <span>Adding members to <strong>#{newChannelData.name}</strong></span>
+                                    <span>Adding members to <strong>#{newChannelData.name}</strong> (Private Channel)</span>
                                 </div>
                                 <div className="max-h-[300px] overflow-y-auto p-2">
                                     {workspaceMembers.map(member => (
@@ -441,14 +443,50 @@ const ChannelsPanel = ({ title }) => {
                         )}
 
                         <div className="px-8 py-5 bg-gray-50 border-t border-gray-100 flex justify-end gap-3">
-                            <button onClick={() => setShowCreateChannelModal(false)} className="px-6 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-200 rounded-xl transition-colors">Cancel</button>
-                            <button
-                                onClick={handleCreateChannel}
-                                disabled={!newChannelData.name}
-                                className="px-6 py-2.5 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-md hover:shadow-lg transition-all transform active:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                                {createStep === 1 && newChannelData.isPrivate ? "Next: Add Members" : "Create Channel"}
-                            </button>
+                            <button onClick={() => {
+                                setShowCreateChannelModal(false);
+                                setNewChannelData({ name: "", description: "" });
+                                setCreateStep(1);
+                                setSelectedChannelMembers([]);
+                            }} className="px-6 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-200 rounded-xl transition-colors">Cancel</button>
+
+                            {createStep === 1 ? (
+                                <>
+                                    <button
+                                        onClick={() => setCreateStep(2)}
+                                        disabled={!newChannelData.name}
+                                        className="px-6 py-2.5 text-sm font-medium text-blue-600 hover:bg-blue-50 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        Add Specific Members
+                                    </button>
+                                    <button
+                                        onClick={handleCreateChannel}
+                                        disabled={!newChannelData.name}
+                                        className="px-6 py-2.5 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-md hover:shadow-lg transition-all transform active:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        Create Public Channel
+                                    </button>
+                                </>
+                            ) : (
+                                <>
+                                    <button
+                                        onClick={() => {
+                                            setCreateStep(1);
+                                            setSelectedChannelMembers([]);
+                                        }}
+                                        className="px-6 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-200 rounded-xl transition-colors"
+                                    >
+                                        Back
+                                    </button>
+                                    <button
+                                        onClick={handleCreateChannel}
+                                        disabled={selectedChannelMembers.length === 0}
+                                        className="px-6 py-2.5 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-md hover:shadow-lg transition-all transform active:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        Create Private Channel
+                                    </button>
+                                </>
+                            )}
                         </div>
                     </div>
                 </div>

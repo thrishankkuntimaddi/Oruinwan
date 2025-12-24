@@ -614,21 +614,47 @@ exports.getWorkspaceChannels = async (req, res) => {
       return res.status(403).json({ message: "You are not a member of this workspace" });
     }
 
-    // Fetch channels for this workspace only, sorted (default channels first)
-    const channels = await Channel.find({ workspace: workspaceId })
+    // Fetch ALL channels for this workspace
+    const allChannels = await Channel.find({ workspace: workspaceId })
       .select('name description isPrivate isDefault members createdBy createdAt workspace')
       .sort({ isDefault: -1, createdAt: 1 }) // Default channels first, then by creation time
       .lean();
 
-    console.log(`✅ Found ${channels.length} channels for workspace ${workspaceId}`);
+    // 🔒 CRITICAL: Filter channels based on privacy
+    // - Public channels (isPrivate = false): Show to all workspace members
+    // - Private channels (isPrivate = true): Show ONLY to members of that channel
+    const visibleChannels = allChannels.filter(channel => {
+      if (!channel.isPrivate) {
+        // Public channel - visible to all workspace members
+        console.log(`  📢 #${channel.name} - PUBLIC - showing to all`);
+        return true;
+      } else {
+        // Private channel - only visible if user is a member
+        const isMemberOfChannel = channel.members.some(m => {
+          const memberId = m.user ? m.user.toString() : m.toString();
+          return memberId === userId.toString();
+        });
 
-    // 🔍 DEBUG: Log each channel's workspace
-    console.log('\n🔍 CHANNEL DETAILS:');
-    channels.forEach((ch, idx) => {
-      console.log(`${idx + 1}. #${ch.name} - Workspace: ${ch.workspace}`);
+        console.log(`  🔒 #${channel.name} - PRIVATE - user ${userId} is ${isMemberOfChannel ? 'MEMBER ✅' : 'NOT member ❌'}`);
+        console.log(`     Members (${channel.members.length}):`, channel.members.map(m => {
+          const id = m.user ? m.user.toString() : m.toString();
+          return id.substring(id.length - 4); // Last 4 chars for brevity
+        }));
+
+        return isMemberOfChannel;
+      }
     });
 
-    return res.json({ channels });
+    console.log(`✅ Found ${allChannels.length} total channels, ${visibleChannels.length} visible to user ${userId}`);
+
+    // 🔍 DEBUG: Log each channel's visibility
+    console.log('\n🔍 CHANNEL VISIBILITY:');
+    allChannels.forEach((ch, idx) => {
+      const isVisible = visibleChannels.some(vc => vc._id.toString() === ch._id.toString());
+      console.log(`${idx + 1}. #${ch.name} - ${ch.isPrivate ? '🔒 PRIVATE' : '🌐 PUBLIC'} - ${isVisible ? '✅ VISIBLE' : '❌ HIDDEN'}`);
+    });
+
+    return res.json({ channels: visibleChannels });
   } catch (err) {
     console.error("GET WORKSPACE CHANNELS ERROR:", err);
     return res.status(500).json({ message: "Server error" });
@@ -693,16 +719,29 @@ exports.createWorkspaceChannel = async (req, res) => {
       }
     }
 
-    // Ensure creator is always included in members
-    const finalMemberIds = channelMembers && channelMembers.length > 0
-      ? [...new Set([userId, ...channelMembers])]
-      : [userId];
+    // ✨ NEW LOGIC: Determine channel type based on member selection
+    const isPublicChannel = !channelMembers || channelMembers.length === 0;
 
-    // Convert member IDs to proper format
-    const finalMembers = finalMemberIds.map(memberId => ({
-      user: memberId,
-      joinedAt: new Date()
-    }));
+    let finalMembers;
+    if (isPublicChannel) {
+      // 🌐 PUBLIC CHANNEL: Include ALL workspace members (current + future)
+      console.log('🌐 Creating PUBLIC channel - including all workspace members');
+      finalMembers = workspace.members.map(m => ({
+        user: m.user,
+        joinedAt: new Date()
+      }));
+    } else {
+      // 🔒 PRIVATE CHANNEL: Only selected members + creator
+      console.log(`🔒 Creating PRIVATE channel - ${channelMembers.length} selected members + creator`);
+
+      // Ensure creator is always included
+      const finalMemberIds = [...new Set([userId, ...channelMembers])];
+
+      finalMembers = finalMemberIds.map(memberId => ({
+        user: memberId,
+        joinedAt: new Date()
+      }));
+    }
 
     // Create channel
     const channel = await Channel.create({
@@ -710,13 +749,13 @@ exports.createWorkspaceChannel = async (req, res) => {
       company: workspace.company || null,
       name: name.toLowerCase().trim(),
       description: description || "",
-      isPrivate: isPrivate || false,
+      isPrivate: !isPublicChannel, // ✨ Determined by member selection
       isDefault: false, // User-created channels are not default
       createdBy: userId,
       members: finalMembers
     });
 
-    console.log(`✅ Channel created: #${channel.name}`);
+    console.log(`✅ Channel created: #${channel.name} (${isPublicChannel ? 'PUBLIC' : 'PRIVATE'}) with ${finalMembers.length} members`);
 
     return res.status(201).json({
       message: "Channel created successfully",

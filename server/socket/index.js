@@ -167,11 +167,12 @@ module.exports = function registerChatHandlers(io, socket) {
   socket.on("mark-chat-read", async ({ type, id }) => {
     try {
       const readerId = userId;
+      console.log(`📖 mark-chat-read: type=${type}, id=${id}, readerId=${readerId}`);
 
       if (type === "dm") {
         const dmSessionId = id;
 
-        await Message.updateMany(
+        const result = await Message.updateMany(
           {
             dm: dmSessionId,
             sender: { $ne: readerId },
@@ -179,6 +180,8 @@ module.exports = function registerChatHandlers(io, socket) {
           },
           { $addToSet: { readBy: readerId } }
         );
+
+        console.log(`✅ DM mark-read result: matched=${result.matchedCount}, modified=${result.modifiedCount}`);
 
         io.to(`dm_${dmSessionId}`).emit("read-update", {
           readerId,
@@ -192,7 +195,7 @@ module.exports = function registerChatHandlers(io, socket) {
 
         if (!channel.members.some(m => String(m) === String(readerId))) return;
 
-        await Message.updateMany(
+        const result = await Message.updateMany(
           {
             channel: channelId,
             sender: { $ne: readerId },
@@ -200,6 +203,8 @@ module.exports = function registerChatHandlers(io, socket) {
           },
           { $addToSet: { readBy: readerId } }
         );
+
+        console.log(`✅ Channel mark-read result: matched=${result.matchedCount}, modified=${result.modifiedCount}`);
 
         io.to(`channel_${channelId}`).emit("read-update", {
           readerId,

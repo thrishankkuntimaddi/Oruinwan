@@ -133,6 +133,7 @@ exports.getDMs = async (req, res) => {
       .sort({ createdAt: -1 }) // Get newest first
       .limit(limit)
       .populate("sender", "username email profilePicture")
+      .populate("readBy", "username") // Populate read receipts
       .populate("threadParent");
 
     // Reverse to get chronological order (oldest to newest)
@@ -193,6 +194,7 @@ exports.getChannelMessages = async (req, res) => {
       .sort({ createdAt: -1 }) // Get newest first
       .limit(limit)
       .populate("sender", "username email profilePicture")
+      .populate("readBy", "username") // Populate read receipts
       .populate("threadParent");
 
     // Reverse to get chronological order (oldest to newest)

@@ -1,6 +1,6 @@
 // client/src/components/messagesComp/chatWindowComp/chatWindow.jsx
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import "./chatWindow.css";
 
 import Header from "./header/header.jsx";
@@ -92,15 +92,7 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
   --------------------------------------------------------- */
   const formatTime = (iso) => fmtTime(iso);
 
-  const getAccessToken = () => {
-    const t = localStorage.getItem("accessToken");
-    if (t) return t;
-
-    const match = document.cookie.match(/(^| )accessToken=([^;]+)/);
-    if (match) return match[2];
-
-    return null;
-  };
+  // getAccessToken removed - using accessToken from context instead
 
   const mapBackendMsgToUI = (m) => {
     const senderObj = typeof m.sender === "object" ? m.sender : {};
@@ -141,7 +133,7 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
   /* ---------------------------------------------------------
       LOAD CURRENT USER FROM TOKEN
   --------------------------------------------------------- */
-  const fetchWorkspaceMembers = async () => {
+  const fetchWorkspaceMembers = useCallback(async () => {
     try {
       if (!chat || !chat.workspaceId) return;
       const res = await api.get(`/api/workspaces/${chat.workspaceId}/all-members`);
@@ -149,11 +141,11 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
     } catch (err) {
       console.error("Fetch workspace members failed:", err);
     }
-  };
+  }, [chat]);
 
   useEffect(() => {
     fetchWorkspaceMembers();
-  }, [chat?.workspaceId]);
+  }, [chat?.workspaceId, fetchWorkspaceMembers]);
 
   /* ---------------------------------------------------------
       LOAD CURRENT USER FROM TOKEN
@@ -166,7 +158,7 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
       const d = jwtDecode(t);
       currentUserIdRef.current = d.sub || d.id || d.userId || null;
     } catch { }
-  }, []);
+  }, [accessToken]);
 
   /* ---------------------------------------------------------
       LOAD CHAT HISTORY
@@ -220,11 +212,16 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
 
         // Mark as read via socket
         const socket = socketRef.current;
+        console.log(`📖 [ChatWindow] Attempting to mark as read: socket=${!!socket}, connected=${connected}, type=${chat.type}, id=${chat.id}`);
+
         if (socket && connected) {
+          console.log(`✅ [ChatWindow] Emitting mark-chat-read event`);
           socket.emit("mark-chat-read", {
             type: chat.type,
             id: chat.id,
           });
+        } else {
+          console.warn(`⚠️ [ChatWindow] Cannot mark as read - socket or connection not ready`);
         }
       } catch (err) {
         console.error("Load messages error:", err);
@@ -237,6 +234,32 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
     loadMessages();
     return () => (mounted = false);
   }, [chat, connected, accessToken]); // Note: We keep accessToken in deps to re-run when context updates
+
+  /* ---------------------------------------------------------
+      MARK MESSAGES AS READ (separate effect to handle timing)
+  --------------------------------------------------------- */
+  useEffect(() => {
+    // Only mark as read if we have messages, socket is connected, and chat is active
+    if (!chat || !connected || !socketRef.current || messages.length === 0) {
+      return;
+    }
+
+    console.log(`📖 [ChatWindow] Marking chat as read: type=${chat.type}, id=${chat.id}`);
+
+    // Small delay to ensure socket is fully ready
+    const timer = setTimeout(() => {
+      const socket = socketRef.current;
+      if (socket && connected) {
+        console.log(`✅ [ChatWindow] Emitting mark-chat-read event`);
+        socket.emit("mark-chat-read", {
+          type: chat.type,
+          id: chat.id,
+        });
+      }
+    }, 100);
+
+    return () => clearTimeout(timer);
+  }, [chat, connected, messages.length]); // Re-run when chat changes or messages load
 
   /* ---------------------------------------------------------
       OUTSIDE CLICK HANDLER
@@ -344,15 +367,18 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
       }
     });
 
+    /* --- SOCKET DISCONNECT --- */
     socket.on("disconnect", (reason) => {
+      console.log("🔌 [ChatWindow] Socket disconnected:", reason);
       setConnected(false);
-      console.log('🔌 [ChatWindow] Socket disconnected:', reason);
 
-      if (reason === "io server disconnect") {
-        // Server forced disconnect, need to reconnect manually
-        socket.connect();
+      // Don't show toast for intentional disconnects (navigation, refresh, etc.)
+      // Socket will auto-reconnect if it was a network issue
+      if (reason === "transport close" || reason === "transport error") {
+        // Network issue - socket.io will auto-reconnect
+        console.log("⚠️ Network disconnect - will auto-reconnect");
       }
-      showToast("Connection lost. Reconnecting...", "warning");
+      // Removed annoying toast - disconnects during navigation are normal
     });
 
     /* --- NEW MESSAGE --- */

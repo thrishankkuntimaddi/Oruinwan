@@ -1,20 +1,65 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { X, CheckCircle2, User, Clock } from "lucide-react";
 
 export default function MessageInfoModal({ msg, onClose, currentUserId, workspaceMembers = [] }) {
+  // Hooks must be called before any early returns
+  const [debugInfo, setDebugInfo] = useState(null);
+
+  useEffect(() => {
+    if (!msg) return; // Guard within useEffect
+
+    // Debug: Log the data structure
+    console.log("🔍 MessageInfoModal Debug:", {
+      msgId: msg.id,
+      readBy: msg.backend?.readBy,
+      readByType: typeof msg.backend?.readBy,
+      readByIsArray: Array.isArray(msg.backend?.readBy),
+      workspaceMembersCount: workspaceMembers.length,
+      workspaceMembersSample: workspaceMembers.slice(0, 2),
+      currentUserId
+    });
+
+    setDebugInfo({
+      readByCount: Array.isArray(msg.backend?.readBy) ? msg.backend.readBy.length : 0,
+      membersCount: workspaceMembers.length
+    });
+  }, [msg, workspaceMembers, currentUserId]);
+
+  // Early return after hooks
   if (!msg) return null;
 
-  const readBy = Array.isArray(msg.backend?.readBy) ? msg.backend.readBy : [];
+  // Get readBy array and convert all IDs to strings
+  const readBy = Array.isArray(msg.backend?.readBy)
+    ? msg.backend.readBy.map(id => String(id))
+    : [];
+
+  console.log("📊 Processed readBy:", readBy);
 
   // Resolve "Seen by" names
   const seenByList = workspaceMembers
-    .filter(m => readBy.includes(String(m.id)) && String(m.id) !== String(currentUserId))
+    .filter(m => {
+      const memberId = String(m.id || m._id);
+      const isReader = readBy.includes(memberId);
+      const isNotCurrentUser = memberId !== String(currentUserId);
+
+      console.log(`👤 Member ${m.name}: id=${memberId}, isReader=${isReader}, isNotCurrentUser=${isNotCurrentUser}`);
+
+      return isReader && isNotCurrentUser;
+    })
     .sort((a, b) => (a.name || "").localeCompare(b.name || ""));
 
   // Resolve "Delivered to" names (everyone else in the workspace who hasn't seen it)
   const deliveredToList = workspaceMembers
-    .filter(m => !readBy.includes(String(m.id)) && String(m.id) !== String(currentUserId))
+    .filter(m => {
+      const memberId = String(m.id || m._id);
+      return !readBy.includes(memberId) && memberId !== String(currentUserId);
+    })
     .sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+
+  console.log("✅ Final lists:", {
+    seenByCount: seenByList.length,
+    deliveredToCount: deliveredToList.length
+  });
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center animate-fade-in text-gray-800">
@@ -38,6 +83,12 @@ export default function MessageInfoModal({ msg, onClose, currentUserId, workspac
             <Clock size={12} />
             Sent at {new Date(msg.ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
           </div>
+          {/* Debug info - remove after fixing */}
+          {debugInfo && (
+            <div className="mt-2 text-[9px] text-gray-400 font-mono">
+              Debug: {debugInfo.readByCount} readers / {debugInfo.membersCount} members
+            </div>
+          )}
         </div>
 
         {/* Status Body */}
@@ -52,7 +103,7 @@ export default function MessageInfoModal({ msg, onClose, currentUserId, workspac
             {seenByList.length > 0 ? (
               <div className="space-y-3 pl-1">
                 {seenByList.map((user) => (
-                  <div key={user.id} className="flex items-center gap-2.5">
+                  <div key={user.id || user._id} className="flex items-center gap-2.5">
                     <div className="w-6 h-6 rounded bg-blue-50 flex items-center justify-center border border-blue-100/50">
                       <span className="text-[10px] font-bold text-blue-600">{(user.name || "?").charAt(0).toUpperCase()}</span>
                     </div>
@@ -73,7 +124,7 @@ export default function MessageInfoModal({ msg, onClose, currentUserId, workspac
             {deliveredToList.length > 0 ? (
               <div className="space-y-3 pl-1">
                 {deliveredToList.map((user) => (
-                  <div key={user.id} className="flex items-center gap-2.5 opacity-70">
+                  <div key={user.id || user._id} className="flex items-center gap-2.5 opacity-70">
                     <div className="w-6 h-6 rounded bg-gray-50 flex items-center justify-center border border-gray-200">
                       <span className="text-[10px] font-bold text-gray-400">{(user.name || "?").charAt(0).toUpperCase()}</span>
                     </div>
