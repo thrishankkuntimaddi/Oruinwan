@@ -37,9 +37,15 @@ export default function Header({
   blocked,
   setBlocked,
   onDeleteChat,
+  onExitChannel,
+  onDeleteChannel,
+  currentUserId,
   showToast,
 }) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  // Check if current user is the channel creator
+  const isChannelCreator = chat.type === 'channel' && chat.createdBy && String(chat.createdBy) === String(currentUserId);
 
   const handleDelete = () => {
     if (onDeleteChat) {
@@ -193,15 +199,45 @@ export default function Header({
                   </button>
                 )}
                 <div className="border-t border-gray-100 my-1" />
-                <button
-                  className="w-full text-left px-4 py-2 hover:bg-gray-50 text-red-600 flex items-center gap-3"
-                  onClick={() => {
-                    setShowMenu(false);
-                    setShowDeleteConfirm(true);
-                  }}
-                >
-                  <Trash2 size={16} /> Delete {chat.type === 'channel' ? 'Channel' : 'Chat'}
-                </button>
+
+                {/* Channel: Exit Channel (only non-default channels) */}
+                {chat.type === 'channel' && !chat.isDefault && onExitChannel && (
+                  <button
+                    className="w-full text-left px-4 py-2 hover:bg-gray-50 text-orange-600 flex items-center gap-3"
+                    onClick={() => {
+                      setShowMenu(false);
+                      onExitChannel();
+                    }}
+                  >
+                    <Trash2 size={16} /> Exit Channel
+                  </button>
+                )}
+
+                {/* Channel: Delete Channel (creators only) */}
+                {chat.type === 'channel' && isChannelCreator && onDeleteChannel && !chat.isDefault && (
+                  <button
+                    className="w-full text-left px-4 py-2 hover:bg-gray-50 text-red-600 flex items-center gap-3"
+                    onClick={() => {
+                      setShowMenu(false);
+                      onDeleteChannel();
+                    }}
+                  >
+                    <Trash2 size={16} /> Delete Channel Permanently
+                  </button>
+                )}
+
+                {/* DM: Delete Chat */}
+                {chat.type !== 'channel' && (
+                  <button
+                    className="w-full text-left px-4 py-2 hover:bg-gray-50 text-red-600 flex items-center gap-3"
+                    onClick={() => {
+                      setShowMenu(false);
+                      setShowDeleteConfirm(true);
+                    }}
+                  >
+                    <Trash2 size={16} /> Delete Chat
+                  </button>
+                )}
               </div>
             )}
           </div>

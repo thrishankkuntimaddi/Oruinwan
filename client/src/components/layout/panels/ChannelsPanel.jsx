@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Plus, Hash, Search, Trash2, X, CheckSquare, Settings2 } from 'lucide-react';
+import { Plus, Hash, Search, Trash2, X, CheckSquare, Settings2, Lock } from 'lucide-react';
 import { useWorkspace } from "../../../contexts/WorkspaceContext";
 import api from "../../../services/api";
 import ConfirmationModal from "../../ui/ConfirmationModal";
@@ -146,7 +146,8 @@ const ChannelsPanel = ({ title }) => {
                 isPrivate: createdChannel.isPrivate,
                 isDefault: false,
                 description: createdChannel.description || '',
-                canDelete: true
+                canDelete: true,
+                createdBy: createdChannel.createdBy // Add createdBy for newly created channel
             };
 
             setChannels(prev => [...prev, newChannel]);
@@ -248,8 +249,13 @@ const ChannelsPanel = ({ title }) => {
                             {isSelected && <CheckSquare size={10} className="text-white" />}
                         </div>
                     )}
+                    {item.isPrivate ? (
+                        <Lock size={14} className="text-purple-400" />
+                    ) : (
+                        <Hash size={14} className="text-gray-400" />
+                    )}
                     <span className="opacity-70 text-lg">#</span>
-                    <span className="truncate text-sm font-medium">{item.label}</span>
+                    <span className="truncate text-sm font-medium">{item.label || 'Unnamed Channel'}</span>
                     {/* Default badge removed */}
                 </div>
             </div>
@@ -414,26 +420,26 @@ const ChannelsPanel = ({ title }) => {
                                 </div>
                                 <div className="max-h-[300px] overflow-y-auto p-2">
                                     {workspaceMembers.map(member => (
-                                        <label key={member.id} className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-xl cursor-pointer transition-colors">
+                                        <label key={member._id} className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-xl cursor-pointer transition-colors">
                                             <div className="flex items-center gap-3">
                                                 <input
                                                     type="checkbox"
                                                     className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
-                                                    checked={selectedChannelMembers.includes(member.id)}
+                                                    checked={selectedChannelMembers.includes(member._id)}
                                                     onChange={(e) => {
                                                         if (e.target.checked) {
-                                                            setSelectedChannelMembers([...selectedChannelMembers, member.id]);
+                                                            setSelectedChannelMembers([...selectedChannelMembers, member._id]);
                                                         } else {
-                                                            setSelectedChannelMembers(selectedChannelMembers.filter(id => id !== member.id));
+                                                            setSelectedChannelMembers(selectedChannelMembers.filter(id => id !== member._id));
                                                         }
                                                     }}
                                                 />
-                                                <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-xs font-bold text-gray-600">
-                                                    {member.name.charAt(0)}
+                                                <div className="w-7 h-7 rounded-full bg-blue-500 flex items-center justify-center text-white font-medium text-xs">
+                                                    {(member?.name || member?.username || 'U').charAt(0)}
                                                 </div>
                                                 <div>
-                                                    <div className="text-sm font-bold text-gray-900">{member.name}</div>
-                                                    <div className="text-xs text-gray-500">{member.role}</div>
+                                                    <div className="font-medium text-sm">{member?.name || member?.username || 'Unknown'}</div>
+                                                    <div className="text-xs text-gray-500">{member?.email || ''}</div>
                                                 </div>
                                             </div>
                                         </label>

@@ -50,6 +50,18 @@ export default function ChannelMessageItem({
         };
     }, [showReactionPicker]);
 
+    // ✨ System Message Rendering (e.g., "muza exited from #maker on Dec 24, 2025")
+    // Must be AFTER all hooks to avoid React Hooks rules violation
+    if (msg.type === 'system' || msg.backend?.type === 'system') {
+        return (
+            <div className="flex justify-center my-3">
+                <div className="bg-gray-100/80 px-4 py-1.5 rounded-full text-xs text-gray-600 font-medium shadow-sm">
+                    {msg.text}
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div
             className={`group flex items-start gap-3 px-4 py-0.5 hover:bg-gray-50/50 relative ${isSelected ? "bg-blue-50/30" : ""} ${msg.isPinned ? "bg-yellow-50/50 border-l-2 border-yellow-400" : "border-l-2 border-transparent"}`}

@@ -33,12 +33,13 @@ export default function ChannelManagementModal({ channel, onClose, currentUserId
         try {
             const token = localStorage.getItem("accessToken");
             const headers = token ? { Authorization: `Bearer ${token}` } : {};
-            const res = await axios.get(`${API_BASE}/api/auth/users`, { headers });
-            setAllUsers(res.data.users || []);
+            // Fetch workspace members instead of all users
+            const res = await axios.get(`${API_BASE}/api/workspaces/${channel.workspaceId}/members`, { headers });
+            setAllUsers(res.data.members || []);
         } catch (err) {
-            console.error("Load users failed:", err);
+            console.error("Load workspace members failed:", err);
         }
-    }, []);
+    }, [channel.workspaceId]);
 
     useEffect(() => {
         loadMembers();
@@ -179,9 +180,9 @@ export default function ChannelManagementModal({ channel, onClose, currentUserId
                                                 <div key={user._id} className="flex items-center justify-between p-2 bg-white rounded-lg border border-blue-100 hover:border-blue-300 transition-colors">
                                                     <div className="flex items-center gap-3">
                                                         <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-xs">
-                                                            {user.username.charAt(0).toUpperCase()}
+                                                            {(user?.username || 'U').charAt(0).toUpperCase()}
                                                         </div>
-                                                        <span className="text-sm font-medium text-gray-700">{user.username}</span>
+                                                        <span className="text-sm font-medium text-gray-700">{user?.username || 'Unknown'}</span>
                                                     </div>
                                                     <button
                                                         onClick={() => handleInvite(user._id)}
@@ -217,11 +218,11 @@ export default function ChannelManagementModal({ channel, onClose, currentUserId
                                         <div key={member._id} className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-xl transition-colors group">
                                             <div className="flex items-center gap-3">
                                                 <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-600 font-bold">
-                                                    {member.username.charAt(0).toUpperCase()}
+                                                    {(member?.username || 'U').charAt(0).toUpperCase()}
                                                 </div>
                                                 <div>
                                                     <div className="text-sm font-bold text-gray-900 flex items-center gap-2">
-                                                        {member.username}
+                                                        {member?.username || 'Unknown'}
                                                         {String(member._id) === String(channel.createdBy) && (
                                                             <span className="px-1.5 py-0.5 bg-yellow-100 text-yellow-700 text-[10px] font-bold rounded uppercase tracking-wide">Owner</span>
                                                         )}

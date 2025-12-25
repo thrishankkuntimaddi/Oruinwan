@@ -381,6 +381,38 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
       // Removed annoying toast - disconnects during navigation are normal
     });
 
+    /* --- MEMBER LEFT CHANNEL --- */
+    socket.on("member-left", ({ channelId, userId, systemMessage }) => {
+      console.log("👋 [ChatWindow] Member left channel:", { channelId, userId });
+
+      // If it's the current user who left, close the chat window
+      if (String(userId) === String(currentUserIdRef.current)) {
+        console.log("✅ Current user left channel - closing chat window");
+        showToast("You have left this channel", "info");
+        onClose(); // Close the chat window
+        if (onDeleteChat) {
+          onDeleteChat(); // Trigger parent to refresh channel list
+        }
+      } else {
+        // Another user left - just show the system message
+        if (systemMessage) {
+          const mappedMsg = mapBackendMsgToUI(systemMessage);
+          setMessages((prev) => [...prev, mappedMsg]);
+        }
+      }
+    });
+
+    /* --- CHANNEL DELETED --- */
+    socket.on("channel-deleted", ({ channelId, channelName }) => {
+      console.log("🗑️ [ChatWindow] Channel deleted:", { channelId, channelName });
+
+      showToast(`#${channelName} has been deleted`, "warning");
+      onClose(); // Close the chat window
+      if (onDeleteChat) {
+        onDeleteChat(); // Trigger parent to refresh channel list
+      }
+    });
+
     /* --- NEW MESSAGE --- */
     socket.on("new-message", ({ message, clientTempId }) => {
       console.log('📨 [ChatWindow] Received new-message:', { messageId: message._id, clientTempId });
@@ -538,6 +570,7 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
     return () => {
       socket.disconnect();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chat, accessToken]);
 
   /* ---------------------------------------------------------
@@ -832,10 +865,88 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
   };
 
   /* ---------------------------------------------------------
+      EXIT CHANNEL
+  --------------------------------------------------------- */
+  const handleExitChannel = async () => {
+    if (chat.type !== 'channel') return;
+
+    const confirmed = window.confirm(
+      `Exit #${chat.name}?\n\nYou'll no longer be able to send or receive messages in this channel.`
+    );
+
+    if (!confirmed) return;
+
+    try {
+      console.log('📤 Exiting channel:', chat.id);
+
+      const response = await api.post(`/api/channels/${chat.id}/exit`);
+
+      console.log('✅ Exited channel:', response.data);
+
+      showToast(`You left #${chat.name}`, 'success');
+
+      // Close the chat window and navigate away
+      onClose();
+
+      // Optionally reload the channel list
+      if (onDeleteChat) {
+        onDeleteChat(); // This will trigger parent to refresh
+      }
+    } catch (err) {
+      console.error('❌ Exit channel error:', err);
+
+      if (err.response?.data?.requiresAdminAssignment) {
+        showToast('You must assign another admin before exiting', 'warning');
+      } else {
+        showToast(err.response?.data?.message || 'Failed to exit channel', 'error');
+      }
+    }
+  };
+
+  /* ---------------------------------------------------------
+      DELETE CHANNEL (CREATOR ONLY)
+  --------------------------------------------------------- */
+  const handleDeleteChannel = async () => {
+    if (chat.type !== 'channel') return;
+
+    const confirmed = window.confirm(
+      `⚠️ PERMANENTLY DELETE #${chat.name}?\n\n` +
+      `This will:\n` +
+      `• Delete ALL messages\n` +
+      `• Remove ALL members\n` +
+      `• Cannot be undone\n\n` +
+      `Are you absolutely sure?`
+    );
+
+    if (!confirmed) return;
+
+    try {
+      console.log('🗑️ Deleting channel:', chat.id);
+
+      const response = await api.delete(`/api/channels/${chat.id}`);
+
+      console.log('✅ Channel deleted:', response.data);
+
+      showToast(`#${chat.name} has been permanently deleted`, 'success');
+
+      // Close the chat window and navigate away
+      onClose();
+
+      // Trigger parent to refresh channel list
+      if (onDeleteChat) {
+        onDeleteChat();
+      }
+    } catch (err) {
+      console.error('❌ Delete channel error:', err);
+      showToast(err.response?.data?.message || 'Failed to delete channel', 'error');
+    }
+  };
+
+  /* ---------------------------------------------------------
       RENDER
   --------------------------------------------------------- */
   return (
-    <div className="flex h-full w-full bg-white overflow-hidden">
+    <div className="flex h-full max-h-full overflow-hidden relative">
 
       {/* Main Chat Column */}
       <div className="flex-1 flex flex-col min-w-0 relative">
@@ -859,6 +970,9 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
           blocked={blocked}
           setBlocked={setBlocked}
           onDeleteChat={onDeleteChat}
+          onExitChannel={handleExitChannel}
+          onDeleteChannel={handleDeleteChannel}
+          currentUserId={currentUserIdRef.current}
           showToast={showToast}
         />
 

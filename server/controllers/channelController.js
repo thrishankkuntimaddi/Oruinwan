@@ -317,12 +317,647 @@ exports.updateChannel = async (req, res) => {
  */
 exports.getChannelMembers = async (req, res) => {
   try {
-    const channelId = req.params.id;
-    const channel = await Channel.findById(channelId).populate("members", "_id username profilePicture");
-    if (!channel) return res.status(404).json({ message: "Channel not found" });
-    return res.json({ members: channel.members });
+    const { id } = req.params;
+    const channel = await Channel.findById(id)
+      .populate('members.user', 'username profilePicture email');
+
+    if (!channel) {
+      return res.status(404).json({ message: "Channel not found" });
+    }
+
+    // Map members to include user data
+    const formattedMembers = channel.members.map(m => ({
+      _id: m.user._id,
+      username: m.user.username,
+      email: m.user.email,
+      profilePicture: m.user.profilePicture,
+      joinedAt: m.joinedAt
+    }));
+
+    return res.json({ members: formattedMembers });
   } catch (err) {
     console.error("GET CHANNEL MEMBERS ERROR:", err);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+/**
+ * Exit from a channel
+ * POST /channels/:id/exit
+ * Members can exit unless they're the only admin
+ */
+exports.exitChannel = async (req, res) => {
+  try {
+    const userId = req.user.sub;
+    const channelId = req.params.id;
+
+    const channel = await Channel.findById(channelId).populate('members.user', 'username');
+    if (!channel) {
+      return res.status(404).json({ message: "Channel not found" });
+    }
+
+    // Cannot exit default channels (general, announcements) - they are mandatory
+    if (channel.isDefault) {
+      return res.status(403).json({
+        message: "Cannot exit default channels",
+        isDefault: true
+      });
+    }
+
+    // Check if user is a member
+    const isMember = channel.members.some(m => {
+      const memberId = m.user?._id ? m.user._id.toString() : m.user.toString();
+      return memberId === userId.toString();
+    });
+
+    if (!isMember) {
+      return res.status(400).json({ message: "You are not a member of this channel" });
+    }
+
+    // Check if user is the ONLY admin and there are OTHER members
+    // If they're the only member, let them exit (channel will auto-delete)
+    if (channel.isOnlyAdmin(userId) && channel.members.length > 1) {
+      return res.status(403).json({
+        message: "You must assign another admin before exiting",
+        requiresAdminAssignment: true
+      });
+    }
+
+    // Get username for system message
+    const exitingUser = await User.findById(userId).select('username');
+    const username = exitingUser?.username || 'User';
+
+    // Remove user from members
+    channel.members = channel.members.filter(m => {
+      const memberId = m.user?._id ? m.user._id.toString() : m.user.toString();
+      return memberId !== userId.toString();
+    });
+
+    // Remove from admins if they were admin
+    channel.admins = channel.admins.filter(adminId => adminId.toString() !== userId.toString());
+
+    // Check if channel is now empty
+    if (channel.members.length === 0) {
+      // Delete channel and all its messages
+      await Message.deleteMany({ channel: channelId });
+      await channel.deleteOne();
+
+      console.log(`🗑️ Channel #${channel.name} deleted - last member exited`);
+
+      // Emit deletion event
+      const io = req.app?.get("io");
+      if (io) {
+        io.to(`channel_${channelId}`).emit('channel-deleted', {
+          channelId,
+          channelName: channel.name,
+          reason: 'empty'
+        });
+      }
+
+      return res.json({
+        message: "Successfully exited channel",
+        channelDeleted: true
+      });
+    }
+
+    await channel.save();
+
+    // Create system message
+    const systemMessage = await Message.create({
+      channel: channelId,
+      workspace: channel.workspace,
+      type: 'system',
+      systemEvent: 'member_left',
+      systemData: {
+        userId,
+        username,
+        exitedAt: new Date()
+      },
+      text: `${username} exited from this channel on ${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`,
+      sender: userId // System messages still need a sender for queries
+    });
+
+    console.log(`👋 User ${username} exited channel #${channel.name}`);
+
+    // Emit socket event
+    const io = req.app?.get("io");
+    if (io) {
+      io.to(`channel_${channelId}`).emit('member-left', {
+        channelId,
+        userId,
+        username,
+        systemMessage: {
+          _id: systemMessage._id,
+          text: systemMessage.text,
+          type: systemMessage.type,
+          createdAt: systemMessage.createdAt
+        }
+      });
+    }
+
+    return res.json({
+      message: "Successfully exited channel",
+      systemMessage
+    });
+  } catch (err) {
+    console.error("EXIT CHANNEL ERROR:", err);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+
+/**
+ * Assign another member as admin
+ * POST /channels/:id/assign-admin
+ * Body: { userId }
+ * Only current admins can assign new admins
+ */
+exports.assignAdmin = async (req, res) => {
+  try {
+    const userId = req.user.sub;
+    const channelId = req.params.id;
+    const { userId: targetUserId } = req.body;
+
+    if (!targetUserId) {
+      return res.status(400).json({ message: "Target user ID is required" });
+    }
+
+    const channel = await Channel.findById(channelId);
+    if (!channel) {
+      return res.status(404).json({ message: "Channel not found" });
+    }
+
+    // Check if requester is an admin
+    if (!channel.isAdmin(userId)) {
+      return res.status(403).json({ message: "Only admins can assign other admins" });
+    }
+
+    // Check if target user is a channel member
+    const isMember = channel.members.some(m => {
+      const memberId = m.user ? m.user.toString() : m.toString();
+      return memberId === targetUserId.toString();
+    });
+
+    if (!isMember) {
+      return res.status(400).json({ message: "User is not a member of this channel" });
+    }
+
+    // Check if target is already an admin
+    if (channel.isAdmin(targetUserId)) {
+      return res.status(400).json({ message: "User is already an admin" });
+    }
+
+    // Add to admins
+    channel.admins.push(targetUserId);
+    await channel.save();
+
+    // Get usernames for system message
+    const [requesterUser, targetUser] = await Promise.all([
+      User.findById(userId).select('username'),
+      User.findById(targetUserId).select('username')
+    ]);
+
+    const requesterName = requesterUser?.username || 'Admin';
+    const targetName = targetUser?.username || 'User';
+
+    // Create system message
+    const systemMessage = await Message.create({
+      channel: channelId,
+      workspace: channel.workspace,
+      type: 'system',
+      systemEvent: 'admin_assigned',
+      systemData: {
+        assignerId: userId,
+        assignedUserId: targetUserId,
+        assignedAt: new Date()
+      },
+      text: `${requesterName} assigned ${targetName} as channel admin`,
+      sender: userId
+    });
+
+    console.log(`👑 User ${targetName} assigned as admin in #${channel.name} by ${requesterName}`);
+
+    // Emit socket event
+    const io = req.app?.get("io");
+    if (io) {
+      io.to(`channel_${channelId}`).emit('admin-assigned', {
+        channelId,
+        assignerId: userId,
+        assignedUserId: targetUserId,
+        systemMessage: {
+          _id: systemMessage._id,
+          text: systemMessage.text,
+          type: systemMessage.type,
+          createdAt: systemMessage.createdAt
+        }
+      });
+    }
+
+    return res.json({
+      message: "Admin assigned successfully",
+      systemMessage
+    });
+  } catch (err) {
+    console.error("ASSIGN ADMIN ERROR:", err);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+
+/**
+ * Permanently delete a channel
+ * DELETE /channels/:id
+ * Only admins can delete channels
+ * All messages are deleted as well
+ */
+exports.deleteChannel = async (req, res) => {
+  try {
+    const userId = req.user.sub;
+    const channelId = req.params.id;
+
+    const channel = await Channel.findById(channelId);
+    if (!channel) {
+      return res.status(404).json({ message: "Channel not found" });
+    }
+
+    // Check if channel is a default channel
+    if (channel.isDefault) {
+      return res.status(403).json({ message: "Cannot delete default channels" });
+    }
+
+    // Check if user is an admin
+    if (!channel.isAdmin(userId)) {
+      return res.status(403).json({ message: "Only admins can delete channels" });
+    }
+
+    const channelName = channel.name;
+    const workspaceId = channel.workspace;
+
+    // Delete all messages in the channel
+    const deletedMessages = await Message.deleteMany({ channel: channelId });
+    console.log(`🗑️ Deleted ${deletedMessages.deletedCount} messages from #${channelName}`);
+
+    // Delete the channel
+    await channel.deleteOne();
+
+    console.log(`🗑️ Channel #${channelName} permanently deleted by admin`);
+
+    // Emit socket event to all members
+    const io = req.app?.get("io");
+    if (io) {
+      io.to(`channel_${channelId}`).emit('channel-deleted', {
+        channelId,
+        channelName,
+        workspaceId,
+        deletedBy: userId,
+        reason: 'admin_delete'
+      });
+    }
+
+    return res.json({
+      message: "Channel deleted successfully",
+      deletedMessages: deletedMessages.deletedCount
+    });
+  } catch (err) {
+    console.error("DELETE CHANNEL ERROR:", err);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+/**
+ * Get detailed channel information with members
+ * GET /channels/:id/details
+ */
+exports.getChannelDetails = async (req, res) => {
+  try {
+    const userId = req.user.sub;
+    const channelId = req.params.id;
+
+    const channel = await Channel.findById(channelId)
+      .populate('createdBy', 'username profilePicture email')
+      .populate('members.user', 'username profilePicture email')
+      .populate('admins', 'username profilePicture email')
+      .lean();
+
+    if (!channel) {
+      return res.status(404).json({ message: "Channel not found" });
+    }
+
+    // Check if user is a member
+    const isMember = channel.members.some(m => {
+      const memberId = m.user?._id ? m.user._id.toString() : m.user.toString();
+      return memberId === userId.toString();
+    });
+
+    if (!isMember) {
+      return res.status(403).json({ message: "You are not a member of this channel" });
+    }
+
+    // Format response
+    const response = {
+      id: channel._id,
+      name: channel.name,
+      description: channel.description,
+      isPrivate: channel.isPrivate,
+      isDefault: channel.isDefault,
+      createdBy: channel.createdBy,
+      createdAt: channel.createdAt,
+      memberCount: channel.members.length,
+      admins: channel.admins || [],
+      members: channel.members.map(m => ({
+        user: m.user,
+        joinedAt: m.joinedAt
+      }))
+    };
+
+    return res.json({ channel: response });
+  } catch (err) {
+    console.error("GET CHANNEL DETAILS ERROR:", err);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+
+/**
+ * Update channel info (name/description)
+ * PUT /channels/:id/info
+ * Only admins can update
+ */
+exports.updateChannelInfo = async (req, res) => {
+  try {
+    const userId = req.user.sub;
+    const channelId = req.params.id;
+    const { name, description } = req.body;
+
+    const channel = await Channel.findById(channelId);
+    if (!channel) {
+      return res.status(404).json({ message: "Channel not found" });
+    }
+
+    // Check if user is admin
+    if (!channel.isAdmin(userId)) {
+      return res.status(403).json({ message: "Only admins can update channel info" });
+    }
+
+    // Cannot rename default channels
+    if (channel.isDefault && name && name !== channel.name) {
+      return res.status(403).json({ message: "Cannot rename default channels" });
+    }
+
+    const oldName = channel.name;
+    const oldDesc = channel.description;
+
+    // Update fields
+    if (name && name.trim()) {
+      channel.name = name.trim().toLowerCase();
+    }
+    if (description !== undefined) {
+      channel.description = description;
+    }
+
+    await channel.save();
+
+    // Create system message if changed
+    if (name && name !== oldName) {
+      const user = await User.findById(userId).select('username');
+      await Message.create({
+        channel: channelId,
+        workspace: channel.workspace,
+        type: 'system',
+        systemEvent: 'channel_renamed',
+        systemData: {
+          userId,
+          oldName,
+          newName: channel.name
+        },
+        text: `${user?.username || 'Admin'} renamed this channel from #${oldName} to #${channel.name}`,
+        sender: userId
+      });
+    }
+
+    console.log(`📝 Channel #${channel.name} info updated`);
+
+    // Emit socket event
+    const io = req.app?.get("io");
+    if (io) {
+      io.to(`channel_${channelId}`).emit('channel-updated', {
+        channelId,
+        name: channel.name,
+        description: channel.description
+      });
+    }
+
+    return res.json({
+      message: "Channel updated successfully",
+      channel: {
+        id: channel._id,
+        name: channel.name,
+        description: channel.description
+      }
+    });
+  } catch (err) {
+    console.error("UPDATE CHANNEL INFO ERROR:", err);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+
+/**
+ * Demote admin to regular member
+ * POST /channels/:id/demote-admin
+ * Body: { userId }
+ */
+exports.demoteAdmin = async (req, res) => {
+  try {
+    const userId = req.user.sub;
+    const channelId = req.params.id;
+    const { userId: targetUserId } = req.body;
+
+    if (!targetUserId) {
+      return res.status(400).json({ message: "Target user ID is required" });
+    }
+
+    const channel = await Channel.findById(channelId);
+    if (!channel) {
+      return res.status(404).json({ message: "Channel not found" });
+    }
+
+    // Check if requester is an admin
+    if (!channel.isAdmin(userId)) {
+      return res.status(403).json({ message: "Only admins can demote other admins" });
+    }
+
+    // Cannot demote the creator
+    if (String(channel.createdBy) === String(targetUserId)) {
+      return res.status(403).json({ message: "Cannot demote the channel creator" });
+    }
+
+    // Check if target is actually an admin
+    if (!channel.isAdmin(targetUserId)) {
+      return res.status(400).json({ message: "User is not an admin" });
+    }
+
+    // Cannot demote yourself if you're the only admin
+    if (String(userId) === String(targetUserId) && channel.admins.length === 1) {
+      return res.status(403).json({ message: "Cannot demote yourself as the only admin" });
+    }
+
+    // Remove from admins
+    channel.admins = channel.admins.filter(adminId => adminId.toString() !== targetUserId.toString());
+    await channel.save();
+
+    // Get usernames for system message
+    const [requesterUser, targetUser] = await Promise.all([
+      User.findById(userId).select('username'),
+      User.findById(targetUserId).select('username')
+    ]);
+
+    const requesterName = requesterUser?.username || 'Admin';
+    const targetName = targetUser?.username || 'User';
+
+    // Create system message
+    const systemMessage = await Message.create({
+      channel: channelId,
+      workspace: channel.workspace,
+      type: 'system',
+      systemEvent: 'admin_demoted',
+      systemData: {
+        demoterId: userId,
+        demotedUserId: targetUserId,
+        demotedAt: new Date()
+      },
+      text: `${requesterName} removed ${targetName} as channel admin`,
+      sender: userId
+    });
+
+    console.log(`👤 User ${targetName} demoted from admin in #${channel.name}`);
+
+    // Emit socket event
+    const io = req.app?.get("io");
+    if (io) {
+      io.to(`channel_${channelId}`).emit('admin-demoted', {
+        channelId,
+        demoterId: userId,
+        demotedUserId: targetUserId,
+        systemMessage: {
+          _id: systemMessage._id,
+          text: systemMessage.text,
+          type: systemMessage.type,
+          createdAt: systemMessage.createdAt
+        }
+      });
+    }
+
+    return res.json({
+      message: "Admin demoted successfully",
+      systemMessage
+    });
+  } catch (err) {
+    console.error("DEMOTE ADMIN ERROR:", err);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+
+/**
+ * Remove member from channel
+ * POST /channels/:id/remove-member
+ * Body: { userId }
+ */
+exports.removeMember = async (req, res) => {
+  try {
+    const userId = req.user.sub;
+    const channelId = req.params.id;
+    const { userId: targetUserId } = req.body;
+
+    if (!targetUserId) {
+      return res.status(400).json({ message: "Target user ID is required" });
+    }
+
+    const channel = await Channel.findById(channelId).populate('members.user', 'username');
+    if (!channel) {
+      return res.status(404).json({ message: "Channel not found" });
+    }
+
+    // Check if requester is an admin
+    if (!channel.isAdmin(userId)) {
+      return res.status(403).json({ message: "Only admins can remove members" });
+    }
+
+    // Cannot remove the creator
+    if (String(channel.createdBy) === String(targetUserId)) {
+      return res.status(403).json({ message: "Cannot remove the channel creator" });
+    }
+
+    // Check if target is a member
+    const isMember = channel.members.some(m => {
+      const memberId = m.user?._id ? m.user._id.toString() : m.user.toString();
+      return memberId === targetUserId.toString();
+    });
+
+    if (!isMember) {
+      return res.status(400).json({ message: "User is not a member of this channel" });
+    }
+
+    // Get target username before removing
+    const targetUser = await User.findById(targetUserId).select('username');
+    const targetName = targetUser?.username || 'User';
+
+    // Remove from members
+    channel.members = channel.members.filter(m => {
+      const memberId = m.user?._id ? m.user._id.toString() : m.user.toString();
+      return memberId !== targetUserId.toString();
+    });
+
+    // Also remove from admins if they were admin
+    channel.admins = channel.admins.filter(adminId => adminId.toString() !== targetUserId.toString());
+
+    await channel.save();
+
+    // Get remover username
+    const removerUser = await User.findById(userId).select('username');
+    const removerName = removerUser?.username || 'Admin';
+
+    // Create system message
+    const systemMessage = await Message.create({
+      channel: channelId,
+      workspace: channel.workspace,
+      type: 'system',
+      systemEvent: 'member_removed',
+      systemData: {
+        removerId: userId,
+        removedUserId: targetUserId,
+        removedAt: new Date()
+      },
+      text: `${removerName} removed ${targetName} from this channel on ${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`,
+      sender: userId
+    });
+
+    console.log(`🚫 User ${targetName} removed from #${channel.name} by ${removerName}`);
+
+    // Emit socket events
+    const io = req.app?.get("io");
+    if (io) {
+      // Notify channel members
+      io.to(`channel_${channelId}`).emit('member-removed', {
+        channelId,
+        removerId: userId,
+        removedUserId: targetUserId,
+        systemMessage: {
+          _id: systemMessage._id,
+          text: systemMessage.text,
+          type: systemMessage.type,
+          createdAt: systemMessage.createdAt
+        }
+      });
+
+      // Notify removed user specifically
+      io.to(`user_${targetUserId}`).emit('removed-from-channel', {
+        channelId,
+        channelName: channel.name,
+        removedBy: removerName
+      });
+    }
+
+    return res.json({
+      message: "Member removed successfully",
+      systemMessage
+    });
+  } catch (err) {
+    console.error("REMOVE MEMBER ERROR:", err);
     return res.status(500).json({ message: "Server error" });
   }
 };

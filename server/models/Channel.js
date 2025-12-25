@@ -21,6 +21,9 @@ const ChannelSchema = new mongoose.Schema({
     joinedAt: { type: Date, default: Date.now }
   }],
 
+  // Channel admins (can manage members, settings, and delete channel)
+  admins: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+
   // Activity tracking
   lastMessageAt: { type: Date, default: null },
   messageCount: { type: Number, default: 0 },
@@ -58,6 +61,16 @@ ChannelSchema.methods.getUserJoinDate = function (userId) {
 
   // Return joinedAt if new format, otherwise return channel creation date
   return member?.joinedAt || this.createdAt;
+};
+
+// Helper to check if user is admin
+ChannelSchema.methods.isAdmin = function (userId) {
+  return this.admins.some(adminId => adminId.toString() === userId.toString());
+};
+
+// Helper to check if user is the only admin
+ChannelSchema.methods.isOnlyAdmin = function (userId) {
+  return this.admins.length === 1 && this.isAdmin(userId);
 };
 
 module.exports = mongoose.model("Channel", ChannelSchema);

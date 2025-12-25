@@ -187,6 +187,45 @@ exports.listWorkspaces = async (req, res) => {
 };
 
 /**
+ * Get workspace members
+ * GET /api/workspaces/:id/members
+ */
+exports.getWorkspaceMembers = async (req, res) => {
+  try {
+    const workspaceId = req.params.id;
+    const userId = req.user.sub;
+
+    const workspace = await Workspace.findById(workspaceId)
+      .populate('members.user', 'username email profilePicture');
+
+    if (!workspace) {
+      return res.status(404).json({ message: "Workspace not found" });
+    }
+
+    // Check if requester is a member
+    const isMember = workspace.members.some(m => String(m.user._id) === String(userId));
+    if (!isMember) {
+      return res.status(403).json({ message: "Not a workspace member" });
+    }
+
+    // Format members with user data
+    const formattedMembers = workspace.members.map(m => ({
+      _id: m.user._id,
+      username: m.user.username,
+      email: m.user.email,
+      profilePicture: m.user.profilePicture,
+      role: m.role,
+      joinedAt: m.joinedAt
+    }));
+
+    return res.json({ members: formattedMembers });
+  } catch (err) {
+    console.error("GET WORKSPACE MEMBERS ERROR:", err);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+
+/**
  * Delete workspace (only owner can delete)
  * DELETE /api/workspaces/:id
  */
@@ -575,10 +614,10 @@ exports.getWorkspaceMembers = async (req, res) => {
     const members = workspace.members
       .filter(m => String(m.user._id) !== String(userId))
       .map(m => ({
-        id: m.user._id,
-        name: m.user.username,
+        _id: m.user._id,  // Changed from 'id' to '_id'
+        username: m.user.username,  // Changed from 'name' to 'username'
         email: m.user.email,
-        avatar: m.user.profilePicture,
+        profilePicture: m.user.profilePicture,  // Changed from 'avatar' to 'profilePicture'
         status: m.user.isOnline ? 'online' : 'offline',
         lastSeen: m.user.lastLoginAt,
         role: m.role
@@ -752,7 +791,8 @@ exports.createWorkspaceChannel = async (req, res) => {
       isPrivate: !isPublicChannel, // ✨ Determined by member selection
       isDefault: false, // User-created channels are not default
       createdBy: userId,
-      members: finalMembers
+      members: finalMembers,
+      admins: [userId] // Creator is initial admin
     });
 
     console.log(`✅ Channel created: #${channel.name} (${isPublicChannel ? 'PUBLIC' : 'PRIVATE'}) with ${finalMembers.length} members`);
