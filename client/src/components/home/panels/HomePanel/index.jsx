@@ -79,6 +79,24 @@ const HomePanel = ({ title }) => {
     const [newChannelData, setNewChannelData] = useState({ name: "", description: "", isPrivate: false });
     const [createStep, setCreateStep] = useState(1);
     const [selectedChannelMembers, setSelectedChannelMembers] = useState([]);
+    const [workspaceMembers, setWorkspaceMembers] = useState([]);
+
+    // Fetch workspace members for channel creation
+    React.useEffect(() => {
+        const fetchMembers = async () => {
+            if (!activeWorkspace?.id) return;
+
+            try {
+                const response = await api.get(`/api/workspaces/${activeWorkspace.id}/members`);
+                setWorkspaceMembers(response.data.members || []);
+                console.log('👥 Fetched workspace members:', response.data.members);
+            } catch (err) {
+                console.error('Error fetching workspace members:', err);
+            }
+        };
+
+        fetchMembers();
+    }, [activeWorkspace?.id]);
 
     // No more MOCK_USERS - using real data from useUsers hook
 
@@ -429,7 +447,7 @@ const HomePanel = ({ title }) => {
                 setCreateStep={setCreateStep}
                 selectedChannelMembers={selectedChannelMembers}
                 setSelectedChannelMembers={setSelectedChannelMembers}
-                MOCK_USERS={users}
+                workspaceMembers={workspaceMembers}
                 addItem={addItem}
             />
 

@@ -104,8 +104,23 @@ const WorkspaceHeader = ({
                         <div className="py-1">
                             {isAdmin && (
                                 <button
-                                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 flex items-center gap-2"
-                                    onClick={() => { setShowInviteModal(true); setShowWorkspaceMenu(false); }}
+                                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-gray-700"
+                                    onClick={() => {
+                                        // ✅ Check permission before allowing invites
+                                        const canInvite = isAdmin || activeWorkspace?.settings?.allowMemberInvite !== false;
+
+                                        if (!canInvite) {
+                                            alert('Member invitations are disabled for non-admins in this workspace');
+                                            return;
+                                        }
+                                        setShowInviteModal(true);
+                                        setShowWorkspaceMenu(false);
+                                    }}
+                                    disabled={!isAdmin && activeWorkspace?.settings?.allowMemberInvite === false}
+                                    title={(() => {
+                                        const canInvite = isAdmin || activeWorkspace?.settings?.allowMemberInvite !== false;
+                                        return canInvite ? `Invite people to ${workspaceName}` : "Member invitations disabled";
+                                    })()}
                                 >
                                     <UserPlus size={16} /> Invite people to {workspaceName}
                                 </button>

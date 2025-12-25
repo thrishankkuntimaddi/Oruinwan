@@ -280,9 +280,30 @@ const ChannelsPanel = ({ title }) => {
                         <Settings2 size={20} />
                     </button>
                     <button
-                        onClick={() => setShowCreateChannelModal(true)}
-                        className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                        title="Create Channel"
+                        onClick={() => {
+                            // ✅ Check permission before allowing channel creation
+                            const userRole = activeWorkspace?.role?.toLowerCase() || '';
+                            const isAdmin = userRole === 'admin' || userRole === 'owner';
+                            const canCreateChannel = isAdmin || activeWorkspace?.settings?.allowMemberChannelCreation !== false;
+
+                            if (!canCreateChannel) {
+                                alert('Channel creation is disabled for members in this workspace');
+                                return;
+                            }
+                            setShowCreateChannelModal(true);
+                        }}
+                        disabled={(() => {
+                            const userRole = activeWorkspace?.role?.toLowerCase() || '';
+                            const isAdmin = userRole === 'admin' || userRole === 'owner';
+                            return !isAdmin && activeWorkspace?.settings?.allowMemberChannelCreation === false;
+                        })()}
+                        className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-gray-400"
+                        title={(() => {
+                            const userRole = activeWorkspace?.role?.toLowerCase() || '';
+                            const isAdmin = userRole === 'admin' || userRole === 'owner';
+                            const canCreate = isAdmin || activeWorkspace?.settings?.allowMemberChannelCreation !== false;
+                            return canCreate ? "Create Channel" : "Channel creation disabled for members";
+                        })()}
                     >
                         <Plus size={20} />
                     </button>
@@ -304,31 +325,33 @@ const ChannelsPanel = ({ title }) => {
             </div>
 
             {/* Selection Mode Header */}
-            {isSelectionMode && (
-                <div className="px-4 py-2 bg-blue-50 border-b border-blue-100 flex items-center justify-between sticky top-0 z-10">
-                    <span className="text-sm font-bold text-blue-900">{selectedItems.size} selected</span>
-                    <div className="flex gap-2">
-                        <button
-                            onClick={() => setShowDeleteConfirm(true)}
-                            disabled={selectedItems.size === 0}
-                            className="p-1.5 text-red-600 hover:bg-red-100 rounded-lg disabled:opacity- disabled:cursor-not-allowed"
-                            title="Delete Selected"
-                        >
-                            <Trash2 size={16} />
-                        </button>
-                        <button
-                            onClick={() => {
-                                setIsSelectionMode(false);
-                                setSelectedItems(new Set());
-                            }}
-                            className="p-1.5 text-gray-600 hover:bg-gray-200 rounded-lg"
-                            title="Cancel"
-                        >
-                            <X size={16} />
-                        </button>
+            {
+                isSelectionMode && (
+                    <div className="px-4 py-2 bg-blue-50 border-b border-blue-100 flex items-center justify-between sticky top-0 z-10">
+                        <span className="text-sm font-bold text-blue-900">{selectedItems.size} selected</span>
+                        <div className="flex gap-2">
+                            <button
+                                onClick={() => setShowDeleteConfirm(true)}
+                                disabled={selectedItems.size === 0}
+                                className="p-1.5 text-red-600 hover:bg-red-100 rounded-lg disabled:opacity- disabled:cursor-not-allowed"
+                                title="Delete Selected"
+                            >
+                                <Trash2 size={16} />
+                            </button>
+                            <button
+                                onClick={() => {
+                                    setIsSelectionMode(false);
+                                    setSelectedItems(new Set());
+                                }}
+                                className="p-1.5 text-gray-600 hover:bg-gray-200 rounded-lg"
+                                title="Cancel"
+                            >
+                                <X size={16} />
+                            </button>
+                        </div>
                     </div>
-                </div>
-            )}
+                )
+            }
 
             {/* Channel List */}
             <div className="flex-1 overflow-y-auto custom-scrollbar px-2 py-4 space-y-0.5">
@@ -361,143 +384,145 @@ const ChannelsPanel = ({ title }) => {
             />
 
             {/* Create Channel Modal */}
-            {showCreateChannelModal && (
-                <div className="fixed inset-0 bg-black/60 z-[70] flex items-center justify-center animate-fade-in backdrop-blur-sm">
-                    <div className="bg-white rounded-2xl shadow-2xl w-[500px] overflow-hidden transform transition-all scale-100 border border-gray-100">
-                        <div className="px-8 py-6 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center">
-                            <h3 className="text-xl font-bold text-gray-900">
-                                {createStep === 1 ? "Create New Channel" : "Add Members"}
-                            </h3>
-                            <button onClick={() => setShowCreateChannelModal(false)} className="text-gray-400 hover:text-gray-600">✕</button>
-                        </div>
-
-                        {createStep === 1 ? (
-                            <div className="p-8 space-y-6">
-                                <div>
-                                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Channel Name</label>
-                                    <div className="relative">
-                                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold">#</span>
-                                        <input
-                                            type="text"
-                                            value={newChannelData.name}
-                                            onChange={(e) => setNewChannelData({ ...newChannelData, name: e.target.value })}
-                                            placeholder="e.g. marketing-updates"
-                                            className="w-full pl-8 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium"
-                                            autoFocus
-                                        />
-                                    </div>
-                                    <p className="text-xs text-gray-400 mt-2">Channels are where your team communicates. They're best when organized around a topic.</p>
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Description <span className="text-gray-300 font-normal">(Optional)</span></label>
-                                    <input
-                                        type="text"
-                                        value={newChannelData.description}
-                                        onChange={(e) => setNewChannelData({ ...newChannelData, description: e.target.value })}
-                                        placeholder="What's this channel about?"
-                                        className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
-                                    />
-                                </div>
-
-                                {/* ✨ NEW: Channel Visibility Info */}
-                                <div className="bg-blue-50 border border-blue-100 rounded-xl p-4">
-                                    <h4 className="text-sm font-bold text-blue-900 mb-2">Channel Visibility</h4>
-                                    <div className="space-y-2 text-xs text-blue-800">
-                                        <p>
-                                            <span className="font-bold">🌐 Public:</span> Skip member selection - all workspace members can view and join
-                                        </p>
-                                        <p>
-                                            <span className="font-bold">🔒 Private:</span> Select specific members - only they can view and participate
-                                        </p>
-                                    </div>
-                                </div>
+            {
+                showCreateChannelModal && (
+                    <div className="fixed inset-0 bg-black/60 z-[70] flex items-center justify-center animate-fade-in backdrop-blur-sm">
+                        <div className="bg-white rounded-2xl shadow-2xl w-[500px] overflow-hidden transform transition-all scale-100 border border-gray-100">
+                            <div className="px-8 py-6 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center">
+                                <h3 className="text-xl font-bold text-gray-900">
+                                    {createStep === 1 ? "Create New Channel" : "Add Members"}
+                                </h3>
+                                <button onClick={() => setShowCreateChannelModal(false)} className="text-gray-400 hover:text-gray-600">✕</button>
                             </div>
-                        ) : (
-                            <div className="p-0">
-                                <div className="p-4 bg-blue-50 border-b border-blue-100 text-sm text-blue-800 flex items-center gap-2">
-                                    <span>#</span>
-                                    <span>Adding members to <strong>#{newChannelData.name}</strong> (Private Channel)</span>
-                                </div>
-                                <div className="max-h-[300px] overflow-y-auto p-2">
-                                    {workspaceMembers.map(member => (
-                                        <label key={member._id} className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-xl cursor-pointer transition-colors">
-                                            <div className="flex items-center gap-3">
-                                                <input
-                                                    type="checkbox"
-                                                    className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
-                                                    checked={selectedChannelMembers.includes(member._id)}
-                                                    onChange={(e) => {
-                                                        if (e.target.checked) {
-                                                            setSelectedChannelMembers([...selectedChannelMembers, member._id]);
-                                                        } else {
-                                                            setSelectedChannelMembers(selectedChannelMembers.filter(id => id !== member._id));
-                                                        }
-                                                    }}
-                                                />
-                                                <div className="w-7 h-7 rounded-full bg-blue-500 flex items-center justify-center text-white font-medium text-xs">
-                                                    {(member?.name || member?.username || 'U').charAt(0)}
-                                                </div>
-                                                <div>
-                                                    <div className="font-medium text-sm">{member?.name || member?.username || 'Unknown'}</div>
-                                                    <div className="text-xs text-gray-500">{member?.email || ''}</div>
-                                                </div>
-                                            </div>
-                                        </label>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-
-                        <div className="px-8 py-5 bg-gray-50 border-t border-gray-100 flex justify-end gap-3">
-                            <button onClick={() => {
-                                setShowCreateChannelModal(false);
-                                setNewChannelData({ name: "", description: "" });
-                                setCreateStep(1);
-                                setSelectedChannelMembers([]);
-                            }} className="px-6 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-200 rounded-xl transition-colors">Cancel</button>
 
                             {createStep === 1 ? (
-                                <>
-                                    <button
-                                        onClick={() => setCreateStep(2)}
-                                        disabled={!newChannelData.name}
-                                        className="px-6 py-2.5 text-sm font-medium text-blue-600 hover:bg-blue-50 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                    >
-                                        Add Specific Members
-                                    </button>
-                                    <button
-                                        onClick={handleCreateChannel}
-                                        disabled={!newChannelData.name}
-                                        className="px-6 py-2.5 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-md hover:shadow-lg transition-all transform active:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed"
-                                    >
-                                        Create Public Channel
-                                    </button>
-                                </>
+                                <div className="p-8 space-y-6">
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Channel Name</label>
+                                        <div className="relative">
+                                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold">#</span>
+                                            <input
+                                                type="text"
+                                                value={newChannelData.name}
+                                                onChange={(e) => setNewChannelData({ ...newChannelData, name: e.target.value })}
+                                                placeholder="e.g. marketing-updates"
+                                                className="w-full pl-8 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium"
+                                                autoFocus
+                                            />
+                                        </div>
+                                        <p className="text-xs text-gray-400 mt-2">Channels are where your team communicates. They're best when organized around a topic.</p>
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Description <span className="text-gray-300 font-normal">(Optional)</span></label>
+                                        <input
+                                            type="text"
+                                            value={newChannelData.description}
+                                            onChange={(e) => setNewChannelData({ ...newChannelData, description: e.target.value })}
+                                            placeholder="What's this channel about?"
+                                            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                                        />
+                                    </div>
+
+                                    {/* ✨ NEW: Channel Visibility Info */}
+                                    <div className="bg-blue-50 border border-blue-100 rounded-xl p-4">
+                                        <h4 className="text-sm font-bold text-blue-900 mb-2">Channel Visibility</h4>
+                                        <div className="space-y-2 text-xs text-blue-800">
+                                            <p>
+                                                <span className="font-bold">🌐 Public:</span> Skip member selection - all workspace members can view and join
+                                            </p>
+                                            <p>
+                                                <span className="font-bold">🔒 Private:</span> Select specific members - only they can view and participate
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
                             ) : (
-                                <>
-                                    <button
-                                        onClick={() => {
-                                            setCreateStep(1);
-                                            setSelectedChannelMembers([]);
-                                        }}
-                                        className="px-6 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-200 rounded-xl transition-colors"
-                                    >
-                                        Back
-                                    </button>
-                                    <button
-                                        onClick={handleCreateChannel}
-                                        disabled={selectedChannelMembers.length === 0}
-                                        className="px-6 py-2.5 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-md hover:shadow-lg transition-all transform active:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed"
-                                    >
-                                        Create Private Channel
-                                    </button>
-                                </>
+                                <div className="p-0">
+                                    <div className="p-4 bg-blue-50 border-b border-blue-100 text-sm text-blue-800 flex items-center gap-2">
+                                        <span>#</span>
+                                        <span>Adding members to <strong>#{newChannelData.name}</strong> (Private Channel)</span>
+                                    </div>
+                                    <div className="max-h-[300px] overflow-y-auto p-2">
+                                        {workspaceMembers.map(member => (
+                                            <label key={member._id} className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-xl cursor-pointer transition-colors">
+                                                <div className="flex items-center gap-3">
+                                                    <input
+                                                        type="checkbox"
+                                                        className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                                                        checked={selectedChannelMembers.includes(member._id)}
+                                                        onChange={(e) => {
+                                                            if (e.target.checked) {
+                                                                setSelectedChannelMembers([...selectedChannelMembers, member._id]);
+                                                            } else {
+                                                                setSelectedChannelMembers(selectedChannelMembers.filter(id => id !== member._id));
+                                                            }
+                                                        }}
+                                                    />
+                                                    <div className="w-7 h-7 rounded-full bg-blue-500 flex items-center justify-center text-white font-medium text-xs">
+                                                        {(member?.name || member?.username || 'U').charAt(0)}
+                                                    </div>
+                                                    <div>
+                                                        <div className="font-medium text-sm">{member?.name || member?.username || 'Unknown'}</div>
+                                                        <div className="text-xs text-gray-500">{member?.email || ''}</div>
+                                                    </div>
+                                                </div>
+                                            </label>
+                                        ))}
+                                    </div>
+                                </div>
                             )}
+
+                            <div className="px-8 py-5 bg-gray-50 border-t border-gray-100 flex justify-end gap-3">
+                                <button onClick={() => {
+                                    setShowCreateChannelModal(false);
+                                    setNewChannelData({ name: "", description: "" });
+                                    setCreateStep(1);
+                                    setSelectedChannelMembers([]);
+                                }} className="px-6 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-200 rounded-xl transition-colors">Cancel</button>
+
+                                {createStep === 1 ? (
+                                    <>
+                                        <button
+                                            onClick={() => setCreateStep(2)}
+                                            disabled={!newChannelData.name}
+                                            className="px-6 py-2.5 text-sm font-medium text-blue-600 hover:bg-blue-50 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                        >
+                                            Add Specific Members
+                                        </button>
+                                        <button
+                                            onClick={handleCreateChannel}
+                                            disabled={!newChannelData.name}
+                                            className="px-6 py-2.5 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-md hover:shadow-lg transition-all transform active:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed"
+                                        >
+                                            Create Public Channel
+                                        </button>
+                                    </>
+                                ) : (
+                                    <>
+                                        <button
+                                            onClick={() => {
+                                                setCreateStep(1);
+                                                setSelectedChannelMembers([]);
+                                            }}
+                                            className="px-6 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-200 rounded-xl transition-colors"
+                                        >
+                                            Back
+                                        </button>
+                                        <button
+                                            onClick={handleCreateChannel}
+                                            disabled={selectedChannelMembers.length === 0}
+                                            className="px-6 py-2.5 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-md hover:shadow-lg transition-all transform active:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed"
+                                        >
+                                            Create Private Channel
+                                        </button>
+                                    </>
+                                )}
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
-        </div>
+                )
+            }
+        </div >
     );
 };
 

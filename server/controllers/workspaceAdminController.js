@@ -9,7 +9,7 @@ const Channel = require("../models/Channel");
 exports.revokeInvite = async (req, res) => {
     try {
         const { workspaceId, inviteId } = req.params;
-        const { reason } = req.body;
+        const reason = req.body?.reason; // ✅ Safe access - handle undefined body
         const userId = req.user?.sub;
 
         // Verify workspace exists
@@ -106,6 +106,7 @@ exports.getWorkspaceInvites = async (req, res) => {
 
         const now = new Date();
 
+        // First pass: Categorize invites
         for (const invite of invites) {
             const inviteData = {
                 id: invite._id,
@@ -114,7 +115,9 @@ exports.getWorkspaceInvites = async (req, res) => {
                 invitedBy: invite.invitedBy?.username,
                 createdAt: invite.createdAt,
                 expiresAt: invite.expiresAt,
-                status: invite.status
+                status: invite.status,
+                inviteType: invite.inviteType || 'link',  // ✅ Add invite type
+                used: invite.used || false  // ✅ Add used flag
             };
 
             if (invite.status === "pending" && invite.expiresAt < now) {
@@ -133,12 +136,31 @@ exports.getWorkspaceInvites = async (req, res) => {
             }
         }
 
+        // 🔍 Duplicate Detection: Find emails with multiple pending invitations
+        // ⚠️ ONLY count email-based invitations (exclude link invites without email)
+        const emailCounts = {};
+        pending.forEach(invite => {
+            if (invite.email) {  // ✅ Only count if email exists
+                emailCounts[invite.email] = (emailCounts[invite.email] || 0) + 1;
+            }
+        });
+
+        // Mark duplicates
+        const duplicateEmails = Object.keys(emailCounts).filter(email => emailCounts[email] > 1);
+        const pendingWithDuplicates = pending.map(invite => ({
+            ...invite,
+            isDuplicate: invite.email ? duplicateEmails.includes(invite.email) : false,  // ✅ Link invites not duplicates
+            duplicateCount: invite.email ? (emailCounts[invite.email] || 1) : 1
+        }));
+
         return res.json({
-            pending,
+            pending: pendingWithDuplicates,
             accepted,
             revoked,
             expired,
-            total: invites.length
+            total: invites.length,
+            duplicateEmails,
+            duplicateCount: duplicateEmails.length
         });
     } catch (err) {
         console.error("GET WORKSPACE INVITES ERROR:", err);
@@ -508,4 +530,201 @@ exports.removeMember = async (req, res) => {
     }
 };
 
+/**
+ * Bulk revoke workspace invites
+ * POST /api/workspaces/:workspaceId/invites/bulk-revoke
+ */
+exports.bulkRevokeInvites = async (req, res) => {
+    try {
+        const { workspaceId } = req.params;
+        const { inviteIds, reason } = req.body;
+        const userId = req.user?.sub;
+
+        // Validate input
+        if (!Array.isArray(inviteIds) || inviteIds.length === 0) {
+            return res.status(400).json({ message: "inviteIds must be a non-empty array" });
+        }
+
+        // Verify workspace exists
+        const workspace = await Workspace.findById(workspaceId);
+        if (!workspace) {
+            return res.status(404).json({ message: "Workspace not found" });
+        }
+
+        // 🔒 Only admins/owners can bulk revoke invites
+        const member = workspace.members.find(m => String(m.user) === String(userId));
+        if (!member || (member.role !== "admin" && member.role !== "owner")) {
+            return res.status(403).json({ message: "Only workspace admins can revoke invites" });
+        }
+
+        const Invite = require("../models/Invite");
+
+        // Find all invites
+        const invites = await Invite.find({
+            _id: { $in: inviteIds },
+            workspace: workspaceId
+        });
+
+        if (invites.length === 0) {
+            return res.status(404).json({ message: "No matching invites found" });
+        }
+
+        let revokedCount = 0;
+        const errors = [];
+
+        // Revoke each invite
+        for (const invite of invites) {
+            // Skip if already accepted or revoked
+            if (invite.status === "accepted") {
+                errors.push({ id: invite._id, error: "Already accepted" });
+                continue;
+            }
+            if (invite.status === "revoked") {
+                errors.push({ id: invite._id, error: "Already revoked" });
+                continue;
+            }
+
+            invite.status = "revoked";
+            invite.revokedBy = userId;
+            invite.revokedAt = new Date();
+            invite.revokeReason = reason || "Bulk revoked by admin";
+            await invite.save();
+            revokedCount++;
+        }
+
+        console.log(`✅ Bulk revoked ${revokedCount} invites in workspace ${workspaceId}`);
+
+        return res.json({
+            message: `Successfully revoked ${revokedCount} invitation(s)`,
+            revokedCount,
+            totalRequested: inviteIds.length,
+            errors: errors.length > 0 ? errors : undefined
+        });
+    } catch (err) {
+        console.error("BULK REVOKE INVITES ERROR:", err);
+        return res.status(500).json({ message: "Server error" });
+    }
+};
+
+/**
+ * Bulk delete workspace invites (only expired/revoked)
+ * DELETE /api/workspaces/:workspaceId/invites/bulk-delete
+ */
+exports.bulkDeleteInvites = async (req, res) => {
+    try {
+        const { workspaceId } = req.params;
+        const { inviteIds } = req.body;
+        const userId = req.user?.sub;
+
+        // Validate input
+        if (!Array.isArray(inviteIds) || inviteIds.length === 0) {
+            return res.status(400).json({ message: "inviteIds must be a non-empty array" });
+        }
+
+        // Verify workspace exists
+        const workspace = await Workspace.findById(workspaceId);
+        if (!workspace) {
+            return res.status(404).json({ message: "Workspace not found" });
+        }
+
+        // 🔒 Only admins/owners can bulk delete invites
+        const member = workspace.members.find(m => String(m.user) === String(userId));
+        if (!member || (member.role !== "admin" && member.role !== "owner")) {
+            return res.status(403).json({ message: "Only workspace admins can delete invites" });
+        }
+
+        const Invite = require("../models/Invite");
+
+        // 🔍 DEBUG: Check what invitations we're trying to delete
+        const invitesToDelete = await Invite.find({
+            _id: { $in: inviteIds },
+            workspace: workspaceId
+        }).lean();
+
+        console.log('🔍 Invitations to delete:', invitesToDelete.map(inv => ({
+            id: inv._id,
+            email: inv.email,
+            status: inv.status,
+            used: inv.used,
+            expiresAt: inv.expiresAt
+        })));
+
+        // Delete expired, revoked, accepted, or used invites (not pending active ones)
+        const now = new Date();
+        const result = await Invite.deleteMany({
+            _id: { $in: inviteIds },
+            workspace: workspaceId,
+            $or: [
+                { status: "revoked" },
+                { status: "expired" },
+                { status: "accepted" },
+                { used: true },  // ✅ Also delete invitations marked as used
+                { status: "pending", expiresAt: { $lt: now } }
+            ]
+        });
+
+        console.log(`🗑️ Bulk deleted ${result.deletedCount}/${inviteIds.length} invites in workspace ${workspaceId}`);
+
+        // Warn if nothing was deleted
+        if (result.deletedCount === 0) {
+            console.warn('⚠️ No invitations were deleted - they may be active pending invitations');
+        }
+
+        return res.json({
+            message: result.deletedCount > 0
+                ? `Successfully deleted ${result.deletedCount} invitation(s)`
+                : 'No invitations were deleted (active pending invitations cannot be deleted)',
+            deletedCount: result.deletedCount,
+            totalRequested: inviteIds.length
+        });
+    } catch (err) {
+        console.error("BULK DELETE INVITES ERROR:", err);
+        return res.status(500).json({ message: "Server error" });
+    }
+};
+
+/**
+ * Cleanup all expired invites in a workspace
+ * POST /api/workspaces/:workspaceId/invites/cleanup-expired
+ */
+exports.cleanupExpiredInvites = async (req, res) => {
+    try {
+        const { workspaceId } = req.params;
+        const userId = req.user?.sub;
+
+        // Verify workspace exists
+        const workspace = await Workspace.findById(workspaceId);
+        if (!workspace) {
+            return res.status(404).json({ message: "Workspace not found" });
+        }
+
+        // 🔒 Only admins/owners can cleanup invites
+        const member = workspace.members.find(m => String(m.user) === String(userId));
+        if (!member || (member.role !== "admin" && member.role !== "owner")) {
+            return res.status(403).json({ message: "Only workspace admins can cleanup invites" });
+        }
+
+        const Invite = require("../models/Invite");
+        const now = new Date();
+
+        // Delete all expired pending invitations
+        const result = await Invite.deleteMany({
+            workspace: workspaceId,
+            status: "pending",
+            expiresAt: { $lt: now }
+        });
+
+        console.log(`🧹 Cleaned up ${result.deletedCount} expired invites in workspace ${workspaceId}`);
+
+        return res.json({
+            message: `Successfully cleaned up ${result.deletedCount} expired invitation(s)`,
+            deletedCount: result.deletedCount
+        });
+    } catch (err) {
+        console.error("CLEANUP EXPIRED INVITES ERROR:", err);
+        return res.status(500).json({ message: "Server error" });
+    }
+};
+
 // No need for module.exports - already using exports.functionName above
+

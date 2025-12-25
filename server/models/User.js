@@ -93,6 +93,9 @@ const UserSchema = new mongoose.Schema(
     lastActivityAt: { type: Date, default: Date.now },
     isOnline: { type: Boolean, default: false },
 
+    // Favorites (channels and DMs)
+    favorites: [{ type: String }], // Array of channel/conversation IDs
+
     // Status
     isActive: { type: Boolean, default: true },
     deactivatedAt: { type: Date, default: null },

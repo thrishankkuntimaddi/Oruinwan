@@ -37,15 +37,23 @@ const WorkspaceSelect = () => {
             if (response.data.workspaces && response.data.workspaces.length > 0) {
                 console.log('🎨 DEBUG - First workspace color:', response.data.workspaces[0]?.color);
                 console.log('🎨 DEBUG - First workspace full data:', response.data.workspaces[0]);
-                setWorkspaces(response.data.workspaces.map(ws => ({
-                    id: ws.id,
-                    name: ws.name,
-                    members: ws.memberCount || 1,
-                    icon: ws.icon || "rocket",
-                    color: ws.color || "#4f46e5",
-                    type: ws.type,
-                    role: ws.role
-                })));
+                console.log('👤 DEBUG - Owner name:', response.data.workspaces[0]?.ownerName);
+                console.log('✅ DEBUG - Is owner:', response.data.workspaces[0]?.isOwner);
+
+                setWorkspaces(response.data.workspaces.map(ws => {
+                    console.log(`📊 Workspace "${ws.name}": ownerName=${ws.ownerName}, isOwner=${ws.isOwner}`);
+                    return {
+                        id: ws.id,
+                        name: ws.name,
+                        members: ws.memberCount || 1,
+                        icon: ws.icon || "rocket",
+                        color: ws.color || "#4f46e5",
+                        type: ws.type,
+                        role: ws.role,
+                        ownerName: ws.ownerName,  // ✅ Add owner name
+                        isOwner: ws.isOwner  // ✅ Add owner flag
+                    };
+                }));
             } else {
                 setWorkspaces([]);
             }
@@ -69,6 +77,7 @@ const WorkspaceSelect = () => {
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [createStep, setCreateStep] = useState(1);
     const [addMembersLater, setAddMembersLater] = useState(false);
+    const [nameError, setNameError] = useState("");  // ✅ Add name validation error
     const [createData, setCreateData] = useState({
         name: "",
         adminName: "",
@@ -84,6 +93,7 @@ const WorkspaceSelect = () => {
         setCreateStep(1);
         setAddMembersLater(false);
         setIsCopied(false);
+        setNameError("");  // ✅ Reset name error
         setCreateData({
             name: "",
             adminName: "",
@@ -97,11 +107,19 @@ const WorkspaceSelect = () => {
         setIsCreateModalOpen(true);
         setCreateStep(1);
         setIsCopied(false);
+        // Pre-fill admin name with logged-in username
+        setCreateData({
+            name: "",
+            adminName: user?.username || "",
+            icon: "rocket",
+            color: "#2563eb",
+            invites: ""
+        });
     };
 
     const handleNextStep = () => {
         if (createStep === 2) {
-            if (!createData.name.trim() || !createData.adminName.trim()) return;
+            if (!createData.name.trim() || !createData.adminName.trim() || nameError) return;
         }
         setCreateStep(prev => prev + 1);
     };
@@ -153,8 +171,25 @@ const WorkspaceSelect = () => {
             navigate(`/workspace/${response.data.workspace.id}/home`);
         } catch (err) {
             console.error('❌ Create workspace error:', err);
+            console.error('📋 Full error object:', err.response);
+            console.error('💬 Error message:', err.response?.data?.message);
+
             const errorMessage = err.response?.data?.message || err.message || 'Failed to create workspace';
-            alert(errorMessage);
+            console.log('🔍 Extracted error message:', errorMessage);
+
+            // ✅ If it's a duplicate name error, show it inline (no alert popup)
+            if (errorMessage.toLowerCase().includes('already exists') ||
+                errorMessage.toLowerCase().includes('workspace name')) {
+                console.log('✅ Showing inline error for duplicate name');
+                setNameError(errorMessage);
+                setCreateStep(2); // Go back to step 2 where the name field is
+            } else {
+                console.log('⚠️ Other error type:', errorMessage);
+                // For other errors, you might want to show a toast notification
+                // For now, we'll set it as a name error too
+                setNameError(errorMessage);
+                setCreateStep(2);
+            }
         }
     };
 
@@ -482,11 +517,37 @@ const WorkspaceSelect = () => {
                                         <input
                                             type="text"
                                             value={createData.name}
-                                            onChange={(e) => setCreateData({ ...createData, name: e.target.value })}
-                                            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                                            onChange={(e) => {
+                                                const newName = e.target.value;
+                                                setCreateData({ ...createData, name: newName });
+
+                                                // ✅ Check for duplicate name in user's owned workspaces
+                                                if (newName.trim()) {
+                                                    const duplicate = workspaces.find(ws =>
+                                                        ws.name.toLowerCase() === newName.trim().toLowerCase() &&
+                                                        ws.isOwner
+                                                    );
+                                                    if (duplicate) {
+                                                        setNameError("Workspace name already exists in your account");
+                                                    } else {
+                                                        setNameError("");
+                                                    }
+                                                } else {
+                                                    setNameError("");
+                                                }
+                                            }}
+                                            className={`w-full px-4 py-3 bg-gray-50 border ${nameError ? 'border-red-300' : 'border-gray-200'} rounded-xl focus:outline-none focus:bg-white focus:ring-2 ${nameError ? 'focus:ring-red-500/20 focus:border-red-500' : 'focus:ring-blue-500/20 focus:border-blue-500'} transition-all`}
                                             placeholder="e.g. Chttrix Corp"
                                             autoFocus
                                         />
+                                        {nameError && (
+                                            <p className="mt-2 text-xs text-red-600 flex items-center gap-1">
+                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                </svg>
+                                                {nameError}
+                                            </p>
+                                        )}
                                     </div>
                                     <div>
                                         <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Admin Name</label>
@@ -495,7 +556,7 @@ const WorkspaceSelect = () => {
                                             value={createData.adminName}
                                             onChange={(e) => setCreateData({ ...createData, adminName: e.target.value })}
                                             className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
-                                            placeholder="Your Name"
+                                            placeholder={user?.username || "Your Name"}
                                         />
                                     </div>
                                     <div>
@@ -578,8 +639,8 @@ const WorkspaceSelect = () => {
                                     </button>
                                     <button
                                         onClick={handleNextStep}
-                                        disabled={!createData.name.trim() || !createData.adminName.trim()}
-                                        className={`px-6 py-2.5 bg-blue-600 text-white font-bold rounded-xl shadow-md transition-all ${(!createData.name.trim() || !createData.adminName.trim()) ? "opacity-50 cursor-not-allowed" : "hover:bg-blue-700 hover:shadow-lg"}`}
+                                        disabled={!createData.name.trim() || !createData.adminName.trim() || nameError}
+                                        className={`px-6 py-2.5 bg-blue-600 text-white font-bold rounded-xl shadow-md transition-all ${(!createData.name.trim() || !createData.adminName.trim() || nameError) ? "opacity-50 cursor-not-allowed" : "hover:bg-blue-700 hover:shadow-lg"}`}
                                     >
                                         Next Step
                                     </button>
@@ -724,6 +785,19 @@ const WorkspaceSelect = () => {
                                     </div>
 
                                     <h3 className="text-xl font-bold text-gray-900 mb-1">{ws.name}</h3>
+
+                                    {/* Admin Name Badge - Always show */}
+                                    <div className="flex items-center gap-1.5 mb-3">
+                                        <div className="flex items-center gap-1.5 px-2.5 py-1 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 rounded-lg">
+                                            <svg className="w-3.5 h-3.5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                            </svg>
+                                            <span className="text-xs font-semibold text-blue-700">
+                                                {ws.isOwner ? 'You' : ws.ownerName || 'Unknown'}
+                                            </span>
+                                        </div>
+                                    </div>
+
                                     <p className="text-sm text-gray-500 mb-6">Last active just now</p>
 
                                     <button

@@ -10,38 +10,71 @@ const CreateChannelModal = ({
     setCreateStep,
     selectedChannelMembers,
     setSelectedChannelMembers,
-    MOCK_USERS,
+    workspaceMembers,
     addItem
 }) => {
     const navigate = useNavigate();
     const { workspaceId } = useParams();
 
-    const handleCreateChannel = () => {
+    const handleCreateChannel = async () => {
         if (!newChannelData.name) return;
 
-        if (newChannelData.isPrivate && createStep === 1) {
-            setCreateStep(2);
-            return;
+        try {
+            console.log('📡 Creating channel:', newChannelData.name);
+
+            // Backend determines public/private based on members array
+            // - undefined/empty array → PUBLIC (all workspace members)
+            // - array with IDs → PRIVATE (only selected members + creator)
+            const payload = {
+                name: newChannelData.name,
+                description: newChannelData.description,
+                members: selectedChannelMembers.length > 0
+                    ? selectedChannelMembers
+                    : undefined // Backend will make it public
+            };
+
+            console.log('📦 Payload:', {
+                ...payload,
+                visibility: selectedChannelMembers.length > 0 ? 'PRIVATE' : 'PUBLIC'
+            });
+
+            // Import api at the top of the file
+            const api = (await import('../../../../services/api')).default;
+
+            // Call backend API
+            const response = await api.post(`/api/workspaces/${workspaceId}/channels`, payload);
+
+            const createdChannel = response.data.channel;
+            console.log('✅ Channel created:', createdChannel);
+
+            // Append real channel to list
+            const newChannel = {
+                id: createdChannel._id,
+                type: 'channel',
+                label: createdChannel.name,
+                path: `/workspace/${workspaceId}/channel/${createdChannel._id}`,
+                isFavorite: false,
+                isPrivate: createdChannel.isPrivate,
+                isDefault: false,
+                description: createdChannel.description || '',
+                canDelete: true,
+                createdBy: createdChannel.createdBy
+            };
+
+            addItem(newChannel);
+
+            // Navigate with workspace context
+            navigate(`/workspace/${workspaceId}/channel/${createdChannel._id}`);
+
+            // Reset
+            setShowCreateChannelModal(false);
+            setNewChannelData({ name: "", description: "", isPrivate: false });
+            setCreateStep(1);
+            setSelectedChannelMembers([]);
+        } catch (err) {
+            console.error('❌ Error creating channel:', err);
+            alert(err.response?.data?.message || 'Failed to create channel');
         }
-
-        const channelId = newChannelData.name.toLowerCase().replace(/\s+/g, '-');
-        const newChannel = {
-            id: channelId,
-            type: 'channel',
-            label: newChannelData.name.toLowerCase().replace(/\s+/g, '-'),
-            path: `/workspace/${workspaceId}/channel/${channelId}`,
-            isFavorite: false,
-            isPrivate: newChannelData.isPrivate,
-        };
-
-        addItem(newChannel);
-        navigate(`/workspace/${workspaceId}/channel/${channelId}`);
-
-        // Reset
-        setShowCreateChannelModal(false);
-        setNewChannelData({ name: "", description: "", isPrivate: false });
-        setCreateStep(1);
-        setSelectedChannelMembers([]);
     };
 
     if (!showCreateChannelModal) return null;
@@ -83,52 +116,48 @@ const CreateChannelModal = ({
                                 className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
                             />
                         </div>
-                        <div>
-                            <label className="flex items-center cursor-pointer group p-3 border border-gray-100 rounded-xl hover:bg-gray-50 transition-colors">
-                                <div className="relative">
-                                    <input
-                                        type="checkbox"
-                                        className="sr-only peer"
-                                        checked={newChannelData.isPrivate}
-                                        onChange={(e) => setNewChannelData({ ...newChannelData, isPrivate: e.target.checked })}
-                                    />
-                                    <div className="w-10 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                                </div>
-                                <div className="ml-3">
-                                    <span className="block text-sm font-bold text-gray-900">Make Private</span>
-                                    <span className="block text-xs text-gray-500">Only invited members can view this channel.</span>
-                                </div>
-                            </label>
+
+                        {/* ✨ Channel Visibility Info */}
+                        <div className="bg-blue-50 border border-blue-100 rounded-xl p-4">
+                            <h4 className="text-sm font-bold text-blue-900 mb-2">Channel Visibility</h4>
+                            <div className="space-y-2 text-xs text-blue-800">
+                                <p>
+                                    <span className="font-bold">🌐 Public:</span> Skip member selection - all workspace members can view and join
+                                </p>
+                                <p>
+                                    <span className="font-bold">🔒 Private:</span> Select specific members - only they can view and participate
+                                </p>
+                            </div>
                         </div>
                     </div>
                 ) : (
                     <div className="p-0">
                         <div className="p-4 bg-blue-50 border-b border-blue-100 text-sm text-blue-800 flex items-center gap-2">
                             <span>#</span>
-                            <span>Adding members to <strong>#{newChannelData.name}</strong></span>
+                            <span>Adding members to <strong>#{newChannelData.name}</strong> (Private Channel)</span>
                         </div>
                         <div className="max-h-[300px] overflow-y-auto p-2">
-                            {MOCK_USERS.map(user => (
-                                <label key={user.id} className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-xl cursor-pointer transition-colors">
+                            {workspaceMembers.map(member => (
+                                <label key={member._id} className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-xl cursor-pointer transition-colors">
                                     <div className="flex items-center gap-3">
                                         <input
                                             type="checkbox"
                                             className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
-                                            checked={selectedChannelMembers.includes(user.id)}
+                                            checked={selectedChannelMembers.includes(member._id)}
                                             onChange={(e) => {
                                                 if (e.target.checked) {
-                                                    setSelectedChannelMembers([...selectedChannelMembers, user.id]);
+                                                    setSelectedChannelMembers([...selectedChannelMembers, member._id]);
                                                 } else {
-                                                    setSelectedChannelMembers(selectedChannelMembers.filter(id => id !== user.id));
+                                                    setSelectedChannelMembers(selectedChannelMembers.filter(id => id !== member._id));
                                                 }
                                             }}
                                         />
                                         <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-xs font-bold text-gray-600">
-                                            {user.name.charAt(0)}
+                                            {(member?.name || member?.username || 'U').charAt(0)}
                                         </div>
                                         <div>
-                                            <div className="text-sm font-bold text-gray-900">{user.name}</div>
-                                            <div className="text-xs text-gray-500">Member</div>
+                                            <div className="text-sm font-bold text-gray-900">{member?.name || member?.username || 'Unknown'}</div>
+                                            <div className="text-xs text-gray-500">{member?.email || 'Member'}</div>
                                         </div>
                                     </div>
                                 </label>
@@ -139,13 +168,33 @@ const CreateChannelModal = ({
 
                 <div className="px-8 py-5 bg-gray-50 border-t border-gray-100 flex justify-end gap-3">
                     <button onClick={() => setShowCreateChannelModal(false)} className="px-6 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-200 rounded-xl transition-colors">Cancel</button>
-                    <button
-                        onClick={handleCreateChannel}
-                        disabled={!newChannelData.name}
-                        className="px-6 py-2.5 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-md hover:shadow-lg transition-all transform active:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                        {createStep === 1 && newChannelData.isPrivate ? "Next: Add Members" : "Create Channel"}
-                    </button>
+
+                    {createStep === 1 ? (
+                        <>
+                            <button
+                                onClick={() => setCreateStep(2)}
+                                disabled={!newChannelData.name}
+                                className="px-6 py-2.5 text-sm font-medium text-blue-600 hover:bg-blue-50 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                Add Specific Members
+                            </button>
+                            <button
+                                onClick={handleCreateChannel}
+                                disabled={!newChannelData.name}
+                                className="px-6 py-2.5 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-md hover:shadow-lg transition-all transform active:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                Create Public Channel
+                            </button>
+                        </>
+                    ) : (
+                        <button
+                            onClick={handleCreateChannel}
+                            disabled={!newChannelData.name}
+                            className="px-6 py-2.5 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-md hover:shadow-lg transition-all transform active:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            Create Private Channel
+                        </button>
+                    )}
                 </div>
             </div>
         </div>

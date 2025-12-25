@@ -2,16 +2,18 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useWorkspace } from '../../../../contexts/WorkspaceContext';
 import { useToast } from '../../../../contexts/ToastContext';
 import api from '../../../../services/api';
-import { Crown, Shield, UserCheck, Users, Hash, MessageSquare, Rocket, Briefcase, Zap, Palette, FlaskConical, Globe, ShieldCheck, TrendingUp, Lightbulb, Flame, Target, Trophy, Mail, Clock, CheckCircle, XCircle, RotateCw, Search, MoreVertical, Pause, Play, Trash2 } from 'lucide-react';
+import { Crown, Shield, UserCheck, Users, Hash, MessageSquare, Rocket, Briefcase, Zap, Palette, FlaskConical, Globe, ShieldCheck, TrendingUp, Lightbulb, Flame, Target, Trophy, Mail, Clock, CheckCircle, XCircle, RotateCw, Search, MoreVertical, Pause, Play, Trash2, AlertTriangle, Trash, Link2 } from 'lucide-react';
 
 // Invitations Tab Component
 const InvitationsTab = ({ activeWorkspace, isAdmin }) => {
     const { showToast } = useToast();
-    const [invitations, setInvitations] = useState({ pending: [], accepted: [], revoked: [], expired: [] });
+    const [invitations, setInvitations] = useState({ pending: [], accepted: [], revoked: [], expired: [], duplicateEmails: [], duplicateCount: 0 });
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState('all');
     const [searchQuery, setSearchQuery] = useState('');
     const [actionLoading, setActionLoading] = useState({});
+    const [selectedInvites, setSelectedInvites] = useState(new Set());
+    const [bulkActionLoading, setBulkActionLoading] = useState(false);
 
     const fetchInvitations = useCallback(async () => {
         if (!activeWorkspace?.id) return;
@@ -58,21 +60,126 @@ const InvitationsTab = ({ activeWorkspace, isAdmin }) => {
         }
     };
 
-    // Filter and search invitations
+    const handleBulkRevoke = async () => {
+        if (selectedInvites.size === 0) return;
+
+        if (!window.confirm(`Are you sure you want to revoke ${selectedInvites.size} invitation(s)?`)) {
+            return;
+        }
+
+        setBulkActionLoading(true);
+        try {
+            await api.post(`/api/workspaces/${activeWorkspace.id}/invites/bulk-revoke`, {
+                inviteIds: Array.from(selectedInvites)
+            });
+            showToast(`✅ Successfully revoked ${selectedInvites.size} invitation(s)`, 'success');
+            setSelectedInvites(new Set());
+            fetchInvitations();
+        } catch (error) {
+            showToast(error.response?.data?.message || 'Failed to bulk revoke invitations', 'error');
+        } finally {
+            setBulkActionLoading(false);
+        }
+    };
+
+    const handleBulkDelete = async () => {
+        console.log('🗑️ handleBulkDelete called, selectedInvites:', selectedInvites);
+        if (selectedInvites.size === 0) return;
+
+        if (!window.confirm(`Are you sure you want to delete ${selectedInvites.size} invitation(s)? This action cannot be undone.`)) {
+            console.log('❌ User cancelled deletion');
+            return;
+        }
+
+        setBulkActionLoading(true);
+        try {
+            console.log('📤 Sending delete request for:', Array.from(selectedInvites));
+            const response = await api.delete(`/api/workspaces/${activeWorkspace.id}/invites/bulk-delete`, {
+                data: { inviteIds: Array.from(selectedInvites) }
+            });
+            console.log('✅ Delete response:', response.data);
+            showToast(`✅ Successfully deleted ${selectedInvites.size} invitation(s)`, 'success');
+            setSelectedInvites(new Set());
+            fetchInvitations();
+        } catch (error) {
+            console.error('❌ Delete error:', error);
+            showToast(error.response?.data?.message || 'Failed to bulk delete invitations', 'error');
+        } finally {
+            setBulkActionLoading(false);
+        }
+    };
+
+    const handleCleanupExpired = async () => {
+        if (!window.confirm('Are you sure you want to delete all expired invitations? This action cannot be undone.')) {
+            return;
+        }
+
+        setBulkActionLoading(true);
+        try {
+            const response = await api.post(`/api/workspaces/${activeWorkspace.id}/invites/cleanup-expired`);
+            showToast(`✅ ${response.data.message}`, 'success');
+            fetchInvitations();
+        } catch (error) {
+            showToast(error.response?.data?.message || 'Failed to cleanup expired invitations', 'error');
+        } finally {
+            setBulkActionLoading(false);
+        }
+    };
+
+    const toggleSelectInvite = (inviteId) => {
+        const newSelected = new Set(selectedInvites);
+        if (newSelected.has(inviteId)) {
+            newSelected.delete(inviteId);
+        } else {
+            newSelected.add(inviteId);
+        }
+        setSelectedInvites(newSelected);
+    };
+
+    // Removed toggleSelectAll - not using select-all functionality in card view
+
+    // ✅ FIXED: Filter and search invitations with proper categorization
+    // Accepted invitations should NOT appear in pending
     const allInvites = [
-        ...invitations.pending.map(inv => ({ ...inv, filterStatus: 'pending' })),
+        // Only truly pending invitations (not used/accepted)
+        ...invitations.pending.filter(inv => inv.status === 'pending' && !inv.used).map(inv => ({ ...inv, filterStatus: 'pending' })),
+        // Accepted invitations (status=accepted OR used flag is true)
         ...invitations.accepted.map(inv => ({ ...inv, filterStatus: 'accepted' })),
+        // Also check for used invitations that might be in pending
+        ...invitations.pending.filter(inv => inv.used || inv.status === 'accepted').map(inv => ({ ...inv, filterStatus: 'accepted' })),
         ...invitations.expired.map(inv => ({ ...inv, filterStatus: 'expired' })),
         ...invitations.revoked.map(inv => ({ ...inv, filterStatus: 'revoked' }))
     ];
 
-    const filteredInvites = allInvites.filter(invite => {
-        const matchesFilter = filter === 'all' || invite.filterStatus === filter;
+    // Remove duplicates (in case an invitation appears in both pending and accepted)
+    const uniqueInvites = allInvites.reduce((acc, inv) => {
+        if (!acc.find(existing => existing.id === inv.id)) {
+            acc.push(inv);
+        }
+        return acc;
+    }, []);
+
+    const filteredInvites = uniqueInvites.filter(invite => {
+        const matchesFilter = filter === 'all' ||
+            (filter === 'duplicates' ? invite.isDuplicate : invite.filterStatus === filter);
         const matchesSearch = !searchQuery ||
             invite.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            invite.role?.toLowerCase().includes(searchQuery.toLowerCase()) ||
             invite.invitedBy?.toLowerCase().includes(searchQuery.toLowerCase());
         return matchesFilter && matchesSearch;
     });
+
+    // Count selected by type for button enabling
+    const selectedPending = Array.from(selectedInvites).filter(id => {
+        const invite = uniqueInvites.find(inv => inv.id === id);
+        return invite?.filterStatus === 'pending';
+    }).length;
+
+    const selectedDeletable = Array.from(selectedInvites).filter(id => {
+        const invite = uniqueInvites.find(inv => inv.id === id);
+        // Can delete: expired, revoked, or accepted invitations
+        return invite?.filterStatus === 'expired' || invite?.filterStatus === 'revoked' || invite?.filterStatus === 'accepted';
+    }).length;
 
     const getStatusBadge = (status) => {
         const badges = {
@@ -129,53 +236,125 @@ const InvitationsTab = ({ activeWorkspace, isAdmin }) => {
 
     return (
         <div className="h-full flex flex-col">
-            {/* Header */}
-            <div className="px-8 py-6 border-b border-gray-100">
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">Workspace Invitations</h2>
-                <p className="text-gray-600">Manage pending, accepted, and revoked invitations</p>
-            </div>
+            {/* Bulk Actions Bar - Modern Design */}
+            {selectedInvites.size > 0 && (
+                <div className="mx-8 mt-2 mb-2 px-6 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl shadow-lg border border-blue-400/20">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center backdrop-blur-sm">
+                                <CheckCircle className="w-5 h-5 text-white" />
+                            </div>
+                            <div>
+                                <div className="text-base font-bold text-white">
+                                    {selectedInvites.size} {selectedInvites.size === 1 ? 'Invitation' : 'Invitations'} Selected
+                                </div>
+                                <div className="text-xs text-blue-100">
+                                    {selectedPending > 0 && `${selectedPending} pending`}
+                                    {selectedPending > 0 && selectedDeletable > 0 && ', '}
+                                    {selectedDeletable > 0 && `${selectedDeletable} deletable`}
+                                </div>
+                            </div>
+                        </div>
+                        <div className="flex gap-2">
+                            {selectedPending > 0 && (
+                                <button
+                                    onClick={handleBulkRevoke}
+                                    disabled={bulkActionLoading}
+                                    className="px-4 py-2 bg-white/90 hover:bg-white text-orange-600 text-sm font-semibold rounded-lg transition-all disabled:opacity-50 flex items-center gap-2 shadow-md hover:shadow-lg"
+                                >
+                                    <XCircle className="w-4 h-4" />
+                                    Revoke ({selectedPending})
+                                </button>
+                            )}
+                            {selectedDeletable > 0 && (
+                                <button
+                                    onClick={handleBulkDelete}
+                                    disabled={bulkActionLoading}
+                                    className="px-4 py-2 bg-white/90 hover:bg-white text-red-600 text-sm font-semibold rounded-lg transition-all disabled:opacity-50 flex items-center gap-2 shadow-md hover:shadow-lg"
+                                >
+                                    <Trash className="w-4 h-4" />
+                                    Delete ({selectedDeletable})
+                                </button>
+                            )}
+                            {/* Show info message if selected invitations have no available actions */}
+                            {selectedPending === 0 && selectedDeletable === 0 && (
+                                <div className="px-4 py-2 bg-white/90 text-gray-600 text-sm font-medium rounded-lg flex items-center gap-2">
+                                    <AlertTriangle className="w-4 h-4" />
+                                    No actions available for selected invitations
+                                </div>
+                            )}
+                            <button
+                                onClick={() => setSelectedInvites(new Set())}
+                                className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white text-sm font-medium rounded-lg transition-all backdrop-blur-sm border border-white/20"
+                            >
+                                Clear
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
-            {/* Filters and Search */}
-            <div className="px-8 py-4 border-b border-gray-100 flex items-center gap-4">
-                {/* Status Filter */}
-                <div className="flex gap-2">
+            {/* Search and Filters Container */}
+            <div className="px-8 pt-6 pb-2 bg-white border-b border-gray-100 space-y-3">
+                {/* Top Row: Search and Actions */}
+                <div className="flex items-center gap-3">
+                    <div className="relative flex-1">
+                        <Search className="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                        <input
+                            type="text"
+                            placeholder="Search invitations by email, role, or inviter..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm"
+                        />
+                    </div>
+                    {invitations.expired.length > 0 && (
+                        <button
+                            onClick={handleCleanupExpired}
+                            disabled={bulkActionLoading}
+                            className="flex items-center gap-2 px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium rounded-xl transition-colors whitespace-nowrap"
+                        >
+                            <Trash2 className="w-4 h-4" />
+                            Clean Expired
+                        </button>
+                    )}
+                </div>
+
+                {/* Bottom Row: Filter Tabs */}
+                <div className="flex gap-2 pb-1 overflow-x-auto no-scrollbar mask-gradient-right">
                     {[
-                        { value: 'all', label: 'All', count: allInvites.length },
-                        { value: 'pending', label: 'Pending', count: invitations.pending.length },
-                        { value: 'accepted', label: 'Accepted', count: invitations.accepted.length },
-                        { value: 'expired', label: 'Expired', count: invitations.expired.length },
-                        { value: 'revoked', label: 'Revoked', count: invitations.revoked.length }
+                        { value: 'all', label: 'All', count: uniqueInvites.length },
+                        { value: 'pending', label: 'Pending', count: uniqueInvites.filter(inv => inv.filterStatus === 'pending').length },
+                        { value: 'accepted', label: 'Accepted', count: uniqueInvites.filter(inv => inv.filterStatus === 'accepted').length },
+                        { value: 'expired', label: 'Expired', count: uniqueInvites.filter(inv => inv.filterStatus === 'expired').length },
+                        { value: 'revoked', label: 'Revoked', count: uniqueInvites.filter(inv => inv.filterStatus === 'revoked').length },
+                        { value: 'duplicates', label: '⚠️ Duplicates', count: uniqueInvites.filter(inv => inv.isDuplicate).length }
                     ].map(({ value, label, count }) => (
                         <button
                             key={value}
-                            onClick={() => setFilter(value)}
-                            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${filter === value
-                                ? 'bg-blue-100 text-blue-700'
-                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                            onClick={() => { setFilter(value); setSelectedInvites(new Set()); }}
+                            className={`flex-shrink-0 px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${filter === value
+                                ? value === 'duplicates'
+                                    ? 'bg-orange-50 text-orange-700 ring-1 ring-orange-200 shadow-sm'
+                                    : 'bg-blue-600 text-white shadow-md shadow-blue-200'
+                                : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 hover:text-gray-900'
                                 }`}
                         >
-                            {label} ({count})
+                            <span>{label}</span>
+                            <span className={`px-1.5 py-0.5 rounded-full text-xs ${filter === value
+                                ? value === 'duplicates'
+                                    ? 'bg-orange-200/50 text-orange-800'
+                                    : 'bg-white/20 text-white'
+                                : 'bg-gray-100 text-gray-500'
+                                }`}>
+                                {count}
+                            </span>
                         </button>
                     ))}
                 </div>
-
-                {/* Search */}
-                <div className="flex-1 max-w-sm ml-auto">
-                    <div className="relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                        <input
-                            type="text"
-                            placeholder="Search by email..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                        />
-                    </div>
-                </div>
             </div>
-
-            {/* Invitations Table */}
-            <div className="flex-1 overflow-auto px-8 py-4">
+            {/* Invitations List - Card Based Layout */}
+            <div className="flex-1 overflow-auto px-8 py-6">
                 {loading ? (
                     <div className="text-center py-12">
                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
@@ -185,68 +364,131 @@ const InvitationsTab = ({ activeWorkspace, isAdmin }) => {
                     <div className="text-center py-12">
                         <Mail className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                         <p className="text-gray-600">No invitations found</p>
+                        {filter !== 'all' && (
+                            <p className="text-sm text-gray-500 mt-2">Try changing the filter or search query</p>
+                        )}
                     </div>
                 ) : (
-                    <div className="bg-white rounded-xl border border-gray-200 overflow-x-auto">
-                        <table className="w-full min-w-[800px]">
-                            <thead className="bg-gray-50 border-b border-gray-200">
-                                <tr>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Email</th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Role</th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Invited By</th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Sent</th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Status</th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Expires</th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-200">
-                                {filteredInvites.map((invite) => (
-                                    <tr key={invite.id} className="hover:bg-gray-50">
-                                        <td className="px-4 py-3 text-sm text-gray-900">{invite.email}</td>
-                                        <td className="px-4 py-3">
-                                            <span className="px-2 py-1 bg-blue-50 text-blue-700 text-xs font-medium rounded capitalize">
-                                                {invite.role}
-                                            </span>
-                                        </td>
-                                        <td className="px-4 py-3 text-sm text-gray-600">{invite.invitedBy || 'System'}</td>
-                                        <td className="px-4 py-3 text-sm text-gray-600">{getTimeAgo(invite.createdAt)}</td>
-                                        <td className="px-4 py-3">{getStatusBadge(invite.filterStatus)}</td>
-                                        <td className="px-4 py-3 text-sm text-gray-600">{getExpiresIn(invite.expiresAt)}</td>
-                                        <td className="px-4 py-3">
-                                            <div className="flex gap-2">
-                                                {(invite.filterStatus === 'pending' || invite.filterStatus === 'expired') && (
-                                                    <>
-                                                        <button
-                                                            onClick={() => handleResend(invite.id)}
-                                                            disabled={actionLoading[invite.id]}
-                                                            className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors disabled:opacity-50"
-                                                            title="Resend invitation"
-                                                        >
-                                                            <RotateCw className={`w-4 h-4 ${actionLoading[invite.id] === 'resending' ? 'animate-spin' : ''}`} />
-                                                        </button>
-                                                        {invite.filterStatus === 'pending' && (
-                                                            <button
-                                                                onClick={() => handleRevoke(invite.id)}
-                                                                disabled={actionLoading[invite.id]}
-                                                                className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
-                                                                title="Revoke invitation"
-                                                            >
-                                                                <XCircle className="w-4 h-4" />
-                                                            </button>
+                    <div className="space-y-4">
+                        {filteredInvites.map((invite) => (
+                            <div
+                                key={invite.id}
+                                className={`bg-white rounded-xl border-2 transition-all hover:shadow-md ${invite.isDuplicate
+                                    ? 'border-orange-200 bg-orange-50/20'
+                                    : selectedInvites.has(invite.id)
+                                        ? 'border-blue-500 bg-blue-50/50 shadow-md'
+                                        : 'border-gray-200 hover:border-gray-300'
+                                    }`}
+                            >
+                                <div className="p-4">
+                                    <div className="flex items-start gap-4">
+                                        {/* Checkbox */}
+                                        <div className="pt-1">
+                                            <input
+                                                type="checkbox"
+                                                checked={selectedInvites.has(invite.id)}
+                                                onChange={() => toggleSelectInvite(invite.id)}
+                                                className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                            />
+                                        </div>
+
+                                        {/* Main Content */}
+                                        <div className="flex-1 min-w-0">
+                                            {/* Header Row */}
+                                            <div className="flex items-start justify-between gap-4 mb-1.5">
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="flex items-center gap-2 mb-1">
+                                                        {invite.inviteType === 'email' ? (
+                                                            <>
+                                                                <Mail className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                                                                <span className="font-semibold text-gray-900 truncate">
+                                                                    {invite.email}
+                                                                </span>
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <Link2 className="w-4 h-4 text-purple-600 flex-shrink-0" />
+                                                                <div className="flex flex-col">
+                                                                    <span className="font-semibold text-gray-700">
+                                                                        Shareable Link
+                                                                    </span>
+                                                                    <span className="text-xs text-gray-500 italic">
+                                                                        Anyone with this link can join as {invite.role}
+                                                                    </span>
+                                                                </div>
+                                                            </>
                                                         )}
-                                                    </>
-                                                )}
+                                                        {invite.isDuplicate && (
+                                                            <span
+                                                                className="inline-flex items-center gap-1 px-2 py-0.5 bg-orange-100 text-orange-700 text-xs font-medium rounded border border-orange-300"
+                                                                title={`${invite.duplicateCount} pending invitations for this email`}
+                                                            >
+                                                                <AlertTriangle className="w-3 h-3" />
+                                                                ×{invite.duplicateCount}
+                                                            </span>
+                                                        )}
+                                                    </div>
+
+                                                    {/* Metadata Row */}
+                                                    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-gray-600">
+                                                        <div className="flex items-center gap-1.5">
+                                                            <span className="px-2.5 py-0.5 bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700 text-xs font-semibold rounded-md border border-blue-200 capitalize">
+                                                                {invite.role}
+                                                            </span>
+                                                        </div>
+                                                        <div className="flex items-center gap-1.5">
+                                                            <Users className="w-3.5 h-3.5 text-gray-400" />
+                                                            <span>by {invite.invitedBy || 'System'}</span>
+                                                        </div>
+                                                        <div className="flex items-center gap-1.5">
+                                                            <Clock className="w-3.5 h-3.5 text-gray-400" />
+                                                            <span>{getTimeAgo(invite.createdAt)}</span>
+                                                        </div>
+                                                        <div className="flex items-center gap-1.5">
+                                                            <span className="text-gray-400">Expires:</span>
+                                                            <span>{getExpiresIn(invite.expiresAt)}</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {/* Status Badge */}
+                                                <div className="flex-shrink-0">
+                                                    {getStatusBadge(invite.filterStatus)}
+                                                </div>
                                             </div>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
+
+                                            {/* Actions Row */}
+                                            {(invite.filterStatus === 'pending' || invite.filterStatus === 'expired') && (
+                                                <div className="flex gap-2 pt-3 border-t border-gray-100">
+                                                    <button
+                                                        onClick={() => handleResend(invite.id)}
+                                                        disabled={actionLoading[invite.id]}
+                                                        className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors disabled:opacity-50"
+                                                    >
+                                                        <RotateCw className={`w-3.5 h-3.5 ${actionLoading[invite.id] === 'resending' ? 'animate-spin' : ''}`} />
+                                                        Resend
+                                                    </button>
+                                                    {invite.filterStatus === 'pending' && (
+                                                        <button
+                                                            onClick={() => handleRevoke(invite.id)}
+                                                            disabled={actionLoading[invite.id]}
+                                                            className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-red-700 bg-red-50 hover:bg-red-100 rounded-lg transition-colors disabled:opacity-50"
+                                                        >
+                                                            <XCircle className="w-3.5 h-3.5" />
+                                                            Revoke
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
                     </div>
                 )}
-            </div>
-        </div>
+            </div >
+        </div >
     );
 };
 

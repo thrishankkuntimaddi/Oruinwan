@@ -36,15 +36,15 @@ exports.createWorkspace = async (req, res) => {
       }
     }
 
-    // Check if user already has a workspace with this name
+    // ✅ Check if user already OWNS a workspace with this name (not just member of)
     const existingWorkspace = await Workspace.findOne({
       name: name.trim(),
-      'members.user': userId
+      createdBy: userId  // Only check workspaces this user created
     });
 
     if (existingWorkspace) {
       return res.status(400).json({
-        message: `You already have a workspace named "${name.trim()}". Please choose a different name.`
+        message: `Workspace name already exists in your account`
       });
     }
 
@@ -136,7 +136,7 @@ exports.listMyWorkspaces = async (req, res) => {
 
     const user = await User.findById(userId).populate({
       path: 'workspaces.workspace',
-      select: '-__v'  // Select all fields except __v to ensure metadata is included
+      select: '-__v'
     });
 
     if (!user) {
@@ -148,22 +148,35 @@ exports.listMyWorkspaces = async (req, res) => {
     console.log('📋 User workspaces array:', user.workspaces);
 
     // Filter to only return workspaces where user is actually a member
-    const workspaces = user.workspaces
-      .filter(ws => ws.workspace) // Remove null/deleted workspaces
-      .map(ws => ({
-        id: ws.workspace._id,
-        name: ws.workspace.name,
-        description: ws.workspace.description,
-        icon: ws.workspace.icon,
-        color: ws.workspace.color || "#2563eb",
-        type: ws.workspace.type,
-        role: ws.role,
-        memberCount: ws.workspace.members?.length || 0,
-        isPersonal: ws.workspace.type === 'personal'
-      }));
+    const workspacesWithOwner = await Promise.all(
+      user.workspaces
+        .filter(ws => ws.workspace) // Remove null/deleted workspaces
+        .map(async (ws) => {
+          // Populate the createdBy field separately
+          const workspace = await Workspace.findById(ws.workspace._id)
+            .populate('createdBy', 'username')
+            .lean();
 
-    console.log('✅ Returning workspaces:', workspaces);
-    return res.json({ workspaces });
+          console.log(`📊 Workspace "${ws.workspace.name}": createdBy =`, workspace?.createdBy);
+
+          return {
+            id: ws.workspace._id,
+            name: ws.workspace.name,
+            description: ws.workspace.description,
+            icon: ws.workspace.icon,
+            color: ws.workspace.color || "#2563eb",
+            type: ws.workspace.type,
+            role: ws.role,
+            memberCount: ws.workspace.members?.length || 0,
+            isPersonal: ws.workspace.type === 'personal',
+            ownerName: workspace?.createdBy?.username || 'Unknown',  // ✅ Owner name
+            isOwner: String(workspace?.createdBy?._id) === String(userId)  // ✅ Is owner check
+          };
+        })
+    );
+
+    console.log('✅ Returning workspaces with owner info:', workspacesWithOwner);
+    return res.json({ workspaces: workspacesWithOwner });
   } catch (err) {
     console.error("LIST MY WORKSPACES ERROR:", err);
     return res.status(500).json({ message: "Server error" });

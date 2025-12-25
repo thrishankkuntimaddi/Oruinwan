@@ -43,6 +43,16 @@ router.post("/:workspaceId/invites/:inviteId/revoke", auth, workspaceAdminContro
 // Resend invite (admin-only)
 router.post("/:workspaceId/invites/:inviteId/resend", auth, workspaceAdminController.resendInvite);
 
+// 🔒 ADMIN-ONLY: Bulk invitation operations
+// Bulk revoke invites (admin-only)
+router.post("/:workspaceId/invites/bulk-revoke", auth, workspaceAdminController.bulkRevokeInvites);
+
+// Bulk delete invites (admin-only) - only expired/revoked
+router.delete("/:workspaceId/invites/bulk-delete", auth, workspaceAdminController.bulkDeleteInvites);
+
+// Cleanup all expired invites (admin-only)
+router.post("/:workspaceId/invites/cleanup-expired", auth, workspaceAdminController.cleanupExpiredInvites);
+
 // 🔒 ADMIN-ONLY: Member management
 // Suspend member (admin-only)
 router.post("/:workspaceId/members/:userId/suspend", auth, workspaceAdminController.suspendMember);
