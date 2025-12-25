@@ -1,6 +1,6 @@
 import React from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
-import { CheckSquare } from 'lucide-react';
+import { CheckSquare, Lock } from 'lucide-react';
 
 const ListItem = ({ item, isSelectionMode, selectedItems, setSelectedItems, toggleFavorite }) => {
     const location = useLocation();
@@ -14,7 +14,6 @@ const ListItem = ({ item, isSelectionMode, selectedItems, setSelectedItems, togg
         ? `/workspace/${workspaceId}${isHome ? '/home' : ''}/channel/${item.id}`
         : `/workspace/${workspaceId}${isHome ? '/home' : ''}/dm/${item.id}`;
     const isActive = currentPath === itemPath;
-    const Icon = item.isPrivate ? "#" : (item.type === 'dm' ? "👤" : "#");
     const isSelected = selectedItems.has(item.id);
 
     const handleClick = (e) => {
@@ -46,8 +45,10 @@ const ListItem = ({ item, isSelectionMode, selectedItems, setSelectedItems, togg
                         {isSelected && <CheckSquare size={10} className="text-white" />}
                     </div>
                 )}
-                <span className="opacity-70 text-lg">{Icon}</span>
-                <span className="truncate text-sm">{item.label}</span>
+                <span className="opacity-70 text-lg flex items-center">
+                    {item.type === 'dm' ? "👤" : (item.isPrivate ? <Lock size={16} /> : "#")}
+                </span>
+                <span className="truncate text-sm">{item.type === 'channel' ? item.label.replace(/^#/, '') : item.label}</span>
             </div>
 
             {!isSelectionMode && (

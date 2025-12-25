@@ -32,6 +32,15 @@ router.get("/:id/details", requireAuth, channelCtrl.getChannelDetails);
 // Update channel info (name/description)
 router.put("/:id/info", requireAuth, channelCtrl.updateChannelInfo);
 
+// Update channel name only
+router.patch("/:id/name", requireAuth, channelCtrl.updateChannelInfo);
+
+// Update channel description only
+router.patch("/:id/description", requireAuth, channelCtrl.updateChannelInfo);
+
+// Toggle channel privacy
+router.patch("/:id/privacy", requireAuth, channelCtrl.toggleChannelPrivacy);
+
 // Demote admin
 router.post("/:id/demote-admin", requireAuth, channelCtrl.demoteAdmin);
 
@@ -43,6 +52,9 @@ router.post("/:id/exit", requireAuth, channelCtrl.exitChannel);
 
 // Assign admin
 router.post("/:id/assign-admin", requireAuth, channelCtrl.assignAdmin);
+
+// Clear all messages in channel
+router.delete("/:id/messages", requireAuth, channelCtrl.clearChannelMessages);
 
 // Delete channel permanently
 router.delete("/:id", requireAuth, channelCtrl.deleteChannel);

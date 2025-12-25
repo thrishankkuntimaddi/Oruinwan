@@ -13,7 +13,9 @@ import {
   Circle,
   BarChart2,
   X,
-  Trash2
+  Trash2,
+  Link2,
+  Lock
 } from "lucide-react";
 import ConfirmationModal from "../../../ui/ConfirmationModal";
 
@@ -44,8 +46,20 @@ export default function Header({
 }) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
-  // Check if current user is the channel creator
-  const isChannelCreator = chat.type === 'channel' && chat.createdBy && String(chat.createdBy) === String(currentUserId);
+  // Determine if current user is admin for this channel
+  // Default channels (#general, #announcements): Workspace admin/owner
+  // User-created channels: Channel creator OR promoted admin
+  const isDefaultChannel = chat.isDefault || ['general', 'announcements'].includes(chat.name?.toLowerCase().replace(/^#/, ''));
+  const isWorkspaceAdmin = chat.workspaceRole === 'owner' || chat.workspaceRole === 'admin';
+  const isChannelCreator = chat.createdBy && String(chat.createdBy) === String(currentUserId);
+
+  // Check if user is a promoted admin (in the admins array)
+  const isPromotedAdmin = chat.admins && Array.isArray(chat.admins)
+    ? chat.admins.some(adminId => String(adminId) === String(currentUserId))
+    : false;
+
+  // Admin for default channels = workspace admin, admin for user channels = creator OR promoted admin
+  const isChannelAdmin = isDefaultChannel ? isWorkspaceAdmin : (isChannelCreator || isPromotedAdmin);
 
   const handleDelete = () => {
     if (onDeleteChat) {
@@ -62,13 +76,15 @@ export default function Header({
         {chat.image ? (
           <img src={chat.image} alt={chat.name} className="w-8 h-8 rounded object-cover shadow-sm bg-gray-50" />
         ) : (
-          <div className="w-8 h-8 rounded bg-gray-100 flex items-center justify-center text-gray-500 font-medium text-xs">
-            {chat.name?.charAt(0)?.toUpperCase() ?? "?"}
+          <div className={`w-8 h-8 rounded flex items-center justify-center font-medium text-xs ${chat.type === 'channel' && chat.isPrivate ? 'bg-blue-50 text-blue-600' : 'bg-gray-100 text-gray-500'}`}>
+            {chat.type === 'channel' && chat.isPrivate ? <Lock size={14} /> : (chat.name?.charAt(0)?.toUpperCase() ?? "?")}
           </div>
         )}
 
         <div className="min-w-0">
-          <div className="text-sm font-semibold truncate text-gray-800">{chat.name}</div>
+          <div className="text-sm font-semibold truncate text-gray-800">
+            {chat.type === 'channel' ? (chat.name?.replace(/^#/, '') || 'Unnamed Channel') : chat.name}
+          </div>
           <div className="text-[10px] text-gray-400 truncate flex items-center gap-1">
             {chat.status}
           </div>
@@ -167,14 +183,24 @@ export default function Header({
               <div onClick={(e) => e.stopPropagation()} className="absolute right-0 mt-2 w-56 bg-white border border-gray-200 rounded-lg shadow-xl py-1 z-50 text-sm animate-fade-in">
                 {chat.type === "channel" && (
                   <>
-                    <div className="px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">Channel Settings</div>
-                    {setShowChannelManagement && (
+                    <div className="px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">Channel Options</div>
+                    {isChannelAdmin && setShowChannelManagement && (
                       <button className="w-full text-left px-4 py-2 hover:bg-gray-50 text-gray-700 flex items-center gap-3" onClick={() => { setShowChannelManagement("settings"); setShowMenu(false); }}>
-                        <Settings size={16} /> Manage Channel
+                        <Settings size={16} /> Channel Settings
                       </button>
                     )}
                     <button className="w-full text-left px-4 py-2 hover:bg-gray-50 text-gray-700 flex items-center gap-3" onClick={() => { setShowChannelManagement("members"); setShowMenu(false); }}>
-                      <Info size={16} /> Channel Info
+                      <Info size={16} /> View Members & Info
+                    </button>
+                    <button className="w-full text-left px-4 py-2 hover:bg-gray-50 text-gray-700 flex items-center gap-3"
+                      onClick={() => {
+                        const channelLink = `${window.location.origin}/workspace/${chat.workspaceId}/home/channel/${chat.id}`;
+                        navigator.clipboard.writeText(channelLink);
+                        showToast && showToast("Channel link copied!", "success");
+                        setShowMenu(false);
+                      }}
+                    >
+                      <Link2 size={16} /> Copy Channel Link
                     </button>
                     <div className="border-t border-gray-100 my-1" />
                   </>
@@ -213,8 +239,8 @@ export default function Header({
                   </button>
                 )}
 
-                {/* Channel: Delete Channel (creators only) */}
-                {chat.type === 'channel' && isChannelCreator && onDeleteChannel && !chat.isDefault && (
+                {/* Channel: Delete Channel (admins only) */}
+                {chat.type === 'channel' && isChannelAdmin && onDeleteChannel && !chat.isDefault && (
                   <button
                     className="w-full text-left px-4 py-2 hover:bg-gray-50 text-red-600 flex items-center gap-3"
                     onClick={() => {

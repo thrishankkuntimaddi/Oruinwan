@@ -668,7 +668,7 @@ exports.getWorkspaceChannels = async (req, res) => {
 
     // Fetch ALL channels for this workspace
     const allChannels = await Channel.find({ workspace: workspaceId })
-      .select('name description isPrivate isDefault members createdBy createdAt workspace')
+      .select('name description isPrivate isDefault members createdBy createdAt workspace admins')
       .sort({ isDefault: -1, createdAt: 1 }) // Default channels first, then by creation time
       .lean();
 

@@ -455,7 +455,7 @@ const HomePanel = ({ title }) => {
             <NewDMModal
                 showNewDMModal={showNewDMModal}
                 setShowNewDMModal={setShowNewDMModal}
-                MOCK_USERS={users}
+                workspaceMembers={workspaceMembers}
                 handleStartDM={handleStartDM}
             />
         </div>

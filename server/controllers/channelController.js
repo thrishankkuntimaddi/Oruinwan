@@ -326,13 +326,19 @@ exports.getChannelMembers = async (req, res) => {
     }
 
     // Map members to include user data
-    const formattedMembers = channel.members.map(m => ({
-      _id: m.user._id,
-      username: m.user.username,
-      email: m.user.email,
-      profilePicture: m.user.profilePicture,
-      joinedAt: m.joinedAt
-    }));
+    const formattedMembers = channel.members.map(m => {
+      const isAdmin = channel.admins.some(adminId => adminId.toString() === m.user._id.toString());
+      return {
+        _id: m.user._id,
+        username: m.user.username,
+        email: m.user.email,
+        profilePicture: m.user.profilePicture,
+        joinedAt: m.joinedAt,
+        isAdmin
+      };
+    });
+
+    console.log(`📋 Channel #${channel.name} members:`, formattedMembers.map(m => `${m.username} (admin: ${m.isAdmin})`));
 
     return res.json({ members: formattedMembers });
   } catch (err) {
@@ -958,6 +964,137 @@ exports.removeMember = async (req, res) => {
     });
   } catch (err) {
     console.error("REMOVE MEMBER ERROR:", err);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+
+/**
+ * Toggle channel privacy (Public <-> Private)
+ * PATCH /api/channels/:id/privacy
+ * Only admins can toggle
+ */
+exports.toggleChannelPrivacy = async (req, res) => {
+  try {
+    const userId = req.user.sub;
+    const channelId = req.params.id;
+    const { isPrivate } = req.body;
+
+    const channel = await Channel.findById(channelId);
+    if (!channel) {
+      return res.status(404).json({ message: "Channel not found" });
+    }
+
+    // Check if user is admin
+    if (!channel.isAdmin(userId)) {
+      return res.status(403).json({ message: "Only admins can change channel privacy" });
+    }
+
+    // Cannot change privacy of default channels
+    if (channel.isDefault) {
+      return res.status(403).json({ message: "Cannot change privacy of default channels" });
+    }
+
+    const oldPrivacy = channel.isPrivate;
+    channel.isPrivate = isPrivate;
+    await channel.save();
+
+    // Create system message
+    const user = await User.findById(userId).select('username');
+    await Message.create({
+      channel: channelId,
+      workspace: channel.workspace,
+      type: 'system',
+      systemEvent: 'channel_privacy_changed',
+      systemData: {
+        userId,
+        oldPrivacy,
+        newPrivacy: isPrivate
+      },
+      text: `${user?.username || 'Admin'} changed this channel to ${isPrivate ? 'Private' : 'Public'}`,
+      sender: userId
+    });
+
+    console.log(`🔒 Channel #${channel.name} privacy changed: ${isPrivate ? 'Private' : 'Public'}`);
+
+    // Emit socket event
+    const io = req.app?.get("io");
+    if (io) {
+      io.to(`channel_${channelId}`).emit('channel-privacy-changed', {
+        channelId,
+        isPrivate: channel.isPrivate
+      });
+    }
+
+    return res.json({
+      message: `Channel is now ${isPrivate ? 'Private' : 'Public'}`,
+      channel: {
+        id: channel._id,
+        name: channel.name,
+        isPrivate: channel.isPrivate
+      }
+    });
+  } catch (err) {
+    console.error("TOGGLE PRIVACY ERROR:", err);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+/**
+ * Clear all messages in a channel
+ * DELETE /api/channels/:id/messages
+ * Only admins can clear messages
+ */
+exports.clearChannelMessages = async (req, res) => {
+  try {
+    const userId = req.user.sub;
+    const channelId = req.params.id;
+
+    const channel = await Channel.findById(channelId);
+    if (!channel) {
+      return res.status(404).json({ message: "Channel not found" });
+    }
+
+    // Check if user is an admin
+    if (!channel.isAdmin(userId)) {
+      return res.status(403).json({ message: "Only admins can clear messages" });
+    }
+
+    // Delete all messages in the channel
+    const result = await Message.deleteMany({ channel: channelId });
+
+    console.log(`🗑️ Cleared ${result.deletedCount} messages from #${channel.name}`);
+
+    // Create system message about the action
+    const user = await User.findById(userId).select('username');
+    await Message.create({
+      channel: channelId,
+      workspace: channel.workspace,
+      type: 'system',
+      systemEvent: 'messages_cleared',
+      systemData: {
+        userId,
+        clearedCount: result.deletedCount,
+        clearedAt: new Date()
+      },
+      text: `${user?.username || 'Admin'} cleared all message history`,
+      sender: userId
+    });
+
+    // Emit socket event
+    const io = req.app?.get("io");
+    if (io) {
+      io.to(`channel_${channelId}`).emit('messages-cleared', {
+        channelId,
+        clearedBy: userId,
+        count: result.deletedCount
+      });
+    }
+
+    return res.json({
+      message: "All messages cleared successfully",
+      deletedCount: result.deletedCount
+    });
+  } catch (err) {
+    console.error("CLEAR MESSAGES ERROR:", err);
     return res.status(500).json({ message: "Server error" });
   }
 };

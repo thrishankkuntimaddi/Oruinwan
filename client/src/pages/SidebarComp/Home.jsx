@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useLocation } from "react-router-dom";
 import ChatWindow from "../../components/messagesComp/chatWindowComp/chatWindow";
+import { useWorkspace } from "../../contexts/WorkspaceContext";
 import api from "../../services/api";
 
 const Home = () => {
   const { workspaceId, id, dmId } = useParams();
   const location = useLocation();
+  const { activeWorkspace } = useWorkspace();
   const [activeChat, setActiveChat] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -15,7 +17,7 @@ const Home = () => {
       try {
         // 1. Check if it's a channel route
         if (location.pathname.includes("/channel/") && id) {
-          // Fetch channel info to get the name
+          // Fetch channel info with complete metadata
           const res = await api.get(`/api/workspaces/${workspaceId}/channels`);
           const channels = res.data.channels || [];
           const channel = channels.find(c => String(c._id) === String(id) || c.name === id);
@@ -26,10 +28,21 @@ const Home = () => {
               name: `#${channel.name}`,
               type: "channel",
               workspaceId,
-              isPrivate: channel.isPrivate
+              isPrivate: channel.isPrivate,
+              createdBy: channel.createdBy,
+              isDefault: channel.isDefault,
+              description: channel.description,
+              admins: channel.admins || [], // Include admins array
+              workspaceRole: activeWorkspace?.role // Pass workspace role for permission checks
             });
           } else {
-            setActiveChat({ id, name: "Channel", type: "channel", workspaceId });
+            setActiveChat({
+              id,
+              name: "Channel",
+              type: "channel",
+              workspaceId,
+              workspaceRole: activeWorkspace?.role
+            });
           }
           return;
         }
@@ -51,7 +64,8 @@ const Home = () => {
               status: member ? member.status : "offline",
               type: "dm",
               isNew: id === "new",
-              workspaceId
+              workspaceId,
+              workspaceRole: activeWorkspace?.role
             });
           }
           return;
@@ -66,7 +80,7 @@ const Home = () => {
     };
 
     detectChat();
-  }, [location.pathname, id, dmId, workspaceId]);
+  }, [location.pathname, id, dmId, workspaceId, activeWorkspace?.role]);
 
   return (
     <div className="w-full h-full flex flex-col">

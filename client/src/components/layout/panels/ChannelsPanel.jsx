@@ -254,8 +254,7 @@ const ChannelsPanel = ({ title }) => {
                     ) : (
                         <Hash size={14} className="text-gray-400" />
                     )}
-                    <span className="opacity-70 text-lg">#</span>
-                    <span className="truncate text-sm font-medium">{item.label || 'Unnamed Channel'}</span>
+                    <span className="truncate text-sm font-medium">{(item.label || 'Unnamed Channel').replace(/^#/, '')}</span>
                     {/* Default badge removed */}
                 </div>
             </div>
