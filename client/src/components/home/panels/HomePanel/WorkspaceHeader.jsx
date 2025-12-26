@@ -2,6 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronDown, Settings2, SquarePen, UserPlus, Settings, Edit3, LogOut, Rocket, Briefcase, Zap, Palette, Microscope, Globe, Shield, TrendingUp, Lightbulb, Flame, Target, Trophy } from 'lucide-react';
 import { useWorkspace } from '../../../../contexts/WorkspaceContext';
+import { useToast } from '../../../../contexts/ToastContext';
 
 /**
  * WorkspaceHeader Component
@@ -27,6 +28,7 @@ const WorkspaceHeader = ({
 }) => {
     const navigate = useNavigate();
     const { activeWorkspace } = useWorkspace();
+    const { showToast } = useToast();
 
 
     // 🔒 Check if current user is admin/owner (using role from activeWorkspace)
@@ -110,7 +112,7 @@ const WorkspaceHeader = ({
                                         const canInvite = isAdmin || activeWorkspace?.settings?.allowMemberInvite !== false;
 
                                         if (!canInvite) {
-                                            alert('Member invitations are disabled for non-admins in this workspace');
+                                            showToast('Member invitations are disabled for non-admins in this workspace', 'warning');
                                             return;
                                         }
                                         setShowInviteModal(true);

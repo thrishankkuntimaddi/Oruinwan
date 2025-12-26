@@ -11,6 +11,7 @@ import Toast from "../../ui/Toast.jsx";
 import ForwardMessageModal from "./modals/ForwardMessageModal.jsx";
 import ChannelManagementModal from "../ChannelManagementModal.jsx";
 import MessageInfoModal from "./modals/MessageInfoModal.jsx";
+import ConfirmationModal from "../../common/ConfirmationModal.jsx";
 
 
 import ThreadPanel from "./ThreadPanel.jsx";
@@ -65,6 +66,8 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
   const [inspectedMessage, setInspectedMessage] = useState(null);
   const [workspaceMembers, setWorkspaceMembers] = useState([]);
   const [toast, setToast] = useState({ message: "", type: "success", visible: false });
+  const [showExitChannelConfirm, setShowExitChannelConfirm] = useState(false);
+  const [showDeleteChannelConfirm, setShowDeleteChannelConfirm] = useState(false);
 
   const showToast = (message, type = "success") => {
     setToast({ message, type, visible: true });
@@ -870,11 +873,10 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
   const handleExitChannel = async () => {
     if (chat.type !== 'channel') return;
 
-    const confirmed = window.confirm(
-      `Exit #${chat.name}?\n\nYou'll no longer be able to send or receive messages in this channel.`
-    );
+    setShowExitChannelConfirm(true);
+  };
 
-    if (!confirmed) return;
+  const confirmExitChannel = async () => {
 
     try {
       console.log('📤 Exiting channel:', chat.id);
@@ -909,16 +911,10 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
   const handleDeleteChannel = async () => {
     if (chat.type !== 'channel') return;
 
-    const confirmed = window.confirm(
-      `⚠️ PERMANENTLY DELETE #${chat.name}?\n\n` +
-      `This will:\n` +
-      `• Delete ALL messages\n` +
-      `• Remove ALL members\n` +
-      `• Cannot be undone\n\n` +
-      `Are you absolutely sure?`
-    );
+    setShowDeleteChannelConfirm(true);
+  };
 
-    if (!confirmed) return;
+  const confirmDeleteChannel = async () => {
 
     try {
       console.log('🗑️ Deleting channel:', chat.id);
@@ -1149,6 +1145,30 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
           currentUserId={currentUserIdRef.current}
         />
       )}
+
+      {/* Exit Channel Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={showExitChannelConfirm}
+        onClose={() => setShowExitChannelConfirm(false)}
+        onConfirm={confirmExitChannel}
+        title={`Exit #${chat.name}?`}
+        message="You'll no longer be able to send or receive messages in this channel."
+        confirmText="Exit Channel"
+        cancelText="Cancel"
+        variant="warning"
+      />
+
+      {/* Delete Channel Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={showDeleteChannelConfirm}
+        onClose={() => setShowDeleteChannelConfirm(false)}
+        onConfirm={confirmDeleteChannel}
+        title={`Permanently Delete #${chat.name}?`}
+        message={`This will delete ALL messages, remove ALL members, and cannot be undone. Are you absolutely sure?`}
+        confirmText="Delete Channel"
+        cancelText="Cancel"
+        variant="danger"
+      />
     </div>
   );
 }

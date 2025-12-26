@@ -85,7 +85,7 @@ const InvitePeopleModal = ({ isOpen, onClose, workspaceId, workspaceName }) => {
             const data = await response.json();
             setInviteLink(data.inviteLink);
         } catch (err) {
-            alert(err.message);
+            showToast(err.message || 'Failed to generate invite link', 'error');
         } finally {
             setLoading(false);
         }
@@ -101,7 +101,7 @@ const InvitePeopleModal = ({ isOpen, onClose, workspaceId, workspaceName }) => {
 
     const handleSendEmails = async () => {
         if (!emails.trim()) {
-            alert('Please enter at least one email address');
+            showToast('Please enter at least one email address', 'warning');
             return;
         }
 

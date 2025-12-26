@@ -1,5 +1,6 @@
 import React from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useToast } from '../../../../contexts/ToastContext';
 
 const CreateChannelModal = ({
     showCreateChannelModal,
@@ -15,6 +16,7 @@ const CreateChannelModal = ({
 }) => {
     const navigate = useNavigate();
     const { workspaceId } = useParams();
+    const { showToast } = useToast();
 
     const handleCreateChannel = async () => {
         if (!newChannelData.name) return;
@@ -73,7 +75,7 @@ const CreateChannelModal = ({
             setSelectedChannelMembers([]);
         } catch (err) {
             console.error('❌ Error creating channel:', err);
-            alert(err.response?.data?.message || 'Failed to create channel');
+            showToast(err.response?.data?.message || 'Failed to create channel', 'error');
         }
     };
 

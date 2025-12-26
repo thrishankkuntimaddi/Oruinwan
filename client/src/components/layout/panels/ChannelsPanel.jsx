@@ -2,13 +2,15 @@ import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Plus, Hash, Search, Trash2, X, CheckSquare, Settings2, Lock } from 'lucide-react';
 import { useWorkspace } from "../../../contexts/WorkspaceContext";
+import { useToast } from "../../../contexts/ToastContext";
 import api from "../../../services/api";
-import ConfirmationModal from "../../ui/ConfirmationModal";
+import ConfirmationModal from "../../common/ConfirmationModal";
 
 const ChannelsPanel = ({ title }) => {
     const navigate = useNavigate();
     const { workspaceId, id: channelId } = useParams();
     const { activeWorkspace } = useWorkspace();
+    const { showToast } = useToast();
 
     const [searchQuery, setSearchQuery] = useState("");
     const [showCreateChannelModal, setShowCreateChannelModal] = useState(false);
@@ -162,7 +164,7 @@ const ChannelsPanel = ({ title }) => {
             setSelectedChannelMembers([]);
         } catch (err) {
             console.error('❌ Error creating channel:', err);
-            alert(err.response?.data?.message || 'Failed to create channel');
+            showToast(err.response?.data?.message || 'Failed to create channel', 'error');
         }
     };
 
@@ -176,7 +178,7 @@ const ChannelsPanel = ({ title }) => {
             });
 
             if (deletableChannels.length === 0) {
-                alert('Cannot delete default channels (#general, #announcements)');
+                showToast('Cannot delete default channels (#general, #announcements)', 'warning');
                 setShowDeleteConfirm(false);
                 return;
             }
@@ -214,7 +216,7 @@ const ChannelsPanel = ({ title }) => {
 
                 // ✅ Prevent selection of default channels
                 if (item.isDefault) {
-                    alert('Default channels cannot be deleted');
+                    showToast('Default channels cannot be deleted', 'warning');
                     return;
                 }
 
@@ -286,7 +288,7 @@ const ChannelsPanel = ({ title }) => {
                             const canCreateChannel = isAdmin || activeWorkspace?.settings?.allowMemberChannelCreation !== false;
 
                             if (!canCreateChannel) {
-                                alert('Channel creation is disabled for members in this workspace');
+                                showToast('Channel creation is disabled for members in this workspace', 'warning');
                                 return;
                             }
                             setShowCreateChannelModal(true);

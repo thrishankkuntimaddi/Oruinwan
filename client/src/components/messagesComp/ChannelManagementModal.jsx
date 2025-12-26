@@ -3,6 +3,7 @@ import { useParams } from "react-router-dom";
 import axios from "axios";
 import { Trash2, UserPlus, Users, Lock, Unlock, X, AlertTriangle, Eraser, Info } from "lucide-react";
 import { useToast } from "../../contexts/ToastContext";
+import ConfirmationModal from "../common/ConfirmationModal";
 
 const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
@@ -20,6 +21,7 @@ export default function ChannelManagementModal({ channel, onClose, currentUserId
     const [memberToRemove, setMemberToRemove] = useState(null);
     const [memberToPromote, setMemberToPromote] = useState(null);
     const [memberToDemote, setMemberToDemote] = useState(null);
+    const [showClearMessagesConfirm, setShowClearMessagesConfirm] = useState(false);
 
     // Editing states
     const [isEditingName, setIsEditingName] = useState(false);
@@ -253,10 +255,10 @@ export default function ChannelManagementModal({ channel, onClose, currentUserId
     };
 
     const handleClearMessages = async () => {
-        if (!window.confirm("Are you sure you want to clear all messages in this channel? This cannot be undone.")) {
-            return;
-        }
+        setShowClearMessagesConfirm(true);
+    };
 
+    const confirmClearMessages = async () => {
         setLoading(true);
         try {
             const token = localStorage.getItem("accessToken");
@@ -796,9 +798,10 @@ export default function ChannelManagementModal({ channel, onClose, currentUserId
                                                     <button
                                                         onClick={() => handleInvite(user._id)}
                                                         disabled={loading}
-                                                        className="px-4 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+                                                        className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed hover:scale-105 active:scale-95"
+                                                        title="Add to Channel"
                                                     >
-                                                        Add to Channel
+                                                        <UserPlus size={20} />
                                                     </button>
                                                 </div>
                                             ))}
@@ -921,6 +924,18 @@ export default function ChannelManagementModal({ channel, onClose, currentUserId
                     </div>
                 )
             }
+
+            {/* Clear Messages Confirmation Modal */}
+            <ConfirmationModal
+                isOpen={showClearMessagesConfirm}
+                onClose={() => setShowClearMessagesConfirm(false)}
+                onConfirm={confirmClearMessages}
+                title="Clear All Messages"
+                message="Are you sure you want to clear all messages in this channel? This action cannot be undone."
+                confirmText="Clear History"
+                cancelText="Cancel"
+                variant="danger"
+            />
         </>
     );
 }
