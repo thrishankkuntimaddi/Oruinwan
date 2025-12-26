@@ -2,11 +2,13 @@ import React, { useState, useRef, useEffect } from "react";
 import { Smile, MessageSquare, Share, MoreHorizontal, Pin, Copy, Trash2, Info } from "lucide-react";
 import ReactionBadges from "./reactionBadges";
 import ReactionPicker from "./reactionPicker";
+import ReactMarkdown from "react-markdown";
+import remarkBreaks from "remark-breaks";
 
 /* ---------------------------------------------------------
    CHANNEL MessageItem Component (Slack Style)
 --------------------------------------------------------- */
-export default function ChannelMessageItem({
+function ChannelMessageItem({
     msg,
     selectMode,
     selectedIds,
@@ -125,8 +127,17 @@ export default function ChannelMessageItem({
                 </span>
 
                 {/* Message Text (More compact line height) */}
-                <div className="text-gray-800 text-[14px] leading-snug whitespace-pre-wrap break-words">
-                    {msg.text}
+                <div className="text-gray-800 text-[14px] leading-snug whitespace-pre-wrap break-words message-content">
+                    <ReactMarkdown
+                        remarkPlugins={[remarkBreaks]}
+                        components={{
+                            a: ({ node, children, ...props }) => <a {...props} className="text-blue-600 hover:underline" target="_blank" rel="noopener noreferrer">{children}</a>,
+                            ul: ({ node, ...props }) => <ul {...props} className="list-disc list-inside ml-1" />,
+                            ol: ({ node, ...props }) => <ol {...props} className="list-decimal list-inside ml-1" />,
+                        }}
+                    >
+                        {msg.text}
+                    </ReactMarkdown>
                 </div>
 
                 {/* Sending/Failed States */}
@@ -188,7 +199,6 @@ export default function ChannelMessageItem({
 
                 <button onClick={() => onOpenThread && onOpenThread(msg.id)} className="p-1 text-gray-400 hover:bg-gray-100 rounded" title="Thread"><MessageSquare size={14} /></button>
                 <button onClick={() => forwardMessage(msg.id)} className="p-1 text-gray-400 hover:bg-gray-100 rounded" title="Forward"><Share size={14} /></button>
-                <button onClick={() => infoMessage(msg.id)} className="p-1 text-gray-400 hover:bg-gray-100 rounded" title="Message Info"><Info size={14} /></button>
 
                 <div className="relative">
                     <button onClick={(e) => toggleMsgMenu(e, msg.id)} className={`p-1 rounded ${openMsgMenuId === msg.id ? "bg-gray-100 text-gray-900" : "text-gray-400 hover:bg-gray-100"}`} title="More"><MoreHorizontal size={14} /></button>
@@ -196,6 +206,7 @@ export default function ChannelMessageItem({
                         <div className="absolute right-0 top-full mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-xl py-1 z-50 text-sm animate-fade-in">
                             <button onClick={() => { copyMessage(msg.id); toggleMsgMenu({ stopPropagation: () => { } }, null); }} className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2"><Copy size={14} /> Copy text</button>
                             <button onClick={() => { pinMessage(msg.id); toggleMsgMenu({ stopPropagation: () => { } }, null); }} className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2"><Pin size={14} /> {msg.isPinned ? "Unpin message" : "Pin message"}</button>
+                            <button onClick={() => { infoMessage(msg.id); toggleMsgMenu({ stopPropagation: () => { } }, null); }} className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2"><Info size={14} /> Message info</button>
                             <div className="border-t border-gray-100 my-1"></div>
                             <button onClick={() => { deleteMessage(msg.id); toggleMsgMenu({ stopPropagation: () => { } }, null); }} className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2 text-red-600"><Trash2 size={14} /> Delete message</button>
                         </div>
@@ -205,3 +216,20 @@ export default function ChannelMessageItem({
         </div>
     );
 }
+
+// Optimize with React.memo to prevent unnecessary re-renders
+export default React.memo(ChannelMessageItem, (prevProps, nextProps) => {
+    // Re-render only if these specific props change
+    return (
+        prevProps.msg.id === nextProps.msg.id &&
+        prevProps.msg.text === nextProps.msg.text &&
+        prevProps.msg.isPinned === nextProps.msg.isPinned &&
+        prevProps.msg.sending === nextProps.msg.sending &&
+        prevProps.msg.failed === nextProps.msg.failed &&
+        prevProps.selectMode === nextProps.selectMode &&
+        prevProps.selectedIds === nextProps.selectedIds &&
+        prevProps.openMsgMenuId === nextProps.openMsgMenuId &&
+        JSON.stringify(prevProps.msg.reactions) === JSON.stringify(nextProps.msg.reactions) &&
+        prevProps.threadCounts?.[prevProps.msg.id] === nextProps.threadCounts?.[nextProps.msg.id]
+    );
+});

@@ -86,6 +86,10 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
   const socketRef = useRef(null);
   const typingTimeoutRef = useRef(null);
   const [typingUsers, setTypingUsers] = useState([]);
+
+  // Voice Recording Refs
+  const mediaRecorderRef = useRef(null);
+  const audioChunksRef = useRef([]);
   const [connected, setConnected] = useState(false);
 
   const currentUserIdRef = useRef(null);
@@ -213,19 +217,7 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
         if (!mounted) return;
         setMessages(loadedMessages);
 
-        // Mark as read via socket
-        const socket = socketRef.current;
-        console.log(`📖 [ChatWindow] Attempting to mark as read: socket=${!!socket}, connected=${connected}, type=${chat.type}, id=${chat.id}`);
-
-        if (socket && connected) {
-          console.log(`✅ [ChatWindow] Emitting mark-chat-read event`);
-          socket.emit("mark-chat-read", {
-            type: chat.type,
-            id: chat.id,
-          });
-        } else {
-          console.warn(`⚠️ [ChatWindow] Cannot mark as read - socket or connection not ready`);
-        }
+        // Mark as read will be handled by the dedicated useEffect below
       } catch (err) {
         console.error("Load messages error:", err);
         if (!mounted) return;
@@ -239,7 +231,7 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
   }, [chat, connected, accessToken]); // Note: We keep accessToken in deps to re-run when context updates
 
   /* ---------------------------------------------------------
-      MARK MESSAGES AS READ (separate effect to handle timing)
+      MARK MESSAGES AS READ (consolidated single effect)
   --------------------------------------------------------- */
   useEffect(() => {
     // Only mark as read if we have messages, socket is connected, and chat is active
@@ -571,6 +563,23 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
     });
 
     return () => {
+      // Clean up ALL socket listeners before disconnect
+      socket.off("connect");
+      socket.off("disconnect");
+      socket.off("channel-member-joined");
+      socket.off("channel-member-left");
+      socket.off("channel-deleted");
+      socket.off("new-message");
+      socket.off("send-error");
+      socket.off("read-update");
+      socket.off("typing");
+      socket.off("stop-typing");
+      socket.off("message-deleted");
+      socket.off("reaction-added");
+      socket.off("reaction-removed");
+      socket.off("message-pinned");
+      socket.off("message-unpinned");
+
       socket.disconnect();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -579,25 +588,39 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
   /* ---------------------------------------------------------
       SEND MESSAGE
   --------------------------------------------------------- */
+  const typingEmitTimeoutRef = useRef(null);
+
   const onInputChange = (e) => {
-    setNewMessage(e.target.value);
+    // ContentEditable passes the event differently - need to get innerHTML
+    const newValue = e.target.value !== undefined ? e.target.value : e.target.innerHTML;
+    setNewMessage(newValue);
 
     if (typingTimeoutRef.current)
       clearTimeout(typingTimeoutRef.current);
 
     const socket = socketRef.current;
     if (socket && connected) {
-      socket.emit("typing", {
-        dmSessionId: (chat.type === "dm" && !chat.isNew) ? chat.id : null,
-        channelId: chat.type === "channel" ? chat.id : null,
-      });
+      // Debounce typing indicator - only emit if we haven't emitted in last 500ms
+      if (!typingEmitTimeoutRef.current) {
+        socket.emit("typing", {
+          dmSessionId: (chat.type === "dm" && !chat.isNew) ? chat.id : null,
+          channelId: chat.type === "channel" ? chat.id : null,
+        });
+
+        typingEmitTimeoutRef.current = setTimeout(() => {
+          typingEmitTimeoutRef.current = null;
+        }, 500); // Debounce window
+      }
     }
 
     typingTimeoutRef.current = setTimeout(() => { }, 2000);
   };
 
-  const sendMessage = () => {
-    if (!newMessage.trim() || blocked) return;
+  const sendMessage = (textOverride) => {
+    // If textOverride is provided (string), use it. Otherwise use newMessage state.
+    const msgText = typeof textOverride === "string" ? textOverride : newMessage;
+
+    if (!msgText.trim() || blocked) return;
 
     const socket = socketRef.current;
 
@@ -614,7 +637,7 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
     const uiMsg = {
       id: clientTempId,
       sender: "you",
-      text: newMessage.trim(),
+      text: msgText.trim(),
       ts: new Date().toISOString(),
       temp: true,
       sending: true,
@@ -631,16 +654,41 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
       clientTempId
     });
 
-    socket.emit("send-message", {
-      text: newMessage.trim(),
-      attachments: [],
-      replyTo: uiMsg.repliedToId,
-      clientTempId,
-      workspaceId: chat.workspaceId,
-      dmSessionId: (chat.type === "dm" && !chat.isNew) ? chat.id : null,
-      receiverId: (chat.type === "dm" && chat.isNew) ? chat.id : null,
-      channelId: chat.type === "channel" ? chat.id : null,
-    });
+    try {
+      socket.emit("send-message", {
+        text: msgText.trim(),
+        attachments: [],
+        replyTo: uiMsg.repliedToId,
+        clientTempId,
+        workspaceId: chat.workspaceId,
+        dmSessionId: (chat.type === "dm" && !chat.isNew) ? chat.id : null,
+        receiverId: (chat.type === "dm" && chat.isNew) ? chat.id : null,
+        channelId: chat.type === "channel" ? chat.id : null,
+      });
+
+      // Set a timeout to mark message as failed if no response
+      setTimeout(() => {
+        if (pendingMessagesRef.current[clientTempId]) {
+          console.warn('⏱️ [ChatWindow] Message send timeout, marking as failed');
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === clientTempId ? { ...m, sending: false, failed: true } : m
+            )
+          );
+          delete pendingMessagesRef.current[clientTempId];
+          showToast("Message send timeout. Please try again.", "error");
+        }
+      }, 10000); // 10 second timeout
+    } catch (err) {
+      console.error('❌ [ChatWindow] Error emitting message:', err);
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === clientTempId ? { ...m, sending: false, failed: true } : m
+        )
+      );
+      delete pendingMessagesRef.current[clientTempId];
+      showToast("Failed to send message", "error");
+    }
 
     setNewMessage("");
     setReplyingTo(null);
@@ -655,40 +703,49 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
     const socket = socketRef.current;
     if (!socket) return;
 
-    if (type === "photo") {
-      const f = await pickFile("image/*");
-      if (!f) return;
+    try {
+      if (type === "photo") {
+        const f = await pickFile("image/*");
+        if (!f) return;
 
-      socket.emit("send-message", {
-        text: `[Photo] ${f.name}`,
-        attachments: [
-          { type: "image", url: URL.createObjectURL(f), name: f.name },
-        ],
-        workspaceId: chat.workspaceId,
-        dmSessionId: (chat.type === "dm" && !chat.isNew) ? chat.id : null,
-        receiverId: (chat.type === "dm" && chat.isNew) ? chat.id : null,
-        channelId: chat.type === "channel" ? chat.id : null,
-      });
-    }
+        showToast("Uploading photo...", "info");
 
-    if (type === "file") {
-      const f = await pickFile(".pdf,.doc,.docx,.xls,.xlsx");
-      if (!f) return;
+        socket.emit("send-message", {
+          text: `[Photo] ${f.name}`,
+          attachments: [
+            { type: "image", url: URL.createObjectURL(f), name: f.name },
+          ],
+          workspaceId: chat.workspaceId,
+          dmSessionId: (chat.type === "dm" && !chat.isNew) ? chat.id : null,
+          receiverId: (chat.type === "dm" && chat.isNew) ? chat.id : null,
+          channelId: chat.type === "channel" ? chat.id : null,
+        });
+      }
 
-      socket.emit("send-message", {
-        text: `[File] ${f.name}`,
-        attachments: [
-          { type: "file", url: URL.createObjectURL(f), name: f.name },
-        ],
-        workspaceId: chat.workspaceId,
-        dmSessionId: (chat.type === "dm" && !chat.isNew) ? chat.id : null,
-        receiverId: (chat.type === "dm" && chat.isNew) ? chat.id : null,
-        channelId: chat.type === "channel" ? chat.id : null,
-      });
-    }
+      if (type === "file") {
+        const f = await pickFile(".pdf,.doc,.docx,.xls,.xlsx");
+        if (!f) return;
 
-    if (type === "contact") {
-      setShowContactShare(true);
+        showToast("Uploading document...", "info");
+
+        socket.emit("send-message", {
+          text: `[File] ${f.name}`,
+          attachments: [
+            { type: "file", url: URL.createObjectURL(f), name: f.name },
+          ],
+          workspaceId: chat.workspaceId,
+          dmSessionId: (chat.type === "dm" && !chat.isNew) ? chat.id : null,
+          receiverId: (chat.type === "dm" && chat.isNew) ? chat.id : null,
+          channelId: chat.type === "channel" ? chat.id : null,
+        });
+      }
+
+      if (type === "contact") {
+        setShowContactShare(true);
+      }
+    } catch (err) {
+      console.error("Attachment error:", err);
+      showToast("Failed to attach file", "error");
     }
   };
 
@@ -828,6 +885,76 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
     setShowForwardModal(false);
     setForwardingMsgId(null);
   };
+
+  /* ---------------------------------------------------------
+      VOICE RECORDING LOGIC
+  --------------------------------------------------------- */
+  useEffect(() => {
+    const startRecording = async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        mediaRecorderRef.current = new MediaRecorder(stream);
+        audioChunksRef.current = [];
+
+        mediaRecorderRef.current.ondataavailable = (event) => {
+          audioChunksRef.current.push(event.data);
+        };
+
+        mediaRecorderRef.current.onstop = () => {
+          const audioBlob = new Blob(audioChunksRef.current, { type: "audio/webm" });
+          const audioUrl = URL.createObjectURL(audioBlob);
+          const socket = socketRef.current;
+
+          if (socket) {
+            socket.emit("send-message", {
+              text: "[Voice Message]",
+              attachments: [
+                { type: "audio", url: audioUrl, name: "voice_message.webm" },
+              ],
+              workspaceId: chat.workspaceId,
+              dmSessionId: (chat.type === "dm" && !chat.isNew) ? chat.id : null,
+              receiverId: (chat.type === "dm" && chat.isNew) ? chat.id : null,
+              channelId: chat.type === "channel" ? chat.id : null,
+            });
+            showToast("Voice message sent!", "success");
+          }
+
+          // Stop all tracks to release microphone
+          stream.getTracks().forEach(track => track.stop());
+        };
+
+        mediaRecorderRef.current.start();
+        showToast("Recording started...", "info");
+      } catch (err) {
+        console.error("Error accessing microphone:", err);
+        showToast("Could not access microphone", "error");
+        setRecording(false);
+      }
+    };
+
+    const stopRecording = () => {
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+        mediaRecorderRef.current.stop();
+      }
+    };
+
+    if (recording) {
+      startRecording();
+    } else {
+      stopRecording();
+    }
+
+    // Cleanup on unmount or recording toggle
+    return () => {
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+        mediaRecorderRef.current.stop();
+        mediaRecorderRef.current.stream?.getTracks().forEach(track => track.stop());
+      }
+      // Clear refs to allow garbage collection
+      audioChunksRef.current = [];
+      mediaRecorderRef.current = null;
+    };
+  }, [recording, chat]);
 
   /* ---------------------------------------------------------
       LOAD MORE MESSAGES (Pagination)
@@ -1135,6 +1262,7 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
 
         </div>
       </div>
+
 
       {/* Thread Panel */}
       {activeThread && (

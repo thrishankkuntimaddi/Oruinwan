@@ -5,6 +5,7 @@ import { ChevronUp, Loader2 } from "lucide-react";
 import { groupByDate } from "../helpers/helpers";
 import MessageGroup from "./messageGroup";
 import JoinMarker from "./JoinMarker";
+import MessageErrorBoundary from "./MessageErrorBoundary";
 
 export default function MessagesContainer({
   messages,
@@ -40,6 +41,7 @@ export default function MessagesContainer({
   onLoadMore,
 }) {
   const messagesRef = useRef(null);
+  const shownJoinMarkersRef = useRef(new Set()); // Track which members already had join marker shown
 
   /* ---------------------------------------------------------
      AUTO SCROLL TO BOTTOM ON NEW MESSAGES (even optimistic)
@@ -50,13 +52,24 @@ export default function MessagesContainer({
   }, [messages]);
 
   /* ---------------------------------------------------------
+     RESET JOIN MARKERS TRACKING ON CHAT CHANGE
+  --------------------------------------------------------- */
+  useEffect(() => {
+    // Reset tracking when messages change significantly (new chat loaded)
+    shownJoinMarkersRef.current = new Set();
+  }, [messages.length > 0 ? messages[0]?.id : null]); // Reset when first message changes (new chat)
+
+  /* ---------------------------------------------------------
      FILTER & GROUP BY DATE
   --------------------------------------------------------- */
-  const filteredMessages = messages.filter((m) =>
-    searchQuery
-      ? m.text?.toLowerCase().includes(searchQuery.toLowerCase())
-      : true
-  );
+  const filteredMessages = messages.filter((m) => {
+    // Only filter if searchQuery has actual content (not empty/whitespace)
+    if (!searchQuery || !searchQuery.trim()) {
+      return true; // Show all messages when no search
+    }
+    // Filter by search query when it exists
+    return m.text?.toLowerCase().includes(searchQuery.toLowerCase());
+  });
 
   const grouped = groupByDate(filteredMessages);
 
@@ -113,10 +126,26 @@ export default function MessagesContainer({
                   const prevMsgTime = prevMsg ? new Date(prevMsg.ts) : new Date(0);
 
                   // Find a member whose join date is between prevMsg and currentMsg
+                  // AND who hasn't been shown yet
                   memberWhoJoined = channelMembersWithJoinDates.find(member => {
                     const joinTime = new Date(member.joinedAt);
-                    return joinTime > prevMsgTime && joinTime <= currentMsgTime;
+                    const memberKey = String(member.userId); // Use userId as unique key
+
+                    // Check if:
+                    // 1. Join time is between previous and current message
+                    // 2. We haven't shown this member's join marker yet
+                    return (
+                      joinTime > prevMsgTime &&
+                      joinTime <= currentMsgTime &&
+                      !shownJoinMarkersRef.current.has(memberKey)
+                    );
                   });
+
+                  // If we found a member to show, mark them as shown
+                  if (memberWhoJoined) {
+                    const memberKey = String(memberWhoJoined.userId);
+                    shownJoinMarkersRef.current.add(memberKey);
+                  }
                 }
 
                 return (
@@ -128,31 +157,33 @@ export default function MessagesContainer({
                         currentUserId={currentUserId}
                       />
                     )}
-                    <MessageGroup
-                      msg={msg}
+                    <MessageErrorBoundary>
+                      <MessageGroup
+                        msg={msg}
 
-                      selectMode={selectMode}
-                      selectedIds={selectedIds}
-                      toggleSelect={toggleSelect}
+                        selectMode={selectMode}
+                        selectedIds={selectedIds}
+                        toggleSelect={toggleSelect}
 
-                      openMsgMenuId={openMsgMenuId}
-                      toggleMsgMenu={toggleMsgMenu}
-                      setOpenMsgMenuId={setOpenMsgMenuId}
+                        openMsgMenuId={openMsgMenuId}
+                        toggleMsgMenu={toggleMsgMenu}
+                        setOpenMsgMenuId={setOpenMsgMenuId}
 
-                      formatTime={formatTime}
-                      addReaction={addReaction}
-                      pinMessage={pinMessage}
-                      replyToMessage={replyToMessage}
-                      forwardMessage={forwardMessage}
-                      copyMessage={copyMessage}
-                      deleteMessage={deleteMessage}
-                      infoMessage={infoMessage}
+                        formatTime={formatTime}
+                        addReaction={addReaction}
+                        pinMessage={pinMessage}
+                        replyToMessage={replyToMessage}
+                        forwardMessage={forwardMessage}
+                        copyMessage={copyMessage}
+                        deleteMessage={deleteMessage}
+                        infoMessage={infoMessage}
 
-                      currentUserId={currentUserId} // ★ PASS DOWN FOR READ RECEIPTS
-                      onOpenThread={onOpenThread} // ★ THREAD PANEL
-                      threadCounts={threadCounts} // ★ THREAD COUNTS
-                      chatType={chatType}
-                    />
+                        currentUserId={currentUserId} // ★ PASS DOWN FOR READ RECEIPTS
+                        onOpenThread={onOpenThread} // ★ THREAD PANEL
+                        threadCounts={threadCounts} // ★ THREAD COUNTS
+                        chatType={chatType}
+                      />
+                    </MessageErrorBoundary>
                   </React.Fragment>
                 );
               })}

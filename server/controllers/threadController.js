@@ -12,7 +12,7 @@ exports.getThread = async (req, res) => {
 
         // Get the parent message first
         const parentMessage = await Message.findById(messageId)
-            .populate("senderId", "_id username profilePicture")
+            .populate("sender", "_id username profilePicture")
             .lean();
 
         if (!parentMessage) {
@@ -20,29 +20,31 @@ exports.getThread = async (req, res) => {
         }
 
         // Check if user has access to this message
-        // For DMs: user must be sender or receiver
+        // For DMs: user must be sender or participant
         // For channels: user must be a member (we'll check via Channel model)
-        if (parentMessage.receiverId) {
+        if (parentMessage.dm) {
             // DM message
-            const isSender = String(parentMessage.senderId._id || parentMessage.senderId) === String(userId);
-            const isReceiver = String(parentMessage.receiverId) === String(userId);
+            const isSender = String(parentMessage.sender._id || parentMessage.sender) === String(userId);
+            // For DM, check if user is a participant in the DMSession
+            const DMSession = require("../models/DMSession");
+            const dmSession = await DMSession.findById(parentMessage.dm);
 
-            if (!isSender && !isReceiver) {
+            if (!dmSession || !dmSession.participants.map(String).includes(String(userId))) {
                 return res.status(403).json({ message: "Access denied" });
             }
-        } else if (parentMessage.channelId) {
+        } else if (parentMessage.channel) {
             // Channel message - check membership
             const Channel = require("../models/Channel");
-            const channel = await Channel.findById(parentMessage.channelId);
+            const channel = await Channel.findById(parentMessage.channel);
 
-            if (!channel || !channel.members.map(String).includes(String(userId))) {
+            if (!channel || !channel.members.map(m => String(m.user || m)).includes(String(userId))) {
                 return res.status(403).json({ message: "Access denied" });
             }
         }
 
         // Get all replies to this message
-        const replies = await Message.find({ replyTo: messageId })
-            .populate("senderId", "_id username profilePicture")
+        const replies = await Message.find({ threadParent: messageId })
+            .populate("sender", "_id username profilePicture")
             .sort({ createdAt: 1 }) // Oldest first for threads
             .lean();
 
@@ -81,41 +83,39 @@ exports.postThreadReply = async (req, res) => {
 
         // Create the reply message
         const replyData = {
-            senderId: userId,
+            sender: userId,
             text: text.trim(),
             attachments,
-            replyTo: messageId,
+            threadParent: messageId,
             readBy: [userId], // Sender has read it
+            workspace: parentMessage.workspace,
+            company: parentMessage.company,
         };
 
         // Set context (DM or channel)
-        if (parentMessage.receiverId) {
-            replyData.receiverId = parentMessage.receiverId;
-        } else if (parentMessage.channelId) {
-            replyData.channelId = parentMessage.channelId;
+        if (parentMessage.dm) {
+            replyData.dm = parentMessage.dm;
+        } else if (parentMessage.channel) {
+            replyData.channel = parentMessage.channel;
         }
 
         const reply = await Message.create(replyData);
 
         // Populate sender info
-        await reply.populate("senderId", "_id username profilePicture");
+        await reply.populate("sender", "_id username profilePicture");
 
         // Emit socket event for real-time updates
         const io = req.app?.get("io");
         if (io) {
-            if (parentMessage.channelId) {
+            if (parentMessage.channel) {
                 // Broadcast to channel
-                io.to(`channel_${parentMessage.channelId}`).emit("thread-reply", {
+                io.to(`channel_${parentMessage.channel}`).emit("thread-reply", {
                     parentId: messageId,
                     reply: reply.toObject(),
                 });
-            } else if (parentMessage.receiverId) {
-                // Send to both DM participants
-                io.to(`user_${parentMessage.senderId}`).emit("thread-reply", {
-                    parentId: messageId,
-                    reply: reply.toObject(),
-                });
-                io.to(`user_${parentMessage.receiverId}`).emit("thread-reply", {
+            } else if (parentMessage.dm) {
+                // Send to DM session room
+                io.to(`dm_${parentMessage.dm}`).emit("thread-reply", {
                     parentId: messageId,
                     reply: reply.toObject(),
                 });
@@ -137,7 +137,7 @@ exports.getThreadCount = async (req, res) => {
     try {
         const { messageId } = req.params;
 
-        const count = await Message.countDocuments({ replyTo: messageId });
+        const count = await Message.countDocuments({ threadParent: messageId });
 
         return res.json({ count });
     } catch (err) {

@@ -1,14 +1,16 @@
 import React, { useState, useRef, useEffect } from "react";
-import { MoreHorizontal, Copy, Pin, Trash2, Smile, Info } from "lucide-react";
+import { MoreHorizontal, Copy, Pin, Trash2, Smile, Info, MessageSquare, Share } from "lucide-react";
 import ReactionBadges from "./reactionBadges";
 import ReactionPicker from "./reactionPicker";
+import ReactMarkdown from "react-markdown";
+import remarkBreaks from "remark-breaks";
 
 
 
 /* ---------------------------------------------------------
    DM MessageItem Component (Premium Feed Style)
 --------------------------------------------------------- */
-export default function DMMessageItem({
+function DMMessageItem({
     msg,
     selectMode,
     selectedIds,
@@ -103,7 +105,17 @@ export default function DMMessageItem({
                         ? "bg-blue-600 text-white"
                         : "bg-white border border-gray-100 text-gray-800"
                         }`}>
-                        {msg.text}
+                        <ReactMarkdown
+                            remarkPlugins={[remarkBreaks]}
+                            components={{
+                                a: ({ node, children, ...props }) => <a {...props} className={`hover:underline ${isMe ? "text-white underline" : "text-blue-600"}`} target="_blank" rel="noopener noreferrer">{children}</a>,
+                                ul: ({ node, ...props }) => <ul {...props} className="list-disc list-inside ml-1" />,
+                                ol: ({ node, ...props }) => <ol {...props} className="list-decimal list-inside ml-1" />,
+                                p: ({ node, ...props }) => <p {...props} className="mb-0" />, // Remove default margin
+                            }}
+                        >
+                            {msg.text}
+                        </ReactMarkdown>
                     </div>
 
                     {/* Timestamp - Far right edge */}
@@ -141,6 +153,10 @@ export default function DMMessageItem({
                                 )}
                             </div>
 
+                            {/* Thread and Forward buttons */}
+                            <button onClick={() => onOpenThread && onOpenThread(msg.id)} className="p-1 text-gray-400 hover:bg-gray-100 rounded" title="Thread"><MessageSquare size={14} /></button>
+                            <button onClick={() => forwardMessage && forwardMessage(msg.id)} className="p-1 text-gray-400 hover:bg-gray-100 rounded" title="Forward"><Share size={14} /></button>
+
                             {/* Menu Button */}
                             <div className="relative">
                                 <button
@@ -153,7 +169,6 @@ export default function DMMessageItem({
                                 >
                                     <MoreHorizontal size={14} />
                                 </button>
-                                <button onClick={() => infoMessage(msg.id)} className="p-1 text-gray-400 hover:bg-gray-100 rounded" title="Info"><Info size={14} /></button>
 
                                 {/* Dropdown Menu */}
                                 {openMsgMenuId === msg.id && (
@@ -177,6 +192,16 @@ export default function DMMessageItem({
                                             className="w-full text-left px-4 py-2.5 hover:bg-gray-50 flex items-center gap-3 text-gray-700 transition-colors"
                                         >
                                             <Copy size={14} className="text-gray-400" /> Copy text
+                                        </button>
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                infoMessage(msg.id);
+                                                toggleMsgMenu({ stopPropagation: () => { } }, null);
+                                            }}
+                                            className="w-full text-left px-4 py-2.5 hover:bg-gray-50 flex items-center gap-3 text-gray-700 transition-colors"
+                                        >
+                                            <Info size={14} className="text-gray-400" /> Message info
                                         </button>
                                         <div className="border-t border-gray-100 my-1"></div>
                                         <button
@@ -225,3 +250,19 @@ export default function DMMessageItem({
         </div>
     );
 }
+
+// Optimize with React.memo to prevent unnecessary re-renders
+export default React.memo(DMMessageItem, (prevProps, nextProps) => {
+    // Re-render only if these specific props change
+    return (
+        prevProps.msg.id === nextProps.msg.id &&
+        prevProps.msg.text === nextProps.msg.text &&
+        prevProps.msg.isPinned === nextProps.msg.isPinned &&
+        prevProps.msg.sending === nextProps.msg.sending &&
+        prevProps.msg.failed === nextProps.msg.failed &&
+        prevProps.selectMode === nextProps.selectMode &&
+        prevProps.selectedIds === nextProps.selectedIds &&
+        prevProps.openMsgMenuId === nextProps.openMsgMenuId &&
+        JSON.stringify(prevProps.msg.reactions) === JSON.stringify(nextProps.msg.reactions)
+    );
+});
