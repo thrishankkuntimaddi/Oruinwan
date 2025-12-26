@@ -53,12 +53,22 @@ export default function MessagesContainer({
   }, [messages]);
 
   /* ---------------------------------------------------------
-     RESET JOIN MARKERS TRACKING ON CHAT CHANGE
+     RESET JOIN MARKERS TRACKING ON CHAT CHANGE ONLY
   --------------------------------------------------------- */
+  const firstMessageIdRef = useRef(null);
+
   useEffect(() => {
-    // Reset tracking when messages change significantly (new chat loaded)
-    shownJoinMarkersRef.current = new Set();
-  }, [messages.length > 0 ? messages[0]?.id : null]); // Reset when first message changes (new chat)
+    // Only reset when we switch to a different chat (first message ID changes)
+    // Don't reset on minor updates like typing or new messages
+    const currentFirstMsgId = messages.length > 0 ? messages[0]?.backend?._id || messages[0]?.id : null;
+
+    if (currentFirstMsgId && currentFirstMsgId !== firstMessageIdRef.current) {
+      // Chat has changed, reset join markers tracking
+      console.log('🔄 Chat changed, resetting join markers');
+      shownJoinMarkersRef.current = new Set();
+      firstMessageIdRef.current = currentFirstMsgId;
+    }
+  }, [messages]);
 
   /* ---------------------------------------------------------
      FILTER & GROUP BY DATE

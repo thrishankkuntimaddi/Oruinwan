@@ -854,8 +854,10 @@ exports.getAllWorkspaceMembers = async (req, res) => {
     // Return ALL members including current user
     const members = workspace.members
       .map(m => ({
-        _id: m.user._id,  // Changed from 'id' to '_id' for consistency
-        username: m.user.username,  // Changed from 'name' to 'username' for consistency
+        _id: m.user._id,  // Primary ID field
+        id: m.user._id,   // Add 'id' as alias for frontend compatibility
+        name: m.user.username,  // Add 'name' mapped from username for MessageInfoModal
+        username: m.user.username,  // Keep username for backward compatibility
         email: m.user.email,
         profilePicture: m.user.profilePicture,  // Changed from 'avatar' to 'profilePicture' for consistency
         status: m.user.isOnline ? 'online' : 'offline',

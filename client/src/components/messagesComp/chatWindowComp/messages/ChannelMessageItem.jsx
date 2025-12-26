@@ -65,6 +65,32 @@ function ChannelMessageItem({
         );
     }
 
+    // ✨ Deleted Message Rendering
+    if (msg.isDeletedUniversally) {
+        return (
+            <div className="group flex items-start gap-2 px-4 py-2 opacity-60 hover:opacity-100 relative">
+                <div className="flex-shrink-0 pt-1">
+                    <div className="w-7 h-7 rounded bg-gray-200 flex items-center justify-center">
+                        <Trash2 size={12} className="text-gray-500" />
+                    </div>
+                </div>
+                <div className="flex-1 min-w-0">
+                    <div className="text-gray-400 text-xs italic py-1">
+                        Message deleted by {msg.deletedByName || "Unknown"}
+                    </div>
+                </div>
+                {/* Delete icon to remove from view */}
+                <button
+                    onClick={() => deleteMessage(msg.id, 'me')}
+                    className="opacity-0 group-hover:opacity-100 p-1 hover:bg-gray-100 rounded transition-opacity"
+                    title="Remove from view"
+                >
+                    <Trash2 size={12} className="text-gray-400" />
+                </button>
+            </div>
+        );
+    }
+
     return (
         <div
             className={`group flex items-start gap-3 px-4 py-0.5 hover:bg-gray-50/50 relative ${isSelected ? "bg-blue-50/30" : ""} ${msg.isPinned ? "bg-blue-50/30 border-l-2 border-blue-400" : "border-l-2 border-transparent"}`}
@@ -80,26 +106,6 @@ function ChannelMessageItem({
                         onChange={() => toggleSelect(msg.id)}
                         className="w-3.5 h-3.5 rounded-sm border-gray-300 text-blue-600 focus:ring-1 focus:ring-blue-500"
                     />
-                </div>
-            )}
-
-            {/* Deleted Message State */}
-            {msg.deleted && (
-                <div
-                    className="group flex items-start gap-2 px-4 py-0.5 hover:bg-gray-50/50 relative"
-                    onMouseEnter={() => setShowToolbar(true)} // Re-using showToolbar for this context
-                    onMouseLeave={() => setShowToolbar(false)}
-                >
-                    <div className="flex-shrink-0 pt-1">
-                        <div className="w-7 h-7 rounded bg-gray-200 flex items-center justify-center text-[10px] text-gray-500">
-                            <Trash2 size={12} />
-                        </div>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                        <div className="text-gray-400 text-xs italic py-1">
-                            Message deleted by {msg.deletedByName || "Unknown"}
-                        </div>
-                    </div>
                 </div>
             )}
 
@@ -223,12 +229,19 @@ function ChannelMessageItem({
                     {openMsgMenuId === msg.id && (
                         <div className="absolute right-0 top-full mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-xl py-1 z-50 text-sm animate-fade-in">
                             <button onClick={() => { copyMessage(msg.id); toggleMsgMenu({ stopPropagation: () => { } }, null); }} className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2"><Copy size={14} /> Copy text</button>
-                            {isAdmin && (
-                                <button onClick={() => { pinMessage(msg.id); toggleMsgMenu({ stopPropagation: () => { } }, null); }} className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2"><Pin size={14} /> {msg.isPinned ? "Unpin message" : "Pin message"}</button>
+                            <button onClick={() => { replyToMessage(msg.id); toggleMsgMenu({ stopPropagation: () => { } }, null); }} className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2"><MessageSquare size={14} /> Reply</button>
+                            <button onClick={() => { pinMessage(msg.id); toggleMsgMenu({ stopPropagation: () => { } }, null); }} className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2"><Pin size={14} /> {msg.isPinned ? "Unpin message" : "Pin message"}</button>
+                            {isMe && (
+                                <button onClick={() => { infoMessage(msg.id); toggleMsgMenu({ stopPropagation: () => { } }, null); }} className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2"><Info size={14} /> Message info</button>
                             )}
-                            <button onClick={() => { infoMessage(msg.id); toggleMsgMenu({ stopPropagation: () => { } }, null); }} className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2"><Info size={14} /> Message info</button>
                             <div className="border-t border-gray-100 my-1"></div>
-                            <button onClick={() => { deleteMessage(msg.id); toggleMsgMenu({ stopPropagation: () => { } }, null); }} className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2 text-red-600"><Trash2 size={14} /> Delete message</button>
+                            {/* Show both delete options for own messages OR if admin */}
+                            {(isMe || isAdmin) && (
+                                <>
+                                    <button onClick={() => { deleteMessage(msg.id, 'me'); toggleMsgMenu({ stopPropagation: () => { } }, null); }} className="w-full text-left px-4 py-2 hover:bg-red-50 flex items-center gap-2 text-red-600"><Trash2 size={14} /> Delete for me</button>
+                                    <button onClick={() => { deleteMessage(msg.id, 'everyone'); toggleMsgMenu({ stopPropagation: () => { } }, null); }} className="w-full text-left px-4 py-2 hover:bg-red-50 flex items-center gap-2 text-orange-600"><Trash2 size={14} /> Delete for everyone</button>
+                                </>
+                            )}
                         </div>
                     )}
                 </div>

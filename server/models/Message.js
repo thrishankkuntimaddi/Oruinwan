@@ -29,6 +29,7 @@ const MessageSchema = new mongoose.Schema({
 
   // Deletion tracking
   deletedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
+  deletedByName: { type: String, default: null },  // Store the deleter's name
   deletedAt: { type: Date, default: null },
   isDeletedUniversally: { type: Boolean, default: false },
   hiddenFor: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }], // Local deletions only

@@ -193,16 +193,18 @@ function DMMessageItem({
                                         >
                                             <Copy size={14} className="text-gray-400" /> Copy text
                                         </button>
-                                        <button
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                infoMessage(msg.id);
-                                                toggleMsgMenu({ stopPropagation: () => { } }, null);
-                                            }}
-                                            className="w-full text-left px-4 py-2.5 hover:bg-gray-50 flex items-center gap-3 text-gray-700 transition-colors"
-                                        >
-                                            <Info size={14} className="text-gray-400" /> Message info
-                                        </button>
+                                        {isMe && (
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    infoMessage(msg.id);
+                                                    toggleMsgMenu({ stopPropagation: () => { } }, null);
+                                                }}
+                                                className="w-full text-left px-4 py-2.5 hover:bg-gray-50 flex items-center gap-3 text-gray-700 transition-colors"
+                                            >
+                                                <Info size={14} className="text-gray-400" /> Message info
+                                            </button>
+                                        )}
                                         <div className="border-t border-gray-100 my-1"></div>
                                         <button
                                             onClick={(e) => {

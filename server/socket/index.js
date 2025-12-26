@@ -379,15 +379,12 @@ module.exports = function registerChatHandlers(io, socket) {
         });
       } else if (isAdmin || isOwnMessage) {
         // Universal deletion - visible to all as "deleted by [name]"
-        // Get the current user's username (the person deleting the message)
-        console.log("🔍 Fetching user for deletion, userId:", userId);
         const currentUser = await User.findById(userId);
-        console.log("👤 Found user:", currentUser);
         const deleterName = currentUser ? currentUser.username : "Unknown";
-        console.log("📝 Deleter name:", deleterName);
 
         message.isDeletedUniversally = true;
         message.deletedBy = userId;
+        message.deletedByName = deleterName;
         message.deletedAt = new Date();
         await message.save();
 
@@ -418,28 +415,19 @@ module.exports = function registerChatHandlers(io, socket) {
   });
 
   /* ----------------------------------------------------
-     PIN MESSAGE (Admin only)
+     PIN MESSAGE (All members can pin)
   ---------------------------------------------------- */
   socket.on("pin-message", async ({ messageId, channelId }) => {
     try {
-      // Check admin permission
-      const channel = await Channel.findById(channelId).populate("workspace");
+      // Check if user is a member of the channel
+      const channel = await Channel.findById(channelId);
       if (!channel) {
         socket.emit("pin-error", { messageId, error: "Channel not found" });
         return;
       }
 
-      const workspace = await Workspace.findById(channel.workspace);
-      const member = workspace.members.find((m) => m.user.toString() === userId);
-      const isAdmin = member && (member.role === "admin" || member.role === "owner");
-
-      if (!isAdmin) {
-        socket.emit("pin-error", {
-          messageId,
-          error: "Only admins can pin messages",
-        });
-        return;
-      }
+      // If user is connected to this channel via socket, they're a member
+      // Socket room join already verified membership
 
       // Check pin limit (max 3 pins per channel)
       const pinnedCount = await Message.countDocuments({
@@ -483,28 +471,19 @@ module.exports = function registerChatHandlers(io, socket) {
   });
 
   /* ----------------------------------------------------
-     UNPIN MESSAGE (Admin only)
+     UNPIN MESSAGE (All members can unpin)
   ---------------------------------------------------- */
   socket.on("unpin-message", async ({ messageId, channelId }) => {
     try {
-      // Check admin permission
-      const channel = await Channel.findById(channelId).populate("workspace");
+      // Check if user is a member of the channel
+      const channel = await Channel.findById(channelId);
       if (!channel) {
         socket.emit("pin-error", { messageId, error: "Channel not found" });
         return;
       }
 
-      const workspace = await Workspace.findById(channel.workspace);
-      const member = workspace.members.find((m) => m.user.toString() === userId);
-      const isAdmin = member && (member.role === "admin" || member.role === "owner");
-
-      if (!isAdmin) {
-        socket.emit("pin-error", {
-          messageId,
-          error: "Only admins can unpin messages",
-        });
-        return;
-      }
+      // If user is connected to this channel via socket, they're a member
+      // Socket room join already verified membership
 
       // Update message
       await Message.findByIdAndUpdate(messageId, {

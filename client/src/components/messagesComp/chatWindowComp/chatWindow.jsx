@@ -545,23 +545,35 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
 
     /* --- MESSAGE DELETION --- */
     socket.on("message-deleted", ({ messageId, deletedBy, deletedByName, isUniversal, isLocal }) => {
+      console.log('🗑️ Received message-deleted event:', { messageId, deletedBy, deletedByName, isUniversal, isLocal });
+
       if (isLocal) {
         // Local deletion - remove message from UI for this user only
-        setMessages((prev) => prev.filter((m) => m.id !== messageId));
+        setMessages((prev) => {
+          const filtered = prev.filter((m) => m.id !== messageId && m.backend?._id !== messageId);
+          console.log(`Filtered ${prev.length - filtered.length} messages (local delete)`);
+          return filtered;
+        });
       } else if (isUniversal) {
         // Universal deletion - mark as deleted but keep in list
-        setMessages((prev) =>
-          prev.map((m) => {
-            if (m.id !== messageId) return m;
+        console.log('🔄 Updating messages for universal delete');
+        setMessages((prev) => {
+          const updated = prev.map((m) => {
+            // Check both id and backend._id
+            if (m.id !== messageId && m.backend?._id !== messageId) return m;
+            console.log('✅ Marking message as deleted:', m.id, 'by:', deletedByName);
+            // Create a completely new object to force React re-render
             return {
               ...m,
               isDeletedUniversally: true,
               deletedBy,
-              deletedByName,
+              deletedByName: deletedByName || "Unknown",
               deletedAt: new Date().toISOString(),
             };
-          })
-        );
+          });
+          console.log('📊 Updated messages count:', updated.length);
+          return [...updated]; // Return new array reference
+        });
       }
     });
 
