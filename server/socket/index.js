@@ -441,6 +441,20 @@ module.exports = function registerChatHandlers(io, socket) {
         return;
       }
 
+      // Check pin limit (max 3 pins per channel)
+      const pinnedCount = await Message.countDocuments({
+        channel: channelId,
+        isPinned: true,
+      });
+
+      if (pinnedCount >= 3) {
+        socket.emit("pin-error", {
+          messageId,
+          error: "Maximum 3 pins allowed per channel. Unpin a message first.",
+        });
+        return;
+      }
+
       // Update message
       const message = await Message.findByIdAndUpdate(
         messageId,
@@ -450,12 +464,16 @@ module.exports = function registerChatHandlers(io, socket) {
           pinnedAt: new Date(),
         },
         { new: true }
-      );
+      ).populate("pinnedBy", "username");
+
+      // Get pinner username
+      const pinner = await User.findById(userId).select("username");
 
       // Broadcast to channel
       io.to(`channel_${channelId}`).emit("message-pinned", {
         messageId,
         pinnedBy: userId,
+        pinnedByName: pinner?.username || "Unknown",
         message,
       });
     } catch (err) {

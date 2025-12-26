@@ -26,6 +26,7 @@ function ChannelMessageItem({
     currentUserId,
     onOpenThread,
     threadCounts,
+    isAdmin = false, // Admin check for pin permissions
 }) {
     const isMe = msg.sender === "you" || msg.sender === "me";
     const isSelected = selectedIds.has(msg.id);
@@ -66,7 +67,7 @@ function ChannelMessageItem({
 
     return (
         <div
-            className={`group flex items-start gap-3 px-4 py-0.5 hover:bg-gray-50/50 relative ${isSelected ? "bg-blue-50/30" : ""} ${msg.isPinned ? "bg-yellow-50/50 border-l-2 border-yellow-400" : "border-l-2 border-transparent"}`}
+            className={`group flex items-start gap-3 px-4 py-0.5 hover:bg-gray-50/50 relative ${isSelected ? "bg-blue-50/30" : ""} ${msg.isPinned ? "bg-blue-50/30 border-l-2 border-blue-400" : "border-l-2 border-transparent"}`}
             onMouseEnter={() => setShowToolbar(true)}
             onMouseLeave={() => setShowToolbar(false)}
         >
@@ -115,10 +116,27 @@ function ChannelMessageItem({
 
             {/* Content (Tightened) */}
             <div className="flex-1 min-w-0 group-hover:pr-24 relative">
-                {/* Header: Name + Pin */}
-                <div className="flex items-center gap-2 mb-0">
-                    <span className="font-semibold text-gray-900 text-sm leading-tight">{msg.senderName || "Unknown"}</span>
-                    {msg.isPinned && <Pin size={10} className="text-gray-400 rotate-45" />}
+                {/* Header: Name + Pin Info */}
+                <div className="flex flex-col gap-0.5 mb-0">
+                    <div className="flex items-center gap-2">
+                        <span className="font-semibold text-gray-900 text-sm leading-tight">{msg.senderName || "Unknown"}</span>
+                        {msg.isPinned && (
+                            <span className="relative inline-flex group/pin">
+                                <Pin size={10} className="text-blue-500 rotate-45" />
+                                {msg.pinnedByName && (
+                                    <span className="absolute left-1/2 -translate-x-1/2 bottom-full mb-1 px-2 py-1 bg-gray-900 text-white text-xs rounded whitespace-nowrap opacity-0 invisible group-hover/pin:opacity-100 group-hover/pin:visible transition-opacity z-50">
+                                        Pinned by {msg.pinnedByName}
+                                    </span>
+                                )}
+                            </span>
+                        )}
+                    </div>
+                    {msg.isPinned && msg.pinnedByName && (
+                        <div className="flex items-center gap-1 text-[10px] text-blue-600">
+                            <Pin size={8} className="rotate-45" />
+                            <span>Pinned by {msg.pinnedByName}</span>
+                        </div>
+                    )}
                 </div>
 
                 {/* Timestamp - Positioned at the far right edge */}
@@ -205,7 +223,9 @@ function ChannelMessageItem({
                     {openMsgMenuId === msg.id && (
                         <div className="absolute right-0 top-full mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-xl py-1 z-50 text-sm animate-fade-in">
                             <button onClick={() => { copyMessage(msg.id); toggleMsgMenu({ stopPropagation: () => { } }, null); }} className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2"><Copy size={14} /> Copy text</button>
-                            <button onClick={() => { pinMessage(msg.id); toggleMsgMenu({ stopPropagation: () => { } }, null); }} className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2"><Pin size={14} /> {msg.isPinned ? "Unpin message" : "Pin message"}</button>
+                            {isAdmin && (
+                                <button onClick={() => { pinMessage(msg.id); toggleMsgMenu({ stopPropagation: () => { } }, null); }} className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2"><Pin size={14} /> {msg.isPinned ? "Unpin message" : "Pin message"}</button>
+                            )}
                             <button onClick={() => { infoMessage(msg.id); toggleMsgMenu({ stopPropagation: () => { } }, null); }} className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2"><Info size={14} /> Message info</button>
                             <div className="border-t border-gray-100 my-1"></div>
                             <button onClick={() => { deleteMessage(msg.id); toggleMsgMenu({ stopPropagation: () => { } }, null); }} className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2 text-red-600"><Trash2 size={14} /> Delete message</button>

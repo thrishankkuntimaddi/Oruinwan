@@ -29,6 +29,7 @@ import { useAuth } from "../../../contexts/AuthContext";
 const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
 export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat }) {
+  const [userRole, setUserRole] = useState(null); // 'owner', 'admin', 'member', etc.
   const { accessToken } = useAuth();
   /* ---------------------------------------------------------
       STATE
@@ -122,7 +123,8 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
 
       // Pinning
       isPinned: m.isPinned || false,
-      pinnedBy: m.pinnedBy || null,
+      pinnedBy: m.pinnedBy?._id || m.pinnedBy || null,
+      pinnedByName: m.pinnedBy?.username || null,
       pinnedAt: m.pinnedAt || null,
 
       // Deletion
@@ -145,6 +147,28 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
       if (!chat || !chat.workspaceId) return;
       const res = await api.get(`/api/workspaces/${chat.workspaceId}/all-members`);
       setWorkspaceMembers(res.data.members || []);
+
+      // Get current user's role in workspace
+      const currentUserId = currentUserIdRef.current;
+      console.log('🔍 Checking user role:', { currentUserId, membersCount: res.data.members?.length });
+
+      // Debug: Log first member structure
+      if (res.data.members && res.data.members.length > 0) {
+        console.log('📋 First member structure:', res.data.members[0]);
+      }
+
+      if (currentUserId && res.data.members) {
+        const currentMember = res.data.members.find(m => {
+          const memberId = m.user?._id || m.user?.id || m.user || m._id || m.id;
+          const matches = String(memberId) === String(currentUserId);
+          if (matches) console.log('✅ Found match:', m);
+          return matches;
+        });
+
+        const role = currentMember?.role || 'member';
+        console.log('👤 User role found:', { role, currentMember });
+        setUserRole(role);
+      }
     } catch (err) {
       console.error("Fetch workspace members failed:", err);
     }
@@ -542,11 +566,11 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
     });
 
     /* --- MESSAGE PINNING --- */
-    socket.on("message-pinned", ({ messageId, pinnedBy, message }) => {
+    socket.on("message-pinned", ({ messageId, pinnedBy, pinnedByName, message }) => {
       setMessages((prev) =>
         prev.map((m) =>
           m.id === messageId
-            ? { ...m, isPinned: true, pinnedBy, pinnedAt: new Date().toISOString() }
+            ? { ...m, isPinned: true, pinnedBy, pinnedByName, pinnedAt: new Date().toISOString() }
             : m
         )
       );
@@ -556,10 +580,14 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
       setMessages((prev) =>
         prev.map((m) =>
           m.id === messageId
-            ? { ...m, isPinned: false, pinnedBy: null, pinnedAt: null }
+            ? { ...m, isPinned: false, pinnedBy: null, pinnedByName: null, pinnedAt: null }
             : m
         )
       );
+    });
+
+    socket.on("pin-error", ({ error }) => {
+      showToast(error, "error");
     });
 
     return () => {
@@ -579,6 +607,7 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
       socket.off("reaction-removed");
       socket.off("message-pinned");
       socket.off("message-unpinned");
+      socket.off("pin-error");
 
       socket.disconnect();
     };
@@ -785,9 +814,30 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
   };
 
   const pinMessage = (id) => {
-    setMessages((prev) =>
-      prev.map((m) => (m.id === id ? { ...m, isPinned: !m.isPinned } : m))
-    );
+    const msg = messages.find(m => m.id === id);
+    if (!msg) return;
+
+    const socket = socketRef.current;
+    if (!socket || !connected) {
+      showToast("Not connected. Please try again.", "error");
+      return;
+    }
+
+    const channelId = chat.type === "channel" ? chat.id : null;
+    if (!channelId) {
+      showToast("Pinning is only available in channels", "info");
+      return;
+    }
+
+    // Determine if we're pinning or unpinning
+    const shouldPin = !msg.isPinned;
+
+    if (shouldPin) {
+      socket.emit("pin-message", { messageId: id, channelId });
+    } else {
+      socket.emit("unpin-message", { messageId: id, channelId });
+    }
+
     setOpenMsgMenuId(null);
   };
 
@@ -860,26 +910,91 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
   const [showForwardModal, setShowForwardModal] = useState(false);
   const [forwardingMsgId, setForwardingMsgId] = useState(null);
 
-  const handleForward = (target) => {
+  const handleForward = (targets) => {
+    // targets is now an array of target objects
+    if (!Array.isArray(targets) || targets.length === 0) {
+      showToast("No recipients selected", "error");
+      return;
+    }
+
     const msg = messages.find(m => m.id === forwardingMsgId);
-    if (!msg) return;
+    if (!msg) {
+      showToast("Message not found", "error");
+      return;
+    }
 
-    // Simulate forwarding
-    console.log(`Forwarding message "${msg.text}" to ${target.label} (${target.type})`);
+    const socket = socketRef.current;
+    if (!socket || !connected) {
+      showToast("Not connected. Please try again.", "error");
+      return;
+    }
 
-    if (target.id === chat.id) {
-      const clientTempId = generateTempId();
-      const uiMsg = {
-        id: clientTempId,
-        sender: "you",
-        text: `[Forwarded] ${msg.text}`,
-        ts: new Date().toISOString(),
-        temp: true,
-        sending: true,
-      };
-      setMessages(prev => [...prev, uiMsg]);
-    } else {
-      showToast(`Message forwarded to ${target.label}`);
+    // Prepare forwarded message text
+    const forwardedText = `[Forwarded] ${msg.text}`;
+    let successCount = 0;
+    let failCount = 0;
+
+    // Send to each target
+    targets.forEach((target) => {
+      try {
+        if (target.type === 'channel') {
+          // Forward to channel
+          socket.emit("send-message", {
+            text: forwardedText,
+            attachments: msg.attachments || [],
+            replyTo: null,
+            clientTempId: generateTempId(),
+            workspaceId: chat.workspaceId,
+            channelId: target.id,
+            dmSessionId: null,
+            receiverId: null,
+          });
+          successCount++;
+        } else if (target.type === 'dm') {
+          // Forward to DM
+          if (target.isNewDM) {
+            // This is a user ID, not a DM session ID
+            socket.emit("send-message", {
+              text: forwardedText,
+              attachments: msg.attachments || [],
+              replyTo: null,
+              clientTempId: generateTempId(),
+              workspaceId: chat.workspaceId,
+              dmSessionId: null,
+              receiverId: target.id, // User ID for new DM
+              channelId: null,
+            });
+          } else {
+            // This is an existing DM session ID
+            socket.emit("send-message", {
+              text: forwardedText,
+              attachments: msg.attachments || [],
+              replyTo: null,
+              clientTempId: generateTempId(),
+              workspaceId: chat.workspaceId,
+              dmSessionId: target.id,
+              receiverId: null,
+              channelId: null,
+            });
+          }
+          successCount++;
+        }
+      } catch (err) {
+        console.error(`Forward to ${target.label} failed:`, err);
+        failCount++;
+      }
+    });
+
+    // Show summary toast
+    if (successCount > 0) {
+      if (successCount === 1) {
+        showToast(`Message forwarded to ${targets[0].label}`, "success");
+      } else {
+        showToast(`Message forwarded to ${successCount} recipient${successCount > 1 ? 's' : ''}`, "success");
+      }
+    }
+    if (failCount > 0) {
+      showToast(`Failed to forward to ${failCount} recipient${failCount > 1 ? 's' : ''}`, "error");
     }
 
     setShowForwardModal(false);
@@ -1130,6 +1245,8 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
           <ForwardMessageModal
             onClose={() => setShowForwardModal(false)}
             onForward={handleForward}
+            currentChatId={chat.id}
+            currentChatType={chat.type}
           />
         )}
 
@@ -1223,6 +1340,7 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
             chatType={chat.type}
             userJoinedAt={userJoinedAt}
             channelMembersWithJoinDates={channelMembersWithJoinDates}
+            isAdmin={userRole === 'admin' || userRole === 'owner'}
             // Pagination
             hasMore={hasMore}
             isLoadingMore={isLoadingMore}

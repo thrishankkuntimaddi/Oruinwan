@@ -34,6 +34,7 @@ export default function MessagesContainer({
   chatType,
   userJoinedAt, // For channel join timeline marker
   channelMembersWithJoinDates = [], // All members with join dates
+  isAdmin = false, // NEW: admin check for pin permissions
 
   // Pagination props
   hasMore = false,
@@ -182,6 +183,7 @@ export default function MessagesContainer({
                         onOpenThread={onOpenThread} // ★ THREAD PANEL
                         threadCounts={threadCounts} // ★ THREAD COUNTS
                         chatType={chatType}
+                        isAdmin={isAdmin} // ★ PASS DOWN FOR PIN PERMISSIONS
                       />
                     </MessageErrorBoundary>
                   </React.Fragment>

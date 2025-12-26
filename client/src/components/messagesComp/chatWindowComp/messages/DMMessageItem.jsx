@@ -68,7 +68,7 @@ function DMMessageItem({
 
     return (
         <div
-            className={`group flex items-start gap-1.5 px-4 py-1 hover:bg-gray-50/50 relative transition-colors ${isSelected ? "bg-blue-50/50" : ""} w-full ${msg.isPinned ? "bg-yellow-50 border-l-4 border-yellow-400" : "border-l-4 border-transparent"}`}
+            className={`group flex items-start gap-1.5 px-4 py-1 hover:bg-gray-50/50 relative transition-colors ${isSelected ? "bg-blue-50/50" : ""} w-full ${msg.isPinned ? "bg-blue-50/30 border-l-4 border-blue-400" : "border-l-4 border-transparent"}`}
             onMouseEnter={() => setShowToolbar(true)}
             onMouseLeave={() => setShowToolbar(false)}
         >

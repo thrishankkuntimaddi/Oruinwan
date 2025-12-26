@@ -195,6 +195,7 @@ exports.getChannelMessages = async (req, res) => {
       .limit(limit)
       .populate("sender", "username email profilePicture")
       .populate("readBy", "username") // Populate read receipts
+      .populate("pinnedBy", "username") // Populate pin attribution
       .populate("threadParent");
 
     // Reverse to get chronological order (oldest to newest)

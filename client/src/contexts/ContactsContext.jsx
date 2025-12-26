@@ -115,6 +115,13 @@ export default function ContactsProvider({ children }) {
   // Combine channels and DMs into allItems
   const allItems = [...channels, ...dms];
 
+  console.log('📋 ContactsContext allItems:', {
+    totalItems: allItems.length,
+    channels: channels.length,
+    dms: dms.length,
+    allItems
+  });
+
   const deleteItem = (id) => {
     setChannels(prev => prev.filter(item => item.id !== id));
     setDms(prev => prev.filter(item => item.id !== id));
