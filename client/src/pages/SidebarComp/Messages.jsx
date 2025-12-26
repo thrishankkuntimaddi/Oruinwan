@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import ChatWindow from "../../components/messagesComp/chatWindowComp/chatWindow";
 import BroadcastChatWindow from "../../components/messagesComp/BroadcastChatWindow";
 import { useContacts } from "../../contexts/ContactsContext";
+import api from "../../services/api";
 
 export default function Messages() {
   const [selectedChat, setSelectedChat] = useState(null);
@@ -14,6 +15,32 @@ export default function Messages() {
   // Handle Routing for Selected Chat
   useEffect(() => {
     const path = location.pathname;
+
+    // Async function to fetch user details from workspace members
+    const fetchUserDetails = async (userId) => {
+      try {
+        // Extract workspaceId from path
+        const workspaceMatch = path.match(/\/workspace\/([^/]+)/);
+        if (!workspaceMatch) return null;
+        const workspaceId = workspaceMatch[1];
+
+        // Fetch workspace members and find the specific user
+        const response = await api.get(`/api/workspaces/${workspaceId}/members`);
+        const member = response.data.members.find(m => m._id === userId);
+
+        if (member) {
+          return {
+            id: member._id,
+            username: member.username,
+            profilePicture: member.profilePicture
+          };
+        }
+        return null;
+      } catch (error) {
+        console.error("Failed to fetch user details:", error);
+        return null;
+      }
+    };
 
     if (path.includes("/broadcast/")) {
       const broadcastId = path.split("/broadcast/")[1];
@@ -41,21 +68,66 @@ export default function Messages() {
       });
       setCurrentBroadcast(null);
     } else if (path.includes("/dm/")) {
-      const dmId = decodeURIComponent(path.split("/dm/")[1]);
-      const contact = contacts.find(c => c.username.toLowerCase() === dmId.toLowerCase()) || {
-        id: dmId,
-        username: dmId.charAt(0).toUpperCase() + dmId.slice(1),
-        profilePicture: null
+      const dmSessionId = path.split("/dm/").pop();  // This is the DM session ID
+
+      // Extract workspaceId from path
+      const workspaceMatch = path.match(/\/workspace\/([^/]+)/);
+      const workspaceId = workspaceMatch ? workspaceMatch[1] : null;
+
+      if (!workspaceId) {
+        setSelectedChat(null);
+        return;
+      }
+
+      // Fetch DM sessions to find participant details
+      const fetchDMDetails = async () => {
+        try {
+          console.log('🔍 Fetching DM for session ID:', dmSessionId);
+          const response = await api.get(`/api/messages/workspace/${workspaceId}/dms`);
+          const sessions = response.data.sessions || [];
+          console.log('📋 Sessions:', sessions);
+          const dmSession = sessions.find(s => s.id === dmSessionId);
+          console.log('✅ Found:', dmSession);
+
+          if (dmSession && dmSession.otherUser) {
+            setSelectedChat({
+              id: dmSessionId,
+              name: dmSession.otherUser.username || "User",
+              type: "dm",
+              avatar: dmSession.otherUser.profilePicture,
+              status: dmSession.otherUser.isOnline ? "online" : "offline",
+              isNew: true,
+              workspaceId: workspaceId
+            });
+          } else {
+            // Fallback if session not found
+            setSelectedChat({
+              id: dmSessionId,
+              name: "User",
+              type: "dm",
+              avatar: null,
+              status: "offline",
+              isNew: true,
+              workspaceId: workspaceId
+            });
+          }
+        } catch (error) {
+          console.error("Failed to fetch DM details:", error);
+          // Fallback
+          setSelectedChat({
+            id: dmSessionId,
+            name: "User",
+            type: "dm",
+            avatar: null,
+            status: "offline",
+            isNew: true,
+            workspaceId: workspaceId
+          });
+        }
+        setCurrentBroadcast(null);
       };
 
-      setSelectedChat({
-        id: contact.id,
-        name: contact.username,
-        type: "dm",
-        avatar: contact.profilePicture,
-        status: "online"
-      });
-      setCurrentBroadcast(null);
+      fetchDMDetails();
     } else {
       setSelectedChat(null);
       setCurrentBroadcast(null);

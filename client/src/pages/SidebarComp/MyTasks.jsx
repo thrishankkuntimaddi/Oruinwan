@@ -7,6 +7,8 @@ import {
 import TaskModal from "../../components/tasksComp/TaskModal";
 import TaskCompletionModal from "../../components/tasksComp/TaskCompletionModal";
 import { useContacts } from "../../contexts/ContactsContext";
+import { useTasks } from "../../contexts/TasksContext";
+import { useAuth } from "../../contexts/AuthContext";
 
 const PRIORITY_ORDER = {
   "Emergency": 4,
@@ -37,7 +39,9 @@ const MyTasks = () => {
   const [completionTask, setCompletionTask] = useState(null); // Task being completed
   const [deletionTask, setDeletionTask] = useState(null); // Task being deleted
   const [searchQuery, setSearchQuery] = useState("");
-  const { contacts } = useContacts();
+  const { members, channels } = useContacts(); // Get workspace members and channels
+  const { tasks, loading, createTask, updateTask, deleteTask, restoreTask, permanentlyDeleteTask } = useTasks();
+  const { user } = useAuth();
 
   const [sortOrder, setSortOrder] = useState("priority");
   const [showSortMenu, setShowSortMenu] = useState(false);
@@ -54,59 +58,8 @@ const MyTasks = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Mock Data State
-  const [tasks, setTasks] = useState([
-    {
-      id: 1,
-      title: "Design Login Page",
-      description: "Create a modern login page with glassmorphism.",
-      assignee: "Self",
-      assigner: "Self",
-      status: "In Progress",
-      priority: "High",
-      dueDate: "2024-11-30",
-      project: "Design System",
-      deleted: false
-    },
-    {
-      id: 2,
-      title: "Fix Auth Bug",
-      description: "Token expiration issue needs fixing.",
-      assignee: "Self",
-      assigner: "Self",
-      status: "Completed",
-      priority: "Emergency",
-      dueDate: "2024-11-28",
-      project: "Backend",
-      completedAt: "2024-11-28T10:00:00Z",
-      completionNote: "Fixed by updating the JWT secret.",
-      deleted: false
-    },
-    {
-      id: 3,
-      title: "Review PR #123",
-      description: "Code review for the new feature.",
-      assignee: "Self",
-      assigner: "Sarah",
-      status: "To Do",
-      priority: "Medium",
-      dueDate: "2024-12-05",
-      project: "Frontend",
-      deleted: false
-    },
-    {
-      id: 4,
-      title: "Update Documentation",
-      description: "Update the API docs.",
-      assignee: "Bob",
-      assigner: "Self",
-      status: "In Progress",
-      priority: "Low",
-      dueDate: "2024-12-01",
-      project: "Docs",
-      deleted: false
-    },
-  ]);
+  // Get current user's username for filtering
+  const currentUsername = user?.username || "Unknown";
 
   // Filter Tasks based on Tab
   const filteredTasks = useMemo(() => {
@@ -120,11 +73,11 @@ const MyTasks = () => {
       const activeTasks = tasks.filter(t => !t.deleted);
 
       if (activeTab === "my-tasks") {
-        filtered = activeTasks.filter(t => t.assignee === "Self" && t.assigner === "Self" && t.status !== "Completed");
+        filtered = activeTasks.filter(t => t.assignee === currentUsername && t.assigner === currentUsername && t.status !== "Completed");
       } else if (activeTab === "shared-tasks") {
-        filtered = activeTasks.filter(t => t.assignee === "Self" && t.assigner !== "Self" && t.status !== "Completed");
+        filtered = activeTasks.filter(t => t.assignee === currentUsername && t.assigner !== currentUsername && t.status !== "Completed");
       } else if (activeTab === "assigned-tasks") {
-        filtered = activeTasks.filter(t => t.assigner === "Self" && t.assignee !== "Self" && t.status !== "Completed");
+        filtered = activeTasks.filter(t => t.assigner === currentUsername && t.assignee !== currentUsername && t.status !== "Completed");
       } else if (activeTab === "completed-tasks") {
         filtered = activeTasks.filter(t => t.status === "Completed");
       }
@@ -151,15 +104,11 @@ const MyTasks = () => {
       }
       return 0;
     });
-  }, [tasks, activeTab, searchQuery, sortOrder]);
+  }, [tasks, activeTab, searchQuery, sortOrder, currentUsername]);
 
-  const handleAddTask = (newTask) => {
-    const taskToAdd = {
-      ...newTask,
-      assigner: "Self",
-      deleted: false
-    };
-    setTasks([taskToAdd, ...tasks]);
+  const handleAddTask = async (newTask) => {
+    await createTask(newTask);
+    setIsModalOpen(false);
   };
 
   const handleDelete = (id) => {
@@ -169,17 +118,17 @@ const MyTasks = () => {
 
   const handleConfirmDeletion = () => {
     if (!deletionTask) return;
-    setTasks(tasks.map(t => t.id === deletionTask.id ? { ...t, deleted: true } : t));
+    deleteTask(deletionTask.id);
     setDeletionTask(null);
   };
 
   const handleRestore = (id) => {
-    setTasks(tasks.map(t => t.id === id ? { ...t, deleted: false } : t));
+    restoreTask(id);
   };
 
   const handlePermanentDelete = (id) => {
     if (window.confirm("Are you sure you want to permanently delete this task? This cannot be undone.")) {
-      setTasks(tasks.filter(t => t.id !== id));
+      permanentlyDeleteTask(id);
     }
   };
 
@@ -190,18 +139,17 @@ const MyTasks = () => {
       setCompletionTask(task);
       return;
     }
-    setTasks(tasks.map(t => t.id === id ? { ...t, [field]: value } : t));
+    updateTask(id, { [field]: value });
   };
 
   const handleConfirmCompletion = (note) => {
     if (!completionTask) return;
 
-    setTasks(tasks.map(t => t.id === completionTask.id ? {
-      ...t,
+    updateTask(completionTask.id, {
       status: "Completed",
       completionNote: note,
       completedAt: new Date().toISOString()
-    } : t));
+    });
 
     setCompletionTask(null);
   };
@@ -280,7 +228,13 @@ const MyTasks = () => {
 
       {/* Task Content */}
       <div className="flex-1 overflow-auto p-6">
-        {filteredTasks.length === 0 ? (
+        {loading ? (
+          <div className="flex flex-col items-center justify-center h-64 text-gray-400">
+            <CheckCircle2 size={48} className="mb-4 opacity-20 animate-pulse" />
+            <p className="text-lg font-medium">Loading tasks...</p>
+            <p className="text-sm">Please wait while we fetch your tasks.</p>
+          </div>
+        ) : filteredTasks.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-64 text-gray-400">
             {isDeletedTab ? <Trash2 size={48} className="mb-4 opacity-20" /> : <CheckCircle2 size={48} className="mb-4 opacity-20" />}
             <p className="text-lg font-medium">No tasks found</p>
@@ -437,8 +391,8 @@ const MyTasks = () => {
         <TaskModal
           onClose={() => setIsModalOpen(false)}
           onAddTask={handleAddTask}
-          channels={["General", "Design", "Engineering", "Marketing"]}
-          teamMembers={contacts.map(c => c.username || c.email)}
+          channels={channels || []}
+          teamMembers={members || []}
         />
       )}
 

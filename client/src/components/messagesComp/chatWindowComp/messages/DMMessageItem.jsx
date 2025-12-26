@@ -105,6 +105,26 @@ function DMMessageItem({
                         ? "bg-blue-600 text-white"
                         : "bg-white border border-gray-100 text-gray-800"
                         }`}>
+
+                        {/* Reply Preview - Shows which message this is replying to */}
+                        {msg.repliedTo && (
+                            <div className={`mb-2 pb-2 border-b flex items-start gap-2 ${isMe ? "border-blue-400/30" : "border-gray-200"
+                                }`}>
+                                <div className={`w-0.5 rounded-full flex-shrink-0 self-stretch ${isMe ? "bg-blue-300" : "bg-gray-400"
+                                    }`}></div>
+                                <div className="flex-1 min-w-0">
+                                    <div className={`text-[10px] font-semibold mb-0.5 ${isMe ? "text-blue-100" : "text-gray-600"
+                                        }`}>
+                                        {msg.repliedTo.senderName}
+                                    </div>
+                                    <div className={`text-[11px] line-clamp-2 leading-relaxed ${isMe ? "text-blue-50/90" : "text-gray-500"
+                                        }`}>
+                                        {msg.repliedTo.text}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
                         <ReactMarkdown
                             remarkPlugins={[remarkBreaks]}
                             components={{
@@ -153,8 +173,7 @@ function DMMessageItem({
                                 )}
                             </div>
 
-                            {/* Thread and Forward buttons */}
-                            <button onClick={() => onOpenThread && onOpenThread(msg.id)} className="p-1 text-gray-400 hover:bg-gray-100 rounded" title="Thread"><MessageSquare size={14} /></button>
+                            {/* Forward button (no threads in DMs) */}
                             <button onClick={() => forwardMessage && forwardMessage(msg.id)} className="p-1 text-gray-400 hover:bg-gray-100 rounded" title="Forward"><Share size={14} /></button>
 
                             {/* Menu Button */}
@@ -193,18 +212,7 @@ function DMMessageItem({
                                         >
                                             <Copy size={14} className="text-gray-400" /> Copy text
                                         </button>
-                                        {isMe && (
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    infoMessage(msg.id);
-                                                    toggleMsgMenu({ stopPropagation: () => { } }, null);
-                                                }}
-                                                className="w-full text-left px-4 py-2.5 hover:bg-gray-50 flex items-center gap-3 text-gray-700 transition-colors"
-                                            >
-                                                <Info size={14} className="text-gray-400" /> Message info
-                                            </button>
-                                        )}
+
                                         <div className="border-t border-gray-100 my-1"></div>
                                         <button
                                             onClick={(e) => {

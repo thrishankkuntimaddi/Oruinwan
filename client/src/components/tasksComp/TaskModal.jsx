@@ -1,40 +1,105 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useToast } from "../../contexts/ToastContext";
+import { useAuth } from "../../contexts/AuthContext";
 import { X, Calendar, User, Flag, Briefcase, AlignLeft, Type } from "lucide-react";
+import api from "../../services/api";
 
 const priorities = ["Emergency", "High", "Medium", "Low"];
 
 export default function TaskModal({ onClose, onAddTask, channels = [], teamMembers = [] }) {
   const { showToast } = useToast();
+  const { user } = useAuth();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [project, setProject] = useState("");
   const [assigneeType, setAssigneeType] = useState("Self"); // Self or Others
-  const [assignee, setAssignee] = useState("Self");
+  const [selectedMember, setSelectedMember] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [priority, setPriority] = useState("Medium");
   const [status] = useState("To Do");
+  const [channelMembers, setChannelMembers] = useState([]); // Members of selected channel
+  const [loadingMembers, setLoadingMembers] = useState(false);
+
+  // Fetch channel members when a channel is selected
+  useEffect(() => {
+    const fetchChannelMembers = async () => {
+      if (!project) {
+        setChannelMembers([]);
+        return;
+      }
+
+      // Find the channel object to get its ID
+      const selectedChannel = channels.find(ch => ch.label === project || ch.id === project);
+      if (!selectedChannel) {
+        setChannelMembers(teamMembers); // Fallback to all workspace members
+        return;
+      }
+
+      try {
+        setLoadingMembers(true);
+        // Fetch channel members using the channel ID
+        const response = await api.get(`/api/channels/${selectedChannel.id}/members`);
+        setChannelMembers(response.data.members || []);
+      } catch (error) {
+        console.error("Failed to fetch channel members:", error);
+        // Fallback to all workspace members if fetch fails
+        setChannelMembers(teamMembers);
+      } finally {
+        setLoadingMembers(false);
+      }
+    };
+
+    fetchChannelMembers();
+  }, [project, channels, teamMembers]);
 
   const handleAdd = () => {
     if (!title || !project || !dueDate) return showToast("Please fill in all required fields.", "error");
 
-    const finalAssignee = assigneeType === "Self" ? "Self" : assignee;
+    // Validate due date
+    const selectedDate = new Date(dueDate);
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(0, 0, 0, 0);
+
+    const maxDate = new Date('2100-12-31');
+
+    if (selectedDate < tomorrow) {
+      return showToast("Due date must be at least tomorrow", "error");
+    }
+
+    if (selectedDate > maxDate) {
+      return showToast("Due date cannot exceed year 2100", "error");
+    }
+
+    let assigneeId = null;
+    let assigneeName = user?.username || "Self";
+
+    if (assigneeType === "Others" && selectedMember) {
+      // Find the selected contact to get their ID
+      const member = (channelMembers.length > 0 ? channelMembers : teamMembers).find(m => m._id === selectedMember || m.username === selectedMember);
+      if (member) {
+        assigneeId = member._id || member.id;
+        assigneeName = member.username || member.email;
+      }
+    }
 
     const newTask = {
-      id: Date.now(), // Temporary ID
       title,
       description,
       project,
-      assignee: finalAssignee,
+      assignee: assigneeName,
+      assigneeId: assigneeId,
       dueDate,
       priority,
       status,
-      createdAt: new Date().toISOString(),
     };
 
     onAddTask(newTask);
     onClose();
   };
+
+  // Use channel members if available, otherwise use all team members
+  const availableMembers = channelMembers.length > 0 ? channelMembers : teamMembers;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm transition-opacity">
@@ -96,8 +161,8 @@ export default function TaskModal({ onClose, onAddTask, channels = [], teamMembe
                 className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none text-gray-700 appearance-none"
               >
                 <option value="">Select Context</option>
-                {channels.length > 0 ? channels.map((c) => (
-                  <option key={c} value={c}>{c}</option>
+                {channels.length > 0 ? channels.map((ch) => (
+                  <option key={ch.id} value={ch.label}>{ch.label}</option>
                 )) : (
                   <>
                     <option value="General">General</option>
@@ -118,6 +183,8 @@ export default function TaskModal({ onClose, onAddTask, channels = [], teamMembe
                 className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none text-gray-700"
                 value={dueDate}
                 onChange={(e) => setDueDate(e.target.value)}
+                min={new Date(new Date().setDate(new Date().getDate() + 1)).toISOString().split('T')[0]} // Tomorrow
+                max="2100-12-31" // Maximum year 2100
               />
             </div>
 
@@ -138,13 +205,16 @@ export default function TaskModal({ onClose, onAddTask, channels = [], teamMembe
 
                 {assigneeType === "Others" && (
                   <select
-                    value={assignee}
-                    onChange={(e) => setAssignee(e.target.value)}
+                    value={selectedMember}
+                    onChange={(e) => setSelectedMember(e.target.value)}
                     className="w-2/3 px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none text-gray-700"
+                    disabled={loadingMembers}
                   >
-                    <option value="">Select Person</option>
-                    {teamMembers.length > 0 ? teamMembers.map((m) => (
-                      <option key={m} value={m}>{m}</option>
+                    <option value="">{loadingMembers ? "Loading members..." : "Select Person"}</option>
+                    {availableMembers.length > 0 ? availableMembers.map((m) => (
+                      <option key={m._id || m.id || m.username} value={m._id || m.id || m.username}>
+                        {m.username || m.email}
+                      </option>
                     )) : (
                       <>
                         <option value="Alice">Alice</option>

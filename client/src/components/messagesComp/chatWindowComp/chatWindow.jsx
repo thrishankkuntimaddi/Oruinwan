@@ -117,6 +117,12 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
       text: m.text || "",
       ts: m.createdAt,
       repliedToId: m.threadParent?._id || m.threadParent || null,
+      repliedTo: m.threadParent && typeof m.threadParent === 'object' ? {
+        id: m.threadParent._id,
+        text: m.threadParent.text,
+        senderName: m.threadParent.sender?.username || "Unknown",
+        senderAvatar: m.threadParent.sender?.profilePicture || null,
+      } : null,
 
       // Reactions
       reactions: m.reactions || [],

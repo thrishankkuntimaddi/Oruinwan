@@ -134,7 +134,10 @@ exports.getDMs = async (req, res) => {
       .limit(limit)
       .populate("sender", "username email profilePicture")
       .populate("readBy", "username") // Populate read receipts
-      .populate("threadParent");
+      .populate({
+        path: "threadParent",
+        populate: { path: "sender", select: "username profilePicture" }
+      });
 
     // Reverse to get chronological order (oldest to newest)
     messages.reverse();
@@ -196,7 +199,10 @@ exports.getChannelMessages = async (req, res) => {
       .populate("sender", "username email profilePicture")
       .populate("readBy", "username") // Populate read receipts
       .populate("pinnedBy", "username") // Populate pin attribution
-      .populate("threadParent");
+      .populate({
+        path: "threadParent",
+        populate: { path: "sender", select: "username profilePicture" }
+      });
 
     // Reverse to get chronological order (oldest to newest)
     messages.reverse();

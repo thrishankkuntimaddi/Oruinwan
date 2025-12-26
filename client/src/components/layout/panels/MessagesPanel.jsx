@@ -36,15 +36,14 @@ const MessagesPanel = ({ title }) => {
             setIsLoading(true);
             try {
                 const res = await api.get(`/api/messages/workspace/${workspaceId}/dms`);
-                const formatted = res.data.dms.map(dm => {
-                    const otherUser = dm.participants.find(p => p.id !== activeWorkspace?.currentUserId) || dm.participants[0];
+                const formatted = (res.data.sessions || []).map(session => {
                     return {
-                        id: dm.id,
-                        name: otherUser?.name || "User",
-                        avatar: otherUser?.avatar,
-                        status: otherUser?.status || "offline",
-                        unread: dm.unreadCount || 0,
-                        lastMessage: dm.lastMessagePreview || "No messages yet",
+                        id: session.id,
+                        name: session.otherUser?.username || "User",
+                        avatar: session.otherUser?.profilePicture,
+                        status: session.otherUser?.isOnline ? "online" : "offline",
+                        unread: session.unreadCount || 0,
+                        lastMessage: session.lastMessage || "No messages yet",
                         type: "dm"
                     };
                 });
@@ -70,7 +69,7 @@ const MessagesPanel = ({ title }) => {
     const handleStartDM = (selectedUser) => {
         setShowCreateDM(false);
         // Navigate to the "new" DM route with the target user's ID
-        navigate(`/workspace/${workspaceId}/dm/new/${selectedUser._id || selectedUser.id || selectedUser.username}`);
+        navigate(`/workspace/${workspaceId}/messages/dm/${selectedUser._id || selectedUser.id}`);
     };
 
     const handleBroadcast = () => {
@@ -173,7 +172,7 @@ const MessagesPanel = ({ title }) => {
                             {item.name}
                         </div>
                         <div className={`text-xs line-clamp-1 ${isActive ? "text-blue-600" : "text-gray-500 group-hover:text-gray-700"}`}>
-                            {isBroadcast ? `You: ${item.lastMessage}` : "You: Hey there!"}
+                            {item.lastMessage || "No messages yet"}
                         </div>
                     </div>
                 </div>

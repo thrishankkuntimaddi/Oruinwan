@@ -39,10 +39,10 @@ export default function NewDMModal({ onClose, onStart }) {
           const membersList = res.data.members || [];
           // Map workspace member format to DM user format
           const mapped = membersList.map(m => ({
-            _id: m.id,
-            username: m.name,
-            profilePicture: m.avatar,
-            isOnline: m.status === 'online'
+            _id: m._id,
+            username: m.username || m.email,
+            profilePicture: m.profilePicture,
+            isOnline: false
           }));
           setUsers(mapped);
         } else {

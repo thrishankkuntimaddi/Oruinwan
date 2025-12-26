@@ -134,14 +134,30 @@ module.exports = function registerChatHandlers(io, socket) {
       const saved = await Message.create(doc);
 
       const populated = await Message.findById(saved._id)
-        .populate("sender", "username profilePicture");
+        .populate("sender", "username profilePicture")
+        .populate({
+          path: "threadParent",
+          populate: { path: "sender", select: "username profilePicture" }
+        });
 
       // ---------------- broadcast ----------------
       if (actualDMSessionId) {
+        // Emit to DM room
         io.to(`dm_${actualDMSessionId}`).emit("new-message", {
           message: populated,
           clientTempId,
         });
+
+        // Also emit to each participant's personal user room for real-time delivery
+        const dmSession = await DMSession.findById(actualDMSessionId);
+        if (dmSession) {
+          dmSession.participants.forEach(participantId => {
+            io.to(`user_${participantId}`).emit("new-message", {
+              message: populated,
+              clientTempId,
+            });
+          });
+        }
       } else if (channelId) {
         console.log(`📢 Broadcasting to channel room: channel_${channelId}`);
         io.to(`channel_${channelId}`).emit("new-message", {

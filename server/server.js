@@ -16,7 +16,9 @@ const app = express();
 app.set("trust proxy", 1);
 
 // --- Middlewares ---
-app.use(express.json());
+// Increase payload size limit for notes with media (images/videos/audio as base64)
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(cookieParser());
 app.use(helmet());
 

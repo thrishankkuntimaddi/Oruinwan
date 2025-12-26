@@ -21,6 +21,7 @@ export default function ContactsProvider({ children }) {
   const [contacts, setContacts] = useState([]);
   const [channels, setChannels] = useState([]);
   const [dms, setDms] = useState([]);
+  const [members, setMembers] = useState([]); // Workspace members for task assignment
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [favoriteIds, setFavoriteIds] = useState([]);
@@ -30,8 +31,8 @@ export default function ContactsProvider({ children }) {
       setLoading(true);
       setError(null);
 
-      // Fetch channels, chat list, and favorites in parallel
-      const [channelsRes, chatListRes, favoritesRes] = await Promise.all([
+      // Fetch channels, chat list, favorites, AND workspace members in parallel
+      const [channelsRes, chatListRes, favoritesRes, membersRes] = await Promise.all([
         // Only fetch channels if workspaceId is provided
         workspaceId ? channelService.getMyChannels(workspaceId).catch(err => {
           console.warn("Channels fetch failed:", err);
@@ -47,7 +48,13 @@ export default function ContactsProvider({ children }) {
         workspaceId ? api.get(`/api/favorites/${workspaceId}`).catch(err => {
           console.warn("Favorites fetch failed:", err);
           return { data: { favorites: [] } };
-        }) : Promise.resolve({ data: { favorites: [] } })
+        }) : Promise.resolve({ data: { favorites: [] } }),
+
+        // Fetch workspace members
+        workspaceId ? api.get(`/api/workspaces/${workspaceId}/members`).catch(err => {
+          console.warn("Members fetch failed:", err);
+          return { data: { members: [] } };
+        }) : Promise.resolve({ data: { members: [] } })
       ]);
 
       // Extract favorite IDs
@@ -81,16 +88,29 @@ export default function ContactsProvider({ children }) {
           unreadCount: dm.unreadCount || 0
         }));
 
+      // Format workspace members
+      const membersData = (membersRes.data.members || []).map(member => ({
+        _id: member.user?._id || member._id,
+        id: member.user?._id || member._id,
+        username: member.user?.username || member.username,
+        email: member.user?.email || member.email,
+        profilePicture: member.user?.profilePicture || member.profilePicture,
+        role: member.role
+      }));
+
       setChannels(channelsData);
       setDms(dmsData);
+      setMembers(membersData);
       setContacts([...channelsData, ...dmsData]);
 
       console.log('📡 ContactsContext loaded:', {
         channels: channelsData.length,
         dms: dmsData.length,
+        members: membersData.length,
         favorites: favoriteItemIds.length,
         channelsData,
-        dmsData
+        dmsData,
+        membersData
       });
 
     } catch (err) {
@@ -207,6 +227,7 @@ export default function ContactsProvider({ children }) {
       allItems,
       channels,
       dms,
+      members,  // Add workspace members
       setAllItems: setContacts,
       deleteItem,
       addItem,

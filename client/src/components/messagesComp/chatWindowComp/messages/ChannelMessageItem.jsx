@@ -150,6 +150,24 @@ function ChannelMessageItem({
                     {formatTime(msg.ts)}
                 </span>
 
+                {/* Reply Preview - Shows which message this is replying to */}
+                {msg.repliedTo && (
+                    <div className="flex items-start gap-2 mb-2 px-1">
+                        <div className="w-1 bg-blue-500 rounded-full flex-shrink-0 self-stretch"></div>
+                        <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-1.5 mb-0.5">
+                                <MessageSquare size={11} className="text-blue-500 flex-shrink-0" />
+                                <span className="text-xs font-semibold text-gray-700">
+                                    {msg.repliedTo.senderName}
+                                </span>
+                            </div>
+                            <div className="text-xs text-gray-500 line-clamp-2 leading-relaxed">
+                                {msg.repliedTo.text}
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 {/* Message Text (More compact line height) */}
                 <div className="text-gray-800 text-[14px] leading-snug whitespace-pre-wrap break-words message-content">
                     <ReactMarkdown

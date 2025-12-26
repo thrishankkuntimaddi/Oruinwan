@@ -12,7 +12,7 @@ const Notes = () => {
     // ✅ CORRECT: Extract both workspaceId and note id from params
     // Note identity = workspace + noteId
     const { workspaceId, id } = useParams();
-    const { notes, updateNote, deleteNote, addNote } = useNotes();
+    const { notes, updateNote, deleteNote, addNote, loading } = useNotes();
     const { showToast } = useToast();
 
     // Find active note
@@ -120,6 +120,18 @@ const Notes = () => {
     };
 
     if (!id || !note) {
+        if (loading) {
+            return (
+                <div className="flex flex-col items-center justify-center h-full bg-white text-gray-400">
+                    <div className="w-24 h-24 bg-gray-50 rounded-full flex items-center justify-center mb-6">
+                        <Clock size={40} className="text-gray-300 animate-pulse" />
+                    </div>
+                    <h2 className="text-xl font-semibold text-gray-600 mb-2">Loading Notes...</h2>
+                    <p className="text-sm max-w-xs text-center">Please wait while we fetch your notes.</p>
+                </div>
+            );
+        }
+
         return (
             <div className="flex flex-col items-center justify-center h-full bg-white text-gray-400">
                 <div className="w-24 h-24 bg-gray-50 rounded-full flex items-center justify-center mb-6">
@@ -236,14 +248,51 @@ const Notes = () => {
                                     </div>
                                 )}
                                 {block.type === "image" && (
-                                    <div className="w-1/2 rounded-xl overflow-hidden bg-gray-100 border border-gray-200 relative group-hover:shadow-sm transition-all">
-                                        <div className="h-64 flex items-center justify-center text-gray-400 relative">
+                                    <div className="w-full max-w-2xl rounded-xl overflow-hidden bg-gray-100 border border-gray-200 relative group-hover:shadow-sm transition-all">
+                                        <div className="min-h-64 flex items-center justify-center text-gray-400 relative">
                                             {block.content ? (
-                                                <img src={block.content} alt="Note" className="w-full h-full object-cover" />
+                                                <img src={block.content} alt="Note" className="w-full h-full object-contain max-h-96" />
                                             ) : (
-                                                <div className="flex flex-col items-center">
-                                                    <ImageIcon size={32} />
-                                                    <span className="text-sm mt-2">Image Placeholder</span>
+                                                <div className="flex flex-col items-center p-8">
+                                                    <ImageIcon size={48} className="mb-4 text-gray-300" />
+                                                    <p className="text-sm font-medium text-gray-600 mb-4">Add an image</p>
+                                                    <div className="flex flex-col gap-3 w-full max-w-md">
+                                                        <input
+                                                            type="file"
+                                                            accept="image/*"
+                                                            onChange={(e) => {
+                                                                const file = e.target.files[0];
+                                                                if (file) {
+                                                                    const reader = new FileReader();
+                                                                    reader.onload = (event) => {
+                                                                        handleBlockChange(block.id, event.target.result);
+                                                                    };
+                                                                    reader.readAsDataURL(file);
+                                                                }
+                                                            }}
+                                                            className="hidden"
+                                                            id={`img-upload-${block.id}`}
+                                                        />
+                                                        <label
+                                                            htmlFor={`img-upload-${block.id}`}
+                                                            className="cursor-pointer bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors text-center"
+                                                        >
+                                                            Upload from device
+                                                        </label>
+                                                        <div className="relative">
+                                                            <input
+                                                                type="text"
+                                                                placeholder="Or paste image URL..."
+                                                                className="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                                                                onKeyPress={(e) => {
+                                                                    if (e.key === 'Enter' && e.target.value.trim()) {
+                                                                        handleBlockChange(block.id, e.target.value.trim());
+                                                                        e.target.value = '';
+                                                                    }
+                                                                }}
+                                                            />
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             )}
                                             <button
@@ -253,16 +302,89 @@ const Notes = () => {
                                             >
                                                 <Trash2 size={16} />
                                             </button>
+                                            {block.content && (
+                                                <button
+                                                    onClick={() => handleBlockChange(block.id, '')}
+                                                    className="absolute top-2 left-2 p-1.5 bg-white/80 hover:bg-blue-50 text-gray-500 hover:text-blue-600 rounded-full shadow-sm opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-sm"
+                                                    title="Change image"
+                                                >
+                                                    <ImageIcon size={16} />
+                                                </button>
+                                            )}
                                         </div>
                                     </div>
                                 )}
                                 {block.type === "video" && (
-                                    <div className="w-1/2 rounded-xl overflow-hidden bg-gray-900 border border-gray-200 relative group">
-                                        <div className="h-64 flex items-center justify-center text-gray-500 relative">
-                                            <div className="flex flex-col items-center">
-                                                <Video size={32} />
-                                                <span className="text-sm mt-2">Video Placeholder</span>
-                                            </div>
+                                    <div className="w-full max-w-2xl rounded-xl overflow-hidden bg-gray-900 border border-gray-200 relative group">
+                                        <div className="min-h-64 flex items-center justify-center text-gray-500 relative">
+                                            {block.content ? (
+                                                <div className="w-full">
+                                                    {block.content.includes('youtube.com') || block.content.includes('youtu.be') ? (
+                                                        <iframe
+                                                            className="w-full aspect-video"
+                                                            src={block.content.replace('watch?v=', 'embed/').replace('youtu.be/', 'youtube.com/embed/')}
+                                                            title="YouTube video"
+                                                            frameBorder="0"
+                                                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                                            allowFullScreen
+                                                        ></iframe>
+                                                    ) : block.content.includes('vimeo.com') ? (
+                                                        <iframe
+                                                            className="w-full aspect-video"
+                                                            src={`https://player.vimeo.com/video/${block.content.split('/').pop()}`}
+                                                            title="Vimeo video"
+                                                            frameBorder="0"
+                                                            allow="autoplay; fullscreen; picture-in-picture"
+                                                            allowFullScreen
+                                                        ></iframe>
+                                                    ) : (
+                                                        <video className="w-full max-h-96" controls>
+                                                            <source src={block.content} />
+                                                            Your browser does not support the video tag.
+                                                        </video>
+                                                    )}
+                                                </div>
+                                            ) : (
+                                                <div className="flex flex-col items-center p-8">
+                                                    <Video size={48} className="mb-4 text-gray-400" />
+                                                    <p className="text-sm font-medium text-gray-300 mb-4">Add a video</p>
+                                                    <div className="flex flex-col gap-3 w-full max-w-md">
+                                                        <input
+                                                            type="text"
+                                                            placeholder="Paste YouTube, Vimeo, or video URL..."
+                                                            className="w-full px-4 py-2 border border-gray-600 bg-gray-800 text-white rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                                                            onKeyPress={(e) => {
+                                                                if (e.key === 'Enter' && e.target.value.trim()) {
+                                                                    handleBlockChange(block.id, e.target.value.trim());
+                                                                    e.target.value = '';
+                                                                }
+                                                            }}
+                                                        />
+                                                        <input
+                                                            type="file"
+                                                            accept="video/*"
+                                                            onChange={(e) => {
+                                                                const file = e.target.files[0];
+                                                                if (file) {
+                                                                    const reader = new FileReader();
+                                                                    reader.onload = (event) => {
+                                                                        handleBlockChange(block.id, event.target.result);
+                                                                    };
+                                                                    reader.readAsDataURL(file);
+                                                                }
+                                                            }}
+                                                            className="hidden"
+                                                            id={`video-upload-${block.id}`}
+                                                        />
+                                                        <label
+                                                            htmlFor={`video-upload-${block.id}`}
+                                                            className="cursor-pointer bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors text-center"
+                                                        >
+                                                            Upload video file
+                                                        </label>
+                                                    </div>
+                                                </div>
+                                            )}
                                             <button
                                                 onClick={() => removeBlock(block.id)}
                                                 className="absolute top-2 right-2 p-1.5 bg-white/10 hover:bg-red-500/20 text-white/70 hover:text-red-400 rounded-full shadow-sm opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-sm"
@@ -270,25 +392,120 @@ const Notes = () => {
                                             >
                                                 <Trash2 size={16} />
                                             </button>
+                                            {block.content && (
+                                                <button
+                                                    onClick={() => handleBlockChange(block.id, '')}
+                                                    className="absolute top-2 left-2 p-1.5 bg-white/10 hover:bg-blue-500/20 text-white/70 hover:text-blue-400 rounded-full shadow-sm opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-sm"
+                                                    title="Change video"
+                                                >
+                                                    <Video size={16} />
+                                                </button>
+                                            )}
                                         </div>
                                     </div>
                                 )}
                                 {block.type === "audio" && (
-                                    <div className="w-1/2 rounded-xl bg-gray-50 border border-gray-200 p-4 flex items-center gap-3 group">
-                                        <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
-                                            <Mic size={20} />
-                                        </div>
-                                        <div className="h-1 flex-1 bg-gray-200 rounded-full overflow-hidden">
-                                            <div className="w-1/3 h-full bg-blue-500"></div>
-                                        </div>
-                                        <span className="text-xs font-mono text-gray-500">00:00 / 02:30</span>
-                                        <button
-                                            onClick={() => removeBlock(block.id)}
-                                            className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
-                                            title="Delete audio"
-                                        >
-                                            <Trash2 size={16} />
-                                        </button>
+                                    <div className="w-full max-w-2xl rounded-xl bg-gray-50 border border-gray-200 p-6 relative group">
+                                        {block.content ? (
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 flex-shrink-0">
+                                                    <Mic size={24} />
+                                                </div>
+                                                <audio
+                                                    src={block.content}
+                                                    controls
+                                                    className="flex-1"
+                                                    style={{ height: '40px' }}
+                                                />
+                                                <button
+                                                    onClick={() => removeBlock(block.id)}
+                                                    className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                                    title="Delete audio"
+                                                >
+                                                    <Trash2 size={18} />
+                                                </button>
+                                                <button
+                                                    onClick={() => handleBlockChange(block.id, '')}
+                                                    className="p-2 text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"
+                                                    title="Change audio"
+                                                >
+                                                    <Mic size={18} />
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <div className="flex flex-col items-center gap-4">
+                                                <Mic size={48} className="text-gray-400" />
+                                                <p className="text-sm font-medium text-gray-600">Add audio</p>
+                                                <div className="flex gap-3">
+                                                    <button
+                                                        onClick={async () => {
+                                                            try {
+                                                                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                                                                const mediaRecorder = new MediaRecorder(stream);
+                                                                const audioChunks = [];
+
+                                                                mediaRecorder.addEventListener("dataavailable", event => {
+                                                                    audioChunks.push(event.data);
+                                                                });
+
+                                                                mediaRecorder.addEventListener("stop", () => {
+                                                                    const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                                                                    const reader = new FileReader();
+                                                                    reader.onload = () => {
+                                                                        handleBlockChange(block.id, reader.result);
+                                                                    };
+                                                                    reader.readAsDataURL(audioBlob);
+                                                                    stream.getTracks().forEach(track => track.stop());
+                                                                });
+
+                                                                // Start recording
+                                                                mediaRecorder.start();
+
+                                                                // Stop after 60 seconds or on user action
+                                                                showToast("Recording... Click again to stop", "info");
+
+                                                                // Store the recorder on the button for stopping
+                                                                const stopRecording = () => {
+                                                                    mediaRecorder.stop();
+                                                                };
+
+                                                                // Auto-stop after 60 seconds
+                                                                setTimeout(stopRecording, 60000);
+
+                                                            } catch (err) {
+                                                                showToast("Microphone access denied", "error");
+                                                            }
+                                                        }}
+                                                        className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+                                                    >
+                                                        <Mic size={16} />
+                                                        Record Audio
+                                                    </button>
+                                                    <input
+                                                        type="file"
+                                                        accept="audio/*"
+                                                        onChange={(e) => {
+                                                            const file = e.target.files[0];
+                                                            if (file) {
+                                                                const reader = new FileReader();
+                                                                reader.onload = (event) => {
+                                                                    handleBlockChange(block.id, event.target.result);
+                                                                };
+                                                                reader.readAsDataURL(file);
+                                                            }
+                                                        }}
+                                                        className="hidden"
+                                                        id={`audio-upload-${block.id}`}
+                                                    />
+                                                    <label
+                                                        htmlFor={`audio-upload-${block.id}`}
+                                                        className="cursor-pointer bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                                                    >
+                                                        Upload Audio
+                                                    </label>
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
                                 )}
                             </div>
