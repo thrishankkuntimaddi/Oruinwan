@@ -5,7 +5,7 @@ import ConfirmationModal from "../../../ui/ConfirmationModal";
 import { useContacts } from "../../../../contexts/ContactsContext";
 import { useAuth } from "../../../../contexts/AuthContext";
 import { useToast } from "../../../../contexts/ToastContext";
-import { useUsers } from "../../../../hooks/useUsers";
+// import { useUsers } from "../../../../hooks/useUsers"; // Currently unused
 import { useWorkspace } from "../../../../contexts/WorkspaceContext";
 import api from "../../../../services/api";
 import { io } from "socket.io-client";
@@ -25,7 +25,7 @@ const HomePanel = ({ title }) => {
     const navigate = useNavigate();
 
     const { allItems: items, deleteItem, addItem, toggleFavorite, refreshContacts } = useContacts();
-    const { user, accessToken } = useAuth();
+    const { accessToken } = useAuth(); // user removed - currently unused
     const { showToast } = useToast();
     const { activeWorkspace } = useWorkspace();
 
@@ -36,8 +36,33 @@ const HomePanel = ({ title }) => {
         }
     }, [activeWorkspace?.id, refreshContacts]);
 
-    // Fetch real users from API
-    const { users } = useUsers(user?.companyId);
+    // ✅ AUTO-REFRESH: Refresh contacts when tab becomes visible
+    React.useEffect(() => {
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'visible' && activeWorkspace?.id) {
+                console.log('📱 Tab visible - refreshing contacts...');
+                refreshContacts(activeWorkspace.id);
+            }
+        };
+
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+    }, [activeWorkspace?.id, refreshContacts]);
+
+    // ✅ PERIODIC REFRESH: Poll every 30 seconds
+    React.useEffect(() => {
+        if (!activeWorkspace?.id) return;
+
+        const interval = setInterval(() => {
+            console.log('🔄 Auto-refreshing contacts...');
+            refreshContacts(activeWorkspace.id);
+        }, 30000); // Every 30 seconds
+
+        return () => clearInterval(interval);
+    }, [activeWorkspace?.id, refreshContacts]);
+
+    // Fetch real users from API (currently unused, but available for future use)
+    // const { users } = useUsers(user?.companyId);
 
     const [expanded, setExpanded] = useState({
         favorites: true,

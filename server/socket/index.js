@@ -9,6 +9,10 @@ const User = require("../models/User");
 module.exports = function registerChatHandlers(io, socket) {
   const userId = socket.user.id; // extracted from JWT
 
+  // ✅ JOIN USER-SPECIFIC ROOM for targeted events
+  socket.join(`user_${userId}`);
+  console.log(`✅ User ${userId} joined user room: user_${userId}`);
+
   /* ----------------------------------------------------
      JOIN DM SESSION ROOM
   ---------------------------------------------------- */

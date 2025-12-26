@@ -5,12 +5,14 @@ import { useWorkspace } from "../../../contexts/WorkspaceContext";
 import { useToast } from "../../../contexts/ToastContext";
 import api from "../../../services/api";
 import ConfirmationModal from "../../common/ConfirmationModal";
+import { useSocket } from "../../../contexts/SocketContext"; // ✅ Use global socket
 
 const ChannelsPanel = ({ title }) => {
     const navigate = useNavigate();
     const { workspaceId, id: channelId } = useParams();
     const { activeWorkspace } = useWorkspace();
     const { showToast } = useToast();
+    const { socket, addChannelListener } = useSocket(); // ✅ Use global socket
 
     const [searchQuery, setSearchQuery] = useState("");
     const [showCreateChannelModal, setShowCreateChannelModal] = useState(false);
@@ -108,6 +110,149 @@ const ChannelsPanel = ({ title }) => {
 
         fetchChannels();
     }, [workspaceId]);
+
+    // ✅ AUTO-REFRESH: Refetch when tab becomes visible
+    useEffect(() => {
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'visible' && workspaceId) {
+                console.log('📱 Tab visible - refreshing channels...');
+                // Refetch channels when user returns to tab
+                const refetch = async () => {
+                    try {
+                        const response = await api.get(`/api/workspaces/${workspaceId}/channels`);
+                        const mappedChannels = response.data.channels.map(ch => ({
+                            id: ch._id,
+                            type: 'channel',
+                            label: ch.name,
+                            path: `/workspace/${workspaceId}/channel/${ch._id}`,
+                            isFavorite: ch.isDefault || false,
+                            isPrivate: ch.isPrivate || false,
+                            isDefault: ch.isDefault || false,
+                            description: ch.description || '',
+                            canDelete: !ch.isDefault,
+                            workspaceId: ch.workspace
+                        }));
+                        setChannels(mappedChannels);
+                        console.log('✅ Channels refreshed');
+                    } catch (err) {
+                        console.error('Error refreshing channels:', err);
+                    }
+                };
+                refetch();
+            }
+        };
+
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+    }, [workspaceId]);
+
+    // ✅ PERIODIC REFRESH: Poll every 30 seconds as fallback
+    useEffect(() => {
+        if (!workspaceId) return;
+
+        const interval = setInterval(async () => {
+            try {
+                const response = await api.get(`/api/workspaces/${workspaceId}/channels`);
+                const mappedChannels = response.data.channels.map(ch => ({
+                    id: ch._id,
+                    type: 'channel',
+                    label: ch.name,
+                    path: `/workspace/${workspaceId}/channel/${ch._id}`,
+                    isFavorite: ch.isDefault || false,
+                    isPrivate: ch.isPrivate || false,
+                    isDefault: ch.isDefault || false,
+                    description: ch.description || '',
+                    canDelete: !ch.isDefault,
+                    workspaceId: ch.workspace
+                }));
+                setChannels(mappedChannels);
+                console.log('🔄 Auto-refreshed channels');
+            } catch (err) {
+                console.error('Error auto-refreshing channels:', err);
+            }
+        }, 30000); // Every 30 seconds
+
+        return () => clearInterval(interval);
+    }, [workspaceId]);
+
+    // ✅ REAL-TIME UPDATES: Listen for channel events via global socket
+    useEffect(() => {
+        if (!socket || !workspaceId) return;
+
+        // Register channel event handler
+        const handleChannelEvent = (eventType, data) => {
+            console.log(`📢 [ChannelsPanel] ${eventType}:`, data);
+
+            switch (eventType) {
+                case 'channel-created':
+                    // Check if channel belongs to current workspace
+                    if (data.workspace === workspaceId) {
+                        const newChannel = {
+                            id: data._id,
+                            type: 'channel',
+                            label: data.name,
+                            path: `/workspace/${workspaceId}/channel/${data._id}`,
+                            isFavorite: false,
+                            isPrivate: data.isPrivate,
+                            isDefault: false,
+                            description: data.description || '',
+                            canDelete: true
+                        };
+                        setChannels(prev => {
+                            // Avoid duplicates
+                            if (prev.some(ch => ch.id === newChannel.id)) return prev;
+                            return [...prev, newChannel];
+                        });
+                        showToast(`New channel #${data.name} created!`, 'success');
+                    }
+                    break;
+
+                case 'invited-to-channel':
+                    // Fetch full channel details
+                    api.get(`/api/channels/${data.channelId}`)
+                        .then(response => {
+                            const channel = response.data.channel;
+                            const newChannel = {
+                                id: channel._id,
+                                type: 'channel',
+                                label: channel.name,
+                                path: `/workspace/${workspaceId}/channel/${channel._id}`,
+                                isFavorite: false,
+                                isPrivate: channel.isPrivate,
+                                isDefault: false,
+                                description: channel.description || '',
+                                canDelete: true
+                            };
+                            setChannels(prev => {
+                                if (prev.some(ch => ch.id === newChannel.id)) return prev;
+                                return [...prev, newChannel];
+                            });
+                            showToast(`You've been added to #${data.channelName}!`, 'success');
+                        })
+                        .catch(err => console.error('Error fetching invited channel:', err));
+                    break;
+
+                case 'removed-from-channel':
+                    setChannels(prev => prev.filter(ch => ch.id !== data.channelId));
+                    showToast('You have been removed from a channel', 'info');
+                    // If currently viewing the removed channel, navigate away
+                    if (data.channelId === channelId) {
+                        navigate(`/workspace/${workspaceId}`);
+                    }
+                    break;
+
+                default:
+                    break;
+            }
+        };
+
+        // Register with global socket context
+        const unsubscribe = addChannelListener(handleChannelEvent);
+
+        return () => {
+            unsubscribe();
+        };
+    }, [socket, workspaceId, channelId, navigate, showToast, addChannelListener]);
 
     // ✅ CORRECT: Create channel via backend
     const handleCreateChannel = async () => {

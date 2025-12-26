@@ -473,8 +473,6 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
         )
       );
 
-      showToast(message || "Failed to send message", "error");
-
       // Clean up pending message
       if (pendingMessagesRef.current[clientTempId]) {
         delete pendingMessagesRef.current[clientTempId];
@@ -483,24 +481,30 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
 
     /* --- READ RECEIPTS --- */
     socket.on("read-update", ({ readerId, dmSessionId, channelId }) => {
+      // Update all messages in this chat to add the reader to readBy array
       setMessages((prev) =>
         prev.map((m) => {
-          if (!m.backend) return m;
+          // Skip if this message is from the reader themselves
+          if (m.backend?.sender === readerId || m.senderId === readerId) return m;
 
+          // Check if this message belongs to the current chat
           const isRelevant = dmSessionId
-            ? String(m.backend.dm) === String(dmSessionId)
-            : String(m.backend.channel) === String(channelId);
+            ? (m.backend?.dm === dmSessionId || m.dmId === dmSessionId)
+            : (m.backend?.channel === channelId || m.channelId === channelId);
 
-          if (isRelevant && String(m.senderId) !== String(readerId)) {
-            const readBy = new Set(m.backend.readBy || []);
-            readBy.add(readerId);
+          if (!isRelevant) return m;
 
-            return {
-              ...m,
-              backend: { ...m.backend, readBy: Array.from(readBy) },
-            };
-          }
-          return m;
+          // Add reader to readBy if not already there
+          const currentReadBy = m.backend?.readBy || [];
+          if (currentReadBy.includes(readerId)) return m;
+
+          return {
+            ...m,
+            backend: {
+              ...m.backend,
+              readBy: [...currentReadBy, readerId]
+            }
+          };
         })
       );
     });
