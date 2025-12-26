@@ -56,6 +56,9 @@ router.post("/:id/assign-admin", requireAuth, channelCtrl.assignAdmin);
 // Clear all messages in channel
 router.delete("/:id/messages", requireAuth, channelCtrl.clearChannelMessages);
 
+// Join channel via link (with workspace validation)
+router.post("/:id/join-via-link", requireAuth, channelCtrl.joinChannelViaLink);
+
 // Delete channel permanently
 router.delete("/:id", requireAuth, channelCtrl.deleteChannel);
 

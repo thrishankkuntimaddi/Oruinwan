@@ -854,10 +854,10 @@ exports.getAllWorkspaceMembers = async (req, res) => {
     // Return ALL members including current user
     const members = workspace.members
       .map(m => ({
-        id: m.user._id,
-        name: m.user.username,
+        _id: m.user._id,  // Changed from 'id' to '_id' for consistency
+        username: m.user.username,  // Changed from 'name' to 'username' for consistency
         email: m.user.email,
-        avatar: m.user.profilePicture,
+        profilePicture: m.user.profilePicture,  // Changed from 'avatar' to 'profilePicture' for consistency
         status: m.user.isOnline ? 'online' : 'offline',
         lastSeen: m.user.lastLoginAt,
         role: m.role,
@@ -868,7 +868,7 @@ exports.getAllWorkspaceMembers = async (req, res) => {
         const roleOrder = { owner: 0, admin: 1, member: 2 };
         const roleCompare = (roleOrder[a.role] || 2) - (roleOrder[b.role] || 2);
         if (roleCompare !== 0) return roleCompare;
-        return a.name.localeCompare(b.name);
+        return a.username.localeCompare(b.username);  // Changed from 'name' to 'username'
       });
 
     return res.json({ members });

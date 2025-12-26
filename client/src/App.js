@@ -34,6 +34,7 @@ import ResetPassword from "./pages/LoginPageComp/ResetPassword";
 import OAuthSuccess from "./pages/LoginPageComp/OAuthSuccess";
 import AcceptInvite from "./pages/AcceptInvite";
 import JoinWorkspace from "./pages/JoinWorkspace";
+import JoinChannel from "./pages/JoinChannel";
 import CompanyAdmin from "./pages/CompanyAdmin";
 import RegisterCompany from "./pages/RegisterCompany";
 
@@ -313,6 +314,14 @@ function App() {
                 <Route path="/oauth-success" element={<OAuthSuccess />} />
                 <Route path="/accept-invite" element={<AcceptInvite />} />
                 <Route path="/join-workspace" element={<JoinWorkspace />} />
+                <Route
+                  path="/join-channel"
+                  element={
+                    <RequireAuth>
+                      <JoinChannel />
+                    </RequireAuth>
+                  }
+                />
 
               </Routes>
             </BlogsProvider>

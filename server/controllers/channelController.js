@@ -171,6 +171,14 @@ exports.inviteToChannel = async (req, res) => {
       user: inviteeId,
       joinedAt: new Date()
     });
+
+    // 🎯 OWNER PROTECTION: If the invited user is the channel creator, restore them as admin
+    const isChannelCreator = String(channel.createdBy) === String(inviteeId);
+    if (isChannelCreator && !channel.admins.some(adminId => String(adminId) === String(inviteeId))) {
+      channel.admins.push(inviteeId);
+      console.log(`✨ Channel creator ${inviteeId} restored as admin`);
+    }
+
     await channel.save();
 
     // optional: emit socket event to channel room or to invitee
@@ -1095,6 +1103,94 @@ exports.clearChannelMessages = async (req, res) => {
     });
   } catch (err) {
     console.error("CLEAR MESSAGES ERROR:", err);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+
+/**
+ * Join channel via link (with workspace validation)
+ * POST /api/channels/:id/join-via-link
+ */
+exports.joinChannelViaLink = async (req, res) => {
+  try {
+    const channelId = req.params.id;
+    const userId = req.user?.sub;
+
+    console.log(`🔗 User ${userId} attempting to join channel ${channelId} via link`);
+
+    // 1. Find channel and populate workspace
+    const channel = await Channel.findById(channelId).populate('workspace');
+    if (!channel) {
+      console.log('❌ Channel not found');
+      return res.status(404).json({ message: "Channel not found" });
+    }
+
+    // 2. Check if user is workspace member
+    const workspace = channel.workspace;
+    const isWorkspaceMember = workspace.members.some(m => String(m.user) === String(userId));
+
+    if (!isWorkspaceMember) {
+      console.log(`❌ User not a workspace member of ${workspace.name}`);
+      return res.status(403).json({
+        message: "You must be a member of this workspace to join this channel",
+        workspaceName: workspace.name
+      });
+    }
+
+    // 3. Check if already a member
+    const isChannelMember = channel.members.some(m => {
+      const memberId = m.user ? m.user.toString() : m.toString();
+      return memberId === userId.toString();
+    });
+
+    if (isChannelMember) {
+      console.log('✅ User already a member');
+      return res.json({
+        message: "You are already a member of this channel",
+        channel: {
+          id: channel._id,
+          name: channel.name,
+          workspaceId: workspace._id
+        }
+      });
+    }
+
+    // 4. Add user to channel
+    channel.members.push({
+      user: userId,
+      joinedAt: new Date()
+    });
+
+    // 🎯 OWNER PROTECTION: If the rejoining user is the channel creator, restore them as admin
+    const isChannelCreator = String(channel.createdBy) === String(userId);
+    if (isChannelCreator && !channel.admins.some(adminId => String(adminId) === String(userId))) {
+      channel.admins.push(userId);
+      console.log(`✨ Channel creator restored as admin`);
+    }
+
+    await channel.save();
+
+    console.log(`✅ User added to channel #${channel.name}`);
+
+    // 5. Emit socket event
+    const io = req.app.get("io");
+    if (io) {
+      io.to(`workspace_${workspace._id}`).emit("channel-member-added", {
+        channelId: channel._id,
+        userId
+      });
+    }
+
+    return res.json({
+      message: "Successfully joined channel",
+      channel: {
+        id: channel._id,
+        name: channel.name,
+        workspaceId: workspace._id
+      }
+    });
+  } catch (err) {
+    console.error("JOIN CHANNEL VIA LINK ERROR:", err);
     return res.status(500).json({ message: "Server error" });
   }
 };

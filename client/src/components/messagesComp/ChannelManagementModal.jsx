@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useParams } from "react-router-dom";
 import axios from "axios";
-import { Trash2, UserPlus, Users, Lock, Unlock, X, AlertTriangle, Eraser } from "lucide-react";
+import { Trash2, UserPlus, Users, Lock, Unlock, X, AlertTriangle, Eraser, Info } from "lucide-react";
 import { useToast } from "../../contexts/ToastContext";
 
 const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:5000";
@@ -12,7 +12,9 @@ export default function ChannelManagementModal({ channel, onClose, currentUserId
     const [members, setMembers] = useState([]);
     const [allUsers, setAllUsers] = useState([]);
     const [loading, setLoading] = useState(false);
-    const [activeTab, setActiveTab] = useState(initialTab); // members, settings
+    const [activeTab, setActiveTab] = useState(initialTab); // members, settings, invite
+    const [searchQuery, setSearchQuery] = useState(''); // For filtering invite list
+    const [showDebugInfo, setShowDebugInfo] = useState(false); // Toggle debug info visibility
     const [privacyVerification, setPrivacyVerification] = useState("");
     const [deleteVerification, setDeleteVerification] = useState("");
     const [memberToRemove, setMemberToRemove] = useState(null);
@@ -43,6 +45,7 @@ export default function ChannelManagementModal({ channel, onClose, currentUserId
             const token = localStorage.getItem("accessToken");
             const headers = token ? { Authorization: `Bearer ${token}` } : {};
             const res = await axios.get(`${API_BASE}/api/channels/${channel.id}/members`, { headers });
+            console.log('📋 Loaded members:', res.data.members);
             setMembers(res.data.members || []);
         } catch (err) {
             console.error("Load members failed:", err);
@@ -53,11 +56,12 @@ export default function ChannelManagementModal({ channel, onClose, currentUserId
         try {
             const token = localStorage.getItem("accessToken");
             const headers = token ? { Authorization: `Bearer ${token}` } : {};
-            // Fetch workspace members instead of all users
-            const res = await axios.get(`${API_BASE}/api/workspaces/${channel.workspaceId}/members`, { headers });
+            // Fetch ALL workspace members (including current user) for invite filtering
+            const res = await axios.get(`${API_BASE}/api/workspaces/${channel.workspaceId}/all-members`, { headers });
+            console.log('📊 All workspace users loaded:', res.data.members?.length, res.data.members);
             setAllUsers(res.data.members || []);
         } catch (err) {
-            console.error("Load workspace members failed:", err);
+            console.error("❌ Load workspace members failed:", err);
         }
     }, [channel.workspaceId]);
 
@@ -65,6 +69,14 @@ export default function ChannelManagementModal({ channel, onClose, currentUserId
         loadMembers();
         loadAllUsers();
     }, [loadMembers, loadAllUsers]);
+
+    // Reload all users when Invite People tab is clicked
+    useEffect(() => {
+        if (activeTab === 'invite') {
+            console.log('🔄 Invite tab selected, reloading all users...');
+            loadAllUsers();
+        }
+    }, [activeTab, loadAllUsers]);
 
     const handleInvite = async (userId) => {
         if (!userId) return;
@@ -130,10 +142,8 @@ export default function ChannelManagementModal({ channel, onClose, currentUserId
             showToast("Member promoted to admin successfully", "success");
             setMemberToPromote(null);
 
-            // Add a small delay to ensure DB update completes
-            setTimeout(() => {
-                loadMembers();
-            }, 300);
+            // Reload members to reflect admin status change
+            await loadMembers();
         } catch (err) {
             console.error("Promote failed:", err);
             showToast(err?.response?.data?.message || "Failed to promote member", "error");
@@ -163,10 +173,8 @@ export default function ChannelManagementModal({ channel, onClose, currentUserId
             showToast(isSelf ? "You have withdrawn as admin" : "Admin demoted to member successfully", "success");
             setMemberToDemote(null);
 
-            // Add a small delay to ensure DB update completes
-            setTimeout(() => {
-                loadMembers();
-            }, 300);
+            // Reload members to reflect admin status change
+            await loadMembers();
         } catch (err) {
             console.error("Demote failed:", err);
             showToast(err?.response?.data?.message || "Failed to demote admin", "error");
@@ -330,6 +338,18 @@ export default function ChannelManagementModal({ channel, onClose, currentUserId
         (u) => !members.some((m) => String(m._id) === String(u._id))
     );
 
+    console.log('👥 Member count:', members.length, members.map(m => m.username));
+    console.log('👤 All users count:', allUsers.length, allUsers.map(u => u.username));
+    console.log('✨ Non-members count:', nonMembers.length, nonMembers.map(u => u.username));
+
+    // Filter non-members by search query
+    const filteredNonMembers = searchQuery
+        ? nonMembers.filter(user =>
+            user.username?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            user.email?.toLowerCase().includes(searchQuery.toLowerCase())
+        )
+        : nonMembers;
+
     return (
         <>
             <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[100] backdrop-blur-sm animate-fade-in">
@@ -351,9 +371,21 @@ export default function ChannelManagementModal({ channel, onClose, currentUserId
                                 </p>
                             </div>
                         </div>
-                        <button onClick={onClose} className="p-2 hover:bg-gray-200 rounded-full transition-colors text-gray-500">
-                            <X size={20} />
-                        </button>
+                        <div className="flex items-center gap-2">
+                            {/* Debug Info Toggle Button - Only show on Invite tab */}
+                            {activeTab === "invite" && (
+                                <button
+                                    onClick={() => setShowDebugInfo(!showDebugInfo)}
+                                    className="p-2 hover:bg-gray-200 rounded-full transition-colors text-gray-500"
+                                    title={showDebugInfo ? 'Hide Debug Info' : 'Show Debug Info'}
+                                >
+                                    <Info size={20} />
+                                </button>
+                            )}
+                            <button onClick={onClose} className="p-2 hover:bg-gray-200 rounded-full transition-colors text-gray-500">
+                                <X size={20} />
+                            </button>
+                        </div>
                     </div>
 
                     {/* Tabs */}
@@ -362,7 +394,7 @@ export default function ChannelManagementModal({ channel, onClose, currentUserId
                             onClick={() => setActiveTab("members")}
                             className={`py-3 px-4 text-sm font-medium border-b-2 transition-colors ${activeTab === "members" ? "border-blue-600 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-700"}`}
                         >
-                            {isAdmin ? "Members" : "Channel Info"}
+                            Members
                         </button>
                         {isAdmin && (
                             <button
@@ -372,44 +404,20 @@ export default function ChannelManagementModal({ channel, onClose, currentUserId
                                 Manage Channel
                             </button>
                         )}
+                        {isAdmin && (
+                            <button
+                                onClick={() => setActiveTab("invite")}
+                                className={`py-3 px-4 text-sm font-medium border-b-2 transition-colors ${activeTab === "invite" ? "border-blue-600 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-700"}`}
+                            >
+                                Invite People
+                            </button>
+                        )}
                     </div>
 
                     {/* Content */}
                     <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
                         {activeTab === "members" && (
                             <div className="space-y-6">
-                                {/* Invite Section (Admins Only) */}
-                                {isAdmin && (
-                                    <div className="bg-blue-50 rounded-xl p-4 border border-blue-100">
-                                        <h4 className="text-sm font-bold text-blue-900 mb-3 flex items-center gap-2">
-                                            <UserPlus size={16} /> Invite People
-                                        </h4>
-                                        <div className="space-y-2 max-h-40 overflow-y-auto pr-2 custom-scrollbar">
-                                            {nonMembers.length === 0 ? (
-                                                <p className="text-xs text-blue-600/70 italic">Everyone is already here!</p>
-                                            ) : (
-                                                nonMembers.map((user) => (
-                                                    <div key={user._id} className="flex items-center justify-between p-2 bg-white rounded-lg border border-blue-100 hover:border-blue-300 transition-colors">
-                                                        <div className="flex items-center gap-3">
-                                                            <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-xs">
-                                                                {(user?.username || 'U').charAt(0).toUpperCase()}
-                                                            </div>
-                                                            <span className="text-sm font-medium text-gray-700">{user?.username || 'Unknown'}</span>
-                                                        </div>
-                                                        <button
-                                                            onClick={() => handleInvite(user._id)}
-                                                            disabled={loading}
-                                                            className="text-xs font-bold text-blue-600 hover:bg-blue-50 px-3 py-1.5 rounded-md transition-colors"
-                                                        >
-                                                            Add
-                                                        </button>
-                                                    </div>
-                                                ))
-                                            )}
-                                        </div>
-                                    </div>
-                                )}
-
                                 {/* Private Channel Notice (Non-Admins) */}
                                 {!isAdmin && channel.isPrivate && (
                                     <div className="bg-gray-50 rounded-xl p-4 border border-gray-200 flex items-center gap-3">
@@ -485,17 +493,26 @@ export default function ChannelManagementModal({ channel, onClose, currentUserId
                                                     )}
 
                                                     {/* Self-demotion for current user if they're an admin but not owner */}
-                                                    {isCurrentUser && isMemberAdmin && !isOwner && (
-                                                        <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                            <button
-                                                                onClick={() => handleDemoteAdmin(member._id)}
-                                                                disabled={loading}
-                                                                className="text-xs font-medium text-gray-600 hover:bg-gray-100 px-3 py-1.5 rounded-lg transition-all"
-                                                            >
-                                                                Withdraw as Admin
-                                                            </button>
-                                                        </div>
-                                                    )}
+                                                    {isCurrentUser && isMemberAdmin && !isOwner && (() => {
+                                                        // Count total admins to prevent last admin from leaving
+                                                        const totalAdmins = members.filter(m => m.isAdmin).length;
+                                                        const isLastAdmin = totalAdmins === 1;
+
+                                                        // Don't show demote button if this is the last admin
+                                                        if (isLastAdmin) return null;
+
+                                                        return (
+                                                            <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                <button
+                                                                    onClick={() => handleDemoteAdmin(member._id)}
+                                                                    disabled={loading}
+                                                                    className="text-xs font-medium text-gray-600 hover:bg-gray-100 px-3 py-1.5 rounded-lg transition-all"
+                                                                >
+                                                                    Withdraw as Admin
+                                                                </button>
+                                                            </div>
+                                                        );
+                                                    })()}
                                                 </div>
                                             );
                                         })}
@@ -707,6 +724,89 @@ export default function ChannelManagementModal({ channel, onClose, currentUserId
                                 )}
                             </div>
                         )}
+
+                        {/* Invite People Tab */}
+                        {activeTab === "invite" && (
+                            <div className="space-y-4">
+                                {/* Search Input */}
+                                <div className="relative">
+                                    <input
+                                        type="text"
+                                        placeholder="Search by name or email..."
+                                        value={searchQuery}
+                                        onChange={(e) => setSearchQuery(e.target.value)}
+                                        className="w-full px-4 py-2.5 pl-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                                    />
+                                    <svg className="w-5 h-5 text-gray-400 absolute left-3 top-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                    </svg>
+                                    {searchQuery && (
+                                        <button
+                                            onClick={() => setSearchQuery('')}
+                                            className="absolute right-3 top-3 text-gray-400 hover:text-gray-600"
+                                        >
+                                            <X size={18} />
+                                        </button>
+                                    )}
+                                </div>
+
+                                {/* Debug Info Panel - Toggleable */}
+                                {showDebugInfo && (
+                                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-xs">
+                                        <div className="font-bold text-yellow-900 mb-1">🐛 Debug Info:</div>
+                                        <div className="text-yellow-700 space-y-0.5">
+                                            <div>• Total workspace users: {allUsers.length}</div>
+                                            <div>• Channel members: {members.length}</div>
+                                            <div>• Non-members (eligible to invite): {nonMembers.length}</div>
+                                            <div>• Filtered by search: {filteredNonMembers.length}</div>
+                                            <div>• Workspace ID: {channel.workspaceId || 'N/A'}</div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {filteredNonMembers.length === 0 ? (
+                                    <div className="text-center py-12">
+                                        <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                            <Users size={24} className="text-gray-400" />
+                                        </div>
+                                        <p className="text-sm font-medium text-gray-900 mb-1">
+                                            {searchQuery ? 'No members found' : "Everyone's already here!"}
+                                        </p>
+                                        <p className="text-xs text-gray-500">
+                                            {searchQuery ? 'Try a different search term' : 'All workspace members are in this channel.'}
+                                        </p>
+                                    </div>
+                                ) : (
+                                    <>
+                                        <div className="text-xs text-gray-500 mb-2">
+                                            {filteredNonMembers.length} member{filteredNonMembers.length !== 1 ? 's' : ''} available
+                                        </div>
+                                        <div className="space-y-2">
+                                            {filteredNonMembers.map((user) => (
+                                                <div key={user._id} className="flex items-center justify-between p-3 bg-white rounded-xl border border-gray-200 hover:border-blue-300 hover:bg-blue-50/30 transition-all group">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-bold text-sm shadow-sm">
+                                                            {(user?.username || 'U').charAt(0).toUpperCase()}
+                                                        </div>
+                                                        <div>
+                                                            <div className="text-sm font-medium text-gray-900">{user?.username || 'Unknown'}</div>
+                                                            <div className="text-xs text-gray-500">{user?.email || ''}</div>
+                                                        </div>
+                                                    </div>
+                                                    <button
+                                                        onClick={() => handleInvite(user._id)}
+                                                        disabled={loading}
+                                                        className="px-4 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+                                                    >
+                                                        Add to Channel
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </>
+                                )}
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
@@ -745,6 +845,8 @@ export default function ChannelManagementModal({ channel, onClose, currentUserId
                 </div>
             )}
 
+
+
             {/* Promote to Admin Confirmation Modal */}
             {memberToPromote && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[110]" onClick={() => setMemberToPromote(null)}>
@@ -777,45 +879,48 @@ export default function ChannelManagementModal({ channel, onClose, currentUserId
                         </div>
                     </div>
                 </div>
-            )}
+            )
+            }
 
             {/* Demote Admin Confirmation Modal */}
-            {memberToDemote && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[110]" onClick={() => setMemberToDemote(null)}>
-                    <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-start gap-4">
-                            <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center flex-shrink-0">
-                                <AlertTriangle size={20} className="text-orange-600" />
-                            </div>
-                            <div className="flex-1">
-                                <h3 className="text-lg font-bold text-gray-900 mb-2">
-                                    {String(memberToDemote) === String(currentUserId) ? "Withdraw as Admin" : "Demote to Member"}
-                                </h3>
-                                <p className="text-sm text-gray-600 mb-6">
-                                    {String(memberToDemote) === String(currentUserId)
-                                        ? "Are you sure you want to withdraw as admin? You will lose admin privileges and won't be able to manage channel settings."
-                                        : "Are you sure you want to demote this admin to a regular member? They will lose admin privileges."}
-                                </p>
-                                <div className="flex gap-3 justify-end">
-                                    <button
-                                        onClick={() => setMemberToDemote(null)}
-                                        className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        onClick={confirmDemote}
-                                        disabled={loading}
-                                        className="px-4 py-2 text-sm font-medium bg-orange-600 hover:bg-orange-700 text-white rounded-lg transition-colors disabled:opacity-50"
-                                    >
-                                        {String(memberToDemote) === String(currentUserId) ? "Withdraw" : "Demote to Member"}
-                                    </button>
+            {
+                memberToDemote && (
+                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[110]" onClick={() => setMemberToDemote(null)}>
+                        <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+                            <div className="flex items-start gap-4">
+                                <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center flex-shrink-0">
+                                    <AlertTriangle size={20} className="text-orange-600" />
+                                </div>
+                                <div className="flex-1">
+                                    <h3 className="text-lg font-bold text-gray-900 mb-2">
+                                        {String(memberToDemote) === String(currentUserId) ? "Withdraw as Admin" : "Demote to Member"}
+                                    </h3>
+                                    <p className="text-sm text-gray-600 mb-6">
+                                        {String(memberToDemote) === String(currentUserId)
+                                            ? "Are you sure you want to withdraw as admin? You will lose admin privileges and won't be able to manage channel settings."
+                                            : "Are you sure you want to demote this admin to a regular member? They will lose admin privileges."}
+                                    </p>
+                                    <div className="flex gap-3 justify-end">
+                                        <button
+                                            onClick={() => setMemberToDemote(null)}
+                                            className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button
+                                            onClick={confirmDemote}
+                                            disabled={loading}
+                                            className="px-4 py-2 text-sm font-medium bg-orange-600 hover:bg-orange-700 text-white rounded-lg transition-colors disabled:opacity-50"
+                                        >
+                                            {String(memberToDemote) === String(currentUserId) ? "Withdraw" : "Demote to Member"}
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                </div>
-            )}
+                )
+            }
         </>
     );
 }

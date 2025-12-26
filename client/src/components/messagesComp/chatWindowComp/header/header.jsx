@@ -194,7 +194,7 @@ export default function Header({
                     </button>
                     <button className="w-full text-left px-4 py-2 hover:bg-gray-50 text-gray-700 flex items-center gap-3"
                       onClick={() => {
-                        const channelLink = `${window.location.origin}/workspace/${chat.workspaceId}/home/channel/${chat.id}`;
+                        const channelLink = `${window.location.origin}/join-channel?workspace=${chat.workspaceId}&channel=${chat.id}`;
                         navigator.clipboard.writeText(channelLink);
                         showToast && showToast("Channel link copied!", "success");
                         setShowMenu(false);
