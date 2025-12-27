@@ -64,17 +64,18 @@ const ProfileMenu = ({ onClose }) => {
 
   // Real Sessions State
   const [sessions, setSessions] = useState([]);
-  const [loadingSessions, setLoadingSessions] = useState(false);
+  // const [loadingSessions, setLoadingSessions] = useState(false); // Unused for now
 
   useEffect(() => {
     if (view === "security") {
       fetchSessions();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [view]);
 
   const fetchSessions = async () => {
     try {
-      setLoadingSessions(true);
+      // setLoadingSessions(true);
       const { data } = await api.get("/api/auth/sessions");
 
       // Add simple formatting for display if needed, currently backend sends raw date
@@ -89,7 +90,7 @@ const ProfileMenu = ({ onClose }) => {
       console.error("Failed to fetch sessions", err);
       showToast("Failed to load sessions", "error");
     } finally {
-      setLoadingSessions(false);
+      // setLoadingSessions(false); 
     }
   };
 
@@ -105,14 +106,12 @@ const ProfileMenu = ({ onClose }) => {
   };
 
   const handleLogoutAllSessions = async () => {
-    // Log out all OTHER sessions (keep current)
-    const others = sessions.filter(s => !s.current);
     try {
-      await Promise.all(others.map(s => api.delete(`/api/auth/sessions/${s.id}`)));
+      await api.delete("/api/auth/sessions/others");
       setSessions(prev => prev.filter(s => s.current));
       showToast("Logged out of all other devices.", "success");
     } catch (err) {
-      console.error(err);
+      console.error("Logout All Error:", err);
       showToast("Failed to log out all devices", "error");
     }
   };

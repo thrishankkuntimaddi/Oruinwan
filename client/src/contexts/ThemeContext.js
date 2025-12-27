@@ -1,11 +1,16 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import { useAuth } from './AuthContext';
+import api from '../services/api';
 
 const ThemeContext = createContext();
 
 export const useTheme = () => useContext(ThemeContext);
 
 export const ThemeProvider = ({ children }) => {
+    const { user } = useAuth();
+
     // state: 'light' | 'dark' | 'auto'
+    // Initialize from local storage first to prevent flash, will sync with user pref later
     const [theme, setTheme] = useState(() => {
         if (typeof window !== 'undefined') {
             const savedTheme = localStorage.getItem('theme');
@@ -13,6 +18,30 @@ export const ThemeProvider = ({ children }) => {
         }
         return 'auto';
     });
+
+    // 1. Sync FROM backend (user preference) when user loads/changes
+    useEffect(() => {
+        if (user?.preferences?.theme) {
+            const backendTheme = user.preferences.theme;
+            if (backendTheme !== theme) {
+                console.log(`🎨 Syncing theme from backend: ${backendTheme}`);
+                setTheme(backendTheme);
+            }
+        }
+    }, [user?.preferences?.theme]);
+
+    // 2. Sync TO backend when theme changes (if user is logged in)
+    const handleSetTheme = (newTheme) => {
+        setTheme(newTheme);
+
+        // Save to backend if user is logged in and it's different
+        if (user && user.preferences?.theme !== newTheme) {
+            console.log(`💾 Saving theme preference: ${newTheme}`);
+            api.put('/api/auth/me', {
+                preferences: { theme: newTheme }
+            }).catch(err => console.error("Failed to save theme preference:", err));
+        }
+    };
 
     useEffect(() => {
         const root = window.document.documentElement;
@@ -50,7 +79,7 @@ export const ThemeProvider = ({ children }) => {
 
     const value = {
         theme,
-        setTheme
+        setTheme: handleSetTheme
     };
 
     return (

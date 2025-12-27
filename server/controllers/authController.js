@@ -376,7 +376,8 @@ exports.login = async (req, res) => {
         userType: user.userType,
         companyRole: user.companyRole,
         profilePicture: user.profilePicture,
-        userStatus: user.userStatus
+        userStatus: user.userStatus,
+        preferences: user.preferences
       }
     };
 
@@ -627,12 +628,21 @@ exports.updateMe = async (req, res) => {
     if (req.body.username !== undefined) user.username = req.body.username;
     if (req.body.phone !== undefined) user.phone = req.body.phone;
 
-    if (!user.profile) user.profile = {};
+    if (req.body.username !== undefined) user.username = req.body.username;
+    if (req.body.phone !== undefined) user.phone = req.body.phone;
 
-    user.profile.dob = req.body.dob ?? user.profile.dob;
-    user.profile.about = req.body.about ?? user.profile.about;
-    user.profile.company = req.body.company ?? user.profile.company;
-    user.profile.showCompany = req.body.showCompany ?? user.profile.showCompany;
+    // Profile Updates
+    if (!user.profile) user.profile = {};
+    if (req.body.dob !== undefined) user.profile.dob = req.body.dob;
+    if (req.body.about !== undefined) user.profile.about = req.body.about;
+    if (req.body.company !== undefined) user.profile.company = req.body.company;
+    if (req.body.showCompany !== undefined) user.profile.showCompany = req.body.showCompany;
+
+    // Preference Updates
+    if (!user.preferences) user.preferences = {};
+    if (req.body.preferences) {
+      if (req.body.preferences.theme) user.preferences.theme = req.body.preferences.theme;
+    }
 
     await user.save();
 
@@ -651,6 +661,7 @@ exports.updateMe = async (req, res) => {
         verified: user.verified,
         roles: user.roles,
         userStatus: user.userStatus,
+        preferences: user.preferences
       }
     });
 
@@ -900,6 +911,30 @@ exports.revokeSession = async (req, res) => {
     res.json({ message: "Session revoked" });
   } catch (err) {
     console.error("REVOKE SESSION ERROR:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+// DELETE /sessions/others
+exports.revokeOtherSessions = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.sub);
+    const currentToken = req.cookies?.jwt;
+
+    if (!currentToken) {
+      return res.status(400).json({ message: "No active session to keep" });
+    }
+
+    const currentHash = sha256(currentToken);
+
+    // Keep ONLY the current session
+    user.refreshTokens = user.refreshTokens.filter(t => t.tokenHash === currentHash);
+
+    await user.save();
+
+    res.json({ message: "All other sessions revoked" });
+  } catch (err) {
+    console.error("REVOKE OTHERS ERROR:", err);
     res.status(500).json({ message: "Server error" });
   }
 };

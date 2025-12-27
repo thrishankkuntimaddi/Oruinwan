@@ -19,6 +19,10 @@ const ProfileSchema = new mongoose.Schema(
   { _id: false }
 );
 
+const PreferencesSchema = new mongoose.Schema({
+  theme: { type: String, enum: ['light', 'dark', 'auto'], default: 'auto' }
+}, { _id: false });
+
 const UserSchema = new mongoose.Schema(
   {
     // Basic Info
@@ -81,6 +85,9 @@ const UserSchema = new mongoose.Schema(
 
     // Profile
     profile: ProfileSchema,
+
+    // App Preferences
+    preferences: { type: PreferencesSchema, default: () => ({}) },
 
     // Google OAuth fields
     googleId: { type: String, unique: true, sparse: true },

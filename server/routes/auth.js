@@ -18,7 +18,8 @@ const {
   googleLogin,
   googleAuth,
   getSessions,
-  revokeSession
+  revokeSession,
+  revokeOtherSessions
 } = require("../controllers/authController");
 
 const requireAuth = require("../middleware/auth");
@@ -40,6 +41,7 @@ router.put("/me/password", requireAuth, updatePassword);
 
 // SESSION ROUTES
 router.get("/sessions", requireAuth, getSessions);
+router.delete("/sessions/others", requireAuth, revokeOtherSessions);
 router.delete("/sessions/:id", requireAuth, revokeSession);
 
 // USERS LIST (for DMs and channel invitations)
