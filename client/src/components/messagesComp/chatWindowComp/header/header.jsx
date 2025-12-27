@@ -19,6 +19,8 @@ import {
 } from "lucide-react";
 import ConfirmationModal from "../../../ui/ConfirmationModal";
 
+
+
 export default function Header({
   chat,
   onClose,

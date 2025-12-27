@@ -1,6 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import { useToast } from "../../contexts/ToastContext";
+import api from "../../services/api";
 import {
   Settings, HelpCircle, LogOut, ChevronLeft, ChevronRight,
   Laptop, Smartphone, Monitor, Plus, Check, Shield, Moon, Sun,
@@ -35,12 +36,19 @@ const PasswordInput = ({ label, value, onChange, show, onToggle, placeholder = "
 );
 
 const ProfileMenu = ({ onClose }) => {
-  const { user, updateProfile, updatePassword, logout } = useAuth();
+  const { user, setUser, updateProfile, updatePassword, logout } = useAuth();
   const { showToast } = useToast();
 
   const [view, setView] = useState("menu"); // menu, profile, security, preferences
   const [formData, setFormData] = useState({ ...user });
   const [status, setStatus] = useState("active"); // active, away, dnd
+
+  // Load user's current status on mount
+  useEffect(() => {
+    if (user?.userStatus) {
+      setStatus(user.userStatus);
+    }
+  }, [user]);
 
   // Email State
   const [emails, setEmails] = useState([
@@ -75,6 +83,28 @@ const ProfileMenu = ({ onClose }) => {
     window.location.replace("/login");
   };
 
+  // Handle status change
+  const handleStatusChange = async (newStatus) => {
+    try {
+      setStatus(newStatus);
+      // Optimistically update global user object so UI reflects change immediately
+      if (user) {
+        setUser({ ...user, userStatus: newStatus });
+      }
+
+      await api.patch("/api/users/status", { status: newStatus });
+      showToast(`Status updated to ${newStatus.toUpperCase()}`, "success");
+    } catch (err) {
+      console.error("Status update error:", err);
+      showToast("Failed to update status", "error");
+      // Revert on error
+      setStatus(user?.userStatus || "active");
+      if (user) {
+        setUser({ ...user, userStatus: user.userStatus || "active" });
+      }
+    }
+  };
+
   const handleSaveProfile = async () => {
     // Validate Date of Birth
     if (formData.dob) {
@@ -90,10 +120,15 @@ const ProfileMenu = ({ onClose }) => {
     }
 
     try {
+      // Optimistically update global user object
+      setUser({ ...user, ...formData });
+
       await updateProfile(formData);
       showToast("Profile updated successfully!", "success");
       setView("menu");
     } catch (err) {
+      // Revert on error
+      setUser(user);
       showToast(err.message, "error");
     }
   };
@@ -165,19 +200,19 @@ const ProfileMenu = ({ onClose }) => {
         {/* Status Selector */}
         <div className="flex bg-white rounded-lg p-1 border border-gray-200 shadow-sm">
           <button
-            onClick={(e) => { e.stopPropagation(); setStatus("active"); }}
+            onClick={(e) => { e.stopPropagation(); handleStatusChange("active"); }}
             className={`flex-1 flex items-center justify-center py-1.5 rounded-md text-[10px] font-bold transition-all ${status === "active" ? "bg-green-50 text-green-700 shadow-sm" : "text-gray-500 hover:bg-gray-50"}`}
           >
             <div className="w-2 h-2 bg-green-500 rounded-full mr-1.5"></div> Active
           </button>
           <button
-            onClick={(e) => { e.stopPropagation(); setStatus("away"); }}
+            onClick={(e) => { e.stopPropagation(); handleStatusChange("away"); }}
             className={`flex-1 flex items-center justify-center py-1.5 rounded-md text-[10px] font-bold transition-all ${status === "away" ? "bg-yellow-50 text-yellow-700 shadow-sm" : "text-gray-500 hover:bg-gray-50"}`}
           >
             <div className="w-2 h-2 bg-yellow-500 rounded-full mr-1.5"></div> Away
           </button>
           <button
-            onClick={(e) => { e.stopPropagation(); setStatus("dnd"); }}
+            onClick={(e) => { e.stopPropagation(); handleStatusChange("dnd"); }}
             className={`flex-1 flex items-center justify-center py-1.5 rounded-md text-[10px] font-bold transition-all ${status === "dnd" ? "bg-red-50 text-red-700 shadow-sm" : "text-gray-500 hover:bg-gray-50"}`}
           >
             <div className="w-2 h-2 bg-red-500 rounded-full mr-1.5"></div> DND

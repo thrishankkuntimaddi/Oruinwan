@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { MessageCircle, Plus, Search, Trash2, X, Settings2, CheckSquare, Megaphone } from 'lucide-react';
 import { useWorkspace } from "../../../contexts/WorkspaceContext";
+import { useSocket } from "../../../contexts/SocketContext";
 import NewDMModal from "../../messagesComp/NewDMModal";
 import BroadcastModal from "../../messagesComp/BroadcastModal";
 import ConfirmationModal from "../../ui/ConfirmationModal";
@@ -30,6 +31,8 @@ const MessagesPanel = ({ title }) => {
     const [contacts, setContacts] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
 
+    const { socket } = useSocket();
+
     useEffect(() => {
         const loadDMs = async () => {
             if (!workspaceId) return;
@@ -37,11 +40,19 @@ const MessagesPanel = ({ title }) => {
             try {
                 const res = await api.get(`/api/messages/workspace/${workspaceId}/dms`);
                 const formatted = (res.data.sessions || []).map(session => {
+                    // Determine initial status
+                    const user = session.otherUser;
+                    let initialStatus = "offline";
+                    if (user?.isOnline) {
+                        initialStatus = user.userStatus || "active"; // active, away, dnd
+                    }
+
                     return {
                         id: session.id,
+                        userId: session.otherUser?._id || session.otherUser?.id, // Store User ID for socket updates
                         name: session.otherUser?.username || "User",
                         avatar: session.otherUser?.profilePicture,
-                        status: session.otherUser?.isOnline ? "online" : "offline",
+                        status: initialStatus,
                         unread: session.unreadCount || 0,
                         lastMessage: session.lastMessage || "No messages yet",
                         type: "dm"
@@ -57,6 +68,28 @@ const MessagesPanel = ({ title }) => {
 
         loadDMs();
     }, [workspaceId, activeWorkspace?.currentUserId]);
+
+    // Listen for status changes
+    useEffect(() => {
+        if (!socket) return;
+
+        const handleStatusChange = ({ userId, status }) => {
+            console.log("🔔 Status update received:", { userId, status });
+            setContacts(prev => prev.map(contact => {
+                // Check if this contact corresponds to the user who changed status
+                if (String(contact.userId) === String(userId)) {
+                    return { ...contact, status: status };
+                }
+                return contact;
+            }));
+        };
+
+        socket.on("user-status-changed", handleStatusChange);
+
+        return () => {
+            socket.off("user-status-changed", handleStatusChange);
+        };
+    }, [socket]);
 
     const displayList = [...broadcasts, ...contacts];
 
@@ -162,8 +195,10 @@ const MessagesPanel = ({ title }) => {
                             {isBroadcast ? <Megaphone size={14} /> : item.name.charAt(0).toUpperCase()}
                         </div>
                         {!isBroadcast && (
-                            <div className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-white ${item.status === "online" ? "bg-green-500" :
-                                item.status === "busy" ? "bg-red-500" : "bg-gray-400"
+                            <div className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-white ${item.status === "active" || item.status === "online" ? "bg-green-500" :
+                                    item.status === "away" ? "bg-yellow-500" :
+                                        item.status === "dnd" || item.status === "busy" ? "bg-red-500" :
+                                            "bg-gray-400"
                                 }`}></div>
                         )}
                     </div>

@@ -3,6 +3,7 @@ import { useParams, useLocation } from "react-router-dom";
 import ChatWindow from "../../components/messagesComp/chatWindowComp/chatWindow";
 import { useWorkspace } from "../../contexts/WorkspaceContext";
 import api from "../../services/api";
+import { useSocket } from "../../contexts/SocketContext";
 
 const Home = () => {
   const { workspaceId, id, dmId } = useParams();
@@ -10,6 +11,7 @@ const Home = () => {
   const { activeWorkspace } = useWorkspace();
   const [activeChat, setActiveChat] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const { socket } = useSocket();
 
   useEffect(() => {
     const detectChat = async () => {
@@ -58,13 +60,14 @@ const Home = () => {
             let member = members.find(m => String(m._id || m.id) === String(targetId));
             console.log('🔍 [Home] Looking for targetId:', targetId, 'Found:', member);
 
+            let dmSession = null; // Declare dmSession
             // If not found, targetId might be a DM session ID - fetch the session
             if (!member) {
               console.log('⚠️ [Home] Member not found by ID, checking if targetId is a DM session ID...');
               try {
                 const dmRes = await api.get(`/api/messages/workspace/${workspaceId}/dms`);
                 const dmSessions = dmRes.data.sessions || [];
-                const dmSession = dmSessions.find(s => String(s.id) === String(targetId));
+                dmSession = dmSessions.find(s => String(s.id) === String(targetId));
 
                 if (dmSession && dmSession.otherUserId) {
                   console.log('✅ [Home] Found DM session with otherUserId:', dmSession.otherUserId);
@@ -76,11 +79,18 @@ const Home = () => {
               }
             }
 
+            // Determine status
+            let status = "offline";
+            if (member?.isOnline) {
+              status = member.userStatus || "active";
+            }
+
             setActiveChat({
               id: targetId,
+              userId: dmSession?.otherUserId || (member?._id || member?.id),
               name: member ? (member.username || member.name || member.email?.split('@')[0]) : "Unknown User",
               image: member ? (member.profilePicture || member.avatar) : null,
-              status: member ? (member.isOnline ? "online" : "offline") : "offline",
+              status: status, // Use correct status field
               type: "dm",
               isNew: id === "new",
               workspaceId,
@@ -100,6 +110,21 @@ const Home = () => {
 
     detectChat();
   }, [location.pathname, id, dmId, workspaceId, activeWorkspace?.role]);
+
+  // Handle real-time status updates for the active chat header
+  useEffect(() => {
+    if (!socket || !activeChat || activeChat.type !== 'dm') return;
+
+    const handleStatusChange = ({ userId, status }) => {
+      // If the update is for the user currently filling the active chat window
+      if (String(activeChat.userId) === String(userId)) {
+        setActiveChat(prev => ({ ...prev, status: status }));
+      }
+    };
+
+    socket.on("user-status-changed", handleStatusChange);
+    return () => socket.off("user-status-changed", handleStatusChange);
+  }, [socket, activeChat?.userId, activeChat?.type]);
 
   return (
     <div className="w-full h-full flex flex-col">

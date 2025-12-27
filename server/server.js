@@ -86,6 +86,7 @@ app.use("/api/notes", require("./routes/notes"));
 app.use("/api/updates", require("./routes/updates"));
 app.use("/api/dashboard", require("./routes/dashboard"));
 app.use("/api/favorites", require("./routes/favorites"));
+app.use("/api/users", require("./routes/user"));
 
 
 

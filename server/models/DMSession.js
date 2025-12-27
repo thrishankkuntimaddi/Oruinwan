@@ -13,6 +13,13 @@ const DMSessionSchema = new mongoose.Schema({
   company: { type: mongoose.Schema.Types.ObjectId, ref: "Company", default: null }, // Optional: for company-level filtering
   participants: [{ type: mongoose.Schema.Types.ObjectId, ref: "User", required: true }],
   lastMessageAt: { type: Date },
+
+  // Soft delete: Users who have hidden/deleted this DM
+  hiddenFor: [{
+    user: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+    hiddenAt: { type: Date, default: Date.now }
+  }],
+
   metadata: { type: mongoose.Schema.Types.Mixed }
 }, { timestamps: true });
 

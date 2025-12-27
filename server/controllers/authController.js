@@ -365,7 +365,8 @@ exports.login = async (req, res) => {
         verified: user.verified,
         userType: user.userType,
         companyRole: user.companyRole,
-        profilePicture: user.profilePicture
+        profilePicture: user.profilePicture,
+        userStatus: user.userStatus
       }
     };
 
@@ -636,8 +637,10 @@ exports.updateMe = async (req, res) => {
         about: user.profile?.about || "",
         company: user.profile?.company || "",
         showCompany: user.profile?.showCompany ?? true,
+        showCompany: user.profile?.showCompany ?? true,
         verified: user.verified,
         roles: user.roles,
+        userStatus: user.userStatus,
       }
     });
 
@@ -753,10 +756,10 @@ exports.googleLogin = async (req, res) => {
       message: "Google login success",
       accessToken,
       user: {
-        id: user._id,
         username: user.username,
         email: user.email,
         profilePicture: user.profilePicture,
+        userStatus: user.userStatus,
       },
     });
 

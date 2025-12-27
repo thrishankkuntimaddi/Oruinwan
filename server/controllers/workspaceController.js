@@ -215,7 +215,7 @@ exports.getWorkspaceMembers = async (req, res) => {
     const userId = req.user.sub;
 
     const workspace = await Workspace.findById(workspaceId)
-      .populate('members.user', 'username email profilePicture');
+      .populate('members.user', 'username email phone profilePicture isOnline userStatus profile');
 
     if (!workspace) {
       return res.status(404).json({ message: "Workspace not found" });
@@ -232,7 +232,10 @@ exports.getWorkspaceMembers = async (req, res) => {
       _id: m.user._id,
       username: m.user.username,
       email: m.user.email,
+      phone: m.user.phone,
       profilePicture: m.user.profilePicture,
+      isOnline: m.user.isOnline,
+      profile: m.user.profile,
       role: m.role,
       joinedAt: m.joinedAt
     }));

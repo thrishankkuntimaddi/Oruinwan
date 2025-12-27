@@ -93,8 +93,28 @@ const UserSchema = new mongoose.Schema(
     lastActivityAt: { type: Date, default: Date.now },
     isOnline: { type: Boolean, default: false },
 
+    // User Status (Active/Away/DND)
+    userStatus: {
+      type: String,
+      enum: ['active', 'away', 'dnd'],
+      default: 'active'
+    },
+
     // Favorites (channels and DMs)
     favorites: [{ type: String }], // Array of channel/conversation IDs
+
+    // Blocked Users
+    blockedUsers: [{
+      userId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+      blockedAt: { type: Date, default: Date.now }
+    }],
+
+    // Muted Chats (DMs and Channels)
+    mutedChats: [{
+      chatId: { type: String, required: true }, // DM session ID or channel ID
+      chatType: { type: String, enum: ["dm", "channel"], required: true },
+      mutedAt: { type: Date, default: Date.now }
+    }],
 
     // Status
     isActive: { type: Boolean, default: true },

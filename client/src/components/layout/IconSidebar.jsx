@@ -192,7 +192,10 @@ const IconSidebar = ({ onProfileClick }) => {
                             backgroundImage: `url(${user?.profilePicture || "https://ui-avatars.com/api/?name=" + (user?.username || "User")})`,
                         }}
                     />
-                    <div className="absolute w-3 h-3 bg-green-500 rounded-full bottom-0 right-0 border-2 border-white"></div>
+                    <div className={`absolute w-3 h-3 rounded-full bottom-0 right-0 border-2 border-white ${user?.userStatus === "away" ? "bg-yellow-500" :
+                            user?.userStatus === "dnd" ? "bg-red-500" :
+                                "bg-green-500"
+                        }`}></div>
                 </button>
             </div>
         </div>
