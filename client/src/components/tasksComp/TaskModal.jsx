@@ -155,10 +155,10 @@ export default function TaskModal({ onClose, onAddTask, onUpdateTask, channels =
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-md transition-opacity duration-300">
-      <div className="bg-white/95 backdrop-blur-2xl rounded-3xl w-full max-w-2xl shadow-2xl shadow-blue-900/20 transform transition-all scale-100 overflow-hidden border border-white/50 max-h-[90vh] overflow-y-auto">
+      <div className="bg-white/95 backdrop-blur-2xl rounded-3xl w-full max-w-2xl shadow-2xl shadow-blue-900/20 transform transition-all scale-100 overflow-hidden border border-white/50 max-h-[85vh] overflow-y-auto">
 
         {/* Header */}
-        <div className="px-8 py-6 border-b border-gray-100/50 flex justify-between items-center bg-gradient-to-r from-blue-50/50 to-indigo-50/50 sticky top-0 z-10 backdrop-blur-xl">
+        <div className="px-6 py-4 border-b border-gray-100/50 flex justify-between items-center bg-gradient-to-r from-blue-50/50 to-indigo-50/50 sticky top-0 z-10 backdrop-blur-xl">
           <h2 className="text-xl font-bold text-gray-800 flex items-center gap-3">
             <span className="bg-gradient-to-br from-blue-600 to-indigo-600 text-white p-2 rounded-xl shadow-lg shadow-blue-500/20">
               <Briefcase size={20} />
@@ -172,7 +172,7 @@ export default function TaskModal({ onClose, onAddTask, onUpdateTask, channels =
 
         {/* Completion Note (if available) */}
         {initialData?.status === "Completed" && initialData?.completionNote && (
-          <div className="mx-8 mt-6 p-4 bg-emerald-50/80 border border-emerald-100 rounded-2xl flex flex-col gap-2 shadow-sm">
+          <div className="mx-6 mt-4 p-3 bg-emerald-50/80 border border-emerald-100 rounded-2xl flex flex-col gap-2 shadow-sm">
             <div className="flex items-center gap-2 text-emerald-700 font-bold text-sm">
               <CheckCircle2 size={18} /> Completion Note
             </div>
@@ -187,7 +187,7 @@ export default function TaskModal({ onClose, onAddTask, onUpdateTask, channels =
 
         {/* Assigner View Warning */}
         {isEditing && !isReadOnly && String(initialData?.assignerId) === String(user?._id) && initialData?.status !== "Completed" && (
-          <div className="mx-8 mt-6 p-4 bg-blue-50/50 border border-blue-100 rounded-2xl flex items-center gap-3 text-blue-700 text-xs font-semibold shadow-sm">
+          <div className="mx-6 mt-4 p-3 bg-blue-50/50 border border-blue-100 rounded-2xl flex items-center gap-3 text-blue-700 text-xs font-semibold shadow-sm">
             <User size={18} className="text-blue-500" />
             <span>You are the assigner. You have full edit access to this task.</span>
           </div>
@@ -195,17 +195,17 @@ export default function TaskModal({ onClose, onAddTask, onUpdateTask, channels =
 
         {/* Assignee View Note */}
         {isEditing && isReadOnly && initialData?.status !== "Completed" && (
-          <div className="mx-8 mt-6 p-4 bg-amber-50/50 border border-amber-100 rounded-2xl flex items-center gap-3 text-amber-700 text-xs font-semibold shadow-sm">
+          <div className="mx-6 mt-4 p-3 bg-amber-50/50 border border-amber-100 rounded-2xl flex items-center gap-3 text-amber-700 text-xs font-semibold shadow-sm">
             <AlignLeft size={18} className="text-amber-500" /> :
             <span>Read-only mode. Only {initialData.assigner} can modify these details.</span>
           </div>
         )}
 
         {/* Body */}
-        <div className="p-8 space-y-6">
+        <div className="p-6 space-y-4">
 
           {/* Title - Floating Label Style */}
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             <label className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-1.5 ml-1">
               <Type size={12} /> Task Title
             </label>
@@ -213,41 +213,41 @@ export default function TaskModal({ onClose, onAddTask, onUpdateTask, channels =
               type="text"
               readOnly={initialData?.status === "Completed"}
               placeholder="What needs to be done?"
-              className={`w-full px-5 py-3.5 bg-gray-50/50 border border-gray-200/60 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white transition-all outline-none text-gray-900 font-medium placeholder-gray-400 shadow-sm ${isReadOnly ? "cursor-default opacity-80" : ""}`}
+              className={`w-full px-4 py-2.5 bg-gray-50/50 border border-gray-200/60 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white transition-all outline-none text-gray-900 font-medium placeholder-gray-400 shadow-sm ${isReadOnly ? "cursor-default opacity-80" : ""}`}
               value={title}
               onChange={(e) => setTitle(e.target.value)}
             />
           </div>
 
           {/* Description */}
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             <label className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-1.5 ml-1">
               <AlignLeft size={12} /> Description
             </label>
             <textarea
               readOnly={initialData?.status === "Completed"}
               placeholder="Add comprehensive details, context, and requirements..."
-              className={`w-full px-5 py-3.5 bg-gray-50/50 border border-gray-200/60 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white transition-all outline-none text-gray-900 leading-relaxed placeholder-gray-400 min-h-[120px] resize-none shadow-sm ${initialData?.status === "Completed" ? "cursor-default opacity-80" : ""}`}
+              className={`w-full px-4 py-2.5 bg-gray-50/50 border border-gray-200/60 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white transition-all outline-none text-gray-900 leading-relaxed placeholder-gray-400 min-h-[80px] resize-none shadow-sm ${initialData?.status === "Completed" ? "cursor-default opacity-80" : ""}`}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-6">
+          <div className="grid grid-cols-2 gap-4">
 
-            {/* Project / Channel */}
-            <div className="space-y-2">
+            {/* Channel */}
+            <div className="space-y-1.5">
               <label className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-1.5 ml-1">
-                <Briefcase size={12} /> Context
+                <Hash size={12} /> Channel
               </label>
               <div className="relative">
                 <select
                   value={project}
                   disabled={isReadOnly}
                   onChange={(e) => setProject(e.target.value)}
-                  className={`w-full px-5 py-3.5 bg-gray-50/50 border border-gray-200/60 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none text-gray-700 appearance-none font-medium transition-all shadow-sm ${initialData?.status === "Completed" ? "cursor-default opacity-80" : "hover:bg-gray-100"}`}
+                  className={`w-full px-4 py-2.5 bg-gray-50/50 border border-gray-200/60 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none text-gray-700 appearance-none font-medium transition-all shadow-sm ${initialData?.status === "Completed" ? "cursor-default opacity-80" : "hover:bg-gray-100"}`}
                 >
-                  <option value="">Select Project / Channel</option>
+                  <option value="">Select Channel</option>
                   {channels.length > 0 ? channels.map((ch) => (
                     <option key={ch.id} value={ch.label}>{ch.label}</option>
                   )) : (
@@ -262,14 +262,14 @@ export default function TaskModal({ onClose, onAddTask, onUpdateTask, channels =
             </div>
 
             {/* Due Date */}
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <label className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-1.5 ml-1">
                 <Calendar size={12} /> Deadline
               </label>
               <input
                 type="date"
                 readOnly={isReadOnly}
-                className={`w-full px-5 py-3.5 bg-gray-50/50 border border-gray-200/60 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none text-gray-700 font-medium shadow-sm transition-all ${isReadOnly ? "cursor-default opacity-80" : "hover:bg-gray-100"}`}
+                className={`w-full px-4 py-2.5 bg-gray-50/50 border border-gray-200/60 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none text-gray-700 font-medium shadow-sm transition-all ${isReadOnly ? "cursor-default opacity-80" : "hover:bg-gray-100"}`}
                 value={dueDate}
                 onChange={(e) => setDueDate(e.target.value)}
                 min={new Date(new Date().setDate(new Date().getDate() + 1)).toISOString().split('T')[0]}
@@ -279,11 +279,11 @@ export default function TaskModal({ onClose, onAddTask, onUpdateTask, channels =
           </div>
 
           {/* Assignment Type */}
-          <div className="space-y-3">
+          <div className="space-y-2">
             <label className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-1.5 ml-1">
               <User size={12} /> Assign To
             </label>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-3 gap-2">
               {[
                 { id: "self", icon: User, label: "Me" },
                 { id: "individual", icon: Users, label: "Member(s)" },
@@ -298,9 +298,9 @@ export default function TaskModal({ onClose, onAddTask, onUpdateTask, channels =
                     if (type.id === "channel") setSelectedMembers([]);
                     setAssignmentType(type.id);
                   }}
-                  className={`px-4 py-3 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 border ${assignmentType === type.id
-                      ? "bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-500/30 scale-[1.02]"
-                      : "bg-white border-gray-200 text-gray-500 hover:bg-gray-50 hover:border-gray-300"
+                  className={`px-3 py-2.5 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 border ${assignmentType === type.id
+                    ? "bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-500/30 scale-[1.02]"
+                    : "bg-white border-gray-200 text-gray-500 hover:bg-gray-50 hover:border-gray-300"
                     } ${isReadOnly && assignmentType !== type.id ? "hidden" : ""} ${isReadOnly && assignmentType === type.id ? "w-full col-span-3 cursor-default" : ""}`}
                 >
                   <type.icon size={16} /> {type.label}
@@ -311,9 +311,9 @@ export default function TaskModal({ onClose, onAddTask, onUpdateTask, channels =
 
           {/* Individual Assignment - Multi-select */}
           {assignmentType === "individual" && (
-            <div className="space-y-2 max-h-48 overflow-y-auto border border-gray-200/60 rounded-2xl p-4 bg-gray-50/30 custom-scrollbar shadow-inner">
+            <div className="space-y-2 max-h-36 overflow-y-auto border border-gray-200/60 rounded-2xl p-3 bg-gray-50/30 custom-scrollbar shadow-inner">
               {loadingMembers ? (
-                <p className="text-sm text-gray-500 text-center py-4 font-medium animate-pulse">Loading directory...</p>
+                <p className="text-sm text-gray-500 text-center py-2 font-medium animate-pulse">Loading directory...</p>
               ) : availableMembers.length > 0 ? (
                 availableMembers.map((member) => {
                   const memberId = member._id || member.id;
@@ -321,10 +321,10 @@ export default function TaskModal({ onClose, onAddTask, onUpdateTask, channels =
                   return (
                     <label
                       key={memberId}
-                      className={`flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all ${isSelected ? "bg-blue-50 border border-blue-100" : "hover:bg-white hover:shadow-sm border border-transparent"}`}
+                      className={`flex items-center gap-3 p-2 rounded-xl cursor-pointer transition-all ${isSelected ? "bg-blue-50 border border-blue-100" : "hover:bg-white hover:shadow-sm border border-transparent"}`}
                     >
-                      <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${isSelected ? "bg-blue-500 border-blue-500" : "bg-white border-gray-300"}`}>
-                        {isSelected && <CheckCircle2 size={14} className="text-white" />}
+                      <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${isSelected ? "bg-blue-500 border-blue-500" : "bg-white border-gray-300"}`}>
+                        {isSelected && <CheckCircle2 size={12} className="text-white" />}
                       </div>
                       <input
                         type="checkbox"
@@ -333,23 +333,23 @@ export default function TaskModal({ onClose, onAddTask, onUpdateTask, channels =
                         onChange={() => toggleMemberSelection(memberId)}
                         className="hidden"
                       />
-                      <span className={`text-sm font-medium ${isSelected ? "text-blue-700" : "text-gray-700"}`}>{member.username || member.email}</span>
+                      <span className={`text-xs font-medium ${isSelected ? "text-blue-700" : "text-gray-700"}`}>{member.username || member.email}</span>
                     </label>
                   );
                 })
               ) : (
-                <p className="text-sm text-gray-500 text-center py-4">No team members available</p>
+                <p className="text-sm text-gray-500 text-center py-2">No team members available</p>
               )}
             </div>
           )}
 
           {/* Channel Assignment */}
           {assignmentType === "channel" && (
-            <div className="space-y-3 p-4 bg-blue-50/30 border border-blue-100/50 rounded-2xl">
+            <div className="space-y-2 p-3 bg-blue-50/30 border border-blue-100/50 rounded-2xl">
               <select
                 value={selectedChannel}
                 onChange={(e) => setSelectedChannel(e.target.value)}
-                className="w-full px-5 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium shadow-sm"
+                className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium shadow-sm"
                 disabled={initialData?.status === "Completed" || (!!project && channels.some(ch => ch.label === project || ch.id === project))}
               >
                 <option value="">Select Target Channel</option>
@@ -371,7 +371,7 @@ export default function TaskModal({ onClose, onAddTask, onUpdateTask, channels =
           )}
 
           {/* Priority */}
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             <label className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-1.5 ml-1">
               <Flag size={12} /> Urgency Level
             </label>
@@ -380,9 +380,9 @@ export default function TaskModal({ onClose, onAddTask, onUpdateTask, channels =
                 value={priority}
                 disabled={initialData?.status === "Completed"}
                 onChange={(e) => setPriority(e.target.value)}
-                className={`w-full px-5 py-3.5 bg-gray-50/50 border border-gray-200/60 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none appearance-none font-medium transition-all shadow-sm ${priority === "Emergency" ? "text-red-600 bg-red-50 border-red-200" :
-                    priority === "High" ? "text-orange-600 bg-orange-50 border-orange-200" :
-                      "text-gray-700 hover:bg-gray-100"
+                className={`w-full px-4 py-2.5 bg-gray-50/50 border border-gray-200/60 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none appearance-none font-medium transition-all shadow-sm ${priority === "Emergency" ? "text-red-600 bg-red-50 border-red-200" :
+                  priority === "High" ? "text-orange-600 bg-orange-50 border-orange-200" :
+                    "text-gray-700 hover:bg-gray-100"
                   } ${initialData?.status === "Completed" ? "cursor-default opacity-80" : ""}`}
               >
                 {priorities.map((p) => (
@@ -393,18 +393,18 @@ export default function TaskModal({ onClose, onAddTask, onUpdateTask, channels =
           </div>
 
           {/* Attachments Section */}
-          <div className="space-y-3 pt-2">
+          <div className="space-y-2 pt-1">
             <label className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-1.5 ml-1">
               <Paperclip size={12} /> Resources
             </label>
-            <div className="space-y-3 bg-gray-50/30 p-4 rounded-2xl border border-gray-200/50">
+            <div className="space-y-2 bg-gray-50/30 p-3 rounded-2xl border border-gray-200/50">
               <div className="flex gap-2">
                 <input
                   type="text"
                   placeholder="Paste URL (e.g., https://figma.com/...)"
                   value={newAttachmentUrl}
                   onChange={e => setNewAttachmentUrl(e.target.value)}
-                  className="flex-1 px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm"
+                  className="flex-1 px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm"
                 />
                 <button
                   onClick={() => {
@@ -412,7 +412,7 @@ export default function TaskModal({ onClose, onAddTask, onUpdateTask, channels =
                     setAttachments([...attachments, { name: newAttachmentUrl, url: newAttachmentUrl, type: 'link' }]);
                     setNewAttachmentUrl("");
                   }}
-                  className="p-2.5 bg-gray-900 text-white rounded-xl hover:bg-gray-800 transition-all shadow-lg shadow-gray-900/20 active:scale-95"
+                  className="p-2 bg-gray-900 text-white rounded-xl hover:bg-gray-800 transition-all shadow-lg shadow-gray-900/20 active:scale-95"
                 >
                   <Plus size={18} />
                 </button>
@@ -421,7 +421,7 @@ export default function TaskModal({ onClose, onAddTask, onUpdateTask, channels =
               {attachments.length > 0 && (
                 <div className="flex flex-col gap-2">
                   {attachments.map((att, idx) => (
-                    <div key={idx} className="flex justify-between items-center text-sm p-3 bg-white border border-blue-100 rounded-xl shadow-sm text-blue-700 hover:shadow-md transition-shadow group">
+                    <div key={idx} className="flex justify-between items-center text-sm p-2 bg-white border border-blue-100 rounded-xl shadow-sm text-blue-700 hover:shadow-md transition-shadow group">
                       <div className="flex items-center gap-3 overflow-hidden">
                         <LinkIcon size={14} className="shrink-0 text-blue-400" />
                         <a href={att.url} target="_blank" rel="noopener noreferrer" className="truncate font-medium hover:underline">
@@ -441,7 +441,7 @@ export default function TaskModal({ onClose, onAddTask, onUpdateTask, channels =
         </div>
 
         {/* Footer */}
-        <div className="px-8 py-5 bg-gray-50/80 backdrop-blur-md border-t border-gray-200/60 flex justify-between gap-4 sticky bottom-0 z-10">
+        <div className="px-6 py-4 bg-gray-50/80 backdrop-blur-md border-t border-gray-200/60 flex justify-between gap-4 sticky bottom-0 z-10">
           {/* Status (Hidden unless editing) */}
           {/* If needed, status dropdown could go here, but usually managed in dashboard */}
           <div></div>
@@ -449,13 +449,13 @@ export default function TaskModal({ onClose, onAddTask, onUpdateTask, channels =
           <div className="flex items-center gap-3">
             <button
               onClick={onClose}
-              className="px-6 py-3 rounded-xl text-gray-600 font-bold text-sm hover:bg-gray-200/80 transition-colors"
+              className="px-6 py-2.5 rounded-xl text-gray-600 font-bold text-sm hover:bg-gray-200/80 transition-colors"
             >
               Cancel
             </button>
             <button
               onClick={handleAdd}
-              className={`px-8 py-3 rounded-xl bg-gradient-to-r from-gray-900 to-gray-800 text-white font-bold text-sm shadow-xl shadow-gray-900/20 hover:shadow-gray-900/30 hover:scale-[1.02] transition-all active:scale-95 flex items-center gap-2 ${isReadOnly ? "hidden" : ""}`}
+              className={`px-6 py-2.5 rounded-xl bg-gradient-to-r from-gray-900 to-gray-800 text-white font-bold text-sm shadow-xl shadow-gray-900/20 hover:shadow-gray-900/30 hover:scale-[1.02] transition-all active:scale-95 flex items-center gap-2 ${isReadOnly ? "hidden" : ""}`}
             >
               {isEditing ? "Update Task" : "Create Task"}
             </button>

@@ -2,8 +2,7 @@ import React, { useState, useMemo, useRef, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import {
   Plus, Search, Calendar, Flag,
-  CheckCircle2, Trash2, User, ArrowUpDown, FileText, RotateCcw,
-  Sparkles
+  CheckCircle2, Trash2, User, ArrowUpDown, FileText, RotateCcw
 } from "lucide-react";
 import TaskModal from "../../components/tasksComp/TaskModal";
 import TaskCompletionModal from "../../components/tasksComp/TaskCompletionModal";
@@ -292,22 +291,22 @@ const MyTasks = () => {
               <div
                 key={task.id}
                 onDoubleClick={() => handleDoubleClick(task)}
-                className={`group relative bg-white dark:bg-gray-800 rounded-2xl p-5 border transition-all duration-300 hover:-translate-y-1 hover:shadow-xl ${isCompletedTab
+                className={`group relative bg-white dark:bg-gray-800 rounded-2xl p-4 pl-5 border transition-all duration-300 hover:-translate-y-1 hover:shadow-xl overflow-hidden ${isCompletedTab
                     ? "border-emerald-100 bg-emerald-50/30 dark:border-emerald-900/30 dark:bg-emerald-900/10"
                     : isDeletedTab
                       ? "border-red-100 bg-red-50/30 dark:border-red-900/30 dark:bg-red-900/10"
                       : "border-gray-100 dark:border-gray-700/50 shadow-sm hover:border-blue-200/50 dark:hover:border-blue-900/30"
                   }`}
               >
-                {/* Priority Indicator Dot */}
-                <div className={`absolute top-6 left-5 w-2.5 h-2.5 rounded-full shadow-sm ring-2 ring-white dark:ring-gray-800 ${task.priority === "Emergency" ? "bg-red-500 shadow-red-500/50" :
-                    task.priority === "High" ? "bg-orange-500 shadow-orange-500/50" :
-                      task.priority === "Medium" ? "bg-blue-500 shadow-blue-500/50" : "bg-gray-400"
+                {/* Modern Vertical Priority Strip */}
+                <div className={`absolute left-0 top-0 bottom-0 w-1.5 transition-colors ${task.priority === "Emergency" ? "bg-red-500" :
+                    task.priority === "High" ? "bg-orange-500" :
+                      task.priority === "Medium" ? "bg-blue-500" : "bg-gray-300"
                   }`} />
 
-                <div className="pl-6 flex flex-col md:flex-row md:items-start gap-4">
+                <div className="flex flex-col md:flex-row md:items-start gap-4">
                   {/* Main Content */}
-                  <div className="flex-1 min-w-0 space-y-3">
+                  <div className="flex-1 min-w-0 space-y-2">
                     <div className="flex items-center justify-between">
                       <h3 className={`text-lg font-bold text-gray-900 dark:text-white truncate transition-colors ${isCompletedTab || isDeletedTab ? "line-through opacity-60" : "group-hover:text-blue-600 dark:group-hover:text-blue-400"
                         }`}>
@@ -378,20 +377,17 @@ const MyTasks = () => {
                   </div>
 
                   {/* Actions Column */}
-                  <div className="flex flex-col items-end gap-3 md:w-40 shrink-0">
+                  <div className="flex flex-col items-end gap-3 md:w-36 shrink-0">
                     {/* Custom Selectors Styled as Badges */}
                     <div className="relative w-full">
                       <select
                         value={task.status}
                         disabled={!canEditStatus}
                         onChange={(e) => handleUpdate(task.id, "status", e.target.value)}
-                        className={`w-full appearance-none py-1.5 pl-3 pr-8 rounded-lg text-xs font-bold border-0 cursor-pointer outline-none transition-all ${STATUS_COLORS[task.status]} shadow-sm ring-1 ring-inset ring-black/5 hover:ring-black/10`}
+                        className={`w-full appearance-none py-1.5 pl-3 pr-6 rounded-lg text-xs font-bold border-0 cursor-pointer outline-none transition-all ${STATUS_COLORS[task.status]} shadow-sm ring-1 ring-inset ring-black/5 hover:ring-black/10`}
                       >
                         {Object.keys(STATUS_COLORS).map(s => <option key={s} value={s}>{s}</option>)}
                       </select>
-                      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 opacity-50">
-                        <ArrowUpDown size={10} />
-                      </div>
                     </div>
 
                     <div className="relative w-full">
@@ -399,13 +395,10 @@ const MyTasks = () => {
                         value={task.priority}
                         disabled={!canEditPriority}
                         onChange={(e) => handleUpdate(task.id, "priority", e.target.value)}
-                        className={`w-full appearance-none py-1.5 pl-3 pr-8 rounded-lg text-xs font-bold border-0 cursor-pointer outline-none transition-all ${PRIORITY_COLORS[task.priority]} shadow-sm ring-1 ring-inset ring-black/5 hover:ring-black/10`}
+                        className={`w-full appearance-none py-1.5 pl-3 pr-6 rounded-lg text-xs font-bold border-0 cursor-pointer outline-none transition-all ${PRIORITY_COLORS[task.priority]} shadow-sm ring-1 ring-inset ring-black/5 hover:ring-black/10`}
                       >
                         {Object.keys(PRIORITY_COLORS).map(p => <option key={p} value={p}>{p}</option>)}
                       </select>
-                      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 opacity-50">
-                        <ArrowUpDown size={10} />
-                      </div>
                     </div>
                   </div>
                 </div>
