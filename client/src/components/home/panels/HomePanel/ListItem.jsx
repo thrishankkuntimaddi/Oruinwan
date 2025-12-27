@@ -45,9 +45,27 @@ const ListItem = ({ item, isSelectionMode, selectedItems, setSelectedItems, togg
                         {isSelected && <CheckSquare size={10} className="text-white" />}
                     </div>
                 )}
-                <span className="opacity-70 text-lg flex items-center">
-                    {item.type === 'dm' ? "👤" : (item.isPrivate ? <Lock size={16} /> : "#")}
-                </span>
+
+                {/* Channel/DM Icon or Avatar */}
+                {item.type === 'dm' ? (
+                    <div className="relative">
+                        <div className={`w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs shadow-inner ${isActive ? "bg-blue-200 text-blue-700" : "bg-gradient-to-br from-blue-100 to-indigo-100 dark:from-blue-900 dark:to-indigo-900 text-blue-600 dark:text-blue-300"
+                            }`}>
+                            {item.label.charAt(0).toUpperCase()}
+                        </div>
+                        {/* Status Indicator */}
+                        <div className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-white dark:border-gray-900 ${item.status === "active" || item.status === "online" ? "bg-green-500" :
+                                item.status === "away" ? "bg-yellow-500" :
+                                    item.status === "dnd" || item.status === "busy" ? "bg-red-500" :
+                                        "bg-gray-400"
+                            }`}></div>
+                    </div>
+                ) : (
+                    <span className="opacity-70 text-lg flex items-center">
+                        {item.isPrivate ? <Lock size={16} /> : "#"}
+                    </span>
+                )}
+
                 <span className="truncate text-sm">{item.type === 'channel' ? item.label.replace(/^#/, '') : item.label}</span>
             </div>
 

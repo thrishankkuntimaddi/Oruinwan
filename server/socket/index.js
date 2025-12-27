@@ -91,6 +91,16 @@ module.exports = function registerChatHandlers(io, socket) {
             participants: [userId, receiverId],
             lastMessageAt: new Date()
           });
+
+          // ✅ Emit to both participants to refresh their DM lists
+          io.to(`user_${userId}`).emit("new-dm-session", {
+            dmSessionId: dmSession._id,
+            otherUserId: receiverId
+          });
+          io.to(`user_${receiverId}`).emit("new-dm-session", {
+            dmSessionId: dmSession._id,
+            otherUserId: userId
+          });
         }
         actualDMSessionId = dmSession._id;
         // Join the new room

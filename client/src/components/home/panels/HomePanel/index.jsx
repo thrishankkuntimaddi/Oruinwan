@@ -61,6 +61,25 @@ const HomePanel = ({ title }) => {
         return () => clearInterval(interval);
     }, [activeWorkspace?.id, refreshContacts]);
 
+    // ✅ SOCKET LISTENER: Refresh when a new DM session is created
+    React.useEffect(() => {
+        if (!accessToken || !activeWorkspace?.id) return;
+
+        const socket = io(API_BASE, {
+            auth: { token: accessToken },
+            transports: ["websocket"],
+        });
+
+        socket.on("new-dm-session", (data) => {
+            // Refresh contacts to include the new DM
+            refreshContacts(activeWorkspace.id);
+        });
+
+        return () => {
+            socket.disconnect();
+        };
+    }, [activeWorkspace?.id, accessToken, refreshContacts]);
+
     // Fetch real users from API (currently unused, but available for future use)
     // const { users } = useUsers(user?.companyId);
 
@@ -128,17 +147,21 @@ const HomePanel = ({ title }) => {
     const handleStartDM = (selectedUser) => {
         if (!activeWorkspace?.id) return;
 
+        // Extract user ID from various possible structures
+        const userId = selectedUser.id || selectedUser._id || selectedUser.user?._id;
+        const userName = selectedUser.username || selectedUser.name || selectedUser.user?.username;
+
         // Find if we already have a DM with this user in the current workspace
         const existingDM = items.find(i =>
             i.type === 'dm' &&
-            (i.id === selectedUser.id || i.label === selectedUser.name)
+            (i.userId === userId || i.label === userName)
         );
 
         if (existingDM) {
             navigate(`/workspace/${activeWorkspace.id}/home/dm/${existingDM.id}`);
         } else {
             // Navigate to "new" DM route with the target user's ID
-            navigate(`/workspace/${activeWorkspace.id}/home/dm/new/${selectedUser.id || selectedUser._id}`);
+            navigate(`/workspace/${activeWorkspace.id}/home/dm/new/${userId}`);
         }
         setShowNewDMModal(false);
     };

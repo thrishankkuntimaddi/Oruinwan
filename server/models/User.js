@@ -29,6 +29,18 @@ const UserSchema = new mongoose.Schema(
     username: { type: String, required: true }, // primary display name
     email: { type: String, required: true, unique: true, lowercase: true },
     phone: { type: String, unique: true, sparse: true },
+    phoneCode: { type: String, default: "+1" }, // Country code
+
+    // Multiple Email Addresses
+    emails: [{
+      email: { type: String, required: true, lowercase: true },
+      verified: { type: Boolean, default: false },
+      isPrimary: { type: Boolean, default: false },
+      verificationTokenHash: String,
+      verificationTokenExpires: Date,
+      addedAt: { type: Date, default: Date.now }
+    }],
+
     passwordHash: { type: String, required: true },
 
     // User Type

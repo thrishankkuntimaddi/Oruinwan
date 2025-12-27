@@ -49,50 +49,60 @@ const Home = () => {
           return;
         }
 
-        // 2. Check if it's a DM route
-        if (location.pathname.includes("/dm/") && id) {
-          const targetId = id === "new" ? dmId : id;
+        // 2. Check if it's a DM route (handles both /dm/:id and /dm/new/:dmId)
+        if (location.pathname.includes("/dm/") && (id || dmId)) {
+          const targetId = dmId || id; // Use dmId for new DMs, id for existing DMs
 
           if (targetId) {
             // Fetch user info to get the name
             const res = await api.get(`/api/workspaces/${workspaceId}/members`);
             const members = res.data.members || [];
-            let member = members.find(m => String(m._id || m.id) === String(targetId));
-            console.log('🔍 [Home] Looking for targetId:', targetId, 'Found:', member);
+
+            // Try to find member - check both direct ID and nested user.id
+            let member = members.find(m =>
+              String(m._id || m.id) === String(targetId) ||
+              String(m.user?._id || m.user?.id) === String(targetId)
+            );
 
             let dmSession = null; // Declare dmSession
             // If not found, targetId might be a DM session ID - fetch the session
             if (!member) {
-              console.log('⚠️ [Home] Member not found by ID, checking if targetId is a DM session ID...');
               try {
                 const dmRes = await api.get(`/api/messages/workspace/${workspaceId}/dms`);
                 const dmSessions = dmRes.data.sessions || [];
                 dmSession = dmSessions.find(s => String(s.id) === String(targetId));
 
                 if (dmSession && dmSession.otherUserId) {
-                  console.log('✅ [Home] Found DM session with otherUserId:', dmSession.otherUserId);
-                  member = members.find(m => String(m._id || m.id) === String(dmSession.otherUserId));
-                  console.log('👤 [Home] Found member by session lookup:', member);
+                  member = members.find(m =>
+                    String(m._id || m.id) === String(dmSession.otherUserId) ||
+                    String(m.user?._id || m.user?.id) === String(dmSession.otherUserId)
+                  );
                 }
               } catch (err) {
                 console.error('❌ [Home] Failed to fetch DM sessions:', err);
               }
             }
 
+            // Extract user data from nested structure if needed
+            const userData = member?.user || member;
+            const memberId = userData?._id || userData?.id;
+            const memberName = userData?.username || userData?.name || userData?.email?.split('@')[0];
+            const memberPicture = userData?.profilePicture || userData?.avatar;
+
             // Determine status
             let status = "offline";
-            if (member?.isOnline) {
-              status = member.userStatus || "active";
+            if (userData?.isOnline) {
+              status = userData.userStatus || "active";
             }
 
             setActiveChat({
               id: targetId,
-              userId: dmSession?.otherUserId || (member?._id || member?.id),
-              name: member ? (member.username || member.name || member.email?.split('@')[0]) : "Unknown User",
-              image: member ? (member.profilePicture || member.avatar) : null,
-              status: status, // Use correct status field
+              userId: dmSession?.otherUserId || memberId,
+              name: memberName || "Unknown User",
+              image: memberPicture,
+              status: status,
               type: "dm",
-              isNew: id === "new",
+              isNew: !dmSession || location.pathname.includes("/dm/new/"), // New DM if no session exists OR on new route
               workspaceId,
               workspaceRole: activeWorkspace?.role
             });

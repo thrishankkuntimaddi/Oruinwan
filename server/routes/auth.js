@@ -19,7 +19,12 @@ const {
   googleAuth,
   getSessions,
   revokeSession,
-  revokeOtherSessions
+  revokeOtherSessions,
+  addEmail,
+  verifyEmail: verifyEmailCode,
+  resendVerification,
+  setPrimaryEmail,
+  deleteEmail
 } = require("../controllers/authController");
 
 const requireAuth = require("../middleware/auth");
@@ -38,6 +43,13 @@ router.post("/reset-password", resetPassword);
 router.get("/me", requireAuth, getMe);
 router.put("/me", requireAuth, updateMe);
 router.put("/me/password", requireAuth, updatePassword);
+
+// EMAIL MANAGEMENT ROUTES
+router.post("/me/emails", requireAuth, addEmail);
+router.post("/me/emails/:id/verify", requireAuth, verifyEmailCode);
+router.post("/me/emails/:id/resend", requireAuth, resendVerification);
+router.put("/me/emails/:id/primary", requireAuth, setPrimaryEmail);
+router.delete("/me/emails/:id", requireAuth, deleteEmail);
 
 // SESSION ROUTES
 router.get("/sessions", requireAuth, getSessions);

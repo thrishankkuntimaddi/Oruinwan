@@ -44,6 +44,24 @@ const ProfileMenu = ({ onClose }) => {
   const [formData, setFormData] = useState({ ...user });
   const [status, setStatus] = useState("active"); // active, away, dnd
 
+  // Sync formData with user object changes
+  useEffect(() => {
+    if (user) {
+      setFormData({
+        username: user.username,
+        phone: user.phone,
+        phoneCode: user.phoneCode,
+        dob: user.profile?.dob ? new Date(user.profile.dob).toISOString().split('T')[0] : "",
+        about: user.profile?.about || ""
+      });
+
+      // Also update phoneCode state
+      if (user.phoneCode) {
+        setPhoneCode(user.phoneCode);
+      }
+    }
+  }, [user]);
+
   // Load user's current status on mount
   useEffect(() => {
     if (user?.userStatus) {
@@ -51,12 +69,32 @@ const ProfileMenu = ({ onClose }) => {
     }
   }, [user]);
 
-  // Email State
-  const [emails, setEmails] = useState([
-    { id: 1, email: user?.email || "user@example.com", verified: true, primary: true }
-  ]);
+  // Email State - Load from user.emails array
+  const [emails, setEmails] = useState([]);
   const [newEmail, setNewEmail] = useState("");
-  const [phoneCode, setPhoneCode] = useState("+1");
+  const [phoneCode, setPhoneCode] = useState(user?.phoneCode || "+1");
+
+  // Verification Modal State
+  const [showVerifyModal, setShowVerifyModal] = useState(false);
+  const [verifyingEmailId, setVerifyingEmailId] = useState(null);
+  const [verificationCode, setVerificationCode] = useState("");
+
+  // Load emails from user object
+  useEffect(() => {
+    if (user?.emails && user.emails.length > 0) {
+      console.log('📧 Loading emails from user object:', user.emails);
+      setEmails(user.emails);
+    } else if (user?.email) {
+      // Fallback: If no emails array, create from primary email
+      console.log('📧 No emails array, using fallback for:', user.email);
+      setEmails([{
+        id: 'primary',
+        email: user.email,
+        verified: user.verified || true,
+        isPrimary: true
+      }]);
+    }
+  }, [user]);
 
   // Password State
   const [passData, setPassData] = useState({ old: "", new: "", confirm: "" });
@@ -157,11 +195,22 @@ const ProfileMenu = ({ onClose }) => {
       }
     }
 
-    try {
-      // Optimistically update global user object
-      setUser({ ...user, ...formData });
+    // Validate About field
+    if (formData.about && formData.about.length > 500) {
+      return showToast("About section must be 500 characters or less", "error");
+    }
 
-      await updateProfile(formData);
+    try {
+      // Include phoneCode in the update
+      const updateData = {
+        ...formData,
+        phoneCode
+      };
+
+      // Optimistically update global user object
+      setUser({ ...user, ...updateData });
+
+      await updateProfile(updateData);
       showToast("Profile updated successfully!", "success");
       setView("menu");
     } catch (err) {
@@ -190,29 +239,81 @@ const ProfileMenu = ({ onClose }) => {
     }
   };
 
-  const handleAddEmail = () => {
+  const handleAddEmail = async () => {
     if (!newEmail) return;
     if (!newEmail.includes("@")) return showToast("Invalid email address", "error");
 
-    const emailObj = { id: Date.now(), email: newEmail, verified: false, primary: false };
-    setEmails([...emails, emailObj]);
-    setNewEmail("");
-    showToast("Email added. Please verify it.", "info");
+    try {
+      const { data } = await api.post("/api/auth/me/emails", { email: newEmail });
+      setEmails(data.emails);
+      setNewEmail("");
+
+      // Show verification modal for the newly added email
+      const addedEmail = data.emails[data.emails.length - 1];
+      setVerifyingEmailId(addedEmail.id);
+      setShowVerifyModal(true);
+
+      showToast("Email added. Please enter the verification code sent to your inbox.", "success");
+    } catch (err) {
+      showToast(err.response?.data?.message || "Failed to add email", "error");
+    }
   };
 
-  const handleVerifyEmail = (id) => {
-    setEmails(emails.map(e => e.id === id ? { ...e, verified: true } : e));
-    showToast("Email verified successfully!", "success");
+  const handleVerifyEmail = async () => {
+    if (!verificationCode || verificationCode.length !== 6) {
+      return showToast("Please enter a valid 6-digit code", "error");
+    }
+
+    try {
+      const { data } = await api.post(`/api/auth/me/emails/${verifyingEmailId}/verify`, {
+        code: verificationCode
+      });
+
+      setEmails(data.emails);
+      setShowVerifyModal(false);
+      setVerificationCode("");
+      setVerifyingEmailId(null);
+
+      showToast("Email verified successfully!", "success");
+    } catch (err) {
+      showToast(err.response?.data?.message || "Verification failed", "error");
+    }
   };
 
-  const handleMakePrimary = (id) => {
-    setEmails(emails.map(e => ({ ...e, primary: e.id === id })));
-    showToast("Primary email updated.", "success");
+  const handleResendCode = async (id) => {
+    try {
+      await api.post(`/api/auth/me/emails/${id}/resend`);
+      showToast("Verification code sent. Please check your inbox.", "success");
+    } catch (err) {
+      showToast(err.response?.data?.message || "Failed to resend code", "error");
+    }
   };
 
-  const handleDeleteEmail = (id) => {
-    setEmails(emails.filter(e => e.id !== id));
-    showToast("Email removed.", "success");
+  const handleMakePrimary = async (id) => {
+    try {
+      const { data } = await api.put(`/api/auth/me/emails/${id}/primary`);
+      setEmails(data.emails);
+
+      // Update user object to reflect new primary email
+      const primaryEmail = data.emails.find(e => e.isPrimary);
+      if (primaryEmail) {
+        setUser({ ...user, email: primaryEmail.email });
+      }
+
+      showToast("Primary email updated!", "success");
+    } catch (err) {
+      showToast(err.response?.data?.message || "Failed to set primary email", "error");
+    }
+  };
+
+  const handleDeleteEmail = async (id) => {
+    try {
+      const { data } = await api.delete(`/api/auth/me/emails/${id}`);
+      setEmails(data.emails);
+      showToast("Email deleted", "success");
+    } catch (err) {
+      showToast(err.response?.data?.message || "Failed to delete email", "error");
+    }
   };
 
   // --- SUB-COMPONENTS ---
@@ -369,11 +470,11 @@ const ProfileMenu = ({ onClose }) => {
             <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">Email Addresses</label>
             <div className="space-y-3">
               {emails.map(email => (
-                <div key={email.id} className="p-3 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50/50 dark:bg-gray-800/50">
+                <div key={email.id || email._id} className="p-3 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50/50 dark:bg-gray-800/50">
                   <div className="flex flex-col gap-2">
                     <div className="flex items-center justify-between">
                       <span className="text-sm font-medium text-gray-900 dark:text-white truncate">{email.email}</span>
-                      {!email.primary && (
+                      {!email.isPrimary && (
                         <button onClick={() => handleDeleteEmail(email.id)} className="text-gray-400 hover:text-red-500 transition-colors">
                           <Trash2 size={14} />
                         </button>
@@ -390,7 +491,7 @@ const ProfileMenu = ({ onClose }) => {
                           <AlertCircle size={10} className="mr-1" /> Unverified
                         </span>
                       )}
-                      {email.primary && (
+                      {email.isPrimary && (
                         <span className="flex-shrink-0 flex items-center text-[10px] font-bold text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/30 px-2 py-0.5 rounded-full border border-blue-200 dark:border-blue-800">
                           Primary
                         </span>
@@ -399,9 +500,25 @@ const ProfileMenu = ({ onClose }) => {
 
                     <div className="flex items-center gap-3 pt-1 border-t border-gray-200/50 dark:border-gray-700/50">
                       {!email.verified && (
-                        <button onClick={() => handleVerifyEmail(email.id)} className="text-[10px] font-bold text-blue-600 dark:text-blue-400 hover:underline">Verify Now</button>
+                        <>
+                          <button
+                            onClick={() => {
+                              setVerifyingEmailId(email.id);
+                              setShowVerifyModal(true);
+                            }}
+                            className="text-[10px] font-bold text-blue-600 dark:text-blue-400 hover:underline"
+                          >
+                            Verify Now
+                          </button>
+                          <button
+                            onClick={() => handleResendCode(email.id)}
+                            className="text-[10px] font-bold text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:underline"
+                          >
+                            Resend Code
+                          </button>
+                        </>
                       )}
-                      {email.verified && !email.primary && (
+                      {email.verified && !email.isPrimary && (
                         <button onClick={() => handleMakePrimary(email.id)} className="text-[10px] font-bold text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:underline">Set as Primary</button>
                       )}
                     </div>
@@ -426,7 +543,17 @@ const ProfileMenu = ({ onClose }) => {
 
           <div>
             <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">About</label>
-            <textarea value={formData.about || ""} onChange={e => setFormData({ ...formData, about: e.target.value })} className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all bg-white dark:bg-gray-800 text-gray-900 dark:text-white" rows="3" placeholder="Tell us a bit about yourself..." />
+            <textarea
+              value={formData.about || ""}
+              onChange={e => setFormData({ ...formData, about: e.target.value })}
+              className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+              rows="3"
+              placeholder="Tell us a bit about yourself..."
+              maxLength={500}
+            />
+            <div className="text-xs text-gray-400 dark:text-gray-500 mt-1 text-right">
+              {(formData.about || "").length} / 500 characters
+            </div>
           </div>
         </div>
       </div>
@@ -786,6 +913,51 @@ const ProfileMenu = ({ onClose }) => {
         {view === "help_whatsnew" && renderHelpWhatsNew()}
         {view === "help_contact" && renderHelpContact()}
       </div>
+
+      {/* Email Verification Modal */}
+      {showVerifyModal && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-white dark:bg-gray-900 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 p-6 w-96 animate-fade-in">
+            <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Verify Email</h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+              Enter the 6-digit verification code sent to your email address.
+            </p>
+
+            <input
+              type="text"
+              value={verificationCode}
+              onChange={(e) => {
+                const value = e.target.value.replace(/\D/g, '').slice(0, 6);
+                setVerificationCode(value);
+              }}
+              placeholder="000000"
+              className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-3 text-center text-2xl font-bold tracking-widest focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white mb-4"
+              maxLength={6}
+              autoFocus
+            />
+
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  setShowVerifyModal(false);
+                  setVerificationCode("");
+                  setVerifyingEmailId(null);
+                }}
+                className="flex-1 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-lg text-sm font-bold hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleVerifyEmail}
+                disabled={verificationCode.length !== 6}
+                className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-sm hover:bg-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Verify
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 };

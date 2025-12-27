@@ -39,9 +39,9 @@ export default function ContactsProvider({ children }) {
           return { data: { channels: [] } };
         }) : Promise.resolve({ data: { channels: [] } }),
 
-        messageService.getChatList().catch(err => {
-          console.warn("Chat list fetch failed:", err);
-          return { data: { conversations: [] } };
+        messageService.getWorkspaceDMs(workspaceId).catch(err => {
+          console.warn("DM fetch failed:", err);
+          return { data: { sessions: [] } };
         }),
 
         // Fetch favorites if workspaceId is provided
@@ -62,8 +62,6 @@ export default function ContactsProvider({ children }) {
       const favoriteItemIds = favorites.map(fav => String(fav.itemId?._id || fav.itemId));
       setFavoriteIds(favoriteItemIds);
 
-      console.log('⭐ Loaded favorites:', favoriteItemIds);
-
       // Format channels with favorite status
       const channelsData = (channelsRes.data.channels || []).map(ch => ({
         id: ch._id,
@@ -75,23 +73,38 @@ export default function ContactsProvider({ children }) {
         description: ch.description
       }));
 
-      // Format DMs from chat list with favorite status
-      const rawDMs = (chatListRes.data.conversations || chatListRes.data.chats || []).filter(c => c.type === 'dm');
-      console.log('📨 [ContactsContext] Received', rawDMs.length, 'DM conversations');
-      if (rawDMs.length > 0) console.log('📨 [ContactsContext] Sample DM:', rawDMs[0]);
-      const dmsData = rawDMs
-        .map(dm => {
-          const userId = dm.otherUser?._id || dm.otherUserId || dm.id || dm._id;
-          return {
-            id: dm._id || dm.id,
-            type: 'dm',
-            label: dm.otherUser?.username || dm.otherUser?.name || dm.name || 'Unknown User',
-            path: `/dm/${userId}`,
-            isFavorite: favoriteItemIds.includes(String(dm._id || dm.id)),
-            lastMessage: dm.lastMessage,
-            unreadCount: dm.unreadCount || 0
-          };
-        });
+      // Format DMs from workspace sessions
+      const rawDMs = chatListRes.data.sessions || [];
+
+      const dmsData = rawDMs.map(session => {
+        // Correctly extract the other user from the session object
+        const otherUser = session.otherUser;
+        const otherUserId = otherUser?._id || otherUser?.id;
+
+        // Use the session ID for the list item ID, but we might need the user ID for the path
+        // Checking MessagesPanel: it uses `session.id` for the key/id and navigates to `/dm/${session.id}`
+        // Wait, MessagesPanel navigates: `/dm/${item.id}` where item.id is session.id? 
+        // Let's re-read MessagesPanel.jsx line 165: `/workspace/${workspaceId}/dm/${item.id}`
+        // AND line 51: id: session.id
+        // So the ID used in the URL is the SESSION ID, not the USER ID?
+        // Actually, looking at HomePanel handleStartDM (line 138): navigate(`/workspace/.../dm/${existingDM.id}`)
+        // So existingDM.id must matches the route param.
+        // App.js route: /workspace/:workspaceId/dm/:id
+        // So yes, we should use session.id as the ID.
+
+        return {
+          id: session.id, // Use Session ID
+          userId: otherUserId, // Keep User ID reference
+          type: 'dm',
+          label: otherUser?.username || 'Unknown User',
+          path: `/dm/${session.id}`, // Consistent with MessagesPanel logic
+          isFavorite: favoriteItemIds.includes(String(session.id)),
+          lastMessage: session.lastMessage,
+          unreadCount: session.unreadCount || 0,
+          status: otherUser?.isOnline ? (otherUser?.userStatus || 'active') : 'offline',
+          avatar: otherUser?.profilePicture // Add profile picture
+        };
+      });
 
       // Format workspace members
       const membersData = (membersRes.data.members || []).map(member => ({
@@ -108,16 +121,6 @@ export default function ContactsProvider({ children }) {
       setMembers(membersData);
       setContacts([...channelsData, ...dmsData]);
 
-      console.log('📡 ContactsContext loaded:', {
-        channels: channelsData.length,
-        dms: dmsData.length,
-        members: membersData.length,
-        favorites: favoriteItemIds.length,
-        channelsData,
-        dmsData,
-        membersData
-      });
-
     } catch (err) {
       console.error("Error loading contacts:", err);
       setError(err.message);
@@ -131,7 +134,6 @@ export default function ContactsProvider({ children }) {
     if (token) {
       const workspaceId = getCurrentWorkspaceId();
       if (workspaceId) {
-        console.log('🔄 Loading contacts with workspaceId from URL:', workspaceId);
         loadAllData(workspaceId);
       }
     }
@@ -139,13 +141,6 @@ export default function ContactsProvider({ children }) {
 
   // Combine channels and DMs into allItems
   const allItems = [...channels, ...dms];
-
-  console.log('📋 ContactsContext allItems:', {
-    totalItems: allItems.length,
-    channels: channels.length,
-    dms: dms.length,
-    allItems
-  });
 
   const deleteItem = (id) => {
     setChannels(prev => prev.filter(item => item.id !== id));
@@ -172,8 +167,6 @@ export default function ContactsProvider({ children }) {
       console.error('❌ No workspace ID found in URL');
       return;
     }
-
-    console.log('⭐ toggleFavorite - Item:', item.label, 'WorkspaceId:', workspaceId);
 
     const isFavorited = favoriteIds.includes(String(id));
 
@@ -202,7 +195,6 @@ export default function ContactsProvider({ children }) {
 
         if (favorite) {
           await api.delete(`/api/favorites/${favorite.id}`);
-          console.log(`⭐ Removed from favorites: ${id}`);
         }
       } else {
         // Add to favorites
@@ -211,7 +203,6 @@ export default function ContactsProvider({ children }) {
           itemType: item.type === 'channel' ? 'channel' : 'dm',
           itemId: id
         });
-        console.log(`⭐ Added to favorites: ${id}`);
       }
     } catch (err) {
       console.error('Failed to toggle favorite:', err);

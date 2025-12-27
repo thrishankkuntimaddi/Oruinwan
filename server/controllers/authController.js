@@ -381,7 +381,14 @@ exports.login = async (req, res) => {
         companyRole: user.companyRole,
         profilePicture: user.profilePicture,
         userStatus: user.userStatus,
-        preferences: user.preferences
+        preferences: user.preferences,
+        emails: user.emails ? user.emails.map(e => ({
+          id: e._id,
+          email: e.email,
+          verified: e.verified,
+          isPrimary: e.isPrimary,
+          addedAt: e.addedAt
+        })) : []
       }
     };
 
@@ -615,7 +622,51 @@ exports.getMe = async (req, res) => {
       "-passwordHash -refreshTokens"
     );
 
-    return res.json(user);
+    // Migration: Ensure primary email is in emails array
+    if (!user.emails || user.emails.length === 0) {
+      user.emails = [{
+        email: user.email,
+        verified: true, // Assume existing emails are verified
+        isPrimary: true,
+        addedAt: user.createdAt || new Date()
+      }];
+      await user.save();
+    } else {
+      // Check if primary email exists in array
+      const primaryExists = user.emails.some(e => e.isPrimary);
+      if (!primaryExists) {
+        // Find if main email is in array
+        const mainEmailEntry = user.emails.find(e => e.email === user.email);
+        if (mainEmailEntry) {
+          mainEmailEntry.isPrimary = true;
+          await user.save();
+        } else {
+          // Add main email as primary
+          user.emails.unshift({
+            email: user.email,
+            verified: true,
+            isPrimary: true,
+            addedAt: user.createdAt || new Date()
+          });
+          await user.save();
+        }
+      }
+    }
+
+    // Convert user to plain object and map emails with id field
+    const userObject = user.toObject();
+    if (userObject.emails) {
+      userObject.emails = userObject.emails.map(e => ({
+        id: e._id,
+        email: e.email,
+        verified: e.verified,
+        isPrimary: e.isPrimary,
+        addedAt: e.addedAt
+      }));
+    }
+
+    console.log('🔍 Mapped emails with id field:', userObject.emails);
+    return res.json(userObject);
   } catch (err) {
     console.error("GET ME ERROR:", err);
     return res.status(500).json({ message: "Server error" });
@@ -629,16 +680,39 @@ exports.updateMe = async (req, res) => {
   try {
     const user = await User.findById(req.user.sub);
 
+    // Basic Info Updates
     if (req.body.username !== undefined) user.username = req.body.username;
     if (req.body.phone !== undefined) user.phone = req.body.phone;
-
-    if (req.body.username !== undefined) user.username = req.body.username;
-    if (req.body.phone !== undefined) user.phone = req.body.phone;
+    if (req.body.phoneCode !== undefined) user.phoneCode = req.body.phoneCode;
 
     // Profile Updates
     if (!user.profile) user.profile = {};
-    if (req.body.dob !== undefined) user.profile.dob = req.body.dob;
-    if (req.body.about !== undefined) user.profile.about = req.body.about;
+
+    // Date of Birth validation
+    if (req.body.dob !== undefined) {
+      const dob = new Date(req.body.dob);
+      const today = new Date();
+      const age = today.getFullYear() - dob.getFullYear();
+
+      if (dob > today) {
+        return res.status(400).json({ message: "Date of birth cannot be in the future" });
+      }
+      if (age < 13) {
+        return res.status(400).json({ message: "You must be at least 13 years old" });
+      }
+
+      user.profile.dob = dob;
+    }
+
+    // About field with character limit
+    if (req.body.about !== undefined) {
+      const about = req.body.about.trim();
+      if (about.length > 500) {
+        return res.status(400).json({ message: "About section must be 500 characters or less" });
+      }
+      user.profile.about = about;
+    }
+
     if (req.body.company !== undefined) user.profile.company = req.body.company;
     if (req.body.showCompany !== undefined) user.profile.showCompany = req.body.showCompany;
 
@@ -657,10 +731,10 @@ exports.updateMe = async (req, res) => {
         username: user.username,
         email: user.email,
         phone: user.phone,
+        phoneCode: user.phoneCode,
         dob: user.profile?.dob || "",
         about: user.profile?.about || "",
         company: user.profile?.company || "",
-        showCompany: user.profile?.showCompany ?? true,
         showCompany: user.profile?.showCompany ?? true,
         verified: user.verified,
         roles: user.roles,
@@ -944,6 +1018,321 @@ exports.revokeOtherSessions = async (req, res) => {
     res.json({ message: "All other sessions revoked" });
   } catch (err) {
     console.error("REVOKE OTHERS ERROR:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+// ----------------------------------------------------
+// EMAIL MANAGEMENT
+// ----------------------------------------------------
+const { generateVerificationCode, emailVerificationTemplate } = require("../utils/emailTemplates");
+
+// Add new email
+exports.addEmail = async (req, res) => {
+  try {
+    const { email } = req.body;
+    const userId = req.user.sub;
+
+    if (!email) {
+      return res.status(400).json({ message: "Email is required" });
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ message: "Invalid email format" });
+    }
+
+    const normalizedEmail = email.toLowerCase();
+    const user = await User.findById(userId);
+
+    // Check if user already has 5 emails
+    if (user.emails && user.emails.length >= 5) {
+      return res.status(400).json({ message: "Maximum 5 email addresses allowed" });
+    }
+
+    // Check if email already exists for this user
+    if (user.emails && user.emails.some(e => e.email === normalizedEmail)) {
+      return res.status(400).json({ message: "Email already added to your account" });
+    }
+
+    // Check if email exists for any other user (in email field or emails array)
+    const existingUser = await User.findOne({
+      $or: [
+        { email: normalizedEmail },
+        { "emails.email": normalizedEmail }
+      ]
+    });
+
+    if (existingUser && existingUser._id.toString() !== userId) {
+      return res.status(400).json({ message: "Email already in use" });
+    }
+
+    // Generate verification code
+    const code = generateVerificationCode();
+    const tokenHash = sha256(code);
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+
+    // Add email to array
+    if (!user.emails) user.emails = [];
+
+    user.emails.push({
+      email: normalizedEmail,
+      verified: false,
+      isPrimary: false,
+      verificationTokenHash: tokenHash,
+      verificationTokenExpires: expiresAt
+    });
+
+    await user.save();
+
+    // Send verification email
+    let devCode = null;
+    try {
+      const template = emailVerificationTemplate(user.username, code);
+      await sendEmail({
+        to: normalizedEmail,
+        subject: template.subject,
+        text: template.text,
+        html: template.html
+      });
+    } catch (emailErr) {
+      console.error("Failed to send verification email:", emailErr);
+
+      // Development mode: Always log code when email fails (SMTP not configured)
+      console.log('\n========================================');
+      console.log('📧 VERIFICATION CODE (DEV MODE)');
+      console.log('========================================');
+      console.log(`Email: ${normalizedEmail}`);
+      console.log(`Code: ${code}`);
+      console.log('Error:', emailErr.message);
+      console.log('========================================\n');
+      devCode = code;
+    }
+
+    const response = {
+      message: devCode
+        ? `Email added. Verification code: ${devCode} (Check console in production)`
+        : "Email added. Please check your inbox for verification code.",
+      emails: user.emails.map(e => ({
+        id: e._id,
+        email: e.email,
+        verified: e.verified,
+        isPrimary: e.isPrimary,
+        addedAt: e.addedAt
+      }))
+    };
+
+    res.json(response);
+
+  } catch (err) {
+    console.error("ADD EMAIL ERROR:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+// Verify email with code
+exports.verifyEmail = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { code } = req.body;
+    const userId = req.user.sub;
+
+    if (!code) {
+      return res.status(400).json({ message: "Verification code is required" });
+    }
+
+    const user = await User.findById(userId);
+    const emailEntry = user.emails.id(id);
+
+    if (!emailEntry) {
+      return res.status(404).json({ message: "Email not found" });
+    }
+
+    if (emailEntry.verified) {
+      return res.status(400).json({ message: "Email already verified" });
+    }
+
+    // Check if code matches
+    const codeHash = sha256(code);
+    if (emailEntry.verificationTokenHash !== codeHash) {
+      return res.status(400).json({ message: "Invalid verification code" });
+    }
+
+    // Check if code expired
+    if (new Date() > emailEntry.verificationTokenExpires) {
+      return res.status(400).json({ message: "Verification code expired. Please request a new one." });
+    }
+
+    // Mark as verified
+    emailEntry.verified = true;
+    emailEntry.verificationTokenHash = undefined;
+    emailEntry.verificationTokenExpires = undefined;
+
+    await user.save();
+
+    res.json({
+      message: "Email verified successfully",
+      emails: user.emails.map(e => ({
+        id: e._id,
+        email: e.email,
+        verified: e.verified,
+        isPrimary: e.isPrimary,
+        addedAt: e.addedAt
+      }))
+    });
+
+  } catch (err) {
+    console.error("VERIFY EMAIL ERROR:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+// Resend verification code
+exports.resendVerification = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.sub;
+
+    const user = await User.findById(userId);
+    const emailEntry = user.emails.id(id);
+
+    if (!emailEntry) {
+      return res.status(404).json({ message: "Email not found" });
+    }
+
+    if (emailEntry.verified) {
+      return res.status(400).json({ message: "Email already verified" });
+    }
+
+    // Generate new code
+    const code = generateVerificationCode();
+    const tokenHash = sha256(code);
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+
+    emailEntry.verificationTokenHash = tokenHash;
+    emailEntry.verificationTokenExpires = expiresAt;
+
+    await user.save();
+
+    // Send verification email
+    try {
+      const template = emailVerificationTemplate(user.username, code);
+      await sendEmail({
+        to: emailEntry.email,
+        subject: template.subject,
+        text: template.text,
+        html: template.html
+      });
+
+      res.json({ message: "Verification code sent. Please check your inbox." });
+    } catch (emailErr) {
+      console.error("Failed to send verification email:", emailErr);
+
+      // Development mode: Always log code when email fails
+      console.log('\n========================================');
+      console.log('📧 VERIFICATION CODE (DEV MODE - RESEND)');
+      console.log('========================================');
+      console.log(`Email: ${emailEntry.email}`);
+      console.log(`Code: ${code}`);
+      console.log('Error:', emailErr.message);
+      console.log('========================================\n');
+      res.json({ message: `Verification code: ${code} (Check server console)` });
+    }
+
+  } catch (err) {
+    console.error("RESEND VERIFICATION ERROR:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+// Set email as primary
+exports.setPrimaryEmail = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.sub;
+
+    const user = await User.findById(userId);
+    const emailEntry = user.emails.id(id);
+
+    if (!emailEntry) {
+      return res.status(404).json({ message: "Email not found" });
+    }
+
+    if (!emailEntry.verified) {
+      return res.status(400).json({ message: "Cannot set unverified email as primary" });
+    }
+
+    // Set all emails to not primary
+    user.emails.forEach(e => {
+      e.isPrimary = false;
+    });
+
+    // Set target email as primary
+    emailEntry.isPrimary = true;
+
+    // Update main email field
+    user.email = emailEntry.email;
+
+    await user.save();
+
+    res.json({
+      message: "Primary email updated",
+      emails: user.emails.map(e => ({
+        id: e._id,
+        email: e.email,
+        verified: e.verified,
+        isPrimary: e.isPrimary,
+        addedAt: e.addedAt
+      }))
+    });
+
+  } catch (err) {
+    console.error("SET PRIMARY EMAIL ERROR:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+// Delete email
+exports.deleteEmail = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.sub;
+
+    const user = await User.findById(userId);
+    const emailEntry = user.emails.id(id);
+
+    if (!emailEntry) {
+      return res.status(404).json({ message: "Email not found" });
+    }
+
+    if (emailEntry.isPrimary) {
+      return res.status(400).json({ message: "Cannot delete primary email. Set another email as primary first." });
+    }
+
+    // Check if this is the only verified email (excluding primary)
+    const verifiedEmails = user.emails.filter(e => e.verified);
+    if (verifiedEmails.length === 1 && emailEntry.verified) {
+      return res.status(400).json({ message: "Cannot delete your only verified email" });
+    }
+
+    // Remove email
+    user.emails.pull(id);
+    await user.save();
+
+    res.json({
+      message: "Email deleted",
+      emails: user.emails.map(e => ({
+        id: e._id,
+        email: e.email,
+        verified: e.verified,
+        isPrimary: e.isPrimary,
+        addedAt: e.addedAt
+      }))
+    });
+
+  } catch (err) {
+    console.error("DELETE EMAIL ERROR:", err);
     res.status(500).json({ message: "Server error" });
   }
 };

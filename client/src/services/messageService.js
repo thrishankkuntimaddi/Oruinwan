@@ -2,8 +2,11 @@
 import api from './api';
 
 export const messageService = {
-    // Get chat list
+    // Get chat list (Legacy/Global)
     getChatList: () => api.get('/api/chat/list'),
+
+    // Get Workspace DMs
+    getWorkspaceDMs: (workspaceId) => api.get(`/api/messages/workspace/${workspaceId}/dms`),
 
     // Get channel messages
     getChannelMessages: (channelId, limit = 50, before = null) => {
