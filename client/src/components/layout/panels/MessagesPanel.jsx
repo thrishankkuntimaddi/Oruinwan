@@ -3,6 +3,8 @@ import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { MessageCircle, Plus, Search, Trash2, X, Settings2, CheckSquare, Megaphone } from 'lucide-react';
 import { useWorkspace } from "../../../contexts/WorkspaceContext";
 import { useSocket } from "../../../contexts/SocketContext";
+import { useToast } from "../../../contexts/ToastContext";
+import { messageService } from "../../../services/messageService";
 import NewDMModal from "../../messagesComp/NewDMModal";
 import BroadcastModal from "../../messagesComp/BroadcastModal";
 import ConfirmationModal from "../../ui/ConfirmationModal";
@@ -13,6 +15,7 @@ const MessagesPanel = ({ title }) => {
     const location = useLocation();
     const { workspaceId, dmId, channelId } = useParams();
     const { activeWorkspace } = useWorkspace();
+    const { showToast } = useToast();
 
     const [searchQuery, setSearchQuery] = useState("");
     const [showCreateDM, setShowCreateDM] = useState(false);
@@ -109,24 +112,45 @@ const MessagesPanel = ({ title }) => {
         setShowBroadcast(true);
     };
 
-    const handleCreateBroadcast = (data) => {
-        const newBroadcast = {
-            id: `broadcast-${Date.now()}`,
-            type: "broadcast",
-            name: data.name,
-            recipients: data.recipients,
-            lastMessage: `Broadcast created with ${data.recipients.length} recipients`,
-            unread: 0,
-        };
+    const handleSendBroadcast = async (selectedUsers, message) => {
+        try {
+            showToast('Sending broadcast...', 'info');
 
-        // ⚠️ WARNING: Frontend-only, not persisted
-        setBroadcasts((prev) => [newBroadcast, ...prev]);
-        setShowBroadcast(false);
+            // Extract recipient IDs
+            const recipientIds = selectedUsers.map(u => u._id);
 
-        // ✅ CORRECT: Navigate with workspace context
-        navigate(`/workspace/${workspaceId}/messages/broadcast/${newBroadcast.id}`, {
-            state: { broadcast: newBroadcast }
-        });
+            // Send broadcast via messageService
+            await messageService.sendBroadcast(workspaceId, recipientIds, message);
+
+            showToast(`Broadcast sent to ${selectedUsers.length} recipient(s) successfully!`, 'success');
+            setShowBroadcast(false);
+
+            // Optionally refresh DM list to show new conversations
+            const res = await api.get(`/api/messages/workspace/${workspaceId}/dms`);
+            const formatted = (res.data.sessions || []).map(session => {
+                const user = session.otherUser;
+                let initialStatus = "offline";
+                if (user?.isOnline) {
+                    initialStatus = user.userStatus || "active";
+                }
+
+                return {
+                    id: session.id,
+                    userId: session.otherUser?._id || session.otherUser?.id,
+                    name: session.otherUser?.username || "User",
+                    avatar: session.otherUser?.profilePicture,
+                    status: initialStatus,
+                    unread: session.unreadCount || 0,
+                    lastMessage: session.lastMessage || "No messages yet",
+                    type: "dm"
+                };
+            });
+            setContacts(formatted);
+        } catch (err) {
+            console.error('Failed to send broadcast:', err);
+            showToast('Failed to send broadcast. Please try again.', 'error');
+            throw err; // Re-throw so BroadcastModal can handle it
+        }
     };
 
     // ⚠️ WARNING: Frontend-only deletion (TODO: call DELETE /api/dms/:dmId)
@@ -355,9 +379,8 @@ const MessagesPanel = ({ title }) => {
             {/* Broadcast Modal */}
             {showBroadcast && (
                 <BroadcastModal
-                    isOpen={showBroadcast}
                     onClose={() => setShowBroadcast(false)}
-                    onCreate={handleCreateBroadcast}
+                    onSendBroadcast={handleSendBroadcast}
                 />
             )}
         </div>

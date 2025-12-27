@@ -28,18 +28,23 @@ export const ThemeProvider = ({ children }) => {
                 setTheme(backendTheme);
             }
         }
-    }, [user?.preferences?.theme]);
+    }, [user?.preferences?.theme]); // Safe dependency - only updates when backend theme changes
 
     // 2. Sync TO backend when theme changes (if user is logged in)
-    const handleSetTheme = (newTheme) => {
+    const handleSetTheme = async (newTheme) => {
         setTheme(newTheme);
 
-        // Save to backend if user is logged in and it's different
-        if (user && user.preferences?.theme !== newTheme) {
+        // Save to backend if user is logged in
+        if (user) {
             console.log(`💾 Saving theme preference: ${newTheme}`);
-            api.put('/api/auth/me', {
-                preferences: { theme: newTheme }
-            }).catch(err => console.error("Failed to save theme preference:", err));
+            try {
+                await api.put('/api/auth/me', {
+                    preferences: { theme: newTheme }
+                });
+                console.log(`✅ Theme saved successfully`);
+            } catch (err) {
+                console.error("Failed to save theme preference:", err);
+            }
         }
     };
 

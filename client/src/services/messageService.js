@@ -25,6 +25,21 @@ export const messageService = {
     // Send message
     sendMessage: (data) => api.post('/api/messages', data),
 
+    // Send broadcast message to multiple recipients
+    sendBroadcast: async (workspaceId, recipientIds, message) => {
+        // Send individual messages to each recipient using the correct endpoint
+        const sendPromises = recipientIds.map(recipientId =>
+            api.post('/api/messages/dm/send', {
+                receiverId: recipientId,  // backend expects 'receiverId'
+                workspaceId: workspaceId,
+                text: message,             // backend expects 'text'
+                attachments: []
+            })
+        );
+
+        return Promise.all(sendPromises);
+    },
+
     // Update message
     updateMessage: (id, data) => api.put(`/api/messages/${id}`, data),
 
