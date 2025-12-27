@@ -194,7 +194,7 @@ exports.getChannelMessages = async (req, res) => {
       return res.status(403).json({ message: "Not a channel member" });
 
     // Build query
-    let query = { channel: channelId };
+    let query = { channel: channelId, threadParent: null };
 
     // If 'before' is specified, only get messages before that message's timestamp
     if (before) {
@@ -246,8 +246,16 @@ exports.getChannelMessages = async (req, res) => {
       })
     );
 
+    // Populate reply counts
+    const messagesWithCounts = await Promise.all(messages.map(async (msg) => {
+      const count = await Message.countDocuments({ threadParent: msg._id });
+      const msgObj = msg.toObject();
+      msgObj.replyCount = count;
+      return msgObj;
+    }));
+
     return res.json({
-      messages,
+      messages: messagesWithCounts,
       userJoinedAt,
       channelMembers: populatedMembers,
       hasMore,

@@ -51,17 +51,40 @@ export default function ThreadPanel({ parentMessage, onClose, socket, currentUse
     useEffect(() => {
         if (!socket) return;
 
-        const handleNewReply = (reply) => {
-            if (reply.replyTo === parentMessage.id || reply.replyTo?._id === parentMessage.id) {
+        const handleNewReply = (data) => {
+            // Backend emits 'thread-reply' with { parentId, reply }
+            const reply = data.reply || data; // Handle both structures if needed
+
+            if ((data.parentId === parentMessage.id) || (reply.replyTo === parentMessage.id) || (reply.threadParent === parentMessage.id)) {
                 setReplies((prev) => {
+                    // 1. Check strict duplicate by ID
                     if (prev.find((r) => r._id === reply._id)) return prev;
+
+                    // 2. Check for matching optimistic message (same text, same sender, temp ID)
+                    // This handles the race condition where socket arrives before API response
+                    const optimisticMatchIndex = prev.findIndex(r =>
+                        typeof r._id === 'string' && r._id.startsWith("temp-") &&
+                        r.text === reply.text &&
+                        (r.sender?._id === reply.sender?._id || r.senderId === reply.sender?._id)
+                    );
+
+                    if (optimisticMatchIndex !== -1) {
+                        const newReplies = [...prev];
+                        newReplies[optimisticMatchIndex] = reply;
+                        return newReplies;
+                    }
+
                     return [...prev, reply];
                 });
             }
         };
 
+        socket.on("thread-reply", handleNewReply);
+        // Also listen for standard receive-message if it's a thread reply (fallback)
         socket.on("receive-message", handleNewReply);
+
         return () => {
+            socket.off("thread-reply", handleNewReply);
             socket.off("receive-message", handleNewReply);
         };
     }, [socket, parentMessage.id]);
@@ -84,17 +107,17 @@ export default function ThreadPanel({ parentMessage, onClose, socket, currentUse
             const optimisticReply = {
                 _id: tempId,
                 text: newReply,
-                senderId: currentUserId,
+                sender: { _id: currentUserId, username: "You", profilePicture: null }, // Mock sender structure
+                senderId: currentUserId, // Fallback
                 createdAt: new Date().toISOString(),
-                replyTo: parentMessage.id,
+                threadParent: parentMessage.id,
             };
             setReplies((prev) => [...prev, optimisticReply]);
             setNewReply("");
 
             const res = await axios.post(
-                `${API_BASE}/api/messages/reply`,
+                `${API_BASE}/api/messages/thread/${parentMessage.id}`,
                 {
-                    originalMessageId: parentMessage.id,
                     text: optimisticReply.text,
                 },
                 { headers }
@@ -102,7 +125,7 @@ export default function ThreadPanel({ parentMessage, onClose, socket, currentUse
 
             // Replace temp with real
             setReplies((prev) =>
-                prev.map((r) => (r._id === tempId ? res.data : r))
+                prev.map((r) => (r._id === tempId ? res.data.reply : r))
             );
         } catch (err) {
             console.error("Send reply failed:", err);
@@ -111,7 +134,6 @@ export default function ThreadPanel({ parentMessage, onClose, socket, currentUse
             setSending(false);
         }
     };
-
     const handleKeyDown = (e) => {
         if (e.key === "Enter" && !e.shiftKey) {
             e.preventDefault();
@@ -133,7 +155,7 @@ export default function ThreadPanel({ parentMessage, onClose, socket, currentUse
             {/* Header */}
             <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900">
                 <div className="flex items-center gap-2">
-                    <h3 className="font-bold text-gray-800 dark:text-gray-100 text-base">Direction</h3>
+                    <h3 className="font-bold text-gray-800 dark:text-gray-100 text-base">Thread</h3>
                     <span className="text-xs text-gray-400">#{parentMessageState?.channelId?.name || "discussion"}</span>
                 </div>
                 <button
@@ -161,13 +183,13 @@ export default function ThreadPanel({ parentMessage, onClose, socket, currentUse
                                     <div
                                         className="h-7 w-7 bg-gray-200 rounded-md flex-shrink-0 bg-cover bg-center shadow-sm"
                                         style={{
-                                            backgroundImage: `url(${parentMessageState.senderAvatar || parentMessageState.senderId?.profilePicture || "/default-avatar.png"})`,
+                                            backgroundImage: `url(${parentMessageState.sender?.profilePicture || parentMessageState.senderAvatar || parentMessageState.senderId?.profilePicture || "/default-avatar.png"})`,
                                         }}
                                     />
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-baseline gap-2">
                                             <span className="font-bold text-xs text-gray-900 dark:text-gray-100">
-                                                {parentMessageState.senderName || parentMessageState.senderId?.username || "Unknown"}
+                                                {parentMessageState.sender?.username || parentMessageState.senderName || parentMessageState.senderId?.username || "Unknown"}
                                             </span>
                                             <span className="text-[10px] text-gray-400">
                                                 {formatTime(parentMessageState.ts || parentMessageState.createdAt)}
@@ -193,20 +215,22 @@ export default function ThreadPanel({ parentMessage, onClose, socket, currentUse
                                 </div>
                             ) : (
                                 replies.map((reply) => {
-                                    // const isMe = String(reply.senderId?._id || reply.senderId) === String(currentUserId);
+                                    // Handle different sender structures (backend vs flattened)
+                                    const senderName = reply.sender?.username || reply.senderName || reply.senderId?.username || "Unknown";
+                                    const senderPic = reply.sender?.profilePicture || reply.senderAvatar || reply.senderId?.profilePicture || "/default-avatar.png";
 
                                     return (
                                         <div key={reply._id} className="flex items-start gap-3 group">
                                             <div
                                                 className="h-8 w-8 bg-gray-200 rounded-md flex-shrink-0 bg-cover bg-center"
                                                 style={{
-                                                    backgroundImage: `url(${reply.senderId?.profilePicture || "/default-avatar.png"})`,
+                                                    backgroundImage: `url(${senderPic})`,
                                                 }}
                                             />
                                             <div className="flex-1 min-w-0">
                                                 <div className="flex items-baseline gap-2">
                                                     <span className="font-bold text-sm text-gray-900 dark:text-gray-100">
-                                                        {reply.senderId?.username || "Unknown"}
+                                                        {senderName}
                                                     </span>
                                                     <span className="text-xs text-gray-400">
                                                         {formatTime(reply.createdAt)}

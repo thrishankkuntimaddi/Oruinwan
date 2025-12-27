@@ -229,6 +229,18 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
         }
 
         const res = await api.get(url);
+
+        // Sync thread counts from backend
+        if (res.data.messages) {
+          const newCounts = {};
+          res.data.messages.forEach(m => {
+            if (m.replyCount > 0) {
+              newCounts[m._id] = m.replyCount;
+            }
+          });
+          setThreadCounts(prev => ({ ...prev, ...newCounts }));
+        }
+
         let loadedMessages = res.data.messages
           .map(mapBackendMsgToUI)
           // Filter out messages that are hidden for this user
@@ -1264,6 +1276,18 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
       }
 
       const res = await api.get(url);
+
+      // Sync thread counts from backend
+      if (res.data.messages) {
+        const newCounts = {};
+        res.data.messages.forEach(m => {
+          if (m.replyCount > 0) {
+            newCounts[m._id] = m.replyCount;
+          }
+        });
+        setThreadCounts(prev => ({ ...prev, ...newCounts }));
+      }
+
       const olderMessages = res.data.messages
         .map(mapBackendMsgToUI)
         .filter((m) => !m.hiddenFor.includes(String(currentUserIdRef.current)));
@@ -1356,8 +1380,7 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
       RENDER
   --------------------------------------------------------- */
   return (
-    <div className={`flex flex-col h-full bg-white dark:bg-gray-900 relative ${(showContactInfo || activeThread) && "mr-[350px]"
-      }`}>
+    <div className="flex flex-col h-full bg-white dark:bg-gray-900 relative">
       {/* 1. Header */}
       <Header
         chat={chat}
@@ -1400,183 +1423,188 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
         />
       )}
 
-      {/* 3. Main Content: Chat or Canvas */}
-      <div className="flex-1 overflow-hidden relative flex flex-col">
-        {activeTab === "chat" ? (
-          <>
-            <MessagesContainer
-              messages={messages}
-              searchQuery={searchQuery}
-              selectMode={selectMode}
-              selectedIds={selectedIds}
-              toggleSelect={toggleSelect}
-              openMsgMenuId={openMsgMenuId}
-              setOpenMsgMenuId={setOpenMsgMenuId}
-              toggleMsgMenu={(e, id) => {
-                e?.stopPropagation?.();
-                setOpenMsgMenuId((prev) => (prev === id ? null : id));
-              }}
-              formatTime={(iso) => new Date(iso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
-              addReaction={addReaction}
-              pinMessage={(id) => handlePinMessage(id, true)}
-              replyToMessage={replyToMessage}
-              forwardMessage={(id) => {
-                setForwardingMsgId(id);
-                setShowForwardModal(true);
-              }}
-              copyMessage={(id) => {
-                const m = messages.find((x) => x.id === id);
-                if (m) navigator.clipboard.writeText(m.text);
-              }}
-              deleteMessage={(id, deleteType = 'everyone') => {
-                try {
-                  const socket = socketRef.current;
-                  if (!socket || !connected) {
-                    console.error('Socket not connected');
-                    return;
+      {/* Horizontal Flex Container to hold Chat/Canvas AND Side Panels */}
+      <div className="flex-1 flex overflow-hidden">
+
+        {/* 3. Main Content Area */}
+        <div className="flex-1 flex flex-col relative min-w-0">
+          {activeTab === "chat" ? (
+            <>
+              <MessagesContainer
+                messages={messages}
+                searchQuery={searchQuery}
+                selectMode={selectMode}
+                selectedIds={selectedIds}
+                toggleSelect={toggleSelect}
+                openMsgMenuId={openMsgMenuId}
+                setOpenMsgMenuId={setOpenMsgMenuId}
+                toggleMsgMenu={(e, id) => {
+                  e?.stopPropagation?.();
+                  setOpenMsgMenuId((prev) => (prev === id ? null : id));
+                }}
+                formatTime={(iso) => new Date(iso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+                addReaction={addReaction}
+                pinMessage={(id) => {
+                  const m = messages.find((x) => x.id === id);
+                  if (m) handlePinMessage(id, !m.isPinned);
+                }}
+                replyToMessage={replyToMessage}
+                forwardMessage={(id) => {
+                  setForwardingMsgId(id);
+                  setShowForwardModal(true);
+                }}
+                copyMessage={(id) => {
+                  const m = messages.find((x) => x.id === id);
+                  if (m) navigator.clipboard.writeText(m.text);
+                }}
+                deleteMessage={(id, deleteType = 'everyone') => {
+                  try {
+                    const socket = socketRef.current;
+                    if (!socket || !connected) {
+                      console.error('Socket not connected');
+                      return;
+                    }
+
+                    const channelId = chat.type === "channel" ? chat.id : null;
+                    const dmSessionId = chat.type === "dm" && !chat.isNew ? chat.id : null;
+
+                    if (deleteType === 'me') {
+                      socket.emit("delete-message", {
+                        messageId: id,
+                        channelId,
+                        dmSessionId,
+                        localOnly: true
+                      });
+                    } else {
+                      socket.emit("delete-message", {
+                        messageId: id,
+                        channelId,
+                        dmSessionId
+                      });
+                    }
+                  } catch (err) {
+                    console.error("Failed to delete message:", err);
                   }
-
-                  const channelId = chat.type === "channel" ? chat.id : null;
-                  const dmSessionId = chat.type === "dm" && !chat.isNew ? chat.id : null;
-
-                  if (deleteType === 'me') {
-                    socket.emit("delete-message", {
-                      messageId: id,
-                      channelId,
-                      dmSessionId,
-                      localOnly: true
-                    });
-                  } else {
-                    socket.emit("delete-message", {
-                      messageId: id,
-                      channelId,
-                      dmSessionId
-                    });
-                  }
-                } catch (err) {
-                  console.error("Failed to delete message:", err);
-                }
-              }}
-              infoMessage={(id) => {
-                const m = messages.find((x) => x.id === id);
-                if (m) setInspectedMessage(m);
-              }}
-              onOpenThread={(msgId) => {
-                const msg = messages.find((m) => m.id === msgId);
-                if (msg) setActiveThread(msg);
-              }}
-              threadCounts={threadCounts}
-              currentUserId={currentUserIdRef.current}
-              chatType={chat.type}
-              userJoinedAt={userJoinedAt}
-              channelMembersWithJoinDates={channelMembersWithJoinDates}
-              isAdmin={userRole === 'admin' || userRole === 'owner'}
-              hasMore={hasMore}
-              isLoadingMore={isLoadingMore}
-              onLoadMore={loadMoreMessages}
-            />
-
-            {/* Typing indicator moved to header */}
-
-            {/* Reply Preview */}
-            {replyingTo && (
-              <ReplyPreview
-                replyingTo={replyingTo}
-                onCancel={() => setReplyingTo(null)}
+                }}
+                infoMessage={(id) => {
+                  const m = messages.find((x) => x.id === id);
+                  if (m) setInspectedMessage(m);
+                }}
+                onOpenThread={(msgId) => {
+                  const msg = messages.find((m) => m.id === msgId);
+                  if (msg) setActiveThread(msg);
+                }}
+                threadCounts={threadCounts}
+                currentUserId={currentUserIdRef.current}
+                chatType={chat.type}
+                userJoinedAt={userJoinedAt}
+                channelMembersWithJoinDates={channelMembersWithJoinDates}
+                isAdmin={userRole === 'admin' || userRole === 'owner'}
+                hasMore={hasMore}
+                isLoadingMore={isLoadingMore}
+                onLoadMore={loadMoreMessages}
               />
-            )}
 
-            {/* Footer Input */}
-            <FooterInput
-              newMessage={newMessage}
-              onChange={onInputChange}
-              onSend={sendMessage}
-              onAttach={handleAttach}
-              showAttach={showAttach}
-              setShowAttach={setShowAttach}
-              showEmoji={showEmoji}
-              setShowEmoji={setShowEmoji}
-              onPickEmoji={(em) => setNewMessage((m) => m + em.native)}
-              recording={recording}
-              startRecording={() => setRecording(true)}
-              stopRecording={() => setRecording(false)}
-              blocked={blocked}
-              setNewMessage={setNewMessage}
-            />
-          </>
-        ) : (
-          /* CANVAS TAB CONTENT */
-          (() => {
-            const tab = tabs.find(t => t._id === activeTab);
+              {/* Reply Preview */}
+              {replyingTo && (
+                <ReplyPreview
+                  replyingTo={replyingTo}
+                  onCancel={() => setReplyingTo(null)}
+                />
+              )}
 
-            // Check if this is a temp tab (still being created)
-            const isTempTab = activeTab && activeTab.startsWith('temp-');
+              {/* Footer Input */}
+              <FooterInput
+                newMessage={newMessage}
+                onChange={onInputChange}
+                onSend={sendMessage}
+                onAttach={handleAttach}
+                showAttach={showAttach}
+                setShowAttach={setShowAttach}
+                showEmoji={showEmoji}
+                setShowEmoji={setShowEmoji}
+                onPickEmoji={(em) => setNewMessage((m) => m + em.native)}
+                recording={recording}
+                startRecording={() => setRecording(true)}
+                stopRecording={() => setRecording(false)}
+                blocked={blocked}
+                setNewMessage={setNewMessage}
+              />
+            </>
+          ) : (
+            /* CANVAS TAB CONTENT */
+            (() => {
+              const tab = tabs.find(t => t._id === activeTab);
+              const isTempTab = activeTab && activeTab.toString().startsWith("temp-");
 
-            if (isTempTab) {
-              return (
+              if (isTempTab) {
+                return (
+                  <div className="flex-1 flex items-center justify-center text-gray-400">
+                    <div className="flex flex-col items-center gap-4 animate-pulse">
+                      <div className="w-12 h-12 bg-gray-200 dark:bg-gray-800 rounded-lg"></div>
+                      <p>Creating canvas...</p>
+                    </div>
+                  </div>
+                );
+              }
+
+              return tab ? (
+                <CanvasTab
+                  key={tab._id}
+                  tab={tab}
+                  onSave={handleSaveCanvas}
+                  connected={connected}
+                  socket={socketRef.current}
+                  channelId={chat.id}
+                  currentUserId={currentUserIdRef.current}
+                />
+              ) : (
                 <div className="flex-1 flex items-center justify-center text-gray-400">
                   <div className="flex flex-col items-center gap-2">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                    <p>Creating canvas...</p>
+                    <p>Tab not found</p>
+                    <button
+                      onClick={() => setActiveTab("chat")}
+                      className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                    >
+                      Return to Chat
+                    </button>
                   </div>
                 </div>
               );
-            }
+            })()
+          )}
+        </div>
 
-            return tab ? (
-              <CanvasTab
-                key={tab._id}
-                tab={tab}
-                onSave={handleSaveCanvas}
-                connected={connected}
-                socket={socketRef.current}
-                channelId={chat.id}
-                currentUserId={currentUserIdRef.current}
-              />
-            ) : (
-              <div className="flex-1 flex items-center justify-center text-gray-400">
-                <div className="flex flex-col items-center gap-2">
-                  <p>Tab not found</p>
-                  <button
-                    onClick={() => setActiveTab("chat")}
-                    className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                  >
-                    Return to Chat
-                  </button>
-                </div>
-              </div>
-            );
-          })()
+        {/* 4. Side Panels (Flex Items) */}
+
+        {/* Thread Panel */}
+        {activeThread && (
+          <div className="w-[400px] border-l border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-xl z-30 flex flex-col">
+            <ThreadPanel
+              parentMessage={activeThread}
+              onClose={() => setActiveThread(null)}
+              currentUserId={currentUserIdRef.current}
+              socket={socketRef.current}
+            />
+          </div>
+        )}
+
+        {/* Contact Info Sidebar */}
+        {showContactInfo && (
+          <div className="w-80 border-l border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-xl z-40 h-full">
+            <ContactInfoModal
+              chat={chat}
+              onClose={() => setShowContactInfo(false)}
+              currentUserId={currentUserIdRef.current}
+              onBlock={() => setBlocked((prev) => !prev)}
+              onDeleteChat={onDeleteChat}
+              onToggleMute={() => setMuted((prev) => !prev)}
+              muted={muted}
+              blocked={blocked}
+            />
+          </div>
         )}
       </div>
-
-      {/* 4. Side Panels / Modals */}
-      {/* Thread Panel */}
-      {activeThread && (
-        <div className="fixed inset-y-0 right-0 w-[400px] border-l border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-xl z-30 flex flex-col transform transition-transform duration-300">
-          <ThreadPanel
-            parentMessage={activeThread}
-            onClose={() => setActiveThread(null)}
-            currentUserId={currentUserIdRef.current}
-          />
-        </div>
-      )}
-
-      {/* Contact Info Sidebar */}
-      {showContactInfo && (
-        <div className="fixed inset-y-0 right-0 w-80 bg-white dark:bg-gray-900 shadow-xl z-40 transform transition-transform duration-300 border-l border-gray-100 dark:border-gray-800">
-          <ContactInfoModal
-            chat={chat}
-            onClose={() => setShowContactInfo(false)}
-            currentUserId={currentUserIdRef.current}
-            onBlock={() => setBlocked((prev) => !prev)}
-            onDeleteChat={onDeleteChat}
-            onToggleMute={() => setMuted((prev) => !prev)}
-            muted={muted}
-            blocked={blocked}
-          />
-        </div>
-      )}
 
       {/* Other Modals */}
       {showContactShare && (

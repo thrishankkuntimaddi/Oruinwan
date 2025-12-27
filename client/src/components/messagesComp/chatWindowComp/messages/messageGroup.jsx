@@ -22,6 +22,7 @@ export default function MessageGroup({
   onOpenThread,
   threadCounts,
   chatType,
+  channelMembers,
   isAdmin = false, // NEW: admin check for pin permissions
 }) {
   // This component just delegates to MessageItem — kept for future grouping logic
@@ -46,6 +47,7 @@ export default function MessageGroup({
       onOpenThread={onOpenThread}
       threadCounts={threadCounts}
       chatType={chatType}
+      channelMembers={channelMembers}
       isAdmin={isAdmin} // ★ PASS DOWN FOR PIN PERMISSIONS
     />
   );

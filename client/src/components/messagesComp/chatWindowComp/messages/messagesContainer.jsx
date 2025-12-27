@@ -193,6 +193,7 @@ export default function MessagesContainer({
                         onOpenThread={onOpenThread} // ★ THREAD PANEL
                         threadCounts={threadCounts} // ★ THREAD COUNTS
                         chatType={chatType}
+                        channelMembers={channelMembersWithJoinDates} // ★ PASS MEMBERS FOR REACTIONS
                         isAdmin={isAdmin} // ★ PASS DOWN FOR PIN PERMISSIONS
                       />
                     </MessageErrorBoundary>

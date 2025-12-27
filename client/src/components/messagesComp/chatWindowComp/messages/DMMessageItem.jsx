@@ -245,7 +245,12 @@ function DMMessageItem({
                 {/* Reactions Row */}
                 {msg.reactions && msg.reactions.length > 0 && (
                     <div className="mt-1">
-                        <ReactionBadges reactions={msg.reactions} />
+                        <ReactionBadges
+                            reactions={msg.reactions}
+                            currentUserId={currentUserId}
+                            onReactionClick={(emoji) => addReaction(msg.id, emoji)}
+                            channelMembers={null} // DMs don't have member list like channels
+                        />
                     </div>
                 )}
 

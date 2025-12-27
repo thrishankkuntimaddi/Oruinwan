@@ -151,29 +151,25 @@ module.exports = function registerChatHandlers(io, socket) {
         });
 
       // ---------------- broadcast ----------------
+      const eventName = replyTo ? "thread-reply" : "new-message";
+      const payload = replyTo
+        ? { parentId: replyTo, reply: populated, clientTempId }
+        : { message: populated, clientTempId };
+
       if (actualDMSessionId) {
         // Emit to DM room
-        io.to(`dm_${actualDMSessionId}`).emit("new-message", {
-          message: populated,
-          clientTempId,
-        });
+        io.to(`dm_${actualDMSessionId}`).emit(eventName, payload);
 
         // Also emit to each participant's personal user room for real-time delivery
         const dmSession = await DMSession.findById(actualDMSessionId);
         if (dmSession) {
           dmSession.participants.forEach(participantId => {
-            io.to(`user_${participantId}`).emit("new-message", {
-              message: populated,
-              clientTempId,
-            });
+            io.to(`user_${participantId}`).emit(eventName, payload);
           });
         }
       } else if (channelId) {
-        console.log(`📢 Broadcasting to channel room: channel_${channelId}`);
-        io.to(`channel_${channelId}`).emit("new-message", {
-          message: populated,
-          clientTempId,
-        });
+        console.log(`📢 Broadcasting ${eventName} to channel room: channel_${channelId}`);
+        io.to(`channel_${channelId}`).emit(eventName, payload);
       }
 
       // ---------------- ack to sender ----------------

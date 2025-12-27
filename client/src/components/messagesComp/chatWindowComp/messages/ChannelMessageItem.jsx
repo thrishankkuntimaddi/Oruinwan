@@ -26,6 +26,7 @@ function ChannelMessageItem({
     currentUserId,
     onOpenThread,
     threadCounts,
+    channelMembers,
     isAdmin = false, // Admin check for pin permissions
 }) {
     const isMe = msg.sender === "you" || msg.sender === "me";
@@ -189,7 +190,14 @@ function ChannelMessageItem({
                 {/* Reactions */}
                 {msg.reactions && msg.reactions.length > 0 && (
                     <div className="mt-1">
-                        <ReactionBadges reactions={msg.reactions} />
+                        <div className="mt-1">
+                            <ReactionBadges
+                                reactions={msg.reactions}
+                                currentUserId={currentUserId}
+                                onReactionClick={(emoji) => addReaction(msg.id, emoji)}
+                                channelMembers={channelMembers}
+                            />
+                        </div>
                     </div>
                 )}
 
