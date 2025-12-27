@@ -162,20 +162,20 @@ const MyTasks = () => {
   const isDeletedTab = activeTab === "deleted-tasks";
 
   return (
-    <div className="flex flex-col h-full bg-gray-50/50">
+    <div className="flex flex-col h-full bg-gray-50/50 dark:bg-gray-900">
 
       {/* Header Section */}
-      <div className="px-8 py-6 bg-white border-b border-gray-200 flex flex-col gap-4">
+      <div className="px-8 py-6 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex flex-col gap-4">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 tracking-tight flex items-center gap-2">
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight flex items-center gap-2">
               {activeTab === "my-tasks" && "Personal Tasks"}
               {activeTab === "shared-tasks" && "Incoming Requests"}
               {activeTab === "assigned-tasks" && "Delegated Tasks"}
               {activeTab === "completed-tasks" && <><CheckCircle2 className="text-green-600" /> Completed Tasks</>}
-              {activeTab === "deleted-tasks" && <><Trash2 className="text-red-600" /> Deleted Tasks</>}
+              {activeTab === "deleted-tasks" && <><Trash2 className="text-red-600 dark:text-red-400" /> Deleted Tasks</>}
             </h1>
-            <p className="text-sm text-gray-500 mt-1">
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
               {activeTab === "my-tasks" && "Manage your personal to-do list and priorities."}
               {activeTab === "shared-tasks" && "Track tasks assigned to you by others."}
               {activeTab === "assigned-tasks" && "Monitor tasks you've assigned to your team."}
@@ -200,7 +200,7 @@ const MyTasks = () => {
             <input
               type="text"
               placeholder="Search tasks..."
-              className="w-full pl-10 pr-4 py-2 bg-gray-100 border-none rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:bg-white transition-all outline-none text-sm"
+              className="w-full pl-10 pr-4 py-2 bg-gray-100 dark:bg-gray-700/50 border-none rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:bg-white dark:focus:bg-gray-700 transition-all outline-none text-sm text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
@@ -208,18 +208,18 @@ const MyTasks = () => {
           <div className="flex items-center gap-2 relative" ref={sortMenuRef}>
             <button
               onClick={() => setShowSortMenu(!showSortMenu)}
-              className={`p-2 rounded-lg transition-colors ${showSortMenu ? "bg-gray-100 text-gray-600" : "text-gray-500 hover:bg-gray-100"}`}
+              className={`p-2 rounded-lg transition-colors ${showSortMenu ? "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300" : "text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50"}`}
               title="Sort Tasks"
             >
               <ArrowUpDown size={18} />
             </button>
 
             {showSortMenu && (
-              <div className="absolute right-0 top-full mt-2 w-40 bg-white rounded-xl shadow-xl border border-gray-100 py-1 z-20 animate-in fade-in zoom-in-95 duration-100 origin-top-right">
-                <button onClick={() => { setSortOrder("priority"); setShowSortMenu(false); }} className={`w-full text-left px-4 py-2 text-xs font-medium hover:bg-gray-50 transition-colors ${sortOrder === "priority" ? "text-blue-600 bg-blue-50" : "text-gray-700"}`}>Priority (High-Low)</button>
-                <button onClick={() => { setSortOrder("dueDate"); setShowSortMenu(false); }} className={`w-full text-left px-4 py-2 text-xs font-medium hover:bg-gray-50 transition-colors ${sortOrder === "dueDate" ? "text-blue-600 bg-blue-50" : "text-gray-700"}`}>Due Date</button>
-                <button onClick={() => { setSortOrder("status"); setShowSortMenu(false); }} className={`w-full text-left px-4 py-2 text-xs font-medium hover:bg-gray-50 transition-colors ${sortOrder === "status" ? "text-blue-600 bg-blue-50" : "text-gray-700"}`}>Status</button>
-                <button onClick={() => { setSortOrder("a-z"); setShowSortMenu(false); }} className={`w-full text-left px-4 py-2 text-xs font-medium hover:bg-gray-50 transition-colors ${sortOrder === "a-z" ? "text-blue-600 bg-blue-50" : "text-gray-700"}`}>Alphabetical (A-Z)</button>
+              <div className="absolute right-0 top-full mt-2 w-40 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-100 dark:border-gray-700 py-1 z-20 animate-in fade-in zoom-in-95 duration-100 origin-top-right">
+                <button onClick={() => { setSortOrder("priority"); setShowSortMenu(false); }} className={`w-full text-left px-4 py-2 text-xs font-medium hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors ${sortOrder === "priority" ? "text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20" : "text-gray-700 dark:text-gray-300"}`}>Priority (High-Low)</button>
+                <button onClick={() => { setSortOrder("dueDate"); setShowSortMenu(false); }} className={`w-full text-left px-4 py-2 text-xs font-medium hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors ${sortOrder === "dueDate" ? "text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20" : "text-gray-700 dark:text-gray-300"}`}>Due Date</button>
+                <button onClick={() => { setSortOrder("status"); setShowSortMenu(false); }} className={`w-full text-left px-4 py-2 text-xs font-medium hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors ${sortOrder === "status" ? "text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20" : "text-gray-700 dark:text-gray-300"}`}>Status</button>
+                <button onClick={() => { setSortOrder("a-z"); setShowSortMenu(false); }} className={`w-full text-left px-4 py-2 text-xs font-medium hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors ${sortOrder === "a-z" ? "text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20" : "text-gray-700 dark:text-gray-300"}`}>Alphabetical (A-Z)</button>
               </div>
             )}
           </div>
@@ -248,7 +248,7 @@ const MyTasks = () => {
             {filteredTasks.map((task) => (
               <div
                 key={task.id}
-                className={`group bg-white rounded-xl p-5 border shadow-sm hover:shadow-md transition-all duration-200 flex items-start gap-4 ${isCompletedTab ? "border-green-100 bg-green-50/30" : isDeletedTab ? "border-red-100 bg-red-50/30" : "border-gray-100"}`}
+                className={`group bg-white dark:bg-gray-800 rounded-xl p-5 border shadow-sm hover:shadow-md transition-all duration-200 flex items-start gap-4 ${isCompletedTab ? "border-green-100 dark:border-green-900/30 bg-green-50/30 dark:bg-green-900/10" : isDeletedTab ? "border-red-100 dark:border-red-900/30 bg-red-50/30 dark:bg-red-900/10" : "border-gray-100 dark:border-gray-700"}`}
               >
                 {/* Status Indicator Strip */}
                 <div className={`w-1.5 self-stretch rounded-full ${task.status === "Completed" ? "bg-green-500" :
@@ -259,7 +259,7 @@ const MyTasks = () => {
 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start justify-between mb-1">
-                    <h3 className={`text-lg font-semibold text-gray-900 truncate pr-4 ${isCompletedTab || isDeletedTab ? "line-through text-gray-500" : ""}`}>{task.title}</h3>
+                    <h3 className={`text-lg font-semibold text-gray-900 dark:text-gray-100 truncate pr-4 ${isCompletedTab || isDeletedTab ? "line-through text-gray-500 dark:text-gray-500" : ""}`}>{task.title}</h3>
 
                     {/* Actions */}
                     <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -267,14 +267,14 @@ const MyTasks = () => {
                         <>
                           <button
                             onClick={() => handleRestore(task.id)}
-                            className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                            className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-green-600 dark:hover:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg transition-colors"
                             title="Restore Task"
                           >
                             <RotateCcw size={16} />
                           </button>
                           <button
                             onClick={() => handlePermanentDelete(task.id)}
-                            className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                             title="Delete Permanently"
                           >
                             <Trash2 size={16} />
@@ -283,7 +283,7 @@ const MyTasks = () => {
                       ) : (
                         <button
                           onClick={() => handleDelete(task.id)}
-                          className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                           title="Delete Task"
                         >
                           <Trash2 size={16} />
@@ -292,11 +292,11 @@ const MyTasks = () => {
                     </div>
                   </div>
 
-                  <p className="text-gray-500 text-sm mb-4 line-clamp-2">{task.description}</p>
+                  <p className="text-gray-500 dark:text-gray-400 text-sm mb-4 line-clamp-2">{task.description}</p>
 
                   {/* Completion Note Display */}
                   {isCompletedTab && task.completionNote && (
-                    <div className="mb-4 p-3 bg-green-100/50 rounded-lg text-sm text-green-800 flex items-start gap-2">
+                    <div className="mb-4 p-3 bg-green-100/50 dark:bg-green-900/20 rounded-lg text-sm text-green-800 dark:text-green-300 flex items-start gap-2">
                       <FileText size={14} className="mt-0.5 shrink-0" />
                       <span>"{task.completionNote}"</span>
                     </div>
@@ -305,19 +305,19 @@ const MyTasks = () => {
                   <div className="flex flex-wrap items-center gap-3 text-sm">
 
                     {/* Project Badge */}
-                    <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-gray-100 text-gray-600 font-medium text-xs">
+                    <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-gray-100 dark:bg-gray-700/50 text-gray-600 dark:text-gray-300 font-medium text-xs">
                       <Flag size={12} /> {task.project}
                     </span>
 
                     {/* Due Date */}
-                    <div className="flex items-center gap-1.5 text-gray-500">
+                    <div className="flex items-center gap-1.5 text-gray-500 dark:text-gray-400">
                       <Calendar size={14} />
                       {canEditDueDate ? (
                         <input
                           type="date"
                           value={task.dueDate}
                           onChange={(e) => handleUpdate(task.id, "dueDate", e.target.value)}
-                          className="bg-transparent border-b border-transparent hover:border-gray-300 focus:border-blue-500 outline-none transition-colors cursor-pointer"
+                          className="bg-transparent border-b border-transparent hover:border-gray-300 dark:hover:border-gray-600 focus:border-blue-500 outline-none transition-colors cursor-pointer dark:text-gray-300"
                         />
                       ) : (
                         <span>{task.dueDate}</span>
@@ -325,12 +325,12 @@ const MyTasks = () => {
                     </div>
 
                     {/* Assignee/Assigner Info */}
-                    <div className="flex items-center gap-1.5 text-gray-500">
+                    <div className="flex items-center gap-1.5 text-gray-500 dark:text-gray-400">
                       <User size={14} />
                       {activeTab === "assigned-tasks" ? (
-                        <span>Assigned to: <span className="font-medium text-gray-700">{task.assignee}</span></span>
+                        <span>Assigned to: <span className="font-medium text-gray-700 dark:text-gray-300">{task.assignee}</span></span>
                       ) : activeTab === "shared-tasks" ? (
-                        <span>Assigned by: <span className="font-medium text-gray-700">{task.assigner}</span></span>
+                        <span>Assigned by: <span className="font-medium text-gray-700 dark:text-gray-300">{task.assigner}</span></span>
                       ) : (
                         <span>My Task</span>
                       )}

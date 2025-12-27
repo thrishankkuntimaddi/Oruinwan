@@ -55,7 +55,7 @@ function DMMessageItem({
     if (isSystem) {
         return (
             <div className="flex justify-center my-4 px-4">
-                <div className="bg-gray-100 text-gray-500 text-xs px-3 py-1 rounded-full text-center">
+                <div className="bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 text-xs px-3 py-1 rounded-full text-center">
                     {msg.text}
                 </div>
             </div>
@@ -68,7 +68,7 @@ function DMMessageItem({
 
     return (
         <div
-            className={`group flex items-start gap-1.5 px-4 py-1 hover:bg-gray-50/50 relative transition-colors ${isSelected ? "bg-blue-50/50" : ""} w-full ${msg.isPinned ? "bg-blue-50/30 border-l-4 border-blue-400" : "border-l-4 border-transparent"}`}
+            className={`group flex items-start gap-1.5 px-4 py-1 hover:bg-gray-50/50 dark:hover:bg-gray-800/50 relative transition-colors ${isSelected ? "bg-blue-50/50 dark:bg-blue-900/20" : ""} w-full ${msg.isPinned ? "bg-blue-50/30 dark:bg-blue-900/10 border-l-4 border-blue-400 dark:border-blue-500" : "border-l-4 border-transparent"}`}
             onMouseEnter={() => setShowToolbar(true)}
             onMouseLeave={() => setShowToolbar(false)}
         >
@@ -89,7 +89,7 @@ function DMMessageItem({
                 {avatarUrl ? (
                     <img src={avatarUrl} alt={msg.senderName} className="w-7 h-7 rounded object-cover" />
                 ) : (
-                    <div className={`w-7 h-7 rounded flex items-center justify-center text-[10px] font-medium text-white ${isMe ? "bg-blue-500/80" : "bg-gray-400/80"}`}>
+                    <div className={`w-7 h-7 rounded flex items-center justify-center text-[10px] font-medium text-white ${isMe ? "bg-blue-500/80" : "bg-gray-400/80 dark:bg-gray-600"}`}>
                         {initial}
                     </div>
                 )}
@@ -103,21 +103,21 @@ function DMMessageItem({
                     {/* Message Bubble (Tightened) */}
                     <div className={`relative px-3 py-1.5 text-[14px] shadow-sm break-words whitespace-pre-wrap rounded-lg rounded-tl-none max-w-[85%] ${isMe
                         ? "bg-blue-600 text-white"
-                        : "bg-white border border-gray-100 text-gray-800"
+                        : "bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 text-gray-800 dark:text-gray-100"
                         }`}>
 
                         {/* Reply Preview - Shows which message this is replying to */}
                         {msg.repliedTo && (
-                            <div className={`mb-2 pb-2 border-b flex items-start gap-2 ${isMe ? "border-blue-400/30" : "border-gray-200"
+                            <div className={`mb-2 pb-2 border-b flex items-start gap-2 ${isMe ? "border-blue-400/30" : "border-gray-200 dark:border-gray-600"
                                 }`}>
-                                <div className={`w-0.5 rounded-full flex-shrink-0 self-stretch ${isMe ? "bg-blue-300" : "bg-gray-400"
+                                <div className={`w-0.5 rounded-full flex-shrink-0 self-stretch ${isMe ? "bg-blue-300" : "bg-gray-400 dark:bg-gray-500"
                                     }`}></div>
                                 <div className="flex-1 min-w-0">
-                                    <div className={`text-[10px] font-semibold mb-0.5 ${isMe ? "text-blue-100" : "text-gray-600"
+                                    <div className={`text-[10px] font-semibold mb-0.5 ${isMe ? "text-blue-100" : "text-gray-600 dark:text-gray-300"
                                         }`}>
                                         {msg.repliedTo.senderName}
                                     </div>
-                                    <div className={`text-[11px] line-clamp-2 leading-relaxed ${isMe ? "text-blue-50/90" : "text-gray-500"
+                                    <div className={`text-[11px] line-clamp-2 leading-relaxed ${isMe ? "text-blue-50/90" : "text-gray-500 dark:text-gray-400"
                                         }`}>
                                         {msg.repliedTo.text}
                                     </div>
@@ -128,7 +128,7 @@ function DMMessageItem({
                         <ReactMarkdown
                             remarkPlugins={[remarkBreaks]}
                             components={{
-                                a: ({ node, children, ...props }) => <a {...props} className={`hover:underline ${isMe ? "text-white underline" : "text-blue-600"}`} target="_blank" rel="noopener noreferrer">{children}</a>,
+                                a: ({ node, children, ...props }) => <a {...props} className={`hover:underline ${isMe ? "text-white underline" : "text-blue-600 dark:text-blue-400"}`} target="_blank" rel="noopener noreferrer">{children}</a>,
                                 ul: ({ node, ...props }) => <ul {...props} className="list-disc list-inside ml-1" />,
                                 ol: ({ node, ...props }) => <ol {...props} className="list-decimal list-inside ml-1" />,
                                 p: ({ node, ...props }) => <p {...props} className="mb-0" />, // Remove default margin
@@ -139,7 +139,7 @@ function DMMessageItem({
                     </div>
 
                     {/* Timestamp - Far right edge */}
-                    <span className="absolute top-1 right-0 text-[10px] text-gray-400 select-none">
+                    <span className="absolute top-1 right-0 text-[10px] text-gray-400 dark:text-gray-500 select-none">
                         {formatTime(msg.ts)}
                     </span>
 
@@ -150,13 +150,13 @@ function DMMessageItem({
                     <div className="flex items-center gap-3 ml-2 mt-0 pl-2">
 
                         {/* Minimalist Toolbar - Aligned in the row, left of timestamp */}
-                        <div className={`absolute top-0.5 right-20 bg-white border border-gray-100 shadow-sm rounded p-0.5 flex items-center z-10 transition-opacity ${showToolbar || openMsgMenuId === msg.id || showReactionPicker ? "opacity-100 visible" : "opacity-0 invisible"}`}>
+                        <div className={`absolute top-0.5 right-20 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-sm rounded p-0.5 flex items-center z-10 transition-opacity ${showToolbar || openMsgMenuId === msg.id || showReactionPicker ? "opacity-100 visible" : "opacity-0 invisible"}`}>
 
                             {/* Reaction Picker Trigger */}
                             <div className="relative" ref={reactionPickerRef}>
                                 <button
                                     onClick={() => setShowReactionPicker(!showReactionPicker)}
-                                    className={`p-1 rounded hover:bg-gray-100 ${showReactionPicker ? "text-blue-600" : "text-gray-400"}`}
+                                    className={`p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 ${showReactionPicker ? "text-blue-600 dark:text-blue-400" : "text-gray-400 dark:text-gray-500"}`}
                                     title="React"
                                 >
                                     <Smile size={14} />
@@ -174,7 +174,7 @@ function DMMessageItem({
                             </div>
 
                             {/* Forward button (no threads in DMs) */}
-                            <button onClick={() => forwardMessage && forwardMessage(msg.id)} className="p-1 text-gray-400 hover:bg-gray-100 rounded" title="Forward"><Share size={14} /></button>
+                            <button onClick={() => forwardMessage && forwardMessage(msg.id)} className="p-1 text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded" title="Forward"><Share size={14} /></button>
 
                             {/* Menu Button */}
                             <div className="relative">
@@ -183,7 +183,7 @@ function DMMessageItem({
                                         e.stopPropagation();
                                         toggleMsgMenu(e, msg.id);
                                     }}
-                                    className={`p-1 rounded ${openMsgMenuId === msg.id ? "bg-gray-100 text-gray-900" : "text-gray-400 hover:bg-gray-100"}`}
+                                    className={`p-1 rounded ${openMsgMenuId === msg.id ? "bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100" : "text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700"}`}
                                     title="More"
                                 >
                                     <MoreHorizontal size={14} />
@@ -191,16 +191,16 @@ function DMMessageItem({
 
                                 {/* Dropdown Menu */}
                                 {openMsgMenuId === msg.id && (
-                                    <div className="absolute right-0 top-full mt-1 w-48 bg-white border border-gray-200 rounded-xl shadow-2xl py-1 z-50 text-sm animate-fade-in origin-top-right">
+                                    <div className="absolute right-0 top-full mt-1 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-2xl py-1 z-50 text-sm animate-fade-in origin-top-right">
                                         <button
                                             onClick={(e) => {
                                                 e.stopPropagation();
                                                 if (pinMessage) pinMessage(msg.id);
                                                 toggleMsgMenu({ stopPropagation: () => { } }, null);
                                             }}
-                                            className="w-full text-left px-4 py-2.5 hover:bg-gray-50 flex items-center gap-3 text-gray-700 transition-colors"
+                                            className="w-full text-left px-4 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-3 text-gray-700 dark:text-gray-300 transition-colors"
                                         >
-                                            <Pin size={14} className="text-gray-400" /> {msg.isPinned ? "Unpin message" : "Pin message"}
+                                            <Pin size={14} className="text-gray-400 dark:text-gray-500" /> {msg.isPinned ? "Unpin message" : "Pin message"}
                                         </button>
                                         <button
                                             onClick={(e) => {
@@ -208,19 +208,19 @@ function DMMessageItem({
                                                 copyMessage(msg.id);
                                                 toggleMsgMenu({ stopPropagation: () => { } }, null);
                                             }}
-                                            className="w-full text-left px-4 py-2.5 hover:bg-gray-50 flex items-center gap-3 text-gray-700 transition-colors"
+                                            className="w-full text-left px-4 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-3 text-gray-700 dark:text-gray-300 transition-colors"
                                         >
-                                            <Copy size={14} className="text-gray-400" /> Copy text
+                                            <Copy size={14} className="text-gray-400 dark:text-gray-500" /> Copy text
                                         </button>
 
-                                        <div className="border-t border-gray-100 my-1"></div>
+                                        <div className="border-t border-gray-100 dark:border-gray-700 my-1"></div>
                                         <button
                                             onClick={(e) => {
                                                 e.stopPropagation();
                                                 deleteMessage(msg.id, 'me');
                                                 toggleMsgMenu({ stopPropagation: () => { } }, null);
                                             }}
-                                            className="w-full text-left px-4 py-2.5 hover:bg-red-50 flex items-center gap-3 text-red-600 transition-colors"
+                                            className="w-full text-left px-4 py-2.5 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-3 text-red-600 dark:text-red-400 transition-colors"
                                         >
                                             <Trash2 size={14} /> Delete for me
                                         </button>
@@ -230,7 +230,7 @@ function DMMessageItem({
                                                 deleteMessage(msg.id, 'everyone');
                                                 toggleMsgMenu({ stopPropagation: () => { } }, null);
                                             }}
-                                            className="w-full text-left px-4 py-2.5 hover:bg-red-50 flex items-center gap-3 text-orange-600 transition-colors"
+                                            className="w-full text-left px-4 py-2.5 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-3 text-orange-600 dark:text-orange-400 transition-colors"
                                         >
                                             <Trash2 size={14} /> Delete for everyone
                                         </button>

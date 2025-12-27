@@ -124,14 +124,14 @@ const Home = () => {
 
     socket.on("user-status-changed", handleStatusChange);
     return () => socket.off("user-status-changed", handleStatusChange);
-  }, [socket, activeChat?.userId, activeChat?.type]);
+  }, [socket, activeChat]);
 
   return (
-    <div className="w-full h-full flex flex-col">
+    <div className="w-full h-full flex flex-col bg-white dark:bg-gray-900">
       {isLoading ? (
-        <div className="flex flex-col items-center justify-center h-full text-gray-400 bg-white">
+        <div className="flex flex-col items-center justify-center h-full text-gray-400 dark:text-gray-500 bg-white dark:bg-gray-900">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-4"></div>
-          <p className="text-sm text-gray-500">Loading chat...</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">Loading chat...</p>
         </div>
       ) : activeChat ? (
         <ChatWindow
@@ -147,12 +147,12 @@ const Home = () => {
           }}
         />
       ) : (
-        <div className="flex flex-col items-center justify-center h-full text-gray-400 bg-white">
-          <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+        <div className="flex flex-col items-center justify-center h-full text-gray-400 dark:text-gray-500 bg-white dark:bg-gray-900">
+          <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mb-4">
             <span className="text-3xl">👋</span>
           </div>
-          <p className="text-lg font-medium text-gray-500">Welcome to Chttrix</p>
-          <p className="text-sm text-gray-400 mt-2">Select a channel or direct message to start chatting.</p>
+          <p className="text-lg font-medium text-gray-500 dark:text-gray-200">Welcome to Chttrix</p>
+          <p className="text-sm text-gray-400 dark:text-gray-500 mt-2">Select a channel or direct message to start chatting.</p>
         </div>
       )}
     </div>

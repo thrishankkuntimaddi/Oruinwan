@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import { useToast } from "../../contexts/ToastContext";
+import { useTheme } from "../../contexts/ThemeContext";
 import api from "../../services/api";
 import {
   Settings, HelpCircle, LogOut, ChevronLeft, ChevronRight,
@@ -15,9 +16,8 @@ const PasswordInput = ({ label, value, onChange, show, onToggle, placeholder = "
     <div className="relative">
       <input
         type={show ? "text" : "password"}
-        value={value}
         onChange={onChange}
-        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all pr-10"
+        className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all pr-10 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
         placeholder={placeholder}
       />
       <button
@@ -38,6 +38,7 @@ const PasswordInput = ({ label, value, onChange, show, onToggle, placeholder = "
 const ProfileMenu = ({ onClose }) => {
   const { user, setUser, updateProfile, updatePassword, logout } = useAuth();
   const { showToast } = useToast();
+  const { theme, setTheme } = useTheme();
 
   const [view, setView] = useState("menu"); // menu, profile, security, preferences
   const [formData, setFormData] = useState({ ...user });
@@ -61,21 +62,59 @@ const ProfileMenu = ({ onClose }) => {
   const [passData, setPassData] = useState({ old: "", new: "", confirm: "" });
   const [showPasswords, setShowPasswords] = useState({ old: false, new: false, confirm: false });
 
-  // Mock Sessions State
-  const [sessions, setSessions] = useState([
-    { id: 1, device: "MacBook Pro", os: "macOS", location: "San Francisco, US", current: true, lastActive: "Now", type: "laptop" },
-    { id: 2, device: "iPhone 13", os: "iOS", location: "San Francisco, US", current: false, lastActive: "2h ago", type: "mobile" },
-    { id: 3, device: "Windows PC", os: "Windows", location: "New York, US", current: false, lastActive: "1d ago", type: "desktop" },
-  ]);
+  // Real Sessions State
+  const [sessions, setSessions] = useState([]);
+  const [loadingSessions, setLoadingSessions] = useState(false);
 
-  const handleLogoutSession = (id) => {
-    setSessions(prev => prev.filter(s => s.id !== id));
-    showToast("Session logged out successfully.", "success");
+  useEffect(() => {
+    if (view === "security") {
+      fetchSessions();
+    }
+  }, [view]);
+
+  const fetchSessions = async () => {
+    try {
+      setLoadingSessions(true);
+      const { data } = await api.get("/api/auth/sessions");
+
+      // Add simple formatting for display if needed, currently backend sends raw date
+      // We can format client-side
+      const formatted = data.map(s => ({
+        ...s,
+        lastActive: new Date(s.lastActive).toLocaleDateString() + " " + new Date(s.lastActive).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      }));
+
+      setSessions(formatted);
+    } catch (err) {
+      console.error("Failed to fetch sessions", err);
+      showToast("Failed to load sessions", "error");
+    } finally {
+      setLoadingSessions(false);
+    }
   };
 
-  const handleLogoutAllSessions = () => {
-    setSessions(prev => prev.filter(s => s.current));
-    showToast("Logged out of all other devices.", "success");
+  const handleLogoutSession = async (id) => {
+    try {
+      await api.delete(`/api/auth/sessions/${id}`);
+      setSessions(prev => prev.filter(s => s.id !== id));
+      showToast("Session logged out successfully.", "success");
+    } catch (err) {
+      console.error(err);
+      showToast("Failed to log out session", "error");
+    }
+  };
+
+  const handleLogoutAllSessions = async () => {
+    // Log out all OTHER sessions (keep current)
+    const others = sessions.filter(s => !s.current);
+    try {
+      await Promise.all(others.map(s => api.delete(`/api/auth/sessions/${s.id}`)));
+      setSessions(prev => prev.filter(s => s.current));
+      showToast("Logged out of all other devices.", "success");
+    } catch (err) {
+      console.error(err);
+      showToast("Failed to log out all devices", "error");
+    }
   };
 
   const handleLogout = async () => {
@@ -180,17 +219,17 @@ const ProfileMenu = ({ onClose }) => {
   // --- SUB-COMPONENTS ---
 
   const renderMainMenu = () => (
-    <div className="w-72 bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden flex flex-col animate-fade-in">
+    <div className="w-72 bg-white dark:bg-gray-900 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col animate-fade-in">
       {/* Header */}
-      <div className="p-4 border-b border-gray-100 bg-gray-50/50">
+      <div className="p-4 border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/50">
         <div
           onClick={() => setView("profile")}
           className="flex items-center gap-3 mb-3 cursor-pointer p-2 -mx-2 rounded-lg hover:bg-white hover:shadow-sm transition-all group"
         >
           <div className="w-12 h-12 rounded-full bg-gray-300 bg-cover bg-center shadow-sm border-2 border-white group-hover:border-blue-100 transition-colors flex-shrink-0" style={{ backgroundImage: `url(${user?.profilePicture || "https://ui-avatars.com/api/?name=" + user?.username})` }}></div>
           <div className="min-w-0 flex-1">
-            <div className="font-bold text-gray-900 text-base truncate group-hover:text-blue-600 transition-colors">{user?.username}</div>
-            <div className="text-xs text-gray-500 truncate">{user?.email}</div>
+            <div className="font-bold text-gray-900 dark:text-white text-base truncate group-hover:text-blue-600 transition-colors">{user?.username}</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400 truncate">{user?.email}</div>
           </div>
           <div className="opacity-0 group-hover:opacity-100 transition-opacity text-gray-400">
             <ChevronRight size={16} />
@@ -201,19 +240,19 @@ const ProfileMenu = ({ onClose }) => {
         <div className="flex bg-white rounded-lg p-1 border border-gray-200 shadow-sm">
           <button
             onClick={(e) => { e.stopPropagation(); handleStatusChange("active"); }}
-            className={`flex-1 flex items-center justify-center py-1.5 rounded-md text-[10px] font-bold transition-all ${status === "active" ? "bg-green-50 text-green-700 shadow-sm" : "text-gray-500 hover:bg-gray-50"}`}
+            className={`flex-1 flex items-center justify-center py-1.5 rounded-md text-[10px] font-bold transition-all ${status === "active" ? "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 shadow-sm" : "text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-700"}`}
           >
             <div className="w-2 h-2 bg-green-500 rounded-full mr-1.5"></div> Active
           </button>
           <button
             onClick={(e) => { e.stopPropagation(); handleStatusChange("away"); }}
-            className={`flex-1 flex items-center justify-center py-1.5 rounded-md text-[10px] font-bold transition-all ${status === "away" ? "bg-yellow-50 text-yellow-700 shadow-sm" : "text-gray-500 hover:bg-gray-50"}`}
+            className={`flex-1 flex items-center justify-center py-1.5 rounded-md text-[10px] font-bold transition-all ${status === "away" ? "bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-400 shadow-sm" : "text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-700"}`}
           >
             <div className="w-2 h-2 bg-yellow-500 rounded-full mr-1.5"></div> Away
           </button>
           <button
             onClick={(e) => { e.stopPropagation(); handleStatusChange("dnd"); }}
-            className={`flex-1 flex items-center justify-center py-1.5 rounded-md text-[10px] font-bold transition-all ${status === "dnd" ? "bg-red-50 text-red-700 shadow-sm" : "text-gray-500 hover:bg-gray-50"}`}
+            className={`flex-1 flex items-center justify-center py-1.5 rounded-md text-[10px] font-bold transition-all ${status === "dnd" ? "bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 shadow-sm" : "text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-700"}`}
           >
             <div className="w-2 h-2 bg-red-500 rounded-full mr-1.5"></div> DND
           </button>
@@ -222,15 +261,15 @@ const ProfileMenu = ({ onClose }) => {
 
       {/* Menu Items */}
       <div className="p-2 space-y-1">
-        <button onClick={() => setView("preferences")} className="w-full text-left px-3 py-2.5 text-sm text-gray-700 hover:bg-gray-100 rounded-lg flex items-center transition-colors group">
+        <button onClick={() => setView("preferences")} className="w-full text-left px-3 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg flex items-center transition-colors group">
           <Settings size={18} className="mr-3 text-gray-400 group-hover:text-blue-600 transition-colors" />
           <span className="font-medium">Preferences</span>
         </button>
-        <button onClick={() => setView("security")} className="w-full text-left px-3 py-2.5 text-sm text-gray-700 hover:bg-gray-100 rounded-lg flex items-center transition-colors group">
+        <button onClick={() => setView("security")} className="w-full text-left px-3 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg flex items-center transition-colors group">
           <Shield size={18} className="mr-3 text-gray-400 group-hover:text-blue-600 transition-colors" />
           <span className="font-medium">Security</span>
         </button>
-        <button onClick={() => setView("help")} className="w-full text-left px-3 py-2.5 text-sm text-gray-700 hover:bg-gray-100 rounded-lg flex items-center transition-colors group">
+        <button onClick={() => setView("help")} className="w-full text-left px-3 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg flex items-center transition-colors group">
           <HelpCircle size={18} className="mr-3 text-gray-400 group-hover:text-blue-600 transition-colors" />
           <span className="font-medium">Help & Support</span>
         </button>
@@ -241,14 +280,15 @@ const ProfileMenu = ({ onClose }) => {
         {(user?.companyRole === 'admin' || user?.companyRole === 'owner') && (
           <button
             onClick={() => window.location.href = '/admin/company'}
-            className="w-full text-left px-3 py-2.5 text-sm text-indigo-600 hover:bg-indigo-50 rounded-lg flex items-center transition-colors group font-semibold"
+            className="w-full text-left px-3 py-2.5 text-sm text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg flex items-center transition-colors group font-semibold"
           >
             <Settings size={18} className="mr-3 group-hover:rotate-90 transition-transform duration-300" />
             <span>Admin Dashboard</span>
           </button>
         )}
 
-        <button onClick={handleLogout} className="w-full text-left px-3 py-2.5 text-sm text-red-600 hover:bg-red-50 rounded-lg flex items-center transition-colors group">
+
+        <button onClick={handleLogout} className="w-full text-left px-3 py-2.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg flex items-center transition-colors group">
           <LogOut size={18} className="mr-3 group-hover:scale-110 transition-transform" />
           <span className="font-medium">Sign Out</span>
         </button>
@@ -257,12 +297,12 @@ const ProfileMenu = ({ onClose }) => {
   );
 
   const renderProfileView = () => (
-    <div className="w-80 bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden flex flex-col max-h-[80vh] animate-fade-in">
-      <div className="p-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50 sticky top-0 z-10">
-        <button onClick={() => setView("menu")} className="text-gray-500 hover:text-gray-900 flex items-center text-xs font-bold transition-colors">
+    <div className="w-80 bg-white dark:bg-gray-900 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col max-h-[80vh] animate-fade-in">
+      <div className="p-4 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between bg-gray-50/50 dark:bg-gray-800/50 sticky top-0 z-10">
+        <button onClick={() => setView("menu")} className="text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white flex items-center text-xs font-bold transition-colors">
           <ChevronLeft size={14} className="mr-1" /> Back
         </button>
-        <span className="font-bold text-gray-900 text-sm">Edit Profile</span>
+        <span className="font-bold text-gray-900 dark:text-white text-sm">Edit Profile</span>
         <div className="w-8"></div>
       </div>
 
@@ -282,7 +322,7 @@ const ProfileMenu = ({ onClose }) => {
         <div className="space-y-4">
           <div>
             <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">Full Name</label>
-            <input type="text" value={formData.username} onChange={e => setFormData({ ...formData, username: e.target.value })} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all" />
+            <input type="text" value={formData.username} onChange={e => setFormData({ ...formData, username: e.target.value })} className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all bg-white dark:bg-gray-800 text-gray-900 dark:text-white" />
           </div>
 
           <div className="space-y-3">
@@ -294,7 +334,7 @@ const ProfileMenu = ({ onClose }) => {
                 onChange={e => setFormData({ ...formData, dob: e.target.value })}
                 max={new Date().toISOString().split("T")[0]}
                 min="1900-01-01"
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
               />
             </div>
             <div>
@@ -303,7 +343,7 @@ const ProfileMenu = ({ onClose }) => {
                 <select
                   value={phoneCode}
                   onChange={(e) => setPhoneCode(e.target.value)}
-                  className="border border-r-0 border-gray-300 rounded-l-lg px-2 py-2 text-sm bg-gray-50 text-gray-600 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none"
+                  className="border border-r-0 border-gray-300 dark:border-gray-600 rounded-l-lg px-2 py-2 text-sm bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-300 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none"
                 >
                   <option value="+1">+1</option>
                   <option value="+44">+44</option>
@@ -314,7 +354,7 @@ const ProfileMenu = ({ onClose }) => {
                   type="tel"
                   value={formData.phone || ""}
                   onChange={e => setFormData({ ...formData, phone: e.target.value })}
-                  className="w-full border border-gray-300 rounded-r-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                  className="w-full border border-gray-300 dark:border-gray-600 rounded-r-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                   placeholder={
                     phoneCode === "+91" ? "98765 43210" :
                       phoneCode === "+44" ? "7911 123456" :
@@ -330,10 +370,10 @@ const ProfileMenu = ({ onClose }) => {
             <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">Email Addresses</label>
             <div className="space-y-3">
               {emails.map(email => (
-                <div key={email.id} className="p-3 border border-gray-200 rounded-lg bg-gray-50/50">
+                <div key={email.id} className="p-3 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50/50 dark:bg-gray-800/50">
                   <div className="flex flex-col gap-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium text-gray-900 truncate">{email.email}</span>
+                      <span className="text-sm font-medium text-gray-900 dark:text-white truncate">{email.email}</span>
                       {!email.primary && (
                         <button onClick={() => handleDeleteEmail(email.id)} className="text-gray-400 hover:text-red-500 transition-colors">
                           <Trash2 size={14} />
@@ -343,27 +383,27 @@ const ProfileMenu = ({ onClose }) => {
 
                     <div className="flex items-center gap-2 overflow-x-auto no-scrollbar whitespace-nowrap pb-1">
                       {email.verified ? (
-                        <span className="flex-shrink-0 flex items-center text-[10px] font-bold text-green-600 bg-green-100 px-2 py-0.5 rounded-full border border-green-200">
+                        <span className="flex-shrink-0 flex items-center text-[10px] font-bold text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-900/30 px-2 py-0.5 rounded-full border border-green-200 dark:border-green-800">
                           <CheckCircle2 size={10} className="mr-1" /> Verified
                         </span>
                       ) : (
-                        <span className="flex-shrink-0 flex items-center text-[10px] font-bold text-yellow-600 bg-yellow-100 px-2 py-0.5 rounded-full border border-yellow-200">
+                        <span className="flex-shrink-0 flex items-center text-[10px] font-bold text-yellow-600 dark:text-yellow-400 bg-yellow-100 dark:bg-yellow-900/30 px-2 py-0.5 rounded-full border border-yellow-200 dark:border-yellow-800">
                           <AlertCircle size={10} className="mr-1" /> Unverified
                         </span>
                       )}
                       {email.primary && (
-                        <span className="flex-shrink-0 flex items-center text-[10px] font-bold text-blue-600 bg-blue-100 px-2 py-0.5 rounded-full border border-blue-200">
+                        <span className="flex-shrink-0 flex items-center text-[10px] font-bold text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/30 px-2 py-0.5 rounded-full border border-blue-200 dark:border-blue-800">
                           Primary
                         </span>
                       )}
                     </div>
 
-                    <div className="flex items-center gap-3 pt-1 border-t border-gray-200/50">
+                    <div className="flex items-center gap-3 pt-1 border-t border-gray-200/50 dark:border-gray-700/50">
                       {!email.verified && (
-                        <button onClick={() => handleVerifyEmail(email.id)} className="text-[10px] font-bold text-blue-600 hover:underline">Verify Now</button>
+                        <button onClick={() => handleVerifyEmail(email.id)} className="text-[10px] font-bold text-blue-600 dark:text-blue-400 hover:underline">Verify Now</button>
                       )}
                       {email.verified && !email.primary && (
-                        <button onClick={() => handleMakePrimary(email.id)} className="text-[10px] font-bold text-gray-600 hover:text-gray-900 hover:underline">Set as Primary</button>
+                        <button onClick={() => handleMakePrimary(email.id)} className="text-[10px] font-bold text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:underline">Set as Primary</button>
                       )}
                     </div>
                   </div>
@@ -376,9 +416,9 @@ const ProfileMenu = ({ onClose }) => {
                   value={newEmail}
                   onChange={(e) => setNewEmail(e.target.value)}
                   placeholder="Add another email..."
-                  className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                  className="flex-1 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                 />
-                <button onClick={handleAddEmail} className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-2 rounded-lg transition-colors">
+                <button onClick={handleAddEmail} className="bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 px-3 py-2 rounded-lg transition-colors">
                   <Plus size={18} />
                 </button>
               </div>
@@ -387,58 +427,67 @@ const ProfileMenu = ({ onClose }) => {
 
           <div>
             <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">About</label>
-            <textarea value={formData.about || ""} onChange={e => setFormData({ ...formData, about: e.target.value })} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all" rows="3" placeholder="Tell us a bit about yourself..." />
+            <textarea value={formData.about || ""} onChange={e => setFormData({ ...formData, about: e.target.value })} className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all bg-white dark:bg-gray-800 text-gray-900 dark:text-white" rows="3" placeholder="Tell us a bit about yourself..." />
           </div>
         </div>
       </div>
 
-      <div className="p-4 border-t border-gray-100 bg-gray-50/50 flex justify-end">
+      <div className="p-4 border-t border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/50 flex justify-end">
         <button onClick={handleSaveProfile} className="bg-blue-600 text-white px-5 py-2 rounded-lg text-sm font-bold shadow-sm hover:bg-blue-700 transition-all">Save Changes</button>
       </div>
-    </div>
+    </div >
   );
 
   const renderPreferencesView = () => (
-    <div className="w-72 bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden flex flex-col animate-fade-in">
-      <div className="p-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50 sticky top-0 z-10">
-        <button onClick={() => setView("menu")} className="text-gray-500 hover:text-gray-900 flex items-center text-xs font-bold transition-colors">
+    <div className="w-72 bg-white dark:bg-gray-900 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col animate-fade-in">
+      <div className="p-4 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between bg-gray-50/50 dark:bg-gray-800/50 sticky top-0 z-10">
+        <button onClick={() => setView("menu")} className="text-gray-500 hover:text-gray-900 dark:hover:text-white flex items-center text-xs font-bold transition-colors">
           <ChevronLeft size={14} className="mr-1" /> Back
         </button>
-        <span className="font-bold text-gray-900 text-sm">Preferences</span>
+        <span className="font-bold text-gray-900 dark:text-white text-sm">Preferences</span>
         <div className="w-8"></div>
       </div>
       <div className="p-5 space-y-6">
         <div>
-          <h4 className="text-xs font-bold text-gray-900 mb-3">Appearance</h4>
+          <h4 className="text-xs font-bold text-gray-900 dark:text-gray-100 mb-3">Appearance</h4>
           <div className="grid grid-cols-3 gap-3">
-            <button className="p-2 border-2 border-blue-500 bg-blue-50 rounded-xl flex flex-col items-center transition-all">
-              <Sun size={20} className="text-blue-600 mb-2" />
-              <span className="text-[10px] font-bold text-blue-700">Light</span>
+            <button
+              onClick={() => setTheme('light')}
+              className={`p-2 border-2 rounded-xl flex flex-col items-center transition-all ${theme === 'light' ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' : 'border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800'}`}
+            >
+              <Sun size={20} className={`mb-2 ${theme === 'light' ? 'text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400'}`} />
+              <span className={`text-[10px] font-bold ${theme === 'light' ? 'text-blue-700 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400'}`}>Light</span>
             </button>
-            <button className="p-2 border border-gray-200 hover:bg-gray-50 rounded-xl flex flex-col items-center transition-all">
-              <Moon size={20} className="text-gray-600 mb-2" />
-              <span className="text-[10px] font-bold text-gray-600">Dark</span>
+            <button
+              onClick={() => setTheme('dark')}
+              className={`p-2 border-2 rounded-xl flex flex-col items-center transition-all ${theme === 'dark' ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' : 'border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800'}`}
+            >
+              <Moon size={20} className={`mb-2 ${theme === 'dark' ? 'text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400'}`} />
+              <span className={`text-[10px] font-bold ${theme === 'dark' ? 'text-blue-700 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400'}`}>Dark</span>
             </button>
-            <button className="p-2 border border-gray-200 hover:bg-gray-50 rounded-xl flex flex-col items-center transition-all">
-              <MonitorIcon size={20} className="text-gray-600 mb-2" />
-              <span className="text-[10px] font-bold text-gray-600">Auto</span>
+            <button
+              onClick={() => setTheme('auto')}
+              className={`p-2 border-2 rounded-xl flex flex-col items-center transition-all ${theme === 'auto' ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' : 'border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800'}`}
+            >
+              <MonitorIcon size={20} className={`mb-2 ${theme === 'auto' ? 'text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400'}`} />
+              <span className={`text-[10px] font-bold ${theme === 'auto' ? 'text-blue-700 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400'}`}>Auto</span>
             </button>
           </div>
         </div>
 
         <div>
-          <h4 className="text-xs font-bold text-gray-900 mb-3">Notifications</h4>
+          <h4 className="text-xs font-bold text-gray-900 dark:text-gray-100 mb-3">Notifications</h4>
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-700">Desktop Notifications</span>
+              <span className="text-sm text-gray-700 dark:text-gray-300 dark:text-gray-300">Desktop Notifications</span>
               <input type="checkbox" defaultChecked className="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500" />
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-700">Email Digest</span>
+              <span className="text-sm text-gray-700 dark:text-gray-300 dark:text-gray-300">Email Digest</span>
               <input type="checkbox" className="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500" />
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-700">Sound Effects</span>
+              <span className="text-sm text-gray-700 dark:text-gray-300 dark:text-gray-300">Sound Effects</span>
               <input type="checkbox" defaultChecked className="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500" />
             </div>
           </div>
@@ -448,21 +497,21 @@ const ProfileMenu = ({ onClose }) => {
   );
 
   const renderSecurityView = () => (
-    <div className="w-80 bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden flex flex-col animate-fade-in max-h-[80vh]">
-      <div className="p-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50 sticky top-0 z-10">
-        <button onClick={() => setView("menu")} className="text-gray-500 hover:text-gray-900 flex items-center text-xs font-bold transition-colors">
+    <div className="w-80 bg-white dark:bg-gray-900 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col animate-fade-in max-h-[80vh]">
+      <div className="p-4 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between bg-gray-50/50 dark:bg-gray-800/50 sticky top-0 z-10">
+        <button onClick={() => setView("menu")} className="text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white flex items-center text-xs font-bold transition-colors">
           <ChevronLeft size={14} className="mr-1" /> Back
         </button>
-        <span className="font-bold text-gray-900 text-sm">Security</span>
+        <span className="font-bold text-gray-900 dark:text-white text-sm">Security</span>
         <div className="w-8"></div>
       </div>
 
       <div className="p-5 overflow-y-auto custom-scrollbar space-y-8">
         {/* Password Section */}
         <div className="space-y-4">
-          <div className="flex items-center gap-2 border-b border-gray-100 pb-2">
+          <div className="flex items-center gap-2 border-b border-gray-100 dark:border-gray-800 pb-2">
             <Key size={16} className="text-gray-400" />
-            <h4 className="text-xs font-bold text-gray-900 uppercase tracking-wide">Password</h4>
+            <h4 className="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-wide">Password</h4>
           </div>
 
           <PasswordInput
@@ -483,18 +532,19 @@ const ProfileMenu = ({ onClose }) => {
             />
 
             {/* Password Rules Checklist */}
-            <div className="mt-3 grid grid-cols-2 gap-2 bg-gray-50 p-3 rounded-lg border border-gray-100">
-              <div className={`text-[10px] flex items-center font-medium ${passData.new.length >= 8 ? "text-green-600" : "text-gray-400"}`}>
-                <span className="mr-1.5">{passData.new.length >= 8 ? <Check size={10} /> : <div className="w-2.5 h-2.5 rounded-full border border-gray-300"></div>}</span> 8+ chars
+            <div className="mt-3 grid grid-cols-2 gap-2 bg-gray-50 dark:bg-gray-800/50 p-3 rounded-lg border border-gray-100 dark:border-gray-700">
+              <div className={`text-[10px] flex items-center font-medium ${passData.new.length >= 8 ? "text-green-600 dark:text-green-400" : "text-gray-400"}`}>
+                <span className="mr-1.5">{passData.new.length >= 8 ? <Check size={10} /> : <div className="w-2.5 h-2.5 rounded-full border border-gray-300 dark:border-gray-600"></div>}</span> 8+ chars
               </div>
-              <div className={`text-[10px] flex items-center font-medium ${/[A-Z]/.test(passData.new) ? "text-green-600" : "text-gray-400"}`}>
-                <span className="mr-1.5">{/[A-Z]/.test(passData.new) ? <Check size={10} /> : <div className="w-2.5 h-2.5 rounded-full border border-gray-300"></div>}</span> Uppercase
+
+              <div className={`text-[10px] flex items-center font-medium ${/[A-Z]/.test(passData.new) ? "text-green-600 dark:text-green-400" : "text-gray-400"}`}>
+                <span className="mr-1.5">{/[A-Z]/.test(passData.new) ? <Check size={10} /> : <div className="w-2.5 h-2.5 rounded-full border border-gray-300 dark:border-gray-600"></div>}</span> Uppercase
               </div>
-              <div className={`text-[10px] flex items-center font-medium ${/\d/.test(passData.new) ? "text-green-600" : "text-gray-400"}`}>
-                <span className="mr-1.5">{/\d/.test(passData.new) ? <Check size={10} /> : <div className="w-2.5 h-2.5 rounded-full border border-gray-300"></div>}</span> Number
+              <div className={`text-[10px] flex items-center font-medium ${/\d/.test(passData.new) ? "text-green-600 dark:text-green-400" : "text-gray-400"}`}>
+                <span className="mr-1.5">{/\d/.test(passData.new) ? <Check size={10} /> : <div className="w-2.5 h-2.5 rounded-full border border-gray-300 dark:border-gray-600"></div>}</span> Number
               </div>
-              <div className={`text-[10px] flex items-center font-medium ${/[!@#$%^&*(),.?":{}|<>]/.test(passData.new) ? "text-green-600" : "text-gray-400"}`}>
-                <span className="mr-1.5">{/[!@#$%^&*(),.?":{}|<>]/.test(passData.new) ? <Check size={10} /> : <div className="w-2.5 h-2.5 rounded-full border border-gray-300"></div>}</span> Special
+              <div className={`text-[10px] flex items-center font-medium ${/[!@#$%^&*(),.?":{}|<>]/.test(passData.new) ? "text-green-600 dark:text-green-400" : "text-gray-400"}`}>
+                <span className="mr-1.5">{/[!@#$%^&*(),.?":{}|<>]/.test(passData.new) ? <Check size={10} /> : <div className="w-2.5 h-2.5 rounded-full border border-gray-300 dark:border-gray-600"></div>}</span> Special
               </div>
             </div>
           </div>
@@ -507,19 +557,19 @@ const ProfileMenu = ({ onClose }) => {
             onToggle={() => setShowPasswords(prev => ({ ...prev, confirm: !prev.confirm }))}
           />
 
-          <button onClick={handleSavePassword} className="w-full bg-blue-50 text-blue-600 px-4 py-2 rounded-lg text-xs font-bold hover:bg-blue-100 transition-all">Update Password</button>
+          <button onClick={handleSavePassword} className="w-full bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 px-4 py-2 rounded-lg text-xs font-bold hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-all">Update Password</button>
         </div>
 
         {/* 2FA Section */}
         <div className="space-y-3">
-          <div className="flex items-center gap-2 border-b border-gray-100 pb-2">
+          <div className="flex items-center gap-2 border-b border-gray-100 dark:border-gray-800 pb-2">
             <Shield size={16} className="text-gray-400" />
-            <h4 className="text-xs font-bold text-gray-900 uppercase tracking-wide">Two-Factor Authentication</h4>
+            <h4 className="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-wide">Two-Factor Authentication</h4>
           </div>
           <div className="flex items-center justify-between py-2">
             <div>
-              <div className="text-sm font-bold text-gray-900">Enable 2FA</div>
-              <div className="text-xs text-gray-500">Add an extra layer of security</div>
+              <div className="text-sm font-bold text-gray-900 dark:text-white">Enable 2FA</div>
+              <div className="text-xs text-gray-500 dark:text-gray-400">Add an extra layer of security</div>
             </div>
             <button className="bg-gray-200 relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
               <span className="translate-x-0 pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"></span>
@@ -529,23 +579,26 @@ const ProfileMenu = ({ onClose }) => {
 
         {/* Active Sessions Section */}
         <div className="space-y-4">
-          <div className="flex items-center gap-2 border-b border-gray-100 pb-2">
+          <div className="flex items-center gap-2 border-b border-gray-100 dark:border-gray-800 pb-2">
             <Laptop size={16} className="text-gray-400" />
-            <h4 className="text-xs font-bold text-gray-900 uppercase tracking-wide">Logged-in Devices</h4>
+            <h4 className="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-wide">Logged-in Devices</h4>
           </div>
           <div className="space-y-3">
             {sessions.map((session) => (
-              <div key={session.id} className="flex items-start justify-between p-3 rounded-xl border border-gray-100 bg-gray-50/50 hover:bg-gray-50 transition-colors">
+              <div key={session.id} className="flex items-start justify-between p-3 rounded-xl border border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
                 <div className="flex items-start gap-3">
-                  <div className="p-2 bg-white rounded-lg border border-gray-200 text-gray-500">
+                  <div className="p-2 bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-300">
                     {session.type === 'laptop' ? <Laptop size={18} /> : session.type === 'mobile' ? <Smartphone size={18} /> : <Monitor size={18} />}
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="text-sm font-bold text-gray-900">{session.device}</span>
-                      {session.current && <span className="px-2 py-0.5 bg-green-100 text-green-700 text-[10px] font-bold rounded-full">Current</span>}
+                      <span className="text-sm font-bold text-gray-900 dark:text-white">
+                        {session.device}
+                        {session.browser && <span className="ml-1 text-xs font-normal text-gray-500 dark:text-gray-400">• {session.browser}</span>}
+                      </span>
+                      {session.current && <span className="px-2 py-0.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-[10px] font-bold rounded-full">Current</span>}
                     </div>
-                    <div className="text-xs text-gray-500 mt-0.5">{session.location} • {session.lastActive}</div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{session.location} • {session.lastActive}</div>
                   </div>
                 </div>
                 {!session.current && (
@@ -562,7 +615,7 @@ const ProfileMenu = ({ onClose }) => {
           {sessions.length > 1 && (
             <button
               onClick={handleLogoutAllSessions}
-              className="w-full border border-red-200 text-red-600 px-4 py-2.5 rounded-xl text-xs font-bold hover:bg-red-50 transition-all flex items-center justify-center gap-2"
+              className="w-full border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 px-4 py-2.5 rounded-xl text-xs font-bold hover:bg-red-50 dark:hover:bg-red-900/20 transition-all flex items-center justify-center gap-2"
             >
               <LogOut size={14} />
               Log Out All Other Devices
@@ -574,8 +627,8 @@ const ProfileMenu = ({ onClose }) => {
   );
 
   const renderHelpView = () => (
-    <div className="w-72 bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden flex flex-col animate-fade-in">
-      <div className="p-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50 sticky top-0 z-10">
+    <div className="w-72 bg-white dark:bg-gray-900 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col animate-fade-in">
+      <div className="p-4 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between bg-gray-50/50 dark:bg-gray-800/50 sticky top-0 z-10">
         <button onClick={() => setView("menu")} className="text-gray-500 hover:text-gray-900 flex items-center text-xs font-bold transition-colors">
           <ChevronLeft size={14} className="mr-1" /> Back
         </button>
@@ -583,23 +636,23 @@ const ProfileMenu = ({ onClose }) => {
         <div className="w-8"></div>
       </div>
       <div className="p-2 space-y-1">
-        <button onClick={() => setView("help_academy")} className="w-full text-left px-3 py-2.5 text-sm text-gray-700 hover:bg-gray-100 rounded-lg flex items-center transition-colors group">
+        <button onClick={() => setView("help_academy")} className="w-full text-left px-3 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg flex items-center transition-colors group">
           <BookOpen size={18} className="mr-3 text-gray-400 group-hover:text-blue-600 transition-colors" />
           <span className="font-medium">Academy</span>
         </button>
-        <button onClick={() => setView("help_shortcuts")} className="w-full text-left px-3 py-2.5 text-sm text-gray-700 hover:bg-gray-100 rounded-lg flex items-center transition-colors group">
+        <button onClick={() => setView("help_shortcuts")} className="w-full text-left px-3 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg flex items-center transition-colors group">
           <Command size={18} className="mr-3 text-gray-400 group-hover:text-blue-600 transition-colors" />
           <span className="font-medium">Keyboard Shortcuts</span>
         </button>
-        <button onClick={() => setView("help_bug")} className="w-full text-left px-3 py-2.5 text-sm text-gray-700 hover:bg-gray-100 rounded-lg flex items-center transition-colors group">
+        <button onClick={() => setView("help_bug")} className="w-full text-left px-3 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg flex items-center transition-colors group">
           <Bug size={18} className="mr-3 text-gray-400 group-hover:text-blue-600 transition-colors" />
           <span className="font-medium">Report a Bug</span>
         </button>
-        <button onClick={() => setView("help_whatsnew")} className="w-full text-left px-3 py-2.5 text-sm text-gray-700 hover:bg-gray-100 rounded-lg flex items-center transition-colors group">
+        <button onClick={() => setView("help_whatsnew")} className="w-full text-left px-3 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg flex items-center transition-colors group">
           <Sparkles size={18} className="mr-3 text-gray-400 group-hover:text-blue-600 transition-colors" />
           <span className="font-medium">What's New</span>
         </button>
-        <button onClick={() => setView("help_contact")} className="w-full text-left px-3 py-2.5 text-sm text-gray-700 hover:bg-gray-100 rounded-lg flex items-center transition-colors group">
+        <button onClick={() => setView("help_contact")} className="w-full text-left px-3 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg flex items-center transition-colors group">
           <MessageCircle size={18} className="mr-3 text-gray-400 group-hover:text-blue-600 transition-colors" />
           <span className="font-medium">Contact Support</span>
         </button>
@@ -607,21 +660,21 @@ const ProfileMenu = ({ onClose }) => {
     </div>
   );
 
-  // Sub-views for Help (Academy, Shortcuts, etc.) - Simplified for brevity but keeping structure
+  // Sub-views for Help
   const renderHelpAcademy = () => (
-    <div className="w-80 bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden flex flex-col max-h-[80vh] animate-fade-in">
-      <div className="p-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50 sticky top-0 z-10">
-        <button onClick={() => setView("help")} className="text-gray-500 hover:text-gray-900 flex items-center text-xs font-bold transition-colors">
+    <div className="w-80 bg-white dark:bg-gray-900 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col max-h-[80vh] animate-fade-in">
+      <div className="p-4 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between bg-gray-50/50 dark:bg-gray-800/50 sticky top-0 z-10">
+        <button onClick={() => setView("help")} className="text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white flex items-center text-xs font-bold transition-colors">
           <ChevronLeft size={14} className="mr-1" /> Back
         </button>
-        <span className="font-bold text-gray-900 text-sm">Academy</span>
+        <span className="font-bold text-gray-900 dark:text-white text-sm">Academy</span>
         <div className="w-8"></div>
       </div>
       <div className="p-4 overflow-y-auto space-y-2">
         {["Getting Started", "Power User Tips", "Workspace Mgmt", "Integrations"].map((guide, i) => (
-          <div key={i} className="p-3 border border-gray-100 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
-            <h3 className="font-bold text-sm text-gray-800">{guide}</h3>
-            <p className="text-xs text-gray-500 mt-1">Read guide →</p>
+          <div key={i} className="p-3 border border-gray-100 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer transition-colors">
+            <h3 className="font-bold text-sm text-gray-800 dark:text-gray-200">{guide}</h3>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Read guide →</p>
           </div>
         ))}
       </div>
@@ -629,12 +682,12 @@ const ProfileMenu = ({ onClose }) => {
   );
 
   const renderHelpShortcuts = () => (
-    <div className="w-72 bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden flex flex-col animate-fade-in">
-      <div className="p-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50 sticky top-0 z-10">
-        <button onClick={() => setView("help")} className="text-gray-500 hover:text-gray-900 flex items-center text-xs font-bold transition-colors">
+    <div className="w-72 bg-white dark:bg-gray-900 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col animate-fade-in">
+      <div className="p-4 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between bg-gray-50/50 dark:bg-gray-800/50 sticky top-0 z-10">
+        <button onClick={() => setView("help")} className="text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white flex items-center text-xs font-bold transition-colors">
           <ChevronLeft size={14} className="mr-1" /> Back
         </button>
-        <span className="font-bold text-gray-900 text-sm">Shortcuts</span>
+        <span className="font-bold text-gray-900 dark:text-white text-sm">Shortcuts</span>
         <div className="w-8"></div>
       </div>
       <div className="p-4 space-y-2">
@@ -644,9 +697,9 @@ const ProfileMenu = ({ onClose }) => {
           { label: "Toggle AI", keys: "Cmd+J" },
           { label: "Close", keys: "Esc" }
         ].map((item, i) => (
-          <div key={i} className="flex justify-between items-center p-2 border-b border-gray-100 last:border-0">
-            <span className="text-sm text-gray-600">{item.label}</span>
-            <kbd className="px-2 py-1 bg-gray-100 rounded text-xs font-mono text-gray-500 border border-gray-200">{item.keys}</kbd>
+          <div key={i} className="flex justify-between items-center p-2 border-b border-gray-100 dark:border-gray-700 last:border-0">
+            <span className="text-sm text-gray-600 dark:text-gray-300">{item.label}</span>
+            <kbd className="px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded text-xs font-mono text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700">{item.keys}</kbd>
           </div>
         ))}
       </div>
@@ -654,63 +707,63 @@ const ProfileMenu = ({ onClose }) => {
   );
 
   const renderHelpBug = () => (
-    <div className="w-72 bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden flex flex-col animate-fade-in">
-      <div className="p-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50 sticky top-0 z-10">
-        <button onClick={() => setView("help")} className="text-gray-500 hover:text-gray-900 flex items-center text-xs font-bold transition-colors">
+    <div className="w-72 bg-white dark:bg-gray-900 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col animate-fade-in">
+      <div className="p-4 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between bg-gray-50/50 dark:bg-gray-800/50 sticky top-0 z-10">
+        <button onClick={() => setView("help")} className="text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white flex items-center text-xs font-bold transition-colors">
           <ChevronLeft size={14} className="mr-1" /> Back
         </button>
-        <span className="font-bold text-gray-900 text-sm">Report Bug</span>
+        <span className="font-bold text-gray-900 dark:text-white text-sm">Report Bug</span>
         <div className="w-8"></div>
       </div>
       <div className="p-4 space-y-3">
-        <textarea className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-red-500/20 focus:border-red-500 h-32" placeholder="Describe the issue..." />
+        <textarea className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-red-500/20 focus:border-red-500 h-32 bg-white dark:bg-gray-800 text-gray-900 dark:text-white" placeholder="Describe the issue..." />
         <button className="w-full bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-sm hover:bg-red-700 transition-all">Submit Report</button>
       </div>
     </div>
   );
 
   const renderHelpWhatsNew = () => (
-    <div className="w-72 bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden flex flex-col animate-fade-in">
-      <div className="p-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50 sticky top-0 z-10">
-        <button onClick={() => setView("help")} className="text-gray-500 hover:text-gray-900 flex items-center text-xs font-bold transition-colors">
+    <div className="w-72 bg-white dark:bg-gray-900 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col animate-fade-in">
+      <div className="p-4 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between bg-gray-50/50 dark:bg-gray-800/50 sticky top-0 z-10">
+        <button onClick={() => setView("help")} className="text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white flex items-center text-xs font-bold transition-colors">
           <ChevronLeft size={14} className="mr-1" /> Back
         </button>
-        <span className="font-bold text-gray-900 text-sm">What's New</span>
+        <span className="font-bold text-gray-900 dark:text-white text-sm">What's New</span>
         <div className="w-8"></div>
       </div>
       <div className="p-4 space-y-4">
         <div className="pl-4 border-l-2 border-pink-500 relative">
           <div className="absolute -left-[5px] top-0 w-2.5 h-2.5 rounded-full bg-pink-500"></div>
           <div className="text-[10px] font-bold text-pink-500">NOV 2025</div>
-          <div className="text-sm font-bold text-gray-900">Chttrix AI 2.0</div>
-          <div className="text-xs text-gray-500 leading-relaxed mt-1">Smarter responses & context awareness.</div>
+          <div className="text-sm font-bold text-gray-900 dark:text-white">Chttrix AI 2.0</div>
+          <div className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed mt-1">Smarter responses & context awareness.</div>
         </div>
         <div className="pl-4 border-l-2 border-orange-500 relative">
           <div className="absolute -left-[5px] top-0 w-2.5 h-2.5 rounded-full bg-orange-500"></div>
           <div className="text-[10px] font-bold text-orange-500">OCT 2025</div>
-          <div className="text-sm font-bold text-gray-900">Dark Mode</div>
-          <div className="text-xs text-gray-500 leading-relaxed mt-1">Easy on the eyes.</div>
+          <div className="text-sm font-bold text-gray-900 dark:text-white">Dark Mode</div>
+          <div className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed mt-1">Easy on the eyes.</div>
         </div>
       </div>
     </div>
   );
 
   const renderHelpContact = () => (
-    <div className="w-72 bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden flex flex-col animate-fade-in">
-      <div className="p-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50 sticky top-0 z-10">
-        <button onClick={() => setView("help")} className="text-gray-500 hover:text-gray-900 flex items-center text-xs font-bold transition-colors">
+    <div className="w-72 bg-white dark:bg-gray-900 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col animate-fade-in">
+      <div className="p-4 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between bg-gray-50/50 dark:bg-gray-800/50 sticky top-0 z-10">
+        <button onClick={() => setView("help")} className="text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white flex items-center text-xs font-bold transition-colors">
           <ChevronLeft size={14} className="mr-1" /> Back
         </button>
-        <span className="font-bold text-gray-900 text-sm">Contact</span>
+        <span className="font-bold text-gray-900 dark:text-white text-sm">Contact</span>
         <div className="w-8"></div>
       </div>
       <div className="p-4 space-y-3">
-        <select className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
+        <select className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white">
           <option>General Inquiry</option>
           <option>Billing</option>
           <option>Support</option>
         </select>
-        <textarea className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 h-24" placeholder="Message..." />
+        <textarea className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 h-24 bg-white dark:bg-gray-800 text-gray-900 dark:text-white" placeholder="Message..." />
         <button className="w-full bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-sm hover:bg-blue-700 transition-all">Send</button>
       </div>
     </div>

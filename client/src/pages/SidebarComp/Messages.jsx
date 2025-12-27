@@ -221,11 +221,11 @@ export default function Messages() {
               onDeleteChat={() => handleDeleteChat(selectedChat)}
             />
           ) : (
-            <div className="flex flex-col items-center justify-center h-full text-gray-400 bg-white">
-              <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+            <div className="flex flex-col items-center justify-center h-full text-gray-400 bg-white dark:bg-gray-900">
+              <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mb-4">
                 <span className="text-3xl">💬</span>
               </div>
-              <p className="text-lg font-medium text-gray-500">Select a conversation to start chatting</p>
+              <p className="text-lg font-medium text-gray-500 dark:text-gray-400">Select a conversation to start chatting</p>
             </div>
           )}
         </div>

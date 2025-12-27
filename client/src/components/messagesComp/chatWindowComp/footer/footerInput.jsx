@@ -161,8 +161,8 @@ export default function FooterInput({
   const hasText = stripTags(newMessage).trim().length > 0;
 
   return (
-    <div className="px-3 py-2 bg-white border-t border-gray-100 relative">
-      <div className="border border-gray-200 rounded-2xl transition-all bg-white relative shadow-sm hover:shadow-md hover:border-blue-200 focus-within:ring-2 focus-within:ring-blue-100 focus-within:border-blue-300">
+    <div className="px-3 py-2 bg-white dark:bg-gray-900 border-t border-gray-100 dark:border-gray-800 relative">
+      <div className="border border-gray-200 dark:border-gray-700 rounded-2xl transition-all bg-white dark:bg-gray-800 relative shadow-sm hover:shadow-md hover:border-blue-200 dark:hover:border-gray-600 focus-within:ring-2 focus-within:ring-blue-100 dark:focus-within:ring-blue-900/30 focus-within:border-blue-300 dark:focus-within:border-blue-700">
 
         {/* Rich Text Input */}
         <div className="w-full px-3 py-2 text-sm max-h-[60vh] overflow-y-auto custom-scrollbar resize-y min-h-[4rem]">
@@ -175,7 +175,7 @@ export default function FooterInput({
               onChange({ target: { value: evt.target.value } });
             }}
             onKeyDown={handleKeyDown}
-            className={`focus:outline-none min-h-[40px] whitespace-pre-wrap break-words ${blocked ? "cursor-not-allowed opacity-50" : ""}`}
+            className={`focus:outline-none min-h-[40px] whitespace-pre-wrap break-words text-gray-800 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 ${blocked ? "cursor-not-allowed opacity-50" : ""}`}
             placeholder="Message..."
           />
           {!newMessage && !blocked && (
@@ -187,14 +187,14 @@ export default function FooterInput({
 
         {/* Link Input Popover */}
         {showLinkInput && (
-          <div className="absolute bottom-12 left-20 z-50 bg-white shadow-xl border border-gray-200 rounded-xl p-2 flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2">
+          <div className="absolute bottom-12 left-20 z-50 bg-white dark:bg-gray-800 shadow-xl border border-gray-200 dark:border-gray-700 rounded-xl p-2 flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2">
             <input
               id="link-url-input"
               type="text"
               value={linkUrl}
               onChange={(e) => setLinkUrl(e.target.value)}
               placeholder="paste link here..."
-              className="text-sm px-2 py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 w-64"
+              className="text-sm px-2 py-1.5 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg focus:outline-none focus:border-blue-500 w-64"
               onKeyDown={(e) => { if (e.key === 'Enter') applyLink(); }}
             />
             <button
@@ -207,29 +207,29 @@ export default function FooterInput({
         )}
 
         {/* Toolbar (Slim) */}
-        <div className="flex items-center justify-between px-2 pb-1 bg-white rounded-b-2xl">
+        <div className="flex items-center justify-between px-2 pb-1 bg-white dark:bg-gray-800 rounded-b-2xl">
 
           {/* Left: Formatting Tools */}
           <div className="flex items-center gap-1">
             <button onMouseDown={(e) => e.preventDefault()} onClick={() => insertFormat('ai')} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors group" title="AI">
               <img src="/assets/ChttrixAI-logo.png" alt="AI" className="w-4 h-4 object-contain opacity-70 group-hover:opacity-100 group-hover:scale-110 transition-all" />
             </button>
-            <div className="h-4 w-px bg-gray-200 mx-1"></div>
-            <button onMouseDown={(e) => e.preventDefault()} onClick={() => insertFormat('bold')} className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-all" title="Bold">
+            <div className="h-4 w-px bg-gray-200 dark:bg-gray-700 mx-1"></div>
+            <button onMouseDown={(e) => e.preventDefault()} onClick={() => insertFormat('bold')} className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-all" title="Bold">
               <Bold size={15} />
             </button>
-            <button onMouseDown={(e) => e.preventDefault()} onClick={() => insertFormat('italic')} className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-all" title="Italic">
+            <button onMouseDown={(e) => e.preventDefault()} onClick={() => insertFormat('italic')} className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-all" title="Italic">
               <Italic size={15} />
             </button>
             <button
               onMouseDown={(e) => e.preventDefault()}
               onClick={() => insertFormat('link')}
-              className={`p-1.5 rounded-lg transition-all ${showLinkInput ? "text-blue-600 bg-blue-50" : "text-gray-400 hover:text-gray-700 hover:bg-gray-100"}`}
+              className={`p-1.5 rounded-lg transition-all ${showLinkInput ? "text-blue-600 bg-blue-50 dark:bg-blue-900/30" : "text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"}`}
               title="Link"
             >
               <Link size={15} />
             </button>
-            <button onMouseDown={(e) => e.preventDefault()} onClick={() => insertFormat('list')} className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-all" title="List">
+            <button onMouseDown={(e) => e.preventDefault()} onClick={() => insertFormat('list')} className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-all" title="List">
               <List size={15} />
             </button>
           </div>
@@ -245,7 +245,7 @@ export default function FooterInput({
                   setShowEmoji(!showEmoji);
                   setShowAttach(false);
                 }}
-                className={`p-1.5 rounded-lg transition-all ${showEmoji ? "text-blue-600 bg-blue-50" : "text-gray-400 hover:text-gray-600 hover:bg-gray-50"}`}
+                className={`p-1.5 rounded-lg transition-all ${showEmoji ? "text-blue-600 bg-blue-50 dark:bg-blue-900/30" : "text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"}`}
                 title="Emoji"
               >
                 <Smile size={18} />
@@ -265,7 +265,7 @@ export default function FooterInput({
                   setShowAttach(!showAttach);
                   setShowEmoji(false);
                 }}
-                className={`p-1.5 rounded-lg transition-all ${showAttach ? "text-blue-600 bg-blue-50" : "text-gray-400 hover:text-gray-600 hover:bg-gray-50"}`}
+                className={`p-1.5 rounded-lg transition-all ${showAttach ? "text-blue-600 bg-blue-50 dark:bg-blue-900/30" : "text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"}`}
                 title="Attach"
               >
                 <Paperclip size={18} />
@@ -282,7 +282,7 @@ export default function FooterInput({
               onClick={() => {
                 if (!blocked) setRecording(!recording);
               }}
-              className={`p-1.5 rounded-lg transition-all ${recording ? "text-red-500 bg-red-50 animate-pulse" : "text-gray-400 hover:text-gray-600 hover:bg-gray-50"}`}
+              className={`p-1.5 rounded-lg transition-all ${recording ? "text-red-500 bg-red-50 dark:bg-red-900/30 animate-pulse" : "text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"}`}
               title="Voice"
             >
               <Mic size={18} />
@@ -294,7 +294,7 @@ export default function FooterInput({
               disabled={!hasText || blocked}
               className={`ml-2 p-2 rounded-full transition-all duration-200 flex items-center justify-center ${hasText && !blocked
                 ? "bg-blue-600 text-white hover:bg-blue-700 shadow-md hover:shadow-lg"
-                : "bg-gray-200 text-gray-400 cursor-not-allowed"
+                : "bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed"
                 }`}
               title="Send message"
             >

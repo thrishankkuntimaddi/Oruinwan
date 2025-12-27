@@ -173,15 +173,15 @@ const MessagesPanel = ({ title }) => {
                 key={item.id}
                 onClick={handleClick}
                 className={`group p-2 rounded-xl cursor-pointer flex items-center justify-between border transition-all duration-200
-                    ${isSelectionMode && isSelected ? "bg-blue-50 border-blue-200" :
+                    ${isSelectionMode && isSelected ? "bg-blue-50 dark:bg-blue-900/40 border-blue-200 dark:border-blue-800" :
                         isActive
-                            ? "bg-blue-50 border-blue-200 shadow-sm"
-                            : "hover:bg-white hover:shadow-sm border-transparent hover:border-gray-100"
+                            ? "bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800 shadow-sm"
+                            : "hover:bg-white dark:hover:bg-gray-800 hover:shadow-sm border-transparent hover:border-gray-100 dark:hover:border-gray-700"
                     }`}
             >
                 <div className="flex items-center gap-2.5 flex-1">
                     {isSelectionMode && (
-                        <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${isSelected ? "bg-blue-600 border-blue-600" : "border-gray-300 bg-white"
+                        <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${isSelected ? "bg-blue-600 border-blue-600" : "border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800"
                             }`}>
                             {isSelected && <CheckSquare size={10} className="text-white" />}
                         </div>
@@ -195,18 +195,18 @@ const MessagesPanel = ({ title }) => {
                             {isBroadcast ? <Megaphone size={14} /> : item.name.charAt(0).toUpperCase()}
                         </div>
                         {!isBroadcast && (
-                            <div className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-white ${item.status === "active" || item.status === "online" ? "bg-green-500" :
-                                    item.status === "away" ? "bg-yellow-500" :
-                                        item.status === "dnd" || item.status === "busy" ? "bg-red-500" :
-                                            "bg-gray-400"
+                            <div className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-white dark:border-gray-900 ${item.status === "active" || item.status === "online" ? "bg-green-500" :
+                                item.status === "away" ? "bg-yellow-500" :
+                                    item.status === "dnd" || item.status === "busy" ? "bg-red-500" :
+                                        "bg-gray-400"
                                 }`}></div>
                         )}
                     </div>
                     <div className="flex-1 min-w-0">
-                        <div className={`text-sm font-semibold truncate ${isActive ? "text-blue-900" : "text-gray-900"}`}>
+                        <div className={`text-sm font-semibold truncate ${isActive ? "text-blue-900 dark:text-blue-100" : "text-gray-900 dark:text-gray-100"}`}>
                             {item.name}
                         </div>
-                        <div className={`text-xs line-clamp-1 ${isActive ? "text-blue-600" : "text-gray-500 group-hover:text-gray-700"}`}>
+                        <div className={`text-xs line-clamp-1 ${isActive ? "text-blue-600 dark:text-blue-300" : "text-gray-500 dark:text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-300"}`}>
                             {item.lastMessage || "No messages yet"}
                         </div>
                     </div>
@@ -222,17 +222,17 @@ const MessagesPanel = ({ title }) => {
     };
 
     return (
-        <div className="flex flex-col h-full bg-gray-50/50 border-r border-gray-200">
+        <div className="flex flex-col h-full bg-gray-50/50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800">
             {/* Header */}
-            <div className="h-16 border-b border-gray-200 flex items-center justify-between px-5 bg-white shrink-0">
-                <h2 className="font-bold text-xl text-gray-800 tracking-tight flex items-center gap-2">
+            <div className="h-16 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between px-5 bg-white dark:bg-gray-900 shrink-0">
+                <h2 className="font-bold text-xl text-gray-800 dark:text-gray-100 tracking-tight flex items-center gap-2">
                     <MessageCircle className="text-blue-600" size={20} />
                     Messages
                 </h2>
                 <div className="flex items-center gap-1">
                     <button
                         onClick={() => setIsSelectionMode(!isSelectionMode)}
-                        className={`p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors ${isSelectionMode ? "bg-blue-100 text-blue-600" : ""
+                        className={`p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors ${isSelectionMode ? "bg-blue-100 dark:bg-blue-900/30 text-blue-600" : ""
                             }`}
                         title="Manage Messages"
                     >
@@ -240,7 +240,7 @@ const MessagesPanel = ({ title }) => {
                     </button>
                     <button
                         onClick={() => setShowCreateDM(true)}
-                        className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                        className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
                         title="New Message"
                     >
                         <Plus size={20} />
@@ -257,7 +257,7 @@ const MessagesPanel = ({ title }) => {
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         placeholder="Search messages..."
-                        className="w-full pl-9 pr-4 py-2 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
+                        className="w-full pl-9 pr-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-sm text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
                     />
                 </div>
             </div>
@@ -267,14 +267,14 @@ const MessagesPanel = ({ title }) => {
                 <div className="flex space-x-2">
                     <button
                         onClick={() => setFilter("all")}
-                        className={`px-4 py-1.5 text-xs font-medium rounded-full transition-colors ${filter === "all" ? "bg-blue-100 text-blue-700" : "bg-white border border-gray-200 text-gray-600 hover:bg-gray-50"
+                        className={`px-4 py-1.5 text-xs font-medium rounded-full transition-colors ${filter === "all" ? "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400" : "bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700"
                             }`}
                     >
                         All
                     </button>
                     <button
                         onClick={() => setFilter("unread")}
-                        className={`px-4 py-1.5 text-xs font-medium rounded-full transition-colors ${filter === "unread" ? "bg-blue-100 text-blue-700" : "bg-white border border-gray-200 text-gray-600 hover:bg-gray-50"
+                        className={`px-4 py-1.5 text-xs font-medium rounded-full transition-colors ${filter === "unread" ? "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400" : "bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700"
                             }`}
                     >
                         Unread

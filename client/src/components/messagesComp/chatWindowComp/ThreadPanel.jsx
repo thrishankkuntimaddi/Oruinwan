@@ -129,16 +129,16 @@ export default function ThreadPanel({ parentMessage, onClose, socket, currentUse
     }, [onClose]);
 
     return (
-        <div className="w-[400px] h-full bg-white border-l shadow-xl flex flex-col animate-slide-in-right flex-shrink-0">
+        <div className="w-[400px] h-full bg-white dark:bg-gray-900 border-l dark:border-gray-800 shadow-xl flex flex-col animate-slide-in-right flex-shrink-0">
             {/* Header */}
-            <div className="flex items-center justify-between px-4 py-3 border-b bg-white">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900">
                 <div className="flex items-center gap-2">
-                    <h3 className="font-bold text-gray-800 text-base">Direction</h3>
+                    <h3 className="font-bold text-gray-800 dark:text-gray-100 text-base">Direction</h3>
                     <span className="text-xs text-gray-400">#{parentMessageState?.channelId?.name || "discussion"}</span>
                 </div>
                 <button
                     onClick={onClose}
-                    className="p-1.5 rounded-md hover:bg-gray-100 text-gray-500 transition-colors"
+                    className="p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400 transition-colors"
                     title="Close"
                 >
                     <X size={20} />
@@ -152,11 +152,11 @@ export default function ThreadPanel({ parentMessage, onClose, socket, currentUse
             ) : (
                 <>
                     {/* Content Area */}
-                    <div className="flex-1 overflow-y-auto custom-scrollbar bg-white flex flex-col">
+                    <div className="flex-1 overflow-y-auto custom-scrollbar bg-white dark:bg-gray-900 flex flex-col">
 
                         {/* Parent Message (Highlighted & Compact) */}
                         {parentMessageState && (
-                            <div className="px-4 py-3 border-b border-gray-100 bg-blue-50/20">
+                            <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-800 bg-blue-50/20 dark:bg-blue-900/10">
                                 <div className="flex items-start gap-2">
                                     <div
                                         className="h-7 w-7 bg-gray-200 rounded-md flex-shrink-0 bg-cover bg-center shadow-sm"
@@ -166,14 +166,14 @@ export default function ThreadPanel({ parentMessage, onClose, socket, currentUse
                                     />
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-baseline gap-2">
-                                            <span className="font-bold text-xs text-gray-900">
+                                            <span className="font-bold text-xs text-gray-900 dark:text-gray-100">
                                                 {parentMessageState.senderName || parentMessageState.senderId?.username || "Unknown"}
                                             </span>
                                             <span className="text-[10px] text-gray-400">
                                                 {formatTime(parentMessageState.ts || parentMessageState.createdAt)}
                                             </span>
                                         </div>
-                                        <p className="text-xs text-gray-800 mt-0.5 leading-relaxed whitespace-pre-wrap break-words">
+                                        <p className="text-xs text-gray-800 dark:text-gray-200 mt-0.5 leading-relaxed whitespace-pre-wrap break-words">
                                             {parentMessageState.text}
                                         </p>
                                     </div>
@@ -205,14 +205,14 @@ export default function ThreadPanel({ parentMessage, onClose, socket, currentUse
                                             />
                                             <div className="flex-1 min-w-0">
                                                 <div className="flex items-baseline gap-2">
-                                                    <span className="font-bold text-sm text-gray-900">
+                                                    <span className="font-bold text-sm text-gray-900 dark:text-gray-100">
                                                         {reply.senderId?.username || "Unknown"}
                                                     </span>
                                                     <span className="text-xs text-gray-400">
                                                         {formatTime(reply.createdAt)}
                                                     </span>
                                                 </div>
-                                                <p className="text-sm text-gray-700 mt-0.5 leading-relaxed whitespace-pre-wrap break-words">
+                                                <p className="text-sm text-gray-700 dark:text-gray-300 mt-0.5 leading-relaxed whitespace-pre-wrap break-words">
                                                     {reply.text}
                                                 </p>
                                             </div>
@@ -225,8 +225,8 @@ export default function ThreadPanel({ parentMessage, onClose, socket, currentUse
                     </div>
 
                     {/* Input Area (Compact & Feature-rich) */}
-                    <div className="p-4 bg-white border-t border-gray-200">
-                        <div className="border border-gray-300 rounded-lg shadow-sm focus-within:ring-1 focus-within:ring-blue-500 focus-within:border-blue-500 transition-all bg-white">
+                    <div className="p-4 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800">
+                        <div className="border border-gray-300 dark:border-gray-700 rounded-lg shadow-sm focus-within:ring-1 focus-within:ring-blue-500 focus-within:border-blue-500 transition-all bg-white dark:bg-gray-800">
 
                             {/* Textarea */}
                             <textarea
@@ -235,31 +235,31 @@ export default function ThreadPanel({ parentMessage, onClose, socket, currentUse
                                 onKeyDown={handleKeyDown}
                                 placeholder="Reply..."
                                 rows={1}
-                                className="w-full px-3 py-2.5 text-sm resize-none focus:outline-none bg-transparent max-h-32 min-h-[44px]"
+                                className="w-full px-3 py-2.5 text-sm resize-none focus:outline-none bg-transparent dark:text-gray-100 max-h-32 min-h-[44px] placeholder-gray-400 dark:placeholder-gray-500"
                             />
 
                             {/* Toolbar */}
                             <div className="flex items-center justify-between px-2 pb-2 pt-1">
                                 <div className="flex items-center gap-1">
-                                    <button className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors" title="Bold">
+                                    <button className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors" title="Bold">
                                         <Bold size={14} />
                                     </button>
-                                    <button className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors" title="Italic">
+                                    <button className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors" title="Italic">
                                         <Italic size={14} />
                                     </button>
-                                    <button className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors" title="Link">
+                                    <button className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors" title="Link">
                                         <Link size={14} />
                                     </button>
-                                    <button className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors" title="List">
+                                    <button className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors" title="List">
                                         <List size={14} />
                                     </button>
                                 </div>
 
                                 <div className="flex items-center gap-2">
-                                    <button className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors" title="Add emoji">
+                                    <button className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors" title="Add emoji">
                                         <Smile size={16} />
                                     </button>
-                                    <button className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors" title="Attach file">
+                                    <button className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors" title="Attach file">
                                         <Paperclip size={16} />
                                     </button>
                                     <button

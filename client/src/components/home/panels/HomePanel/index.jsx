@@ -295,7 +295,7 @@ const HomePanel = ({ title }) => {
     const dms = items.filter(i => !i.isFavorite && i.type === 'dm');
 
     return (
-        <div className="flex flex-col h-full bg-gray-50 relative">
+        <div className="flex flex-col h-full bg-gray-50 dark:bg-gray-900 relative border-r border-gray-200 dark:border-gray-800">
             {/* Workspace Header with Dropdown */}
             <WorkspaceHeader
                 workspaceName={workspaceName}
@@ -311,20 +311,20 @@ const HomePanel = ({ title }) => {
             />
 
             {/* Divider */}
-            <div className="border-t border-gray-200 mx-4 mt-2 mb-2"></div>
+            <div className="border-t border-gray-200 dark:border-gray-800 mx-4 mt-2 mb-2"></div>
 
             {/* Scrollable Content */}
             <div className="flex-1 overflow-y-auto custom-scrollbar pb-4">
 
                 {/* Selection Mode Header */}
                 {isSelectionMode && (
-                    <div className="px-4 py-2 bg-blue-50 border-b border-blue-100 flex items-center justify-between sticky top-0 z-10">
-                        <span className="text-sm font-bold text-blue-900">{selectedItems.size} selected</span>
+                    <div className="px-4 py-2 bg-blue-50 dark:bg-blue-900/20 border-b border-blue-100 dark:border-blue-900/30 flex items-center justify-between sticky top-0 z-10 transition-colors">
+                        <span className="text-sm font-bold text-blue-900 dark:text-blue-100">{selectedItems.size} selected</span>
                         <div className="flex gap-2">
                             <button
                                 onClick={() => setShowSelectionDeleteConfirm(true)}
                                 disabled={selectedItems.size === 0}
-                                className="p-1.5 text-red-600 hover:bg-red-100 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="p-1.5 text-red-600 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                                 title="Delete Selected"
                             >
                                 <Trash2 size={16} />
@@ -334,7 +334,7 @@ const HomePanel = ({ title }) => {
                                     setIsSelectionMode(false);
                                     setSelectedItems(new Set());
                                 }}
-                                className="p-1.5 text-gray-600 hover:bg-gray-200 rounded-lg"
+                                className="p-1.5 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors"
                                 title="Cancel"
                             >
                                 <X size={16} />

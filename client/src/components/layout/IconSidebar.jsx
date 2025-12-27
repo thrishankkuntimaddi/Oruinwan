@@ -67,7 +67,7 @@ const IconSidebar = ({ onProfileClick }) => {
     ];
 
     return (
-        <div className="w-[70px] bg-white flex flex-col items-center py-4 border-r border-gray-200 z-20 shadow-sm">
+        <div className="w-[70px] bg-white dark:bg-gray-900 flex flex-col items-center py-4 border-r border-gray-200 dark:border-gray-800 z-20 shadow-sm">
             {/* Top Space */}
             <div className="h-2"></div>
 
@@ -104,11 +104,11 @@ const IconSidebar = ({ onProfileClick }) => {
 
                 {/* Dropdown Menu */}
                 {showWorkspaceMenu && (
-                    <div className="absolute left-14 top-0 w-64 bg-white rounded-lg shadow-xl border border-gray-200 z-[100] overflow-hidden animate-fade-in">
-                        <div className="p-3 border-b border-gray-100 bg-gray-50">
+                    <div className="absolute left-14 top-0 w-64 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 z-[100] overflow-hidden animate-fade-in">
+                        <div className="p-3 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50">
                             <button
                                 onClick={() => navigate("/workspaces")}
-                                className="w-full text-left text-sm font-semibold text-blue-600 hover:text-blue-700 flex items-center group"
+                                className="w-full text-left text-sm font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 flex items-center group"
                             >
                                 <span>Manage Workspaces</span>
                                 <span className="ml-auto group-hover:translate-x-1 transition-transform">→</span>
@@ -124,7 +124,7 @@ const IconSidebar = ({ onProfileClick }) => {
                                         setShowWorkspaceMenu(false);
                                         navigate(`/workspace/${ws.id}/home`);
                                     }}
-                                    className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-3 transition-colors"
+                                    className="w-full text-left px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700/50 flex items-center gap-3 transition-colors"
                                 >
                                     <div
                                         style={{ backgroundColor: ws.color || '#2563eb' }}
@@ -148,7 +148,7 @@ const IconSidebar = ({ onProfileClick }) => {
                                             return iconMap[ws.icon] || iconMap['rocket'];
                                         })()}
                                     </div>
-                                    <span className="text-sm text-gray-700 font-medium">{ws.name}</span>
+                                    <span className="text-sm text-gray-700 dark:text-gray-300 font-medium">{ws.name}</span>
                                 </button>
                             ))}
                         </div>
@@ -168,8 +168,8 @@ const IconSidebar = ({ onProfileClick }) => {
                             <button
                                 onClick={() => navigate(targetPath)}
                                 className={`w-10 h-10 rounded-xl flex items-center justify-center text-xl transition-all ${isActive(item.path)
-                                    ? "bg-blue-50 text-blue-600"
-                                    : "text-gray-500 hover:bg-gray-100 hover:text-gray-900"
+                                    ? "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400"
+                                    : "text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-200"
                                     }`}
                             >
                                 {item.icon}
@@ -187,14 +187,14 @@ const IconSidebar = ({ onProfileClick }) => {
             <div className="mt-auto">
                 <button onClick={onProfileClick} className="relative group">
                     <div
-                        className="w-10 h-10 rounded-full bg-cover bg-center border-2 border-gray-100 hover:border-gray-300 transition-all shadow-sm"
+                        className="w-10 h-10 rounded-full bg-cover bg-center border-2 border-gray-100 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-500 transition-all shadow-sm"
                         style={{
                             backgroundImage: `url(${user?.profilePicture || "https://ui-avatars.com/api/?name=" + (user?.username || "User")})`,
                         }}
                     />
-                    <div className={`absolute w-3 h-3 rounded-full bottom-0 right-0 border-2 border-white ${user?.userStatus === "away" ? "bg-yellow-500" :
-                            user?.userStatus === "dnd" ? "bg-red-500" :
-                                "bg-green-500"
+                    <div className={`absolute w-3 h-3 rounded-full bottom-0 right-0 border-2 border-white dark:border-gray-900 ${user?.userStatus === "away" ? "bg-yellow-500" :
+                        user?.userStatus === "dnd" ? "bg-red-500" :
+                            "bg-green-500"
                         }`}></div>
                 </button>
             </div>

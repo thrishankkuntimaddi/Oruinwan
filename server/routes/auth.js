@@ -17,6 +17,8 @@ const {
   updatePassword,
   googleLogin,
   googleAuth,
+  getSessions,
+  revokeSession
 } = require("../controllers/authController");
 
 const requireAuth = require("../middleware/auth");
@@ -35,6 +37,10 @@ router.post("/reset-password", resetPassword);
 router.get("/me", requireAuth, getMe);
 router.put("/me", requireAuth, updateMe);
 router.put("/me/password", requireAuth, updatePassword);
+
+// SESSION ROUTES
+router.get("/sessions", requireAuth, getSessions);
+router.delete("/sessions/:id", requireAuth, revokeSession);
 
 // USERS LIST (for DMs and channel invitations)
 router.get("/users", requireAuth, async (req, res) => {

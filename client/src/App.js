@@ -7,6 +7,7 @@ import ContactsProvider from "./contexts/ContactsContext";
 import { NotesProvider } from "./contexts/NotesContext";
 import { TasksProvider } from "./contexts/TasksContext";
 import { ToastProvider } from "./contexts/ToastContext";
+import { ThemeProvider } from "./contexts/ThemeContext";
 import { BlogsProvider } from "./contexts/BlogsContext"; // ✅ Fix import path
 import { SocketProvider } from "./contexts/SocketContext"; // ✅ Add real-time support
 
@@ -51,304 +52,306 @@ function App() {
   return (
     <ContactsProvider>
       <ToastProvider>
-        <Router>
-          <SocketProvider>
-            <NotesProvider>
-              <TasksProvider>
-                <BlogsProvider>
-                  <Routes>
+        <ThemeProvider>
+          <Router>
+            <SocketProvider>
+              <NotesProvider>
+                <TasksProvider>
+                  <BlogsProvider>
+                    <Routes>
 
-                    {/* PROTECTED AREA (requires login) */}
+                      {/* PROTECTED AREA (requires login) */}
 
-                    {/* Workspace Selection - Must select workspace first */}
-                    <Route
-                      path="/workspaces"
-                      element={
-                        <RequireAuth>
-                          <WorkspaceSelect />
-                        </RequireAuth>
-                      }
-                    />
+                      {/* Workspace Selection - Must select workspace first */}
+                      <Route
+                        path="/workspaces"
+                        element={
+                          <RequireAuth>
+                            <WorkspaceSelect />
+                          </RequireAuth>
+                        }
+                      />
 
-                    {/* WORKSPACE-SPECIFIC ROUTES - All require workspaceId + membership */}
+                      {/* WORKSPACE-SPECIFIC ROUTES - All require workspaceId + membership */}
 
-                    {/* Home/Main View */}
-                    <Route
-                      path="/workspace/:workspaceId/home"
-                      element={
-                        <RequireAuth>
-                          <WorkspaceProvider>
-                            <RequireWorkspace>
-                              <MainLayout sidePanel={<HomePanel />}>
-                                <Home />
-                              </MainLayout>
-                            </RequireWorkspace>
-                          </WorkspaceProvider>
-                        </RequireAuth>
-                      }
-                    />
+                      {/* Home/Main View */}
+                      <Route
+                        path="/workspace/:workspaceId/home"
+                        element={
+                          <RequireAuth>
+                            <WorkspaceProvider>
+                              <RequireWorkspace>
+                                <MainLayout sidePanel={<HomePanel />}>
+                                  <Home />
+                                </MainLayout>
+                              </RequireWorkspace>
+                            </WorkspaceProvider>
+                          </RequireAuth>
+                        }
+                      />
 
-                    {/* Home View - Specific Channel */}
-                    <Route
-                      path="/workspace/:workspaceId/home/channel/:id"
-                      element={
-                        <RequireAuth>
-                          <WorkspaceProvider>
-                            <RequireWorkspace>
-                              <MainLayout sidePanel={<HomePanel />}>
-                                <Home />
-                              </MainLayout>
-                            </RequireWorkspace>
-                          </WorkspaceProvider>
-                        </RequireAuth>
-                      }
-                    />
+                      {/* Home View - Specific Channel */}
+                      <Route
+                        path="/workspace/:workspaceId/home/channel/:id"
+                        element={
+                          <RequireAuth>
+                            <WorkspaceProvider>
+                              <RequireWorkspace>
+                                <MainLayout sidePanel={<HomePanel />}>
+                                  <Home />
+                                </MainLayout>
+                              </RequireWorkspace>
+                            </WorkspaceProvider>
+                          </RequireAuth>
+                        }
+                      />
 
-                    {/* Home View - Specific DM */}
-                    <Route
-                      path="/workspace/:workspaceId/home/dm/:id"
-                      element={
-                        <RequireAuth>
-                          <WorkspaceProvider>
-                            <RequireWorkspace>
-                              <MainLayout sidePanel={<HomePanel />}>
-                                <Home />
-                              </MainLayout>
-                            </RequireWorkspace>
-                          </WorkspaceProvider>
-                        </RequireAuth>
-                      }
-                    />
+                      {/* Home View - Specific DM */}
+                      <Route
+                        path="/workspace/:workspaceId/home/dm/:id"
+                        element={
+                          <RequireAuth>
+                            <WorkspaceProvider>
+                              <RequireWorkspace>
+                                <MainLayout sidePanel={<HomePanel />}>
+                                  <Home />
+                                </MainLayout>
+                              </RequireWorkspace>
+                            </WorkspaceProvider>
+                          </RequireAuth>
+                        }
+                      />
 
-                    {/* Home View - New DM */}
-                    <Route
-                      path="/workspace/:workspaceId/home/dm/new/:dmId"
-                      element={
-                        <RequireAuth>
-                          <WorkspaceProvider>
-                            <RequireWorkspace>
-                              <MainLayout sidePanel={<HomePanel />}>
-                                <Home />
-                              </MainLayout>
-                            </RequireWorkspace>
-                          </WorkspaceProvider>
-                        </RequireAuth>
-                      }
-                    />
+                      {/* Home View - New DM */}
+                      <Route
+                        path="/workspace/:workspaceId/home/dm/new/:dmId"
+                        element={
+                          <RequireAuth>
+                            <WorkspaceProvider>
+                              <RequireWorkspace>
+                                <MainLayout sidePanel={<HomePanel />}>
+                                  <Home />
+                                </MainLayout>
+                              </RequireWorkspace>
+                            </WorkspaceProvider>
+                          </RequireAuth>
+                        }
+                      />
 
-                    {/* Channels View */}
-                    <Route
-                      path="/workspace/:workspaceId/channels"
-                      element={
-                        <RequireAuth>
-                          <WorkspaceProvider>
-                            <RequireWorkspace>
-                              <MainLayout sidePanel={<ChannelsPanel />}>
-                                <Home />
-                              </MainLayout>
-                            </RequireWorkspace>
-                          </WorkspaceProvider>
-                        </RequireAuth>
-                      }
-                    />
+                      {/* Channels View */}
+                      <Route
+                        path="/workspace/:workspaceId/channels"
+                        element={
+                          <RequireAuth>
+                            <WorkspaceProvider>
+                              <RequireWorkspace>
+                                <MainLayout sidePanel={<ChannelsPanel />}>
+                                  <Home />
+                                </MainLayout>
+                              </RequireWorkspace>
+                            </WorkspaceProvider>
+                          </RequireAuth>
+                        }
+                      />
 
-                    {/* Specific Channel */}
-                    <Route
-                      path="/workspace/:workspaceId/channel/:id"
-                      element={
-                        <RequireAuth>
-                          <WorkspaceProvider>
-                            <RequireWorkspace>
-                              <MainLayout sidePanel={<ChannelsPanel />}>
-                                <Home />
-                              </MainLayout>
-                            </RequireWorkspace>
-                          </WorkspaceProvider>
-                        </RequireAuth>
-                      }
-                    />
+                      {/* Specific Channel */}
+                      <Route
+                        path="/workspace/:workspaceId/channel/:id"
+                        element={
+                          <RequireAuth>
+                            <WorkspaceProvider>
+                              <RequireWorkspace>
+                                <MainLayout sidePanel={<ChannelsPanel />}>
+                                  <Home />
+                                </MainLayout>
+                              </RequireWorkspace>
+                            </WorkspaceProvider>
+                          </RequireAuth>
+                        }
+                      />
 
-                    {/* Direct Messages View */}
-                    <Route
-                      path="/workspace/:workspaceId/messages"
-                      element={
-                        <RequireAuth>
-                          <WorkspaceProvider>
-                            <RequireWorkspace>
-                              <MainLayout sidePanel={<MessagesPanel />}>
-                                <Messages />
-                              </MainLayout>
-                            </RequireWorkspace>
-                          </WorkspaceProvider>
-                        </RequireAuth>
-                      }
-                    />
+                      {/* Direct Messages View */}
+                      <Route
+                        path="/workspace/:workspaceId/messages"
+                        element={
+                          <RequireAuth>
+                            <WorkspaceProvider>
+                              <RequireWorkspace>
+                                <MainLayout sidePanel={<MessagesPanel />}>
+                                  <Messages />
+                                </MainLayout>
+                              </RequireWorkspace>
+                            </WorkspaceProvider>
+                          </RequireAuth>
+                        }
+                      />
 
-                    {/* Specific DM from Messages Panel */}
-                    <Route
-                      path="/workspace/:workspaceId/messages/dm/:dmId"
-                      element={
-                        <RequireAuth>
-                          <WorkspaceProvider>
-                            <RequireWorkspace>
-                              <MainLayout sidePanel={<MessagesPanel />}>
-                                <Messages />
-                              </MainLayout>
-                            </RequireWorkspace>
-                          </WorkspaceProvider>
-                        </RequireAuth>
-                      }
-                    />
+                      {/* Specific DM from Messages Panel */}
+                      <Route
+                        path="/workspace/:workspaceId/messages/dm/:dmId"
+                        element={
+                          <RequireAuth>
+                            <WorkspaceProvider>
+                              <RequireWorkspace>
+                                <MainLayout sidePanel={<MessagesPanel />}>
+                                  <Messages />
+                                </MainLayout>
+                              </RequireWorkspace>
+                            </WorkspaceProvider>
+                          </RequireAuth>
+                        }
+                      />
 
-                    {/* Specific DM */}
-                    <Route
-                      path="/workspace/:workspaceId/dm/:id"
-                      element={
-                        <RequireAuth>
-                          <WorkspaceProvider>
-                            <RequireWorkspace>
-                              <MainLayout sidePanel={<MessagesPanel />}>
-                                <Home />
-                              </MainLayout>
-                            </RequireWorkspace>
-                          </WorkspaceProvider>
-                        </RequireAuth>
-                      }
-                    />
+                      {/* Specific DM */}
+                      <Route
+                        path="/workspace/:workspaceId/dm/:id"
+                        element={
+                          <RequireAuth>
+                            <WorkspaceProvider>
+                              <RequireWorkspace>
+                                <MainLayout sidePanel={<MessagesPanel />}>
+                                  <Home />
+                                </MainLayout>
+                              </RequireWorkspace>
+                            </WorkspaceProvider>
+                          </RequireAuth>
+                        }
+                      />
 
-                    {/* New DM (Initiation) */}
-                    <Route
-                      path="/workspace/:workspaceId/dm/new/:dmId"
-                      element={
-                        <RequireAuth>
-                          <WorkspaceProvider>
-                            <RequireWorkspace>
-                              <MainLayout sidePanel={<MessagesPanel />}>
-                                <Home />
-                              </MainLayout>
-                            </RequireWorkspace>
-                          </WorkspaceProvider>
-                        </RequireAuth>
-                      }
-                    />
+                      {/* New DM (Initiation) */}
+                      <Route
+                        path="/workspace/:workspaceId/dm/new/:dmId"
+                        element={
+                          <RequireAuth>
+                            <WorkspaceProvider>
+                              <RequireWorkspace>
+                                <MainLayout sidePanel={<MessagesPanel />}>
+                                  <Home />
+                                </MainLayout>
+                              </RequireWorkspace>
+                            </WorkspaceProvider>
+                          </RequireAuth>
+                        }
+                      />
 
-                    {/* Tasks */}
-                    <Route
-                      path="/workspace/:workspaceId/tasks"
-                      element={
-                        <RequireAuth>
-                          <WorkspaceProvider>
-                            <RequireWorkspace>
-                              <MainLayout sidePanel={<TasksPanel />}>
-                                <MyTasks />
-                              </MainLayout>
-                            </RequireWorkspace>
-                          </WorkspaceProvider>
-                        </RequireAuth>
-                      }
-                    />
+                      {/* Tasks */}
+                      <Route
+                        path="/workspace/:workspaceId/tasks"
+                        element={
+                          <RequireAuth>
+                            <WorkspaceProvider>
+                              <RequireWorkspace>
+                                <MainLayout sidePanel={<TasksPanel />}>
+                                  <MyTasks />
+                                </MainLayout>
+                              </RequireWorkspace>
+                            </WorkspaceProvider>
+                          </RequireAuth>
+                        }
+                      />
 
-                    {/* Notes */}
-                    <Route
-                      path="/workspace/:workspaceId/notes"
-                      element={
-                        <RequireAuth>
-                          <WorkspaceProvider>
-                            <RequireWorkspace>
-                              <MainLayout sidePanel={<NotesPanel />}>
-                                <Notes />
-                              </MainLayout>
-                            </RequireWorkspace>
-                          </WorkspaceProvider>
-                        </RequireAuth>
-                      }
-                    />
+                      {/* Notes */}
+                      <Route
+                        path="/workspace/:workspaceId/notes"
+                        element={
+                          <RequireAuth>
+                            <WorkspaceProvider>
+                              <RequireWorkspace>
+                                <MainLayout sidePanel={<NotesPanel />}>
+                                  <Notes />
+                                </MainLayout>
+                              </RequireWorkspace>
+                            </WorkspaceProvider>
+                          </RequireAuth>
+                        }
+                      />
 
-                    {/* Specific Note */}
-                    <Route
-                      path="/workspace/:workspaceId/notes/:id"
-                      element={
-                        <RequireAuth>
-                          <WorkspaceProvider>
-                            <RequireWorkspace>
-                              <MainLayout sidePanel={<NotesPanel />}>
-                                <Notes />
-                              </MainLayout>
-                            </RequireWorkspace>
-                          </WorkspaceProvider>
-                        </RequireAuth>
-                      }
-                    />
+                      {/* Specific Note */}
+                      <Route
+                        path="/workspace/:workspaceId/notes/:id"
+                        element={
+                          <RequireAuth>
+                            <WorkspaceProvider>
+                              <RequireWorkspace>
+                                <MainLayout sidePanel={<NotesPanel />}>
+                                  <Notes />
+                                </MainLayout>
+                              </RequireWorkspace>
+                            </WorkspaceProvider>
+                          </RequireAuth>
+                        }
+                      />
 
-                    {/* Updates */}
-                    <Route
-                      path="/workspace/:workspaceId/updates"
-                      element={
-                        <RequireAuth>
-                          <WorkspaceProvider>
-                            <RequireWorkspace>
-                              <MainLayout sidePanel={<UpdatesPanel />}>
-                                <Updates />
-                              </MainLayout>
-                            </RequireWorkspace>
-                          </WorkspaceProvider>
-                        </RequireAuth>
-                      }
-                    />
+                      {/* Updates */}
+                      <Route
+                        path="/workspace/:workspaceId/updates"
+                        element={
+                          <RequireAuth>
+                            <WorkspaceProvider>
+                              <RequireWorkspace>
+                                <MainLayout sidePanel={<UpdatesPanel />}>
+                                  <Updates />
+                                </MainLayout>
+                              </RequireWorkspace>
+                            </WorkspaceProvider>
+                          </RequireAuth>
+                        }
+                      />
 
-                    {/* Legacy routes - redirect to workspaces */}
-                    <Route
-                      path="/home"
-                      element={
-                        <RequireAuth>
-                          <WorkspaceSelect />
-                        </RequireAuth>
-                      }
-                    />
+                      {/* Legacy routes - redirect to workspaces */}
+                      <Route
+                        path="/home"
+                        element={
+                          <RequireAuth>
+                            <WorkspaceSelect />
+                          </RequireAuth>
+                        }
+                      />
 
 
-                    {/* Company Admin Console - Admin/Owner Only */}
-                    <Route
-                      path="/admin/company"
-                      element={
-                        <RequireAuth>
-                          <RequireAdmin>
-                            <CompanyAdmin />
-                          </RequireAdmin>
-                        </RequireAuth>
-                      }
-                    />
+                      {/* Company Admin Console - Admin/Owner Only */}
+                      <Route
+                        path="/admin/company"
+                        element={
+                          <RequireAuth>
+                            <RequireAdmin>
+                              <CompanyAdmin />
+                            </RequireAdmin>
+                          </RequireAuth>
+                        }
+                      />
 
-                    {/* PUBLIC ROUTES */}
+                      {/* PUBLIC ROUTES */}
 
-                    {/* Landing Page (Feature Showcase) */}
-                    <Route path="/" element={<FeatureShowcase />} />
-                    <Route path="/features" element={<FeatureShowcase />} />
+                      {/* Landing Page (Feature Showcase) */}
+                      <Route path="/" element={<FeatureShowcase />} />
+                      <Route path="/features" element={<FeatureShowcase />} />
 
-                    {/* PUBLIC ROUTES */}
-                    <Route path="/login" element={<LoginPage />} />
-                    <Route path="/register-company" element={<RegisterCompany />} />
-                    <Route path="/verify-email" element={<VerifyEmail />} />
-                    <Route path="/forgot-password" element={<ForgotPassword />} />
-                    <Route path="/reset-password" element={<ResetPassword />} />
-                    <Route path="/oauth-success" element={<OAuthSuccess />} />
-                    <Route path="/accept-invite" element={<AcceptInvite />} />
-                    <Route path="/join-workspace" element={<JoinWorkspace />} />
-                    <Route
-                      path="/join-channel"
-                      element={
-                        <RequireAuth>
-                          <JoinChannel />
-                        </RequireAuth>
-                      }
-                    />
+                      {/* PUBLIC ROUTES */}
+                      <Route path="/login" element={<LoginPage />} />
+                      <Route path="/register-company" element={<RegisterCompany />} />
+                      <Route path="/verify-email" element={<VerifyEmail />} />
+                      <Route path="/forgot-password" element={<ForgotPassword />} />
+                      <Route path="/reset-password" element={<ResetPassword />} />
+                      <Route path="/oauth-success" element={<OAuthSuccess />} />
+                      <Route path="/accept-invite" element={<AcceptInvite />} />
+                      <Route path="/join-workspace" element={<JoinWorkspace />} />
+                      <Route
+                        path="/join-channel"
+                        element={
+                          <RequireAuth>
+                            <JoinChannel />
+                          </RequireAuth>
+                        }
+                      />
 
-                  </Routes>
-                </BlogsProvider>
-              </TasksProvider>
-            </NotesProvider>
-          </SocketProvider>
-        </Router>
+                    </Routes>
+                  </BlogsProvider>
+                </TasksProvider>
+              </NotesProvider>
+            </SocketProvider>
+          </Router>
+        </ThemeProvider>
       </ToastProvider>
     </ContactsProvider >
   );

@@ -96,7 +96,7 @@ export default function MessagesContainer({
           <button
             onClick={onLoadMore}
             disabled={isLoadingMore}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/50 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isLoadingMore ? (
               <>
@@ -117,7 +117,7 @@ export default function MessagesContainer({
         <div key={grp.label} className="mb-4">
           {/* --- Date Header --- */}
           <div className="flex justify-center mb-3">
-            <div className="text-xs text-gray-500 px-3 py-1 bg-gray-100 rounded-full">
+            <div className="text-xs text-gray-500 dark:text-gray-400 px-3 py-1 bg-gray-100 dark:bg-gray-800 rounded-full">
               {grp.label}
             </div>
           </div>

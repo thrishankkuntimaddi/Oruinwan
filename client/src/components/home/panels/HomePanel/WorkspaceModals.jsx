@@ -37,16 +37,16 @@ const WorkspaceModals = ({
             {/* Rename Modal */}
             {showRenameModal && (
                 <div className="fixed inset-0 bg-black/40 z-[60] flex items-center justify-center animate-fade-in backdrop-blur-md">
-                    <div className="bg-white rounded-2xl shadow-2xl w-[420px] p-8 transform transition-all scale-100 border border-gray-100">
-                        <h3 className="text-xl font-bold text-gray-900 mb-2">Rename Workspace</h3>
-                        <p className="text-sm text-gray-500 mb-6 leading-relaxed">Choose a new name for your team's workspace. This will be visible to everyone.</p>
+                    <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-[420px] p-8 transform transition-all scale-100 border border-gray-100 dark:border-gray-700">
+                        <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Rename Workspace</h3>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mb-6 leading-relaxed">Choose a new name for your team's workspace. This will be visible to everyone.</p>
 
-                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Workspace Name</label>
+                        <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">Workspace Name</label>
                         <input
                             type="text"
                             value={newName}
                             onChange={(e) => setNewName(e.target.value)}
-                            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all mb-6 text-gray-900 placeholder-gray-400"
+                            className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:bg-white dark:focus:bg-gray-900 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all mb-6 text-gray-900 dark:text-white placeholder-gray-400"
                             placeholder="e.g. Chttrix"
                             autoFocus
                         />
@@ -71,11 +71,11 @@ const WorkspaceModals = ({
             {/* Invite Modal */}
             {showInviteModal && (
                 <div className="fixed inset-0 bg-black/40 z-[60] flex items-center justify-center animate-fade-in backdrop-blur-md p-4">
-                    <div className="bg-white rounded-2xl shadow-2xl w-[650px] max-h-[90vh] overflow-hidden transform transition-all scale-100 border border-gray-100 flex flex-col">
+                    <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-[650px] max-h-[90vh] overflow-hidden transform transition-all scale-100 border border-gray-100 dark:border-gray-700 flex flex-col">
                         {/* Header */}
-                        <div className="px-8 py-6 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-indigo-50 flex-shrink-0">
-                            <h3 className="text-2xl font-bold text-gray-900">Invite people to {workspaceName}</h3>
-                            <p className="text-gray-600 mt-1">Bring your team together to collaborate and chat.</p>
+                        <div className="px-8 py-6 border-b border-gray-100 dark:border-gray-800 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/40 dark:to-indigo-900/40 flex-shrink-0">
+                            <h3 className="text-2xl font-bold text-gray-900 dark:text-white">Invite people to {workspaceName}</h3>
+                            <p className="text-gray-600 dark:text-gray-300 mt-1">Bring your team together to collaborate and chat.</p>
                         </div>
 
                         {/* Scrollable Content */}
@@ -137,66 +137,66 @@ const WorkspaceModals = ({
 
                             <div className="relative">
                                 <div className="absolute inset-0 flex items-center">
-                                    <div className="w-full border-t border-gray-200"></div>
+                                    <div className="w-full border-t border-gray-200 dark:border-gray-700"></div>
                                 </div>
                                 <div className="relative flex justify-center text-sm">
-                                    <span className="px-3 bg-white text-gray-500 font-medium">OR</span>
+                                    <span className="px-3 bg-white dark:bg-gray-900 text-gray-500 dark:text-gray-400 font-medium">OR</span>
                                 </div>
                             </div>
 
                             {/* Email Input - Now textarea for bulk support */}
                             <div className="mb-6">
-                                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-2">
-                                    Email Addresses {emailCount > 0 && <span className="text-blue-600">({emailCount} recipient{emailCount > 1 ? 's' : ''})</span>}
+                                <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-2">
+                                    Email Addresses {emailCount > 0 && <span className="text-blue-600 dark:text-blue-400">({emailCount} recipient{emailCount > 1 ? 's' : ''})</span>}
                                 </label>
                                 <textarea
                                     value={inviteEmail}
                                     onChange={(e) => setInviteEmail(e.target.value)}
                                     rows={3}
                                     disabled={isInviting}
-                                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all resize-none disabled:opacity-50 disabled:cursor-not-allowed"
+                                    className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:bg-white dark:focus:bg-gray-900 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all resize-none disabled:opacity-50 disabled:cursor-not-allowed text-gray-900 dark:text-white placeholder-gray-400"
                                     placeholder="user1@example.com, user2@example.com, user3@example.com"
                                 />
-                                <p className="text-xs text-gray-500 mt-2">💡 Separate multiple emails with commas</p>
+                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">💡 Separate multiple emails with commas</p>
                             </div>
 
                             {/* Role Selection - Only for admins */}
                             {isAdmin && (
                                 <div className="mb-6">
-                                    <label className="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-2">
+                                    <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-2">
                                         Role
                                     </label>
                                     <select
                                         value={selectedRole}
                                         onChange={(e) => setSelectedRole(e.target.value)}
                                         disabled={isInviting}
-                                        className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                                        className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:bg-white dark:focus:bg-gray-900 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed text-gray-900 dark:text-white"
                                     >
                                         <option value="member">Member - Can view and participate</option>
                                         <option value="admin">Admin - Can manage workspace and invite others</option>
                                     </select>
-                                    <p className="text-xs text-gray-500 mt-2">
+                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
                                         {selectedRole === 'admin' ? '👑 Admins can manage workspace settings' : '👤 Members can participate in channels'}
                                     </p>
                                 </div>
                             )}
 
                             {/* Info Section */}
-                            <div className="bg-blue-50/50 rounded-xl p-5 border border-blue-100">
-                                <h4 className="text-sm font-bold text-blue-900 mb-2 flex items-center gap-2">
+                            <div className="bg-blue-50/50 dark:bg-blue-900/10 rounded-xl p-5 border border-blue-100 dark:border-blue-800/50">
+                                <h4 className="text-sm font-bold text-blue-900 dark:text-blue-300 mb-2 flex items-center gap-2">
                                     <span>ℹ️</span> How it works
                                 </h4>
-                                <ul className="text-sm text-blue-800 space-y-1.5 opacity-90">
+                                <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-1.5 opacity-90">
                                     <li className="flex items-start gap-2">
-                                        <span className="text-blue-600 mt-0.5">•</span>
+                                        <span className="text-blue-600 dark:text-blue-400 mt-0.5">•</span>
                                         <span>Invitations are sent via email with a secure join link</span>
                                     </li>
                                     <li className="flex items-start gap-2">
-                                        <span className="text-blue-600 mt-0.5">•</span>
+                                        <span className="text-blue-600 dark:text-blue-400 mt-0.5">•</span>
                                         <span>Links expire in 7 days for security</span>
                                     </li>
                                     <li className="flex items-start gap-2">
-                                        <span className="text-blue-600 mt-0.5">•</span>
+                                        <span className="text-blue-600 dark:text-blue-400 mt-0.5">•</span>
                                         <span>Recipients will be added as {selectedRole || 'member'}s</span>
                                     </li>
                                 </ul>
@@ -204,11 +204,11 @@ const WorkspaceModals = ({
                         </div>
 
                         {/* Footer */}
-                        <div className="px-8 py-5 bg-gray-50 border-t border-gray-100 flex justify-end gap-3 flex-shrink-0">
+                        <div className="px-8 py-5 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-100 dark:border-gray-800 flex justify-end gap-3 flex-shrink-0">
                             <button
                                 onClick={() => setShowInviteModal(false)}
                                 disabled={isInviting}
-                                className="px-6 py-2.5 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-200 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="px-6 py-2.5 text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-200 dark:hover:bg-gray-700 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 Cancel
                             </button>

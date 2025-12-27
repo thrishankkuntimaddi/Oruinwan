@@ -226,9 +226,9 @@ const InvitationsTab = ({ activeWorkspace, isAdmin }) => {
         return (
             <div className="flex items-center justify-center h-full">
                 <div className="text-center">
-                    <Shield className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">Admin Access Required</h3>
-                    <p className="text-gray-600">Only workspace admins can manage invitations</p>
+                    <Shield className="w-16 h-16 text-gray-400 dark:text-gray-600 mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Admin Access Required</h3>
+                    <p className="text-gray-600 dark:text-gray-400">Only workspace admins can manage invitations</p>
                 </div>
             </div>
         );
@@ -248,7 +248,7 @@ const InvitationsTab = ({ activeWorkspace, isAdmin }) => {
                                 <div className="text-base font-bold text-white">
                                     {selectedInvites.size} {selectedInvites.size === 1 ? 'Invitation' : 'Invitations'} Selected
                                 </div>
-                                <div className="text-xs text-blue-100">
+                                <div className="text-xs text-blue-100 dark:text-blue-200">
                                     {selectedPending > 0 && `${selectedPending} pending`}
                                     {selectedPending > 0 && selectedDeletable > 0 && ', '}
                                     {selectedDeletable > 0 && `${selectedDeletable} deletable`}
@@ -295,7 +295,7 @@ const InvitationsTab = ({ activeWorkspace, isAdmin }) => {
             )}
 
             {/* Search and Filters Container */}
-            <div className="px-8 pt-6 pb-2 bg-white border-b border-gray-100 space-y-3">
+            <div className="px-8 pt-6 pb-2 bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800 space-y-3">
                 {/* Top Row: Search and Actions */}
                 <div className="flex items-center gap-3">
                     <div className="relative flex-1">
@@ -305,14 +305,14 @@ const InvitationsTab = ({ activeWorkspace, isAdmin }) => {
                             placeholder="Search invitations by email, role, or inviter..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm"
+                            className="w-full pl-10 pr-4 py-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:bg-white dark:focus:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm text-gray-900 dark:text-white placeholder-gray-400"
                         />
                     </div>
                     {invitations.expired.length > 0 && (
                         <button
                             onClick={handleCleanupExpired}
                             disabled={bulkActionLoading}
-                            className="flex items-center gap-2 px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium rounded-xl transition-colors whitespace-nowrap"
+                            className="flex items-center gap-2 px-4 py-2.5 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm font-medium rounded-xl transition-colors whitespace-nowrap"
                         >
                             <Trash2 className="w-4 h-4" />
                             Clean Expired
@@ -335,17 +335,17 @@ const InvitationsTab = ({ activeWorkspace, isAdmin }) => {
                             onClick={() => { setFilter(value); setSelectedInvites(new Set()); }}
                             className={`flex-shrink-0 px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${filter === value
                                 ? value === 'duplicates'
-                                    ? 'bg-orange-50 text-orange-700 ring-1 ring-orange-200 shadow-sm'
-                                    : 'bg-blue-600 text-white shadow-md shadow-blue-200'
-                                : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                                    ? 'bg-orange-50 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 ring-1 ring-orange-200 dark:ring-orange-800 shadow-sm'
+                                    : 'bg-blue-600 text-white shadow-md shadow-blue-200 dark:shadow-none'
+                                : 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-200'
                                 }`}
                         >
                             <span>{label}</span>
                             <span className={`px-1.5 py-0.5 rounded-full text-xs ${filter === value
                                 ? value === 'duplicates'
-                                    ? 'bg-orange-200/50 text-orange-800'
+                                    ? 'bg-orange-200/50 dark:bg-orange-900/50 text-orange-800 dark:text-orange-200'
                                     : 'bg-white/20 text-white'
-                                : 'bg-gray-100 text-gray-500'
+                                : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
                                 }`}>
                                 {count}
                             </span>
@@ -362,10 +362,10 @@ const InvitationsTab = ({ activeWorkspace, isAdmin }) => {
                     </div>
                 ) : filteredInvites.length === 0 ? (
                     <div className="text-center py-12">
-                        <Mail className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                        <p className="text-gray-600">No invitations found</p>
+                        <Mail className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+                        <p className="text-gray-600 dark:text-gray-400">No invitations found</p>
                         {filter !== 'all' && (
-                            <p className="text-sm text-gray-500 mt-2">Try changing the filter or search query</p>
+                            <p className="text-sm text-gray-500 dark:text-gray-500 mt-2">Try changing the filter or search query</p>
                         )}
                     </div>
                 ) : (
@@ -373,11 +373,11 @@ const InvitationsTab = ({ activeWorkspace, isAdmin }) => {
                         {filteredInvites.map((invite) => (
                             <div
                                 key={invite.id}
-                                className={`bg-white rounded-xl border-2 transition-all hover:shadow-md ${invite.isDuplicate
-                                    ? 'border-orange-200 bg-orange-50/20'
+                                className={`bg-white dark:bg-gray-900 rounded-xl border-2 transition-all hover:shadow-md ${invite.isDuplicate
+                                    ? 'border-orange-200 dark:border-orange-900/50 bg-orange-50/20 dark:bg-orange-900/10'
                                     : selectedInvites.has(invite.id)
-                                        ? 'border-blue-500 bg-blue-50/50 shadow-md'
-                                        : 'border-gray-200 hover:border-gray-300'
+                                        ? 'border-blue-500 bg-blue-50/50 dark:bg-blue-900/20 shadow-md'
+                                        : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
                                     }`}
                             >
                                 <div className="p-4">
@@ -400,19 +400,19 @@ const InvitationsTab = ({ activeWorkspace, isAdmin }) => {
                                                     <div className="flex items-center gap-2 mb-1">
                                                         {invite.inviteType === 'email' ? (
                                                             <>
-                                                                <Mail className="w-4 h-4 text-blue-600 flex-shrink-0" />
-                                                                <span className="font-semibold text-gray-900 truncate">
+                                                                <Mail className="w-4 h-4 text-blue-600 dark:text-blue-400 flex-shrink-0" />
+                                                                <span className="font-semibold text-gray-900 dark:text-white truncate">
                                                                     {invite.email}
                                                                 </span>
                                                             </>
                                                         ) : (
                                                             <>
-                                                                <Link2 className="w-4 h-4 text-purple-600 flex-shrink-0" />
+                                                                <Link2 className="w-4 h-4 text-purple-600 dark:text-purple-400 flex-shrink-0" />
                                                                 <div className="flex flex-col">
-                                                                    <span className="font-semibold text-gray-700">
+                                                                    <span className="font-semibold text-gray-700 dark:text-gray-200">
                                                                         Shareable Link
                                                                     </span>
-                                                                    <span className="text-xs text-gray-500 italic">
+                                                                    <span className="text-xs text-gray-500 dark:text-gray-400 italic">
                                                                         Anyone with this link can join as {invite.role}
                                                                     </span>
                                                                 </div>
@@ -420,7 +420,7 @@ const InvitationsTab = ({ activeWorkspace, isAdmin }) => {
                                                         )}
                                                         {invite.isDuplicate && (
                                                             <span
-                                                                className="inline-flex items-center gap-1 px-2 py-0.5 bg-orange-100 text-orange-700 text-xs font-medium rounded border border-orange-300"
+                                                                className="inline-flex items-center gap-1 px-2 py-0.5 bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 text-xs font-medium rounded border border-orange-300 dark:border-orange-800"
                                                                 title={`${invite.duplicateCount} pending invitations for this email`}
                                                             >
                                                                 <AlertTriangle className="w-3 h-3" />
@@ -430,9 +430,9 @@ const InvitationsTab = ({ activeWorkspace, isAdmin }) => {
                                                     </div>
 
                                                     {/* Metadata Row */}
-                                                    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-gray-600">
+                                                    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-gray-600 dark:text-gray-400">
                                                         <div className="flex items-center gap-1.5">
-                                                            <span className="px-2.5 py-0.5 bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700 text-xs font-semibold rounded-md border border-blue-200 capitalize">
+                                                            <span className="px-2.5 py-0.5 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 text-blue-700 dark:text-blue-300 text-xs font-semibold rounded-md border border-blue-200 dark:border-blue-800 capitalize">
                                                                 {invite.role}
                                                             </span>
                                                         </div>
@@ -459,11 +459,11 @@ const InvitationsTab = ({ activeWorkspace, isAdmin }) => {
 
                                             {/* Actions Row */}
                                             {(invite.filterStatus === 'pending' || invite.filterStatus === 'expired') && (
-                                                <div className="flex gap-2 pt-3 border-t border-gray-100">
+                                                <div className="flex gap-2 pt-3 border-t border-gray-100 dark:border-gray-800">
                                                     <button
                                                         onClick={() => handleResend(invite.id)}
                                                         disabled={actionLoading[invite.id]}
-                                                        className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors disabled:opacity-50"
+                                                        className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/40 rounded-lg transition-colors disabled:opacity-50"
                                                     >
                                                         <RotateCw className={`w-3.5 h-3.5 ${actionLoading[invite.id] === 'resending' ? 'animate-spin' : ''}`} />
                                                         Resend
@@ -472,7 +472,7 @@ const InvitationsTab = ({ activeWorkspace, isAdmin }) => {
                                                         <button
                                                             onClick={() => handleRevoke(invite.id)}
                                                             disabled={actionLoading[invite.id]}
-                                                            className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-red-700 bg-red-50 hover:bg-red-100 rounded-lg transition-colors disabled:opacity-50"
+                                                            className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/40 rounded-lg transition-colors disabled:opacity-50"
                                                         >
                                                             <XCircle className="w-3.5 h-3.5" />
                                                             Revoke
@@ -695,18 +695,18 @@ const WorkspaceSettingsModal = ({
 
     return (
         <div className="fixed inset-0 bg-black/40 z-[60] flex items-center justify-center animate-fade-in backdrop-blur-md">
-            <div className="bg-white rounded-2xl shadow-2xl w-[800px] h-[600px] flex overflow-hidden transform transition-all scale-100 border border-gray-100">
+            <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-[800px] h-[600px] flex overflow-hidden transform transition-all scale-100 border border-gray-100 dark:border-gray-700">
                 {/* Sidebar */}
-                <div className="w-56 bg-gray-50/80 backdrop-blur-sm border-r border-gray-200 p-6">
-                    <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-6 px-2">Settings</h3>
+                <div className="w-56 bg-gray-50/80 dark:bg-gray-800/80 backdrop-blur-sm border-r border-gray-200 dark:border-gray-700 p-6">
+                    <h3 className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-6 px-2">Settings</h3>
                     <nav className="space-y-1">
                         {["General", "Permissions", "Members", "Invitations", "Billing", "Advanced"].map((tab) => (
                             <button
                                 key={tab}
                                 onClick={() => setActiveSettingsTab(tab)}
                                 className={`w-full text-left px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${activeSettingsTab === tab
-                                    ? "bg-white text-blue-600 shadow-sm ring-1 ring-gray-200"
-                                    : "text-gray-600 hover:bg-gray-200/50 hover:text-gray-900"}`}
+                                    ? "bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-sm ring-1 ring-gray-200 dark:ring-gray-600"
+                                    : "text-gray-600 dark:text-gray-400 hover:bg-gray-200/50 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-gray-200"}`}
                             >
                                 {tab}
                             </button>
@@ -715,34 +715,34 @@ const WorkspaceSettingsModal = ({
                 </div>
 
                 {/* Content */}
-                <div className="flex-1 p-10 overflow-y-auto bg-white">
-                    <h2 className="text-2xl font-bold text-gray-900 mb-8">{activeSettingsTab}</h2>
+                <div className="flex-1 p-10 overflow-y-auto bg-white dark:bg-gray-900">
+                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-8">{activeSettingsTab}</h2>
 
                     {activeSettingsTab === "General" && (
                         <div className="space-y-6">
                             {editingIcon ? (
                                 /* EDIT MODE */
-                                <div className="space-y-8 bg-blue-50/30 rounded-2xl p-6 border border-blue-100">
+                                <div className="space-y-8 bg-blue-50/30 dark:bg-blue-900/10 rounded-2xl p-6 border border-blue-100 dark:border-blue-800">
                                     <div className="flex items-center justify-between mb-4">
-                                        <h3 className="text-lg font-bold text-gray-900">Edit Workspace Settings</h3>
-                                        <span className="text-xs bg-blue-100 text-blue-700 px-3 py-1 rounded-full font-semibold">Editing</span>
+                                        <h3 className="text-lg font-bold text-gray-900 dark:text-white">Edit Workspace Settings</h3>
+                                        <span className="text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 px-3 py-1 rounded-full font-semibold">Editing</span>
                                     </div>
 
                                     {/* Workspace Name */}
                                     <div>
-                                        <label className="block text-sm font-semibold text-gray-700 mb-3">Workspace Name</label>
+                                        <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Workspace Name</label>
                                         <input
                                             type="text"
                                             value={newWorkspaceName}
                                             onChange={(e) => setNewWorkspaceName(e.target.value)}
-                                            className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                            className="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 dark:text-white placeholder-gray-400"
                                             placeholder="Enter workspace name"
                                         />
                                     </div>
 
                                     {/* Icon Selection */}
                                     <div>
-                                        <label className="block text-sm font-semibold text-gray-700 mb-3">Choose Icon</label>
+                                        <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Choose Icon</label>
                                         <div className="grid grid-cols-6 gap-3">
                                             {iconOptions.map((option) => {
                                                 const IconComponent = option.Icon;
@@ -751,11 +751,11 @@ const WorkspaceSettingsModal = ({
                                                     <button
                                                         key={option.id}
                                                         onClick={() => setSelectedIcon(option.id)}
-                                                        className={`relative p-4 rounded-xl flex items-center justify-center transition-all bg-white hover:bg-gray-50 border-2 ${isSelected ? 'border-blue-500 bg-blue-50' : 'border-gray-200'
+                                                        className={`relative p-4 rounded-xl flex items-center justify-center transition-all bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 border-2 ${isSelected ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30' : 'border-gray-200 dark:border-gray-700'
                                                             }`}
                                                         title={option.name}
                                                     >
-                                                        <IconComponent size={24} className="text-gray-700" />
+                                                        <IconComponent size={24} className="text-gray-700 dark:text-gray-300" />
                                                         {isSelected && (
                                                             <div className="absolute -top-2 -right-2 w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center shadow-sm">
                                                                 <svg className="w-3.5 h-3.5 text-white" fill="currentColor" viewBox="0 0 20 20">
@@ -771,7 +771,7 @@ const WorkspaceSettingsModal = ({
 
                                     {/* Color Selection */}
                                     <div>
-                                        <label className="block text-sm font-semibold text-gray-700 mb-3">Choose Color</label>
+                                        <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Choose Color</label>
                                         <div className="grid grid-cols-8 gap-3">
                                             {[
                                                 { name: 'Blue', color: '#3b82f6' },
@@ -815,8 +815,8 @@ const WorkspaceSettingsModal = ({
                                     </div>
 
                                     {/* Preview */}
-                                    <div className="bg-white rounded-xl p-6 border border-gray-200">
-                                        <h4 className="text-sm font-semibold text-gray-700 mb-4">Preview</h4>
+                                    <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
+                                        <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4">Preview</h4>
                                         <div className="flex items-center gap-4">
                                             <div
                                                 className="w-20 h-20 rounded-2xl flex items-center justify-center shadow-lg"
@@ -829,10 +829,10 @@ const WorkspaceSettingsModal = ({
                                                 })()}
                                             </div>
                                             <div>
-                                                <p className="text-lg font-bold text-gray-900 mb-1">
+                                                <p className="text-lg font-bold text-gray-900 dark:text-white mb-1">
                                                     {newWorkspaceName || 'Workspace Name'}
                                                 </p>
-                                                <p className="text-sm text-gray-600">
+                                                <p className="text-sm text-gray-600 dark:text-gray-400">
                                                     {iconOptions.find(opt => opt.id === selectedIcon)?.name || 'Rocket'} · {selectedColor}
                                                 </p>
                                             </div>
@@ -848,7 +848,7 @@ const WorkspaceSettingsModal = ({
                                                 setSelectedColor(activeWorkspace?.color || '#2563eb');
                                                 setNewWorkspaceName(workspaceName);
                                             }}
-                                            className="px-6 py-2.5 border border-gray-300 text-gray-700 text-sm font-semibold rounded-xl hover:bg-gray-50 transition-colors"
+                                            className="px-6 py-2.5 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-sm font-semibold rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
                                         >
                                             Cancel
                                         </button>
@@ -896,9 +896,9 @@ const WorkspaceSettingsModal = ({
                                 /* VIEW MODE */
                                 <>
                                     {/* Current Settings Display */}
-                                    <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl p-6 border border-gray-200">
+                                    <div className="bg-gradient-to-br from-gray-50 to-white dark:from-gray-800 dark:to-gray-900 rounded-2xl p-6 border border-gray-200 dark:border-gray-700">
                                         <div className="flex items-start justify-between mb-4">
-                                            <h3 className="text-lg font-bold text-gray-900">Workspace Details</h3>
+                                            <h3 className="text-lg font-bold text-gray-900 dark:text-white">Workspace Details</h3>
                                             {isAdmin && (
                                                 <button
                                                     onClick={() => {
@@ -927,13 +927,13 @@ const WorkspaceSettingsModal = ({
                                             </div>
 
                                             <div className="flex-1">
-                                                <h3 className="text-2xl font-bold text-gray-900 mb-2">{workspaceName}</h3>
-                                                <div className="flex items-center gap-4 text-sm text-gray-600">
+                                                <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">{workspaceName}</h3>
+                                                <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
                                                     <span className="flex items-center gap-1">
                                                         <span className="font-semibold">Icon:</span>
                                                         {iconOptions.find(opt => opt.id === (activeWorkspace?.icon || 'rocket'))?.name || 'Rocket'}
                                                     </span>
-                                                    <span className="text-gray-400">•</span>
+                                                    <span className="text-gray-400 dark:text-gray-600">•</span>
                                                     <span className="flex items-center gap-1">
                                                         <span className="font-semibold">Color:</span>
                                                         {activeWorkspace?.color || '#2563eb'}
@@ -945,18 +945,18 @@ const WorkspaceSettingsModal = ({
 
                                     {/* Workspace Information */}
                                     {loadingStats ? (
-                                        <div className="text-sm text-gray-500">Loading workspace info...</div>
+                                        <div className="text-sm text-gray-500 dark:text-gray-400">Loading workspace info...</div>
                                     ) : stats && (
-                                        <div className="bg-white rounded-xl p-6 border border-gray-200">
-                                            <h4 className="text-sm font-bold text-gray-900 mb-4">Workspace Information</h4>
+                                        <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
+                                            <h4 className="text-sm font-bold text-gray-900 dark:text-white mb-4">Workspace Information</h4>
                                             <div className="space-y-3 text-sm">
-                                                <div className="flex justify-between py-2 border-b border-gray-100">
-                                                    <span className="text-gray-600">Created by</span>
-                                                    <span className="font-semibold text-gray-900">{stats.creator?.username || 'Unknown'}</span>
+                                                <div className="flex justify-between py-2 border-b border-gray-100 dark:border-gray-700">
+                                                    <span className="text-gray-600 dark:text-gray-400">Created by</span>
+                                                    <span className="font-semibold text-gray-900 dark:text-white">{stats.creator?.username || 'Unknown'}</span>
                                                 </div>
-                                                <div className="flex justify-between py-2 border-b border-gray-100">
-                                                    <span className="text-gray-600">Created on</span>
-                                                    <span className="font-semibold text-gray-900">
+                                                <div className="flex justify-between py-2 border-b border-gray-100 dark:border-gray-700">
+                                                    <span className="text-gray-600 dark:text-gray-400">Created on</span>
+                                                    <span className="font-semibold text-gray-900 dark:text-white">
                                                         {new Date(stats.createdAt).toLocaleDateString('en-US', {
                                                             year: 'numeric',
                                                             month: 'long',
@@ -964,9 +964,10 @@ const WorkspaceSettingsModal = ({
                                                         })}
                                                     </span>
                                                 </div>
+                                                {/* Hidden total members here as it is shown in billing/stats */}
                                                 <div className="flex justify-between py-2">
-                                                    <span className="text-gray-600">Total members</span>
-                                                    <span className="font-semibold text-gray-900">{stats.memberCount}</span>
+                                                    <span className="text-gray-600 dark:text-gray-400">Total members</span>
+                                                    <span className="font-semibold text-gray-900 dark:text-white">{stats.memberCount}</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -978,12 +979,12 @@ const WorkspaceSettingsModal = ({
 
                     {activeSettingsTab === "Permissions" && (
                         <div className="space-y-6">
-                            <p className="text-sm text-gray-500 mb-4">Control what members can do in this workspace.</p>
+                            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">Control what members can do in this workspace.</p>
 
-                            <div className="flex items-center justify-between py-4 border-b border-gray-100">
+                            <div className="flex items-center justify-between py-4 border-b border-gray-100 dark:border-gray-800">
                                 <div>
-                                    <h4 className="text-sm font-bold text-gray-900">Channel Creation</h4>
-                                    <p className="text-sm text-gray-500 mt-1">Allow members to create new channels</p>
+                                    <h4 className="text-sm font-bold text-gray-900 dark:text-white">Channel Creation</h4>
+                                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Allow members to create new channels</p>
                                 </div>
                                 <label className="relative inline-flex items-center cursor-pointer">
                                     <input
@@ -993,14 +994,14 @@ const WorkspaceSettingsModal = ({
                                         disabled={savingPermissions || !isAdmin}
                                         className="sr-only peer"
                                     />
-                                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600 peer-disabled:opacity-50"></div>
+                                    <div className="w-11 h-6 bg-gray-200 dark:bg-gray-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 dark:after:border-gray-600 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600 peer-disabled:opacity-50"></div>
                                 </label>
                             </div>
 
-                            <div className="flex items-center justify-between py-4 border-b border-gray-100">
+                            <div className="flex items-center justify-between py-4 border-b border-gray-100 dark:border-gray-800">
                                 <div>
-                                    <h4 className="text-sm font-bold text-gray-900">Invite Members</h4>
-                                    <p className="text-sm text-gray-500 mt-1">Allow members to invite new people</p>
+                                    <h4 className="text-sm font-bold text-gray-900 dark:text-white">Invite Members</h4>
+                                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Allow members to invite new people</p>
                                 </div>
                                 <label className="relative inline-flex items-center cursor-pointer">
                                     <input
@@ -1010,14 +1011,14 @@ const WorkspaceSettingsModal = ({
                                         disabled={savingPermissions || !isAdmin}
                                         className="sr-only peer"
                                     />
-                                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600 peer-disabled:opacity-50"></div>
+                                    <div className="w-11 h-6 bg-gray-200 dark:bg-gray-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 dark:after:border-gray-600 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600 peer-disabled:opacity-50"></div>
                                 </label>
                             </div>
 
-                            <div className="flex items-center justify-between py-4 border-b border-gray-100">
+                            <div className="flex items-center justify-between py-4 border-b border-gray-100 dark:border-gray-800">
                                 <div>
-                                    <h4 className="text-sm font-bold text-gray-900">Admin Approval Required</h4>
-                                    <p className="text-sm text-gray-500 mt-1">Require admin approval for new members</p>
+                                    <h4 className="text-sm font-bold text-gray-900 dark:text-white">Admin Approval Required</h4>
+                                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Require admin approval for new members</p>
                                 </div>
                                 <label className="relative inline-flex items-center cursor-pointer">
                                     <input
@@ -1027,14 +1028,14 @@ const WorkspaceSettingsModal = ({
                                         disabled={savingPermissions || !isAdmin}
                                         className="sr-only peer"
                                     />
-                                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600 peer-disabled:opacity-50"></div>
+                                    <div className="w-11 h-6 bg-gray-200 dark:bg-gray-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 dark:after:border-gray-600 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600 peer-disabled:opacity-50"></div>
                                 </label>
                             </div>
 
                             <div className="flex items-center justify-between py-4">
                                 <div>
-                                    <h4 className="text-sm font-bold text-gray-900">Workspace Discoverable</h4>
-                                    <p className="text-sm text-gray-500 mt-1">Make workspace visible in search</p>
+                                    <h4 className="text-sm font-bold text-gray-900 dark:text-white">Workspace Discoverable</h4>
+                                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Make workspace visible in search</p>
                                 </div>
                                 <label className="relative inline-flex items-center cursor-pointer">
                                     <input
@@ -1044,7 +1045,7 @@ const WorkspaceSettingsModal = ({
                                         disabled={savingPermissions || !isAdmin}
                                         className="sr-only peer"
                                     />
-                                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600 peer-disabled:opacity-50"></div>
+                                    <div className="w-11 h-6 bg-gray-200 dark:bg-gray-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 dark:after:border-gray-600 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600 peer-disabled:opacity-50"></div>
                                 </label>
                             </div>
 
@@ -1058,12 +1059,21 @@ const WorkspaceSettingsModal = ({
 
                     {activeSettingsTab === "Members" && (
                         <div>
-                            <p className="text-sm text-gray-500 mb-6">Manage who has access to this workspace.</p>
+                            <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">Manage who has access to this workspace.</p>
+
+                            <div className="relative mb-6">
+                                <Search className="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                                <input
+                                    type="text"
+                                    placeholder="Search members..."
+                                    className="w-full pl-10 pr-4 py-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:bg-white dark:focus:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-gray-900 dark:text-white placeholder-gray-400"
+                                />
+                            </div>
 
                             {loadingMembers ? (
-                                <div className="bg-gray-50 rounded-xl p-8 text-center border border-gray-200">
+                                <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-8 text-center border border-gray-200 dark:border-gray-700">
                                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-                                    <p className="text-gray-500 text-sm mt-4">Loading members...</p>
+                                    <p className="text-gray-500 dark:text-gray-400 text-sm mt-4">Loading members...</p>
                                 </div>
                             ) : members.length > 0 ? (
                                 <div className="space-y-6">
@@ -1075,7 +1085,7 @@ const WorkspaceSettingsModal = ({
                                             <div>
                                                 <div className="flex items-center gap-2 mb-3">
                                                     <Crown size={16} className="text-yellow-500" />
-                                                    <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wider">
+                                                    <h3 className="text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
                                                         Owner{owners.length > 1 ? 's' : ''} ({owners.length})
                                                     </h3>
                                                 </div>
@@ -1083,7 +1093,7 @@ const WorkspaceSettingsModal = ({
                                                     {owners.map((member) => (
                                                         <div
                                                             key={member.id}
-                                                            className="flex items-center justify-between p-3 rounded-xl hover:bg-yellow-50 transition-colors border border-yellow-100 bg-yellow-50/30"
+                                                            className="flex items-center justify-between p-3 rounded-xl hover:bg-yellow-50 dark:hover:bg-yellow-900/20 transition-colors border border-yellow-100 dark:border-yellow-900/30 bg-yellow-50/30 dark:bg-yellow-900/10"
                                                         >
                                                             <div className="flex items-center gap-3 flex-1 min-w-0">
                                                                 <div className="relative">
@@ -1099,21 +1109,21 @@ const WorkspaceSettingsModal = ({
                                                                         </div>
                                                                     )}
                                                                     {member.status === 'online' && (
-                                                                        <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></div>
+                                                                        <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white dark:border-gray-900"></div>
                                                                     )}
                                                                 </div>
                                                                 <div className="flex-1 min-w-0">
                                                                     <div className="flex items-center gap-2">
-                                                                        <div className="font-semibold text-gray-900 truncate">{member.name}</div>
+                                                                        <div className="font-semibold text-gray-900 dark:text-white truncate">{member.name}</div>
                                                                         {member.isCurrentUser && (
-                                                                            <span className="px-1.5 py-0.5 bg-blue-100 text-blue-700 text-xs font-semibold rounded">You</span>
+                                                                            <span className="px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-xs font-semibold rounded">You</span>
                                                                         )}
                                                                     </div>
-                                                                    <div className="text-xs text-gray-500 truncate">{member.email}</div>
+                                                                    <div className="text-xs text-gray-500 dark:text-gray-400 truncate">{member.email}</div>
                                                                 </div>
                                                             </div>
                                                             <div className="flex items-center gap-2">
-                                                                <span className="px-2.5 py-1 rounded-lg text-xs font-semibold border bg-yellow-100 text-yellow-800 border-yellow-200">
+                                                                <span className="px-2.5 py-1 rounded-lg text-xs font-semibold border bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-400 border-yellow-200 dark:border-yellow-800">
                                                                     Owner
                                                                 </span>
                                                             </div>
@@ -1132,7 +1142,7 @@ const WorkspaceSettingsModal = ({
                                             <div>
                                                 <div className="flex items-center gap-2 mb-3">
                                                     <Shield size={16} className="text-blue-500" />
-                                                    <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wider">
+                                                    <h3 className="text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
                                                         Admin{admins.length > 1 ? 's' : ''} ({admins.length})
                                                     </h3>
                                                 </div>
@@ -1140,7 +1150,7 @@ const WorkspaceSettingsModal = ({
                                                     {admins.map((member) => (
                                                         <div
                                                             key={member.id}
-                                                            className="flex items-center justify-between p-3 rounded-xl hover:bg-blue-50 transition-colors border border-blue-100 bg-blue-50/30"
+                                                            className="flex items-center justify-between p-3 rounded-xl hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors border border-blue-100 dark:border-blue-900/30 bg-blue-50/30 dark:bg-blue-900/10"
                                                         >
                                                             <div className="flex items-center gap-3 flex-1 min-w-0">
                                                                 <div className="relative">
@@ -1156,44 +1166,44 @@ const WorkspaceSettingsModal = ({
                                                                         </div>
                                                                     )}
                                                                     {member.status === 'online' && (
-                                                                        <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></div>
+                                                                        <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white dark:border-gray-900"></div>
                                                                     )}
                                                                 </div>
                                                                 <div className="flex-1 min-w-0">
                                                                     <div className="flex items-center gap-2">
-                                                                        <div className="font-semibold text-gray-900 truncate">{member.name}</div>
+                                                                        <div className="font-semibold text-gray-900 dark:text-white truncate">{member.name}</div>
                                                                         {member.isCurrentUser && (
-                                                                            <span className="px-1.5 py-0.5 bg-blue-100 text-blue-700 text-xs font-semibold rounded">You</span>
+                                                                            <span className="px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-xs font-semibold rounded">You</span>
                                                                         )}
                                                                     </div>
-                                                                    <div className="text-xs text-gray-500 truncate">{member.email}</div>
+                                                                    <div className="text-xs text-gray-500 dark:text-gray-400 truncate">{member.email}</div>
                                                                 </div>
                                                             </div>
                                                             <div className="flex items-center gap-2">
                                                                 {member.memberStatus === 'suspended' && (
-                                                                    <span className="px-2 py-1 bg-yellow-100 text-yellow-700 text-xs font-medium rounded-full flex items-center gap-1">
+                                                                    <span className="px-2 py-1 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 text-xs font-medium rounded-full flex items-center gap-1">
                                                                         <Pause className="w-3 h-3" />
                                                                         Suspended
                                                                     </span>
                                                                 )}
-                                                                <span className="px-2.5 py-1 rounded-lg text-xs font-semibold border bg-blue-100 text-blue-800 border-blue-200">
+                                                                <span className="px-2.5 py-1 rounded-lg text-xs font-semibold border bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 border-blue-200 dark:border-blue-800">
                                                                     Admin
                                                                 </span>
                                                                 {isAdmin && !member.isCurrentUser && (
                                                                     <div className="relative">
                                                                         <button
                                                                             onClick={() => setOpenMemberDropdown(openMemberDropdown === member.id ? null : member.id)}
-                                                                            className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
+                                                                            className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
                                                                             disabled={memberActionLoading[member.id]}
                                                                         >
-                                                                            <MoreVertical className="w-4 h-4 text-gray-600" />
+                                                                            <MoreVertical className="w-4 h-4 text-gray-600 dark:text-gray-400" />
                                                                         </button>
                                                                         {openMemberDropdown === member.id && (
-                                                                            <div className="absolute right-0 top-full mt-1 bg-white rounded-lg shadow-lg border border-gray-200 py-1 min-w-[160px] z-10">
+                                                                            <div className="absolute right-0 top-full mt-1 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 min-w-[160px] z-10">
                                                                                 {member.memberStatus === 'suspended' ? (
                                                                                     <button
                                                                                         onClick={() => handleRestoreMember(member.id)}
-                                                                                        className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2 text-green-600"
+                                                                                        className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2 text-green-600 dark:text-green-400"
                                                                                     >
                                                                                         <Play className="w-4 h-4" />
                                                                                         Restore Access
@@ -1202,21 +1212,21 @@ const WorkspaceSettingsModal = ({
                                                                                     <>
                                                                                         <button
                                                                                             onClick={() => handleChangeRole(member.id, 'admin')}
-                                                                                            className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2 text-blue-600"
+                                                                                            className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2 text-blue-600 dark:text-blue-400"
                                                                                         >
                                                                                             <UserCheck className="w-4 h-4" />
                                                                                             Demote to Member
                                                                                         </button>
                                                                                         <button
                                                                                             onClick={() => handleSuspendMember(member.id)}
-                                                                                            className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2 text-yellow-700"
+                                                                                            className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2 text-yellow-700 dark:text-yellow-400"
                                                                                         >
                                                                                             <Pause className="w-4 h-4" />
                                                                                             Suspend Member
                                                                                         </button>
                                                                                         <button
                                                                                             onClick={() => handleRemoveMember(member.id)}
-                                                                                            className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2 text-red-600"
+                                                                                            className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2 text-red-600 dark:text-red-400"
                                                                                         >
                                                                                             <Trash2 className="w-4 h-4" />
                                                                                             Remove Member
@@ -1243,7 +1253,7 @@ const WorkspaceSettingsModal = ({
                                             <div>
                                                 <div className="flex items-center gap-2 mb-3">
                                                     <UserCheck size={16} className="text-gray-400" />
-                                                    <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wider">
+                                                    <h3 className="text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
                                                         Member{regularMembers.length > 1 ? 's' : ''} ({regularMembers.length})
                                                     </h3>
                                                 </div>
@@ -1251,7 +1261,7 @@ const WorkspaceSettingsModal = ({
                                                     {regularMembers.map((member) => (
                                                         <div
                                                             key={member.id}
-                                                            className="flex items-center justify-between p-3 rounded-xl hover:bg-gray-50 transition-colors border border-gray-100"
+                                                            className="flex items-center justify-between p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border border-gray-100 dark:border-gray-700"
                                                         >
                                                             <div className="flex items-center gap-3 flex-1 min-w-0">
                                                                 <div className="relative">
@@ -1267,44 +1277,44 @@ const WorkspaceSettingsModal = ({
                                                                         </div>
                                                                     )}
                                                                     {member.status === 'online' && (
-                                                                        <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></div>
+                                                                        <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white dark:border-gray-900"></div>
                                                                     )}
                                                                 </div>
                                                                 <div className="flex-1 min-w-0">
                                                                     <div className="flex items-center gap-2">
-                                                                        <div className="font-semibold text-gray-900 truncate">{member.name}</div>
+                                                                        <div className="font-semibold text-gray-900 dark:text-white truncate">{member.name}</div>
                                                                         {member.isCurrentUser && (
-                                                                            <span className="px-1.5 py-0.5 bg-blue-100 text-blue-700 text-xs font-semibold rounded">You</span>
+                                                                            <span className="px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-xs font-semibold rounded">You</span>
                                                                         )}
                                                                     </div>
-                                                                    <div className="text-xs text-gray-500 truncate">{member.email}</div>
+                                                                    <div className="text-xs text-gray-500 dark:text-gray-400 truncate">{member.email}</div>
                                                                 </div>
                                                             </div>
                                                             <div className="flex items-center gap-2">
                                                                 {member.memberStatus === 'suspended' && (
-                                                                    <span className="px-2 py-1 bg-yellow-100 text-yellow-700 text-xs font-medium rounded-full flex items-center gap-1">
+                                                                    <span className="px-2 py-1 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 text-xs font-medium rounded-full flex items-center gap-1">
                                                                         <Pause className="w-3 h-3" />
                                                                         Suspended
                                                                     </span>
                                                                 )}
-                                                                <span className="px-2.5 py-1 rounded-lg text-xs font-semibold border bg-gray-100 text-gray-800 border-gray-200">
+                                                                <span className="px-2.5 py-1 rounded-lg text-xs font-semibold border bg-gray-100 dark:bg-gray-700/50 text-gray-800 dark:text-gray-300 border-gray-200 dark:border-gray-600">
                                                                     Member
                                                                 </span>
                                                                 {isAdmin && !member.isCurrentUser && (
                                                                     <div className="relative">
                                                                         <button
                                                                             onClick={() => setOpenMemberDropdown(openMemberDropdown === member.id ? null : member.id)}
-                                                                            className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
+                                                                            className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
                                                                             disabled={memberActionLoading[member.id]}
                                                                         >
-                                                                            <MoreVertical className="w-4 h-4 text-gray-600" />
+                                                                            <MoreVertical className="w-4 h-4 text-gray-600 dark:text-gray-400" />
                                                                         </button>
                                                                         {openMemberDropdown === member.id && (
-                                                                            <div className="absolute right-0 top-full mt-1 bg-white rounded-lg shadow-lg border border-gray-200 py-1 min-w-[160px] z-10">
+                                                                            <div className="absolute right-0 top-full mt-1 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 min-w-[160px] z-10">
                                                                                 {member.memberStatus === 'suspended' ? (
                                                                                     <button
                                                                                         onClick={() => handleRestoreMember(member.id)}
-                                                                                        className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2 text-green-600"
+                                                                                        className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2 text-green-600 dark:text-green-400"
                                                                                     >
                                                                                         <Play className="w-4 h-4" />
                                                                                         Restore Access
@@ -1313,21 +1323,21 @@ const WorkspaceSettingsModal = ({
                                                                                     <>
                                                                                         <button
                                                                                             onClick={() => handleChangeRole(member.id, 'member')}
-                                                                                            className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2 text-blue-600"
+                                                                                            className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2 text-blue-600 dark:text-blue-400"
                                                                                         >
                                                                                             <Shield className="w-4 h-4" />
                                                                                             Promote to Admin
                                                                                         </button>
                                                                                         <button
                                                                                             onClick={() => handleSuspendMember(member.id)}
-                                                                                            className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2 text-yellow-700"
+                                                                                            className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2 text-yellow-700 dark:text-yellow-400"
                                                                                         >
                                                                                             <Pause className="w-4 h-4" />
                                                                                             Suspend Member
                                                                                         </button>
                                                                                         <button
                                                                                             onClick={() => handleRemoveMember(member.id)}
-                                                                                            className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2 text-red-600"
+                                                                                            className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2 text-red-600 dark:text-red-400"
                                                                                         >
                                                                                             <Trash2 className="w-4 h-4" />
                                                                                             Remove Member
@@ -1347,9 +1357,9 @@ const WorkspaceSettingsModal = ({
                                     })()}
                                 </div>
                             ) : (
-                                <div className="bg-gray-50 rounded-xl p-8 text-center border border-gray-200 border-dashed">
+                                <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-8 text-center border border-gray-200 dark:border-gray-700 border-dashed">
                                     <div className="text-gray-400 mb-2">👥</div>
-                                    <p className="text-gray-500 text-sm">No members found</p>
+                                    <p className="text-gray-500 dark:text-gray-400 text-sm">No members found</p>
                                 </div>
                             )}
                         </div>
@@ -1367,59 +1377,59 @@ const WorkspaceSettingsModal = ({
                             {loadingStats ? (
                                 <div className="text-center py-12">
                                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                                    <p className="text-gray-500">Loading workspace statistics...</p>
+                                    <p className="text-gray-500 dark:text-gray-400">Loading workspace statistics...</p>
                                 </div>
                             ) : (
                                 <>
-                                    <div className="text-center py-8 mb-8 bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl border border-green-200">
-                                        <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">
+                                    <div className="text-center py-8 mb-8 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-xl border border-green-200 dark:border-green-800">
+                                        <div className="w-16 h-16 bg-green-100 dark:bg-green-800/20 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">
                                             ✨
                                         </div>
-                                        <h3 className="text-lg font-bold text-green-900 mb-2">FREE Plan</h3>
-                                        <p className="text-green-700">Currently using the free tier</p>
+                                        <h3 className="text-lg font-bold text-green-900 dark:text-green-300 mb-2">FREE Plan</h3>
+                                        <p className="text-green-700 dark:text-green-400">Currently using the free tier</p>
                                     </div>
 
                                     {stats && (
                                         <div className="space-y-4">
-                                            <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wider mb-4">Workspace Usage</h3>
+                                            <h3 className="text-sm font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-4">Workspace Usage</h3>
 
-                                            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-200">
+                                            <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
                                                 <div className="flex items-center gap-3">
-                                                    <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                                                        <Users size={20} className="text-blue-600" />
+                                                    <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
+                                                        <Users size={20} className="text-blue-600 dark:text-blue-400" />
                                                     </div>
                                                     <div>
-                                                        <div className="text-sm font-semibold text-gray-900">Members</div>
-                                                        <div className="text-xs text-gray-500">Total workspace members</div>
+                                                        <div className="text-sm font-semibold text-gray-900 dark:text-white">Members</div>
+                                                        <div className="text-xs text-gray-500 dark:text-gray-400">Total workspace members</div>
                                                     </div>
                                                 </div>
-                                                <div className="text-2xl font-bold text-gray-900">{stats.memberCount}</div>
+                                                <div className="text-2xl font-bold text-gray-900 dark:text-white">{stats.memberCount}</div>
                                             </div>
 
-                                            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-200">
+                                            <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
                                                 <div className="flex items-center gap-3">
-                                                    <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-                                                        <Hash size={20} className="text-purple-600" />
+                                                    <div className="w-10 h-10 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center">
+                                                        <Hash size={20} className="text-purple-600 dark:text-purple-400" />
                                                     </div>
                                                     <div>
-                                                        <div className="text-sm font-semibold text-gray-900">Channels</div>
-                                                        <div className="text-xs text-gray-500">Active channels</div>
+                                                        <div className="text-sm font-semibold text-gray-900 dark:text-white">Channels</div>
+                                                        <div className="text-xs text-gray-500 dark:text-gray-400">Active channels</div>
                                                     </div>
                                                 </div>
-                                                <div className="text-2xl font-bold text-gray-900">{stats.channelCount}</div>
+                                                <div className="text-2xl font-bold text-gray-900 dark:text-white">{stats.channelCount}</div>
                                             </div>
 
-                                            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-200">
+                                            <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
                                                 <div className="flex items-center gap-3">
-                                                    <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                                                        <MessageSquare size={20} className="text-green-600" />
+                                                    <div className="w-10 h-10 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
+                                                        <MessageSquare size={20} className="text-green-600 dark:text-green-400" />
                                                     </div>
                                                     <div>
-                                                        <div className="text-sm font-semibold text-gray-900">Messages</div>
-                                                        <div className="text-xs text-gray-500">Total messages sent</div>
+                                                        <div className="text-sm font-semibold text-gray-900 dark:text-white">Messages</div>
+                                                        <div className="text-xs text-gray-500 dark:text-gray-400">Total messages sent</div>
                                                     </div>
                                                 </div>
-                                                <div className="text-2xl font-bold text-gray-900">{stats.messageCount}</div>
+                                                <div className="text-2xl font-bold text-gray-900 dark:text-white">{stats.messageCount}</div>
                                             </div>
                                         </div>
                                     )}
@@ -1431,17 +1441,17 @@ const WorkspaceSettingsModal = ({
                     {activeSettingsTab === "Advanced" && (
                         <div>
                             {isAdmin ? (
-                                <div className="bg-red-50/50 border border-red-100 rounded-2xl p-8">
-                                    <h3 className="text-lg font-bold text-red-900 mb-2">Danger Zone</h3>
-                                    <p className="text-sm text-red-700/80 mb-8 leading-relaxed">
+                                <div className="bg-red-50/50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/30 rounded-2xl p-8">
+                                    <h3 className="text-lg font-bold text-red-900 dark:text-red-400 mb-2">Danger Zone</h3>
+                                    <p className="text-sm text-red-700/80 dark:text-red-400/80 mb-8 leading-relaxed">
                                         Deleting a workspace is permanent and cannot be undone. All messages, files, and data will be lost forever.
                                         <br />
                                         <strong>Only administrators can perform this action.</strong>
                                     </p>
-                                    <div className="flex items-center justify-between bg-white p-4 rounded-xl border border-red-100 shadow-sm">
+                                    <div className="flex items-center justify-between bg-white dark:bg-gray-800 p-4 rounded-xl border border-red-100 dark:border-red-900/30 shadow-sm">
                                         <div>
-                                            <h4 className="text-sm font-bold text-gray-900">Delete this workspace</h4>
-                                            <p className="text-xs text-gray-500 mt-1">Once deleted, it's gone for good.</p>
+                                            <h4 className="text-sm font-bold text-gray-900 dark:text-white">Delete this workspace</h4>
+                                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Once deleted, it's gone for good.</p>
                                         </div>
                                         <button
                                             onClick={() => setShowDeleteConfirm(true)}
@@ -1452,9 +1462,9 @@ const WorkspaceSettingsModal = ({
                                     </div>
                                 </div>
                             ) : (
-                                <div className="bg-gray-50 rounded-xl p-8 text-center border border-gray-200">
+                                <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-8 text-center border border-gray-200 dark:border-gray-700">
                                     <div className="text-gray-400 mb-2 text-4xl">🔒</div>
-                                    <p className="text-gray-500 font-semibold">Admin Access Required</p>
+                                    <p className="text-gray-500 dark:text-gray-300 font-semibold">Admin Access Required</p>
                                     <p className="text-sm text-gray-400 mt-2">Only workspace administrators can access advanced settings.</p>
                                 </div>
                             )}
@@ -1465,7 +1475,7 @@ const WorkspaceSettingsModal = ({
                 {/* Close Button */}
                 <button
                     onClick={() => setShowSettingsModal(false)}
-                    className="absolute top-6 right-6 text-gray-400 hover:text-gray-600 bg-white rounded-full p-1 hover:bg-gray-100 transition-colors"
+                    className="absolute top-6 right-6 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 bg-white dark:bg-gray-800 rounded-full p-1 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                 >
                     <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
                 </button>

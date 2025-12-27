@@ -334,6 +334,16 @@ exports.login = async (req, res) => {
     const refreshToken = generateRefreshToken(user);
     const refreshHash = sha256(refreshToken);
 
+    // Enforce Max 3 Sessions (FIFO)
+    // Remove oldest sessions if we have 3 or more before adding the new one
+    // We sort just to be safe, though usually they are in order
+    if (user.refreshTokens.length >= 3) {
+      user.refreshTokens.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+      while (user.refreshTokens.length >= 3) {
+        user.refreshTokens.shift(); // Remove oldest
+      }
+    }
+
     user.refreshTokens.push({
       tokenHash: refreshHash,
       expiresAt: new Date(Date.now() + REFRESH_DAYS * 86400000),
@@ -773,3 +783,123 @@ exports.googleLogin = async (req, res) => {
 // OPTIONAL REDIRECT GOOGLE FLOW
 // ----------------------------------------------------
 exports.googleAuth = exports.googleLogin;
+
+// ----------------------------------------------------
+// SESSION MANAGEMENT
+// ----------------------------------------------------
+
+// GET /sessions
+exports.getSessions = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.sub);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    // Identify current session
+    const currentToken = req.cookies?.jwt;
+    const currentHash = currentToken ? sha256(currentToken) : null;
+
+    // ---------------------------------------------------------
+    // AUTO-CLEANUP: Enforce Max 3 Sessions Policy on Read
+    // ---------------------------------------------------------
+    if (user.refreshTokens.length > 3) {
+      // Sort: Current first, then Newest to Oldest
+      // We want to KEEP: Current + (2 newest others)
+      const tokens = user.refreshTokens.map(t => ({
+        ...t.toObject(),
+        isCurrent: t.tokenHash === currentHash
+      }));
+
+      tokens.sort((a, b) => {
+        if (a.isCurrent) return -1;
+        if (b.isCurrent) return 1;
+        return new Date(b.createdAt) - new Date(a.createdAt);
+      });
+
+      // Keep top 3
+      const keepTokens = tokens.slice(0, 3);
+
+      // Update DB with only kept tokens
+      // We need to map back to the original schema format (removing isCurrent prop)
+      user.refreshTokens = keepTokens.map(t => ({
+        tokenHash: t.tokenHash,
+        expiresAt: t.expiresAt,
+        createdAt: t.createdAt,
+        deviceInfo: t.deviceInfo,
+        _id: t._id // Preserve ID
+      }));
+
+      await user.save();
+    }
+    // ---------------------------------------------------------
+
+    const sessions = user.refreshTokens.map(t => {
+      // Simple parser for device info (User-Agent)
+      let deviceType = "desktop";
+      const ua = (t.deviceInfo || "").toLowerCase();
+
+      // Basic Detection
+      if (ua.includes("mobile") || ua.includes("iphone") || ua.includes("android")) {
+        deviceType = "mobile";
+      }
+
+      // Detailed OS Name
+      let deviceName = "Unknown Device";
+      if (ua.includes("mac os")) deviceName = "MacBook / Mac";
+      else if (ua.includes("windows")) deviceName = "Windows PC";
+      else if (ua.includes("iphone")) deviceName = "iPhone";
+      else if (ua.includes("android")) deviceName = "Android Device";
+      else if (ua.includes("linux")) deviceName = "Linux Machine";
+      else if (ua.includes("cros")) deviceName = "Chromebook";
+
+      // Browser Detection to differentiate "MacBook" sessions
+      let browser = "";
+      if (ua.includes("chrome") && !ua.includes("edg") && !ua.includes("opr")) browser = "Chrome";
+      else if (ua.includes("safari") && !ua.includes("chrome")) browser = "Safari";
+      else if (ua.includes("firefox")) browser = "Firefox";
+      else if (ua.includes("edg")) browser = "Edge";
+      else if (ua.includes("opr")) browser = "Opera";
+
+      return {
+        id: t._id,
+        device: deviceName,
+        browser: browser, // Send specific browser info
+        os: deviceType,
+        location: "Unknown",
+        lastActive: t.createdAt,
+        current: t.tokenHash === currentHash
+      };
+    });
+
+    // Sort for Response: Current first, then by date desc
+    sessions.sort((a, b) => {
+      if (a.current) return -1;
+      if (b.current) return 1;
+      return new Date(b.lastActive) - new Date(a.lastActive);
+    });
+
+    res.json(sessions);
+  } catch (err) {
+    console.error("GET SESSIONS ERROR:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+// DELETE /sessions/:id
+exports.revokeSession = async (req, res) => {
+  try {
+    const sessionId = req.params.id;
+    const user = await User.findById(req.user.sub);
+
+    // If session ID matches current session, maybe we should warn or just do it (logout)
+    // But usually client handles "current" logout via /logout endpoint
+    // This endpoint is for revoking *other* sessions usually
+
+    user.refreshTokens.pull({ _id: sessionId });
+    await user.save();
+
+    res.json({ message: "Session revoked" });
+  } catch (err) {
+    console.error("REVOKE SESSION ERROR:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};

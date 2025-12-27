@@ -383,23 +383,23 @@ const ChannelsPanel = ({ title }) => {
             <div
                 onClick={handleClick}
                 className={`px-4 py-2 mx-2 rounded-md cursor-pointer flex items-center justify-between group transition-colors ${isSelectionMode && isSelected
-                    ? "bg-blue-50 border border-blue-200"
+                    ? "bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800"
                     : isActive
-                        ? "bg-blue-50 text-blue-600 font-semibold"
-                        : "hover:bg-gray-200 text-gray-600 hover:text-gray-900"
+                        ? "bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 font-semibold"
+                        : "hover:bg-gray-200 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
                     }`}
             >
                 <div className="flex items-center truncate flex-1 gap-2">
                     {isSelectionMode && !item.isDefault && (
-                        <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${isSelected ? "bg-blue-600 border-blue-600" : "border-gray-300 bg-white"
+                        <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${isSelected ? "bg-blue-600 border-blue-600" : "border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700"
                             }`}>
                             {isSelected && <CheckSquare size={10} className="text-white" />}
                         </div>
                     )}
                     {item.isPrivate ? (
-                        <Lock size={14} className="text-purple-400" />
+                        <Lock size={14} className="text-purple-400 dark:text-purple-400" />
                     ) : (
-                        <Hash size={14} className="text-gray-400" />
+                        <Hash size={14} className="text-gray-400 dark:text-gray-500" />
                     )}
                     <span className="truncate text-sm font-medium">{(item.label || 'Unnamed Channel').replace(/^#/, '')}</span>
                     {/* Default badge removed */}
@@ -409,17 +409,17 @@ const ChannelsPanel = ({ title }) => {
     };
 
     return (
-        <div className="flex flex-col h-full bg-gray-50/50 border-r border-gray-200">
+        <div className="flex flex-col h-full bg-gray-50/50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800">
             {/* Header */}
-            <div className="h-16 border-b border-gray-200 flex items-center justify-between px-5 bg-white shrink-0">
-                <h2 className="font-bold text-xl text-gray-800 tracking-tight flex items-center gap-2">
+            <div className="h-16 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between px-5 bg-white dark:bg-gray-900 shrink-0">
+                <h2 className="font-bold text-xl text-gray-800 dark:text-gray-100 tracking-tight flex items-center gap-2">
                     <Hash className="text-blue-600" size={20} />
                     Channels
                 </h2>
                 <div className="flex items-center gap-1">
                     <button
                         onClick={() => setIsSelectionMode(!isSelectionMode)}
-                        className={`p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors ${isSelectionMode ? "bg-blue-100 text-blue-600" : ""
+                        className={`p-2 text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors ${isSelectionMode ? "bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400" : ""
                             }`}
                         title="Manage Channels"
                     >
@@ -443,7 +443,7 @@ const ChannelsPanel = ({ title }) => {
                             const isAdmin = userRole === 'admin' || userRole === 'owner';
                             return !isAdmin && activeWorkspace?.settings?.allowMemberChannelCreation === false;
                         })()}
-                        className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-gray-400"
+                        className="p-2 text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-gray-400"
                         title={(() => {
                             const userRole = activeWorkspace?.role?.toLowerCase() || '';
                             const isAdmin = userRole === 'admin' || userRole === 'owner';
@@ -465,7 +465,7 @@ const ChannelsPanel = ({ title }) => {
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         placeholder="Search channels..."
-                        className="w-full pl-9 pr-4 py-2 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
+                        className="w-full pl-9 pr-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-sm text-gray-800 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
                     />
                 </div>
             </div>
@@ -473,13 +473,13 @@ const ChannelsPanel = ({ title }) => {
             {/* Selection Mode Header */}
             {
                 isSelectionMode && (
-                    <div className="px-4 py-2 bg-blue-50 border-b border-blue-100 flex items-center justify-between sticky top-0 z-10">
-                        <span className="text-sm font-bold text-blue-900">{selectedItems.size} selected</span>
+                    <div className="px-4 py-2 bg-blue-50 dark:bg-blue-900/30 border-b border-blue-100 dark:border-blue-800 flex items-center justify-between sticky top-0 z-10">
+                        <span className="text-sm font-bold text-blue-900 dark:text-blue-300">{selectedItems.size} selected</span>
                         <div className="flex gap-2">
                             <button
                                 onClick={() => setShowDeleteConfirm(true)}
                                 disabled={selectedItems.size === 0}
-                                className="p-1.5 text-red-600 hover:bg-red-100 rounded-lg disabled:opacity- disabled:cursor-not-allowed"
+                                className="p-1.5 text-red-600 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
                                 title="Delete Selected"
                             >
                                 <Trash2 size={16} />
@@ -489,7 +489,7 @@ const ChannelsPanel = ({ title }) => {
                                     setIsSelectionMode(false);
                                     setSelectedItems(new Set());
                                 }}
-                                className="p-1.5 text-gray-600 hover:bg-gray-200 rounded-lg"
+                                className="p-1.5 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg"
                                 title="Cancel"
                             >
                                 <X size={16} />
@@ -501,11 +501,11 @@ const ChannelsPanel = ({ title }) => {
 
             {/* Channel List */}
             <div className="flex-1 overflow-y-auto custom-scrollbar px-2 py-4 space-y-0.5">
-                <div className="px-4 mb-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                <div className="px-4 mb-2 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
                     {activeWorkspace?.name || 'Workspace'} Channels
                 </div>
                 {isLoadingChannels ? (
-                    <div className="px-4 py-8 text-center text-sm text-gray-500">
+                    <div className="px-4 py-8 text-center text-sm text-gray-500 dark:text-gray-400">
                         Loading channels...
                     </div>
                 ) : sortedChannels.length > 0 ? (
@@ -513,7 +513,7 @@ const ChannelsPanel = ({ title }) => {
                         <Item key={channel.id} item={channel} />
                     ))
                 ) : (
-                    <div className="px-4 py-8 text-center text-sm text-gray-500">
+                    <div className="px-4 py-8 text-center text-sm text-gray-500 dark:text-gray-400">
                         No channels found
                     </div>
                 )}
@@ -533,18 +533,18 @@ const ChannelsPanel = ({ title }) => {
             {
                 showCreateChannelModal && (
                     <div className="fixed inset-0 bg-black/60 z-[70] flex items-center justify-center animate-fade-in backdrop-blur-sm">
-                        <div className="bg-white rounded-2xl shadow-2xl w-[500px] overflow-hidden transform transition-all scale-100 border border-gray-100">
-                            <div className="px-8 py-6 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center">
-                                <h3 className="text-xl font-bold text-gray-900">
+                        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-[500px] overflow-hidden transform transition-all scale-100 border border-gray-100 dark:border-gray-700">
+                            <div className="px-8 py-6 border-b border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50 flex justify-between items-center">
+                                <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">
                                     {createStep === 1 ? "Create New Channel" : "Add Members"}
                                 </h3>
-                                <button onClick={() => setShowCreateChannelModal(false)} className="text-gray-400 hover:text-gray-600">✕</button>
+                                <button onClick={() => setShowCreateChannelModal(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">✕</button>
                             </div>
 
                             {createStep === 1 ? (
                                 <div className="p-8 space-y-6">
                                     <div>
-                                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Channel Name</label>
+                                        <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">Channel Name</label>
                                         <div className="relative">
                                             <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold">#</span>
                                             <input
@@ -552,27 +552,27 @@ const ChannelsPanel = ({ title }) => {
                                                 value={newChannelData.name}
                                                 onChange={(e) => setNewChannelData({ ...newChannelData, name: e.target.value })}
                                                 placeholder="e.g. marketing-updates"
-                                                className="w-full pl-8 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium"
+                                                className="w-full pl-8 pr-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl focus:outline-none focus:bg-white dark:focus:bg-gray-700 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-gray-900 dark:text-gray-100 transition-all font-medium"
                                                 autoFocus
                                             />
                                         </div>
                                         <p className="text-xs text-gray-400 mt-2">Channels are where your team communicates. They're best when organized around a topic.</p>
                                     </div>
                                     <div>
-                                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Description <span className="text-gray-300 font-normal">(Optional)</span></label>
+                                        <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">Description <span className="text-gray-300 dark:text-gray-600 font-normal">(Optional)</span></label>
                                         <input
                                             type="text"
                                             value={newChannelData.description}
                                             onChange={(e) => setNewChannelData({ ...newChannelData, description: e.target.value })}
                                             placeholder="What's this channel about?"
-                                            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                                            className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl focus:outline-none focus:bg-white dark:focus:bg-gray-700 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-gray-900 dark:text-gray-100 transition-all"
                                         />
                                     </div>
 
                                     {/* ✨ NEW: Channel Visibility Info */}
-                                    <div className="bg-blue-50 border border-blue-100 rounded-xl p-4">
-                                        <h4 className="text-sm font-bold text-blue-900 mb-2">Channel Visibility</h4>
-                                        <div className="space-y-2 text-xs text-blue-800">
+                                    <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-900 rounded-xl p-4">
+                                        <h4 className="text-sm font-bold text-blue-900 dark:text-blue-300 mb-2">Channel Visibility</h4>
+                                        <div className="space-y-2 text-xs text-blue-800 dark:text-blue-200">
                                             <p>
                                                 <span className="font-bold">🌐 Public:</span> Skip member selection - all workspace members can view and join
                                             </p>
@@ -584,13 +584,13 @@ const ChannelsPanel = ({ title }) => {
                                 </div>
                             ) : (
                                 <div className="p-0">
-                                    <div className="p-4 bg-blue-50 border-b border-blue-100 text-sm text-blue-800 flex items-center gap-2">
+                                    <div className="p-4 bg-blue-50 dark:bg-blue-900/30 border-b border-blue-100 dark:border-blue-800 text-sm text-blue-800 dark:text-blue-300 flex items-center gap-2">
                                         <span>#</span>
                                         <span>Adding members to <strong>#{newChannelData.name}</strong> (Private Channel)</span>
                                     </div>
                                     <div className="max-h-[300px] overflow-y-auto p-2">
                                         {workspaceMembers.map(member => (
-                                            <label key={member._id} className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-xl cursor-pointer transition-colors">
+                                            <label key={member._id} className="flex items-center justify-between p-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-xl cursor-pointer transition-colors">
                                                 <div className="flex items-center gap-3">
                                                     <input
                                                         type="checkbox"
@@ -608,8 +608,8 @@ const ChannelsPanel = ({ title }) => {
                                                         {(member?.name || member?.username || 'U').charAt(0)}
                                                     </div>
                                                     <div>
-                                                        <div className="font-medium text-sm">{member?.name || member?.username || 'Unknown'}</div>
-                                                        <div className="text-xs text-gray-500">{member?.email || ''}</div>
+                                                        <div className="font-medium text-sm text-gray-900 dark:text-gray-200">{member?.name || member?.username || 'Unknown'}</div>
+                                                        <div className="text-xs text-gray-500 dark:text-gray-400">{member?.email || ''}</div>
                                                     </div>
                                                 </div>
                                             </label>
@@ -618,13 +618,13 @@ const ChannelsPanel = ({ title }) => {
                                 </div>
                             )}
 
-                            <div className="px-8 py-5 bg-gray-50 border-t border-gray-100 flex justify-end gap-3">
+                            <div className="px-8 py-5 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-100 dark:border-gray-700 flex justify-end gap-3">
                                 <button onClick={() => {
                                     setShowCreateChannelModal(false);
                                     setNewChannelData({ name: "", description: "" });
                                     setCreateStep(1);
                                     setSelectedChannelMembers([]);
-                                }} className="px-6 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-200 rounded-xl transition-colors">Cancel</button>
+                                }} className="px-6 py-2.5 text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-xl transition-colors">Cancel</button>
 
                                 {createStep === 1 ? (
                                     <>
@@ -650,7 +650,7 @@ const ChannelsPanel = ({ title }) => {
                                                 setCreateStep(1);
                                                 setSelectedChannelMembers([]);
                                             }}
-                                            className="px-6 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-200 rounded-xl transition-colors"
+                                            className="px-6 py-2.5 text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-xl transition-colors"
                                         >
                                             Back
                                         </button>

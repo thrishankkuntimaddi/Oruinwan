@@ -122,23 +122,23 @@ const Notes = () => {
     if (!id || !note) {
         if (loading) {
             return (
-                <div className="flex flex-col items-center justify-center h-full bg-white text-gray-400">
-                    <div className="w-24 h-24 bg-gray-50 rounded-full flex items-center justify-center mb-6">
-                        <Clock size={40} className="text-gray-300 animate-pulse" />
+                <div className="flex flex-col items-center justify-center h-full bg-white dark:bg-gray-900 text-gray-400 dark:text-gray-500">
+                    <div className="w-24 h-24 bg-gray-50 dark:bg-gray-800 rounded-full flex items-center justify-center mb-6">
+                        <Clock size={40} className="text-gray-300 dark:text-gray-600 animate-pulse" />
                     </div>
-                    <h2 className="text-xl font-semibold text-gray-600 mb-2">Loading Notes...</h2>
-                    <p className="text-sm max-w-xs text-center">Please wait while we fetch your notes.</p>
+                    <h2 className="text-xl font-semibold text-gray-600 dark:text-gray-300 mb-2">Loading Notes...</h2>
+                    <p className="text-sm max-w-xs text-center text-gray-500 dark:text-gray-400">Please wait while we fetch your notes.</p>
                 </div>
             );
         }
 
         return (
-            <div className="flex flex-col items-center justify-center h-full bg-white text-gray-400">
-                <div className="w-24 h-24 bg-gray-50 rounded-full flex items-center justify-center mb-6">
-                    <Star size={40} className="text-gray-300" />
+            <div className="flex flex-col items-center justify-center h-full bg-white dark:bg-gray-900 text-gray-400 dark:text-gray-500">
+                <div className="w-24 h-24 bg-gray-50 dark:bg-gray-800 rounded-full flex items-center justify-center mb-6">
+                    <Star size={40} className="text-gray-300 dark:text-gray-600" />
                 </div>
-                <h2 className="text-xl font-semibold text-gray-600 mb-2">Select a Note</h2>
-                <p className="text-sm max-w-xs text-center">Choose a note from the sidebar or create a new one to get started.</p>
+                <h2 className="text-xl font-semibold text-gray-600 dark:text-gray-300 mb-2">Select a Note</h2>
+                <p className="text-sm max-w-xs text-center text-gray-500 dark:text-gray-400">Choose a note from the sidebar or create a new one to get started.</p>
             </div>
         );
     }
@@ -148,10 +148,10 @@ const Notes = () => {
     });
 
     return (
-        <div className="flex flex-col h-full bg-white relative">
+        <div className="flex flex-col h-full bg-white dark:bg-gray-900 relative">
             {/* Toolbar / Header */}
-            <div className="h-16 px-8 flex items-center justify-between border-b border-gray-100 shrink-0">
-                <div className="flex items-center gap-2 text-xs font-medium text-gray-400">
+            <div className="h-16 px-8 flex items-center justify-between border-b border-gray-100 dark:border-gray-700 shrink-0">
+                <div className="flex items-center gap-2 text-xs font-medium text-gray-400 dark:text-gray-500">
                     <Clock size={14} />
                     <span>Last edited {formattedDate}</span>
                 </div>
@@ -172,41 +172,40 @@ const Notes = () => {
                     <div className="relative">
                         <button
                             onClick={handleShare}
-                            className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                            className="p-2 text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
                             title="Copy Link"
                         >
-                            {showShareTooltip ? <Check size={18} className="text-green-600" /> : <Share2 size={18} />}
+                            {showShareTooltip ? <Check size={18} className="text-green-600 dark:text-green-400" /> : <Share2 size={18} />}
                         </button>
                     </div>
 
                     {/* Delete Button */}
                     <button
                         onClick={() => setIsDeleteModalOpen(true)}
-                        className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                        className="p-2 text-gray-400 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                         title="Delete Note"
                     >
                         <Trash2 size={18} />
                     </button>
 
-                    {/* More Menu */}
                     <div className="relative" ref={menuRef}>
                         <button
                             onClick={() => setShowMenu(!showMenu)}
-                            className={`p-2 rounded-lg transition-colors ${showMenu ? "bg-gray-100 text-gray-700" : "text-gray-400 hover:text-gray-600 hover:bg-gray-100"}`}
+                            className={`p-2 rounded-lg transition-colors ${showMenu ? "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200" : "text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"}`}
                         >
                             <MoreHorizontal size={18} />
                         </button>
 
                         {showMenu && (
-                            <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-gray-100 py-1 z-20 animate-in fade-in zoom-in-95 duration-100 origin-top-right">
-                                <button onClick={handleDuplicate} className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2 transition-colors">
+                            <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-100 dark:border-gray-700 py-1 z-20 animate-in fade-in zoom-in-95 duration-100 origin-top-right">
+                                <button onClick={handleDuplicate} className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50 flex items-center gap-2 transition-colors">
                                     <Copy size={14} className="text-gray-400" /> Duplicate
                                 </button>
-                                <button onClick={handleDownloadPDF} className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2 transition-colors">
+                                <button onClick={handleDownloadPDF} className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50 flex items-center gap-2 transition-colors">
                                     <Download size={14} className="text-gray-400" /> Download PDF
                                 </button>
-                                <div className="h-px bg-gray-100 my-1" />
-                                <button onClick={() => { setShowInfoModal(true); setShowMenu(false); }} className="w-full text-left px-4 py-2 text-sm text-gray-500 hover:bg-gray-50 flex items-center gap-2 transition-colors">
+                                <div className="h-px bg-gray-100 dark:bg-gray-700 my-1" />
+                                <button onClick={() => { setShowInfoModal(true); setShowMenu(false); }} className="w-full text-left px-4 py-2 text-sm text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50 flex items-center gap-2 transition-colors">
                                     <Info size={14} className="text-gray-400" /> Note Info
                                 </button>
                             </div>
@@ -222,7 +221,7 @@ const Notes = () => {
                         type="text"
                         value={title}
                         onChange={handleTitleChange}
-                        className="text-4xl font-bold text-gray-900 placeholder-gray-300 border-none focus:ring-0 p-0 mb-6 w-full bg-transparent outline-none"
+                        className="text-4xl font-bold text-gray-900 dark:text-white placeholder-gray-300 dark:placeholder-gray-600 border-none focus:ring-0 p-0 mb-6 w-full bg-transparent outline-none"
                         placeholder="Untitled Note"
                     />
 
@@ -234,7 +233,7 @@ const Notes = () => {
                                         <textarea
                                             value={block.content}
                                             onChange={(e) => handleBlockChange(block.id, e.target.value)}
-                                            className="w-full resize-none border-none focus:ring-0 text-gray-700 text-lg leading-relaxed p-0 placeholder-gray-300 bg-transparent outline-none min-h-[1.5em] overflow-hidden pr-8"
+                                            className="w-full resize-none border-none focus:ring-0 text-gray-700 dark:text-gray-200 text-lg leading-relaxed p-0 placeholder-gray-300 dark:placeholder-gray-600 bg-transparent outline-none min-h-[1.5em] overflow-hidden pr-8"
                                             placeholder="Type something..."
                                             onInput={(e) => { e.target.style.height = "auto"; e.target.style.height = e.target.scrollHeight + "px"; }}
                                         />
@@ -248,8 +247,8 @@ const Notes = () => {
                                     </div>
                                 )}
                                 {block.type === "image" && (
-                                    <div className="w-full max-w-2xl rounded-xl overflow-hidden bg-gray-100 border border-gray-200 relative group-hover:shadow-sm transition-all">
-                                        <div className="min-h-64 flex items-center justify-center text-gray-400 relative">
+                                    <div className="w-full max-w-2xl rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 relative group-hover:shadow-sm transition-all">
+                                        <div className="min-h-64 flex items-center justify-center text-gray-400 dark:text-gray-500 relative">
                                             {block.content ? (
                                                 <img src={block.content} alt="Note" className="w-full h-full object-contain max-h-96" />
                                             ) : (
@@ -405,10 +404,10 @@ const Notes = () => {
                                     </div>
                                 )}
                                 {block.type === "audio" && (
-                                    <div className="w-full max-w-2xl rounded-xl bg-gray-50 border border-gray-200 p-6 relative group">
+                                    <div className="w-full max-w-2xl rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-6 relative group">
                                         {block.content ? (
                                             <div className="flex items-center gap-4">
-                                                <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 flex-shrink-0">
+                                                <div className="w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400 flex-shrink-0">
                                                     <Mic size={24} />
                                                 </div>
                                                 <audio
@@ -514,38 +513,38 @@ const Notes = () => {
 
                     {/* Add Block Menu */}
                     <div className="mt-6 flex items-center gap-2 opacity-50 hover:opacity-100 transition-opacity">
-                        <button onClick={() => addBlock("text")} className="p-2 rounded-lg hover:bg-gray-100 text-gray-500 flex items-center gap-2 text-sm"><Type size={16} /> Text</button>
-                        <button onClick={() => addBlock("image")} className="p-2 rounded-lg hover:bg-gray-100 text-gray-500 flex items-center gap-2 text-sm"><ImageIcon size={16} /> Image</button>
-                        <button onClick={() => addBlock("video")} className="p-2 rounded-lg hover:bg-gray-100 text-gray-500 flex items-center gap-2 text-sm"><Video size={16} /> Video</button>
-                        <button onClick={() => addBlock("audio")} className="p-2 rounded-lg hover:bg-gray-100 text-gray-500 flex items-center gap-2 text-sm"><Mic size={16} /> Audio</button>
+                        <button onClick={() => addBlock("text")} className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400 flex items-center gap-2 text-sm"><Type size={16} /> Text</button>
+                        <button onClick={() => addBlock("image")} className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400 flex items-center gap-2 text-sm"><ImageIcon size={16} /> Image</button>
+                        <button onClick={() => addBlock("video")} className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400 flex items-center gap-2 text-sm"><Video size={16} /> Video</button>
+                        <button onClick={() => addBlock("audio")} className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400 flex items-center gap-2 text-sm"><Mic size={16} /> Audio</button>
                     </div>
                 </div>
             </div>
 
             {/* Note Info Modal */}
             {showInfoModal && (
-                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center animate-fade-in">
-                    <div className="bg-white rounded-2xl shadow-2xl p-6 w-80 animate-scale-in">
-                        <h3 className="text-lg font-bold text-gray-900 mb-4">Note Info</h3>
+                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center animate-fade-in backdrop-blur-sm">
+                    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 w-80 animate-scale-in text-gray-900 dark:text-gray-100">
+                        <h3 className="text-lg font-bold mb-4">Note Info</h3>
                         <div className="space-y-3 text-sm">
                             <div className="flex justify-between">
-                                <span className="text-gray-500">Created</span>
-                                <span className="font-medium text-gray-900">{new Date(note.createdAt).toLocaleDateString()}</span>
+                                <span className="text-gray-500 dark:text-gray-400">Created</span>
+                                <span className="font-medium text-gray-900 dark:text-gray-100">{new Date(note.createdAt).toLocaleDateString()}</span>
                             </div>
                             <div className="flex justify-between">
-                                <span className="text-gray-500">Last Edited</span>
-                                <span className="font-medium text-gray-900">{new Date(note.updatedAt).toLocaleDateString()}</span>
+                                <span className="text-gray-500 dark:text-gray-400">Last Edited</span>
+                                <span className="font-medium text-gray-900 dark:text-gray-100">{new Date(note.updatedAt).toLocaleDateString()}</span>
                             </div>
                             <div className="flex justify-between">
-                                <span className="text-gray-500">Size</span>
-                                <span className="font-medium text-gray-900">{(JSON.stringify(blocks).length / 1024).toFixed(2)} KB</span>
+                                <span className="text-gray-500 dark:text-gray-400">Size</span>
+                                <span className="font-medium text-gray-900 dark:text-gray-100">{(JSON.stringify(blocks).length / 1024).toFixed(2)} KB</span>
                             </div>
                             <div className="flex justify-between">
-                                <span className="text-gray-500">Words</span>
-                                <span className="font-medium text-gray-900">{blocks.filter(b => b.type === 'text').reduce((acc, b) => acc + (b.content?.split(/\s+/).length || 0), 0)}</span>
+                                <span className="text-gray-500 dark:text-gray-400">Words</span>
+                                <span className="font-medium text-gray-900 dark:text-gray-100">{blocks.filter(b => b.type === 'text').reduce((acc, b) => acc + (b.content?.split(/\s+/).length || 0), 0)}</span>
                             </div>
                         </div>
-                        <button onClick={() => setShowInfoModal(false)} className="mt-6 w-full bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold py-2 rounded-xl transition-colors">Close</button>
+                        <button onClick={() => setShowInfoModal(false)} className="mt-6 w-full bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-800 dark:text-white font-bold py-2 rounded-xl transition-colors">Close</button>
                     </div>
                 </div>
             )}

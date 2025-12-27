@@ -22,6 +22,21 @@
   --radius-standard: 6px;
 }
 
+/* Dark Mode Overrides */
+.dark {
+  --bg-primary: #111827;
+  /* gray-900 */
+  --bg-secondary: #1f2937;
+  /* gray-800 */
+  --border-color: #374151;
+  /* gray-700 */
+  --text-primary: #f3f4f6;
+  /* gray-100 */
+  --text-secondary: #9ca3af;
+  /* gray-400 */
+  --shadow-minimal: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
 html,
 body,
 #root {
@@ -32,6 +47,7 @@ body,
   padding: 0;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   color: var(--text-primary);
+  background-color: var(--bg-primary);
 }
 
 /* Scrollbar Refinement */
@@ -51,6 +67,17 @@ body,
 
 ::-webkit-scrollbar-thumb:hover {
   background: #9ca3af;
+}
+
+/* Dark Mode Scrollbar */
+.dark ::-webkit-scrollbar-thumb {
+  background: #4b5563;
+  /* gray-600 */
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #6b7280;
+  /* gray-500 */
 }
 
 /* Animation Subtlety */

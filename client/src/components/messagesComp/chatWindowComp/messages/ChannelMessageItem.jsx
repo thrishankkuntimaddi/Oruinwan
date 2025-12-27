@@ -58,7 +58,7 @@ function ChannelMessageItem({
     if (msg.type === 'system' || msg.backend?.type === 'system') {
         return (
             <div className="flex justify-center my-3">
-                <div className="bg-gray-100/80 px-4 py-1.5 rounded-full text-xs text-gray-600 font-medium shadow-sm">
+                <div className="bg-gray-100/80 dark:bg-gray-800/80 px-4 py-1.5 rounded-full text-xs text-gray-600 dark:text-gray-300 font-medium shadow-sm">
                     {msg.text}
                 </div>
             </div>
@@ -70,8 +70,8 @@ function ChannelMessageItem({
         return (
             <div className="group flex items-start gap-2 px-4 py-2 opacity-60 hover:opacity-100 relative">
                 <div className="flex-shrink-0 pt-1">
-                    <div className="w-7 h-7 rounded bg-gray-200 flex items-center justify-center">
-                        <Trash2 size={12} className="text-gray-500" />
+                    <div className="w-7 h-7 rounded bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
+                        <Trash2 size={12} className="text-gray-500 dark:text-gray-400" />
                     </div>
                 </div>
                 <div className="flex-1 min-w-0">
@@ -93,7 +93,7 @@ function ChannelMessageItem({
 
     return (
         <div
-            className={`group flex items-start gap-3 px-4 py-0.5 hover:bg-gray-50/50 relative ${isSelected ? "bg-blue-50/30" : ""} ${msg.isPinned ? "bg-blue-50/30 border-l-2 border-blue-400" : "border-l-2 border-transparent"}`}
+            className={`group flex items-start gap-3 px-4 py-0.5 hover:bg-gray-50/50 dark:hover:bg-gray-800/50 relative ${isSelected ? "bg-blue-50/30 dark:bg-blue-900/20" : ""} ${msg.isPinned ? "bg-blue-50/30 dark:bg-blue-900/10 border-l-2 border-blue-400 dark:border-blue-500" : "border-l-2 border-transparent"}`}
             onMouseEnter={() => setShowToolbar(true)}
             onMouseLeave={() => setShowToolbar(false)}
         >
@@ -114,7 +114,7 @@ function ChannelMessageItem({
                 {avatarUrl ? (
                     <img src={avatarUrl} alt={msg.senderName} className="w-7 h-7 rounded object-cover" />
                 ) : (
-                    <div className={`w-7 h-7 rounded flex items-center justify-center text-[10px] font-medium text-white ${isMe ? "bg-blue-500/80" : "bg-gray-400/80"}`}>
+                    <div className={`w-7 h-7 rounded flex items-center justify-center text-[10px] font-medium text-white ${isMe ? "bg-blue-500/80" : "bg-gray-400/80 dark:bg-gray-600"}`}>
                         {initial}
                     </div>
                 )}
@@ -125,7 +125,7 @@ function ChannelMessageItem({
                 {/* Header: Name + Pin Info */}
                 <div className="flex flex-col gap-0.5 mb-0">
                     <div className="flex items-center gap-2">
-                        <span className="font-semibold text-gray-900 text-sm leading-tight">{msg.senderName || "Unknown"}</span>
+                        <span className="font-semibold text-gray-900 dark:text-gray-100 text-sm leading-tight">{msg.senderName || "Unknown"}</span>
                         {msg.isPinned && (
                             <span className="relative inline-flex group/pin">
                                 <Pin size={10} className="text-blue-500 rotate-45" />
@@ -146,7 +146,7 @@ function ChannelMessageItem({
                 </div>
 
                 {/* Timestamp - Positioned at the far right edge */}
-                <span className="absolute top-1 right-4 text-[10px] text-gray-400 select-none">
+                <span className="absolute top-1 right-4 text-[10px] text-gray-400 dark:text-gray-500 select-none">
                     {formatTime(msg.ts)}
                 </span>
 
@@ -157,11 +157,11 @@ function ChannelMessageItem({
                         <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-1.5 mb-0.5">
                                 <MessageSquare size={11} className="text-blue-500 flex-shrink-0" />
-                                <span className="text-xs font-semibold text-gray-700">
+                                <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">
                                     {msg.repliedTo.senderName}
                                 </span>
                             </div>
-                            <div className="text-xs text-gray-500 line-clamp-2 leading-relaxed">
+                            <div className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2 leading-relaxed">
                                 {msg.repliedTo.text}
                             </div>
                         </div>
@@ -169,11 +169,11 @@ function ChannelMessageItem({
                 )}
 
                 {/* Message Text (More compact line height) */}
-                <div className="text-gray-800 text-[14px] leading-snug whitespace-pre-wrap break-words message-content">
+                <div className="text-gray-800 dark:text-gray-200 text-[14px] leading-snug whitespace-pre-wrap break-words message-content">
                     <ReactMarkdown
                         remarkPlugins={[remarkBreaks]}
                         components={{
-                            a: ({ node, children, ...props }) => <a {...props} className="text-blue-600 hover:underline" target="_blank" rel="noopener noreferrer">{children}</a>,
+                            a: ({ node, children, ...props }) => <a {...props} className="text-blue-600 dark:text-blue-400 hover:underline" target="_blank" rel="noopener noreferrer">{children}</a>,
                             ul: ({ node, ...props }) => <ul {...props} className="list-disc list-inside ml-1" />,
                             ol: ({ node, ...props }) => <ol {...props} className="list-decimal list-inside ml-1" />,
                         }}
@@ -203,10 +203,10 @@ function ChannelMessageItem({
                             <div className="w-5 h-5 rounded bg-gray-200 border border-white"></div>
                             <div className="w-5 h-5 rounded bg-gray-300 border border-white"></div>
                         </div>
-                        <span className="text-xs font-medium text-blue-600 group-hover/thread:underline">
+                        <span className="text-xs font-medium text-blue-600 dark:text-blue-400 group-hover/thread:underline">
                             {threadCounts[msg.id]} {threadCounts[msg.id] === 1 ? "reply" : "replies"}
                         </span>
-                        <span className="text-xs text-gray-400 group-hover/thread:text-gray-600">
+                        <span className="text-xs text-gray-400 dark:text-gray-500 group-hover/thread:text-gray-600 dark:group-hover/thread:text-gray-300">
                             Last reply today at {formatTime(msg.ts)}
                         </span>
                     </div>
@@ -216,13 +216,13 @@ function ChannelMessageItem({
             </div>
 
             {/* Minimalist Hover Toolbar - Vertically aligned in the row, left of timestamp */}
-            <div className={`absolute top-0.5 right-24 bg-white border border-gray-100 shadow-sm rounded p-0.5 flex items-center z-10 ${showToolbar || openMsgMenuId === msg.id || showReactionPicker ? "opacity-100" : "opacity-0 invisible"}`}>
+            <div className={`absolute top-0.5 right-24 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-sm rounded p-0.5 flex items-center z-10 ${showToolbar || openMsgMenuId === msg.id || showReactionPicker ? "opacity-100" : "opacity-0 invisible"}`}>
 
                 {/* Reaction Picker Trigger */}
                 <div className="relative" ref={reactionPickerRef}>
                     <button
                         onClick={() => setShowReactionPicker(!showReactionPicker)}
-                        className={`p-1 rounded hover:bg-gray-100 ${showReactionPicker ? "text-blue-600" : "text-gray-400"}`}
+                        className={`p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 ${showReactionPicker ? "text-blue-600 dark:text-blue-400" : "text-gray-400 dark:text-gray-500"}`}
                         title="React"
                     >
                         <Smile size={14} />
@@ -239,25 +239,25 @@ function ChannelMessageItem({
                     )}
                 </div>
 
-                <button onClick={() => onOpenThread && onOpenThread(msg.id)} className="p-1 text-gray-400 hover:bg-gray-100 rounded" title="Thread"><MessageSquare size={14} /></button>
-                <button onClick={() => forwardMessage(msg.id)} className="p-1 text-gray-400 hover:bg-gray-100 rounded" title="Forward"><Share size={14} /></button>
+                <button onClick={() => onOpenThread && onOpenThread(msg.id)} className="p-1 text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded" title="Thread"><MessageSquare size={14} /></button>
+                <button onClick={() => forwardMessage(msg.id)} className="p-1 text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded" title="Forward"><Share size={14} /></button>
 
                 <div className="relative">
-                    <button onClick={(e) => toggleMsgMenu(e, msg.id)} className={`p-1 rounded ${openMsgMenuId === msg.id ? "bg-gray-100 text-gray-900" : "text-gray-400 hover:bg-gray-100"}`} title="More"><MoreHorizontal size={14} /></button>
+                    <button onClick={(e) => toggleMsgMenu(e, msg.id)} className={`p-1 rounded ${openMsgMenuId === msg.id ? "bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100" : "text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700"}`} title="More"><MoreHorizontal size={14} /></button>
                     {openMsgMenuId === msg.id && (
-                        <div className="absolute right-0 top-full mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-xl py-1 z-50 text-sm animate-fade-in">
-                            <button onClick={() => { copyMessage(msg.id); toggleMsgMenu({ stopPropagation: () => { } }, null); }} className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2"><Copy size={14} /> Copy text</button>
-                            <button onClick={() => { replyToMessage(msg.id); toggleMsgMenu({ stopPropagation: () => { } }, null); }} className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2"><MessageSquare size={14} /> Reply</button>
-                            <button onClick={() => { pinMessage(msg.id); toggleMsgMenu({ stopPropagation: () => { } }, null); }} className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2"><Pin size={14} /> {msg.isPinned ? "Unpin message" : "Pin message"}</button>
+                        <div className="absolute right-0 top-full mt-1 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl py-1 z-50 text-sm animate-fade-in">
+                            <button onClick={() => { copyMessage(msg.id); toggleMsgMenu({ stopPropagation: () => { } }, null); }} className="w-full text-left px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2 text-gray-700 dark:text-gray-300"><Copy size={14} /> Copy text</button>
+                            <button onClick={() => { replyToMessage(msg.id); toggleMsgMenu({ stopPropagation: () => { } }, null); }} className="w-full text-left px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2 text-gray-700 dark:text-gray-300"><MessageSquare size={14} /> Reply</button>
+                            <button onClick={() => { pinMessage(msg.id); toggleMsgMenu({ stopPropagation: () => { } }, null); }} className="w-full text-left px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2 text-gray-700 dark:text-gray-300"><Pin size={14} /> {msg.isPinned ? "Unpin message" : "Pin message"}</button>
                             {isMe && (
-                                <button onClick={() => { infoMessage(msg.id); toggleMsgMenu({ stopPropagation: () => { } }, null); }} className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2"><Info size={14} /> Message info</button>
+                                <button onClick={() => { infoMessage(msg.id); toggleMsgMenu({ stopPropagation: () => { } }, null); }} className="w-full text-left px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2 text-gray-700 dark:text-gray-300"><Info size={14} /> Message info</button>
                             )}
-                            <div className="border-t border-gray-100 my-1"></div>
+                            <div className="border-t border-gray-100 dark:border-gray-700 my-1"></div>
                             {/* Show both delete options for own messages OR if admin */}
                             {(isMe || isAdmin) && (
                                 <>
-                                    <button onClick={() => { deleteMessage(msg.id, 'me'); toggleMsgMenu({ stopPropagation: () => { } }, null); }} className="w-full text-left px-4 py-2 hover:bg-red-50 flex items-center gap-2 text-red-600"><Trash2 size={14} /> Delete for me</button>
-                                    <button onClick={() => { deleteMessage(msg.id, 'everyone'); toggleMsgMenu({ stopPropagation: () => { } }, null); }} className="w-full text-left px-4 py-2 hover:bg-red-50 flex items-center gap-2 text-orange-600"><Trash2 size={14} /> Delete for everyone</button>
+                                    <button onClick={() => { deleteMessage(msg.id, 'me'); toggleMsgMenu({ stopPropagation: () => { } }, null); }} className="w-full text-left px-4 py-2 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2 text-red-600 dark:text-red-400"><Trash2 size={14} /> Delete for me</button>
+                                    <button onClick={() => { deleteMessage(msg.id, 'everyone'); toggleMsgMenu({ stopPropagation: () => { } }, null); }} className="w-full text-left px-4 py-2 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2 text-orange-600 dark:text-orange-400"><Trash2 size={14} /> Delete for everyone</button>
                                 </>
                             )}
                         </div>

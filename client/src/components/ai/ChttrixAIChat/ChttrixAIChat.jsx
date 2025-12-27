@@ -164,7 +164,7 @@ const ChttrixAIChat = ({ onClose, isSidebar = false }) => {
   const QuickAction = ({ icon: Icon, label, onClick }) => (
     <button
       onClick={onClick}
-      className="flex items-center space-x-2 px-3 py-1.5 bg-gray-50 hover:bg-gray-100 rounded-md text-xs text-gray-600 transition-colors border border-transparent hover:border-gray-200 whitespace-nowrap"
+      className="flex items-center space-x-2 px-3 py-1.5 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md text-xs text-gray-600 dark:text-gray-300 transition-colors border border-transparent hover:border-gray-200 dark:hover:border-gray-600 whitespace-nowrap"
     >
       <Icon size={14} className="text-gray-500" />
       <span>{label}</span>
@@ -172,24 +172,24 @@ const ChttrixAIChat = ({ onClose, isSidebar = false }) => {
   );
 
   const renderContent = () => (
-    <div className={`flex flex-col h-full bg-white relative transition-all duration-300 ease-out transform ${isSidebar
-        ? (isVisible ? "opacity-100 translate-x-0" : "opacity-0 translate-x-12")
-        : (isVisible ? "opacity-100 scale-100 translate-y-0" : "opacity-0 scale-95 translate-y-4")
-      } ${!isSidebar && "shadow-2xl rounded-xl border border-gray-200 overflow-hidden"}`}>
+    <div className={`flex flex-col h-full bg-white dark:bg-gray-900 relative transition-all duration-300 ease-out transform ${isSidebar
+      ? (isVisible ? "opacity-100 translate-x-0" : "opacity-0 translate-x-12")
+      : (isVisible ? "opacity-100 scale-100 translate-y-0" : "opacity-0 scale-95 translate-y-4")
+      } ${!isSidebar && "shadow-2xl rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden"}`}>
 
       {/* --- Info Modal --- */}
       {showInfoModal && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-white/80 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white rounded-xl shadow-xl border border-gray-100 w-[85%] max-w-sm p-6 relative">
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-white/80 dark:bg-black/60 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-100 dark:border-gray-700 w-[85%] max-w-sm p-6 relative">
             <button onClick={() => setShowInfoModal(false)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
               <X size={18} />
             </button>
 
             <div className="text-center mb-6">
-              <div className="w-10 h-10 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-3 text-blue-600">
+              <div className="w-10 h-10 bg-blue-50 dark:bg-blue-900/30 rounded-full flex items-center justify-center mx-auto mb-3 text-blue-600 dark:text-blue-400">
                 <Info size={20} />
               </div>
-              <h3 className="text-base font-semibold text-gray-900">About Chttrix AI</h3>
+              <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">About Chttrix AI</h3>
             </div>
 
             <div className="space-y-4">
@@ -226,9 +226,9 @@ const ChttrixAIChat = ({ onClose, isSidebar = false }) => {
       {/* --- History Sidebar Overlay --- */}
       {showHistory && (
         <div className="absolute inset-0 z-20 flex">
-          <div className="w-64 bg-white border-r border-gray-100 shadow-lg flex flex-col animate-fade-in-left">
-            <div className="p-4 border-b border-gray-50 flex justify-between items-center">
-              <h3 className="font-semibold text-gray-900 text-sm">History</h3>
+          <div className="w-64 bg-white dark:bg-gray-800 border-r border-gray-100 dark:border-gray-700 shadow-lg flex flex-col animate-fade-in-left">
+            <div className="p-4 border-b border-gray-50 dark:border-gray-700 flex justify-between items-center">
+              <h3 className="font-semibold text-gray-900 dark:text-white text-sm">History</h3>
               <button onClick={() => setShowHistory(false)} className="text-gray-400 hover:text-gray-600">
                 <X size={16} />
               </button>
@@ -241,9 +241,9 @@ const ChttrixAIChat = ({ onClose, isSidebar = false }) => {
                   <button
                     key={chat.id}
                     onClick={() => loadChatFromHistory(chat)}
-                    className="w-full text-left px-3 py-2.5 text-xs text-gray-700 hover:bg-gray-50 rounded-md transition-colors truncate group"
+                    className="w-full text-left px-3 py-2.5 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-md transition-colors truncate group"
                   >
-                    <div className="font-medium truncate group-hover:text-blue-600 transition-colors">{chat.title}</div>
+                    <div className="font-medium truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{chat.title}</div>
                     <div className="text-[9px] text-gray-400 mt-0.5">{chat.date}</div>
                   </button>
                 ))
@@ -255,14 +255,14 @@ const ChttrixAIChat = ({ onClose, isSidebar = false }) => {
       )}
 
       {/* --- Header --- */}
-      <div className="flex justify-between items-center px-4 py-3 border-b border-gray-100 bg-white sticky top-0 z-10">
+      <div className="flex justify-between items-center px-4 py-3 border-b border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-900 sticky top-0 z-10">
         <div className="flex items-center gap-3">
           <div className="relative">
             <img src="/assets/ChttrixAI-logo.png" alt="AI" className="w-6 h-6 rounded-md object-cover" />
             <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 bg-green-500 border-2 border-white rounded-full"></span>
           </div>
           <div className="flex flex-col">
-            <h3 className="font-semibold text-gray-900 text-sm leading-tight">{chatTitle}</h3>
+            <h3 className="font-semibold text-gray-900 dark:text-white text-sm leading-tight">{chatTitle}</h3>
             {chatTitle === "Chttrix AI" && <span className="text-[10px] text-gray-400 font-medium">Assistant</span>}
           </div>
         </div>
@@ -287,11 +287,11 @@ const ChttrixAIChat = ({ onClose, isSidebar = false }) => {
         {/* Welcome / Empty State */}
         {messages.length === 1 && (
           <div className="flex flex-col items-center justify-center h-full text-center p-6 animate-fade-in">
-            <div className="w-12 h-12 bg-gray-50 rounded-xl flex items-center justify-center mb-4 text-gray-400">
+            <div className="w-12 h-12 bg-gray-50 dark:bg-gray-800 rounded-xl flex items-center justify-center mb-4 text-gray-400">
               <Monitor size={24} />
             </div>
-            <h4 className="text-gray-900 font-medium text-sm mb-1">Chttrix AI</h4>
-            <p className="text-gray-500 text-xs">How can I help you today?</p>
+            <h4 className="text-gray-900 dark:text-white font-medium text-sm mb-1">Chttrix AI</h4>
+            <p className="text-gray-500 dark:text-gray-400 text-xs">How can I help you today?</p>
           </div>
         )}
 
@@ -301,16 +301,16 @@ const ChttrixAIChat = ({ onClose, isSidebar = false }) => {
 
               {/* Reply Context */}
               {msg.replyTo && (
-                <div className={`mb-1 px-3 py-1 text-xs rounded-lg border-l-2 bg-gray-50 text-gray-500 truncate max-w-full ${msg.sender === "user" ? "border-blue-500 self-end" : "border-gray-400 self-start"}`}>
+                <div className={`mb-1 px-3 py-1 text-xs rounded-lg border-l-2 bg-gray-50 dark:bg-gray-800 text-gray-500 dark:text-gray-400 truncate max-w-full ${msg.sender === "user" ? "border-blue-500 self-end" : "border-gray-400 self-start"}`}>
                   <span className="font-semibold block text-[10px]">{msg.replyTo.sender === "user" ? "You" : "Chttrix AI"}</span>
                   {msg.replyTo.text.substring(0, 50)}...
                 </div>
               )}
 
               {editingMessageId === msg.id ? (
-                <div className="flex flex-col gap-2 w-full min-w-[200px] bg-gray-100 text-gray-900 rounded-lg p-3 shadow-sm">
+                <div className="flex flex-col gap-2 w-full min-w-[200px] bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg p-3 shadow-sm">
                   <textarea
-                    className="w-full text-sm text-gray-900 bg-transparent border-none outline-none focus:outline-none focus:ring-0 resize-none p-0 leading-relaxed placeholder-gray-500"
+                    className="w-full text-sm text-gray-900 dark:text-white bg-transparent border-none outline-none focus:outline-none focus:ring-0 resize-none p-0 leading-relaxed placeholder-gray-500"
                     defaultValue={msg.text}
                     autoFocus
                     rows={Math.max(2, Math.ceil(msg.text.length / 30))}
@@ -330,8 +330,8 @@ const ChttrixAIChat = ({ onClose, isSidebar = false }) => {
               ) : (
                 <div
                   className={`px-3 py-2 text-sm leading-relaxed ${msg.sender === "ai"
-                    ? "text-gray-800"
-                    : "bg-gray-100 text-gray-900 rounded-lg"
+                    ? "text-gray-800 dark:text-gray-200"
+                    : "bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg"
                     }`}
                 >
                   {msg.text}
@@ -377,13 +377,13 @@ const ChttrixAIChat = ({ onClose, isSidebar = false }) => {
       )}
 
       {/* --- Input Area --- */}
-      <div className="p-3 bg-white border-t border-gray-100 relative">
+      <div className="p-3 bg-white dark:bg-gray-900 border-t border-gray-100 dark:border-gray-700 relative">
         {/* Reply Preview Banner */}
         {replyingTo && (
-          <div className="flex items-center justify-between bg-gray-50 border-l-4 border-blue-500 px-3 py-2 mb-2 rounded-r-lg animate-fade-in-up">
+          <div className="flex items-center justify-between bg-gray-50 dark:bg-gray-800 border-l-4 border-blue-500 px-3 py-2 mb-2 rounded-r-lg animate-fade-in-up">
             <div className="flex flex-col overflow-hidden">
-              <span className="text-xs font-bold text-blue-600">{replyingTo.sender === "user" ? "You" : "Chttrix AI"}</span>
-              <span className="text-xs text-gray-500 truncate">{replyingTo.text}</span>
+              <span className="text-xs font-bold text-blue-600 dark:text-blue-400">{replyingTo.sender === "user" ? "You" : "Chttrix AI"}</span>
+              <span className="text-xs text-gray-500 dark:text-gray-400 truncate">{replyingTo.text}</span>
             </div>
             <button onClick={() => setReplyingTo(null)} className="text-gray-400 hover:text-gray-600">
               <X size={14} />
@@ -395,22 +395,22 @@ const ChttrixAIChat = ({ onClose, isSidebar = false }) => {
         {showAttachMenu && (
           <div
             ref={attachMenuRef}
-            className="absolute bottom-full left-0 mb-2 bg-white rounded-lg shadow-lg border border-gray-100 overflow-hidden animate-fade-in-up z-20 w-32"
+            className="absolute bottom-full left-0 mb-2 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-100 dark:border-gray-700 overflow-hidden animate-fade-in-up z-20 w-32"
           >
-            <button className="flex items-center gap-2 w-full px-3 py-2 hover:bg-gray-50 text-xs text-gray-700 transition-colors">
+            <button className="flex items-center gap-2 w-full px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 text-xs text-gray-700 dark:text-gray-300 transition-colors">
               <Image size={14} /> Photo
             </button>
-            <button className="flex items-center gap-2 w-full px-3 py-2 hover:bg-gray-50 text-xs text-gray-700 transition-colors">
+            <button className="flex items-center gap-2 w-full px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 text-xs text-gray-700 dark:text-gray-300 transition-colors">
               <FileText size={14} /> File
             </button>
           </div>
         )}
 
-        <div className="flex items-end gap-2 bg-white border border-gray-200 rounded-xl px-2 py-2 focus-within:ring-1 focus-within:ring-gray-300 focus-within:border-gray-300 transition-all shadow-sm">
+        <div className="flex items-end gap-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-2 py-2 focus-within:ring-1 focus-within:ring-gray-300 dark:focus-within:ring-gray-600 focus-within:border-gray-300 dark:focus-within:border-gray-600 transition-all shadow-sm">
           <button
             ref={attachButtonRef}
             onClick={() => setShowAttachMenu(!showAttachMenu)}
-            className={`p-1.5 text-gray-400 hover:text-gray-600 rounded-md transition-colors ${showAttachMenu ? "text-gray-800 bg-gray-100" : ""}`}
+            className={`p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-md transition-colors ${showAttachMenu ? "text-gray-800 bg-gray-100 dark:bg-gray-700" : ""}`}
             title="Attach"
           >
             <Plus size={18} />
@@ -418,7 +418,7 @@ const ChttrixAIChat = ({ onClose, isSidebar = false }) => {
 
           <textarea
             ref={textareaRef}
-            className="flex-1 bg-transparent border-none focus:ring-0 outline-none focus:outline-none text-sm text-gray-700 max-h-32 resize-none py-1 placeholder-gray-400 w-full"
+            className="flex-1 bg-transparent border-none focus:ring-0 outline-none focus:outline-none text-sm text-gray-700 dark:text-gray-200 max-h-32 resize-none py-1 placeholder-gray-400 w-full"
             placeholder={isListening ? "Listening..." : "Message Chttrix AI..."}
             rows={1}
             value={input}

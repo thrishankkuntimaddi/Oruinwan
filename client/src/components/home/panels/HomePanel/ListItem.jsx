@@ -35,13 +35,13 @@ const ListItem = ({ item, isSelectionMode, selectedItems, setSelectedItems, togg
     return (
         <div
             onClick={handleClick}
-            className={`px-4 py-1.5 mx-2 rounded-md cursor-pointer flex items-center justify-between group transition-colors ${isSelectionMode && isSelected ? "bg-blue-50 border border-blue-200" :
-                isActive ? "bg-blue-100 text-blue-700 font-medium" : "hover:bg-gray-200 text-gray-600 hover:text-gray-900"
+            className={`px-4 py-1.5 mx-2 rounded-md cursor-pointer flex items-center justify-between group transition-colors ${isSelectionMode && isSelected ? "bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800" :
+                isActive ? "bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 font-medium" : "hover:bg-gray-200 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
                 }`}
         >
             <div className="flex items-center truncate flex-1 gap-2">
                 {isSelectionMode && (
-                    <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${isSelected ? "bg-blue-600 border-blue-600" : "border-gray-300 bg-white"}`}>
+                    <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${isSelected ? "bg-blue-600 border-blue-600" : "border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800"}`}>
                         {isSelected && <CheckSquare size={10} className="text-white" />}
                     </div>
                 )}
@@ -57,7 +57,7 @@ const ListItem = ({ item, isSelectionMode, selectedItems, setSelectedItems, togg
                         e.stopPropagation();
                         toggleFavorite(item.id);
                     }}
-                    className={`p-1 rounded hover:bg-gray-300 transition-all ${item.isFavorite ? "text-yellow-400 opacity-100" : "text-gray-400 opacity-0 group-hover:opacity-100"}`}
+                    className={`p-1 rounded hover:bg-gray-300 dark:hover:bg-gray-600 transition-all ${item.isFavorite ? "text-yellow-400 opacity-100" : "text-gray-400 dark:text-gray-500 opacity-0 group-hover:opacity-100"}`}
                     title={item.isFavorite ? "Remove from favorites" : "Add to favorites"}
                 >
                     <svg
