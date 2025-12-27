@@ -246,11 +246,44 @@ exports.getChannelMessages = async (req, res) => {
       })
     );
 
-    // Populate reply counts
+    // Populate reply counts and avatars
     const messagesWithCounts = await Promise.all(messages.map(async (msg) => {
+      // 1. Count replies
       const count = await Message.countDocuments({ threadParent: msg._id });
+
+      // 2. Get recent replier avatars (distinct)
+      let replyAvatars = [];
+      let lastReplyAt = null;
+
+      if (count > 0) {
+        try {
+          const lastReplies = await Message.find({ threadParent: msg._id })
+            .sort({ createdAt: -1 })
+            .limit(5)
+            .populate("sender", "avatarUrl");
+
+          if (lastReplies.length > 0) {
+            lastReplyAt = lastReplies[0].createdAt;
+          }
+
+          const seen = new Set();
+          for (const r of lastReplies) {
+            if (r.sender && r.sender.avatarUrl && !seen.has(r.sender._id.toString())) {
+              seen.add(r.sender._id.toString());
+              replyAvatars.push(r.sender.avatarUrl);
+              // Limit to 3 avatars
+              if (replyAvatars.length >= 3) break;
+            }
+          }
+        } catch (err) {
+          console.error("Error fetching reply avatars:", err);
+        }
+      }
+
       const msgObj = msg.toObject();
       msgObj.replyCount = count;
+      msgObj.replyAvatars = replyAvatars;
+      msgObj.lastReplyAt = lastReplyAt;
       return msgObj;
     }));
 

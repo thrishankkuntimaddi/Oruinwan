@@ -142,6 +142,11 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
       deletedAt: m.deletedAt || null,
       hiddenFor: m.hiddenFor || [],
 
+      // Thread info
+      replyCount: m.replyCount || 0,
+      replyAvatars: m.replyAvatars || [],
+      lastReplyAt: m.lastReplyAt || null,
+
       backend: m,
     };
   };

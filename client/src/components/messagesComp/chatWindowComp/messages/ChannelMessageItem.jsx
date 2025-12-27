@@ -29,6 +29,18 @@ function ChannelMessageItem({
     channelMembers,
     isAdmin = false, // Admin check for pin permissions
 }) {
+    // DEBUG LOG
+    // if (threadCounts && threadCounts[msg.id]) {
+    //    console.log(`CMI Render: ${msg.id} count=${threadCounts[msg.id]}`);
+    // } else if (msg.replyCount > 0) {
+    //    console.log(`CMI Render: ${msg.id} has replyCount=${msg.replyCount} but no threadCount prop match? Keys:`, Object.keys(threadCounts || {}));
+    // }
+
+    // TEMPORARY FIX: Fallback to msg.replyCount if threadCounts missing?
+    // But threadCounts is the source of truth for updates.
+
+    const count = (threadCounts && threadCounts[msg.id]) || msg.replyCount || 0;
+
     const isMe = msg.sender === "you" || msg.sender === "me";
     const isSelected = selectedIds.has(msg.id);
     const [showToolbar, setShowToolbar] = useState(false);
@@ -202,20 +214,34 @@ function ChannelMessageItem({
                 )}
 
                 {/* Thread Reply Link */}
-                {threadCounts && threadCounts[msg.id] > 0 && onOpenThread && (
+                {count > 0 && onOpenThread && (
                     <div
                         onClick={(e) => { e.stopPropagation(); onOpenThread(msg.id); }}
                         className="mt-2 flex items-center gap-2 group/thread cursor-pointer"
                     >
-                        <div className="flex -space-x-1">
-                            <div className="w-5 h-5 rounded bg-gray-200 border border-white"></div>
-                            <div className="w-5 h-5 rounded bg-gray-300 border border-white"></div>
+                        <div className="flex -space-x-2"> {/* Increased overlap for better look */}
+                            {msg.replyAvatars && msg.replyAvatars.length > 0 ? (
+                                msg.replyAvatars.map((url, i) => (
+                                    <img
+                                        key={i}
+                                        src={url}
+                                        alt="Replier"
+                                        className="w-5 h-5 rounded hover:z-10 relative bg-white border border-white object-cover"
+                                    />
+                                ))
+                            ) : (
+                                /* Fallback if no avatars (e.g. backend not updated yet) */
+                                <div className="flex -space-x-1">
+                                    <div className="w-5 h-5 rounded bg-gray-200 border border-white"></div>
+                                    <div className="w-5 h-5 rounded bg-gray-300 border border-white"></div>
+                                </div>
+                            )}
                         </div>
                         <span className="text-xs font-medium text-blue-600 dark:text-blue-400 group-hover/thread:underline">
-                            {threadCounts[msg.id]} {threadCounts[msg.id] === 1 ? "reply" : "replies"}
+                            {count} {count === 1 ? "reply" : "replies"}
                         </span>
                         <span className="text-xs text-gray-400 dark:text-gray-500 group-hover/thread:text-gray-600 dark:group-hover/thread:text-gray-300">
-                            Last reply today at {formatTime(msg.ts)}
+                            Last reply today at {formatTime(msg.lastReplyAt || msg.ts)}
                         </span>
                     </div>
                 )}

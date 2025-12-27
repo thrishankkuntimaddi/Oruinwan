@@ -42,33 +42,46 @@ export default function MessagesContainer({
   onLoadMore,
 }) {
   const messagesRef = useRef(null);
-  const shownJoinMarkersRef = useRef(new Set()); // Track which members already had join marker shown
 
   /* ---------------------------------------------------------
      AUTO SCROLL TO BOTTOM ON NEW MESSAGES (even optimistic)
   --------------------------------------------------------- */
-  useEffect(() => {
-    const el = messagesRef.current;
-    if (el) el.scrollTop = el.scrollHeight;
-  }, [messages]);
+  const prevMessagesInfoRef = useRef({ length: 0, lastId: null });
 
   /* ---------------------------------------------------------
-     RESET JOIN MARKERS TRACKING ON CHAT CHANGE ONLY
+     AUTO SCROLL TO BOTTOM ON NEW MESSAGES
+     Only scroll if:
+     1. Initial load
+     2. New message added to the bottom
+     Avoid scrolling on updates (reactions, pins) or history load
   --------------------------------------------------------- */
-  const firstMessageIdRef = useRef(null);
-
   useEffect(() => {
-    // Only reset when we switch to a different chat (first message ID changes)
-    // Don't reset on minor updates like typing or new messages
-    const currentFirstMsgId = messages.length > 0 ? messages[0]?.backend?._id || messages[0]?.id : null;
+    const el = messagesRef.current;
+    if (!el) return;
 
-    if (currentFirstMsgId && currentFirstMsgId !== firstMessageIdRef.current) {
-      // Chat has changed, reset join markers tracking
-      console.log('🔄 Chat changed, resetting join markers');
-      shownJoinMarkersRef.current = new Set();
-      firstMessageIdRef.current = currentFirstMsgId;
+    const currentLen = messages.length;
+    const currentLastId = currentLen > 0 ? messages[currentLen - 1].id : null;
+    const prevInfo = prevMessagesInfoRef.current;
+
+    // Check if new message added at the end (length increased AND last ID changed)
+    const isNewMessageAtEnd =
+      currentLen > prevInfo.length &&
+      currentLastId !== prevInfo.lastId;
+
+    // Check if initial load (from 0 to N)
+    const isInitialLoad = prevInfo.length === 0 && currentLen > 0;
+
+    if (isNewMessageAtEnd || isInitialLoad) {
+      el.scrollTop = el.scrollHeight;
     }
+
+    prevMessagesInfoRef.current = {
+      length: currentLen,
+      lastId: currentLastId
+    };
   }, [messages]);
+
+
 
   /* ---------------------------------------------------------
      FILTER & GROUP BY DATE
@@ -129,33 +142,22 @@ export default function MessagesContainer({
                 const prevMsg = grp.items[idx - 1];
 
                 // Determine if we should show a join marker before this message
-                // Find members who joined between the previous message and current message
+                // Show marker at the position of a member's FIRST message
                 let memberWhoJoined = null;
 
-                if (chatType === 'channel' && channelMembersWithJoinDates.length > 0) {
-                  const currentMsgTime = new Date(msg.ts);
-                  const prevMsgTime = prevMsg ? new Date(prevMsg.ts) : new Date(0);
+                if (chatType === 'channel' && channelMembersWithJoinDates.length > 0 && messages.length > 0) {
+                  const currentMsgSenderId = msg.senderId;
 
-                  // Find a member whose join date is between prevMsg and currentMsg
-                  // AND who hasn't been shown yet
-                  memberWhoJoined = channelMembersWithJoinDates.find(member => {
-                    const joinTime = new Date(member.joinedAt);
-                    const memberKey = String(member.userId); // Use userId as unique key
+                  // Check if this is the first message from this sender in the entire chat
+                  const isFirstMessageFromSender = messages.findIndex(m =>
+                    String(m.senderId) === String(currentMsgSenderId)
+                  ) === messages.findIndex(m => m.id === msg.id);
 
-                    // Check if:
-                    // 1. Join time is between previous and current message
-                    // 2. We haven't shown this member's join marker yet
-                    return (
-                      joinTime > prevMsgTime &&
-                      joinTime <= currentMsgTime &&
-                      !shownJoinMarkersRef.current.has(memberKey)
+                  if (isFirstMessageFromSender) {
+                    // Find the member info for this sender
+                    memberWhoJoined = channelMembersWithJoinDates.find(member =>
+                      String(member.userId) === String(currentMsgSenderId)
                     );
-                  });
-
-                  // If we found a member to show, mark them as shown
-                  if (memberWhoJoined) {
-                    const memberKey = String(memberWhoJoined.userId);
-                    shownJoinMarkersRef.current.add(memberKey);
                   }
                 }
 
