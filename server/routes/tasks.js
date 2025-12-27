@@ -43,9 +43,23 @@ router.put("/:id", requireAuth, taskController.updateTask);
 
 /**
  * @route   DELETE /api/tasks/:id
- * @desc    Delete a task
+ * @desc    Delete a task (soft delete)
  * @access  Private (task creator or workspace admin)
  */
 router.delete("/:id", requireAuth, taskController.deleteTask);
+
+/**
+ * @route   PUT /api/tasks/:id/restore
+ * @desc    Restore a deleted task
+ * @access  Private (task creator or workspace admin)
+ */
+router.put("/:id/restore", requireAuth, taskController.restoreTask);
+
+/**
+ * @route   DELETE /api/tasks/:id/permanent
+ * @desc    Permanently delete a task
+ * @access  Private (task creator or workspace admin)
+ */
+router.delete("/:id/permanent", requireAuth, taskController.permanentDeleteTask);
 
 module.exports = router;

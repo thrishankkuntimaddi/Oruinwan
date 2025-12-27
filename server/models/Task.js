@@ -61,7 +61,10 @@ const TaskSchema = new mongoose.Schema({
     }],
 
     completedAt: { type: Date, default: null },
-    completedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null }
+    completedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
+    completionNote: { type: String, default: "" }, // Completion note from frontend
+    deleted: { type: Boolean, default: false } // Soft delete support
+
 
 }, { timestamps: true });
 

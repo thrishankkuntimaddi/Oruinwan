@@ -36,31 +36,47 @@ export const TasksProvider = ({ children }) => {
             const response = await api.get(`/api/tasks?workspaceId=${workspaceId}`);
 
             // Map backend tasks to frontend format
-            const mappedTasks = response.data.tasks.map(task => ({
-                id: task._id,
-                title: task.title,
-                description: task.description || "",
-                // If assignedTo is null, it's assigned to creator (self)
-                assignee: task.assignedTo?.username || task.createdBy?.username || user?.username || "Self",
-                assigneeId: task.assignedTo?._id || task.createdBy?._id || user?._id || null,
-                assigner: task.createdBy?.username || user?.username || "Unknown",
-                assignerId: task.createdBy?._id || user?._id,
-                status: mapBackendStatus(task.status),
-                priority: mapBackendPriority(task.priority),
-                dueDate: task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : null,
-                project: task.channel || "General",
-                completedAt: task.completedAt,
-                completionNote: task.completionNote || "",
-                deleted: false,
-                tags: task.tags || [],
-                createdAt: task.createdAt,
-                updatedAt: task.updatedAt
-            }));
+            const mappedTasks = response.data.tasks.map(task => {
+                // Handle multiple assignees display
+                const validAssignees = (task.assignedTo || []).filter(u => u);
+
+                let assigneeDisplay = "Self";
+                if (validAssignees.length > 0) {
+                    if (validAssignees.length === 1) {
+                        assigneeDisplay = validAssignees[0].username || "Unknown";
+                    } else {
+                        assigneeDisplay = `${validAssignees.length} members`;
+                    }
+                }
+
+                return {
+                    id: task._id,
+                    title: task.title,
+                    description: task.description || "",
+                    assignee: assigneeDisplay,
+                    assigneeId: validAssignees.length > 0 ? validAssignees[0]._id : user?._id || null,
+                    assigner: task.createdBy?.username || user?.username || "Unknown",
+                    assignerId: task.createdBy?._id || user?._id,
+                    status: mapBackendStatus(task.status),
+                    priority: mapBackendPriority(task.priority),
+                    dueDate: task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : null,
+                    project: task.channel?.name || "General",
+                    completedAt: task.completedAt,
+                    completionNote: task.completionNote || "",
+                    deleted: task.deleted || false,
+                    tags: task.tags || [],
+                    createdAt: task.createdAt,
+                    updatedAt: task.updatedAt,
+                    visibility: task.visibility || "private",
+                    assignees: validAssignees, // Keep full valid assignee list
+                    attachments: task.attachments || []
+                };
+            });
 
             setTasks(mappedTasks);
         } catch (error) {
             console.error("Failed to load tasks:", error);
-            showToast("Failed to load tasks", "error");
+            showToast(error.response?.data?.message || "Failed to load tasks", "error");
             setTasks([]);
         } finally {
             setLoading(false);
@@ -68,7 +84,7 @@ export const TasksProvider = ({ children }) => {
     }, [getWorkspaceId, showToast, user]);
 
     // Map backend status to frontend format
-    const mapBackendStatus = (status) => {
+    const mapBackendStatus = useCallback((status) => {
         const statusMap = {
             'todo': 'To Do',
             'in-progress': 'In Progress',
@@ -77,10 +93,10 @@ export const TasksProvider = ({ children }) => {
             'cancelled': 'Terminated'
         };
         return statusMap[status] || 'To Do';
-    };
+    }, []);
 
     // Map frontend status to backend format
-    const mapFrontendStatus = (status) => {
+    const mapFrontendStatus = useCallback((status) => {
         const statusMap = {
             'To Do': 'todo',
             'In Progress': 'in-progress',
@@ -89,10 +105,10 @@ export const TasksProvider = ({ children }) => {
             'Terminated': 'cancelled'
         };
         return statusMap[status] || 'todo';
-    };
+    }, []);
 
     // Map backend priority to frontend format
-    const mapBackendPriority = (priority) => {
+    const mapBackendPriority = useCallback((priority) => {
         const priorityMap = {
             'low': 'Low',
             'medium': 'Medium',
@@ -100,10 +116,10 @@ export const TasksProvider = ({ children }) => {
             'urgent': 'Emergency'
         };
         return priorityMap[priority] || 'Medium';
-    };
+    }, []);
 
     // Map frontend priority to backend format
-    const mapFrontendPriority = (priority) => {
+    const mapFrontendPriority = useCallback((priority) => {
         const priorityMap = {
             'Low': 'low',
             'Medium': 'medium',
@@ -111,7 +127,7 @@ export const TasksProvider = ({ children }) => {
             'Emergency': 'urgent'
         };
         return priorityMap[priority] || 'medium';
-    };
+    }, []);
 
     // Load tasks when workspace changes
     useEffect(() => {
@@ -131,48 +147,68 @@ export const TasksProvider = ({ children }) => {
                 workspaceId,
                 title: taskData.title,
                 description: taskData.description || "",
-                assignedTo: taskData.assigneeId || null,
+                assignmentType: taskData.assignmentType || "self",
+                assignedToIds: taskData.assignedToIds || [],
+                channelId: taskData.channelId || null,
                 status: mapFrontendStatus(taskData.status || "To Do"),
                 priority: mapFrontendPriority(taskData.priority || "Medium"),
                 dueDate: taskData.dueDate || null,
                 tags: taskData.tags || []
             });
 
-            const newTask = {
-                id: response.data.task._id,
-                title: response.data.task.title,
-                description: response.data.task.description || "",
-                // If assignedTo is null, task is assigned to creator (self)
-                assignee: response.data.task.assignedTo?.username || response.data.task.createdBy?.username || user?.username || "Self",
-                assigneeId: response.data.task.assignedTo?._id || response.data.task.createdBy?._id || user?._id || null,
-                assigner: response.data.task.createdBy?.username || user?.username || "Self",
-                assignerId: response.data.task.createdBy?._id || user?._id,
-                status: mapBackendStatus(response.data.task.status),
-                priority: mapBackendPriority(response.data.task.priority),
-                dueDate: response.data.task.dueDate ? new Date(response.data.task.dueDate).toISOString().split('T')[0] : null,
-                project: response.data.task.channel || "General",
-                deleted: false,
-                tags: response.data.task.tags || []
-            };
+            // Handle both single task and array of tasks (for split individual assignments)
+            const backendTasks = response.data.tasks || [response.data.task];
 
-            setTasks(prev => [newTask, ...prev]);
-            showToast("Task created", "success");
+            const newFrontendTasks = backendTasks.map(task => {
+                // Handle multiple assignees display
+                let assigneeDisplay = "Self";
+                if (task.assignedTo && task.assignedTo.length > 0) {
+                    if (task.assignedTo.length === 1) {
+                        assigneeDisplay = task.assignedTo[0].username || "Unknown";
+                    } else {
+                        assigneeDisplay = `${task.assignedTo.length} members`;
+                    }
+                }
 
-            return newTask;
+                // Determine project/channel name
+                let projectName = taskData.project || "General";
+                if (task.channel && task.channel.name) {
+                    projectName = task.channel.name;
+                }
+
+                return {
+                    id: task._id,
+                    title: task.title,
+                    description: task.description || "",
+                    assignee: assigneeDisplay,
+                    assigneeId: task.assignedTo && task.assignedTo.length > 0 ? task.assignedTo[0]._id : user?._id || null,
+                    assigner: task.createdBy?.username || user?.username || "Unknown",
+                    assignerId: task.createdBy?._id || user?._id,
+                    status: mapBackendStatus(task.status),
+                    priority: mapBackendPriority(task.priority),
+                    dueDate: task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : null,
+                    project: projectName,
+                    deleted: false,
+                    tags: task.tags || [],
+                    visibility: task.visibility || "private",
+                    assignees: task.assignedTo || [],
+                    attachments: task.attachments || []
+                };
+            });
+
+            setTasks(prev => [...newFrontendTasks, ...prev]);
+            showToast(`Created ${newFrontendTasks.length} task(s) successfully`, "success");
+
+            return newFrontendTasks;
         } catch (error) {
             console.error("Failed to create task:", error);
-            showToast("Failed to create task", "error");
+            showToast(error.response?.data?.message || "Failed to create task", "error");
             return null;
         }
     }, [getWorkspaceId, showToast, user]);
 
     // Update task
     const updateTask = useCallback(async (id, updates) => {
-        // Optimistically update UI
-        setTasks(prev => prev.map(task =>
-            task.id === id ? { ...task, ...updates } : task
-        ));
-
         try {
             const backendUpdates = {};
 
@@ -183,8 +219,53 @@ export const TasksProvider = ({ children }) => {
             if (updates.dueDate !== undefined) backendUpdates.dueDate = updates.dueDate;
             if (updates.assigneeId !== undefined) backendUpdates.assignedTo = updates.assigneeId;
             if (updates.tags !== undefined) backendUpdates.tags = updates.tags;
+            if (updates.completionNote !== undefined) backendUpdates.completionNote = updates.completionNote;
+            if (updates.completedAt !== undefined) backendUpdates.completedAt = updates.completedAt;
 
-            await api.put(`/ api / tasks / ${id} `, backendUpdates);
+            const response = await api.put(`/api/tasks/${id}`, backendUpdates);
+            const updatedBackendTask = response.data.task;
+
+            // Map backend task to frontend format
+            const validAssignees = (updatedBackendTask.assignedTo || []).filter(u => u);
+            let assigneeDisplay = "Self";
+            if (validAssignees.length > 0) {
+                if (validAssignees.length === 1) {
+                    assigneeDisplay = validAssignees[0].username || "Unknown";
+                } else {
+                    assigneeDisplay = `${validAssignees.length} members`;
+                }
+            }
+
+            const updatedTask = {
+                id: updatedBackendTask._id,
+                title: updatedBackendTask.title,
+                description: updatedBackendTask.description || "",
+                assignee: assigneeDisplay,
+                assigneeId: validAssignees.length > 0 ? validAssignees[0]._id : user?._id || null,
+                assigner: updatedBackendTask.createdBy?.username || user?.username || "Unknown",
+                assignerId: updatedBackendTask.createdBy?._id || user?._id,
+                status: mapBackendStatus(updatedBackendTask.status),
+                priority: mapBackendPriority(updatedBackendTask.priority),
+                dueDate: updatedBackendTask.dueDate ? new Date(updatedBackendTask.dueDate).toISOString().split('T')[0] : null,
+                project: updatedBackendTask.channel?.name || "General",
+                completedAt: updatedBackendTask.completedAt,
+                completionNote: updatedBackendTask.completionNote || "",
+                deleted: updatedBackendTask.deleted || false,
+                tags: updatedBackendTask.tags || [],
+                createdAt: updatedBackendTask.createdAt,
+                updatedAt: updatedBackendTask.updatedAt,
+                visibility: updatedBackendTask.visibility || "private",
+                assignees: validAssignees,
+                attachments: updatedBackendTask.attachments || []
+            };
+
+            setTasks(prev => prev.map(task =>
+                task.id === id ? updatedTask : task
+            ));
+
+            if (updates.status === "Completed") {
+                showToast("Task completed successfully", "success");
+            }
         } catch (error) {
             console.error("Failed to update task:", error);
             showToast("Failed to update task", "error");
@@ -192,13 +273,13 @@ export const TasksProvider = ({ children }) => {
             // Reload tasks on error
             loadTasks();
         }
-    }, [showToast, loadTasks]);
+    }, [showToast, loadTasks, user, mapBackendStatus, mapBackendPriority, mapFrontendStatus, mapFrontendPriority]);
 
     // Delete task (soft delete)
     const deleteTask = useCallback(async (id) => {
         try {
-            // For now, mark as deleted locally
-            // You can implement soft delete on backend later
+            await api.delete(`/api/tasks/${id}`);
+
             setTasks(prev => prev.map(task =>
                 task.id === id ? { ...task, deleted: true } : task
             ));
@@ -207,13 +288,15 @@ export const TasksProvider = ({ children }) => {
         } catch (error) {
             console.error("Failed to delete task:", error);
             showToast("Failed to delete task", "error");
+            // Revert optimistic update if needed or just reload
+            loadTasks();
         }
-    }, [showToast]);
+    }, [showToast, loadTasks]);
 
     // Permanently delete task
     const permanentlyDeleteTask = useCallback(async (id) => {
         try {
-            await api.delete(`/ api / tasks / ${id} `);
+            await api.delete(`/api/tasks/${id}/permanent`);
             setTasks(prev => prev.filter(task => task.id !== id));
             showToast("Task permanently deleted", "success");
         } catch (error) {
@@ -223,11 +306,17 @@ export const TasksProvider = ({ children }) => {
     }, [showToast]);
 
     // Restore task
-    const restoreTask = useCallback((id) => {
-        setTasks(prev => prev.map(task =>
-            task.id === id ? { ...task, deleted: false } : task
-        ));
-        showToast("Task restored", "success");
+    const restoreTask = useCallback(async (id) => {
+        try {
+            await api.put(`/api/tasks/${id}/restore`);
+            setTasks(prev => prev.map(task =>
+                task.id === id ? { ...task, deleted: false } : task
+            ));
+            showToast("Task restored", "success");
+        } catch (error) {
+            console.error("Failed to restore task:", error);
+            showToast("Failed to restore task", "error");
+        }
     }, [showToast]);
 
     return (

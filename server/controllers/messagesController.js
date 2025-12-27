@@ -4,6 +4,7 @@ const Channel = require("../models/Channel");
 const User = require("../models/User");
 const DMSession = require("../models/DMSession");
 const Workspace = require("../models/Workspace");
+const Task = require("../models/Task");
 
 // -----------------------------------------------------
 // SEND DIRECT MESSAGE (user → user)
@@ -53,6 +54,11 @@ exports.sendDirectMessage = async (req, res) => {
       threadParent: replyTo || null,
     });
 
+    // Process AI Commands
+    if (text && text.includes("@chttrixAI")) {
+      processAICommand(message, req.user, "dm", req);
+    }
+
     return res.status(201).json({ message });
   } catch (err) {
     console.error("SEND DM ERROR:", err);
@@ -88,6 +94,11 @@ exports.sendChannelMessage = async (req, res) => {
       attachments: attachments || [],
       threadParent: replyTo || null,
     });
+
+    // Process AI Commands
+    if (text && text.includes("@chttrixAI")) {
+      processAICommand(message, req.user, "channel", req);
+    }
 
     return res.status(201).json({ message });
   } catch (err) {
@@ -295,3 +306,114 @@ exports.getWorkspaceDMList = async (req, res) => {
     return res.status(500).json({ message: "Server error" });
   }
 };
+
+
+/**
+ * AI Command Processor
+ * Parses @chttrixAI commands to create tasks
+ */
+async function processAICommand(message, sender, contextType, req) {
+  try {
+    const text = message.text;
+    const io = req.io;
+
+    // 1. Parse Assignees (@User)
+    const mentionRegex = /@(\w+)/g;
+    const mentions = text.match(mentionRegex) || [];
+    const targetUsernames = mentions
+      .filter(m => m.toLowerCase() !== "@chttrixai")
+      .map(m => m.substring(1)); // remove @
+
+    if (targetUsernames.length === 0) {
+      return sendAIReply(message, "⚠️ Please mention a user to assign the task (e.g. @Muzamil).", io);
+    }
+
+    // Resolve Users
+    const assigneeIds = [];
+    const assigneeNames = [];
+    for (const username of targetUsernames) {
+      const user = await User.findOne({ username: new RegExp(`^${username}$`, "i") });
+      // Verify user is in workspace helper if needed, but for now strict name match
+      if (user) {
+        assigneeIds.push(user._id);
+        assigneeNames.push(user.username);
+      }
+    }
+
+    if (assigneeIds.length === 0) return;
+
+    // 2. Parse Due Date (Simple heuristic)
+    let dueDate = null;
+    const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    const lowerText = text.toLowerCase();
+
+    // Check for "by X day"
+    for (let i = 0; i < 7; i++) {
+      if (lowerText.includes(days[i])) {
+        const today = new Date();
+        const currentDay = today.getDay();
+        let distance = i - currentDay;
+        if (distance <= 0) distance += 7; // Next occurrence
+        dueDate = new Date(today);
+        dueDate.setDate(today.getDate() + distance);
+        break;
+      }
+    }
+
+    // 3. Extract Title (Remove mentions)
+    let cleanText = text.replace(/@\w+/g, "").replace(/\s+/g, " ").trim();
+    // Remove "by Friday" etc if complex parsing, but simply using clean text as description/title is fine
+    const title = cleanText.substring(0, 50) + (cleanText.length > 50 ? "..." : "");
+
+    // 4. Create Task(s) - Split Logic
+    for (const assigneeId of assigneeIds) {
+      const task = new Task({
+        company: message.company,
+        workspace: message.workspace,
+        title: title || "New AI Task",
+        description: text,
+        createdBy: sender.sub || sender._id,
+        assignedTo: [assigneeId], // Independent task
+        visibility: contextType === 'dm' ? 'private' : 'channel',
+        channel: contextType === 'channel' ? message.channel : null,
+        status: 'todo',
+        priority: 'medium',
+        dueDate: dueDate,
+        linkedMessage: message._id
+      });
+      await task.save();
+    }
+
+    // 5. Reply
+    const assigneeStr = assigneeNames.map(n => `@${n}`).join(", ");
+    sendAIReply(message, `🤖 **Task Created:** ${title}\n👤 Assigned to: ${assigneeStr}\n📅 Due: ${dueDate ? dueDate.toDateString() : "No Date"}`, io);
+
+  } catch (err) {
+    console.error("AI PROCESS ERROR:", err);
+  }
+}
+
+async function sendAIReply(originalMsg, text, io) {
+  try {
+    const reply = await Message.create({
+      company: originalMsg.company,
+      workspace: originalMsg.workspace,
+      channel: originalMsg.channel,
+      dm: originalMsg.dm,
+      sender: originalMsg.sender, // Reply as the user (self-echo) or system? 
+      // Better to reply as System but we lack ID. 
+      // Using sender is safe fallback, but adding START "🤖" makes it clear.
+      text: text,
+      threadParent: originalMsg._id // Thread it!
+    });
+
+    await reply.populate("sender", "username profilePicture");
+
+    // Emit
+    const room = originalMsg.channel ? `channel_${originalMsg.channel}` : `dm_${originalMsg.dm}`;
+    if (io) io.to(room).emit("new-message", reply);
+
+  } catch (e) {
+    console.error("Bot Reply Error", e);
+  }
+}
