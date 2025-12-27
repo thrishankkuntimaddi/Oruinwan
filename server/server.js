@@ -22,10 +22,9 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(cookieParser());
 app.use(helmet());
 
-// CORS - Allow both common React dev ports
+// CORS - Only allow port 3000 for the client
 const allowedOrigins = [
   'http://localhost:3000',
-  'http://localhost:3001',
   process.env.FRONTEND_URL
 ].filter(Boolean);
 

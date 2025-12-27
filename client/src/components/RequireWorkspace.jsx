@@ -44,7 +44,7 @@ const RequireWorkspace = ({ children }) => {
     // 🔒 CRITICAL VALIDATION #2: User must be member of workspace
     // Check membership FIRST (before checking if it's active)
     // Use loose comparison to handle string vs number IDs
-    const isMember = workspaces.some(ws => ws.id == workspaceId || ws.id.toString() === workspaceId.toString());
+    const isMember = workspaces.some(ws => ws.id === workspaceId || ws.id.toString() === workspaceId.toString());
 
     if (!isMember) {
         // If we are still loading workspaces, give it a moment before kicking them out
@@ -68,7 +68,7 @@ const RequireWorkspace = ({ children }) => {
 
     // 🔒 CRITICAL VALIDATION #3: activeWorkspace must exist and match URL
     // If we have a valid member but activeWorkspace confuses us, we might be mid-switch
-    if (!activeWorkspace || error || (activeWorkspace.id != workspaceId && activeWorkspace.id.toString() !== workspaceId.toString())) {
+    if (!activeWorkspace || error || (activeWorkspace.id !== workspaceId && activeWorkspace.id.toString() !== workspaceId.toString())) {
         console.log('🔄 [RequireWorkspace] Workspace switch in progress - waiting for context update...', {
             urlId: workspaceId,
             activeId: activeWorkspace?.id

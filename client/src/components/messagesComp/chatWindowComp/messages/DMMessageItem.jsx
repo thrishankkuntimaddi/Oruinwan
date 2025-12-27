@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import { MoreHorizontal, Copy, Pin, Trash2, Smile, Info, MessageSquare, Share } from "lucide-react";
+import { MoreHorizontal, Copy, Pin, Trash2, Smile, Share } from "lucide-react";
 import ReactionBadges from "./reactionBadges";
 import ReactionPicker from "./reactionPicker";
 import ReactMarkdown from "react-markdown";

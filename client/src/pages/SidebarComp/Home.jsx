@@ -55,13 +55,32 @@ const Home = () => {
             // Fetch user info to get the name
             const res = await api.get(`/api/workspaces/${workspaceId}/members`);
             const members = res.data.members || [];
-            const member = members.find(m => String(m.id) === String(targetId));
+            let member = members.find(m => String(m._id || m.id) === String(targetId));
+            console.log('🔍 [Home] Looking for targetId:', targetId, 'Found:', member);
+
+            // If not found, targetId might be a DM session ID - fetch the session
+            if (!member) {
+              console.log('⚠️ [Home] Member not found by ID, checking if targetId is a DM session ID...');
+              try {
+                const dmRes = await api.get(`/api/messages/workspace/${workspaceId}/dms`);
+                const dmSessions = dmRes.data.sessions || [];
+                const dmSession = dmSessions.find(s => String(s.id) === String(targetId));
+
+                if (dmSession && dmSession.otherUserId) {
+                  console.log('✅ [Home] Found DM session with otherUserId:', dmSession.otherUserId);
+                  member = members.find(m => String(m._id || m.id) === String(dmSession.otherUserId));
+                  console.log('👤 [Home] Found member by session lookup:', member);
+                }
+              } catch (err) {
+                console.error('❌ [Home] Failed to fetch DM sessions:', err);
+              }
+            }
 
             setActiveChat({
               id: targetId,
-              name: member ? member.name : "User",
-              image: member ? member.avatar : null,
-              status: member ? member.status : "offline",
+              name: member ? (member.username || member.name || member.email?.split('@')[0]) : "Unknown User",
+              image: member ? (member.profilePicture || member.avatar) : null,
+              status: member ? (member.isOnline ? "online" : "offline") : "offline",
               type: "dm",
               isNew: id === "new",
               workspaceId,

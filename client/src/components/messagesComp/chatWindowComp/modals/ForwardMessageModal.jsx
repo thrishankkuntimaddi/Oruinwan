@@ -5,7 +5,7 @@ import { useWorkspace } from "../../../../contexts/WorkspaceContext";
 import api from "../../../../services/api";
 
 export default function ForwardMessageModal({ onClose, onForward, currentChatId, currentChatType }) {
-    const { channels, dms } = useContacts();
+    const { channels } = useContacts();
     const { activeWorkspace } = useWorkspace();
     const [activeTab, setActiveTab] = useState('channels'); // 'channels' or 'dms'
     const [search, setSearch] = useState("");
@@ -18,6 +18,7 @@ export default function ForwardMessageModal({ onClose, onForward, currentChatId,
         if (activeTab === 'dms' && activeWorkspace) {
             loadWorkspaceMembers();
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [activeTab, activeWorkspace]);
 
     const loadWorkspaceMembers = async () => {
@@ -41,7 +42,6 @@ export default function ForwardMessageModal({ onClose, onForward, currentChatId,
     const filteredDMs = workspaceMembers
         .filter(member => member.username.toLowerCase().includes(search.toLowerCase()));
 
-    const currentList = activeTab === 'channels' ? filteredChannels : filteredDMs;
 
     const toggleSelection = (item) => {
         const newSelection = new Set(selectedItems);
@@ -108,8 +108,8 @@ export default function ForwardMessageModal({ onClose, onForward, currentChatId,
                     <button
                         onClick={() => setActiveTab('channels')}
                         className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${activeTab === 'channels'
-                                ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50/50'
-                                : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
+                            ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50/50'
+                            : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
                             }`}
                     >
                         <div className="flex items-center justify-center gap-2">
@@ -120,8 +120,8 @@ export default function ForwardMessageModal({ onClose, onForward, currentChatId,
                     <button
                         onClick={() => setActiveTab('dms')}
                         className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${activeTab === 'dms'
-                                ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50/50'
-                                : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
+                            ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50/50'
+                            : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
                             }`}
                     >
                         <div className="flex items-center justify-center gap-2">
@@ -162,8 +162,8 @@ export default function ForwardMessageModal({ onClose, onForward, currentChatId,
                                         key={channel.id}
                                         onClick={() => toggleSelection(channel)}
                                         className={`w-full flex items-center gap-3 p-2 rounded-lg transition-colors ${isSelected
-                                                ? "bg-blue-50 border border-blue-200"
-                                                : "hover:bg-gray-50 border border-transparent"
+                                            ? "bg-blue-50 border border-blue-200"
+                                            : "hover:bg-gray-50 border border-transparent"
                                             }`}
                                     >
                                         <input
@@ -197,8 +197,8 @@ export default function ForwardMessageModal({ onClose, onForward, currentChatId,
                                         key={member._id}
                                         onClick={() => toggleSelection(member)}
                                         className={`w-full flex items-center gap-3 p-2 rounded-lg transition-colors ${isSelected
-                                                ? "bg-blue-50 border border-blue-200"
-                                                : "hover:bg-gray-50 border border-transparent"
+                                            ? "bg-blue-50 border border-blue-200"
+                                            : "hover:bg-gray-50 border border-transparent"
                                             }`}
                                     >
                                         <input

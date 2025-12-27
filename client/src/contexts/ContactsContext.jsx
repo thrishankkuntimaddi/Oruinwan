@@ -76,17 +76,22 @@ export default function ContactsProvider({ children }) {
       }));
 
       // Format DMs from chat list with favorite status
-      const dmsData = (chatListRes.data.conversations || [])
-        .filter(c => c.type === 'dm')
-        .map(dm => ({
-          id: dm._id,
-          type: 'dm',
-          label: dm.otherUser?.username || dm.otherUser?.name || 'Unknown User',
-          path: `/dm/${dm.otherUser?._id || dm._id}`,
-          isFavorite: favoriteItemIds.includes(String(dm._id)),
-          lastMessage: dm.lastMessage,
-          unreadCount: dm.unreadCount || 0
-        }));
+      const rawDMs = (chatListRes.data.conversations || chatListRes.data.chats || []).filter(c => c.type === 'dm');
+      console.log('📨 [ContactsContext] Received', rawDMs.length, 'DM conversations');
+      if (rawDMs.length > 0) console.log('📨 [ContactsContext] Sample DM:', rawDMs[0]);
+      const dmsData = rawDMs
+        .map(dm => {
+          const userId = dm.otherUser?._id || dm.otherUserId || dm.id || dm._id;
+          return {
+            id: dm._id || dm.id,
+            type: 'dm',
+            label: dm.otherUser?.username || dm.otherUser?.name || dm.name || 'Unknown User',
+            path: `/dm/${userId}`,
+            isFavorite: favoriteItemIds.includes(String(dm._id || dm.id)),
+            lastMessage: dm.lastMessage,
+            unreadCount: dm.unreadCount || 0
+          };
+        });
 
       // Format workspace members
       const membersData = (membersRes.data.members || []).map(member => ({

@@ -42,60 +42,82 @@ export default function DMChatWindow({ chat, onClose, onDeleteChat }) {
     useEffect(() => {
         if (!accessToken || !chat) return;
 
-        const socket = io(API_BASE, {
-            auth: { token: accessToken },
-            transports: ["websocket"],
-        });
+        // Helper function to check and refresh token if needed
+        const ensureValidToken = async () => {
+            let token = accessToken;
 
-        socketRef.current = socket;
+            try {
+                // Check if token is expired or about to expire
+                const decoded = jwtDecode(token);
+                const now = Date.now() / 1000;
 
-        socket.on("connect", () => {
-            console.log("✅ DM Socket connected");
-            setConnected(true);
+                // If token expires in less than 60 seconds, refresh it proactively
+                if (decoded.exp && decoded.exp - now < 60) {
+                    console.log('🔄 [DMChatWindow] Token expiring soon, refreshing proactively...');
 
-            // Join DM room if it's not a new DM
-            if (!chat.isNew && chat.id) {
-                socket.emit("join-dm", { dmSessionId: chat.id });
+                    try {
+                        const response = await api.post('/api/auth/refresh', {}, {
+                            withCredentials: true
+                        });
+
+                        token = response.data.accessToken;
+                        localStorage.setItem('accessToken', token);
+                        console.log('✅ [DMChatWindow] Token refreshed before socket connection');
+                    } catch (refreshError) {
+                        console.error('❌ [DMChatWindow] Failed to refresh token:', refreshError);
+                        showToast("Session expired. Please login again.", "error");
+                        return null;
+                    }
+                }
+            } catch (err) {
+                console.error('[DMChatWindow] Token decode error:', err);
+                // If token is malformed, try to continue anyway and let server reject
             }
-        });
 
-        socket.on("disconnect", () => {
-            console.log("❌ DM Socket disconnected");
-            setConnected(false);
-        });
+            return token;
+        };
 
-        // Listen for new messages
-        socket.on("new-message", ({ message, clientTempId }) => {
-            console.log("📨 Received new message:", message);
+        // Connect socket with valid token
+        const connectSocket = async () => {
+            const validToken = await ensureValidToken();
+            if (!validToken) return;
 
-            // Remove pending optimistic message if exists
-            if (clientTempId && pendingMessagesRef.current[clientTempId]) {
-                delete pendingMessagesRef.current[clientTempId];
-                setMessages(prev => prev.filter(m => m.id !== clientTempId));
-            }
+            const socket = io(API_BASE, {
+                auth: { token: validToken },
+                transports: ["websocket"],
+            });
 
-            // Add real message
-            const formattedMsg = {
-                id: message._id,
-                sender: message.sender._id === currentUserId ? "you" : "them",
-                senderName: message.sender.username,
-                senderAvatar: message.sender.profilePicture,
-                text: message.text,
-                ts: message.createdAt,
-                backend: message,
-            };
+            socketRef.current = socket;
 
-            setMessages(prev => [...prev, formattedMsg]);
-        });
+            socket.on("connect", () => {
+                console.log("✅ DM Socket connected");
+                setConnected(true);
 
-        socket.on("message-sent", ({ message, clientTempId }) => {
-            // Replace optimistic message with real one
-            if (clientTempId && pendingMessagesRef.current[clientTempId]) {
-                delete pendingMessagesRef.current[clientTempId];
+                // Join DM room if it's not a new DM
+                if (!chat.isNew && chat.id) {
+                    socket.emit("join-dm", { dmSessionId: chat.id });
+                }
+            });
 
+            socket.on("disconnect", () => {
+                console.log("❌ DM Socket disconnected");
+                setConnected(false);
+            });
+
+            // Listen for new messages
+            socket.on("new-message", ({ message, clientTempId }) => {
+                console.log("📨 Received new message:", message);
+
+                // Remove pending optimistic message if exists
+                if (clientTempId && pendingMessagesRef.current[clientTempId]) {
+                    delete pendingMessagesRef.current[clientTempId];
+                    setMessages(prev => prev.filter(m => m.id !== clientTempId));
+                }
+
+                // Add real message
                 const formattedMsg = {
                     id: message._id,
-                    sender: "you",
+                    sender: message.sender._id === currentUserId ? "you" : "them",
                     senderName: message.sender.username,
                     senderAvatar: message.sender.profilePicture,
                     text: message.text,
@@ -103,27 +125,52 @@ export default function DMChatWindow({ chat, onClose, onDeleteChat }) {
                     backend: message,
                 };
 
-                setMessages(prev => prev.map(m =>
-                    m.id === clientTempId ? formattedMsg : m
-                ));
-            }
-        });
+                setMessages(prev => [...prev, formattedMsg]);
+            });
 
-        socket.on("send-error", ({ clientTempId, message: errorMsg }) => {
-            console.error("❌ Send error:", errorMsg);
+            socket.on("message-sent", ({ message, clientTempId }) => {
+                // Replace optimistic message with real one
+                if (clientTempId && pendingMessagesRef.current[clientTempId]) {
+                    delete pendingMessagesRef.current[clientTempId];
 
-            if (clientTempId) {
-                setMessages(prev => prev.map(m =>
-                    m.id === clientTempId ? { ...m, failed: true, sending: false } : m
-                ));
-                delete pendingMessagesRef.current[clientTempId];
-            }
+                    const formattedMsg = {
+                        id: message._id,
+                        sender: "you",
+                        senderName: message.sender.username,
+                        senderAvatar: message.sender.profilePicture,
+                        text: message.text,
+                        ts: message.createdAt,
+                        backend: message,
+                    };
 
-            showToast(errorMsg || "Failed to send message", "error");
-        });
+                    setMessages(prev => prev.map(m =>
+                        m.id === clientTempId ? formattedMsg : m
+                    ));
+                }
+            });
+
+            socket.on("send-error", ({ clientTempId, message: errorMsg }) => {
+                console.error("❌ Send error:", errorMsg);
+
+                if (clientTempId) {
+                    setMessages(prev => prev.map(m =>
+                        m.id === clientTempId ? { ...m, failed: true, sending: false } : m
+                    ));
+                    delete pendingMessagesRef.current[clientTempId];
+                }
+
+                showToast(errorMsg || "Failed to send message", "error");
+            });
+        };
+
+        // Call the async connect function
+        connectSocket();
 
         return () => {
-            socket.disconnect();
+            const socket = socketRef.current;
+            if (socket) {
+                socket.disconnect();
+            }
         };
     }, [accessToken, chat, currentUserId, showToast]);
 
@@ -227,7 +274,9 @@ export default function DMChatWindow({ chat, onClose, onDeleteChat }) {
 
                     {/* Name and Status */}
                     <div>
-                        <h2 className="font-semibold text-gray-900">{chat.name || "User"}</h2>
+                        <h2 className="font-semibold text-gray-900">
+                            {chat.name || chat.username || chat.email?.split('@')[0] || "Unknown User"}
+                        </h2>
                         <p className="text-xs text-gray-500">{chat.status || "offline"}</p>
                     </div>
                 </div>

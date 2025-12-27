@@ -82,8 +82,14 @@ export default function Header({
         )}
 
         <div className="min-w-0">
+          {/* Debug: Log chat object for DMs */}
+          {chat.type === 'dm' && console.log('🔍 [Header] DM chat object:', { name: chat.name, username: chat.username, email: chat.email, fullChat: chat })}
+
           <div className="text-sm font-semibold truncate text-gray-800">
-            {chat.type === 'channel' ? (chat.name?.replace(/^#/, '') || 'Unnamed Channel') : chat.name}
+            {chat.type === 'channel'
+              ? (chat.name?.replace(/^#/, '') || 'Unnamed Channel')
+              : (chat.name || chat.username || chat.email?.split('@')[0] || 'Unknown User')
+            }
           </div>
           <div className="text-[10px] text-gray-400 truncate flex items-center gap-1">
             {chat.status}

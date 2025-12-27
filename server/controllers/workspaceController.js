@@ -3,6 +3,12 @@ const Workspace = require("../models/Workspace");
 const Channel = require("../models/Channel");
 const User = require("../models/User");
 const Message = require("../models/Message");
+const DMSession = require("../models/DMSession");
+const Task = require("../models/Task");
+const Note = require("../models/Note");
+const Update = require("../models/Update");
+const Favorite = require("../models/Favorite");
+const Invite = require("../models/Invite");
 const { createInvite } = require("../utils/invite");
 const sendEmail = require("../utils/sendEmail");
 
@@ -268,6 +274,30 @@ exports.deleteWorkspace = async (req, res) => {
     const deletedMessages = await Message.deleteMany({ workspace: workspaceId });
     console.log(`   ✅ Deleted ${deletedMessages.deletedCount} messages`);
 
+    // Delete all DM sessions in this workspace
+    const deletedDMSessions = await DMSession.deleteMany({ workspace: workspaceId });
+    console.log(`   ✅ Deleted ${deletedDMSessions.deletedCount} DM sessions`);
+
+    // Delete all tasks in this workspace
+    const deletedTasks = await Task.deleteMany({ workspace: workspaceId });
+    console.log(`   ✅ Deleted ${deletedTasks.deletedCount} tasks`);
+
+    // Delete all notes in this workspace
+    const deletedNotes = await Note.deleteMany({ workspace: workspaceId });
+    console.log(`   ✅ Deleted ${deletedNotes.deletedCount} notes`);
+
+    // Delete all updates in this workspace
+    const deletedUpdates = await Update.deleteMany({ workspace: workspaceId });
+    console.log(`   ✅ Deleted ${deletedUpdates.deletedCount} updates`);
+
+    // Delete all favorites in this workspace
+    const deletedFavorites = await Favorite.deleteMany({ workspace: workspaceId });
+    console.log(`   ✅ Deleted ${deletedFavorites.deletedCount} favorites`);
+
+    // Delete all pending invites for this workspace
+    const deletedInvites = await Invite.deleteMany({ workspace: workspaceId });
+    console.log(`   ✅ Deleted ${deletedInvites.deletedCount} pending invites`);
+
     // Remove workspace from all users
     await User.updateMany(
       { "workspaces.workspace": workspaceId },
@@ -284,6 +314,15 @@ exports.deleteWorkspace = async (req, res) => {
     // Delete the workspace itself
     await Workspace.findByIdAndDelete(workspaceId);
     console.log(`   ✅ Workspace deleted successfully`);
+    console.log(`\n📊 DELETION SUMMARY:`);
+    console.log(`   - Channels: ${deletedChannels.deletedCount}`);
+    console.log(`   - Messages: ${deletedMessages.deletedCount}`);
+    console.log(`   - DM Sessions: ${deletedDMSessions.deletedCount}`);
+    console.log(`   - Tasks: ${deletedTasks.deletedCount}`);
+    console.log(`   - Notes: ${deletedNotes.deletedCount}`);
+    console.log(`   - Updates: ${deletedUpdates.deletedCount}`);
+    console.log(`   - Favorites: ${deletedFavorites.deletedCount}`);
+    console.log(`   - Invites: ${deletedInvites.deletedCount}\n`);
 
     return res.json({ message: "Workspace deleted successfully" });
   } catch (err) {

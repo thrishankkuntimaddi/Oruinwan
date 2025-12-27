@@ -311,308 +311,354 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
   useEffect(() => {
     if (!chat) return;
 
-    // Use context token OR fallback to localStorage for socket auth
-    const token = accessToken || localStorage.getItem("accessToken");
-    if (!token) return;
+    // Helper function to check and refresh token if needed
+    const ensureValidToken = async () => {
+      // Use context token OR fallback to localStorage for socket auth
+      let token = accessToken || localStorage.getItem("accessToken");
+      if (!token) return null;
 
-    const socket = io(API_BASE, {
-      auth: { token },
-      transports: ["websocket"],
-    });
+      try {
+        // Check if token is expired or about to expire
+        const decoded = jwtDecode(token);
+        const now = Date.now() / 1000;
 
-    socketRef.current = socket;
+        // If token expires in less than 60 seconds, refresh it proactively
+        if (decoded.exp && decoded.exp - now < 60) {
+          console.log('🔄 [ChatWindow] Token expiring soon, refreshing proactively...');
 
-    /* --- Connection --- */
-    socket.on("connect", () => {
-      setConnected(true);
-      console.log('✅ [ChatWindow] Socket connected');
+          try {
+            const response = await api.post('/api/auth/refresh', {}, {
+              withCredentials: true
+            });
 
-      if (!chat) return;
-
-      // Join appropriate room AFTER socket is connected
-      if (chat.type === "dm") {
-        if (chat.isNew) {
-          console.log('📝 [ChatWindow] New DM - not joining room yet');
-        } else {
-          console.log(`🚪 [ChatWindow] Joining DM room: ${chat.id}`);
-          socket.emit("join-dm", { dmSessionId: chat.id });
-        }
-      } else {
-        console.log(`🚪 [ChatWindow] Joining channel room: ${chat.id}`);
-        socket.emit("join-channel", { channelId: chat.id });
-      }
-    });
-
-    socket.on("connect_error", async (err) => {
-      console.error('❌ [ChatWindow] Socket connection error:', err.message);
-      setConnected(false);
-
-      // If authentication failed, try to refresh the token
-      if (err.message.includes('Authentication') || err.message.includes('jwt') || err.message.includes('token')) {
-        console.log('🔄 [ChatWindow] Attempting token refresh due to auth failure...');
-
-        try {
-          // Try to refresh the token
-          // The refresh token is in HTTP-only cookie, so we don't need to pass it
-          // Just make the request with credentials: 'include' to send cookies
-          const response = await api.post('/api/auth/refresh', {}, {
-            withCredentials: true  // This sends the HTTP-only cookie
-          });
-
-          const newAccessToken = response.data.accessToken;
-
-          if (newAccessToken) {
-            localStorage.setItem('accessToken', newAccessToken);
-            console.log('✅ [ChatWindow] Token refreshed successfully');
-
-            // Show success message and reload to reconnect
-            showToast("Reconnecting with fresh session...", "success");
-
-            // Reload page to reinitialize with fresh token
-            setTimeout(() => {
-              window.location.reload();
-            }, 500);
-            return;
-          }
-
-          // If refresh failed, show error
-          showToast("Session expired. Please login again.", "error");
-        } catch (refreshErr) {
-          console.error('❌ [ChatWindow] Token refresh failed:', refreshErr);
-
-          // Check if it's a 401 (no refresh token) or other error
-          if (refreshErr.response?.status === 401) {
-            showToast("Please login to continue.", "info");
-          } else {
+            token = response.data.accessToken;
+            localStorage.setItem('accessToken', token);
+            console.log('✅ [ChatWindow] Token refreshed before socket connection');
+          } catch (refreshError) {
+            console.error('❌ [ChatWindow] Failed to refresh token:', refreshError);
             showToast("Session expired. Please login again.", "error");
+            return null;
           }
         }
-      } else {
-        showToast("Connection error. Retrying...", "error");
+      } catch (err) {
+        console.error('[ChatWindow] Token decode error:', err);
+        // If token is malformed, try to continue anyway and let server reject
       }
-    });
 
-    /* --- SOCKET DISCONNECT --- */
-    socket.on("disconnect", (reason) => {
-      console.log("🔌 [ChatWindow] Socket disconnected:", reason);
-      setConnected(false);
+      return token;
+    };
 
-      // Don't show toast for intentional disconnects (navigation, refresh, etc.)
-      // Socket will auto-reconnect if it was a network issue
-      if (reason === "transport close" || reason === "transport error") {
-        // Network issue - socket.io will auto-reconnect
-        console.log("⚠️ Network disconnect - will auto-reconnect");
-      }
-      // Removed annoying toast - disconnects during navigation are normal
-    });
+    // Connect socket with valid token
+    const connectSocket = async () => {
+      const validToken = await ensureValidToken();
+      if (!validToken) return;
 
-    /* --- MEMBER LEFT CHANNEL --- */
-    socket.on("member-left", ({ channelId, userId, systemMessage }) => {
-      console.log("👋 [ChatWindow] Member left channel:", { channelId, userId });
+      const socket = io(API_BASE, {
+        auth: { token: validToken },
+        transports: ["websocket"],
+      });
 
-      // If it's the current user who left, close the chat window
-      if (String(userId) === String(currentUserIdRef.current)) {
-        console.log("✅ Current user left channel - closing chat window");
-        showToast("You have left this channel", "info");
+      socketRef.current = socket;
+
+      /* --- Connection --- */
+      socket.on("connect", () => {
+        setConnected(true);
+        console.log('✅ [ChatWindow] Socket connected');
+
+        if (!chat) return;
+
+        // Join appropriate room AFTER socket is connected
+        if (chat.type === "dm") {
+          if (chat.isNew) {
+            console.log('📝 [ChatWindow] New DM - not joining room yet');
+          } else {
+            console.log(`🚪 [ChatWindow] Joining DM room: ${chat.id}`);
+            socket.emit("join-dm", { dmSessionId: chat.id });
+          }
+        } else {
+          console.log(`🚪 [ChatWindow] Joining channel room: ${chat.id}`);
+          socket.emit("join-channel", { channelId: chat.id });
+        }
+      });
+
+      socket.on("connect_error", async (err) => {
+        console.error('❌ [ChatWindow] Socket connection error:', err.message);
+        setConnected(false);
+
+        // If authentication failed, try to refresh the token
+        if (err.message.includes('Authentication') || err.message.includes('jwt') || err.message.includes('token')) {
+          console.log('🔄 [ChatWindow] Attempting token refresh due to auth failure...');
+
+          try {
+            // Try to refresh the token
+            // The refresh token is in HTTP-only cookie, so we don't need to pass it
+            // Just make the request with credentials: 'include' to send cookies
+            const response = await api.post('/api/auth/refresh', {}, {
+              withCredentials: true  // This sends the HTTP-only cookie
+            });
+
+            const newAccessToken = response.data.accessToken;
+
+            if (newAccessToken) {
+              localStorage.setItem('accessToken', newAccessToken);
+              console.log('✅ [ChatWindow] Token refreshed successfully');
+
+              // Show success message and reload to reconnect
+              showToast("Reconnecting with fresh session...", "success");
+
+              // Reload page to reinitialize with fresh token
+              setTimeout(() => {
+                window.location.reload();
+              }, 500);
+              return;
+            }
+
+            // If refresh failed, show error
+            showToast("Session expired. Please login again.", "error");
+          } catch (refreshErr) {
+            console.error('❌ [ChatWindow] Token refresh failed:', refreshErr);
+
+            // Check if it's a 401 (no refresh token) or other error
+            if (refreshErr.response?.status === 401) {
+              showToast("Please login to continue.", "info");
+            } else {
+              showToast("Session expired. Please login again.", "error");
+            }
+          }
+        } else {
+          showToast("Connection error. Retrying...", "error");
+        }
+      });
+
+      /* --- SOCKET DISCONNECT --- */
+      socket.on("disconnect", (reason) => {
+        console.log("🔌 [ChatWindow] Socket disconnected:", reason);
+        setConnected(false);
+
+        // Don't show toast for intentional disconnects (navigation, refresh, etc.)
+        // Socket will auto-reconnect if it was a network issue
+        if (reason === "transport close" || reason === "transport error") {
+          // Network issue - socket.io will auto-reconnect
+          console.log("⚠️ Network disconnect - will auto-reconnect");
+        }
+        // Removed annoying toast - disconnects during navigation are normal
+      });
+
+      /* --- MEMBER LEFT CHANNEL --- */
+      socket.on("member-left", ({ channelId, userId, systemMessage }) => {
+        console.log("👋 [ChatWindow] Member left channel:", { channelId, userId });
+
+        // If it's the current user who left, close the chat window
+        if (String(userId) === String(currentUserIdRef.current)) {
+          console.log("✅ Current user left channel - closing chat window");
+          showToast("You have left this channel", "info");
+          onClose(); // Close the chat window
+          if (onDeleteChat) {
+            onDeleteChat(); // Trigger parent to refresh channel list
+          }
+        } else {
+          // Another user left - just show the system message
+          if (systemMessage) {
+            const mappedMsg = mapBackendMsgToUI(systemMessage);
+            setMessages((prev) => [...prev, mappedMsg]);
+          }
+        }
+      });
+
+      /* --- CHANNEL DELETED --- */
+      socket.on("channel-deleted", ({ channelId, channelName }) => {
+        console.log("🗑️ [ChatWindow] Channel deleted:", { channelId, channelName });
+
+        showToast(`#${channelName} has been deleted`, "warning");
         onClose(); // Close the chat window
         if (onDeleteChat) {
           onDeleteChat(); // Trigger parent to refresh channel list
         }
-      } else {
-        // Another user left - just show the system message
-        if (systemMessage) {
-          const mappedMsg = mapBackendMsgToUI(systemMessage);
-          setMessages((prev) => [...prev, mappedMsg]);
+      });
+
+      /* --- NEW MESSAGE --- */
+      socket.on("new-message", ({ message, clientTempId }) => {
+        console.log('📨 [ChatWindow] Received new-message:', { messageId: message._id, clientTempId });
+        const realMsg = mapBackendMsgToUI(message);
+
+        // Replace optimistic message
+        if (clientTempId && pendingMessagesRef.current[clientTempId]) {
+          console.log('🔄 [ChatWindow] Replacing optimistic message');
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === clientTempId
+                ? { ...realMsg, sending: false, temp: false }
+                : m
+            )
+          );
+
+          delete pendingMessagesRef.current[clientTempId];
+          return;
         }
-      }
-    });
 
-    /* --- CHANNEL DELETED --- */
-    socket.on("channel-deleted", ({ channelId, channelName }) => {
-      console.log("🗑️ [ChatWindow] Channel deleted:", { channelId, channelName });
+        // Normal incoming message
+        console.log('➕ [ChatWindow] Adding new message to list');
+        setMessages((prev) => {
+          if (prev.some((x) => x.id === realMsg.id)) {
+            console.log('⚠️ [ChatWindow] Message already exists, skipping');
+            return prev;
+          }
+          return [...prev, realMsg];
+        });
+      });
 
-      showToast(`#${channelName} has been deleted`, "warning");
-      onClose(); // Close the chat window
-      if (onDeleteChat) {
-        onDeleteChat(); // Trigger parent to refresh channel list
-      }
-    });
+      /* --- SEND ERROR --- */
+      socket.on("send-error", ({ clientTempId, message }) => {
+        console.error('❌ [ChatWindow] Send error:', message);
 
-    /* --- NEW MESSAGE --- */
-    socket.on("new-message", ({ message, clientTempId }) => {
-      console.log('📨 [ChatWindow] Received new-message:', { messageId: message._id, clientTempId });
-      const realMsg = mapBackendMsgToUI(message);
-
-      // Replace optimistic message
-      if (clientTempId && pendingMessagesRef.current[clientTempId]) {
-        console.log('🔄 [ChatWindow] Replacing optimistic message');
         setMessages((prev) =>
           prev.map((m) =>
-            m.id === clientTempId
-              ? { ...realMsg, sending: false, temp: false }
-              : m
+            m.id === clientTempId ? { ...m, sending: false, failed: true } : m
           )
         );
 
-        delete pendingMessagesRef.current[clientTempId];
-        return;
-      }
-
-      // Normal incoming message
-      console.log('➕ [ChatWindow] Adding new message to list');
-      setMessages((prev) => {
-        if (prev.some((x) => x.id === realMsg.id)) {
-          console.log('⚠️ [ChatWindow] Message already exists, skipping');
-          return prev;
+        // Clean up pending message
+        if (pendingMessagesRef.current[clientTempId]) {
+          delete pendingMessagesRef.current[clientTempId];
         }
-        return [...prev, realMsg];
       });
-    });
 
-    /* --- SEND ERROR --- */
-    socket.on("send-error", ({ clientTempId, message }) => {
-      console.error('❌ [ChatWindow] Send error:', message);
+      /* --- READ RECEIPTS --- */
+      socket.on("read-update", ({ readerId, dmSessionId, channelId }) => {
+        // Update all messages in this chat to add the reader to readBy array
+        setMessages((prev) =>
+          prev.map((m) => {
+            // Skip if this message is from the reader themselves
+            if (m.backend?.sender === readerId || m.senderId === readerId) return m;
 
-      setMessages((prev) =>
-        prev.map((m) =>
-          m.id === clientTempId ? { ...m, sending: false, failed: true } : m
-        )
-      );
+            // Check if this message belongs to the current chat
+            const isRelevant = dmSessionId
+              ? (m.backend?.dm === dmSessionId || m.dmId === dmSessionId)
+              : (m.backend?.channel === channelId || m.channelId === channelId);
 
-      // Clean up pending message
-      if (pendingMessagesRef.current[clientTempId]) {
-        delete pendingMessagesRef.current[clientTempId];
-      }
-    });
+            if (!isRelevant) return m;
 
-    /* --- READ RECEIPTS --- */
-    socket.on("read-update", ({ readerId, dmSessionId, channelId }) => {
-      // Update all messages in this chat to add the reader to readBy array
-      setMessages((prev) =>
-        prev.map((m) => {
-          // Skip if this message is from the reader themselves
-          if (m.backend?.sender === readerId || m.senderId === readerId) return m;
+            // Add reader to readBy if not already there
+            const currentReadBy = m.backend?.readBy || [];
+            if (currentReadBy.includes(readerId)) return m;
 
-          // Check if this message belongs to the current chat
-          const isRelevant = dmSessionId
-            ? (m.backend?.dm === dmSessionId || m.dmId === dmSessionId)
-            : (m.backend?.channel === channelId || m.channelId === channelId);
-
-          if (!isRelevant) return m;
-
-          // Add reader to readBy if not already there
-          const currentReadBy = m.backend?.readBy || [];
-          if (currentReadBy.includes(readerId)) return m;
-
-          return {
-            ...m,
-            backend: {
-              ...m.backend,
-              readBy: [...currentReadBy, readerId]
-            }
-          };
-        })
-      );
-    });
-
-    /* --- TYPING --- */
-    socket.on("typing", ({ from }) => {
-      if (!from) return;
-      setTypingUsers((prev) =>
-        prev.includes(from) ? prev : [...prev, from]
-      );
-
-      setTimeout(() => {
-        setTypingUsers((prev) => prev.filter((u) => u !== from));
-      }, 3000);
-    });
-
-    /* --- THREAD REPLIES --- */
-    socket.on("thread-reply", ({ parentId }) => {
-      // Update thread count for the parent message
-      setThreadCounts((prev) => ({
-        ...prev,
-        [parentId]: (prev[parentId] || 0) + 1,
-      }));
-    });
-
-    /* --- REACTIONS --- */
-    socket.on("reaction-added", ({ messageId, userId, emoji, reactions }) => {
-      setMessages((prev) =>
-        prev.map((m) =>
-          m.id === messageId ? { ...m, reactions } : m
-        )
-      );
-    });
-
-    socket.on("reaction-removed", ({ messageId, userId, reactions }) => {
-      setMessages((prev) =>
-        prev.map((m) =>
-          m.id === messageId ? { ...m, reactions } : m
-        )
-      );
-    });
-
-    /* --- MESSAGE DELETION --- */
-    socket.on("message-deleted", ({ messageId, deletedBy, deletedByName, isUniversal, isLocal }) => {
-      console.log('🗑️ Received message-deleted event:', { messageId, deletedBy, deletedByName, isUniversal, isLocal });
-
-      if (isLocal) {
-        // Local deletion - remove message from UI for this user only
-        setMessages((prev) => {
-          const filtered = prev.filter((m) => m.id !== messageId && m.backend?._id !== messageId);
-          console.log(`Filtered ${prev.length - filtered.length} messages (local delete)`);
-          return filtered;
-        });
-      } else if (isUniversal) {
-        // Universal deletion - mark as deleted but keep in list
-        console.log('🔄 Updating messages for universal delete');
-        setMessages((prev) => {
-          const updated = prev.map((m) => {
-            // Check both id and backend._id
-            if (m.id !== messageId && m.backend?._id !== messageId) return m;
-            console.log('✅ Marking message as deleted:', m.id, 'by:', deletedByName);
-            // Create a completely new object to force React re-render
             return {
               ...m,
-              isDeletedUniversally: true,
-              deletedBy,
-              deletedByName: deletedByName || "Unknown",
-              deletedAt: new Date().toISOString(),
+              backend: {
+                ...m.backend,
+                readBy: [...currentReadBy, readerId]
+              }
             };
+          })
+        );
+      });
+
+      /* --- TYPING --- */
+      socket.on("typing", ({ from }) => {
+        if (!from) return;
+        setTypingUsers((prev) =>
+          prev.includes(from) ? prev : [...prev, from]
+        );
+
+        setTimeout(() => {
+          setTypingUsers((prev) => prev.filter((u) => u !== from));
+        }, 3000);
+      });
+
+      /* --- THREAD REPLIES --- */
+      socket.on("thread-reply", ({ parentId }) => {
+        // Update thread count for the parent message
+        setThreadCounts((prev) => ({
+          ...prev,
+          [parentId]: (prev[parentId] || 0) + 1,
+        }));
+      });
+
+      /* --- REACTIONS --- */
+      socket.on("reaction-added", ({ messageId, userId, emoji, reactions }) => {
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === messageId ? { ...m, reactions } : m
+          )
+        );
+      });
+
+      socket.on("reaction-removed", ({ messageId, userId, reactions }) => {
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === messageId ? { ...m, reactions } : m
+          )
+        );
+      });
+
+      /* --- MESSAGE DELETION --- */
+      socket.on("message-deleted", ({ messageId, deletedBy, deletedByName, isUniversal, isLocal }) => {
+        console.log('🗑️ Received message-deleted event:', { messageId, deletedBy, deletedByName, isUniversal, isLocal });
+
+        if (isLocal) {
+          // Local deletion - remove message from UI for this user only
+          setMessages((prev) => {
+            const filtered = prev.filter((m) => m.id !== messageId && m.backend?._id !== messageId);
+            console.log(`Filtered ${prev.length - filtered.length} messages (local delete)`);
+            return filtered;
           });
-          console.log('📊 Updated messages count:', updated.length);
-          return [...updated]; // Return new array reference
-        });
-      }
-    });
+        } else if (isUniversal) {
+          // Universal deletion - mark as deleted but keep in list
+          console.log('🔄 Updating messages for universal delete');
+          setMessages((prev) => {
+            const updated = prev.map((m) => {
+              // Check both id and backend._id
+              if (m.id !== messageId && m.backend?._id !== messageId) return m;
+              console.log('✅ Marking message as deleted:', m.id, 'by:', deletedByName);
+              // Create a completely new object to force React re-render
+              return {
+                ...m,
+                isDeletedUniversally: true,
+                deletedBy,
+                deletedByName: deletedByName || "Unknown",
+                deletedAt: new Date().toISOString(),
+              };
+            });
+            console.log('📊 Updated messages count:', updated.length);
+            return [...updated]; // Return new array reference
+          });
+        }
+      });
 
-    /* --- MESSAGE PINNING --- */
-    socket.on("message-pinned", ({ messageId, pinnedBy, pinnedByName, message }) => {
-      setMessages((prev) =>
-        prev.map((m) =>
-          m.id === messageId
-            ? { ...m, isPinned: true, pinnedBy, pinnedByName, pinnedAt: new Date().toISOString() }
-            : m
-        )
-      );
-    });
+      /* --- MESSAGE PINNING --- */
+      socket.on("message-pinned", ({ messageId, pinnedBy, pinnedByName, message }) => {
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === messageId
+              ? { ...m, isPinned: true, pinnedBy, pinnedByName, pinnedAt: new Date().toISOString() }
+              : m
+          )
+        );
+      });
 
-    socket.on("message-unpinned", ({ messageId }) => {
-      setMessages((prev) =>
-        prev.map((m) =>
-          m.id === messageId
-            ? { ...m, isPinned: false, pinnedBy: null, pinnedByName: null, pinnedAt: null }
-            : m
-        )
-      );
-    });
+      socket.on("message-unpinned", ({ messageId }) => {
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === messageId
+              ? { ...m, isPinned: false, pinnedBy: null, pinnedByName: null, pinnedAt: null }
+              : m
+          )
+        );
+      });
 
-    socket.on("pin-error", ({ error }) => {
-      showToast(error, "error");
-    });
+      socket.on("pin-error", ({ error }) => {
+        showToast(error, "error");
+      });
+    }; // End of connectSocket function
 
+    // Call the async connect function
+    connectSocket();
+
+    // Return cleanup function that will be called when component unmounts
     return () => {
+      const socket = socketRef.current;
+      if (!socket) return;
+
       // Clean up ALL socket listeners before disconnect
       socket.off("connect");
       socket.off("disconnect");
