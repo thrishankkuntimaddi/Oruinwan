@@ -223,7 +223,7 @@ const ProfileMenu = ({ onClose }) => {
       <div className="p-4 border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/50">
         <div
           onClick={() => setView("profile")}
-          className="flex items-center gap-3 mb-3 cursor-pointer p-2 -mx-2 rounded-lg hover:bg-white hover:shadow-sm transition-all group"
+          className="flex items-center gap-3 mb-3 cursor-pointer p-2 -mx-2 rounded-lg hover:bg-white dark:hover:bg-gray-800 hover:shadow-sm transition-all group"
         >
           <div className="w-12 h-12 rounded-full bg-gray-300 bg-cover bg-center shadow-sm border-2 border-white group-hover:border-blue-100 transition-colors flex-shrink-0" style={{ backgroundImage: `url(${user?.profilePicture || "https://ui-avatars.com/api/?name=" + user?.username})` }}></div>
           <div className="min-w-0 flex-1">
@@ -236,7 +236,7 @@ const ProfileMenu = ({ onClose }) => {
         </div>
 
         {/* Status Selector */}
-        <div className="flex bg-white rounded-lg p-1 border border-gray-200 shadow-sm">
+        <div className="flex bg-white dark:bg-gray-800 rounded-lg p-1 border border-gray-200 dark:border-gray-700 shadow-sm">
           <button
             onClick={(e) => { e.stopPropagation(); handleStatusChange("active"); }}
             className={`flex-1 flex items-center justify-center py-1.5 rounded-md text-[10px] font-bold transition-all ${status === "active" ? "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 shadow-sm" : "text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-700"}`}

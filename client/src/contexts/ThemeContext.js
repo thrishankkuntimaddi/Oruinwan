@@ -14,9 +14,9 @@ export const ThemeProvider = ({ children }) => {
     const [theme, setTheme] = useState(() => {
         if (typeof window !== 'undefined') {
             const savedTheme = localStorage.getItem('theme');
-            return savedTheme || 'auto';
+            return savedTheme || 'light';
         }
-        return 'auto';
+        return 'light';
     });
 
     // 1. Sync FROM backend (user preference) when user loads/changes

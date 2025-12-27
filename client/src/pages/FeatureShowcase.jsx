@@ -127,7 +127,7 @@ const FeatureShowcase = () => {
     ];
 
     return (
-        <div className={`h-screen w-full bg-white dark:bg-gray-900 overflow-y-auto overflow-x-hidden transition-opacity duration-700 ${isVisible ? "opacity-100" : "opacity-0"}`}>
+        <div className={`h-screen w-full bg-white overflow-y-auto overflow-x-hidden transition-opacity duration-700 ${isVisible ? "opacity-100" : "opacity-0"}`}>
 
             {/* Custom Animations */}
             <style>{`
@@ -154,28 +154,28 @@ const FeatureShowcase = () => {
             `}</style>
 
             {/* Navbar */}
-            <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-b border-gray-100 dark:border-gray-800 transition-all duration-300">
+            <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-100 transition-all duration-300">
                 <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
                     {/* Logo */}
                     <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate("/")}>
                         <img src="/assets/ChttrixLogo.svg" alt="Chttrix Logo" className="w-8 h-8 rounded-lg object-cover shadow-sm hover:rotate-3 transition-transform duration-300" />
-                        <span className="text-xl font-black text-gray-900 dark:text-white tracking-tight">Chttrix</span>
+                        <span className="text-xl font-black text-gray-900 tracking-tight">Chttrix</span>
                     </div>
 
                     {/* Auth Buttons */}
                     <div className="flex items-center gap-3">
                         <button
                             onClick={() => navigate("/register-company")}
-                            className="group flex items-center gap-2 px-5 py-2 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-900 dark:text-white text-sm font-semibold rounded-full border border-gray-200 dark:border-gray-700 transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 active:scale-95"
+                            className="group flex items-center gap-2 px-5 py-2 bg-white hover:bg-gray-50 text-gray-900 text-sm font-semibold rounded-full border border-gray-200 transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 active:scale-95"
                         >
                             <span>Register Company</span>
                         </button>
                         <button
                             onClick={() => navigate("/login")}
-                            className="group flex items-center gap-2 px-5 py-2 bg-gray-900 dark:bg-white hover:bg-gray-800 dark:hover:bg-gray-100 text-white dark:text-gray-900 text-sm font-semibold rounded-full transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 active:scale-95"
+                            className="group flex items-center gap-2 px-5 py-2 bg-gray-900 hover:bg-gray-800 text-white text-sm font-semibold rounded-full transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 active:scale-95"
                         >
                             <span>Sign in</span>
-                            <ArrowRight size={14} className="text-gray-300 dark:text-gray-600 group-hover:translate-x-1 transition-transform" />
+                            <ArrowRight size={14} className="text-gray-300 group-hover:translate-x-1 transition-transform" />
                         </button>
                     </div>
                 </div>
@@ -191,20 +191,20 @@ const FeatureShowcase = () => {
 
                 {/* Hero Section */}
                 <div className={`transform transition-all duration-1000 delay-100 flex flex-col items-center text-center max-w-4xl mx-auto mb-24 ${isVisible ? "scale-100 translate-y-0 opacity-100" : "scale-95 translate-y-10 opacity-0"}`}>
-                    <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 text-xs font-bold uppercase tracking-wider mb-8 border border-indigo-100 dark:border-indigo-800 shadow-sm hover:shadow-md hover:scale-105 transition-all duration-300 cursor-default">
+                    <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-indigo-50 text-indigo-600 text-xs font-bold uppercase tracking-wider mb-8 border border-indigo-100 shadow-sm hover:shadow-md hover:scale-105 transition-all duration-300 cursor-default">
                         <Sparkles size={14} className="animate-pulse" />
                         <span>Collaboration Redefined</span>
                     </div>
-                    <h1 className="text-5xl md:text-7xl font-black text-gray-900 dark:text-white tracking-tight leading-[1.1] mb-8 drop-shadow-sm">
+                    <h1 className="text-5xl md:text-7xl font-black text-gray-900 tracking-tight leading-[1.1] mb-8 drop-shadow-sm">
                         One Platform.<br />
                         <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 animate-text-shimmer">Limitless Possibilities.</span>
                     </h1>
-                    <p className="text-xl text-gray-600 dark:text-gray-400 font-medium tracking-wide max-w-2xl mx-auto mb-10 leading-relaxed">
+                    <p className="text-xl text-gray-600 font-medium tracking-wide max-w-2xl mx-auto mb-10 leading-relaxed">
                         Seamlessly integrated apps for notes, tasks, brainstorming, and AI-driven workflows. Everything you need, all in one place.
                     </p>
                     <button
                         onClick={() => navigate("/login")}
-                        className="group relative px-9 py-4 bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-base font-bold rounded-2xl shadow-xl hover:shadow-2xl hover:shadow-purple-500/20 hover:-translate-y-1 hover:scale-105 transition-all duration-300 overflow-hidden"
+                        className="group relative px-9 py-4 bg-gray-900 text-white text-base font-bold rounded-2xl shadow-xl hover:shadow-2xl hover:shadow-purple-500/20 hover:-translate-y-1 hover:scale-105 transition-all duration-300 overflow-hidden"
                     >
                         <div className="absolute inset-0 bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-500 opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-[length:200%_auto] animate-text-shimmer"></div>
                         <span className="relative flex items-center gap-2">
@@ -213,15 +213,14 @@ const FeatureShowcase = () => {
                     </button>
                 </div>
 
-                {/* Core Platform Features */}
                 <div className="w-full mb-16">
                     <div className="text-center mb-16">
-                        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white dark:bg-gray-800 text-gray-800 dark:text-white text-xs font-bold uppercase tracking-wider mb-6 border border-gray-200 dark:border-gray-700 shadow-sm">
+                        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white text-gray-800 text-xs font-bold uppercase tracking-wider mb-6 border border-gray-200 shadow-sm">
                             <Zap size={12} className="text-yellow-500" />
                             <span>Core Foundation</span>
                         </div>
-                        <h2 className="text-4xl font-bold text-gray-900 dark:text-white mb-4 tracking-tight">Everything you need to run your team.</h2>
-                        <p className="text-lg text-gray-500 dark:text-gray-400 max-w-2xl mx-auto">Built on a robust communication layer that keeps everyone in sync.</p>
+                        <h2 className="text-4xl font-bold text-gray-900 mb-4 tracking-tight">Everything you need to run your team.</h2>
+                        <p className="text-lg text-gray-500 max-w-2xl mx-auto">Built on a robust communication layer that keeps everyone in sync.</p>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full">
@@ -234,21 +233,20 @@ const FeatureShowcase = () => {
                                     style={{ transitionDelay: `${400 + (index * 100)}ms` }}
                                 >
                                     <div className={`group relative rounded-3xl p-8 shadow-sm transition-all duration-500 h-48 overflow-hidden cursor-default ${isAI
-                                        ? "bg-gradient-to-br from-white dark:from-gray-800 to-violet-50/80 dark:to-violet-900/20 border border-violet-200 dark:border-violet-800 hover:shadow-2xl hover:shadow-violet-500/10 hover:border-violet-300 dark:hover:border-violet-600"
-                                        : "bg-white/60 dark:bg-gray-800/60 backdrop-blur-md border border-gray-200 dark:border-gray-700 hover:shadow-xl hover:border-indigo-100 dark:hover:border-gray-600 hover:bg-white dark:hover:bg-gray-800"
+                                        ? "bg-gradient-to-br from-white to-violet-50/80 border border-violet-200 hover:shadow-2xl hover:shadow-violet-500/10 hover:border-violet-300"
+                                        : "bg-white/60 backdrop-blur-md border border-gray-200 hover:shadow-xl hover:border-indigo-100 hover:bg-white"
                                         }`}>
 
-                                        {/* Icon & Label */}
                                         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center transition-all duration-500 group-hover:left-8 group-hover:translate-x-0 group-hover:items-start group-hover:max-w-[40%]">
-                                            <div className={`w-16 h-16 rounded-2xl ${feature.bg} dark:bg-gray-700 ${feature.color} dark:text-white flex items-center justify-center mb-4 shadow-sm transition-all duration-500 group-hover:scale-75 group-hover:origin-top-left group-hover:mb-2`}>
+                                            <div className={`w-16 h-16 rounded-2xl ${feature.bg} ${feature.color} flex items-center justify-center mb-4 shadow-sm transition-all duration-500 group-hover:scale-75 group-hover:origin-top-left group-hover:mb-2`}>
                                                 {feature.icon}
                                             </div>
-                                            <h3 className="text-xl font-bold text-gray-800 dark:text-white whitespace-nowrap transition-all duration-500 group-hover:text-base group-hover:whitespace-normal group-hover:leading-tight">{feature.label}</h3>
+                                            <h3 className="text-xl font-bold text-gray-800 whitespace-nowrap transition-all duration-500 group-hover:text-base group-hover:whitespace-normal group-hover:leading-tight">{feature.label}</h3>
                                         </div>
 
                                         {/* Description (Visible on Hover - Right Side) */}
                                         <div className="absolute top-1/2 right-8 -translate-y-1/2 w-[50%] opacity-0 translate-x-10 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-500 delay-75">
-                                            <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed font-medium text-left">
+                                            <p className="text-sm text-gray-600 leading-relaxed font-medium text-left">
                                                 {feature.desc}
                                             </p>
                                         </div>
@@ -263,8 +261,8 @@ const FeatureShowcase = () => {
                 {/* The Chttrix Suite */}
                 <div className="w-full mb-24">
                     <div className="text-center mb-16">
-                        <h2 className="text-4xl font-bold text-gray-900 dark:text-white mb-4 tracking-tight">The Chttrix Suite</h2>
-                        <p className="text-lg text-gray-500 dark:text-gray-400 max-w-2xl mx-auto">Powerful standalone apps that work even better together.</p>
+                        <h2 className="text-4xl font-bold text-gray-900 mb-4 tracking-tight">The Chttrix Suite</h2>
+                        <p className="text-lg text-gray-500 max-w-2xl mx-auto">Powerful standalone apps that work even better together.</p>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -272,7 +270,7 @@ const FeatureShowcase = () => {
                             <div
                                 key={product.id}
                                 onClick={() => showToast("Coming Soon", "info")}
-                                className={`group relative bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-[2rem] p-8 border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-2xl hover:shadow-indigo-500/10 hover:-translate-y-2 transition-all duration-500 overflow-hidden cursor-pointer ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}
+                                className={`group relative bg-white/80 backdrop-blur-sm rounded-[2rem] p-8 border border-gray-100 shadow-sm hover:shadow-2xl hover:shadow-indigo-500/10 hover:-translate-y-2 transition-all duration-500 overflow-hidden cursor-pointer ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}
                                 style={{ transitionDelay: `${200 + (index * 100)}ms` }}
                             >
                                 {/* Hover Gradient Border Effect */}
@@ -280,16 +278,16 @@ const FeatureShowcase = () => {
                                 <div className={`absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r ${product.gradient} transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500`}></div>
 
                                 <div className="relative z-10 flex flex-col h-full items-start">
-                                    <div className={`w-16 h-16 rounded-2xl ${product.bg} dark:bg-gray-700 ${product.color} dark:text-white flex items-center justify-center mb-6 shadow-sm group-hover:scale-110 group-hover:rotate-6 transition-all duration-500`}>
+                                    <div className={`w-16 h-16 rounded-2xl ${product.bg} ${product.color} flex items-center justify-center mb-6 shadow-sm group-hover:scale-110 group-hover:rotate-6 transition-all duration-500`}>
                                         {product.icon}
                                     </div>
 
-                                    <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-3 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">{product.name}</h3>
-                                    <p className="text-sm text-gray-500 dark:text-gray-400 font-medium leading-relaxed mb-6 flex-grow">
+                                    <h3 className="text-2xl font-bold text-gray-900 mb-3 group-hover:text-indigo-600 transition-colors">{product.name}</h3>
+                                    <p className="text-sm text-gray-500 font-medium leading-relaxed mb-6 flex-grow">
                                         {product.desc}
                                     </p>
 
-                                    <div className="flex items-center text-xs font-bold text-gray-400 dark:text-gray-500 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors uppercase tracking-wider mt-auto">
+                                    <div className="flex items-center text-xs font-bold text-gray-400 group-hover:text-indigo-600 transition-colors uppercase tracking-wider mt-auto">
                                         <span>Launch App</span>
                                         <ArrowRight size={12} className="ml-2 transform group-hover:translate-x-1 transition-transform" />
                                     </div>
@@ -300,12 +298,12 @@ const FeatureShowcase = () => {
                 </div>
 
                 {/* Footer */}
-                <div className="w-full mt-4 border-t border-gray-100 dark:border-gray-800 py-6 text-center">
+                <div className="w-full mt-4 border-t border-gray-100 py-6 text-center">
                     <div className="flex items-center justify-center gap-2">
                         <img src="/assets/ChttrixLogo.svg" alt="Logo" className="w-5 h-5 grayscale opacity-70 hover:opacity-100 transition-opacity" />
-                        <span className="text-sm font-bold text-gray-800 dark:text-white">Chttrix</span>
-                        <span className="text-gray-300 dark:text-gray-700">|</span>
-                        <p className="text-gray-500 dark:text-gray-400 text-xs">© 2025 Chttrix Inc. All rights reserved.</p>
+                        <span className="text-sm font-bold text-gray-800">Chttrix</span>
+                        <span className="text-gray-300">|</span>
+                        <p className="text-gray-500 text-xs">© 2025 Chttrix Inc. All rights reserved.</p>
                     </div>
                 </div>
 

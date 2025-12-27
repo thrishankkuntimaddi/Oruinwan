@@ -20,7 +20,7 @@ const ProfileSchema = new mongoose.Schema(
 );
 
 const PreferencesSchema = new mongoose.Schema({
-  theme: { type: String, enum: ['light', 'dark', 'auto'], default: 'auto' }
+  theme: { type: String, enum: ['light', 'dark', 'auto'], default: 'light' }
 }, { _id: false });
 
 const UserSchema = new mongoose.Schema(

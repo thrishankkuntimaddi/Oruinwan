@@ -334,13 +334,17 @@ exports.login = async (req, res) => {
     const refreshToken = generateRefreshToken(user);
     const refreshHash = sha256(refreshToken);
 
-    // Enforce Max 3 Sessions (FIFO)
-    // Remove oldest sessions if we have 3 or more before adding the new one
-    // We sort just to be safe, though usually they are in order
+    // Enforce Max 3 Sessions (Safe Slicing)
+    // We do this AFTER pushing usually, but here we can check before
+    // Actually, simpler to push first then slice newest 3
+    // But to match current structure:
     if (user.refreshTokens.length >= 3) {
+      // Sort by createdAt ascending (oldest first) so we can remove the oldest
       user.refreshTokens.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+
+      // Remove oldest until we have 2 (so we can add 1 more to make 3)
       while (user.refreshTokens.length >= 3) {
-        user.refreshTokens.shift(); // Remove oldest
+        user.refreshTokens.shift();
       }
     }
 
@@ -810,35 +814,32 @@ exports.getSessions = async (req, res) => {
     const currentHash = currentToken ? sha256(currentToken) : null;
 
     // ---------------------------------------------------------
-    // AUTO-CLEANUP: Enforce Max 3 Sessions Policy on Read
+    // DEDUPLICATION & CLEANUP:
+    // Remove duplicate tokens (same hash) to prevent "double current" bugs
     // ---------------------------------------------------------
-    if (user.refreshTokens.length > 3) {
-      // Sort: Current first, then Newest to Oldest
-      // We want to KEEP: Current + (2 newest others)
-      const tokens = user.refreshTokens.map(t => ({
-        ...t.toObject(),
-        isCurrent: t.tokenHash === currentHash
-      }));
+    console.log(`🔍 [getSessions] Raw Tokens Count: ${user.refreshTokens.length}`);
 
-      tokens.sort((a, b) => {
-        if (a.isCurrent) return -1;
-        if (b.isCurrent) return 1;
-        return new Date(b.createdAt) - new Date(a.createdAt);
-      });
+    const seenHashes = new Set();
+    const uniqueTokens = [];
+    let isDirty = false;
 
-      // Keep top 3
-      const keepTokens = tokens.slice(0, 3);
+    // Process from newest to oldest (if we assume array is roughly ordered)
+    // or just iterate and keep first.
+    // Let's iterate normally.
+    for (const t of user.refreshTokens) {
+      if (seenHashes.has(t.tokenHash)) {
+        console.log(`⚠️ Removing duplicate hash: ${t.tokenHash.substring(0, 10)}...`);
+        isDirty = true; // Found a duplicate, will need to save
+        continue;
+      }
+      seenHashes.add(t.tokenHash);
+      uniqueTokens.push(t);
+    }
 
-      // Update DB with only kept tokens
-      // We need to map back to the original schema format (removing isCurrent prop)
-      user.refreshTokens = keepTokens.map(t => ({
-        tokenHash: t.tokenHash,
-        expiresAt: t.expiresAt,
-        createdAt: t.createdAt,
-        deviceInfo: t.deviceInfo,
-        _id: t._id // Preserve ID
-      }));
-
+    if (isDirty) {
+      console.log(`💾 Saving cleaned tokens. New Count: ${uniqueTokens.length}`);
+      user.refreshTokens = uniqueTokens;
+      user.markModified('refreshTokens'); // Explicitly mark as modified
       await user.save();
     }
     // ---------------------------------------------------------
@@ -927,9 +928,17 @@ exports.revokeOtherSessions = async (req, res) => {
 
     const currentHash = sha256(currentToken);
 
-    // Keep ONLY the current session
-    user.refreshTokens = user.refreshTokens.filter(t => t.tokenHash === currentHash);
+    // Keep ONLY the current session (Strict: Find first match and discard EVERYTHING else)
+    const activeToken = user.refreshTokens.find(t => t.tokenHash === currentHash);
 
+    if (activeToken) {
+      user.refreshTokens = [activeToken]; // Reset array to just this one
+    } else {
+      // Should be impossible if logged in, but safe fallback
+      user.refreshTokens = [];
+    }
+
+    user.markModified('refreshTokens');
     await user.save();
 
     res.json({ message: "All other sessions revoked" });

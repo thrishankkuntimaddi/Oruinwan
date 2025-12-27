@@ -355,11 +355,11 @@ export default function ChannelManagementModal({ channel, onClose, currentUserId
     return (
         <>
             <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[100] backdrop-blur-sm animate-fade-in">
-                <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[85vh] overflow-hidden shadow-2xl flex flex-col">
+                <div className="bg-white dark:bg-gray-900 rounded-2xl w-full max-w-2xl max-h-[85vh] overflow-hidden shadow-2xl flex flex-col border border-gray-200 dark:border-gray-800">
                     {/* Header */}
-                    <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+                    <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center bg-gray-50/50 dark:bg-gray-800/50">
                         <div>
-                            <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                            <h3 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
                                 {channel.isPrivate ? <Lock size={20} className="text-gray-500" /> : <Users size={20} className="text-gray-500" />}
                                 {channel.name}
                             </h3>
@@ -391,17 +391,17 @@ export default function ChannelManagementModal({ channel, onClose, currentUserId
                     </div>
 
                     {/* Tabs */}
-                    <div className="flex border-b border-gray-100 px-6">
+                    <div className="flex border-b border-gray-100 dark:border-gray-800 px-6">
                         <button
                             onClick={() => setActiveTab("members")}
-                            className={`py-3 px-4 text-sm font-medium border-b-2 transition-colors ${activeTab === "members" ? "border-blue-600 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-700"}`}
+                            className={`py-3 px-4 text-sm font-medium border-b-2 transition-colors ${activeTab === "members" ? "border-blue-600 text-blue-600 dark:text-blue-400" : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"}`}
                         >
                             Members
                         </button>
                         {isAdmin && (
                             <button
                                 onClick={() => setActiveTab("settings")}
-                                className={`py-3 px-4 text-sm font-medium border-b-2 transition-colors ${activeTab === "settings" ? "border-blue-600 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-700"}`}
+                                className={`py-3 px-4 text-sm font-medium border-b-2 transition-colors ${activeTab === "settings" ? "border-blue-600 text-blue-600 dark:text-blue-400" : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"}`}
                             >
                                 Manage Channel
                             </button>
@@ -409,7 +409,7 @@ export default function ChannelManagementModal({ channel, onClose, currentUserId
                         {isAdmin && (
                             <button
                                 onClick={() => setActiveTab("invite")}
-                                className={`py-3 px-4 text-sm font-medium border-b-2 transition-colors ${activeTab === "invite" ? "border-blue-600 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-700"}`}
+                                className={`py-3 px-4 text-sm font-medium border-b-2 transition-colors ${activeTab === "invite" ? "border-blue-600 text-blue-600 dark:text-blue-400" : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"}`}
                             >
                                 Invite People
                             </button>
@@ -422,12 +422,12 @@ export default function ChannelManagementModal({ channel, onClose, currentUserId
                             <div className="space-y-6">
                                 {/* Private Channel Notice (Non-Admins) */}
                                 {!isAdmin && channel.isPrivate && (
-                                    <div className="bg-gray-50 rounded-xl p-4 border border-gray-200 flex items-center gap-3">
-                                        <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-500">
+                                    <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-gray-500 dark:text-gray-400">
                                             <Lock size={20} />
                                         </div>
                                         <div>
-                                            <h4 className="text-sm font-bold text-gray-900">Private Channel</h4>
+                                            <h4 className="text-sm font-bold text-gray-900 dark:text-white">Private Channel</h4>
                                             <p className="text-xs text-gray-500 mt-0.5">
                                                 This channel is private. Only channel admins can invite new members.
                                             </p>
@@ -445,13 +445,13 @@ export default function ChannelManagementModal({ channel, onClose, currentUserId
                                             const isCurrentUser = String(member._id) === String(currentUserId);
 
                                             return (
-                                                <div key={member._id} className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-xl transition-colors group">
+                                                <div key={member._id} className="flex items-center justify-between p-3 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl transition-colors group">
                                                     <div className="flex items-center gap-3">
-                                                        <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-600 font-bold">
+                                                        <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-gray-600 dark:text-gray-300 font-bold">
                                                             {(member?.username || 'U').charAt(0).toUpperCase()}
                                                         </div>
                                                         <div>
-                                                            <div className="text-sm font-bold text-gray-900 flex items-center gap-2">
+                                                            <div className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
                                                                 {member?.username || 'Unknown'}
                                                                 {isOwner && (
                                                                     <span className="px-1.5 py-0.5 bg-yellow-100 text-yellow-700 text-[10px] font-bold rounded uppercase tracking-wide">Owner</span>
@@ -527,12 +527,12 @@ export default function ChannelManagementModal({ channel, onClose, currentUserId
                             <div className="space-y-8">
                                 {/* Channel Information */}
                                 <div className="space-y-4">
-                                    <h4 className="text-sm font-bold text-gray-900 border-b border-gray-100 pb-2">Channel Information</h4>
+                                    <h4 className="text-sm font-bold text-gray-900 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">Channel Information</h4>
 
                                     {/* Channel Name */}
                                     <div className="flex items-center justify-between">
                                         <div className="flex-1">
-                                            <div className="font-medium text-gray-800 text-sm">Channel Name</div>
+                                            <div className="font-medium text-gray-800 dark:text-white text-sm">Channel Name</div>
                                             <p className="text-xs text-gray-500 mt-0.5">
                                                 This is how your channel appears to all members
                                             </p>
@@ -544,7 +544,7 @@ export default function ChannelManagementModal({ channel, onClose, currentUserId
                                                         type="text"
                                                         value={editedName}
                                                         onChange={(e) => setEditedName(e.target.value)}
-                                                        className="text-sm border border-blue-300 rounded px-3 py-1.5 w-48 focus:outline-none focus:border-blue-500"
+                                                        className="text-sm border border-blue-300 dark:border-blue-700 rounded px-3 py-1.5 w-48 focus:outline-none focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                                                         autoFocus
                                                         disabled={loading || isDefaultChannel}
                                                     />
@@ -560,14 +560,14 @@ export default function ChannelManagementModal({ channel, onClose, currentUserId
                                                             setEditedName(channel.name);
                                                             setIsEditingName(false);
                                                         }}
-                                                        className="text-xs font-bold bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded-lg transition-colors"
+                                                        className="text-xs font-bold bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 px-3 py-1.5 rounded-lg transition-colors"
                                                     >
                                                         Cancel
                                                     </button>
                                                 </>
                                             ) : (
                                                 <>
-                                                    <span className="text-sm font-semibold text-gray-700">{channel.name}</span>
+                                                    <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">{channel.name}</span>
                                                     {!isDefaultChannel && (
                                                         <button
                                                             onClick={() => setIsEditingName(true)}
@@ -584,7 +584,7 @@ export default function ChannelManagementModal({ channel, onClose, currentUserId
                                     {/* Channel Description */}
                                     <div className="flex items-start justify-between">
                                         <div className="flex-1">
-                                            <div className="font-medium text-gray-800 text-sm">Channel Description</div>
+                                            <div className="font-medium text-gray-800 dark:text-white text-sm">Channel Description</div>
                                             <p className="text-xs text-gray-500 mt-0.5">
                                                 Help others understand what this channel is for
                                             </p>
@@ -595,7 +595,7 @@ export default function ChannelManagementModal({ channel, onClose, currentUserId
                                                     <textarea
                                                         value={editedDescription}
                                                         onChange={(e) => setEditedDescription(e.target.value)}
-                                                        className="text-sm border border-blue-300 rounded px-3 py-2 w-full focus:outline-none focus:border-blue-500 resize-none"
+                                                        className="text-sm border border-blue-300 dark:border-blue-700 rounded px-3 py-2 w-full focus:outline-none focus:border-blue-500 resize-none bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                                                         rows={3}
                                                         autoFocus
                                                         disabled={loading}
@@ -613,7 +613,7 @@ export default function ChannelManagementModal({ channel, onClose, currentUserId
                                                                 setEditedDescription(channel.description || "");
                                                                 setIsEditingDescription(false);
                                                             }}
-                                                            className="text-xs font-bold bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded-lg transition-colors"
+                                                            className="text-xs font-bold bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 px-3 py-1.5 rounded-lg transition-colors"
                                                         >
                                                             Cancel
                                                         </button>
@@ -637,7 +637,7 @@ export default function ChannelManagementModal({ channel, onClose, currentUserId
                                 {/* Privacy Settings (Hidden for Default Channels) */}
                                 {!isDefaultChannel && (
                                     <div className="space-y-4">
-                                        <h4 className="text-sm font-bold text-gray-900 border-b border-gray-100 pb-2">Privacy & Visibility</h4>
+                                        <h4 className="text-sm font-bold text-gray-900 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">Privacy & Visibility</h4>
                                         <div className="flex items-start justify-between">
                                             <div>
                                                 <div className="font-medium text-gray-800 flex items-center gap-2">
@@ -657,7 +657,7 @@ export default function ChannelManagementModal({ channel, onClose, currentUserId
                                                         placeholder={`Type "${channel.name}" to confirm`}
                                                         value={privacyVerification}
                                                         onChange={(e) => setPrivacyVerification(e.target.value)}
-                                                        className="text-xs border border-gray-300 rounded px-2 py-1 w-40 focus:outline-none focus:border-blue-500"
+                                                        className="text-xs border border-gray-300 dark:border-gray-600 rounded px-2 py-1 w-40 focus:outline-none focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                                                     />
                                                     <button
                                                         onClick={handleTogglePrivacy}
@@ -670,7 +670,7 @@ export default function ChannelManagementModal({ channel, onClose, currentUserId
                                             ) : (
                                                 <button
                                                     onClick={handleTogglePrivacy}
-                                                    className="text-xs font-bold bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded-lg transition-colors"
+                                                    className="text-xs font-bold bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 px-3 py-1.5 rounded-lg transition-colors"
                                                 >
                                                     Make Private
                                                 </button>
@@ -683,26 +683,26 @@ export default function ChannelManagementModal({ channel, onClose, currentUserId
                                 {/* Danger Zone (Hidden for Default Channels) */}
                                 {!isDefaultChannel && (
                                     <div className="space-y-4">
-                                        <h4 className="text-sm font-bold text-red-600 border-b border-red-100 pb-2 flex items-center gap-2">
+                                        <h4 className="text-sm font-bold text-red-600 border-b border-red-100 dark:border-red-900/30 pb-2 flex items-center gap-2">
                                             <AlertTriangle size={16} /> Danger Zone
                                         </h4>
 
-                                        <div className="flex items-center justify-between p-4 border border-red-100 rounded-xl bg-red-50/30">
+                                        <div className="flex items-center justify-between p-4 border border-red-100 dark:border-red-900/50 rounded-xl bg-red-50/30 dark:bg-red-900/10">
                                             <div>
-                                                <div className="font-bold text-gray-800 text-sm">Clear All Messages</div>
+                                                <div className="font-bold text-gray-800 dark:text-gray-200 text-sm">Clear All Messages</div>
                                                 <p className="text-xs text-gray-500 mt-0.5">Permanently delete all message history in this channel.</p>
                                             </div>
                                             <button
                                                 onClick={handleClearMessages}
-                                                className="text-xs font-bold text-red-600 hover:bg-red-50 border border-red-200 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1"
+                                                className="text-xs font-bold text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 border border-red-200 dark:border-red-900/50 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1"
                                             >
                                                 <Eraser size={14} /> Clear History
                                             </button>
                                         </div>
 
-                                        <div className="flex items-center justify-between p-4 border border-red-100 rounded-xl bg-red-50/30">
+                                        <div className="flex items-center justify-between p-4 border border-red-100 dark:border-red-900/50 rounded-xl bg-red-50/30 dark:bg-red-900/10">
                                             <div>
-                                                <div className="font-bold text-gray-800 text-sm">Delete Channel</div>
+                                                <div className="font-bold text-gray-800 dark:text-gray-200 text-sm">Delete Channel</div>
                                                 <p className="text-xs text-gray-500 mt-0.5">Permanently delete this channel and all its data.</p>
                                             </div>
                                             <div className="flex flex-col items-end gap-2">
@@ -711,7 +711,7 @@ export default function ChannelManagementModal({ channel, onClose, currentUserId
                                                     placeholder={`Type "${channel.name}" to confirm`}
                                                     value={deleteVerification}
                                                     onChange={(e) => setDeleteVerification(e.target.value)}
-                                                    className="text-xs border border-red-200 rounded px-2 py-1 w-40 focus:outline-none focus:border-red-500 bg-white"
+                                                    className="text-xs border border-red-200 dark:border-red-900/50 rounded px-2 py-1 w-40 focus:outline-none focus:border-red-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                                                 />
                                                 <button
                                                     onClick={handleDeleteChannel}
@@ -737,7 +737,7 @@ export default function ChannelManagementModal({ channel, onClose, currentUserId
                                         placeholder="Search by name or email..."
                                         value={searchQuery}
                                         onChange={(e) => setSearchQuery(e.target.value)}
-                                        className="w-full px-4 py-2.5 pl-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                                        className="w-full px-4 py-2.5 pl-10 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                                     />
                                     <svg className="w-5 h-5 text-gray-400 absolute left-3 top-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -768,10 +768,10 @@ export default function ChannelManagementModal({ channel, onClose, currentUserId
 
                                 {filteredNonMembers.length === 0 ? (
                                     <div className="text-center py-12">
-                                        <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                        <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-4">
                                             <Users size={24} className="text-gray-400" />
                                         </div>
-                                        <p className="text-sm font-medium text-gray-900 mb-1">
+                                        <p className="text-sm font-medium text-gray-900 dark:text-white mb-1">
                                             {searchQuery ? 'No members found' : "Everyone's already here!"}
                                         </p>
                                         <p className="text-xs text-gray-500">
@@ -785,13 +785,13 @@ export default function ChannelManagementModal({ channel, onClose, currentUserId
                                         </div>
                                         <div className="space-y-2">
                                             {filteredNonMembers.map((user) => (
-                                                <div key={user._id} className="flex items-center justify-between p-3 bg-white rounded-xl border border-gray-200 hover:border-blue-300 hover:bg-blue-50/30 transition-all group">
+                                                <div key={user._id} className="flex items-center justify-between p-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-blue-300 hover:bg-blue-50/30 dark:hover:bg-gray-700 transition-all group">
                                                     <div className="flex items-center gap-3">
                                                         <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-bold text-sm shadow-sm">
                                                             {(user?.username || 'U').charAt(0).toUpperCase()}
                                                         </div>
                                                         <div>
-                                                            <div className="text-sm font-medium text-gray-900">{user?.username || 'Unknown'}</div>
+                                                            <div className="text-sm font-medium text-gray-900 dark:text-white">{user?.username || 'Unknown'}</div>
                                                             <div className="text-xs text-gray-500">{user?.email || ''}</div>
                                                         </div>
                                                     </div>

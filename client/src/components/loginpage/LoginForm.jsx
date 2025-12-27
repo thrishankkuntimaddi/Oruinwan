@@ -117,7 +117,7 @@ const LoginForm = ({ onSwitch, initialEmail = "" }) => {
             required
             value={formData.email}
             onChange={handleChange}
-            className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-sm"
+            className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-sm text-gray-900 bg-white"
           />
         </div>
 
@@ -134,7 +134,7 @@ const LoginForm = ({ onSwitch, initialEmail = "" }) => {
               required
               value={formData.password}
               onChange={handleChange}
-              className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-sm"
+              className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-sm text-gray-900 bg-white"
             />
 
 
