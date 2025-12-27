@@ -144,12 +144,24 @@ export default function FooterInput({
     setNewMessage("");
   };
 
-  const handleKeyDown = (e) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
-    }
-  };
+  // CRITICAL FIX: react-contenteditable doesn't properly support onKeyDown prop
+  // We need to use a native event listener instead
+  useEffect(() => {
+    const editable = editableRef.current;
+    if (!editable) return;
+
+    const handleNativeKeyDown = (e) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        handleSend();
+      }
+    };
+
+    editable.addEventListener('keydown', handleNativeKeyDown);
+    return () => {
+      editable.removeEventListener('keydown', handleNativeKeyDown);
+    };
+  }, [newMessage, blocked, handleSend]); // Re-attach when message changes to capture latest state
 
   // Helper to strip tags for "is empty" check
   const stripTags = (html) => {
@@ -174,7 +186,6 @@ export default function FooterInput({
               // react-contenteditable provides the new HTML in evt.target.value
               onChange({ target: { value: evt.target.value } });
             }}
-            onKeyDown={handleKeyDown}
             className={`focus:outline-none min-h-[40px] whitespace-pre-wrap break-words text-gray-800 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 ${blocked ? "cursor-not-allowed opacity-50" : ""}`}
             placeholder="Message..."
           />

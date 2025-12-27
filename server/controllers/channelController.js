@@ -1194,3 +1194,183 @@ exports.joinChannelViaLink = async (req, res) => {
     return res.status(500).json({ message: "Server error" });
   }
 };
+/**
+ * Add a new tab to a channel
+ * POST /channels/:id/tabs
+ * Body: { name, type, content }
+ */
+exports.addTab = async (req, res) => {
+  try {
+    const userId = req.user.sub;
+    const channelId = req.params.id;
+    const { name, type = "canvas", content = "" } = req.body;
+
+    if (!name) return res.status(400).json({ message: "Tab name is required" });
+
+    const channel = await Channel.findById(channelId);
+    if (!channel) return res.status(404).json({ message: "Channel not found" });
+
+    // Check if user is a member
+    const isMember = channel.members.some(m => {
+      const memberId = m.user ? m.user.toString() : m.toString();
+      return memberId === userId.toString();
+    });
+
+    if (!isMember) {
+      return res.status(403).json({ message: "Not a member of this channel" });
+    }
+
+    // Check tab limit (max 5 tabs per channel)
+    if (channel.tabs && channel.tabs.length >= 5) {
+      return res.status(400).json({ message: "Maximum 5 canvases allowed per channel" });
+    }
+
+    const newTab = {
+      name,
+      type,
+      content,
+      createdBy: userId,
+      createdAt: new Date()
+    };
+
+    channel.tabs.push(newTab);
+    await channel.save();
+
+    // The newly created tab will have an _id assigned by Mongoose
+    const createdTab = channel.tabs[channel.tabs.length - 1];
+
+    const io = req.app?.get("io");
+    if (io) {
+      io.to(`channel_${channelId}`).emit("tab-added", {
+        channelId,
+        tab: createdTab
+      });
+    }
+
+    return res.status(201).json({ tab: createdTab });
+  } catch (err) {
+    console.error("ADD TAB ERROR:", err);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+
+/**
+ * Update a tab content or name
+ * PUT /channels/:id/tabs/:tabId
+ * Body: { name?, content? }
+ */
+exports.updateTab = async (req, res) => {
+  try {
+    const userId = req.user.sub;
+    const { id: channelId, tabId } = req.params;
+    const { name, content } = req.body;
+
+    const channel = await Channel.findById(channelId);
+    if (!channel) return res.status(404).json({ message: "Channel not found" });
+
+    const tab = channel.tabs.id(tabId);
+    if (!tab) return res.status(404).json({ message: "Tab not found" });
+
+    // Check if user is a member
+    const isMember = channel.members.some(m => {
+      const memberId = m.user ? m.user.toString() : m.toString();
+      return memberId === userId.toString();
+    });
+
+    if (!isMember) {
+      return res.status(403).json({ message: "Not a member of this channel" });
+    }
+
+    if (name) tab.name = name;
+    if (content !== undefined) tab.content = content;
+
+    await channel.save();
+
+    const io = req.app?.get("io");
+    if (io) {
+      io.to(`channel_${channelId}`).emit("tab-updated", {
+        channelId,
+        tabId,
+        name: tab.name,
+        content: tab.content,
+        updatedBy: userId
+      });
+    }
+
+    return res.json({ tab });
+  } catch (err) {
+    console.error("UPDATE TAB ERROR:", err);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+
+/**
+ * Delete a tab
+ * DELETE /channels/:id/tabs/:tabId
+ */
+exports.deleteTab = async (req, res) => {
+  try {
+    const userId = req.user.sub;
+    const { id: channelId, tabId } = req.params;
+
+    const channel = await Channel.findById(channelId);
+    if (!channel) return res.status(404).json({ message: "Channel not found" });
+
+    // Only generic tabs can be deleted, not built-in ones (if any)
+    const tab = channel.tabs.id(tabId);
+    if (!tab) return res.status(404).json({ message: "Tab not found" });
+
+    // Check if user is creator of tab or channel admin
+    const isAdmin = channel.isAdmin(userId);
+    const isCreator = String(tab.createdBy) === String(userId);
+
+    if (!isAdmin && !isCreator) {
+      return res.status(403).json({ message: "Not authorized to delete this tab" });
+    }
+
+    channel.tabs.pull(tabId);
+    await channel.save();
+
+    const io = req.app?.get("io");
+    if (io) {
+      io.to(`channel_${channelId}`).emit("tab-deleted", {
+        channelId,
+        tabId
+      });
+    }
+
+    return res.json({ message: "Tab deleted", tabId });
+  } catch (err) {
+    console.error("DELETE TAB ERROR:", err);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+
+/**
+ * Get all tabs for a channel
+ * GET /channels/:id/tabs
+ */
+exports.getTabs = async (req, res) => {
+  try {
+    const userId = req.user.sub;
+    const channelId = req.params.id;
+
+    const channel = await Channel.findById(channelId).select("tabs members isPrivate");
+    if (!channel) return res.status(404).json({ message: "Channel not found" });
+
+    // Check membership
+    const isMember = channel.members.some(m => {
+      const memberId = m.user ? m.user.toString() : m.toString();
+      return memberId === userId.toString();
+    });
+
+    if (!isMember && channel.isPrivate) {
+      return res.status(403).json({ message: "Not authorized" });
+    }
+
+    return res.json({ tabs: channel.tabs || [] });
+  } catch (err) {
+    console.error("GET TABS ERROR:", err);
+    return res.status(500).json({ message: "Server error" });
+  }
+};

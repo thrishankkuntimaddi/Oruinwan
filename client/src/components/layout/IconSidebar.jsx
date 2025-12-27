@@ -63,7 +63,10 @@ const IconSidebar = ({ onProfileClick }) => {
         { icon: <MessageSquare size={20} strokeWidth={2} />, path: "/messages", label: "Messages" },
         { icon: <CheckSquare size={20} strokeWidth={2} />, path: "/tasks", label: "Tasks" },
         { icon: <FileText size={20} strokeWidth={2} />, path: "/notes", label: "Notes" },
-        { icon: <Newspaper size={20} strokeWidth={2} />, path: "/updates", label: "Updates" },
+        // Only show Updates for company users
+        ...(user?.userType === "company" ? [
+            { icon: <Newspaper size={20} strokeWidth={2} />, path: "/updates", label: "Updates" }
+        ] : []),
     ];
 
     return (

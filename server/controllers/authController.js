@@ -429,59 +429,78 @@ exports.login = async (req, res) => {
 // REFRESH TOKEN
 // ----------------------------------------------------
 exports.refresh = async (req, res) => {
-  try {
-    const refreshToken = req.cookies?.jwt;
-    if (!refreshToken) return res.status(401).json({ message: "No refresh token" });
+  const MAX_RETRIES = 3;
+  let attempts = 0;
 
-    const refreshHash = sha256(refreshToken);
+  while (attempts < MAX_RETRIES) {
+    try {
+      const refreshToken = req.cookies?.jwt;
+      if (!refreshToken) return res.status(401).json({ message: "No refresh token" });
 
-    const user = await User.findOne({
-      "refreshTokens.tokenHash": refreshHash
-    });
+      const refreshHash = sha256(refreshToken);
 
-    if (!user) return res.status(403).json({ message: "Invalid refresh token" });
+      const user = await User.findOne({
+        "refreshTokens.tokenHash": refreshHash
+      });
 
-    jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET);
+      if (!user) return res.status(403).json({ message: "Invalid refresh token" });
 
-    const newAccess = generateAccessToken(user);
-    const newRefresh = generateRefreshToken(user);
+      // Verify JWT signature
+      try {
+        jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET);
+      } catch (err) {
+        return res.status(403).json({ message: "Invalid refresh token signature" });
+      }
 
-    // CRITICAL FIX: Don't remove old token immediately!
-    // Instead, mark it with a grace period to handle race conditions
-    // (React StrictMode, double requests, etc.)
-    const oldTokenIndex = user.refreshTokens.findIndex(t => t.tokenHash === refreshHash);
+      const newAccess = generateAccessToken(user);
+      const newRefresh = generateRefreshToken(user);
 
-    if (oldTokenIndex !== -1) {
-      // Keep old token but mark it as expiring soon (10 second grace period)
-      user.refreshTokens[oldTokenIndex].expiresAt = new Date(Date.now() + 10000);
+      // CRITICAL FIX: Don't remove old token immediately!
+      // Instead, mark it with a grace period to handle race conditions
+      // (React StrictMode, double requests, etc.)
+      const oldTokenIndex = user.refreshTokens.findIndex(t => t.tokenHash === refreshHash);
+
+      if (oldTokenIndex !== -1) {
+        // Keep old token but mark it as expiring soon (10 second grace period)
+        user.refreshTokens[oldTokenIndex].expiresAt = new Date(Date.now() + 10000);
+      }
+
+      // Add new refresh token
+      user.refreshTokens.push({
+        tokenHash: sha256(newRefresh),
+        expiresAt: new Date(Date.now() + REFRESH_DAYS * 86400000),
+        deviceInfo: req.get("User-Agent") || "Unknown"
+      });
+
+      // Clean up truly expired tokens
+      user.refreshTokens = user.refreshTokens.filter(
+        t => t.expiresAt > new Date()
+      );
+
+      await user.save();
+
+      res.cookie("jwt", newRefresh, {
+        httpOnly: true,
+        secure: false,
+        sameSite: "lax",
+        maxAge: REFRESH_DAYS * 86400000
+      });
+
+      return res.json({ accessToken: newAccess });
+
+    } catch (err) {
+      if (err.name === 'VersionError' && attempts < MAX_RETRIES - 1) {
+        console.warn(`Refresh token VersionError (attempt ${attempts + 1}/${MAX_RETRIES}), retrying...`);
+        attempts++;
+        // Small delay to reduce contention
+        await new Promise(resolve => setTimeout(resolve, 50));
+        continue;
+      }
+
+      console.error("REFRESH ERROR:", err);
+      // Only return 500 if we exhausted retries or hit another error
+      return res.status(500).json({ message: "Server error" });
     }
-
-    // Add new refresh token
-    user.refreshTokens.push({
-      tokenHash: sha256(newRefresh),
-      expiresAt: new Date(Date.now() + REFRESH_DAYS * 86400000),
-      deviceInfo: req.get("User-Agent") || "Unknown"
-    });
-
-    // Clean up truly expired tokens
-    user.refreshTokens = user.refreshTokens.filter(
-      t => t.expiresAt > new Date()
-    );
-
-    await user.save();
-
-    res.cookie("jwt", newRefresh, {
-      httpOnly: true,
-      secure: false,
-      sameSite: "lax",
-      maxAge: REFRESH_DAYS * 86400000
-    });
-
-    return res.json({ accessToken: newAccess });
-
-  } catch (err) {
-    console.error("REFRESH ERROR:", err);
-    return res.status(500).json({ message: "Server error" });
   }
 };
 

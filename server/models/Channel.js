@@ -31,6 +31,15 @@ const ChannelSchema = new mongoose.Schema({
   // Pinned messages
   pinnedMessages: [{ type: mongoose.Schema.Types.ObjectId, ref: "Message" }],
 
+  // Generic Tabs (Canvas, etc.)
+  tabs: [{
+    name: { type: String, required: true },
+    type: { type: String, enum: ['canvas'], default: 'canvas' },
+    content: { type: String, default: "" }, // HTML content
+    createdAt: { type: Date, default: Date.now },
+    createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" }
+  }],
+
   // Additional metadata
   metadata: { type: mongoose.Schema.Types.Mixed }
 

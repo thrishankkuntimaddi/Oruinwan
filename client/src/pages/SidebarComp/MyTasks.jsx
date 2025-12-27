@@ -224,8 +224,8 @@ const MyTasks = () => {
               <button
                 onClick={() => setShowSortMenu(!showSortMenu)}
                 className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border transition-all duration-200 font-medium text-sm ${showSortMenu
-                    ? "bg-blue-50 border-blue-200 text-blue-700 dark:bg-blue-900/30 dark:border-blue-800 dark:text-blue-300"
-                    : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-gray-300"
+                  ? "bg-blue-50 border-blue-200 text-blue-700 dark:bg-blue-900/30 dark:border-blue-800 dark:text-blue-300"
+                  : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-gray-300"
                   } shadow-sm`}
               >
                 <ArrowUpDown size={16} />
@@ -244,8 +244,8 @@ const MyTasks = () => {
                       key={opt.id}
                       onClick={() => { setSortOrder(opt.id); setShowSortMenu(false); }}
                       className={`w-full text-left px-4 py-2.5 text-sm font-medium transition-colors flex items-center justify-between ${sortOrder === opt.id
-                          ? "text-blue-600 bg-blue-50 dark:bg-blue-900/20"
-                          : "text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50"
+                        ? "text-blue-600 bg-blue-50 dark:bg-blue-900/20"
+                        : "text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50"
                         }`}
                     >
                       {opt.label}
@@ -292,16 +292,16 @@ const MyTasks = () => {
                 key={task.id}
                 onDoubleClick={() => handleDoubleClick(task)}
                 className={`group relative bg-white dark:bg-gray-800 rounded-2xl p-4 pl-5 border transition-all duration-300 hover:-translate-y-1 hover:shadow-xl overflow-hidden ${isCompletedTab
-                    ? "border-emerald-100 bg-emerald-50/30 dark:border-emerald-900/30 dark:bg-emerald-900/10"
-                    : isDeletedTab
-                      ? "border-red-100 bg-red-50/30 dark:border-red-900/30 dark:bg-red-900/10"
-                      : "border-gray-100 dark:border-gray-700/50 shadow-sm hover:border-blue-200/50 dark:hover:border-blue-900/30"
+                  ? "border-emerald-100 bg-emerald-50/30 dark:border-emerald-900/30 dark:bg-emerald-900/10"
+                  : isDeletedTab
+                    ? "border-red-100 bg-red-50/30 dark:border-red-900/30 dark:bg-red-900/10"
+                    : "border-gray-100 dark:border-gray-700/50 shadow-sm hover:border-blue-200/50 dark:hover:border-blue-900/30"
                   }`}
               >
                 {/* Modern Vertical Priority Strip */}
                 <div className={`absolute left-0 top-0 bottom-0 w-1.5 transition-colors ${task.priority === "Emergency" ? "bg-red-500" :
-                    task.priority === "High" ? "bg-orange-500" :
-                      task.priority === "Medium" ? "bg-blue-500" : "bg-gray-300"
+                  task.priority === "High" ? "bg-orange-500" :
+                    task.priority === "Medium" ? "bg-blue-500" : "bg-gray-300"
                   }`} />
 
                 <div className="flex flex-col md:flex-row md:items-start gap-4">

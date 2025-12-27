@@ -283,11 +283,18 @@ module.exports = function registerChatHandlers(io, socket) {
   /* ----------------------------------------------------
      TYPING
   ---------------------------------------------------- */
-  socket.on("typing", ({ dmSessionId, channelId }) => {
-    if (dmSessionId) {
-      io.to(`dm_${dmSessionId}`).emit("typing", { from: userId });
-    } else if (channelId) {
-      io.to(`channel_${channelId}`).emit("typing", { from: userId });
+  socket.on("typing", async ({ dmSessionId, channelId }) => {
+    try {
+      // Get user's name for better UX
+      const fromName = socket.user?.username || "Someone";
+
+      if (dmSessionId) {
+        io.to(`dm_${dmSessionId}`).emit("typing", { from: userId, fromName });
+      } else if (channelId) {
+        io.to(`channel_${channelId}`).emit("typing", { from: userId, fromName });
+      }
+    } catch (err) {
+      console.error("TYPING ERROR:", err);
     }
   });
 

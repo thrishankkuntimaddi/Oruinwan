@@ -62,4 +62,10 @@ router.post("/:id/join-via-link", requireAuth, channelCtrl.joinChannelViaLink);
 // Delete channel permanently
 router.delete("/:id", requireAuth, channelCtrl.deleteChannel);
 
+// --- TAB MANAGEMENT ---
+router.get("/:id/tabs", requireAuth, channelCtrl.getTabs);
+router.post("/:id/tabs", requireAuth, channelCtrl.addTab);
+router.put("/:id/tabs/:tabId", requireAuth, channelCtrl.updateTab);
+router.delete("/:id/tabs/:tabId", requireAuth, channelCtrl.deleteTab);
+
 module.exports = router;

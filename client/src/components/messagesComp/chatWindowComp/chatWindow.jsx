@@ -4,7 +4,6 @@ import React, { useEffect, useRef, useState, useCallback } from "react";
 import "./chatWindow.css";
 
 import Header from "./header/header.jsx";
-import PinnedMessage from "./pinned/pinnedMessage.jsx";
 import ContactInfoModal from "./modals/contactInfoModal.jsx";
 import ContactShareModal from "./modals/contactShareModal.jsx";
 import Toast from "../../ui/Toast.jsx";
@@ -14,12 +13,14 @@ import MessageInfoModal from "./modals/MessageInfoModal.jsx";
 import ConfirmationModal from "../../common/ConfirmationModal.jsx";
 
 
+import ChannelTabs from "./tabs/ChannelTabs.jsx";
+import CanvasTab from "./tabs/CanvasTab.jsx";
 import ThreadPanel from "./ThreadPanel.jsx";
 import MessagesContainer from "./messages/messagesContainer.jsx";
 import ReplyPreview from "./messages/replyPreview.jsx";
 import FooterInput from "./footer/footerInput.jsx";
 
-import { pickFile, formatTime as fmtTime } from "./helpers/helpers.js";
+import { pickFile } from "./helpers/helpers.js";
 
 import { io } from "socket.io-client";
 import api from "../../../services/api";
@@ -43,6 +44,10 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
   const [hasMore, setHasMore] = useState(true); // Are there more messages to load?
   const [isLoadingMore, setIsLoadingMore] = useState(false); // Loading older messages?
 
+  // TABS STATE
+  const [activeTab, setActiveTab] = useState("chat"); // 'chat' or tab ID
+  const [tabs, setTabs] = useState([]);
+
   const [newMessage, setNewMessage] = useState("");
   const [showSearch, setShowSearch] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -58,7 +63,6 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
   const [blocked, setBlocked] = useState(false);
   const [recording, setRecording] = useState(false);
 
-  const [pinnedId, setPinnedId] = useState(null);
   const [replyingTo, setReplyingTo] = useState(null);
 
   const [showContactInfo, setShowContactInfo] = useState(false);
@@ -98,7 +102,6 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
   /* ---------------------------------------------------------
       HELPERS
   --------------------------------------------------------- */
-  const formatTime = (iso) => fmtTime(iso);
 
   // getAccessToken removed - using accessToken from context instead
 
@@ -554,14 +557,24 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
       });
 
       /* --- TYPING --- */
-      socket.on("typing", ({ from }) => {
+      socket.on("typing", ({ from, fromName }) => {
         if (!from) return;
-        setTypingUsers((prev) =>
-          prev.includes(from) ? prev : [...prev, from]
-        );
+
+        // CRITICAL FIX: Don't show typing indicator for current user
+        if (String(from) === String(currentUserIdRef.current)) {
+          return; // Ignore typing events from self
+        }
+
+        setTypingUsers((prev) => {
+          // Check if user is already in the list
+          const exists = prev.find((u) => u.id === from);
+          if (exists) return prev;
+
+          return [...prev, { id: from, name: fromName || "Someone" }];
+        });
 
         setTimeout(() => {
-          setTypingUsers((prev) => prev.filter((u) => u !== from));
+          setTypingUsers((prev) => prev.filter((u) => u.id !== from));
         }, 3000);
       });
 
@@ -581,6 +594,32 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
             m.id === messageId ? { ...m, reactions } : m
           )
         );
+      });
+
+      /* --- TABS --- */
+      socket.on("tab-added", ({ tab }) => {
+        console.log('📡 Socket: tab-added event', tab._id);
+        // Don't add if we already have this tab (prevents duplicates from optimistic updates)
+        setTabs(prev => {
+          const exists = prev.find(t => t._id === tab._id);
+          if (exists) {
+            console.log('⚠️ Tab already exists, skipping:', tab._id);
+            return prev;
+          }
+          console.log('➕ Adding new tab:', tab._id);
+          return [...prev, tab];
+        });
+      });
+
+      socket.on("tab-updated", ({ tabId, name, content }) => {
+        setTabs(prev => prev.map(t =>
+          t._id === tabId ? { ...t, name, content } : t
+        ));
+      });
+
+      socket.on("tab-deleted", ({ tabId }) => {
+        setTabs(prev => prev.filter(t => t._id !== tabId));
+        if (activeTab === tabId) setActiveTab("chat");
       });
 
       socket.on("reaction-removed", ({ messageId, userId, reactions }) => {
@@ -881,33 +920,7 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
     setSelectMode(false);
   };
 
-  const pinMessage = (id) => {
-    const msg = messages.find(m => m.id === id);
-    if (!msg) return;
 
-    const socket = socketRef.current;
-    if (!socket || !connected) {
-      showToast("Not connected. Please try again.", "error");
-      return;
-    }
-
-    const channelId = chat.type === "channel" ? chat.id : null;
-    if (!channelId) {
-      showToast("Pinning is only available in channels", "info");
-      return;
-    }
-
-    // Determine if we're pinning or unpinning
-    const shouldPin = !msg.isPinned;
-
-    if (shouldPin) {
-      socket.emit("pin-message", { messageId: id, channelId });
-    } else {
-      socket.emit("unpin-message", { messageId: id, channelId });
-    }
-
-    setOpenMsgMenuId(null);
-  };
 
   const replyToMessage = (id) => {
     setReplyingTo(messages.find((m) => m.id === id));
@@ -977,6 +990,97 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
 
   const [showForwardModal, setShowForwardModal] = useState(false);
   const [forwardingMsgId, setForwardingMsgId] = useState(null);
+
+  /* ---------------------------------------------------------
+      TAB HELPERS
+  --------------------------------------------------------- */
+  const fetchTabs = useCallback(async () => {
+    if (chat?.type !== 'channel') return;
+    try {
+      console.log('🔵 Fetching tabs for channel:', chat.id);
+      const res = await api.get(`/api/channels/${chat.id}/tabs`);
+      console.log('✅ Tabs fetched:', res.data.tabs);
+      setTabs(res.data.tabs || []);
+    } catch (err) {
+      console.error("❌ Fetch tabs error:", err);
+      console.error("Error response:", err.response?.data);
+    }
+  }, [chat]);
+
+  useEffect(() => {
+    if (chat?.type === 'channel') {
+      fetchTabs();
+    } else {
+      setTabs([]); // Clear tabs for DMs
+    }
+  }, [chat, fetchTabs]);
+
+  const handleAddTab = async (name) => {
+    // Check tab limit
+    if (tabs.length >= 5) {
+      showToast("Maximum 5 canvases allowed per channel", "error");
+      return;
+    }
+
+    try {
+      console.log('🔵 Creating tab:', { name, channelId: chat.id });
+
+      // Optimistic update
+      const tempId = "temp-" + Date.now();
+      const newTab = { _id: tempId, name, type: "canvas", content: "" };
+      setTabs(prev => [...prev, newTab]);
+      setActiveTab(tempId);
+
+      const res = await api.post(`/api/channels/${chat.id}/tabs`, { name, type: "canvas" });
+
+      console.log('✅ Tab created successfully:', res.data);
+
+      // Remove temp tab and DON'T add the real one (socket will do it)
+      // This prevents race condition where both temp and real tab exist
+      setTabs(prev => prev.filter(t => t._id !== tempId));
+      setActiveTab(res.data.tab._id);
+      showToast(`Canvas "${name}" created`, "success");
+    } catch (err) {
+      console.error("❌ Add tab error:", err);
+      console.error("Error response:", err.response?.data);
+      console.error("Error status:", err.response?.status);
+      showToast(err.response?.data?.message || "Failed to create tab", "error");
+      setTabs(prev => prev.filter(t => !t._id.startsWith("temp-"))); // Revert all temp tabs
+      setActiveTab("chat");
+    }
+  };
+
+  const handleDeleteTab = async (tabId) => {
+    try {
+      await api.delete(`/api/channels/${chat.id}/tabs/${tabId}`);
+      // Socket event will update UI, but we can do optimistic too
+      setTabs(prev => prev.filter(t => t._id !== tabId));
+      if (activeTab === tabId) setActiveTab("chat");
+    } catch (err) {
+      console.error("Delete tab error:", err);
+      showToast("Failed to delete tab", "error");
+    }
+  };
+
+  const handleSaveCanvas = async (tabId, data) => {
+    try {
+      await api.put(`/api/channels/${chat.id}/tabs/${tabId}`, data);
+    } catch (err) {
+      console.error("Save canvas error:", err);
+    }
+  };
+
+  const handleRenameTab = async (tabId, newName) => {
+    try {
+      await api.put(`/api/channels/${chat.id}/tabs/${tabId}`, { name: newName });
+      // Optimistically update UI
+      setTabs(prev => prev.map(t => t._id === tabId ? { ...t, name: newName } : t));
+      showToast("Tab renamed", "success");
+    } catch (err) {
+      console.error("Rename tab error:", err);
+      showToast("Failed to rename tab", "error");
+    }
+  };
 
   const handleForward = (targets) => {
     // targets is now an array of target objects
@@ -1252,237 +1356,296 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
       RENDER
   --------------------------------------------------------- */
   return (
-    <div className="flex h-full max-h-full overflow-hidden relative">
+    <div className={`flex flex-col h-full bg-white dark:bg-gray-900 relative ${(showContactInfo || activeThread) && "mr-[350px]"
+      }`}>
+      {/* 1. Header */}
+      <Header
+        chat={chat}
+        onClose={onClose}
+        showSearch={showSearch}
+        setShowSearch={setShowSearch}
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+        showMenu={showMenu}
+        setShowMenu={setShowMenu}
+        selectMode={selectMode}
+        setSelectMode={setSelectMode}
+        selectedCount={selectedIds.size}
+        onDeleteSelected={deleteSelected}
+        setShowContactInfo={setShowContactInfo}
+        setShowChannelManagement={setChannelManagementTab}
+        muted={muted}
+        setMuted={setMuted}
+        blocked={blocked}
+        setBlocked={setBlocked}
+        onDeleteChat={onDeleteChat}
+        onExitChannel={handleExitChannel}
+        onDeleteChannel={handleDeleteChannel}
+        currentUserId={currentUserIdRef.current}
+        showToast={showToast}
+        typingUsers={typingUsers}
+      />
 
-      {/* Main Chat Column */}
-      <div className="flex-1 flex flex-col min-w-0 relative">
-        <Header
-          chat={chat}
-          onClose={onClose}
-          showSearch={showSearch}
-          setShowSearch={setShowSearch}
-          searchQuery={searchQuery}
-          setSearchQuery={setSearchQuery}
-          showMenu={showMenu}
-          setShowMenu={setShowMenu}
-          selectMode={selectMode}
-          setSelectMode={setSelectMode}
-          selectedCount={selectedIds.size}
-          onDeleteSelected={deleteSelected}
-          setShowContactInfo={setShowContactInfo}
-          setShowChannelManagement={setChannelManagementTab}
-          muted={muted}
-          setMuted={setMuted}
-          blocked={blocked}
-          setBlocked={setBlocked}
-          onDeleteChat={onDeleteChat}
-          onExitChannel={handleExitChannel}
-          onDeleteChannel={handleDeleteChannel}
+      {/* 2. Tabs Bar (Only for channels) */}
+      {chat.type === 'channel' && (
+        <ChannelTabs
+          tabs={tabs}
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          onAddTab={handleAddTab}
+          onDeleteTab={handleDeleteTab}
+          onRenameTab={handleRenameTab}
           currentUserId={currentUserIdRef.current}
-          showToast={showToast}
-        />
-
-        <PinnedMessage
-          pinned={messages.find((m) => m.id === pinnedId)}
-          onUnpin={() => setPinnedId(null)}
-        />
-
-        {toast.visible && (
-          <div className="absolute top-4 right-4 z-[9999]">
-            <Toast
-              message={toast.message}
-              type={toast.type}
-              onClose={() => setToast(prev => ({ ...prev, visible: false }))}
-            />
-          </div>
-        )}
-
-        {showContactInfo && (
-          <ContactInfoModal chat={chat} onClose={() => setShowContactInfo(false)} />
-        )}
-
-        {showContactShare && (
-          <ContactShareModal
-            contacts={contacts}
-            onShare={shareContact}
-            onClose={() => setShowContactShare(false)}
-          />
-        )}
-
-        {showForwardModal && (
-          <ForwardMessageModal
-            onClose={() => setShowForwardModal(false)}
-            onForward={handleForward}
-            currentChatId={chat.id}
-            currentChatType={chat.type}
-          />
-        )}
-
-        {channelManagementTab && (
-          <ChannelManagementModal
-            channel={chat}
-            currentUserId={currentUserIdRef.current}
-            initialTab={channelManagementTab}
-            onClose={() => setChannelManagementTab(null)}
-          />
-        )}
-
-        {inspectedMessage && (
-          <MessageInfoModal
-            msg={inspectedMessage}
-            currentUserId={currentUserIdRef.current}
-            onClose={() => setInspectedMessage(null)}
-            workspaceMembers={workspaceMembers}
-          />
-        )}
-
-        <div className="flex-1 flex flex-col overflow-hidden">
-
-          <MessagesContainer
-            messages={messages}
-            searchQuery={searchQuery}
-            selectMode={selectMode}
-            selectedIds={selectedIds}
-            toggleSelect={toggleSelect}
-            openMsgMenuId={openMsgMenuId}
-            setOpenMsgMenuId={setOpenMsgMenuId}
-            toggleMsgMenu={(e, id) => {
-              // Safe stopPropagation
-              e?.stopPropagation?.();
-              setOpenMsgMenuId((prev) => (prev === id ? null : id));
-            }}
-            formatTime={formatTime}
-            addReaction={addReaction}
-            pinMessage={pinMessage}
-            replyToMessage={replyToMessage}
-            forwardMessage={(id) => {
-              setForwardingMsgId(id);
-              setShowForwardModal(true);
-            }}
-            copyMessage={(id) => {
-              const m = messages.find((x) => x.id === id);
-              if (m) navigator.clipboard.writeText(m.text);
-            }}
-            deleteMessage={(id, deleteType = 'everyone') => {
-              try {
-                // Use the socket-based delete handler
-                const socket = socketRef.current;
-                if (!socket || !connected) {
-                  console.error('Socket not connected');
-                  return;
-                }
-
-                const channelId = chat.type === "channel" ? chat.id : null;
-                const dmSessionId = chat.type === "dm" && !chat.isNew ? chat.id : null;
-
-                if (deleteType === 'me') {
-                  // Local delete - only hide for this user
-                  socket.emit("delete-message", {
-                    messageId: id,
-                    channelId,
-                    dmSessionId,
-                    localOnly: true  // This tells backend to add to hiddenFor array
-                  });
-                } else {
-                  // Universal delete - delete for everyone
-                  socket.emit("delete-message", {
-                    messageId: id,
-                    channelId,
-                    dmSessionId
-                  });
-                }
-              } catch (err) {
-                console.error("Failed to delete message:", err);
-              }
-            }}
-            infoMessage={(id) => {
-              const m = messages.find((x) => x.id === id);
-              if (m) setInspectedMessage(m);
-            }}
-            onOpenThread={(msgId) => {
-              const msg = messages.find((m) => m.id === msgId);
-              if (msg) setActiveThread(msg);
-            }}
-            threadCounts={threadCounts}
-            currentUserId={currentUserIdRef.current}
-            chatType={chat.type}
-            userJoinedAt={userJoinedAt}
-            channelMembersWithJoinDates={channelMembersWithJoinDates}
-            isAdmin={userRole === 'admin' || userRole === 'owner'}
-            // Pagination
-            hasMore={hasMore}
-            isLoadingMore={isLoadingMore}
-            onLoadMore={loadMoreMessages}
-          />
-
-          {/* Selection Toolbar removed, moved to header */}
-
-          <ReplyPreview
-            replyingTo={replyingTo}
-            onCancel={() => setReplyingTo(null)}
-          />
-
-          {/* Typing indicator */}
-          {typingUsers.length > 0 && (
-            <div className="px-4 py-1 text-sm text-gray-500">
-              {typingUsers.length === 1 ? "Typing..." : `${typingUsers.length} typing...`}
-            </div>
-          )}
-
-          <FooterInput
-            newMessage={newMessage}
-            onChange={onInputChange}
-            onSend={sendMessage}
-            onAttach={handleAttach}
-            showAttach={showAttach}
-            setShowAttach={setShowAttach}
-            showEmoji={showEmoji}
-            setShowEmoji={setShowEmoji}
-            onPickEmoji={(em) => setNewMessage((m) => m + em)}
-            recording={recording}
-            setRecording={setRecording}
-            blocked={blocked}
-            setNewMessage={setNewMessage}
-          />
-
-
-        </div>
-      </div>
-
-
-      {/* Thread Panel */}
-      {activeThread && (
-        <ThreadPanel
-          parentMessage={activeThread}
-          onClose={() => setActiveThread(null)}
-          socket={socketRef.current}
-          currentUserId={currentUserIdRef.current}
+          isAdmin={userRole === 'admin' || userRole === 'owner' || chat.isOwner}
         />
       )}
 
-      {/* Exit Channel Confirmation Modal */}
+      {/* 3. Main Content: Chat or Canvas */}
+      <div className="flex-1 overflow-hidden relative flex flex-col">
+        {activeTab === "chat" ? (
+          <>
+            <MessagesContainer
+              messages={messages}
+              searchQuery={searchQuery}
+              selectMode={selectMode}
+              selectedIds={selectedIds}
+              toggleSelect={toggleSelect}
+              openMsgMenuId={openMsgMenuId}
+              setOpenMsgMenuId={setOpenMsgMenuId}
+              toggleMsgMenu={(e, id) => {
+                e?.stopPropagation?.();
+                setOpenMsgMenuId((prev) => (prev === id ? null : id));
+              }}
+              formatTime={(iso) => new Date(iso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+              addReaction={addReaction}
+              pinMessage={(id) => handlePinMessage(id, true)}
+              replyToMessage={replyToMessage}
+              forwardMessage={(id) => {
+                setForwardingMsgId(id);
+                setShowForwardModal(true);
+              }}
+              copyMessage={(id) => {
+                const m = messages.find((x) => x.id === id);
+                if (m) navigator.clipboard.writeText(m.text);
+              }}
+              deleteMessage={(id, deleteType = 'everyone') => {
+                try {
+                  const socket = socketRef.current;
+                  if (!socket || !connected) {
+                    console.error('Socket not connected');
+                    return;
+                  }
+
+                  const channelId = chat.type === "channel" ? chat.id : null;
+                  const dmSessionId = chat.type === "dm" && !chat.isNew ? chat.id : null;
+
+                  if (deleteType === 'me') {
+                    socket.emit("delete-message", {
+                      messageId: id,
+                      channelId,
+                      dmSessionId,
+                      localOnly: true
+                    });
+                  } else {
+                    socket.emit("delete-message", {
+                      messageId: id,
+                      channelId,
+                      dmSessionId
+                    });
+                  }
+                } catch (err) {
+                  console.error("Failed to delete message:", err);
+                }
+              }}
+              infoMessage={(id) => {
+                const m = messages.find((x) => x.id === id);
+                if (m) setInspectedMessage(m);
+              }}
+              onOpenThread={(msgId) => {
+                const msg = messages.find((m) => m.id === msgId);
+                if (msg) setActiveThread(msg);
+              }}
+              threadCounts={threadCounts}
+              currentUserId={currentUserIdRef.current}
+              chatType={chat.type}
+              userJoinedAt={userJoinedAt}
+              channelMembersWithJoinDates={channelMembersWithJoinDates}
+              isAdmin={userRole === 'admin' || userRole === 'owner'}
+              hasMore={hasMore}
+              isLoadingMore={isLoadingMore}
+              onLoadMore={loadMoreMessages}
+            />
+
+            {/* Typing indicator moved to header */}
+
+            {/* Reply Preview */}
+            {replyingTo && (
+              <ReplyPreview
+                replyingTo={replyingTo}
+                onCancel={() => setReplyingTo(null)}
+              />
+            )}
+
+            {/* Footer Input */}
+            <FooterInput
+              newMessage={newMessage}
+              onChange={onInputChange}
+              onSend={sendMessage}
+              onAttach={handleAttach}
+              showAttach={showAttach}
+              setShowAttach={setShowAttach}
+              showEmoji={showEmoji}
+              setShowEmoji={setShowEmoji}
+              onPickEmoji={(em) => setNewMessage((m) => m + em.native)}
+              recording={recording}
+              startRecording={() => setRecording(true)}
+              stopRecording={() => setRecording(false)}
+              blocked={blocked}
+              setNewMessage={setNewMessage}
+            />
+          </>
+        ) : (
+          /* CANVAS TAB CONTENT */
+          (() => {
+            const tab = tabs.find(t => t._id === activeTab);
+
+            // Check if this is a temp tab (still being created)
+            const isTempTab = activeTab && activeTab.startsWith('temp-');
+
+            if (isTempTab) {
+              return (
+                <div className="flex-1 flex items-center justify-center text-gray-400">
+                  <div className="flex flex-col items-center gap-2">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                    <p>Creating canvas...</p>
+                  </div>
+                </div>
+              );
+            }
+
+            return tab ? (
+              <CanvasTab
+                key={tab._id}
+                tab={tab}
+                onSave={handleSaveCanvas}
+                connected={connected}
+                socket={socketRef.current}
+                channelId={chat.id}
+                currentUserId={currentUserIdRef.current}
+              />
+            ) : (
+              <div className="flex-1 flex items-center justify-center text-gray-400">
+                <div className="flex flex-col items-center gap-2">
+                  <p>Tab not found</p>
+                  <button
+                    onClick={() => setActiveTab("chat")}
+                    className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                  >
+                    Return to Chat
+                  </button>
+                </div>
+              </div>
+            );
+          })()
+        )}
+      </div>
+
+      {/* 4. Side Panels / Modals */}
+      {/* Thread Panel */}
+      {activeThread && (
+        <div className="fixed inset-y-0 right-0 w-[400px] border-l border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-xl z-30 flex flex-col transform transition-transform duration-300">
+          <ThreadPanel
+            parentMessage={activeThread}
+            onClose={() => setActiveThread(null)}
+            currentUserId={currentUserIdRef.current}
+          />
+        </div>
+      )}
+
+      {/* Contact Info Sidebar */}
+      {showContactInfo && (
+        <div className="fixed inset-y-0 right-0 w-80 bg-white dark:bg-gray-900 shadow-xl z-40 transform transition-transform duration-300 border-l border-gray-100 dark:border-gray-800">
+          <ContactInfoModal
+            chat={chat}
+            onClose={() => setShowContactInfo(false)}
+            currentUserId={currentUserIdRef.current}
+            onBlock={() => setBlocked((prev) => !prev)}
+            onDeleteChat={onDeleteChat}
+            onToggleMute={() => setMuted((prev) => !prev)}
+            muted={muted}
+            blocked={blocked}
+          />
+        </div>
+      )}
+
+      {/* Other Modals */}
+      {showContactShare && (
+        <ContactShareModal
+          contacts={contacts}
+          onClose={() => setShowContactShare(false)}
+          onShare={shareContact}
+        />
+      )}
+
+      {/* Forward Modal */}
+      {showForwardModal && (
+        <ForwardMessageModal
+          onClose={() => setShowForwardModal(false)}
+          onForward={handleForward}
+          currentChatId={chat.id}
+          currentChatType={chat.type}
+        />
+      )}
+
+      {channelManagementTab && (
+        <ChannelManagementModal
+          chat={chat}
+          initialTab={channelManagementTab}
+          onClose={() => setChannelManagementTab(null)}
+          currentUserId={currentUserIdRef.current}
+          showToast={showToast}
+        />
+      )}
+
+      {inspectedMessage && (
+        <MessageInfoModal
+          message={inspectedMessage}
+          onClose={() => setInspectedMessage(null)}
+        />
+      )}
+
+      {/* Confirmation Modals */}
       <ConfirmationModal
         isOpen={showExitChannelConfirm}
         onClose={() => setShowExitChannelConfirm(false)}
         onConfirm={confirmExitChannel}
-        title={`Exit #${chat.name}?`}
-        message="You'll no longer be able to send or receive messages in this channel."
-        confirmText="Exit Channel"
-        cancelText="Cancel"
-        variant="warning"
+        title="Leave Channel"
+        message={`Are you sure you want to leave #${chat.name}?`}
+        confirmText="Leave"
+        confirmType="danger"
       />
 
-      {/* Delete Channel Confirmation Modal */}
       <ConfirmationModal
         isOpen={showDeleteChannelConfirm}
         onClose={() => setShowDeleteChannelConfirm(false)}
         onConfirm={confirmDeleteChannel}
-        title={`Permanently Delete #${chat.name}?`}
-        message={`This will delete ALL messages, remove ALL members, and cannot be undone. Are you absolutely sure?`}
-        confirmText="Delete Channel"
-        cancelText="Cancel"
-        variant="danger"
+        title="Delete Channel"
+        message={`Are you sure you want to delete #${chat.name}? This action cannot be undone and all messages will be lost.`}
+        confirmText="Delete"
+        confirmType="danger"
       />
+
+      {/* Toast Notification */}
+      {toast.visible && (
+        <div className="fixed top-4 right-4 z-[9999]">
+          <Toast
+            message={toast.message}
+            type={toast.type}
+            isVisible={toast.visible}
+            onClose={() => setToast({ ...toast, visible: false })}
+          />
+        </div>
+      )}
     </div>
   );
 }
