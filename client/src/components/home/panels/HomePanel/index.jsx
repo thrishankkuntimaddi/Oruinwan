@@ -333,8 +333,6 @@ const HomePanel = ({ title }) => {
                 setNewName={setNewName}
             />
 
-            {/* Divider */}
-            <div className="border-t border-gray-200 dark:border-gray-800 mx-4 mt-2 mb-2"></div>
 
             {/* Scrollable Content */}
             <div className="flex-1 overflow-y-auto custom-scrollbar pb-4">
