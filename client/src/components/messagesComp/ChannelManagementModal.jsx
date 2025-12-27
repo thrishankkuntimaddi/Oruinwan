@@ -10,6 +10,7 @@ const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:5000";
 export default function ChannelManagementModal({ channel, onClose, currentUserId, initialTab = "members" }) {
     const { workspaceId } = useParams();
     const { showToast } = useToast();
+
     const [members, setMembers] = useState([]);
     const [allUsers, setAllUsers] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -25,17 +26,17 @@ export default function ChannelManagementModal({ channel, onClose, currentUserId
 
     // Editing states
     const [isEditingName, setIsEditingName] = useState(false);
-    const [editedName, setEditedName] = useState(channel.name || "");
+    const [editedName, setEditedName] = useState(channel?.name || "");
     const [isEditingDescription, setIsEditingDescription] = useState(false);
-    const [editedDescription, setEditedDescription] = useState(channel.description || "");
+    const [editedDescription, setEditedDescription] = useState(channel?.description || "");
 
     // Admin permission logic
-    const isDefaultChannel = channel.isDefault || ['general', 'announcements'].includes(channel.name?.toLowerCase().replace(/^#/, ''));
-    const isWorkspaceAdmin = channel.workspaceRole === 'owner' || channel.workspaceRole === 'admin';
-    const isChannelCreator = String(channel.createdBy) === String(currentUserId);
+    const isDefaultChannel = channel?.isDefault || ['general', 'announcements'].includes(channel?.name?.toLowerCase().replace(/^#/, ''));
+    const isWorkspaceAdmin = channel?.workspaceRole === 'owner' || channel?.workspaceRole === 'admin';
+    const isChannelCreator = String(channel?.createdBy) === String(currentUserId);
 
     // Check if user is a promoted admin (in the admins array)
-    const isPromotedAdmin = channel.admins && Array.isArray(channel.admins)
+    const isPromotedAdmin = channel?.admins && Array.isArray(channel.admins)
         ? channel.admins.some(adminId => String(adminId) === String(currentUserId))
         : false;
 
@@ -43,6 +44,7 @@ export default function ChannelManagementModal({ channel, onClose, currentUserId
     const isAdmin = isDefaultChannel ? isWorkspaceAdmin : (isChannelCreator || isPromotedAdmin);
 
     const loadMembers = useCallback(async () => {
+        if (!channel?.id) return;
         try {
             const token = localStorage.getItem("accessToken");
             const headers = token ? { Authorization: `Bearer ${token}` } : {};
@@ -52,9 +54,10 @@ export default function ChannelManagementModal({ channel, onClose, currentUserId
         } catch (err) {
             console.error("Load members failed:", err);
         }
-    }, [channel.id]);
+    }, [channel?.id]);
 
     const loadAllUsers = useCallback(async () => {
+        if (!channel?.workspaceId) return;
         try {
             const token = localStorage.getItem("accessToken");
             const headers = token ? { Authorization: `Bearer ${token}` } : {};
@@ -65,7 +68,7 @@ export default function ChannelManagementModal({ channel, onClose, currentUserId
         } catch (err) {
             console.error("❌ Load workspace members failed:", err);
         }
-    }, [channel.workspaceId]);
+    }, [channel?.workspaceId]);
 
     useEffect(() => {
         loadMembers();
@@ -79,6 +82,14 @@ export default function ChannelManagementModal({ channel, onClose, currentUserId
             loadAllUsers();
         }
     }, [activeTab, loadAllUsers]);
+
+    // Safety check - if channel is undefined, close the modal
+    // This must come AFTER all hooks are declared
+    if (!channel) {
+        console.error("ChannelManagementModal: channel prop is undefined");
+        onClose?.();
+        return null;
+    }
 
     const handleInvite = async (userId) => {
         if (!userId) return;

@@ -92,6 +92,12 @@ export default function ContactsProvider({ children }) {
         // App.js route: /workspace/:workspaceId/dm/:id
         // So yes, we should use session.id as the ID.
 
+        // Determine avatar color based on user status
+        const userStatus = otherUser?.isOnline ? (otherUser?.userStatus || 'active') : 'offline';
+        const avatarColor = userStatus === 'active' ? 'green' :
+          userStatus === 'away' ? 'yellow' :
+            userStatus === 'dnd' ? 'red' : 'gray';
+
         return {
           id: session.id, // Use Session ID
           userId: otherUserId, // Keep User ID reference
@@ -101,7 +107,8 @@ export default function ContactsProvider({ children }) {
           isFavorite: favoriteItemIds.includes(String(session.id)),
           lastMessage: session.lastMessage,
           unreadCount: session.unreadCount || 0,
-          status: otherUser?.isOnline ? (otherUser?.userStatus || 'active') : 'offline',
+          status: userStatus,
+          avatarColor: avatarColor, // Add avatar color based on status
           avatar: otherUser?.profilePicture // Add profile picture
         };
       });

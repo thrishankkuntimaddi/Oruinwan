@@ -89,7 +89,11 @@ function ChannelMessageItem({
                 </div>
                 <div className="flex-1 min-w-0">
                     <div className="text-gray-400 text-xs italic py-1">
-                        Message deleted by {msg.deletedByName || "Unknown"}
+                        Message deleted by {
+                            String(msg.deletedBy) === String(currentUserId)
+                                ? "You"
+                                : (msg.deletedByName || "Unknown")
+                        }
                     </div>
                 </div>
                 {/* Delete icon to remove from view */}

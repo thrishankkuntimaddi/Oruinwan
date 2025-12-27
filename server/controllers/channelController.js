@@ -1018,7 +1018,7 @@ exports.toggleChannelPrivacy = async (req, res) => {
         oldPrivacy,
         newPrivacy: isPrivate
       },
-      text: `${user?.username || 'Admin'} changed this channel to ${isPrivate ? 'Private' : 'Public'}`,
+      text: `Channel made ${isPrivate ? 'Private' : 'Public'}`,
       sender: userId
     });
 

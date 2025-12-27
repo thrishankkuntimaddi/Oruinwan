@@ -223,13 +223,13 @@ const MyTasks = () => {
             <div className="relative" ref={sortMenuRef}>
               <button
                 onClick={() => setShowSortMenu(!showSortMenu)}
-                className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border transition-all duration-200 font-medium text-sm ${showSortMenu
+                className={`flex items-center justify-center p-2.5 rounded-xl border transition-all duration-200 font-medium text-sm ${showSortMenu
                   ? "bg-blue-50 border-blue-200 text-blue-700 dark:bg-blue-900/30 dark:border-blue-800 dark:text-blue-300"
                   : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-gray-300"
                   } shadow-sm`}
+                title="Sort"
               >
-                <ArrowUpDown size={16} />
-                <span>Sort</span>
+                <ArrowUpDown size={18} />
               </button>
 
               {showSortMenu && (

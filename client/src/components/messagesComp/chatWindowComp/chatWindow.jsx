@@ -139,6 +139,7 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
       // Deletion
       isDeletedUniversally: m.isDeletedUniversally || false,
       deletedBy: m.deletedBy || null,
+      deletedByName: m.deletedByName || null,
       deletedAt: m.deletedAt || null,
       hiddenFor: m.hiddenFor || [],
 
@@ -1632,7 +1633,7 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
 
       {channelManagementTab && (
         <ChannelManagementModal
-          chat={chat}
+          channel={chat}
           initialTab={channelManagementTab}
           onClose={() => setChannelManagementTab(null)}
           currentUserId={currentUserIdRef.current}

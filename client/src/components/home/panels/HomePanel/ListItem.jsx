@@ -49,15 +49,24 @@ const ListItem = ({ item, isSelectionMode, selectedItems, setSelectedItems, togg
                 {/* Channel/DM Icon or Avatar */}
                 {item.type === 'dm' ? (
                     <div className="relative">
-                        <div className={`w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs shadow-inner ${isActive ? "bg-blue-200 text-blue-700" : "bg-gradient-to-br from-blue-100 to-indigo-100 dark:from-blue-900 dark:to-indigo-900 text-blue-600 dark:text-blue-300"
+                        {/* Dynamic avatar color based on user status */}
+                        <div className={`w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs shadow-inner ${isActive
+                                ? "bg-blue-200 text-blue-700"
+                                : item.avatarColor === 'green'
+                                    ? "bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300"
+                                    : item.avatarColor === 'yellow'
+                                        ? "bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-300"
+                                        : item.avatarColor === 'red'
+                                            ? "bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300"
+                                            : "bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
                             }`}>
                             {item.label.charAt(0).toUpperCase()}
                         </div>
                         {/* Status Indicator */}
                         <div className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-white dark:border-gray-900 ${item.status === "active" || item.status === "online" ? "bg-green-500" :
-                                item.status === "away" ? "bg-yellow-500" :
-                                    item.status === "dnd" || item.status === "busy" ? "bg-red-500" :
-                                        "bg-gray-400"
+                            item.status === "away" ? "bg-yellow-500" :
+                                item.status === "dnd" || item.status === "busy" ? "bg-red-500" :
+                                    "bg-gray-400"
                             }`}></div>
                     </div>
                 ) : (
