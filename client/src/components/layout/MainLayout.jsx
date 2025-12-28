@@ -2,8 +2,10 @@ import React, { useState, useRef, useEffect } from "react";
 import IconSidebar from "./IconSidebar";
 import ProfileMenu from "../SidebarComp/ProfileSidebar";
 import ChttrixAIChat from "../ai/ChttrixAIChat/ChttrixAIChat";
+import UniversalSearch from "../common/UniversalSearch";
 import { useWorkspace } from "../../contexts/WorkspaceContext";
-import { Bot, BookOpen, Command, Bug, Sparkles, Search, MessageCircle, X } from "lucide-react";
+import { useUniversalSearch } from "../../hooks/useUniversalSearch";
+import { Bot, BookOpen, Command, Bug, Sparkles, Search, MessageCircle, X, Loader2 } from "lucide-react";
 
 const MainLayout = ({ children, sidePanel }) => {
     const { activeWorkspace } = useWorkspace();
@@ -12,56 +14,24 @@ const MainLayout = ({ children, sidePanel }) => {
     const [aiWidth, setAiWidth] = useState(350);
     const [sidePanelWidth, setSidePanelWidth] = useState(270);
 
-    // Search State
-    const [searchQuery, setSearchQuery] = useState("");
-    const [showSearchResults, setShowSearchResults] = useState(false);
-    const [searchResults, setSearchResults] = useState({ channels: [], dms: [], files: [] });
-    const [recentSearches, setRecentSearches] = useState([]);
+    // Universal Search State
+    // Universal Search State
+    const [showUniversalSearch, setShowUniversalSearch] = useState(false);
+    const { query, setQuery, results, loading, clearSearch } = useUniversalSearch(activeWorkspace?._id);
+    const searchInputRef = useRef(null);
 
-    // Search Logic - TODO: Replace with actual API call
+    // Keyboard shortcut for search (Cmd+K / Ctrl+K)
     useEffect(() => {
-        if (!searchQuery.trim()) {
-            setSearchResults({ channels: [], dms: [], files: [] });
-            return;
-        }
-
-        // Mock data simulating API search
-        const mockChannels = [
-            { id: 'c1', type: 'channel', name: 'general', icon: '📢' },
-            { id: 'c2', type: 'channel', name: 'announcements', icon: '📣' },
-            { id: 'c3', type: 'channel', name: 'engineering', icon: '⚙️' },
-        ];
-
-        const mockDMs = [
-            { id: 'd1', type: 'dm', name: 'Sarah Connor', avatar: 'SC' },
-            { id: 'd2', type: 'dm', name: 'Alice Smith', avatar: 'AS' },
-        ];
-
-        const mockFiles = [
-            { id: 'f1', type: 'file', name: 'Q4_Report.pdf', uploadedBy: 'Thrishank' },
-            { id: 'f2', type: 'file', name: 'Design_Mockups.fig', uploadedBy: 'Sarah' },
-        ];
-
-        const filteredChannels = mockChannels.filter(ch => ch.name.toLowerCase().includes(searchQuery.toLowerCase()));
-        const filteredDMs = mockDMs.filter(dm => dm.name.toLowerCase().includes(searchQuery.toLowerCase()));
-        const filteredFiles = mockFiles.filter(f => f.name.toLowerCase().includes(searchQuery.toLowerCase()));
-
-        setSearchResults({
-            channels: filteredChannels,
-            dms: filteredDMs,
-            files: filteredFiles
-        });
-    }, [searchQuery]);
-
-    const handleResultClick = (item) => {
-        // Add to recent searches if not already present
-        if (!recentSearches.find(r => r.id === item.id)) {
-            setRecentSearches(prev => [item, ...prev].slice(0, 5)); // Keep last 5
-        }
-        setSearchQuery(""); // Clear input
-        setShowSearchResults(false);
-        // In a real app, navigate to the item here
-    };
+        const handleKeyDown = (e) => {
+            if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+                e.preventDefault();
+                setShowUniversalSearch(true);
+                searchInputRef.current?.focus();
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, []);
 
     // Help State
     const [showHelp, setShowHelp] = useState(false);
@@ -257,127 +227,61 @@ const MainLayout = ({ children, sidePanel }) => {
                 <div className="w-20"></div>
 
                 {/* Center: Search Bar */}
-                <div className="flex-1 max-w-xl mx-auto relative">
-                    <div className="relative">
-                        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <div className="flex-1 max-w-xl mx-auto relative z-[70]">
+                    <div
+                        className={`w-full flex items-center gap-2 px-3 py-1.5 bg-gray-100 dark:bg-gray-800 rounded text-sm transition-all border ${showUniversalSearch ? 'border-blue-500 ring-2 ring-blue-100 dark:ring-blue-900/30' : 'border-transparent hover:border-blue-500'}`}
+                    >
+                        <Search size={14} className="text-gray-400 flex-shrink-0" />
                         <input
+                            ref={searchInputRef}
                             type="text"
-                            value={searchQuery}
+                            value={query}
                             onChange={(e) => {
-                                setSearchQuery(e.target.value);
-                                setShowSearchResults(true);
+                                setQuery(e.target.value);
+                                if (!showUniversalSearch) setShowUniversalSearch(true);
                             }}
-                            onFocus={() => {
-                                setShowSearchResults(true);
-                            }}
-                            onBlur={() => setTimeout(() => setShowSearchResults(false), 200)} // Delay to allow clicking results
+                            onFocus={() => setShowUniversalSearch(true)}
                             placeholder="Search Chttrix..."
-                            className="w-full pl-8 pr-3 py-1.5 bg-gray-100 dark:bg-gray-800 rounded text-sm text-gray-700 dark:text-gray-200 placeholder-gray-500 dark:placeholder-gray-500 focus:bg-white dark:focus:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all border border-transparent focus:border-blue-500"
+                            className="flex-1 bg-transparent border-none outline-none text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 min-w-0"
                         />
+                        {loading && <Loader2 size={14} className="text-blue-500 animate-spin flex-shrink-0" />}
+                        {query && !loading && (
+                            <button
+                                onClick={clearSearch}
+                                className="p-0.5 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full transition-colors"
+                            >
+                                <X size={14} className="text-gray-400" />
+                            </button>
+                        )}
+                        <div className="ml-auto flex items-center gap-1 flex-shrink-0 pointer-events-none">
+                            <kbd className="px-1.5 py-0.5 bg-white dark:bg-gray-900 rounded text-xs font-mono border border-gray-300 dark:border-gray-600">
+                                {navigator.platform.includes('Mac') ? '⌘' : 'Ctrl'}
+                            </kbd>
+                            <kbd className="px-1.5 py-0.5 bg-white dark:bg-gray-900 rounded text-xs font-mono border border-gray-300 dark:border-gray-600">
+                                K
+                            </kbd>
+                        </div>
                     </div>
 
-                    {/* Search Results Dropdown */}
-                    {showSearchResults && (
-                        <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 overflow-hidden z-50 animate-fade-in max-h-[400px] overflow-y-auto">
-
-                            {/* Case 1: Search Query is Empty -> Show Recent Searches */}
-                            {!searchQuery.trim() && (
-                                <>
-                                    {recentSearches.length > 0 ? (
-                                        <div className="p-2">
-                                            <div className="text-xs font-bold text-gray-500 uppercase px-3 py-1 mb-1">Recent Searches</div>
-                                            {recentSearches.map(item => (
-                                                <div
-                                                    key={item.id}
-                                                    onClick={() => handleResultClick(item)}
-                                                    className="hover:bg-gray-100 px-3 py-2 rounded-lg cursor-pointer text-sm text-gray-700 flex items-center group transition-colors"
-                                                >
-                                                    <span className="mr-3 text-gray-400 group-hover:text-blue-500">
-                                                        {item.type === 'channel' ? '#' : item.type === 'dm' ? '�' : '📄'}
-                                                    </span>
-                                                    {item.name}
-                                                </div>
-                                            ))}
-                                        </div>
-                                    ) : (
-                                        <div className="p-4 text-center text-sm text-gray-500">
-                                            No recent searches
-                                        </div>
-                                    )}
-                                </>
-                            )}
-
-                            {/* Case 2: Search Query Exists -> Show Results */}
-                            {searchQuery.trim() && (
-                                <>
-                                    {/* Channels */}
-                                    {searchResults.channels.length > 0 && (
-                                        <div className="p-2 border-b border-gray-100">
-                                            <div className="text-xs font-bold text-gray-500 uppercase px-3 py-1 mb-1">Channels</div>
-                                            {searchResults.channels.map(item => (
-                                                <div
-                                                    key={item.id}
-                                                    onClick={() => handleResultClick(item)}
-                                                    className="hover:bg-gray-100 px-3 py-2 rounded-lg cursor-pointer text-sm text-gray-700 flex items-center group transition-colors"
-                                                >
-                                                    <span className="mr-3 text-gray-400 group-hover:text-blue-500">#</span>
-                                                    <span className="font-medium">{item.name}</span>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-
-                                    {/* Direct Messages */}
-                                    {searchResults.dms.length > 0 && (
-                                        <div className="p-2 border-b border-gray-100">
-                                            <div className="text-xs font-bold text-gray-500 uppercase px-3 py-1 mb-1">Direct Messages</div>
-                                            {searchResults.dms.map(item => (
-                                                <div
-                                                    key={item.id}
-                                                    onClick={() => handleResultClick(item)}
-                                                    className="hover:bg-gray-100 px-3 py-2 rounded-lg cursor-pointer text-sm text-gray-700 flex items-center group transition-colors"
-                                                >
-                                                    <span className="mr-3 text-gray-400 group-hover:text-blue-500">👤</span>
-                                                    <span>{item.name}</span>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-
-                                    {/* Files */}
-                                    {searchResults.files.length > 0 && (
-                                        <div className="p-2 border-b border-gray-100">
-                                            <div className="text-xs font-bold text-gray-500 uppercase px-3 py-1 mb-1">Files</div>
-                                            {searchResults.files.map(item => (
-                                                <div
-                                                    key={item.id}
-                                                    onClick={() => handleResultClick(item)}
-                                                    className="hover:bg-gray-100 px-3 py-2 rounded-lg cursor-pointer text-sm text-gray-700 flex items-center group transition-colors"
-                                                >
-                                                    <span className="mr-3 text-gray-400 group-hover:text-blue-500">📄</span>
-                                                    <span>{item.name}</span>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-
-                                    {/* No Results Found */}
-                                    {searchResults.channels.length === 0 &&
-                                        searchResults.dms.length === 0 &&
-                                        searchResults.files.length === 0 && (
-                                            <div className="p-8 text-center">
-                                                <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3 text-gray-400">
-                                                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-                                                </div>
-                                                <p className="text-gray-900 font-medium">Nothing to show</p>
-                                                <p className="text-xs text-gray-500 mt-1">We couldn't find anything matching "{searchQuery}"</p>
-                                            </div>
-                                        )}
-                                </>
-                            )}
-                        </div>
+                    {/* Universal Search Dropdown */}
+                    {showUniversalSearch && activeWorkspace && (
+                        <>
+                            {/* Backdrop */}
+                            <div
+                                className="fixed inset-0 z-[80]"
+                                onClick={() => setShowUniversalSearch(false)}
+                            />
+                            <UniversalSearch
+                                workspaceId={activeWorkspace._id}
+                                onClose={() => setShowUniversalSearch(false)}
+                                results={results}
+                                loading={loading}
+                                query={query}
+                            />
+                        </>
                     )}
                 </div>
+
 
                 {/* Right: Utilities */}
                 <div className="flex items-center space-x-4 w-20 justify-end relative">
@@ -387,7 +291,6 @@ const MainLayout = ({ children, sidePanel }) => {
                     >
                         Help
                     </button>
-
 
                     <button
                         onClick={() => setShowAI(!showAI)}
@@ -526,7 +429,7 @@ const MainLayout = ({ children, sidePanel }) => {
 
             {/* Overlays */}
             {showProfile && <ProfileMenu onClose={() => setShowProfile(false)} />}
-        </div>
+        </div >
     );
 };
 
