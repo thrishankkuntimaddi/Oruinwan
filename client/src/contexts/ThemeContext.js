@@ -7,7 +7,7 @@ const ThemeContext = createContext();
 export const useTheme = () => useContext(ThemeContext);
 
 export const ThemeProvider = ({ children }) => {
-    const { user } = useAuth();
+    const { user, setUser } = useAuth();
 
     // state: 'light' | 'dark' | 'auto'
     // Initialize from local storage first to prevent flash, will sync with user pref later
@@ -21,6 +21,7 @@ export const ThemeProvider = ({ children }) => {
 
     // 1. Sync FROM backend (user preference) when user loads/changes
     useEffect(() => {
+        // Only sync if the user has a preference and it's different from current
         if (user?.preferences?.theme) {
             const backendTheme = user.preferences.theme;
             if (backendTheme !== theme) {
@@ -28,7 +29,7 @@ export const ThemeProvider = ({ children }) => {
                 setTheme(backendTheme);
             }
         }
-    }, [user?.preferences?.theme, theme]); // Safe dependency - only updates when backend theme changes
+    }, [user, theme]);
 
     // 2. Sync TO backend when theme changes (if user is logged in)
     const handleSetTheme = async (newTheme) => {
@@ -36,6 +37,17 @@ export const ThemeProvider = ({ children }) => {
 
         // Save to backend if user is logged in
         if (user) {
+            // Optimistically update the user object in AuthContext immediately
+            // This prevents the "Sync FROM backend" effect from reverting our change
+            const updatedUser = {
+                ...user,
+                preferences: {
+                    ...user.preferences,
+                    theme: newTheme
+                }
+            };
+            setUser(updatedUser);
+
             console.log(`💾 Saving theme preference: ${newTheme}`);
             try {
                 await api.put('/api/auth/me', {
@@ -44,6 +56,8 @@ export const ThemeProvider = ({ children }) => {
                 console.log(`✅ Theme saved successfully`);
             } catch (err) {
                 console.error("Failed to save theme preference:", err);
+                // Optional: Revert on failure if strict consistency is needed
+                // But generally better to leave the UI in the state the user picked
             }
         }
     };
