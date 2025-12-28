@@ -652,7 +652,7 @@ exports.getWorkspaceMembers = async (req, res) => {
 
     const workspace = await Workspace.findById(workspaceId).populate({
       path: 'members.user',
-      select: 'username email profilePicture isOnline lastLoginAt'
+      select: 'username email phone profilePicture isOnline userStatus profile lastLoginAt'
     });
 
     if (!workspace) {
@@ -672,7 +672,10 @@ exports.getWorkspaceMembers = async (req, res) => {
         _id: m.user._id,  // Changed from 'id' to '_id'
         username: m.user.username,  // Changed from 'name' to 'username'
         email: m.user.email,
+        phone: m.user.phone,  // Include phone
         profilePicture: m.user.profilePicture,  // Changed from 'avatar' to 'profilePicture'
+        userStatus: m.user.userStatus,  // Include user status
+        profile: m.user.profile,  // Include profile
         status: m.user.isOnline ? 'online' : 'offline',
         lastSeen: m.user.lastLoginAt,
         role: m.role

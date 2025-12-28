@@ -112,17 +112,37 @@ const MessagesPanel = ({ title }) => {
         setShowBroadcast(true);
     };
 
-    const handleSendBroadcast = async (selectedUsers, message) => {
+    const handleSendBroadcast = async (selectedItems, message) => {
         try {
             showToast('Sending broadcast...', 'info');
 
-            // Extract recipient IDs
-            const recipientIds = selectedUsers.map(u => u._id);
+            // Separate users and channels
+            const userRecipients = selectedItems.filter(item => item.type === 'dm' || item.type === 'member');
+            const channelRecipients = selectedItems.filter(item => item.type === 'channel');
 
-            // Send broadcast via messageService
-            await messageService.sendBroadcast(workspaceId, recipientIds, message);
+            const promises = [];
 
-            showToast(`Broadcast sent to ${selectedUsers.length} recipient(s) successfully!`, 'success');
+            // 1. Send to Users (DMs)
+            if (userRecipients.length > 0) {
+                const userIds = userRecipients.map(u => u.id); // Correctly extract 'id' property
+                promises.push(messageService.sendBroadcast(workspaceId, userIds, message));
+            }
+
+            // 2. Send to Channels
+            if (channelRecipients.length > 0) {
+                const channelPromises = channelRecipients.map(ch =>
+                    api.post('/api/messages/channel/send', {
+                        channelId: ch.id,
+                        text: message,
+                        attachments: []
+                    })
+                );
+                promises.push(...channelPromises);
+            }
+
+            await Promise.all(promises);
+
+            showToast(`Broadcast sent to ${selectedItems.length} recipient(s) successfully!`, 'success');
             setShowBroadcast(false);
 
             // Optionally refresh DM list to show new conversations
@@ -211,15 +231,22 @@ const MessagesPanel = ({ title }) => {
                         </div>
                     )}
                     <div className="relative">
+                        {/* Dynamic avatar color based on user status - matching HomePanel style */}
                         <div className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs shadow-inner
-                            ${isActive ? "bg-blue-200 text-blue-700" :
-                                isBroadcast ? "bg-purple-100 text-purple-600" :
-                                    "bg-gradient-to-br from-blue-100 to-indigo-100 text-blue-600"}
-                        `}>
+                            ${isActive ? "bg-blue-200 text-blue-700 dark:bg-blue-800 dark:text-blue-200" :
+                                item.status === "active" || item.status === "online"
+                                    ? "bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300"
+                                    : item.status === "away"
+                                        ? "bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-300"
+                                        : item.status === "dnd" || item.status === "busy"
+                                            ? "bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300"
+                                            : "bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
+                            }`}>
                             {isBroadcast ? <Megaphone size={14} /> : item.name.charAt(0).toUpperCase()}
                         </div>
+                        {/* Status Indicator */}
                         {!isBroadcast && (
-                            <div className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-white dark:border-gray-900 ${item.status === "active" || item.status === "online" ? "bg-green-500" :
+                            <div className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-white dark:border-gray-900 ${item.status === "active" || item.status === "online" ? "bg-green-500" :
                                 item.status === "away" ? "bg-yellow-500" :
                                     item.status === "dnd" || item.status === "busy" ? "bg-red-500" :
                                         "bg-gray-400"
@@ -379,6 +406,7 @@ const MessagesPanel = ({ title }) => {
             {/* Broadcast Modal */}
             {showBroadcast && (
                 <BroadcastModal
+                    workspaceId={workspaceId}
                     onClose={() => setShowBroadcast(false)}
                     onSendBroadcast={handleSendBroadcast}
                 />

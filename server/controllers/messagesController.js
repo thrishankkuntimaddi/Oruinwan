@@ -82,7 +82,7 @@ exports.sendChannelMessage = async (req, res) => {
       return res.status(404).json({ message: "Channel not found" });
 
     // Ensure user is a member of the channel
-    if (!channel.members.some(m => String(m) === String(senderId)))
+    if (!channel.isMember(senderId))
       return res.status(403).json({ message: "Not a channel member" });
 
     const message = await Message.create({
@@ -312,7 +312,7 @@ exports.getWorkspaceDMList = async (req, res) => {
     const sessions = await DMSession.find({
       workspace: workspaceId,
       participants: userId
-    }).populate("participants", "username email profilePicture isOnline");
+    }).populate("participants", "username email profilePicture isOnline userStatus");
 
     // Return sessions with recent message preview and unread counts
     const sessionList = await Promise.all(sessions.map(async (s) => {
