@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import {
     Clock, MoreHorizontal, Trash2, Share2, Star, Sparkles,
     Copy, Download, Info, Check, Type, Image as ImageIcon, Video, Mic
@@ -12,8 +12,19 @@ const Notes = () => {
     // ✅ CORRECT: Extract both workspaceId and note id from params
     // Note identity = workspace + noteId
     const { workspaceId, id } = useParams();
+    const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
     const { notes, updateNote, deleteNote, addNote, loading } = useNotes();
     const { showToast } = useToast();
+
+    // Handle query parameter navigation from universal search
+    useEffect(() => {
+        const noteIdParam = searchParams.get('noteId');
+        if (noteIdParam && noteIdParam !== id) {
+            console.log('📝 [Notes] Navigating to note from query param:', noteIdParam);
+            navigate(`/workspace/${workspaceId}/notes/${noteIdParam}`, { replace: true });
+        }
+    }, [searchParams, id, workspaceId, navigate]);
 
     // Find active note
     const note = notes.find(n => n.id === id);

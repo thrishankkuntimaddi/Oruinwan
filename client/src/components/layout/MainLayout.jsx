@@ -15,9 +15,8 @@ const MainLayout = ({ children, sidePanel }) => {
     const [sidePanelWidth, setSidePanelWidth] = useState(270);
 
     // Universal Search State
-    // Universal Search State
     const [showUniversalSearch, setShowUniversalSearch] = useState(false);
-    const { query, setQuery, results, loading, clearSearch } = useUniversalSearch(activeWorkspace?._id);
+    const { query, setQuery, results, loading, clearSearch } = useUniversalSearch(activeWorkspace?.id);
     const searchInputRef = useRef(null);
 
     // Keyboard shortcut for search (Cmd+K / Ctrl+K)
@@ -272,7 +271,7 @@ const MainLayout = ({ children, sidePanel }) => {
                                 onClick={() => setShowUniversalSearch(false)}
                             />
                             <UniversalSearch
-                                workspaceId={activeWorkspace._id}
+                                workspaceId={activeWorkspace.id}
                                 onClose={() => setShowUniversalSearch(false)}
                                 results={results}
                                 loading={loading}

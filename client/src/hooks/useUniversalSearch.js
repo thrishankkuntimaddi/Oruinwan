@@ -11,7 +11,7 @@ const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:500
 export const useUniversalSearch = (workspaceId, debounceMs = 300) => {
     const [query, setQuery] = useState('');
     const [debouncedQuery, setDebouncedQuery] = useState('');
-    const [results, setResults] = useState({ channels: [], contacts: [], messages: [] });
+    const [results, setResults] = useState({ channels: [], contacts: [], messages: [], tasks: [], notes: [] });
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
 
@@ -27,18 +27,25 @@ export const useUniversalSearch = (workspaceId, debounceMs = 300) => {
     // Perform search when debounced query changes
     useEffect(() => {
         const performSearch = async () => {
+            console.log('🔍 SEARCH HOOK - Query:', debouncedQuery, 'WorkspaceId:', workspaceId);
+
             if (!debouncedQuery.trim() || !workspaceId) {
-                setResults({ channels: [], contacts: [], messages: [] });
+                console.log('🔍 SEARCH HOOK - Empty query or no workspace, skipping search');
+                setResults({ channels: [], contacts: [], messages: [], tasks: [], notes: [] });
                 setLoading(false);
                 return;
             }
 
+            console.log('🔍 SEARCH HOOK - Starting search...');
             setLoading(true);
             setError(null);
 
             try {
                 const token = localStorage.getItem('accessToken');
-                const response = await axios.get(`${API_BASE_URL}/search/universal`, {
+                const url = `${API_BASE_URL}/search/universal`;
+                console.log('🔍 SEARCH HOOK - Calling API:', url, 'with params:', { workspaceId, query: debouncedQuery });
+
+                const response = await axios.get(url, {
                     params: {
                         workspaceId,
                         query: debouncedQuery
@@ -48,11 +55,13 @@ export const useUniversalSearch = (workspaceId, debounceMs = 300) => {
                     }
                 });
 
+                console.log('🔍 SEARCH HOOK - API Response:', response.data);
                 setResults(response.data);
             } catch (err) {
-                console.error('Search error:', err);
+                console.error('🔍 SEARCH HOOK - Error:', err);
+                console.error('🔍 SEARCH HOOK - Error details:', err.response?.data);
                 setError(err.response?.data?.message || 'Search failed');
-                setResults({ channels: [], contacts: [], messages: [] });
+                setResults({ channels: [], contacts: [], messages: [], tasks: [], notes: [] });
             } finally {
                 setLoading(false);
             }
@@ -64,7 +73,7 @@ export const useUniversalSearch = (workspaceId, debounceMs = 300) => {
     const clearSearch = useCallback(() => {
         setQuery('');
         setDebouncedQuery('');
-        setResults({ channels: [], contacts: [], messages: [] });
+        setResults({ channels: [], contacts: [], messages: [], tasks: [], notes: [] });
         setError(null);
     }, []);
 
@@ -75,6 +84,6 @@ export const useUniversalSearch = (workspaceId, debounceMs = 300) => {
         loading,
         error,
         clearSearch,
-        hasResults: results.channels.length > 0 || results.contacts.length > 0 || results.messages.length > 0
+        hasResults: results.channels.length > 0 || results.contacts.length > 0 || results.messages.length > 0 || results.tasks.length > 0 || results.notes.length > 0
     };
 };

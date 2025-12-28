@@ -3,6 +3,8 @@ const Channel = require("../models/Channel");
 const User = require("../models/User");
 const Message = require("../models/Message");
 const Workspace = require("../models/Workspace");
+const Task = require("../models/Task");
+const Note = require("../models/Note");
 
 /**
  * Universal Search - Search across channels, contacts, and messages
@@ -31,16 +33,30 @@ exports.universalSearch = async (req, res) => {
         }
 
         // Parallel search across all categories
-        const [channels, contacts, messages] = await Promise.all([
+        const [channels, contacts, messages, tasks, notes] = await Promise.all([
             searchChannels(workspaceId, userId, searchRegex),
             searchContacts(workspaceId, userId, searchRegex),
-            searchMessages(workspaceId, userId, searchRegex)
+            searchMessages(workspaceId, userId, searchRegex),
+            searchTasks(workspaceId, userId, searchRegex),
+            searchNotes(workspaceId, userId, searchRegex)
         ]);
+
+        console.log('🔍 UNIVERSAL SEARCH RESULTS:');
+        console.log('Query:', searchTerm);
+        console.log('WorkspaceId:', workspaceId);
+        console.log('UserId:', userId);
+        console.log('Channels found:', channels.length, channels);
+        console.log('Contacts found:', contacts.length, contacts);
+        console.log('Messages found:', messages.length, messages);
+        console.log('Tasks found:', tasks.length, tasks);
+        console.log('Notes found:', notes.length, notes);
 
         return res.json({
             channels,
             contacts,
             messages,
+            tasks,
+            notes,
             query: searchTerm
         });
     } catch (err) {
@@ -217,4 +233,118 @@ async function searchMessages(workspaceId, userId, searchRegex) {
 function truncateText(text, maxLength) {
     if (text.length <= maxLength) return text;
     return text.substring(0, maxLength) + "...";
+}
+
+/**
+ * Search tasks by title, description, and tags
+ */
+async function searchTasks(workspaceId, userId, searchRegex) {
+    try {
+        // Find tasks in this workspace that the user can access
+        const tasks = await Task.find({
+            workspace: workspaceId,
+            deleted: false,
+            $or: [
+                { title: searchRegex },
+                { description: searchRegex },
+                { tags: searchRegex }
+            ],
+            $and: [
+                {
+                    $or: [
+                        { visibility: "workspace" }, // Workspace-visible tasks
+                        { createdBy: userId }, // Created by user
+                        { assignedTo: userId } // Assigned to user
+                        // Note: channel-specific tasks would need channel membership check
+                    ]
+                }
+            ]
+        })
+            .select("title description status priority dueDate visibility createdBy assignedTo tags createdAt")
+            .populate("createdBy", "username profilePicture")
+            .populate("assignedTo", "username profilePicture")
+            .sort({ createdAt: -1 })
+            .limit(10) // Limit to 10 task results
+            .lean();
+
+        // Format results
+        return tasks.map(task => ({
+            id: task._id,
+            type: "task",
+            title: task.title,
+            description: truncateText(task.description || "", 100),
+            status: task.status,
+            priority: task.priority,
+            dueDate: task.dueDate,
+            visibility: task.visibility,
+            createdBy: {
+                id: task.createdBy._id,
+                name: task.createdBy.username,
+                profilePicture: task.createdBy.profilePicture
+            },
+            assignedTo: task.assignedTo?.map(user => ({
+                id: user._id,
+                name: user.username,
+                profilePicture: user.profilePicture
+            })) || [],
+            tags: task.tags || [],
+            createdAt: task.createdAt
+        }));
+    } catch (err) {
+        console.error("Search tasks error:", err);
+        return [];
+    }
+}
+
+/**
+ * Search notes by title, content, and tags
+ */
+async function searchNotes(workspaceId, userId, searchRegex) {
+    try {
+        // Find notes in this workspace that the user can access
+        const notes = await Note.find({
+            workspace: workspaceId,
+            isArchived: false,
+            $or: [
+                { title: searchRegex },
+                { content: searchRegex },
+                { tags: searchRegex }
+            ],
+            $and: [
+                {
+                    $or: [
+                        { owner: userId }, // Owned by user
+                        { isPublic: true }, // Public notes
+                        { sharedWith: userId } // Shared with user
+                    ]
+                }
+            ]
+        })
+            .select("title content type isPublic owner tags createdAt isPinned")
+            .populate("owner", "username profilePicture")
+            .sort({ isPinned: -1, createdAt: -1 }) // Pinned notes first
+            .limit(10) // Limit to 10 note results
+            .lean();
+
+        // Format results
+        return notes.map(note => ({
+            id: note._id,
+            type: "note",
+            title: note.title,
+            preview: truncateText(note.content || "", 100),
+            noteType: note.type,
+            isPublic: note.isPublic,
+            isPinned: note.isPinned,
+            owner: {
+                id: note.owner._id,
+                name: note.owner.username,
+                profilePicture: note.owner.profilePicture
+            },
+            tags: note.tags || [],
+            createdAt: note.createdAt
+        }));
+    } catch (err) {
+        console.error("Search notes error:", err);
+        return [];
+    }
 }

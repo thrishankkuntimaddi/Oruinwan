@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Hash, User, MessageSquare, Lock } from 'lucide-react';
+import { Search, Hash, User, MessageSquare, Lock, CheckSquare, FileText } from 'lucide-react';
 import axios from 'axios';
 
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000/api';
@@ -8,7 +8,7 @@ const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:500
 export default function UniversalSearch({ workspaceId, onClose, results, loading, query }) {
     const navigate = useNavigate();
 
-    const hasResults = results.channels.length > 0 || results.contacts.length > 0 || results.messages.length > 0;
+    const hasResults = results.channels.length > 0 || results.contacts.length > 0 || results.messages.length > 0 || results.tasks.length > 0 || results.notes.length > 0;
 
 
     // Handle ESC key to close
@@ -24,7 +24,10 @@ export default function UniversalSearch({ workspaceId, onClose, results, loading
 
     // Handle channel navigation
     const handleChannelClick = (channel) => {
-        navigate(`/workspace/${workspaceId}/messages?channel=${channel.id}`);
+        const navPath = `/workspace/${workspaceId}/messages?channel=${channel.id}`;
+        console.log('🔍 [UniversalSearch] Navigating to channel:', navPath);
+        console.log('🔍 [UniversalSearch] Channel:', channel);
+        navigate(navPath);
         onClose();
     };
 
@@ -63,11 +66,51 @@ export default function UniversalSearch({ workspaceId, onClose, results, loading
 
     // Handle message navigation
     const handleMessageClick = (message) => {
+        console.log('🔍 [UniversalSearch] Navigating to message:', message);
         if (message.parent.type === 'channel') {
-            navigate(`/workspace/${workspaceId}/messages?channel=${message.parent.id}&highlight=${message.id}`);
+            const navPath = `/workspace/${workspaceId}/messages?channel=${message.parent.id}&highlight=${message.id}`;
+            console.log('🔍 [UniversalSearch] Channel message path:', navPath);
+            navigate(navPath);
         } else {
-            navigate(`/workspace/${workspaceId}/messages?dm=${message.parent.id}&highlight=${message.id}`);
+            const navPath = `/workspace/${workspaceId}/messages?dm=${message.parent.id}&highlight=${message.id}`;
+            console.log('🔍 [UniversalSearch] DM message path:', navPath);
+            navigate(navPath);
         }
+        onClose();
+    };
+
+    // Handle task navigation
+    const handleTaskClick = (task) => {
+        console.log('✅ [UniversalSearch] Navigating to task:', task);
+
+        // Determine the appropriate filter based on task properties
+        let filter = 'incoming'; // default
+
+        if (task.status === 'done') {
+            filter = 'completed';
+        } else if (task.deleted) {
+            filter = 'deleted';
+        } else if (task.assignedTo && task.assignedTo.length > 0) {
+            // Check if task is assigned to someone else (delegated) or to current user
+            const isAssignedToOthers = task.assignedTo.some(assignee => assignee.id !== task.createdBy.id);
+            if (isAssignedToOthers && task.createdBy.id === localStorage.getItem('userId')) {
+                filter = 'delegated';
+            } else {
+                filter = 'incoming';
+            }
+        } else if (task.visibility === 'private') {
+            filter = 'personal';
+        }
+
+        console.log('✅ [UniversalSearch] Task filter:', filter);
+        navigate(`/workspace/${workspaceId}/tasks?filter=${filter}&taskId=${task.id}`);
+        onClose();
+    };
+
+    // Handle note navigation
+    const handleNoteClick = (note) => {
+        console.log('📝 [UniversalSearch] Navigating to note:', note);
+        navigate(`/workspace/${workspaceId}/notes?noteId=${note.id}`);
         onClose();
     };
 
@@ -205,7 +248,7 @@ export default function UniversalSearch({ workspaceId, onClose, results, loading
 
                 {/* Messages Section */}
                 {results.messages.length > 0 && (
-                    <div>
+                    <div className="border-b border-gray-100 dark:border-gray-800">
                         <div className="px-4 py-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-900/50">
                             Messages (3 most recent)
                         </div>
@@ -242,6 +285,100 @@ export default function UniversalSearch({ workspaceId, onClose, results, loading
                                 </div>
                                 <div className="text-xs text-gray-400 dark:text-gray-500 flex-shrink-0">
                                     {formatTime(message.createdAt)}
+                                </div>
+                            </button>
+                        ))}
+                    </div>
+                )}
+
+                {/* Tasks Section */}
+                {results.tasks.length > 0 && (
+                    <div className="border-b border-gray-100 dark:border-gray-800">
+                        <div className="px-4 py-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-900/50">
+                            Tasks
+                        </div>
+                        {results.tasks.map((task) => (
+                            <button
+                                key={task.id}
+                                onClick={() => handleTaskClick(task)}
+                                className="w-full px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800/50 flex items-start gap-3 transition-colors text-left group"
+                            >
+                                <CheckSquare size={18} className={`mt-0.5 flex-shrink-0 ${task.status === 'done' ? 'text-green-500' : 'text-blue-500'
+                                    }`} />
+                                <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2 mb-1">
+                                        <span className="font-medium text-sm text-gray-900 dark:text-gray-100 truncate">
+                                            {task.title}
+                                        </span>
+                                        <span className={`px-1.5 py-0.5 text-xs rounded-full ${task.priority === 'urgent' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
+                                            task.priority === 'high' ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400' :
+                                                task.priority === 'medium' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' :
+                                                    'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400'
+                                            }`}>
+                                            {task.priority}
+                                        </span>
+                                    </div>
+                                    {task.description && (
+                                        <div className="text-xs text-gray-500 dark:text-gray-400 line-clamp-1 mb-1">
+                                            {task.description}
+                                        </div>
+                                    )}
+                                    <div className="flex items-center gap-2 text-xs text-gray-400 dark:text-gray-500">
+                                        <span>by {task.createdBy.name}</span>
+                                        {task.assignedTo.length > 0 && (
+                                            <span>• assigned to {task.assignedTo.length} {task.assignedTo.length === 1 ? 'person' : 'people'}</span>
+                                        )}
+                                    </div>
+                                </div>
+                                <div className="text-xs text-gray-400 dark:text-gray-500 flex-shrink-0">
+                                    {formatTime(task.createdAt)}
+                                </div>
+                            </button>
+                        ))}
+                    </div>
+                )}
+
+                {/* Notes Section */}
+                {results.notes.length > 0 && (
+                    <div>
+                        <div className="px-4 py-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-900/50">
+                            Notes
+                        </div>
+                        {results.notes.map((note) => (
+                            <button
+                                key={note.id}
+                                onClick={() => handleNoteClick(note)}
+                                className="w-full px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800/50 flex items-start gap-3 transition-colors text-left group"
+                            >
+                                <FileText size={18} className="text-purple-500 dark:text-purple-400 mt-0.5 flex-shrink-0" />
+                                <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2 mb-1">
+                                        <span className="font-medium text-sm text-gray-900 dark:text-gray-100 truncate">
+                                            {note.title}
+                                        </span>
+                                        {note.isPinned && (
+                                            <span className="text-xs text-yellow-600 dark:text-yellow-500">📌</span>
+                                        )}
+                                        {note.isPublic && (
+                                            <span className="px-1.5 py-0.5 text-xs rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+                                                Public
+                                            </span>
+                                        )}
+                                    </div>
+                                    {note.preview && (
+                                        <div className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2 mb-1">
+                                            {note.preview}
+                                        </div>
+                                    )}
+                                    <div className="flex items-center gap-2 text-xs text-gray-400 dark:text-gray-500">
+                                        <span>by {note.owner.name}</span>
+                                        {note.tags.length > 0 && (
+                                            <span>• {note.tags.slice(0, 2).join(', ')}{note.tags.length > 2 ? '...' : ''}</span>
+                                        )}
+                                    </div>
+                                </div>
+                                <div className="text-xs text-gray-400 dark:text-gray-500 flex-shrink-0">
+                                    {formatTime(note.createdAt)}
                                 </div>
                             </button>
                         ))}

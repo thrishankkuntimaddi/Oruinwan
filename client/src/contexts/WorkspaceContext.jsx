@@ -54,6 +54,7 @@ export const WorkspaceProvider = ({ children }) => {
 
                         if (active) {
                             console.log('✅ [WorkspaceContext] Active workspace set:', active.name);
+                            console.log('🆔 [WorkspaceContext] Workspace ID:', active.id);
                             setActiveWorkspace(active);
                         } else {
                             console.warn('⚠️ [WorkspaceContext] WorkspaceId not found in user workspaces:', workspaceId);
