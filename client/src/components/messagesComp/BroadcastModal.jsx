@@ -78,12 +78,6 @@ export default function BroadcastModal({ workspaceId, onClose, onSendBroadcast }
     const handleSend = () => {
         if (!message.trim() || selectedItems.length === 0) return;
 
-        // Extract user IDs (for DMs and members)
-        const userIds = selectedItems
-            .filter(item => item.type === 'dm' || item.type === 'member')
-            .map(item => item.id);
-
-        // For now, we only send to users (channels can be added later)
         onSendBroadcast(selectedItems, message);
     };
 

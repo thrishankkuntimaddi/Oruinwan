@@ -53,7 +53,6 @@ export default function DMChatWindow({ chat, onClose, onDeleteChat }) {
 
                 // If token expires in less than 60 seconds, refresh it proactively
                 if (decoded.exp && decoded.exp - now < 60) {
-                    console.log('🔄 [DMChatWindow] Token expiring soon, refreshing proactively...');
 
                     try {
                         const response = await api.post('/api/auth/refresh', {}, {
@@ -62,7 +61,6 @@ export default function DMChatWindow({ chat, onClose, onDeleteChat }) {
 
                         token = response.data.accessToken;
                         localStorage.setItem('accessToken', token);
-                        console.log('✅ [DMChatWindow] Token refreshed before socket connection');
                     } catch (refreshError) {
                         console.error('❌ [DMChatWindow] Failed to refresh token:', refreshError);
                         showToast("Session expired. Please login again.", "error");
@@ -90,7 +88,6 @@ export default function DMChatWindow({ chat, onClose, onDeleteChat }) {
             socketRef.current = socket;
 
             socket.on("connect", () => {
-                console.log("✅ DM Socket connected");
                 setConnected(true);
 
                 // Join DM room if it's not a new DM
@@ -100,13 +97,11 @@ export default function DMChatWindow({ chat, onClose, onDeleteChat }) {
             });
 
             socket.on("disconnect", () => {
-                console.log("❌ DM Socket disconnected");
                 setConnected(false);
             });
 
             // Listen for new messages
             socket.on("new-message", ({ message, clientTempId }) => {
-                console.log("📨 Received new message:", message);
 
                 // Remove pending optimistic message if exists
                 if (clientTempId && pendingMessagesRef.current[clientTempId]) {

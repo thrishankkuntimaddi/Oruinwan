@@ -70,8 +70,6 @@ exports.createWorkspace = async (req, res) => {
       }
     });
 
-    console.log(`✅ Workspace created: ${workspace.name} (${workspace.type})`);
-
     // Create default channels (#general and #announcements)
     const generalChannel = await Channel.create({
       workspace: workspace._id,
@@ -94,8 +92,6 @@ exports.createWorkspace = async (req, res) => {
       createdBy: userId,
       members: [{ user: userId, joinedAt: new Date() }]
     });
-
-    console.log(`   ✅ Default channels created: #general, #announcements`);
 
     // Update workspace with default channels
     workspace.defaultChannels = [generalChannel._id, announcementsChannel._id];
@@ -138,7 +134,6 @@ exports.createWorkspace = async (req, res) => {
 exports.listMyWorkspaces = async (req, res) => {
   try {
     const userId = req.user?.sub;
-    console.log('🔍 listMyWorkspaces called for user:', userId);
 
     const user = await User.findById(userId).populate({
       path: 'workspaces.workspace',
@@ -146,12 +141,8 @@ exports.listMyWorkspaces = async (req, res) => {
     });
 
     if (!user) {
-      console.log('❌ User not found:', userId);
       return res.status(404).json({ message: "User not found" });
     }
-
-    console.log('👤 User found:', user.username);
-    console.log('📋 User workspaces array:', user.workspaces);
 
     // Filter to only return workspaces where user is actually a member
     const workspacesWithOwner = await Promise.all(
@@ -162,8 +153,6 @@ exports.listMyWorkspaces = async (req, res) => {
           const workspace = await Workspace.findById(ws.workspace._id)
             .populate('createdBy', 'username')
             .lean();
-
-          console.log(`📊 Workspace "${ws.workspace.name}": createdBy =`, workspace?.createdBy);
 
           return {
             id: ws.workspace._id,
@@ -181,7 +170,6 @@ exports.listMyWorkspaces = async (req, res) => {
         })
     );
 
-    console.log('✅ Returning workspaces with owner info:', workspacesWithOwner);
     return res.json({ workspaces: workspacesWithOwner });
   } catch (err) {
     console.error("LIST MY WORKSPACES ERROR:", err);

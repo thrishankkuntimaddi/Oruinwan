@@ -53,29 +53,12 @@ const ChannelsPanel = ({ title }) => {
     // Fetch workspace-specific channels (✅ CORRECT ENDPOINT)
     useEffect(() => {
         const fetchChannels = async () => {
-            if (!workspaceId) {
-                console.log('⚠️ No workspace ID available');
-                return;
-            }
+            if (!workspaceId) return;
 
             try {
                 setIsLoadingChannels(true);
-                console.log('📡 Fetching channels for workspace:', workspaceId);
-
                 // ✅ CORRECT: Use workspace-specific endpoint
                 const response = await api.get(`/api/workspaces/${workspaceId}/channels`);
-
-                console.log('📋 Channels received:', response.data.channels);
-
-                // 🔍 DEBUG: Check for workspace mismatches
-                console.log('\n🔍 DETAILED CHANNEL DEBUG:');
-                response.data.channels.forEach((ch, idx) => {
-                    console.log(`${idx + 1}. #${ch.name}`);
-                    console.log(`   - Channel ID: ${ch._id}`);
-                    console.log(`   - Workspace ID: ${ch.workspace}`);
-                    console.log(`   - Current Workspace: ${workspaceId}`);
-                    console.log(`   - Match: ${ch.workspace === workspaceId ? '✅' : '❌ MISMATCH!'}`);
-                });
 
                 // ✅ NO FILTERING NEEDED - Backend already returns only this workspace's channels
                 const mappedChannels = response.data.channels.map(ch => ({
@@ -88,18 +71,9 @@ const ChannelsPanel = ({ title }) => {
                     isDefault: ch.isDefault || false,
                     description: ch.description || '',
                     canDelete: !ch.isDefault, // ✅ Default channels cannot be deleted
-                    workspaceId: ch.workspace // ✅ Keep workspace ID for debugging
+                    workspaceId: ch.workspace
                 }));
 
-                // 🔍 DEBUG: Check for duplicate names
-                const names = mappedChannels.map(ch => ch.label);
-                const duplicates = names.filter((name, idx) => names.indexOf(name) !== idx);
-                if (duplicates.length > 0) {
-                    console.error('\n⚠️ DUPLICATE CHANNEL NAMES:', [...new Set(duplicates)]);
-                    console.error('This indicates the backend is returning duplicate channels!');
-                }
-
-                console.log(`✅ Loaded ${mappedChannels.length} channels for workspace ${workspaceId}`);
                 setChannels(mappedChannels);
                 setIsLoadingChannels(false);
             } catch (err) {
@@ -115,7 +89,6 @@ const ChannelsPanel = ({ title }) => {
     useEffect(() => {
         const handleVisibilityChange = () => {
             if (document.visibilityState === 'visible' && workspaceId) {
-                console.log('📱 Tab visible - refreshing channels...');
                 // Refetch channels when user returns to tab
                 const refetch = async () => {
                     try {
@@ -133,7 +106,6 @@ const ChannelsPanel = ({ title }) => {
                             workspaceId: ch.workspace
                         }));
                         setChannels(mappedChannels);
-                        console.log('✅ Channels refreshed');
                     } catch (err) {
                         console.error('Error refreshing channels:', err);
                     }
@@ -166,7 +138,6 @@ const ChannelsPanel = ({ title }) => {
                     workspaceId: ch.workspace
                 }));
                 setChannels(mappedChannels);
-                console.log('🔄 Auto-refreshed channels');
             } catch (err) {
                 console.error('Error auto-refreshing channels:', err);
             }
@@ -181,7 +152,6 @@ const ChannelsPanel = ({ title }) => {
 
         // Register channel event handler
         const handleChannelEvent = (eventType, data) => {
-            console.log(`📢 [ChannelsPanel] ${eventType}:`, data);
 
             switch (eventType) {
                 case 'channel-created':

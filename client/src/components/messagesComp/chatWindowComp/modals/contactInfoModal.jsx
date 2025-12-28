@@ -10,40 +10,22 @@ export default function ContactInfoModal({ chat, onClose }) {
     const fetchUserData = async () => {
       try {
         setLoading(true);
-        console.log('🔍 [ContactInfo] Chat object:', chat);
 
         const workspaceId = chat.workspaceId;
         if (!workspaceId) {
-          console.error('❌ [ContactInfo] No workspaceId in chat object');
           throw new Error('No workspace ID');
         }
 
-        console.log('📡 [ContactInfo] Fetching members from workspace:', workspaceId);
         const res = await api.get(`/api/workspaces/${workspaceId}/members`);
         const members = res.data.members || [];
-        console.log('📋 [ContactInfo] Members received:', members);
-        console.log('📋 [ContactInfo] First member structure:', JSON.stringify(members[0], null, 2));
 
         const userId = chat.userId || chat.id;
-        console.log('🔍 [ContactInfo] Looking for user:', userId);
 
         const user = members.find(m => String(m._id || m.id) === String(userId));
-        console.log('👤 [ContactInfo] Found user:', user);
-        console.log('📱 [ContactInfo] User phone:', user?.phone);
-        console.log('📝 [ContactInfo] User profile:', user?.profile);
-        console.log('ℹ️  [ContactInfo] User about:', user?.profile?.about);
 
         if (user) {
-          console.log('✅ [ContactInfo] Setting userData with user:', {
-            username: user.username,
-            email: user.email,
-            phone: user.phone,
-            profile: user.profile,
-            userStatus: user.userStatus
-          });
           setUserData(user);
         } else {
-          console.warn('⚠️ [ContactInfo] User not found, using fallback');
           setUserData({
             username: chat.name || chat.username,
             email: chat.email,
@@ -54,7 +36,6 @@ export default function ContactInfoModal({ chat, onClose }) {
           });
         }
       } catch (err) {
-        console.error("❌ [ContactInfo] Error:", err);
         setUserData({
           username: chat.name || chat.username,
           email: chat.email,

@@ -11,7 +11,6 @@ module.exports = function registerChatHandlers(io, socket) {
 
   // ✅ JOIN USER-SPECIFIC ROOM for targeted events
   socket.join(`user_${userId}`);
-  console.log(`✅ User ${userId} joined user room: user_${userId}`);
 
   /* ----------------------------------------------------
      JOIN DM SESSION ROOM
@@ -19,7 +18,6 @@ module.exports = function registerChatHandlers(io, socket) {
   socket.on("join-dm", ({ dmSessionId }) => {
     const room = `dm_${dmSessionId}`;
     socket.join(room);
-    console.log(`User ${userId} joined DM room: ${room}`);
   });
 
   /* ----------------------------------------------------
@@ -28,7 +26,6 @@ module.exports = function registerChatHandlers(io, socket) {
   socket.on("join-channel", ({ channelId }) => {
     const room = `channel_${channelId}`;
     socket.join(room);
-    console.log(`User ${userId} joined channel room: ${room}`);
   });
 
   /* ----------------------------------------------------
@@ -37,7 +34,6 @@ module.exports = function registerChatHandlers(io, socket) {
   socket.on("join-workspace", ({ workspaceId }) => {
     const room = `workspace_${workspaceId}`;
     socket.join(room);
-    console.log(`User ${userId} joined workspace room: ${room}`);
   });
 
   /* ----------------------------------------------------
@@ -134,12 +130,6 @@ module.exports = function registerChatHandlers(io, socket) {
       }
 
       // Save message
-      console.log(`💾 Saving message for ${actualDMSessionId ? 'DM' : 'Channel'}:`, {
-        workspace: workspaceId,
-        channel: channelId,
-        dm: actualDMSessionId,
-        company: companyId
-      });
 
       const saved = await Message.create(doc);
 
@@ -168,7 +158,6 @@ module.exports = function registerChatHandlers(io, socket) {
           });
         }
       } else if (channelId) {
-        console.log(`📢 Broadcasting ${eventName} to channel room: channel_${channelId}`);
         io.to(`channel_${channelId}`).emit(eventName, payload);
       }
 
@@ -193,7 +182,6 @@ module.exports = function registerChatHandlers(io, socket) {
   socket.on("mark-chat-read", async ({ type, id }) => {
     try {
       const readerId = userId;
-      console.log(`📖 mark-chat-read: type=${type}, id=${id}, readerId=${readerId}`);
 
       if (type === "dm") {
         const dmSessionId = id;
@@ -206,8 +194,6 @@ module.exports = function registerChatHandlers(io, socket) {
           },
           { $addToSet: { readBy: readerId } }
         );
-
-        console.log(`✅ DM mark-read result: matched=${result.matchedCount}, modified=${result.modifiedCount}`);
 
         io.to(`dm_${dmSessionId}`).emit("read-update", {
           readerId,
@@ -229,8 +215,6 @@ module.exports = function registerChatHandlers(io, socket) {
           },
           { $addToSet: { readBy: readerId } }
         );
-
-        console.log(`✅ Channel mark-read result: matched=${result.matchedCount}, modified=${result.modifiedCount}`);
 
         io.to(`channel_${channelId}`).emit("read-update", {
           readerId,
@@ -539,6 +523,6 @@ module.exports = function registerChatHandlers(io, socket) {
      DISCONNECT
   ---------------------------------------------------- */
   socket.on("disconnect", () => {
-    console.log(`User disconnected: ${userId}`);
+    // User disconnected
   });
 };

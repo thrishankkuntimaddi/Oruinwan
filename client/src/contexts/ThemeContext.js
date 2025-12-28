@@ -28,7 +28,7 @@ export const ThemeProvider = ({ children }) => {
                 setTheme(backendTheme);
             }
         }
-    }, [user?.preferences?.theme]); // Safe dependency - only updates when backend theme changes
+    }, [user?.preferences?.theme, theme]); // Safe dependency - only updates when backend theme changes
 
     // 2. Sync TO backend when theme changes (if user is logged in)
     const handleSetTheme = async (newTheme) => {

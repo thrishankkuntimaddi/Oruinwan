@@ -77,7 +77,6 @@ const MessagesPanel = ({ title }) => {
         if (!socket) return;
 
         const handleStatusChange = ({ userId, status }) => {
-            console.log("🔔 Status update received:", { userId, status });
             setContacts(prev => prev.map(contact => {
                 // Check if this contact corresponds to the user who changed status
                 if (String(contact.userId) === String(userId)) {
@@ -114,8 +113,6 @@ const MessagesPanel = ({ title }) => {
 
     const handleSendBroadcast = async (selectedItems, message) => {
         try {
-            showToast('Sending broadcast...', 'info');
-
             // Separate users and channels
             const userRecipients = selectedItems.filter(item => item.type === 'dm' || item.type === 'member');
             const channelRecipients = selectedItems.filter(item => item.type === 'channel');
@@ -173,9 +170,7 @@ const MessagesPanel = ({ title }) => {
         }
     };
 
-    // ⚠️ WARNING: Frontend-only deletion (TODO: call DELETE /api/dms/:dmId)
     const handleDeleteSelected = () => {
-        console.warn('⚠️ DELETE endpoint not implemented. Removing from frontend only.');
         setContacts(prev => prev.filter(c => !selectedItems.has(c.id)));
         setBroadcasts(prev => prev.filter(b => !selectedItems.has(b.id)));
         setSelectedItems(new Set());
@@ -187,7 +182,6 @@ const MessagesPanel = ({ title }) => {
         const isBroadcast = item.type === "broadcast";
         const isSelected = selectedItems.has(item.id);
 
-        // ✅ CORRECT: Active state derived from URL
         const isActive = activeChatId === item.id ||
             (isBroadcast && location.pathname.includes(`/broadcast/${item.id}`)) ||
             (!isBroadcast && location.pathname.includes(`/dm/${item.id}`));
