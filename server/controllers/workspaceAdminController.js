@@ -54,8 +54,6 @@ exports.revokeInvite = async (req, res) => {
         invite.revokeReason = reason || "Revoked by admin";
         await invite.save();
 
-        console.log(`✅ Invite ${inviteId} revoked by ${userId}`);
-
         return res.json({
             message: "Invite revoked successfully",
             invite: {
@@ -242,18 +240,10 @@ exports.resendInvite = async (req, res) => {
                     <p style="margin-top: 20px; color: #666;">This link will expire in 7 days.</p>
                 `
             });
-            console.log(`✅ Invitation resent to: ${invite.email}`);
+
         } catch (e) {
             console.warn("⚠️ SMTP not configured — Email not sent");
-            console.log('\n' + '='.repeat(80));
-            console.log('📧 RESENT WORKSPACE INVITATION LINK');
-            console.log('='.repeat(80));
-            console.log(`To: ${invite.email}`);
-            console.log(`Workspace: ${workspace.name}`);
-            console.log(`Role: ${invite.role}`);
-            console.log(`\nInvitation Link:`);
-            console.log(`👉 ${inviteLink}`);
-            console.log('\n' + '='.repeat(80) + '\n');
+
         }
 
         return res.json({
@@ -313,15 +303,11 @@ exports.suspendMember = async (req, res) => {
             return res.status(400).json({ message: "Member is already suspended" });
         }
 
-        console.log(`⏸️ Suspending user ${targetUserId} in workspace ${workspaceId}`);
-
         // Suspend member
         targetMember.status = "suspended";
         targetMember.suspendedAt = new Date();
         targetMember.suspendedBy = adminId;
         await workspace.save();
-
-        console.log(`✅ User ${targetUserId} suspended in workspace ${workspaceId}`);
 
         return res.json({
             message: "Member suspended successfully",
@@ -365,15 +351,11 @@ exports.restoreMember = async (req, res) => {
             return res.status(400).json({ message: "Member is not suspended" });
         }
 
-        console.log(`▶️ Restoring user ${targetUserId} in workspace ${workspaceId}`);
-
         // Restore member
         targetMember.status = "active";
         targetMember.suspendedAt = null;
         targetMember.suspendedBy = null;
         await workspace.save();
-
-        console.log(`✅ User ${targetUserId} restored in workspace ${workspaceId}`);
 
         return res.json({
             message: "Member restored successfully",
@@ -433,13 +415,9 @@ exports.changeRole = async (req, res) => {
             return res.status(400).json({ message: `Member is already ${newRole}` });
         }
 
-        console.log(`🔄 Changing user ${targetUserId} role from ${targetMember.role} to ${newRole} in workspace ${workspaceId}`);
-
         // Change role
         targetMember.role = newRole;
         await workspace.save();
-
-        console.log(`✅ User ${targetUserId} role changed to ${newRole} in workspace ${workspaceId}`);
 
         return res.json({
             message: "Member role updated successfully",
@@ -493,8 +471,6 @@ exports.removeMember = async (req, res) => {
             return res.status(403).json({ message: "Cannot remove workspace owner" });
         }
 
-        console.log(`🚨 Removing user ${targetUserId} from workspace ${workspaceId}`);
-
         // 1️⃣ Remove from workspace
         workspace.members = workspace.members.filter(m => String(m.user) !== String(targetUserId));
         await workspace.save();
@@ -517,8 +493,6 @@ exports.removeMember = async (req, res) => {
         await User.findByIdAndUpdate(targetUserId, {
             $pull: { workspaces: { workspace: workspaceId } }
         });
-
-        console.log(`✅ User ${targetUserId} removed from workspace ${workspaceId}`);
 
         return res.json({
             message: "Member removed successfully",
@@ -592,8 +566,6 @@ exports.bulkRevokeInvites = async (req, res) => {
             revokedCount++;
         }
 
-        console.log(`✅ Bulk revoked ${revokedCount} invites in workspace ${workspaceId}`);
-
         return res.json({
             message: `Successfully revoked ${revokedCount} invitation(s)`,
             revokedCount,
@@ -641,14 +613,6 @@ exports.bulkDeleteInvites = async (req, res) => {
             workspace: workspaceId
         }).lean();
 
-        console.log('🔍 Invitations to delete:', invitesToDelete.map(inv => ({
-            id: inv._id,
-            email: inv.email,
-            status: inv.status,
-            used: inv.used,
-            expiresAt: inv.expiresAt
-        })));
-
         // Delete expired, revoked, accepted, or used invites (not pending active ones)
         const now = new Date();
         const result = await Invite.deleteMany({
@@ -662,8 +626,6 @@ exports.bulkDeleteInvites = async (req, res) => {
                 { status: "pending", expiresAt: { $lt: now } }
             ]
         });
-
-        console.log(`🗑️ Bulk deleted ${result.deletedCount}/${inviteIds.length} invites in workspace ${workspaceId}`);
 
         // Warn if nothing was deleted
         if (result.deletedCount === 0) {
@@ -713,8 +675,6 @@ exports.cleanupExpiredInvites = async (req, res) => {
             status: "pending",
             expiresAt: { $lt: now }
         });
-
-        console.log(`🧹 Cleaned up ${result.deletedCount} expired invites in workspace ${workspaceId}`);
 
         return res.json({
             message: `Successfully cleaned up ${result.deletedCount} expired invitation(s)`,

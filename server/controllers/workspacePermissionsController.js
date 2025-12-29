@@ -34,8 +34,6 @@ exports.updateWorkspacePermissions = async (req, res) => {
 
         await workspace.save();
 
-        console.log(`✅ Permissions updated for workspace: ${workspace.name}`);
-
         return res.json({
             message: "Permissions updated successfully",
             settings: workspace.settings

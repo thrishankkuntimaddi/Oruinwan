@@ -33,10 +33,14 @@ exports.registerCompany = async (req, res) => {
       companyName,
       adminName,
       adminEmail,
-      adminPassword, // NEW: Accept password during registration
+      adminPassword,
       domain,
       documents,
-      skipDomainVerification = true // Make domain verification optional
+      departments = [], // NEW: Department names from frontend
+      workspaceName, // NEW: Custom workspace name
+      workspaceDescription, // NEW: Workspace description
+      defaultChannels = ["general", "announcements"], // NEW: Channel names from frontend
+      skipDomainVerification = true
     } = req.body;
 
     // Validation
@@ -84,8 +88,6 @@ exports.registerCompany = async (req, res) => {
 
     await company.save();
 
-    console.log(`✅ Company created: ${companyName} (ID: ${company._id})`);
-
     // Step 2: Create Admin User with provided password
     const passwordHash = await bcrypt.hash(adminPassword, 12);
 
@@ -96,12 +98,11 @@ exports.registerCompany = async (req, res) => {
       userType: "company",
       companyId: company._id,
       companyRole: "owner",
-      verified: true // Auto-verify admin
+      verified: true, // Auto-verify admin
+      departments: departments || [] // Save department names
     });
 
     await adminUser.save();
-
-    console.log(`✅ Admin user created: ${adminName} (${adminEmail})`);
 
     // Step 3: Add admin to company.admins array
     company.admins.push({
@@ -109,12 +110,13 @@ exports.registerCompany = async (req, res) => {
       role: "owner"
     });
 
-    // Step 4: Create Default Workspace
+    // Step 4: Create Default Workspace with custom name
+    const finalWorkspaceName = workspaceName || `${companyName} Workspace`;
     const defaultWorkspace = new Workspace({
       company: company._id,
       type: "company",
-      name: `${companyName} Workspace`,
-      description: "Default company workspace",
+      name: finalWorkspaceName,
+      description: workspaceDescription || "Default company workspace",
       createdBy: adminUser._id,
       members: [{
         user: adminUser._id,
@@ -123,8 +125,6 @@ exports.registerCompany = async (req, res) => {
     });
 
     await defaultWorkspace.save();
-
-    console.log(`✅ Default workspace created: ${defaultWorkspace.name}`);
 
     // Update company with default workspace
     company.defaultWorkspace = defaultWorkspace._id;
@@ -137,36 +137,35 @@ exports.registerCompany = async (req, res) => {
     });
     await adminUser.save();
 
-    // Step 5: Create Default Channels (#general, #announcements)
-    const generalChannel = new Channel({
-      workspace: defaultWorkspace._id,
-      company: company._id,
-      name: "general",
-      description: "General discussion",
-      isPrivate: false,
-      isDefault: true,
-      createdBy: adminUser._id,
-      members: [adminUser._id]
-    });
+    // Step 5: Create Default Channels from frontend
+    const createdChannels = [];
 
-    const announcementsChannel = new Channel({
-      workspace: defaultWorkspace._id,
-      company: company._id,
-      name: "announcements",
-      description: "Company announcements",
-      isPrivate: false,
-      isDefault: true,
-      createdBy: adminUser._id,
-      members: [adminUser._id]
-    });
+    for (const channelName of defaultChannels) {
+      const channel = new Channel({
+        workspace: defaultWorkspace._id,
+        company: company._id,
+        name: channelName.toLowerCase(),
+        description: channelName === "general"
+          ? "General discussion"
+          : channelName === "announcements"
+            ? "Company announcements"
+            : `${channelName} channel`,
+        isPrivate: false,
+        isDefault: true,
+        createdBy: adminUser._id,
+        members: [{
+          user: adminUser._id,
+          joinedAt: new Date()
+        }]
+      });
 
-    await generalChannel.save();
-    await announcementsChannel.save();
+      await channel.save();
+      createdChannels.push(channel);
 
-    console.log(`✅ Default channels created: #general, #announcements`);
+    }
 
     // Update workspace with default channels
-    defaultWorkspace.defaultChannels = [generalChannel._id, announcementsChannel._id];
+    defaultWorkspace.defaultChannels = createdChannels.map(c => c._id);
     await defaultWorkspace.save();
 
     // Log the company creation
@@ -180,15 +179,6 @@ exports.registerCompany = async (req, res) => {
       metadata: { companyName, domain },
       req
     });
-
-    console.log("\n" + "=".repeat(80));
-    console.log("🏢 COMPANY REGISTRATION SUCCESSFUL");
-    console.log("Company:", companyName);
-    console.log("Admin:", adminName);
-    console.log("Email:", adminEmail);
-    console.log("Company ID:", company._id);
-    console.log("Workspace ID:", defaultWorkspace._id);
-    console.log("=".repeat(80) + "\n");
 
     return res.status(201).json({
       message: "Company registered successfully. Please login to access your dashboard.",
@@ -214,10 +204,15 @@ exports.registerCompany = async (req, res) => {
       canVerifyDomainLater: true
     });
 
-
   } catch (err) {
-    console.error("REGISTER COMPANY ERROR:", err);
-    return res.status(500).json({ message: "Server error" });
+    console.error("❌ REGISTER COMPANY ERROR:");
+    console.error("Error Message:", err.message);
+    console.error("Error Stack:", err.stack);
+    console.error("Error Details:", JSON.stringify(err, null, 2));
+    return res.status(500).json({
+      message: "Server error",
+      error: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
   }
 };
 
@@ -255,8 +250,6 @@ exports.generateDomainVerification = async (req, res) => {
     company.domainVerificationExpires = new Date(Date.now() + 86400000); // 24 hours
     company.domainVerified = false;
     await company.save();
-
-    console.log(`🔐 Domain verification token generated for ${company.domain}`);
 
     return res.json({
       message: "Domain verification token generated",
@@ -335,8 +328,6 @@ exports.verifyDomain = async (req, res) => {
       req
     });
 
-    console.log(`✅ Domain verified: ${company.domain} `);
-
     return res.json({
       message: "Domain verified successfully",
       domain: company.domain,
@@ -376,8 +367,6 @@ exports.setAutoJoinPolicy = async (req, res) => {
 
     company.autoJoinByDomain = autoJoinByDomain === true;
     await company.save();
-
-    console.log(`🔄 Auto - join policy ${company.autoJoinByDomain ? 'enabled' : 'disabled'} for ${company.domain}`);
 
     return res.json({
       message: "Auto-join policy updated",
@@ -445,9 +434,6 @@ exports.inviteEmployee = async (req, res) => {
     await invite.save();
 
     const inviteLink = `${process.env.FRONTEND_URL}/accept-invite?token=${rawToken}&email=${encodeURIComponent(email)}`;
-
-    console.log(`📧 Invite created for ${email}`);
-    console.log(`   Link: ${inviteLink}`);
 
     // Send email
     try {
@@ -574,8 +560,6 @@ exports.bulkInviteEmployees = async (req, res) => {
       }
     }
 
-    console.log(`✅ Bulk invite completed: ${results.success.length} sent, ${results.failed.length} failed`);
-
     return res.json({
       message: "Bulk invitation completed",
       summary: {
@@ -652,8 +636,6 @@ exports.directCreateEmployee = async (req, res) => {
 
     await newUser.save();
 
-    console.log(`✅ Direct employee created: ${email} by admin`);
-
     // Add to default workspace
     if (company.defaultWorkspace) {
       const workspace = await Workspace.findById(company.defaultWorkspace);
@@ -692,12 +674,12 @@ exports.directCreateEmployee = async (req, res) => {
               joinedAt: new Date()
             });
             await channel.save();
-            console.log(`   → Added to channel: #${channel.name}`);
+
           }
         }
 
         await newUser.save();
-        console.log(`   → Added to workspace: ${workspace.name}`);
+
       }
     }
 
@@ -896,8 +878,6 @@ exports.acceptInvite = async (req, res) => {
       req
     });
 
-    console.log(`✅ ${user.email} accepted invite and joined ${company.name}`);
-
     return res.json({
       message: "Invitation accepted successfully",
       user: {
@@ -1053,8 +1033,6 @@ exports.updateMemberRole = async (req, res) => {
       metadata: { oldRole: targetUser.companyRole, newRole: role },
       req
     });
-
-    console.log(`✅ Role updated: ${targetUser.email} → ${role}`);
 
     return res.json({
       message: "Role updated successfully",

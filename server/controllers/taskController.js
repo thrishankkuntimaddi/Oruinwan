@@ -19,19 +19,19 @@ exports.getTasks = async (req, res) => {
         const user = await User.findById(userId);
 
         if (!workspaceId) {
-            console.log("❌ Missing workspaceId");
+
             return res.status(400).json({ message: "Workspace ID required" });
         }
 
         const workspace = await Workspace.findById(workspaceId);
         if (!workspace) {
-            console.log("❌ Workspace not found");
+
             return res.status(404).json({ message: "Workspace not found" });
         }
 
         // Check access
         if (!workspace.isMember(userId)) {
-            console.log("❌ Access denied");
+
             return res.status(403).json({ message: "Access denied" });
         }
 
@@ -41,8 +41,6 @@ exports.getTasks = async (req, res) => {
             workspace: new mongoose.Types.ObjectId(workspaceId),
             "members.user": new mongoose.Types.ObjectId(userId)
         }).distinct('_id');
-
-        console.log(`🔍 User ${userId} is in channels:`, userChannels.length);
 
         // Build query
         const query = {
@@ -64,7 +62,6 @@ exports.getTasks = async (req, res) => {
         if (status) query.status = status;
         if (priority) query.priority = priority;
         // if (assignedTo) query.assignedTo = assignedTo; // Removed to avoid conflict with visibility check
-
 
         const tasks = await Task.find(query)
             .populate("createdBy", "username profilePicture")

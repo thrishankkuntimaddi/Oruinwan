@@ -9,6 +9,7 @@ const rateLimit = require("express-rate-limit");
 const http = require("http");
 const { Server } = require("socket.io");
 const registerChatHandlers = require("./socket");
+const logger = require("./utils/logger");
 
 // Initialize app
 const app = express();
@@ -22,11 +23,19 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(cookieParser());
 app.use(helmet());
 
-// CORS - Only allow port 3000 for the client
+// CORS - Allow development and production origins
+const isProduction = process.env.NODE_ENV === 'production';
 const allowedOrigins = [
-  'http://localhost:3000',
+  'http://localhost:3000', // Development
   process.env.FRONTEND_URL
 ].filter(Boolean);
+
+// In production, only allow HTTPS origins
+if (isProduction && allowedOrigins.includes('http://localhost:3000')) {
+  const prodOnlyOrigins = allowedOrigins.filter(origin => !origin.includes('localhost'));
+  allowedOrigins.length = 0;
+  allowedOrigins.push(...prodOnlyOrigins);
+}
 
 app.use(
   cors({
@@ -45,9 +54,10 @@ app.use(
 );
 
 // Rate limiting (protect auth endpoints)
+// Use stricter limits in production
 const limiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
-  max: 100, // Increased for development (reduce to 20 in production)
+  max: isProduction ? 20 : 100, // Stricter in production
   standardHeaders: true,
   legacyHeaders: false,
   // Skip rate limiting for frequently-called endpoints
@@ -68,8 +78,8 @@ app.use("/api/auth", limiter);
 // Connect to MongoDB
 mongoose
   .connect(process.env.MONGO_URI)
-  .then(() => console.log("MongoDB Connected ✔"))
-  .catch((err) => console.log("MongoDB Error ❌", err));
+  .then(() => logger.success("MongoDB Connected ✔"))
+  .catch((err) => logger.error("MongoDB Error ❌", err));
 
 // Serve uploaded files as static files
 app.use("/uploads", express.static(require("path").join(__dirname, "uploads")));
@@ -125,14 +135,14 @@ io.use(async (socket, next) => {
     socket.user = { id: decoded.sub };
     next();
   } catch (err) {
-    console.error("SOCKET AUTH ERROR:", err);
+    logger.error("SOCKET AUTH ERROR:", err);
     next(new Error("Authentication failed"));
   }
 });
 
 // Register socket events
 io.on("connection", (socket) => {
-  console.log("User connected:", socket.user.id);
+  logger.debug("User connected:", socket.user.id);
 
   registerChatHandlers(io, socket);
 });
@@ -142,6 +152,8 @@ io.on("connection", (socket) => {
 // ---------------------------------------------------------
 const PORT = process.env.PORT || 5000;
 
-httpServer.listen(PORT, () =>
-  console.log(`Server (Socket.io + Express) running on port ${PORT}`)
-);
+httpServer.listen(PORT, () => {
+  logger.success(`Server (Socket.io + Express) running on port ${PORT}`);
+  logger.info(`Environment: ${process.env.NODE_ENV || 'development'}`);
+  logger.info(`CORS allowed origins: ${allowedOrigins.join(', ')}`);
+});

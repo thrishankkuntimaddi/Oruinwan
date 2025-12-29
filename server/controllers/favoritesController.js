@@ -35,8 +35,6 @@ exports.toggleFavorite = async (req, res) => {
 
         await user.save();
 
-        console.log(`⭐ User ${userId} toggled favorite: ${itemId}, now ${user.favorites.length} favorites`);
-
         return res.json({
             message: index > -1 ? 'Removed from favorites' : 'Added to favorites',
             favorites: user.favorites

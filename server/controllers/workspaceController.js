@@ -255,46 +255,35 @@ exports.deleteWorkspace = async (req, res) => {
       return res.status(403).json({ message: "Only workspace owner can delete the workspace" });
     }
 
-    console.log(`🗑️ Deleting workspace: ${workspace.name}`);
-
     // Delete all channels in this workspace
     const deletedChannels = await Channel.deleteMany({ workspace: workspaceId });
-    console.log(`   ✅ Deleted ${deletedChannels.deletedCount} channels`);
 
     // Delete all messages in this workspace
     const deletedMessages = await Message.deleteMany({ workspace: workspaceId });
-    console.log(`   ✅ Deleted ${deletedMessages.deletedCount} messages`);
 
     // Delete all DM sessions in this workspace
     const deletedDMSessions = await DMSession.deleteMany({ workspace: workspaceId });
-    console.log(`   ✅ Deleted ${deletedDMSessions.deletedCount} DM sessions`);
 
     // Delete all tasks in this workspace
     const deletedTasks = await Task.deleteMany({ workspace: workspaceId });
-    console.log(`   ✅ Deleted ${deletedTasks.deletedCount} tasks`);
 
     // Delete all notes in this workspace
     const deletedNotes = await Note.deleteMany({ workspace: workspaceId });
-    console.log(`   ✅ Deleted ${deletedNotes.deletedCount} notes`);
 
     // Delete all updates in this workspace
     const deletedUpdates = await Update.deleteMany({ workspace: workspaceId });
-    console.log(`   ✅ Deleted ${deletedUpdates.deletedCount} updates`);
 
     // Delete all favorites in this workspace
     const deletedFavorites = await Favorite.deleteMany({ workspace: workspaceId });
-    console.log(`   ✅ Deleted ${deletedFavorites.deletedCount} favorites`);
 
     // Delete all pending invites for this workspace
     const deletedInvites = await Invite.deleteMany({ workspace: workspaceId });
-    console.log(`   ✅ Deleted ${deletedInvites.deletedCount} pending invites`);
 
     // Remove workspace from all users
     await User.updateMany(
       { "workspaces.workspace": workspaceId },
       { $pull: { workspaces: { workspace: workspaceId } } }
     );
-    console.log(`   ✅ Removed workspace from all users`);
 
     // Remove as personalWorkspace if applicable
     await User.updateMany(
@@ -304,16 +293,6 @@ exports.deleteWorkspace = async (req, res) => {
 
     // Delete the workspace itself
     await Workspace.findByIdAndDelete(workspaceId);
-    console.log(`   ✅ Workspace deleted successfully`);
-    console.log(`\n📊 DELETION SUMMARY:`);
-    console.log(`   - Channels: ${deletedChannels.deletedCount}`);
-    console.log(`   - Messages: ${deletedMessages.deletedCount}`);
-    console.log(`   - DM Sessions: ${deletedDMSessions.deletedCount}`);
-    console.log(`   - Tasks: ${deletedTasks.deletedCount}`);
-    console.log(`   - Notes: ${deletedNotes.deletedCount}`);
-    console.log(`   - Updates: ${deletedUpdates.deletedCount}`);
-    console.log(`   - Favorites: ${deletedFavorites.deletedCount}`);
-    console.log(`   - Invites: ${deletedInvites.deletedCount}\n`);
 
     return res.json({ message: "Workspace deleted successfully" });
   } catch (err) {
@@ -383,18 +362,10 @@ exports.inviteToWorkspace = async (req, res) => {
               <p style="margin-top: 20px; color: #666;">This link will expire in ${daysValid} days and can only be used once.</p>
             `
           });
-          console.log(`✅ Invitation email sent to: ${email}${userExists ? ' (existing user)' : ' (new user)'}`);
+
         } catch (e) {
           console.warn("⚠️ SMTP not configured — Email not sent");
-          console.log('\n' + '='.repeat(80));
-          console.log('📧 WORKSPACE INVITATION LINK (Copy and share manually)');
-          console.log('='.repeat(80));
-          console.log(`To: ${email}${userExists ? ' (existing user)' : ' (new user - will create account)'}`);
-          console.log(`Workspace: ${workspace.name}`);
-          console.log(`Role: ${role}`);
-          console.log(`\nInvitation Link:`);
-          console.log(`👉 ${inviteLink}`);
-          console.log('\n' + '='.repeat(80) + '\n');
+
         }
 
         invites.push({ email, inviteLink, userExists: !!userExists });
@@ -421,16 +392,6 @@ exports.inviteToWorkspace = async (req, res) => {
       });
 
       const inviteLink = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/join-workspace?token=${raw}`;
-
-      console.log('\n' + '='.repeat(80));
-      console.log('🔗 SHAREABLE WORKSPACE INVITATION LINK GENERATED');
-      console.log('='.repeat(80));
-      console.log(`Workspace: ${workspace.name}`);
-      console.log(`Role: ${role}`);
-      console.log(`Expires: ${expiresAt.toLocaleString()}`);
-      console.log(`\nInvitation Link:`);
-      console.log(`👉 ${inviteLink}`);
-      console.log('\n' + '='.repeat(80) + '\n');
 
       return res.json({
         message: "Invite link generated",
@@ -502,12 +463,8 @@ exports.joinWorkspace = async (req, res) => {
     const sha256 = (v) => crypto.createHash("sha256").update(v).digest("hex");
     const Invite = require("../models/Invite");
 
-    console.log('🔍 JOIN WORKSPACE REQUEST:');
-    console.log('  - Token received:', token ? 'Yes' : 'No');
-    console.log('  - User ID:', userId);
-
     if (!token) {
-      console.log('❌ No token provided');
+
       return res.status(400).json({ message: "Invite token is required" });
     }
 
@@ -612,8 +569,6 @@ exports.joinWorkspace = async (req, res) => {
       });
     }
 
-    console.log(`✅ User ${user.username} joined workspace ${workspace.name}`);
-
     return res.json({
       message: "Successfully joined workspace",
       workspace: {
@@ -685,8 +640,6 @@ exports.getWorkspaceChannels = async (req, res) => {
     const { workspaceId } = req.params;
     const userId = req.user?.sub;
 
-    console.log(`📡 Fetching channels for workspace: ${workspaceId}, user: ${userId}`);
-
     // Verify workspace exists
     const workspace = await Workspace.findById(workspaceId);
     if (!workspace) {
@@ -711,7 +664,7 @@ exports.getWorkspaceChannels = async (req, res) => {
     const visibleChannels = allChannels.filter(channel => {
       if (!channel.isPrivate) {
         // Public channel - visible to all workspace members
-        console.log(`  📢 #${channel.name} - PUBLIC - showing to all`);
+
         return true;
       } else {
         // Private channel - only visible if user is a member
@@ -720,9 +673,6 @@ exports.getWorkspaceChannels = async (req, res) => {
           return memberId === userId.toString();
         });
 
-        console.log(`  🔒 #${channel.name} - PRIVATE - user ${userId} is ${isMemberOfChannel ? 'MEMBER ✅' : 'NOT member ❌'}`);
-        console.log(`     Members (${channel.members.length}):`, channel.members.map(m => {
-          const id = m.user ? m.user.toString() : m.toString();
           return id.substring(id.length - 4); // Last 4 chars for brevity
         }));
 
@@ -730,13 +680,11 @@ exports.getWorkspaceChannels = async (req, res) => {
       }
     });
 
-    console.log(`✅ Found ${allChannels.length} total channels, ${visibleChannels.length} visible to user ${userId}`);
-
     // 🔍 DEBUG: Log each channel's visibility
-    console.log('\n🔍 CHANNEL VISIBILITY:');
+
     allChannels.forEach((ch, idx) => {
       const isVisible = visibleChannels.some(vc => vc._id.toString() === ch._id.toString());
-      console.log(`${idx + 1}. #${ch.name} - ${ch.isPrivate ? '🔒 PRIVATE' : '🌐 PUBLIC'} - ${isVisible ? '✅ VISIBLE' : '❌ HIDDEN'}`);
+
     });
 
     return res.json({ channels: visibleChannels });
@@ -759,8 +707,6 @@ exports.createWorkspaceChannel = async (req, res) => {
     if (!name) {
       return res.status(400).json({ message: "Channel name is required" });
     }
-
-    console.log(`📡 Creating channel "${name}" in workspace: ${workspaceId}`);
 
     // Verify workspace exists
     const workspace = await Workspace.findById(workspaceId);
@@ -810,14 +756,13 @@ exports.createWorkspaceChannel = async (req, res) => {
     let finalMembers;
     if (isPublicChannel) {
       // 🌐 PUBLIC CHANNEL: Include ALL workspace members (current + future)
-      console.log('🌐 Creating PUBLIC channel - including all workspace members');
+
       finalMembers = workspace.members.map(m => ({
         user: m.user,
         joinedAt: new Date()
       }));
     } else {
       // 🔒 PRIVATE CHANNEL: Only selected members + creator
-      console.log(`🔒 Creating PRIVATE channel - ${channelMembers.length} selected members + creator`);
 
       // Ensure creator is always included
       const finalMemberIds = [...new Set([userId, ...channelMembers])];
@@ -840,8 +785,6 @@ exports.createWorkspaceChannel = async (req, res) => {
       members: finalMembers,
       admins: [userId] // Creator is initial admin
     });
-
-    console.log(`✅ Channel created: #${channel.name} (${isPublicChannel ? 'PUBLIC' : 'PRIVATE'}) with ${finalMembers.length} members`);
 
     return res.status(201).json({
       message: "Channel created successfully",
@@ -955,8 +898,6 @@ exports.renameWorkspace = async (req, res) => {
     workspace.name = name.trim();
     await workspace.save();
 
-    console.log(`✅ Workspace renamed to: ${workspace.name}`);
-
     return res.json({
       message: "Workspace renamed successfully",
       workspace: {
@@ -969,7 +910,6 @@ exports.renameWorkspace = async (req, res) => {
     return res.status(500).json({ message: "Server error" });
   }
 };
-
 
 /**
  * Update workspace settings (admin/owner only)
@@ -1012,8 +952,6 @@ exports.updateWorkspace = async (req, res) => {
     }
 
     await workspace.save();
-
-    console.log(`✅ Workspace updated: ${workspace.name}`);
 
     return res.json({
       message: "Workspace updated successfully",

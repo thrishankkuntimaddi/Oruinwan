@@ -176,7 +176,7 @@ exports.inviteToChannel = async (req, res) => {
     const isChannelCreator = String(channel.createdBy) === String(inviteeId);
     if (isChannelCreator && !channel.admins.some(adminId => String(adminId) === String(inviteeId))) {
       channel.admins.push(inviteeId);
-      console.log(`✨ Channel creator ${inviteeId} restored as admin`);
+
     }
 
     await channel.save();
@@ -346,8 +346,6 @@ exports.getChannelMembers = async (req, res) => {
       };
     });
 
-    console.log(`📋 Channel #${channel.name} members:`, formattedMembers.map(m => `${m.username} (admin: ${m.isAdmin})`));
-
     return res.json({ members: formattedMembers });
   } catch (err) {
     console.error("GET CHANNEL MEMBERS ERROR:", err);
@@ -415,8 +413,6 @@ exports.exitChannel = async (req, res) => {
       await Message.deleteMany({ channel: channelId });
       await channel.deleteOne();
 
-      console.log(`🗑️ Channel #${channel.name} deleted - last member exited`);
-
       // Emit deletion event
       const io = req.app?.get("io");
       if (io) {
@@ -449,8 +445,6 @@ exports.exitChannel = async (req, res) => {
       text: `${username} exited from this channel on ${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`,
       sender: userId // System messages still need a sender for queries
     });
-
-    console.log(`👋 User ${username} exited channel #${channel.name}`);
 
     // Emit socket event
     const io = req.app?.get("io");
@@ -547,8 +541,6 @@ exports.assignAdmin = async (req, res) => {
       sender: userId
     });
 
-    console.log(`👑 User ${targetName} assigned as admin in #${channel.name} by ${requesterName}`);
-
     // Emit socket event
     const io = req.app?.get("io");
     if (io) {
@@ -606,12 +598,9 @@ exports.deleteChannel = async (req, res) => {
 
     // Delete all messages in the channel
     const deletedMessages = await Message.deleteMany({ channel: channelId });
-    console.log(`🗑️ Deleted ${deletedMessages.deletedCount} messages from #${channelName}`);
 
     // Delete the channel
     await channel.deleteOne();
-
-    console.log(`🗑️ Channel #${channelName} permanently deleted by admin`);
 
     // Emit socket event to all members
     const io = req.app?.get("io");
@@ -744,8 +733,6 @@ exports.updateChannelInfo = async (req, res) => {
       });
     }
 
-    console.log(`📝 Channel #${channel.name} info updated`);
-
     // Emit socket event
     const io = req.app?.get("io");
     if (io) {
@@ -837,8 +824,6 @@ exports.demoteAdmin = async (req, res) => {
       text: `${requesterName} removed ${targetName} as channel admin`,
       sender: userId
     });
-
-    console.log(`👤 User ${targetName} demoted from admin in #${channel.name}`);
 
     // Emit socket event
     const io = req.app?.get("io");
@@ -940,8 +925,6 @@ exports.removeMember = async (req, res) => {
       sender: userId
     });
 
-    console.log(`🚫 User ${targetName} removed from #${channel.name} by ${removerName}`);
-
     // Emit socket events
     const io = req.app?.get("io");
     if (io) {
@@ -1022,8 +1005,6 @@ exports.toggleChannelPrivacy = async (req, res) => {
       sender: userId
     });
 
-    console.log(`🔒 Channel #${channel.name} privacy changed: ${isPrivate ? 'Private' : 'Public'}`);
-
     // Emit socket event
     const io = req.app?.get("io");
     if (io) {
@@ -1068,8 +1049,6 @@ exports.clearChannelMessages = async (req, res) => {
 
     // Delete all messages in the channel
     const result = await Message.deleteMany({ channel: channelId });
-
-    console.log(`🗑️ Cleared ${result.deletedCount} messages from #${channel.name}`);
 
     // Create system message about the action
     const user = await User.findById(userId).select('username');
@@ -1116,12 +1095,10 @@ exports.joinChannelViaLink = async (req, res) => {
     const channelId = req.params.id;
     const userId = req.user?.sub;
 
-    console.log(`🔗 User ${userId} attempting to join channel ${channelId} via link`);
-
     // 1. Find channel and populate workspace
     const channel = await Channel.findById(channelId).populate('workspace');
     if (!channel) {
-      console.log('❌ Channel not found');
+
       return res.status(404).json({ message: "Channel not found" });
     }
 
@@ -1130,7 +1107,7 @@ exports.joinChannelViaLink = async (req, res) => {
     const isWorkspaceMember = workspace.members.some(m => String(m.user) === String(userId));
 
     if (!isWorkspaceMember) {
-      console.log(`❌ User not a workspace member of ${workspace.name}`);
+
       return res.status(403).json({
         message: "You must be a member of this workspace to join this channel",
         workspaceName: workspace.name
@@ -1144,7 +1121,7 @@ exports.joinChannelViaLink = async (req, res) => {
     });
 
     if (isChannelMember) {
-      console.log('✅ User already a member');
+
       return res.json({
         message: "You are already a member of this channel",
         channel: {
@@ -1165,12 +1142,10 @@ exports.joinChannelViaLink = async (req, res) => {
     const isChannelCreator = String(channel.createdBy) === String(userId);
     if (isChannelCreator && !channel.admins.some(adminId => String(adminId) === String(userId))) {
       channel.admins.push(userId);
-      console.log(`✨ Channel creator restored as admin`);
+
     }
 
     await channel.save();
-
-    console.log(`✅ User added to channel #${channel.name}`);
 
     // 5. Emit socket event
     const io = req.app.get("io");

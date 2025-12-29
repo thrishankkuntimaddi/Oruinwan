@@ -41,16 +41,6 @@ exports.universalSearch = async (req, res) => {
             searchNotes(workspaceId, userId, searchRegex)
         ]);
 
-        console.log('🔍 UNIVERSAL SEARCH RESULTS:');
-        console.log('Query:', searchTerm);
-        console.log('WorkspaceId:', workspaceId);
-        console.log('UserId:', userId);
-        console.log('Channels found:', channels.length, channels);
-        console.log('Contacts found:', contacts.length, contacts);
-        console.log('Messages found:', messages.length, messages);
-        console.log('Tasks found:', tasks.length, tasks);
-        console.log('Notes found:', notes.length, notes);
-
         return res.json({
             channels,
             contacts,

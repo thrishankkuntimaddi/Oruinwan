@@ -94,7 +94,6 @@ exports.signup = async (req, res) => {
         invite.used = true;
         await invite.save();
 
-        console.log(`✅ Signup via INVITE: ${email} → Company ${companyId}`);
       }
     }
 
@@ -114,7 +113,6 @@ exports.signup = async (req, res) => {
           workspacesToJoin.push(companyWithAllowedEmail.defaultWorkspace);
         }
 
-        console.log(`✅ Signup via ALLOWED EMAIL: ${email} → ${companyWithAllowedEmail.name}`);
       }
     }
 
@@ -139,14 +137,13 @@ exports.signup = async (req, res) => {
             workspacesToJoin.push(companyWithDomain.defaultWorkspace);
           }
 
-          console.log(`✅ Signup via DOMAIN AUTO-JOIN: ${email} → ${companyWithDomain.name} (${domain})`);
         }
       }
     }
 
     // If no company match, user remains personal
     if (!companyId) {
-      console.log(`ℹ️  Personal user signup: ${email}`);
+
     }
 
     // ==================== CREATE USER ====================
@@ -214,11 +211,10 @@ exports.signup = async (req, res) => {
                 joinedAt: new Date()
               });
               await channel.save();
-              console.log(`   → Added to channel: #${channel.name}`);
+
             }
           }
 
-          console.log(`   → Added to workspace: ${workspace.name}`);
         }
       }
 
@@ -232,17 +228,9 @@ exports.signup = async (req, res) => {
 
     const verifyUrl = `${process.env.FRONTEND_URL}/verify-email?token=${rawToken}&email=${encodeURIComponent(email)}`;
 
-    console.log("\n" + "=".repeat(80));
-    console.log("📧 NEW USER SIGNUP");
-    console.log("User:", username);
-    console.log("Email:", email);
-    console.log("Type:", userType);
     if (companyId) {
-      console.log("Company ID:", companyId);
-      console.log("Role:", companyRole);
+
     }
-    console.log("Verify URL:", verifyUrl);
-    console.log("=".repeat(80) + "\n");
 
     /*
     await sendEmail({
@@ -424,7 +412,6 @@ exports.login = async (req, res) => {
   }
 };
 
-
 // ----------------------------------------------------
 // REFRESH TOKEN
 // ----------------------------------------------------
@@ -568,7 +555,7 @@ exports.forgotPassword = async (req, res) => {
     const user = await User.findOne({ email });
 
     if (!user) {
-      console.log("❌ NO USER FOUND for email:", email);
+
       return res.json({ message: "If that email exists, reset link sent" });
     }
 
@@ -580,12 +567,6 @@ exports.forgotPassword = async (req, res) => {
     await user.save();
 
     const url = `${process.env.FRONTEND_URL}/reset-password?token=${raw}&email=${encodeURIComponent(email)}`;
-
-    console.log("\n" + "=".repeat(80));
-    console.log("🔐 PASSWORD RESET REQUEST");
-    console.log("Email:", email);
-    console.log("Reset URL:", url);
-    console.log("=".repeat(80) + "\n");
 
     await sendEmail({
       to: email,
@@ -599,7 +580,6 @@ exports.forgotPassword = async (req, res) => {
     return res.status(500).json({ message: "Server error" });
   }
 };
-
 
 // ----------------------------------------------------
 // RESET PASSWORD
@@ -684,7 +664,6 @@ exports.getMe = async (req, res) => {
       }));
     }
 
-    console.log('🔍 Mapped emails with id field:', userObject.emails);
     return res.json(userObject);
   } catch (err) {
     console.error("GET ME ERROR:", err);
@@ -910,7 +889,6 @@ exports.getSessions = async (req, res) => {
     // DEDUPLICATION & CLEANUP:
     // Remove duplicate tokens (same hash) to prevent "double current" bugs
     // ---------------------------------------------------------
-    console.log(`🔍 [getSessions] Raw Tokens Count: ${user.refreshTokens.length}`);
 
     const seenHashes = new Set();
     const uniqueTokens = [];
@@ -921,7 +899,7 @@ exports.getSessions = async (req, res) => {
     // Let's iterate normally.
     for (const t of user.refreshTokens) {
       if (seenHashes.has(t.tokenHash)) {
-        console.log(`⚠️ Removing duplicate hash: ${t.tokenHash.substring(0, 10)}...`);
+
         isDirty = true; // Found a duplicate, will need to save
         continue;
       }
@@ -930,7 +908,7 @@ exports.getSessions = async (req, res) => {
     }
 
     if (isDirty) {
-      console.log(`💾 Saving cleaned tokens. New Count: ${uniqueTokens.length}`);
+
       user.refreshTokens = uniqueTokens;
       user.markModified('refreshTokens'); // Explicitly mark as modified
       await user.save();
@@ -1119,13 +1097,7 @@ exports.addEmail = async (req, res) => {
       console.error("Failed to send verification email:", emailErr);
 
       // Development mode: Always log code when email fails (SMTP not configured)
-      console.log('\n========================================');
-      console.log('📧 VERIFICATION CODE (DEV MODE)');
-      console.log('========================================');
-      console.log(`Email: ${normalizedEmail}`);
-      console.log(`Code: ${code}`);
-      console.log('Error:', emailErr.message);
-      console.log('========================================\n');
+
       devCode = code;
     }
 
@@ -1249,13 +1221,7 @@ exports.resendVerification = async (req, res) => {
       console.error("Failed to send verification email:", emailErr);
 
       // Development mode: Always log code when email fails
-      console.log('\n========================================');
-      console.log('📧 VERIFICATION CODE (DEV MODE - RESEND)');
-      console.log('========================================');
-      console.log(`Email: ${emailEntry.email}`);
-      console.log(`Code: ${code}`);
-      console.log('Error:', emailErr.message);
-      console.log('========================================\n');
+
       res.json({ message: `Verification code: ${code} (Check server console)` });
     }
 
