@@ -15,22 +15,29 @@ exports.universalSearch = async (req, res) => {
         const userId = req.user.sub;
         const { workspaceId, query } = req.query;
 
+        console.log('🔍 [UNIVERSAL SEARCH] Request received:', { userId, workspaceId, query });
+
         if (!workspaceId) {
+            console.log('🔍 [UNIVERSAL SEARCH] ERROR: No workspace ID provided');
             return res.status(400).json({ message: "Workspace ID is required" });
         }
 
         if (!query || query.trim().length === 0) {
+            console.log('🔍 [UNIVERSAL SEARCH] Empty query, returning empty results');
             return res.json({ channels: [], contacts: [], messages: [] });
         }
 
         const searchTerm = query.trim();
         const searchRegex = new RegExp(searchTerm, "i"); // Case-insensitive search
+        console.log('🔍 [UNIVERSAL SEARCH] Search term:', searchTerm);
 
         // Verify workspace exists and user has access
         const workspace = await Workspace.findById(workspaceId);
         if (!workspace) {
+            console.log('🔍 [UNIVERSAL SEARCH] ERROR: Workspace not found:', workspaceId);
             return res.status(404).json({ message: "Workspace not found" });
         }
+        console.log('🔍 [UNIVERSAL SEARCH] Workspace found:', workspace.name);
 
         // Parallel search across all categories
         const [channels, contacts, messages, tasks, notes] = await Promise.all([
@@ -40,6 +47,14 @@ exports.universalSearch = async (req, res) => {
             searchTasks(workspaceId, userId, searchRegex),
             searchNotes(workspaceId, userId, searchRegex)
         ]);
+
+        console.log('🔍 [UNIVERSAL SEARCH] Results:', {
+            channels: channels.length,
+            contacts: contacts.length,
+            messages: messages.length,
+            tasks: tasks.length,
+            notes: notes.length
+        });
 
         return res.json({
             channels,
@@ -60,6 +75,8 @@ exports.universalSearch = async (req, res) => {
  */
 async function searchChannels(workspaceId, userId, searchRegex) {
     try {
+        console.log('🔍 [searchChannels] Starting search:', { workspaceId, userId, searchRegex: searchRegex.toString() });
+
         // Find channels in this workspace that match the search term
         // User must be a member or it must be a public channel
         const channels = await Channel.find({
@@ -81,6 +98,17 @@ async function searchChannels(workspaceId, userId, searchRegex) {
             .select("name description isPrivate isDefault members createdAt")
             .limit(10) // Limit to 10 channel results
             .lean();
+
+        console.log('🔍 [searchChannels] Found channels:', channels.length);
+        if (channels.length > 0) {
+            console.log('🔍 [searchChannels] Sample channel:', {
+                name: channels[0].name,
+                isPrivate: channels[0].isPrivate,
+                membersType: Array.isArray(channels[0].members) ?
+                    (channels[0].members[0]?.user ? 'new format (with user field)' : 'old format (direct IDs)') :
+                    'unknown'
+            });
+        }
 
         // Format results
         return channels.map(ch => ({

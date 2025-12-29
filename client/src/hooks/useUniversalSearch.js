@@ -1,6 +1,6 @@
 // client/src/hooks/useUniversalSearch.js
 import { useState, useEffect, useCallback } from 'react';
-import axios from 'axios';
+import api from '../services/api';
 
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000/api';
 
@@ -41,17 +41,13 @@ export const useUniversalSearch = (workspaceId, debounceMs = 300) => {
             setError(null);
 
             try {
-                const token = localStorage.getItem('accessToken');
-                const url = `${API_BASE_URL}/search/universal`;
-                console.log('🔍 SEARCH HOOK - Calling API:', url, 'with params:', { workspaceId, query: debouncedQuery });
+                console.log('🔍 SEARCH HOOK - Calling API with params:', { workspaceId, query: debouncedQuery });
 
-                const response = await axios.get(url, {
+                // Using the configured api instance which automatically adds auth headers
+                const response = await api.get('/api/search/universal', {
                     params: {
                         workspaceId,
                         query: debouncedQuery
-                    },
-                    headers: {
-                        Authorization: `Bearer ${token}`
                     }
                 });
 
