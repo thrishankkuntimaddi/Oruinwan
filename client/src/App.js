@@ -48,6 +48,7 @@ import DepartmentManagement from "./pages/DepartmentManagement";
 import AdminDashboard from "./pages/dashboards/AdminDashboard";
 import ManagerDashboard from "./pages/dashboards/ManagerDashboard";
 import EmployeeDashboard from "./pages/dashboards/EmployeeDashboard";
+import AnalyticsDashboard from "./pages/dashboards/AnalyticsDashboard";
 
 // Protected route wrappers
 import RequireAuth from "./components/RequireAuth";
@@ -373,6 +374,17 @@ function App() {
                               <RequireAuth>
                                 <RequireAdmin>
                                   <DepartmentManagement />
+                                </RequireAdmin>
+                              </RequireAuth>
+                            }
+                          />
+
+                          <Route
+                            path="/admin/analytics"
+                            element={
+                              <RequireAuth>
+                                <RequireAdmin>
+                                  <AnalyticsDashboard />
                                 </RequireAdmin>
                               </RequireAuth>
                             }

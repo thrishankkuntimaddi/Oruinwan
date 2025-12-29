@@ -5,6 +5,7 @@ const Channel = require("../models/Channel");
 const DMSession = require("../models/DMSession");
 const Workspace = require("../models/Workspace");
 const User = require("../models/User");
+const logger = require("../utils/logger");
 
 module.exports = function registerChatHandlers(io, socket) {
   const userId = socket.user.id; // extracted from JWT
@@ -168,7 +169,7 @@ module.exports = function registerChatHandlers(io, socket) {
       });
 
     } catch (err) {
-      console.error("❌ SOCKET SEND ERROR:", err);
+      logger.error("❌ SOCKET SEND ERROR:", err);
       socket.emit("send-error", {
         clientTempId: data.clientTempId,
         message: err.message || "Failed to send message",
@@ -223,7 +224,7 @@ module.exports = function registerChatHandlers(io, socket) {
       }
 
     } catch (err) {
-      console.error("MARK READ ERROR:", err);
+      logger.error("MARK READ ERROR:", err);
     }
   });
 
@@ -256,7 +257,7 @@ module.exports = function registerChatHandlers(io, socket) {
       }
 
     } catch (err) {
-      console.error("message-read ERROR:", err);
+      logger.error("message-read ERROR:", err);
     }
   });
 
@@ -274,7 +275,7 @@ module.exports = function registerChatHandlers(io, socket) {
         io.to(`channel_${channelId}`).emit("typing", { from: userId, fromName });
       }
     } catch (err) {
-      console.error("TYPING ERROR:", err);
+      logger.error("TYPING ERROR:", err);
     }
   });
 
@@ -316,7 +317,7 @@ module.exports = function registerChatHandlers(io, socket) {
         reactions: message.reactions,
       });
     } catch (err) {
-      console.error("ADD REACTION ERROR:", err);
+      logger.error("ADD REACTION ERROR:", err);
       socket.emit("reaction-error", { messageId, error: err.message });
     }
   });
@@ -350,7 +351,7 @@ module.exports = function registerChatHandlers(io, socket) {
         reactions: message.reactions,
       });
     } catch (err) {
-      console.error("REMOVE REACTION ERROR:", err);
+      logger.error("REMOVE REACTION ERROR:", err);
       socket.emit("reaction-error", { messageId, error: err.message });
     }
   });
@@ -426,7 +427,7 @@ module.exports = function registerChatHandlers(io, socket) {
         });
       }
     } catch (err) {
-      console.error("DELETE MESSAGE ERROR:", err);
+      logger.error("DELETE MESSAGE ERROR:", err);
       socket.emit("delete-error", { messageId, error: err.message });
     }
   });
@@ -482,7 +483,7 @@ module.exports = function registerChatHandlers(io, socket) {
         message,
       });
     } catch (err) {
-      console.error("PIN MESSAGE ERROR:", err);
+      logger.error("PIN MESSAGE ERROR:", err);
       socket.emit("pin-error", { messageId, error: err.message });
     }
   });
@@ -514,7 +515,7 @@ module.exports = function registerChatHandlers(io, socket) {
         messageId,
       });
     } catch (err) {
-      console.error("UNPIN MESSAGE ERROR:", err);
+      logger.error("UNPIN MESSAGE ERROR:", err);
       socket.emit("pin-error", { messageId, error: err.message });
     }
   });

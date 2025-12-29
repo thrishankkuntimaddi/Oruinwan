@@ -7,7 +7,7 @@ import { useCompany } from '../../contexts/CompanyContext';
 import { useToast } from '../../contexts/ToastContext';
 import {
     Building, Users, Briefcase, Activity, Plus, ArrowLeft,
-    Search, Filter, TrendingUp, Settings
+    Search, Filter, TrendingUp, Settings, BarChart3
 } from 'lucide-react';
 import {
     DashboardCard, StatsWidget,
@@ -305,6 +305,15 @@ const AdminDashboard = () => {
                                     <Briefcase className="w-8 h-8 text-green-600 mb-3 group-hover:scale-110 transition-transform" />
                                     <p className="font-semibold text-gray-900">Workspaces</p>
                                     <p className="text-sm text-gray-600 mt-1">Create & manage</p>
+                                </button>
+
+                                <button
+                                    onClick={() => navigate('/admin/analytics')}
+                                    className="p-6 bg-gradient-to-br from-indigo-50 to-indigo-100 hover:from-indigo-100 hover:to-indigo-200 rounded-xl text-left transition-all group"
+                                >
+                                    <BarChart3 className="w-8 h-8 text-indigo-600 mb-3 group-hover:scale-110 transition-transform" />
+                                    <p className="font-semibold text-gray-900">Analytics</p>
+                                    <p className="text-sm text-gray-600 mt-1">View insights</p>
                                 </button>
 
                                 <button

@@ -5,6 +5,7 @@ const Message = require("../models/Message");
 const Workspace = require("../models/Workspace");
 const Task = require("../models/Task");
 const Note = require("../models/Note");
+const logger = require("../utils/logger");
 
 /**
  * Universal Search - Search across channels, contacts, and messages
@@ -15,29 +16,29 @@ exports.universalSearch = async (req, res) => {
         const userId = req.user.sub;
         const { workspaceId, query } = req.query;
 
-        console.log('🔍 [UNIVERSAL SEARCH] Request received:', { userId, workspaceId, query });
+        logger.debug('🔍 [UNIVERSAL SEARCH] Request received:', { userId, workspaceId, query });
 
         if (!workspaceId) {
-            console.log('🔍 [UNIVERSAL SEARCH] ERROR: No workspace ID provided');
+            logger.debug('🔍 [UNIVERSAL SEARCH] ERROR: No workspace ID provided');
             return res.status(400).json({ message: "Workspace ID is required" });
         }
 
         if (!query || query.trim().length === 0) {
-            console.log('🔍 [UNIVERSAL SEARCH] Empty query, returning empty results');
+            logger.debug('🔍 [UNIVERSAL SEARCH] Empty query, returning empty results');
             return res.json({ channels: [], contacts: [], messages: [] });
         }
 
         const searchTerm = query.trim();
         const searchRegex = new RegExp(searchTerm, "i"); // Case-insensitive search
-        console.log('🔍 [UNIVERSAL SEARCH] Search term:', searchTerm);
+        logger.debug('🔍 [UNIVERSAL SEARCH] Search term:', searchTerm);
 
         // Verify workspace exists and user has access
         const workspace = await Workspace.findById(workspaceId);
         if (!workspace) {
-            console.log('🔍 [UNIVERSAL SEARCH] ERROR: Workspace not found:', workspaceId);
+            logger.debug('🔍 [UNIVERSAL SEARCH] ERROR: Workspace not found:', workspaceId);
             return res.status(404).json({ message: "Workspace not found" });
         }
-        console.log('🔍 [UNIVERSAL SEARCH] Workspace found:', workspace.name);
+        logger.debug('🔍 [UNIVERSAL SEARCH] Workspace found:', workspace.name);
 
         // Parallel search across all categories
         const [channels, contacts, messages, tasks, notes] = await Promise.all([
@@ -48,7 +49,7 @@ exports.universalSearch = async (req, res) => {
             searchNotes(workspaceId, userId, searchRegex)
         ]);
 
-        console.log('🔍 [UNIVERSAL SEARCH] Results:', {
+        logger.debug('🔍 [UNIVERSAL SEARCH] Results:', {
             channels: channels.length,
             contacts: contacts.length,
             messages: messages.length,
@@ -65,7 +66,7 @@ exports.universalSearch = async (req, res) => {
             query: searchTerm
         });
     } catch (err) {
-        console.error("UNIVERSAL SEARCH ERROR:", err);
+        logger.error("UNIVERSAL SEARCH ERROR:", err);
         return res.status(500).json({ message: "Server error" });
     }
 };
@@ -75,7 +76,7 @@ exports.universalSearch = async (req, res) => {
  */
 async function searchChannels(workspaceId, userId, searchRegex) {
     try {
-        console.log('🔍 [searchChannels] Starting search:', { workspaceId, userId, searchRegex: searchRegex.toString() });
+        logger.debug('🔍 [searchChannels] Starting search:', { workspaceId, userId, searchRegex: searchRegex.toString() });
 
         // Find channels in this workspace that match the search term
         // User must be a member or it must be a public channel
@@ -99,9 +100,9 @@ async function searchChannels(workspaceId, userId, searchRegex) {
             .limit(10) // Limit to 10 channel results
             .lean();
 
-        console.log('🔍 [searchChannels] Found channels:', channels.length);
+        logger.debug('🔍 [searchChannels] Found channels:', channels.length);
         if (channels.length > 0) {
-            console.log('🔍 [searchChannels] Sample channel:', {
+            logger.debug('🔍 [searchChannels] Sample channel:', {
                 name: channels[0].name,
                 isPrivate: channels[0].isPrivate,
                 membersType: Array.isArray(channels[0].members) ?
@@ -122,7 +123,7 @@ async function searchChannels(workspaceId, userId, searchRegex) {
             icon: ch.isPrivate ? "🔒" : "#"
         }));
     } catch (err) {
-        console.error("Search channels error:", err);
+        logger.error("Search channels error:", err);
         return [];
     }
 }
@@ -167,7 +168,7 @@ async function searchContacts(workspaceId, userId, searchRegex) {
 
         return contacts;
     } catch (err) {
-        console.error("Search contacts error:", err);
+        logger.error("Search contacts error:", err);
         return [];
     }
 }
@@ -241,7 +242,7 @@ async function searchMessages(workspaceId, userId, searchRegex) {
             };
         });
     } catch (err) {
-        console.error("Search messages error:", err);
+        logger.error("Search messages error:", err);
         return [];
     }
 }
@@ -310,7 +311,7 @@ async function searchTasks(workspaceId, userId, searchRegex) {
             createdAt: task.createdAt
         }));
     } catch (err) {
-        console.error("Search tasks error:", err);
+        logger.error("Search tasks error:", err);
         return [];
     }
 }
@@ -363,7 +364,7 @@ async function searchNotes(workspaceId, userId, searchRegex) {
             createdAt: note.createdAt
         }));
     } catch (err) {
-        console.error("Search notes error:", err);
+        logger.error("Search notes error:", err);
         return [];
     }
 }

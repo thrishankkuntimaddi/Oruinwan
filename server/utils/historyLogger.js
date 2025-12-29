@@ -1,6 +1,7 @@
 // server/utils/historyLogger.js
 
 const HistoryLog = require("../models/HistoryLog");
+const logger = require("./logger");
 
 /**
  * Log an action to history
@@ -40,11 +41,11 @@ exports.logAction = async ({
 
         await logEntry.save();
 
-        console.log(`📝 Logged: ${action} by user ${userId}`);
+        logger.debug(`📝 Logged: ${action} by user ${userId}`);
 
         return logEntry;
     } catch (err) {
-        console.error("Error logging action:", err);
+        logger.error("Error logging action:", err);
         // Don't fail the request if logging fails
     }
 };
@@ -63,7 +64,7 @@ exports.getUserHistory = async (userId, limit = 50) => {
             .populate("user", "username email")
             .lean();
     } catch (err) {
-        console.error("Error fetching user history:", err);
+        logger.error("Error fetching user history:", err);
         return [];
     }
 };
@@ -82,7 +83,7 @@ exports.getCompanyHistory = async (companyId, limit = 100) => {
             .populate("user", "username email")
             .lean();
     } catch (err) {
-        console.error("Error fetching company history:", err);
+        logger.error("Error fetching company history:", err);
         return [];
     }
 };
@@ -102,7 +103,7 @@ exports.getResourceHistory = async (resourceType, resourceId, limit = 50) => {
             .populate("user", "username email")
             .lean();
     } catch (err) {
-        console.error("Error fetching resource history:", err);
+        logger.error("Error fetching resource history:", err);
         return [];
     }
 };

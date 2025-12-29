@@ -54,12 +54,12 @@ Modern teams are fragmented across multiple tools (Slack for chat, Asana for tas
 
 #### 3. **Notes & Documentation**
 - **Rich Text Editor**: Markdown support with formatting
-- **Collaboration**: Real-time collaborative editing
+- **Collaboration**: Share notes with team members and control editing permissions
 - **Organization**: Folders and tags
-- **Version History**: Track changes over time
+- **Activity Tracking**: Track note creation and sharing events
 - **Sharing**: Share notes with specific teams or company-wide
 
-**Tech Used**: Draft.js or TipTap for rich text, real-time sync via Socket.io
+**Tech Used**: Rich text editor with permission-based sharing and activity logging
 
 #### 4. **Company Updates**
 - **Announcements**: Company-wide broadcasts

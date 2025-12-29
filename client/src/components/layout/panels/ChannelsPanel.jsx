@@ -283,7 +283,7 @@ const ChannelsPanel = ({ title }) => {
         }
     };
 
-    // ✅ WARNING: Delete should call backend (TODO: implement DELETE endpoint)
+    // ✅ Delete channels via backend API
     const handleDeleteSelected = async () => {
         try {
             // Filter out default channels (they cannot be deleted)
@@ -298,16 +298,48 @@ const ChannelsPanel = ({ title }) => {
                 return;
             }
 
-            // TODO: Implement DELETE /api/channels/:id endpoint
-            // For now, just remove from frontend
-            console.warn('⚠️ DELETE endpoint not implemented. Removing from frontend only.');
+            // ✅ Check if currently viewing a deleted channel BEFORE making changes
+            const isViewingDeletedChannel = channelId && deletableChannels.includes(channelId);
 
+            // ✅ Call backend DELETE endpoint for each channel
+            const deletePromises = deletableChannels.map(id =>
+                api.delete(`/api/channels/${id}`)
+            );
+
+            await Promise.all(deletePromises);
+
+            // ✅ Navigate away BEFORE updating state if viewing a deleted channel
+            if (isViewingDeletedChannel) {
+                // Find first non-deleted channel or go to workspace home
+                const remainingChannels = channels.filter(ch => !deletableChannels.includes(ch.id));
+                if (remainingChannels.length > 0) {
+                    navigate(remainingChannels[0].path);
+                } else {
+                    navigate(`/workspace/${workspaceId}`);
+                }
+            }
+
+            // Remove deleted channels from frontend state
             setChannels(prev => prev.filter(ch => !deletableChannels.includes(ch.id)));
+
+            // Reset selection state
             setSelectedItems(new Set());
             setIsSelectionMode(false);
             setShowDeleteConfirm(false);
+
+            // Show success message
+            const count = deletableChannels.length;
+            showToast(
+                `Successfully deleted ${count} channel${count > 1 ? 's' : ''}`,
+                'success'
+            );
         } catch (err) {
             console.error('Error deleting channels:', err);
+            showToast(
+                err.response?.data?.message || 'Failed to delete channels',
+                'error'
+            );
+            setShowDeleteConfirm(false);
         }
     };
 

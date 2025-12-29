@@ -1,0 +1,346 @@
+// client/src/pages/dashboards/AnalyticsDashboard.jsx
+
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
+import { useToast } from '../../contexts/ToastContext';
+import {
+    ArrowLeft, Users, Briefcase, MessageSquare, CheckSquare,
+    TrendingUp, Download, RefreshCw, Calendar, BarChart3,
+    Activity, Hash
+} from 'lucide-react';
+import { LineChart, BarChart, PieChart, AreaChart, StatCard } from '../../components/company/ChartComponents';
+import {
+    getAnalyticsSummary,
+    getUserActivityAnalytics,
+    getWorkspaceAnalytics,
+    getChannelEngagementAnalytics,
+    getTaskAnalytics,
+    getMessageVolumeAnalytics,
+    getEngagementTrends
+} from '../../services/analyticsService';
+
+const AnalyticsDashboard = () => {
+    const { user } = useAuth();
+    const { showToast } = useToast();
+    const navigate = useNavigate();
+
+    const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
+    const [period, setPeriod] = useState(30); // Default 30 days
+
+    // Analytics data state
+    const [summary, setSummary] = useState(null);
+    const [userActivity, setUserActivity] = useState(null);
+    const [workspaces, setWorkspaces] = useState([]);
+    const [channels, setChannels] = useState([]);
+    const [tasks, setTasks] = useState(null);
+    const [messages, setMessages] = useState(null);
+    const [engagement, setEngagement] = useState(null);
+
+    // Fetch all analytics data
+    const fetchAnalytics = async (showLoadingState = true) => {
+        try {
+            if (showLoadingState) setLoading(true);
+            else setRefreshing(true);
+
+            const [
+                summaryData,
+                userActivityData,
+                workspacesData,
+                channelsData,
+                tasksData,
+                messagesData,
+                engagementData
+            ] = await Promise.all([
+                getAnalyticsSummary(period),
+                getUserActivityAnalytics(period),
+                getWorkspaceAnalytics(),
+                getChannelEngagementAnalytics(),
+                getTaskAnalytics(period),
+                getMessageVolumeAnalytics(period),
+                getEngagementTrends(period)
+            ]);
+
+            setSummary(summaryData);
+            setUserActivity(userActivityData);
+            setWorkspaces(workspacesData.workspaces || []);
+            setChannels(channelsData.channels || []);
+            setTasks(tasksData);
+            setMessages(messagesData);
+            setEngagement(engagementData);
+
+        } catch (error) {
+            console.error('Error fetching analytics:', error);
+            showToast(error.response?.data?.message || 'Failed to load analytics', 'error');
+        } finally {
+            setLoading(false);
+            setRefreshing(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchAnalytics();
+    }, [period]);
+
+    // Handle period change
+    const handlePeriodChange = (newPeriod) => {
+        setPeriod(newPeriod);
+    };
+
+    // Handle export
+    const handleExport = () => {
+        showToast('Export functionality coming soon!', 'info');
+    };
+
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+                <div className="text-center">
+                    <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                    <p className="text-gray-500">Loading analytics...</p>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="min-h-screen bg-gray-50">
+            {/* Header */}
+            <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div className="flex items-center justify-between h-16">
+                        <div className="flex items-center gap-4">
+                            <button
+                                onClick={() => navigate('/admin/dashboard')}
+                                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                            >
+                                <ArrowLeft className="w-5 h-5 text-gray-600" />
+                            </button>
+                            <div>
+                                <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                                    <BarChart3 className="w-6 h-6 text-blue-600" />
+                                    Analytics Dashboard
+                                </h1>
+                                <p className="text-sm text-gray-500">Insights and usage statistics</p>
+                            </div>
+                        </div>
+
+                        <div className="flex items-center gap-3">
+                            {/* Period Selector */}
+                            <div className="flex items-center gap-2 bg-gray-100 rounded-lg p-1">
+                                {[7, 30, 90, 365].map((days) => (
+                                    <button
+                                        key={days}
+                                        onClick={() => handlePeriodChange(days)}
+                                        className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${period === days
+                                                ? 'bg-white text-blue-600 shadow-sm'
+                                                : 'text-gray-600 hover:text-gray-900'
+                                            }`}
+                                    >
+                                        {days === 365 ? '1Y' : `${days}D`}
+                                    </button>
+                                ))}
+                            </div>
+
+                            <button
+                                onClick={() => fetchAnalytics(false)}
+                                disabled={refreshing}
+                                className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                                title="Refresh data"
+                            >
+                                <RefreshCw className={`w-5 h-5 ${refreshing ? 'animate-spin' : ''}`} />
+                            </button>
+
+                            <button
+                                onClick={handleExport}
+                                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 flex items-center gap-2"
+                            >
+                                <Download className="w-4 h-4" />
+                                Export
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Main Content */}
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                <div className="space-y-8">
+                    {/* Overview Cards */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                        <StatCard
+                            label="Total Users"
+                            value={summary?.summary?.totalUsers || 0}
+                            trend={summary?.summary?.userGrowth}
+                            icon={Users}
+                            color="blue"
+                        />
+                        <StatCard
+                            label="Active Users"
+                            value={summary?.summary?.activeUsers || 0}
+                            icon={Activity}
+                            color="green"
+                        />
+                        <StatCard
+                            label="Total Messages"
+                            value={summary?.summary?.totalMessages || 0}
+                            icon={MessageSquare}
+                            color="purple"
+                        />
+                        <StatCard
+                            label="Task Completion"
+                            value={`${summary?.summary?.taskCompletionRate || 0}%`}
+                            icon={CheckSquare}
+                            color="orange"
+                        />
+                    </div>
+
+                    {/* Engagement Metrics */}
+                    <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
+                        <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                            <TrendingUp className="w-5 h-5 text-blue-600" />
+                            Engagement Metrics
+                        </h2>
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                            <div className="text-center">
+                                <p className="text-sm text-gray-600 mb-1">Daily Active Users</p>
+                                <p className="text-3xl font-bold text-blue-600">{engagement?.dau || 0}</p>
+                            </div>
+                            <div className="text-center">
+                                <p className="text-sm text-gray-600 mb-1">Weekly Active Users</p>
+                                <p className="text-3xl font-bold text-purple-600">{engagement?.wau || 0}</p>
+                            </div>
+                            <div className="text-center">
+                                <p className="text-sm text-gray-600 mb-1">Monthly Active Users</p>
+                                <p className="text-3xl font-bold text-green-600">{engagement?.mau || 0}</p>
+                            </div>
+                            <div className="text-center">
+                                <p className="text-sm text-gray-600 mb-1">DAU/WAU Ratio</p>
+                                <p className="text-3xl font-bold text-orange-600">{engagement?.dauWauRatio || 0}%</p>
+                                <p className="text-xs text-gray-500 mt-1">Stickiness</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* User Activity Chart */}
+                    <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
+                        <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                            <Users className="w-5 h-5 text-blue-600" />
+                            User Activity Trend
+                        </h2>
+                        <LineChart
+                            data={userActivity?.trendData || []}
+                            height={250}
+                            color="#3b82f6"
+                        />
+                    </div>
+
+                    {/* Two Column Layout */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        {/* Workspace Analytics */}
+                        <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
+                            <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                                <Briefcase className="w-5 h-5 text-purple-600" />
+                                Workspace Activity
+                            </h2>
+                            <BarChart
+                                data={workspaces.map(ws => ({
+                                    label: ws.name.length > 10 ? ws.name.substring(0, 10) + '...' : ws.name,
+                                    value: ws.messageCount || 0
+                                }))}
+                                height={250}
+                                color="#8b5cf6"
+                            />
+                        </div>
+
+                        {/* Task Status Distribution */}
+                        <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
+                            <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                                <CheckSquare className="w-5 h-5 text-orange-600" />
+                                Task Distribution
+                            </h2>
+                            <div className="flex justify-center">
+                                <PieChart
+                                    data={[
+                                        { label: 'To Do', value: tasks?.metrics?.todo || 0 },
+                                        { label: 'In Progress', value: tasks?.metrics?.inProgress || 0 },
+                                        { label: 'Review', value: tasks?.metrics?.review || 0 },
+                                        { label: 'Done', value: tasks?.metrics?.completed || 0 },
+                                        { label: 'Cancelled', value: tasks?.metrics?.cancelled || 0 }
+                                    ].filter(item => item.value > 0)}
+                                    size={200}
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Message Volume */}
+                    <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
+                        <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                            <MessageSquare className="w-5 h-5 text-green-600" />
+                            Message Volume Over Time
+                        </h2>
+                        <AreaChart
+                            data={messages?.trendData || []}
+                            height={250}
+                            color="#10b981"
+                        />
+                        <div className="grid grid-cols-3 gap-4 mt-6 pt-6 border-t border-gray-200">
+                            <div className="text-center">
+                                <p className="text-sm text-gray-600 mb-1">Total Messages</p>
+                                <p className="text-2xl font-bold text-gray-900">{messages?.metrics?.total || 0}</p>
+                            </div>
+                            <div className="text-center">
+                                <p className="text-sm text-gray-600 mb-1">Channel Messages</p>
+                                <p className="text-2xl font-bold text-blue-600">{messages?.metrics?.byChannel || 0}</p>
+                            </div>
+                            <div className="text-center">
+                                <p className="text-sm text-gray-600 mb-1">Direct Messages</p>
+                                <p className="text-2xl font-bold text-purple-600">{messages?.metrics?.byDM || 0}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Top Channels */}
+                    <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
+                        <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                            <Hash className="w-5 h-5 text-blue-600" />
+                            Top Channels by Engagement
+                        </h2>
+                        <div className="space-y-3">
+                            {channels.length === 0 ? (
+                                <p className="text-center text-gray-500 py-8">No channel data available</p>
+                            ) : (
+                                channels.slice(0, 10).map((channel, index) => (
+                                    <div
+                                        key={channel.channelId}
+                                        className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-8 h-8 bg-blue-100 text-blue-600 rounded-lg flex items-center justify-center font-bold text-sm">
+                                                {index + 1}
+                                            </div>
+                                            <div>
+                                                <p className="font-semibold text-gray-900">{channel.name}</p>
+                                                <p className="text-sm text-gray-500">
+                                                    {channel.memberCount} members • {channel.activeUsers} active
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <div className="text-right">
+                                            <p className="text-lg font-bold text-gray-900">{channel.messageCount}</p>
+                                            <p className="text-xs text-gray-500">messages</p>
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+export default AnalyticsDashboard;
