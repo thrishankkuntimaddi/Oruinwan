@@ -2,7 +2,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
-import { useToast } from "../contexts/ToastContext";
 import {
     MessageSquare,
     Users,
@@ -20,7 +19,6 @@ import {
 const FeatureShowcase = () => {
     const navigate = useNavigate();
     const { user } = useAuth();
-    const { showToast } = useToast();
     const [isVisible, setIsVisible] = useState(false);
 
     useEffect(() => {
@@ -31,49 +29,6 @@ const FeatureShowcase = () => {
     }, [user, navigate]);
 
     if (user) return null;
-
-    const products = [
-        {
-            id: 'ai',
-            name: 'Chttrix.ai',
-            icon: <Bot size={32} />,
-            desc: 'Context-aware AI to generate code, summarize chats, and automate workflows.',
-            color: 'text-purple-600',
-            bg: 'bg-purple-50',
-            border: 'border-purple-100',
-            gradient: 'from-purple-500 to-indigo-600'
-        },
-        {
-            id: 'note',
-            name: 'ChttrixNote',
-            icon: <FileText size={32} />,
-            desc: 'Real-time multi-player docs for specs, wikis, and meeting notes.',
-            color: 'text-blue-600',
-            bg: 'bg-blue-50',
-            border: 'border-blue-100',
-            gradient: 'from-blue-500 to-cyan-500'
-        },
-        {
-            id: 'task',
-            name: 'ChttrixTask',
-            icon: <CheckSquare size={32} />,
-            desc: 'Track sprints, manage bugs, and visualize progress on Kanban boards.',
-            color: 'text-green-600',
-            bg: 'bg-green-50',
-            border: 'border-green-100',
-            gradient: 'from-emerald-500 to-green-600'
-        },
-        {
-            id: 'mind',
-            name: 'MindFlush',
-            icon: <Brain size={32} />,
-            desc: 'Infinite whiteboards for diagramming, wireframing, and brainstorming.',
-            color: 'text-orange-600',
-            bg: 'bg-orange-50',
-            border: 'border-orange-100',
-            gradient: 'from-orange-500 to-amber-500'
-        }
-    ];
 
     const features = [
         {
@@ -258,7 +213,7 @@ const FeatureShowcase = () => {
                         })}
                     </div>
                 </div>
-            
+
 
                 {/* Footer */}
                 <div className="w-full mt-4 border-t border-gray-100 py-6 text-center">
