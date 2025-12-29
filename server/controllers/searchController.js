@@ -72,7 +72,8 @@ async function searchChannels(workspaceId, userId, searchRegex) {
                 {
                     $or: [
                         { isPrivate: false }, // Public channels
-                        { 'members.user': userId } // Or user is a member
+                        { 'members.user': userId }, // New format: user is a member
+                        { 'members': userId } // Old format: user ID directly in array
                     ]
                 }
             ]

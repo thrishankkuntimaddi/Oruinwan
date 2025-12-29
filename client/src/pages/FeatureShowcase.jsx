@@ -258,45 +258,7 @@ const FeatureShowcase = () => {
                         })}
                     </div>
                 </div>
-
-                {/* The Chttrix Suite */}
-                <div className="w-full mb-24">
-                    <div className="text-center mb-16">
-                        <h2 className="text-4xl font-bold text-gray-900 mb-4 tracking-tight">The Chttrix Suite</h2>
-                        <p className="text-lg text-gray-500 max-w-2xl mx-auto">Powerful standalone apps that work even better together.</p>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                        {products.map((product, index) => (
-                            <div
-                                key={product.id}
-                                onClick={() => showToast("Coming Soon", "info")}
-                                className={`group relative bg-white/80 backdrop-blur-sm rounded-[2rem] p-8 border border-gray-100 shadow-sm hover:shadow-2xl hover:shadow-indigo-500/10 hover:-translate-y-2 transition-all duration-500 overflow-hidden cursor-pointer ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}
-                                style={{ transitionDelay: `${200 + (index * 100)}ms` }}
-                            >
-                                {/* Hover Gradient Border Effect */}
-                                <div className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-gradient-to-br ${product.gradient} opacity-[0.03]`}></div>
-                                <div className={`absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r ${product.gradient} transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500`}></div>
-
-                                <div className="relative z-10 flex flex-col h-full items-start">
-                                    <div className={`w-16 h-16 rounded-2xl ${product.bg} ${product.color} flex items-center justify-center mb-6 shadow-sm group-hover:scale-110 group-hover:rotate-6 transition-all duration-500`}>
-                                        {product.icon}
-                                    </div>
-
-                                    <h3 className="text-2xl font-bold text-gray-900 mb-3 group-hover:text-indigo-600 transition-colors">{product.name}</h3>
-                                    <p className="text-sm text-gray-500 font-medium leading-relaxed mb-6 flex-grow">
-                                        {product.desc}
-                                    </p>
-
-                                    <div className="flex items-center text-xs font-bold text-gray-400 group-hover:text-indigo-600 transition-colors uppercase tracking-wider mt-auto">
-                                        <span>Launch App</span>
-                                        <ArrowRight size={12} className="ml-2 transform group-hover:translate-x-1 transition-transform" />
-                                    </div>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
+            
 
                 {/* Footer */}
                 <div className="w-full mt-4 border-t border-gray-100 py-6 text-center">

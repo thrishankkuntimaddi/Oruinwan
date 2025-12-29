@@ -673,9 +673,6 @@ exports.getWorkspaceChannels = async (req, res) => {
           return memberId === userId.toString();
         });
 
-          return id.substring(id.length - 4); // Last 4 chars for brevity
-        }));
-
         return isMemberOfChannel;
       }
     });
