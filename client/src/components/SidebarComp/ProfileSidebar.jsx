@@ -156,7 +156,7 @@ const ProfileMenu = ({ onClose }) => {
 
   const handleLogout = async () => {
     await logout();
-    window.location.replace("/login");
+    window.location.replace("/");
   };
 
   // Handle status change

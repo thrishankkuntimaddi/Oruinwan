@@ -15,7 +15,7 @@ const WorkspaceSelect = () => {
 
     const handleLogout = async () => {
         await logout();
-        window.location.replace("/login");
+        window.location.replace("/");
     };
 
     const [workspaces, setWorkspaces] = useState([]);

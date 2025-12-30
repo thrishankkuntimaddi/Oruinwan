@@ -1,8 +1,13 @@
 ChttrixCollab/
 ├── README.md
 ├── structure.txt
+├── verify-security.sh
+├── nixpacks.toml
+├── railway.json
+├── .gitignore
 ├── client/
 │   ├── package.json
+│   ├── yarn.lock
 │   ├── postcss.config.js
 │   ├── tailwind.config.js
 │   ├── public/
@@ -21,12 +26,24 @@ ChttrixCollab/
 │       │   ├── RequireAdmin.jsx
 │       │   ├── RequireAuth.jsx
 │       │   ├── RequireWorkspace.jsx
+│       │   ├── ThemeAwareLogo.jsx
 │       │   ├── SidebarComp/
 │       │   │   ├── ProfileSidebar.jsx
 │       │   │   └── Sidebar.jsx
 │       │   ├── ai/
 │       │   │   └── ChttrixAIChat/
 │       │   │       └── ChttrixAIChat.jsx
+│       │   ├── analytics/
+│       │   │   ├── AnalyticsChart.jsx
+│       │   │   ├── AnalyticsDashboard.jsx
+│       │   │   ├── AnalyticsSection.jsx
+│       │   │   └── AnalyticsSummary.jsx
+│       │   ├── company/
+│       │   │   ├── DepartmentCard.jsx
+│       │   │   └── EmployeeCard.jsx
+│       │   ├── departments/
+│       │   │   ├── CreateDepartmentModal.jsx
+│       │   │   └── DepartmentList.jsx
 │       │   ├── home/
 │       │   │   └── panels/
 │       │   │       └── HomePanel/
@@ -48,6 +65,7 @@ ChttrixCollab/
 │       │   │       ├── ChannelsPanel.jsx
 │       │   │       ├── MessagesPanel.jsx
 │       │   │       ├── NotesPanel.jsx
+│       │   │       ├── SearchPanel.jsx
 │       │   │       ├── TasksPanel.jsx
 │       │   │       └── UpdatesPanel.jsx
 │       │   ├── loginpage/
@@ -65,6 +83,7 @@ ChttrixCollab/
 │       │   │   ├── BroadcastView.jsx
 │       │   │   ├── ChannelManagementModal.jsx
 │       │   │   ├── CreateChannelModal.jsx
+│       │   │   ├── DMChatWindow.jsx
 │       │   │   ├── JoinChannelModal.jsx
 │       │   │   ├── MessageList.jsx
 │       │   │   ├── NewDMModal.jsx
@@ -77,13 +96,16 @@ ChttrixCollab/
 │       │   │       │   ├── emojiPicker.jsx
 │       │   │       │   └── footerInput.jsx
 │       │   │       ├── header/
-│       │   │       │   └── header.jsx
+│       │   │       │   ├── ContactOptionsDropdown.jsx
+│       │   │       │   ├── header.jsx
+│       │   │       │   └── useContactOptions.js
 │       │   │       ├── helpers/
 │       │   │       │   └── helpers.js
 │       │   │       ├── messages/
 │       │   │       │   ├── ChannelMessageItem.jsx
 │       │   │       │   ├── DMMessageItem.jsx
 │       │   │       │   ├── JoinMarker.jsx
+│       │   │       │   ├── MessageErrorBoundary.jsx
 │       │   │       │   ├── messageGroup.jsx
 │       │   │       │   ├── messageItem.jsx
 │       │   │       │   ├── messageMenu.jsx
@@ -92,12 +114,17 @@ ChttrixCollab/
 │       │   │       │   ├── reactionPicker.jsx
 │       │   │       │   └── replyPreview.jsx
 │       │   │       ├── modals/
+│       │   │       │   ├── BlockUserDialog.jsx
+│       │   │       │   ├── DeleteChatDialog.jsx
 │       │   │       │   ├── ForwardMessageModal.jsx
 │       │   │       │   ├── MessageInfoModal.jsx
 │       │   │       │   ├── contactInfoModal.jsx
 │       │   │       │   └── contactShareModal.jsx
 │       │   │       ├── pinned/
 │       │   │       │   └── pinnedMessage.jsx
+│       │   │       ├── tabs/
+│       │   │       │   ├── CanvasTab.jsx
+│       │   │       │   └── ChannelTabs.jsx
 │       │   │       └── toolbar/
 │       │   │           └── selectionToolbar.jsx
 │       │   ├── modals/
@@ -116,17 +143,25 @@ ChttrixCollab/
 │       ├── contexts/
 │       │   ├── AuthContext.jsx
 │       │   ├── BlogsContext.jsx
+│       │   ├── CompanyContext.jsx
 │       │   ├── ContactsContext.jsx
+│       │   ├── DepartmentContext.jsx
 │       │   ├── NotesContext.jsx
+│       │   ├── SocketContext.jsx
+│       │   ├── TasksContext.jsx
+│       │   ├── ThemeContext.js
 │       │   ├── ToastContext.jsx
 │       │   └── WorkspaceContext.jsx
 │       ├── hooks/
 │       │   ├── useChannels.js
+│       │   ├── useUniversalSearch.js
 │       │   └── useUsers.js
 │       ├── pages/
 │       │   ├── AcceptInvite.jsx
 │       │   ├── CompanyAdmin.jsx
+│       │   ├── DepartmentManagement.jsx
 │       │   ├── FeatureShowcase.jsx
+│       │   ├── JoinChannel.jsx
 │       │   ├── JoinWorkspace.jsx
 │       │   ├── RegisterCompany.jsx
 │       │   ├── VerifyEmail.jsx
@@ -145,12 +180,23 @@ ChttrixCollab/
 │       │   ├── auth/
 │       │   │   └── utils/
 │       │   │       └── formValidation.js
+│       │   ├── dashboards/
+│       │   │   ├── AdminDashboard.jsx
+│       │   │   ├── AnalyticsDashboard.jsx
+│       │   │   ├── EmployeeDashboard.jsx
+│       │   │   └── ManagerDashboard.jsx
 │       │   └── workspace/
 │       │       └── WorkspaceSelect/
 │       │           └── WorkspaceCard.jsx
 │       ├── services/
+│       │   ├── analyticsService.js
 │       │   ├── api.js
+│       │   ├── auditService.js
 │       │   ├── channelService.js
+│       │   ├── companyService.js
+│       │   ├── contactService.js
+│       │   ├── dashboardService.js
+│       │   ├── departmentService.js
 │       │   ├── messageService.js
 │       │   ├── userService.js
 │       │   └── workspaceService.js
@@ -162,7 +208,11 @@ ChttrixCollab/
     ├── package-lock.json
     ├── seed.js
     ├── server.js
-    ├── migrate-channel-members.js
+    ├── .env
+    ├── .env.example
+    ├── .env.production.template
+    ├── .eslintrc.json
+    ├── .gitignore
     ├── controllers/
     │   ├── authController.js
     │   ├── channelController.js
@@ -171,17 +221,22 @@ ChttrixCollab/
     │   ├── companyController.js
     │   ├── dashboardController.js
     │   ├── favoriteController.js
+    │   ├── favoritesController.js
     │   ├── messagesController.js
     │   ├── noteController.js
+    │   ├── searchController.js
     │   ├── taskController.js
     │   ├── threadController.js
     │   ├── updateController.js
+    │   ├── userController.js
     │   ├── workspaceAdminController.js
-    │   └── workspaceController.js
+    │   ├── workspaceController.js
+    │   └── workspacePermissionsController.js
     ├── middleware/
     │   ├── auth.js
     │   └── permissions.js
     ├── models/
+    │   ├── Analytics.js
     │   ├── AuditLog.js
     │   ├── Channel.js
     │   ├── Company.js
@@ -207,20 +262,38 @@ ChttrixCollab/
     │   ├── favorites.js
     │   ├── messages.js
     │   ├── notes.js
+    │   ├── search.js
     │   ├── tasks.js
     │   ├── updates.js
+    │   ├── user.js
     │   └── workspaces.js
     ├── scripts/
+    │   ├── analyzeDatabase.js
+    │   ├── cleanupAllInvitations.js
     │   ├── cleanupChannels.js
+    │   ├── cleanupDuplicateDomains.js
+    │   ├── cleanupInvitations.js
+    │   ├── cleanupKeepUsers.js
     │   ├── fixDefaultChannels.js
-    │   └── migrateProfileNames.js
+    │   ├── fixDomainIndex.js
+    │   ├── fixWorkspaceOwners.js
+    │   ├── migrateProfileNames.js
+    │   ├── remove-console-logs.js
+    │   ├── resetDatabase.js
+    │   ├── testApiEndpoint.js
+    │   ├── testCompanyRegistration.js
+    │   └── archive/
+    │       └── migrate-channel-members.js
     ├── socket/
     │   └── index.js
     └── utils/
+        ├── analyticsService.js
         ├── auditLogger.js
         ├── domainVerification.js
+        ├── emailTemplates.js
+        ├── fileUpload.js
         ├── generateTokens.js
         ├── historyLogger.js
         ├── invite.js
+        ├── logger.js
         └── sendEmail.js
-

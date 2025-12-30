@@ -21,7 +21,7 @@ const ThemeAwareLogo = ({ className = "", style = {} }) => {
             height="1024"
             viewBox="0 0 1024 1024"
             className={className}
-            style={style}
+            style={{ borderRadius: '8px', ...style }}
         >
             <g>
                 {/* Main logo paths - these stay the same */}
