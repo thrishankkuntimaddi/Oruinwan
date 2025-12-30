@@ -366,6 +366,7 @@ exports.login = async (req, res) => {
         roles: user.roles,
         verified: user.verified,
         userType: user.userType,
+        companyId: user.companyId ? user.companyId._id : null, // Add companyId for redirect logic
         companyRole: user.companyRole,
         profilePicture: user.profilePicture,
         userStatus: user.userStatus,

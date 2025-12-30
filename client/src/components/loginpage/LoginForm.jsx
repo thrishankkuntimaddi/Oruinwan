@@ -59,13 +59,22 @@ const LoginForm = ({ onSwitch, initialEmail = "" }) => {
         return;
       }
 
-      // Determine redirect based on role
+      // Determine redirect based on company status
+      const hasCompany = response?.user?.companyId;
       const isAdmin = response?.isAdmin ||
         response?.user?.companyRole === 'owner' ||
         response?.user?.companyRole === 'admin';
 
-      // Admin → Dashboard, Regular user → Workspaces
-      navigate(isAdmin ? "/admin/company" : "/workspaces");
+      // If user has a company, go to workspaces
+      // If admin without company, go to company creation
+      // Otherwise, go to workspaces
+      if (hasCompany) {
+        navigate("/workspaces");
+      } else if (isAdmin) {
+        navigate("/admin/company");
+      } else {
+        navigate("/workspaces");
+      }
 
     } catch (err) {
       console.error("🔴 Login Error:", err);

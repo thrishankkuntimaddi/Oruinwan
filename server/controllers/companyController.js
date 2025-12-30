@@ -5,6 +5,7 @@ const User = require("../models/User");
 const Workspace = require("../models/Workspace");
 const Channel = require("../models/Channel");
 const Invite = require("../models/Invite");
+const Department = require("../models/Department");
 const { logAction } = require("../utils/historyLogger");
 const {
   generateDomainVerificationToken,
@@ -88,7 +89,30 @@ exports.registerCompany = async (req, res) => {
 
     await company.save();
 
-    // Step 2: Create Admin User with provided password
+    // Step 2: Create Department documents for selected departments
+    console.log("📋 Step 2: Creating departments...");
+    const createdDepartmentIds = [];
+
+    try {
+      for (const departmentName of departments) {
+        const department = new Department({
+          company: company._id,
+          name: departmentName,
+          description: `${departmentName} department`,
+          members: [] // Will add admin later
+        });
+
+        await department.save();
+        createdDepartmentIds.push(department._id);
+        console.log(`✅ Created department: ${departmentName}`);
+      }
+    } catch (err) {
+      console.error("❌ Error creating departments:", err);
+      throw new Error(`Failed to create departments: ${err.message}`);
+    }
+
+    // Step 3: Create Admin User with provided password
+    console.log("👤 Step 3: Creating admin user...");
     const passwordHash = await bcrypt.hash(adminPassword, 12);
 
     const adminUser = new User({
@@ -99,18 +123,48 @@ exports.registerCompany = async (req, res) => {
       companyId: company._id,
       companyRole: "owner",
       verified: true, // Auto-verify admin
-      departments: departments || [] // Save department names
+      departments: createdDepartmentIds // Save department ObjectIds
     });
 
-    await adminUser.save();
+    try {
+      await adminUser.save();
+      console.log(`✅ Admin user created: ${adminName} (${adminEmail})`);
+    } catch (err) {
+      console.error("❌ Error creating admin user:", err);
+      throw new Error(`Failed to create admin user: ${err.message}`);
+    }
 
-    // Step 3: Add admin to company.admins array
-    company.admins.push({
-      user: adminUser._id,
-      role: "owner"
-    });
+    // Step 4: Add admin to each department's members array
+    console.log("📋 Step 4: Adding admin to departments...");
+    try {
+      for (const departmentId of createdDepartmentIds) {
+        const department = await Department.findById(departmentId);
+        if (department) {
+          department.members.push(adminUser._id);
+          await department.save();
+        }
+      }
+      console.log("✅ Admin added to all departments");
+    } catch (err) {
+      console.error("❌ Error adding admin to departments:", err);
+      throw new Error(`Failed to add admin to departments: ${err.message}`);
+    }
 
-    // Step 4: Create Default Workspace with custom name
+    // Step 5: Add admin to company.admins array
+    console.log("🏢 Step 5: Adding admin to company...");
+    try {
+      company.admins.push({
+        user: adminUser._id,
+        role: "owner"
+      });
+      console.log("✅ Admin added to company admins");
+    } catch (err) {
+      console.error("❌ Error adding admin to company:", err);
+      throw new Error(`Failed to add admin to company: ${err.message}`);
+    }
+
+    // Step 6: Create Default Workspace with custom name
+    console.log("🏠 Step 6: Creating default workspace...");
     const finalWorkspaceName = workspaceName || `${companyName} Workspace`;
     const defaultWorkspace = new Workspace({
       company: company._id,
@@ -124,61 +178,83 @@ exports.registerCompany = async (req, res) => {
       }]
     });
 
-    await defaultWorkspace.save();
+    try {
+      await defaultWorkspace.save();
+      console.log(`✅ Workspace created: ${finalWorkspaceName}`);
 
-    // Update company with default workspace
-    company.defaultWorkspace = defaultWorkspace._id;
-    await company.save();
+      // Update company with default workspace
+      company.defaultWorkspace = defaultWorkspace._id;
+      await company.save();
+      console.log("✅ Company updated with default workspace");
 
-    // Update user's workspace memberships
-    adminUser.workspaces.push({
-      workspace: defaultWorkspace._id,
-      role: "owner"
-    });
-    await adminUser.save();
-
-    // Step 5: Create Default Channels from frontend
-    const createdChannels = [];
-
-    for (const channelName of defaultChannels) {
-      const channel = new Channel({
+      // Update user's workspace memberships
+      adminUser.workspaces.push({
         workspace: defaultWorkspace._id,
-        company: company._id,
-        name: channelName.toLowerCase(),
-        description: channelName === "general"
-          ? "General discussion"
-          : channelName === "announcements"
-            ? "Company announcements"
-            : `${channelName} channel`,
-        isPrivate: false,
-        isDefault: true,
-        createdBy: adminUser._id,
-        members: [{
-          user: adminUser._id,
-          joinedAt: new Date()
-        }]
+        role: "owner"
       });
-
-      await channel.save();
-      createdChannels.push(channel);
-
+      await adminUser.save();
+      console.log("✅ Admin added to workspace");
+    } catch (err) {
+      console.error("❌ Error creating/updating workspace:", err);
+      throw new Error(`Failed to create workspace: ${err.message}`);
     }
 
-    // Update workspace with default channels
-    defaultWorkspace.defaultChannels = createdChannels.map(c => c._id);
-    await defaultWorkspace.save();
+    // Step 7: Create Default Channels from frontend
+    console.log("📢 Step 7: Creating default channels...");
+    const createdChannels = [];
+
+    try {
+      for (const channelName of defaultChannels) {
+        const channel = new Channel({
+          workspace: defaultWorkspace._id,
+          company: company._id,
+          name: channelName.toLowerCase(),
+          description: channelName === "general"
+            ? "General discussion"
+            : channelName === "announcements"
+              ? "Company announcements"
+              : `${channelName} channel`,
+          isPrivate: false,
+          isDefault: true,
+          createdBy: adminUser._id,
+          members: [{
+            user: adminUser._id,
+            joinedAt: new Date()
+          }]
+        });
+
+        await channel.save();
+        createdChannels.push(channel);
+        console.log(`✅ Created channel: #${channelName}`);
+      }
+
+      // Update workspace with default channels
+      defaultWorkspace.defaultChannels = createdChannels.map(c => c._id);
+      await defaultWorkspace.save();
+      console.log("✅ Workspace updated with default channels");
+    } catch (err) {
+      console.error("❌ Error creating channels:", err);
+      throw new Error(`Failed to create channels: ${err.message}`);
+    }
 
     // Log the company creation
-    await logAction({
-      userId: adminUser._id,
-      action: "company_created",
-      description: `Company "${companyName}" registered`,
-      resourceType: "company",
-      resourceId: company._id,
-      companyId: company._id,
-      metadata: { companyName, domain },
-      req
-    });
+    console.log("📝 Step 8: Logging company creation...");
+    try {
+      await logAction({
+        userId: adminUser._id,
+        action: "company_created",
+        description: `Company "${companyName}" registered`,
+        resourceType: "company",
+        resourceId: company._id,
+        companyId: company._id,
+        metadata: { companyName, domain },
+        req
+      });
+      console.log("✅ Action logged successfully");
+    } catch (err) {
+      console.warn("⚠️ Failed to log action (non-critical):", err.message);
+      // Don't throw - logging failure shouldn't break registration
+    }
 
     return res.status(201).json({
       message: "Company registered successfully. Please login to access your dashboard.",

@@ -247,7 +247,7 @@ const RegisterCompany = () => {
                                                 value={formData.companyName}
                                                 onChange={handleChange}
                                                 placeholder="Acme Inc."
-                                                className={`w-full pl-12 pr-4 py-3.5 bg-white border ${errors.companyName ? "border-red-300 ring-4 ring-red-50" : "border-gray-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50"} rounded-2xl outline-none transition-all shadow-sm`}
+                                                className={`w-full pl-12 pr-4 py-3.5 bg-white border ${errors.companyName ? "border-red-300 ring-4 ring-red-50" : "border-gray-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50"} rounded-2xl outline-none transition-all shadow-sm text-gray-900`}
                                             />
                                         </div>
                                         {errors.companyName && <p className="text-red-500 text-xs font-semibold ml-2">{errors.companyName}</p>}
@@ -262,7 +262,7 @@ const RegisterCompany = () => {
                                                 value={formData.domain}
                                                 onChange={handleChange}
                                                 placeholder="acme.com"
-                                                className="w-full pl-12 pr-4 py-3.5 bg-white border border-gray-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 rounded-2xl outline-none transition-all shadow-sm"
+                                                className="w-full pl-12 pr-4 py-3.5 bg-white border border-gray-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 rounded-2xl outline-none transition-all shadow-sm text-gray-900"
                                             />
                                         </div>
                                     </div>
@@ -280,7 +280,7 @@ const RegisterCompany = () => {
                                                 value={formData.adminName}
                                                 onChange={handleChange}
                                                 placeholder="John Doe"
-                                                className={`w-full pl-12 pr-4 py-3.5 bg-white border ${errors.adminName ? "border-red-300" : "border-gray-200"} focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 rounded-2xl outline-none transition-all shadow-sm`}
+                                                className={`w-full pl-12 pr-4 py-3.5 bg-white border ${errors.adminName ? "border-red-300" : "border-gray-200"} focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 rounded-2xl outline-none transition-all shadow-sm text-gray-900`}
                                             />
                                         </div>
                                     </div>
@@ -294,7 +294,7 @@ const RegisterCompany = () => {
                                                 value={formData.adminEmail}
                                                 onChange={handleChange}
                                                 placeholder="john@acme.com"
-                                                className={`w-full pl-12 pr-4 py-3.5 bg-white border ${errors.adminEmail ? "border-red-300" : "border-gray-200"} focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 rounded-2xl outline-none transition-all shadow-sm`}
+                                                className={`w-full pl-12 pr-4 py-3.5 bg-white border ${errors.adminEmail ? "border-red-300" : "border-gray-200"} focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 rounded-2xl outline-none transition-all shadow-sm text-gray-900`}
                                             />
                                         </div>
                                         {errors.adminEmail && <p className="text-red-500 text-xs font-semibold ml-2">{errors.adminEmail}</p>}
@@ -312,7 +312,7 @@ const RegisterCompany = () => {
                                                 value={formData.adminPassword}
                                                 onChange={handleChange}
                                                 placeholder="••••••••"
-                                                className={`w-full pl-12 pr-4 py-3.5 bg-white border ${errors.adminPassword ? "border-red-300" : "border-gray-200"} focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 rounded-2xl outline-none transition-all shadow-sm`}
+                                                className={`w-full pl-12 pr-4 py-3.5 bg-white border ${errors.adminPassword ? "border-red-300" : "border-gray-200"} focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 rounded-2xl outline-none transition-all shadow-sm text-gray-900`}
                                             />
                                         </div>
                                         {errors.adminPassword && <p className="text-red-500 text-xs font-semibold ml-2">{errors.adminPassword}</p>}
@@ -328,7 +328,7 @@ const RegisterCompany = () => {
                                                 value={formData.confirmPassword}
                                                 onChange={handleChange}
                                                 placeholder="••••••••"
-                                                className={`w-full pl-12 pr-4 py-3.5 bg-white border ${errors.confirmPassword ? "border-red-300" : "border-gray-200"} focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 rounded-2xl outline-none transition-all shadow-sm`}
+                                                className={`w-full pl-12 pr-4 py-3.5 bg-white border ${errors.confirmPassword ? "border-red-300" : "border-gray-200"} focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 rounded-2xl outline-none transition-all shadow-sm text-gray-900`}
                                             />
                                         </div>
                                     </div>
@@ -375,7 +375,7 @@ const RegisterCompany = () => {
                                             onChange={handleChange}
                                             name="customDepartment"
                                             placeholder="Human Resources"
-                                            className="flex-1 px-5 py-3 rounded-2xl border border-gray-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 outline-none transition-all bg-white"
+                                            className="flex-1 px-5 py-3 rounded-2xl border border-gray-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 outline-none transition-all bg-white text-gray-900"
                                             onKeyPress={(e) => e.key === 'Enter' && addCustomDepartment()}
                                         />
                                         <button onClick={addCustomDepartment} className="px-6 py-3 bg-gray-900 text-white rounded-2xl font-bold hover:bg-black hover:shadow-lg transition-all">
@@ -419,7 +419,7 @@ const RegisterCompany = () => {
                                         value={formData.workspaceName}
                                         onChange={handleChange}
                                         placeholder={`${formData.companyName || "Company"} Workspace`}
-                                        className="w-full px-5 py-4 bg-white border border-gray-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 rounded-2xl outline-none transition-all shadow-sm text-lg"
+                                        className="w-full px-5 py-4 bg-white border border-gray-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 rounded-2xl outline-none transition-all shadow-sm text-lg text-gray-900"
                                     />
                                 </div>
 
@@ -431,7 +431,7 @@ const RegisterCompany = () => {
                                         onChange={handleChange}
                                         rows={4}
                                         placeholder="The central hub for all things Acme Inc."
-                                        className="w-full px-5 py-4 bg-white border border-gray-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 rounded-2xl outline-none transition-all shadow-sm resize-none"
+                                        className="w-full px-5 py-4 bg-white border border-gray-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 rounded-2xl outline-none transition-all shadow-sm resize-none text-gray-900"
                                     />
                                 </div>
 
@@ -459,9 +459,9 @@ const RegisterCompany = () => {
                                     <div className="absolute top-6 right-6 opacity-0 group-hover:opacity-100 transition-opacity text-indigo-600 text-sm font-bold">Edit</div>
                                     <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2"><Building size={18} className="text-gray-400" /> Company</h3>
                                     <div className="grid grid-cols-2 gap-4 text-sm">
-                                        <div><span className="block text-gray-500 text-xs uppercase tracking-wider font-bold mb-1">Name</span>{formData.companyName}</div>
-                                        <div><span className="block text-gray-500 text-xs uppercase tracking-wider font-bold mb-1">Admin</span>{formData.adminName}</div>
-                                        <div className="col-span-2"><span className="block text-gray-500 text-xs uppercase tracking-wider font-bold mb-1">Email</span>{formData.adminEmail}</div>
+                                        <div><span className="block text-gray-500 text-xs uppercase tracking-wider font-bold mb-1">Name</span><span className="text-gray-900 font-medium">{formData.companyName}</span></div>
+                                        <div><span className="block text-gray-500 text-xs uppercase tracking-wider font-bold mb-1">Admin</span><span className="text-gray-900 font-medium">{formData.adminName}</span></div>
+                                        <div className="col-span-2"><span className="block text-gray-500 text-xs uppercase tracking-wider font-bold mb-1">Email</span><span className="text-gray-900 font-medium">{formData.adminEmail}</span></div>
                                     </div>
                                 </div>
 
