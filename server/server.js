@@ -135,7 +135,10 @@ io.use(async (socket, next) => {
     socket.user = { id: decoded.sub };
     next();
   } catch (err) {
-    logger.error("SOCKET AUTH ERROR:", err);
+    // Only log unexpected errors - token expiration is handled by client refresh
+    if (err.name !== 'TokenExpiredError') {
+      logger.error("SOCKET AUTH ERROR:", err);
+    }
     next(new Error("Authentication failed"));
   }
 });

@@ -58,7 +58,11 @@ export const SocketProvider = ({ children }) => {
         });
 
         socketInstance.on('connect_error', (error) => {
-            console.error('❌ Socket connection error:', error.message);
+            // Only log if it's not a typical initialization error
+            // (Socket.io often tries multiple transports before connecting successfully)
+            if (!error.message.includes('xhr poll error') && !error.message.includes('websocket error')) {
+                console.error('❌ Socket connection error:', error.message);
+            }
             setIsConnected(false);
         });
 

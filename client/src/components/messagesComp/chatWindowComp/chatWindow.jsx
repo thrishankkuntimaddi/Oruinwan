@@ -69,7 +69,7 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
   const [showContactShare, setShowContactShare] = useState(false);
   const [channelManagementTab, setChannelManagementTab] = useState(null); // null, "members", "settings"
   const [inspectedMessage, setInspectedMessage] = useState(null);
-  const [workspaceMembers, setWorkspaceMembers] = useState([]);
+  const [, setWorkspaceMembers] = useState([]);
   const [toast, setToast] = useState({ message: "", type: "success", visible: false });
   const [showExitChannelConfirm, setShowExitChannelConfirm] = useState(false);
   const [showDeleteChannelConfirm, setShowDeleteChannelConfirm] = useState(false);
@@ -521,7 +521,7 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
         console.log('➕ [ChatWindow] Adding new message to list');
         setMessages((prev) => {
           if (prev.some((x) => x.id === realMsg.id)) {
-            console.log('⚠️ [ChatWindow] Message already exists, skipping');
+            // Message already exists (likely due to optimistic update) - this is normal
             return prev;
           }
           return [...prev, realMsg];

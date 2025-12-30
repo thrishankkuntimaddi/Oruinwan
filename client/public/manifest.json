@@ -7,14 +7,22 @@
   "theme_color": "#ffffff",
   "icons": [
     {
-      "src": "assets/ChttrixFavico.png",
-      "type": "image/png",
-      "sizes": "192x192"
+      "src": "assets/ChttrixLogo.svg",
+      "type": "image/svg+xml",
+      "sizes": "any",
+      "purpose": "any"
     },
     {
-      "src": "assets/ChttrixFavico.png",
-      "type": "image/png",
-      "sizes": "512x512"
+      "src": "assets/ChttrixLogo-light.svg",
+      "type": "image/svg+xml",
+      "sizes": "any",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/ChttrixLogo-dark.svg",
+      "type": "image/svg+xml",
+      "sizes": "any",
+      "purpose": "any"
     }
   ]
 }
