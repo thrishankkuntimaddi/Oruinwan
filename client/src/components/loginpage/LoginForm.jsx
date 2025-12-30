@@ -59,26 +59,22 @@ const LoginForm = ({ onSwitch, initialEmail = "" }) => {
         return;
       }
 
+      // 0. Priority Backend Instruction
+      if (response.redirectTo) {
+        console.log("🔀 Redirecting based on backend instruction:", response.redirectTo);
+        navigate(response.redirectTo);
+        return;
+      }
+
       // Determine redirect based on company status
       const hasCompany = response?.user?.companyId;
       const isAdmin = response?.isAdmin ||
         response?.user?.companyRole === 'owner' ||
         response?.user?.companyRole === 'admin';
 
-      const company = response?.company || {};
-      const isSetupComplete = company.isSetupComplete;
-
+      // Fallback Logic (if redirectTo wasn't sent for some reason)
       if (hasCompany) {
-        if (isAdmin && !isSetupComplete) {
-          // Redirect to setup flow
-          if (!company.setupStep || company.setupStep === 0) {
-            navigate("/company/confirm");
-          } else {
-            navigate("/company/setup");
-          }
-        } else {
-          navigate("/workspaces");
-        }
+        navigate("/workspaces");
       } else if (isAdmin) {
         navigate("/admin/company"); // Edge case for admin without company structure (unlikely in new flow)
       } else {

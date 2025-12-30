@@ -1,6 +1,7 @@
 // server/server.js
 require("dotenv").config();
 const express = require("express");
+const path = require("path");
 const mongoose = require("mongoose");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
@@ -82,10 +83,12 @@ mongoose
   .catch((err) => logger.error("MongoDB Error ❌", err));
 
 // Serve uploaded files as static files
-app.use("/uploads", express.static(require("path").join(__dirname, "uploads")));
+app.use(express.static(path.join(__dirname, "../client/build")));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Routes
 app.use("/api/auth", require("./routes/auth"));
+app.use("/api/admin", require("./middleware/auth"), require("./routes/admin")); // Protected by auth middleware first
 app.use("/api/messages", require("./routes/messages"));
 app.use("/api/chat", require("./routes/chatList"));
 app.use("/api/channels", require("./routes/channels"));

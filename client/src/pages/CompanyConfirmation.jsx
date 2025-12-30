@@ -1,106 +1,148 @@
 import React, { useState } from 'react';
+import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { CheckCircle, Shield, FileText, ArrowRight, Building } from 'lucide-react';
+import { CheckCircle, Shield, FileText, ArrowRight, Building, Sparkles } from 'lucide-react';
 
 const CompanyConfirmation = () => {
-    const { user } = useAuth(); // Removed 'login'
+    const { user, refreshUser } = useAuth(); // Assuming refreshUser exists, otherwise just rely on setup flow
     const navigate = useNavigate();
     const [isLoading, setIsLoading] = useState(false);
-
-    // In a real app, we might fetch company details here if not in user object
-    // For now, rely on user.company object
+    const [accepted, setAccepted] = useState(false);
 
     const company = user?.company || {};
 
     const handleConfirm = async () => {
+        if (!accepted) return;
         setIsLoading(true);
-        // We don't necessarily need an API call here if it's just a "Read & Accept" 
-        // that leads to the Setup Wizard. The Setup Wizard step 1 will update the backend.
-        // However, we can mark step 0 -> 1 here if we want granular tracking.
+        try {
+            await axios.post(`${process.env.REACT_APP_BACKEND_URL}/api/companies/${company.id}/start-setup`, {
+                plan: "free", // Defaulting to free for now
+                acceptedTerms: true
+            }, { withCredentials: true });
 
-        setTimeout(() => {
             navigate('/company/setup');
+        } catch (err) {
+            console.error("Setup Start Error:", err);
+            // navigate('/company/setup'); // fallback? No, better show error
+        } finally {
             setIsLoading(false);
-        }, 800);
+        }
     };
 
     if (!user) return null;
 
     return (
-        <div className="h-screen w-full bg-slate-50 relative overflow-hidden font-sans flex flex-col items-center justify-center p-6">
+        <div className="h-screen w-full bg-white relative overflow-hidden font-sans flex flex-col items-center justify-center p-6">
 
-            {/* Background elements */}
-            <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
-                <div className="absolute top-10 left-10 w-64 h-64 bg-indigo-100 rounded-full blur-[80px] opacity-60"></div>
-                <div className="absolute bottom-10 right-10 w-96 h-96 bg-blue-50 rounded-full blur-[100px] opacity-60"></div>
+            {/* Styles & Animations */}
+            <style>{`
+                @keyframes float { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(0, -20px); } }
+                @keyframes float-delayed { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(0, 20px); } }
+                .animate-float { animation: float 10s ease-in-out infinite; }
+                .animate-float-delayed { animation: float-delayed 12s ease-in-out infinite; }
+            `}</style>
+
+            {/* Premium Background */}
+            <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
+                <div className="absolute -top-[10%] -left-[10%] w-[60%] h-[60%] rounded-full bg-gradient-to-br from-indigo-100/40 via-purple-50/40 to-transparent blur-[100px] animate-float"></div>
+                <div className="absolute top-[20%] -right-[10%] w-[50%] h-[50%] rounded-full bg-gradient-to-bl from-blue-100/40 via-teal-50/40 to-transparent blur-[100px] animate-float-delayed"></div>
             </div>
 
-            <div className="max-w-3xl w-full bg-white/80 backdrop-blur-xl rounded-[2rem] shadow-xl border border-white/60 overflow-hidden relative z-10 flex flex-col md:flex-row">
+            <div className="max-w-4xl w-full bg-white/70 backdrop-blur-2xl rounded-[2.5rem] shadow-2xl shadow-indigo-100/50 border border-white/60 overflow-hidden relative z-10 flex flex-col md:flex-row transition-all animate-fadeIn">
 
                 {/* Left Side: Summary */}
-                <div className="w-full md:w-2/5 bg-slate-900 text-white p-8 md:p-10 flex flex-col justify-between relative overflow-hidden">
-                    <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-indigo-600/20 to-transparent"></div>
+                <div className="w-full md:w-2/5 bg-gray-900 text-white p-10 flex flex-col justify-between relative overflow-hidden">
+                    {/* Abstract Shapes */}
+                    <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-indigo-600/30 to-transparent z-0"></div>
+                    <div className="absolute -bottom-20 -left-20 w-64 h-64 bg-indigo-500/20 rounded-full blur-3xl"></div>
 
                     <div className="relative z-10">
-                        <div className="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center mb-6 border border-white/10">
-                            <Building className="text-indigo-300" />
+                        <div className="w-14 h-14 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center mb-8 border border-white/10 shadow-lg">
+                            <Building className="text-indigo-300" size={28} />
                         </div>
-                        <h2 className="text-2xl font-bold mb-2">Welcome Aboard</h2>
-                        <p className="text-slate-400 text-sm leading-relaxed">
-                            Your company registration has been verified. Please review the details before configuring your workspace.
+                        <h2 className="text-3xl font-black mb-3 tracking-tight">Welcome Aboard</h2>
+                        <p className="text-gray-400 leading-relaxed font-medium">
+                            Your workspace for <strong>{company.name}</strong> has been provisioned.
                         </p>
                     </div>
 
-                    <div className="relative z-10 mt-8 space-y-4">
-                        <div className="py-3 px-4 bg-white/5 rounded-lg border border-white/5">
-                            <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Company Name</p>
-                            <p className="font-semibold text-lg">{company.name}</p>
+                    <div className="relative z-10 mt-10 space-y-4">
+                        <div className="py-4 px-5 bg-white/5 backdrop-blur-sm rounded-2xl border border-white/10 hover:bg-white/10 transition-colors">
+                            <div className="flex items-center gap-3 mb-1">
+                                <Sparkles size={14} className="text-yellow-300" />
+                                <p className="text-xs text-gray-400 uppercase tracking-wider font-bold">Plan</p>
+                            </div>
+                            <p className="font-bold text-lg text-white">Enterprise Trial</p>
                         </div>
-                        <div className="py-3 px-4 bg-white/5 rounded-lg border border-white/5">
-                            <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Verified Domain</p>
-                            <p className="font-semibold text-blue-300 flex items-center gap-2">
-                                <Shield size={14} /> {company.domain || "N/A"}
+                        <div className="py-4 px-5 bg-white/5 backdrop-blur-sm rounded-2xl border border-white/10 hover:bg-white/10 transition-colors">
+                            <div className="flex items-center gap-3 mb-1">
+                                <Shield size={14} className="text-green-300" />
+                                <p className="text-xs text-gray-400 uppercase tracking-wider font-bold">Security</p>
+                            </div>
+                            <p className="font-bold text-lg text-white flex items-center gap-2">
+                                {company.domain || "Standard"}
                             </p>
                         </div>
                     </div>
                 </div>
 
                 {/* Right Side: Action */}
-                <div className="w-full md:w-3/5 p-8 md:p-10 flex flex-col">
-                    <div className="mb-6">
-                        <span className="inline-flex items-center gap-1.5 py-1 px-3 rounded-full bg-green-50 text-green-700 text-xs font-bold uppercase tracking-wider mb-4 border border-green-100">
-                            <CheckCircle size={12} /> Verified
+                <div className="w-full md:w-3/5 p-10 md:p-12 flex flex-col bg-white/40">
+                    <div className="mb-8">
+                        <span className="inline-flex items-center gap-1.5 py-1.5 px-3 rounded-full bg-green-100/80 text-green-700 text-xs font-bold uppercase tracking-wider mb-6 border border-green-200">
+                            <CheckCircle size={12} strokeWidth={3} /> Verified
                         </span>
-                        <h1 className="text-3xl font-black text-gray-900 mb-2">Confirmation</h1>
-                        <p className="text-gray-500">
-                            You are becoming the <strong>Primary Owner</strong> of this workspace. This action cannot be undone.
+                        <h1 className="text-3xl font-black text-gray-900 mb-3 tracking-tight">One Last Step</h1>
+                        <p className="text-gray-600 text-lg">
+                            We need to configure your workspace preferences before you invite your team. This takes about 2 minutes.
                         </p>
                     </div>
 
-                    <div className="flex-1 bg-gray-50 rounded-xl p-5 border border-gray-100 mb-8 overflow-y-auto max-h-48 text-sm text-gray-600 space-y-3">
-                        <div className="flex items-start gap-3">
-                            <FileText size={18} className="mt-0.5 text-gray-400 shrink-0" />
-                            <p>By proceeding, you agree to the <span className="text-indigo-600 underline cursor-pointer">Terms of Service</span> and <span className="text-indigo-600 underline cursor-pointer">Privacy Policy</span>.</p>
+                    <div className="flex-1 space-y-4 mb-10">
+                        <div className="flex items-start gap-4 p-4 rounded-2xl bg-white border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
+                            <div className="w-8 h-8 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+                                <Shield size={16} />
+                            </div>
+                            <div>
+                                <h4 className="font-bold text-gray-900 text-sm">Admin Access</h4>
+                                <p className="text-sm text-gray-500 mt-0.5">You will be the primary owner of this workspace.</p>
+                            </div>
                         </div>
-                        <div className="flex items-start gap-3">
-                            <Shield size={18} className="mt-0.5 text-gray-400 shrink-0" />
-                            <p>You confirm that you have the authority to manage the workspace for <strong>{company.name}</strong>.</p>
+                        <div className="flex items-start gap-4 p-4 rounded-2xl bg-white border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
+                            <div className="w-8 h-8 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+                                <FileText size={16} />
+                            </div>
+                            <div>
+                                <h4 className="font-bold text-gray-900 text-sm">Terms of Service</h4>
+                                <label className="flex items-center gap-2 mt-1 cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        checked={accepted}
+                                        onChange={(e) => setAccepted(e.target.checked)}
+                                        className="w-4 h-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500"
+                                    />
+                                    <p className="text-sm text-gray-500">I agree to the Terms & Policies.</p>
+                                </label>
+                            </div>
                         </div>
                     </div>
 
                     <div className="mt-auto">
                         <button
                             onClick={handleConfirm}
-                            disabled={isLoading}
-                            className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-lg shadow-indigo-200 hover:shadow-indigo-300 transition-all flex items-center justify-center gap-2 group"
+                            disabled={isLoading || !accepted}
+                            className={`w-full py-4 font-bold rounded-2xl shadow-xl transition-all flex items-center justify-center gap-3 group ${isLoading || !accepted
+                                    ? "bg-gray-300 text-gray-500 cursor-not-allowed shadow-none"
+                                    : "bg-gray-900 hover:bg-black text-white shadow-gray-200 hover:shadow-2xl hover:scale-[1.01]"
+                                }`}
                         >
                             {isLoading ? (
                                 <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
                             ) : (
                                 <>
-                                    Accept & Continue Setup
-                                    <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
+                                    Accept & Start Setup
+                                    <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
                                 </>
                             )}
                         </button>

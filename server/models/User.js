@@ -60,6 +60,9 @@ const UserSchema = new mongoose.Schema(
       default: "member"
     },
 
+    // Job Title (e.g. CTO, PA, etc)
+    jobTitle: { type: String },
+
     // Departments
     departments: [{ type: mongoose.Schema.Types.ObjectId, ref: "Department" }],
 

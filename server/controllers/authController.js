@@ -317,6 +317,21 @@ exports.login = async (req, res) => {
       }
     }
 
+    // Check for Account Status (e.g., Pending Company Verification)
+    if (user.accountStatus === 'pending_company') {
+      const company = user.companyId ? await require("../models/Company").findById(user.companyId) : null;
+      if (company && company.verificationStatus === 'rejected') {
+        return res.status(403).json({
+          message: `Registration Rejected: ${company.rejectionReason || "Contact Support"}`
+        });
+      }
+      return res.status(403).json({ message: "Verification Pending. You will receive an email once approved." });
+    }
+
+    if (user.accountStatus === 'suspended') {
+      return res.status(403).json({ message: "Account Suspended." });
+    }
+
     // Tokens
     const accessToken = generateAccessToken(user);
     const refreshToken = generateRefreshToken(user);
@@ -381,8 +396,14 @@ exports.login = async (req, res) => {
       }
     };
 
-    // Add company info if company user
-    if (user.companyId) {
+    // --- REDIRECT LOGIC ---
+
+    // 1. Super Admin
+    if (user.roles.includes('chttrix_admin')) {
+      response.redirectTo = "/chttrix-admin";
+    }
+    // 2. Company User
+    else if (user.companyId) { // user.companyId is populated
       response.company = {
         id: user.companyId._id,
         name: user.companyId.name,
@@ -396,14 +417,20 @@ exports.login = async (req, res) => {
       const isAdmin = user.companyRole === "owner" || user.companyRole === "admin";
       response.isAdmin = isAdmin;
 
-      // Set redirect URL
-      if (isAdmin) {
-        response.redirectTo = "/admin/dashboard"; // Admin dashboard
+      // Logic for Setup Flow
+      if (!user.companyId.isSetupComplete) {
+        // Not setup yet -> Go to Confirmation (or Resume Setup)
+        response.redirectTo = "/company/confirm";
       } else {
-        response.redirectTo = "/workspace"; // Regular workspace view
+        // Normal Flow
+        if (isAdmin) {
+          response.redirectTo = "/admin/dashboard"; // Admin dashboard
+        } else {
+          response.redirectTo = "/workspace"; // Regular workspace view
+        }
       }
     } else {
-      // Personal user
+      // 3. Personal User
       response.redirectTo = "/personal/workspace";
     }
 

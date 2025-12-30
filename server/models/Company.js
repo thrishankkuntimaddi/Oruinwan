@@ -20,6 +20,7 @@ const CompanySchema = new mongoose.Schema({
     enum: ["pending", "verified", "rejected"],
     default: "pending"
   },
+  rejectionReason: { type: String, default: null },
 
   // Phase 3 & 4: Setup Tracking
   isSetupComplete: { type: Boolean, default: false },

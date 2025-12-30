@@ -51,6 +51,7 @@ import AdminDashboard from "./pages/dashboards/AdminDashboard";
 import ManagerDashboard from "./pages/dashboards/ManagerDashboard";
 import EmployeeDashboard from "./pages/dashboards/EmployeeDashboard";
 import AnalyticsDashboard from "./pages/dashboards/AnalyticsDashboard";
+import ChttrixAdminDashboard from "./pages/dashboards/ChttrixAdminDashboard";
 
 // Protected route wrappers
 import RequireAuth from "./components/RequireAuth";
@@ -424,6 +425,16 @@ function App() {
                             element={
                               <RequireAuth>
                                 <EmployeeDashboard />
+                              </RequireAuth>
+                            }
+                          />
+
+                          {/* Chttrix Super Admin */}
+                          <Route
+                            path="/chttrix-admin"
+                            element={
+                              <RequireAuth>
+                                <ChttrixAdminDashboard />
                               </RequireAuth>
                             }
                           />

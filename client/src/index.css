@@ -96,11 +96,8 @@ body,
 }
 
 /* Remove "Amateur" shadows globally */
-.shadow-2xl,
-.shadow-xl,
-.shadow-lg {
-  box-shadow: var(--shadow-minimal) !important;
-}
+/* Standard Shadows restored for Premium UI */
+/* .shadow-2xl, .shadow-xl, .shadow-lg overrides removed to allow for depth */
 
 /* Compact utility classes */
 .compact-scroll {

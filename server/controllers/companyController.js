@@ -21,6 +21,89 @@ const bcrypt = require("bcryptjs");
 const sha256 = (v) => crypto.createHash("sha256").update(v).digest("hex");
 
 // ============================================================================
+// OTP STORE (In-Memory for Development)
+// ============================================================================
+const otpStore = new Map();
+
+/**
+ * Send OTP (Dev Mode: Logs to Terminal)
+ * POST /api/companies/otp/send
+ * Body: { target: string, type: 'email' | 'phone' }
+ */
+exports.sendOtp = async (req, res) => {
+  try {
+    const { target, type } = req.body;
+    if (!target) return res.status(400).json({ message: "Target is required" });
+
+    // Generate 4-digit OTP
+    const otp = Math.floor(1000 + Math.random() * 9000).toString();
+
+    // Store with 5-minute expiration
+    otpStore.set(target, {
+      otp,
+      expires: Date.now() + 5 * 60 * 1000
+    });
+
+    // ---------------------------------------------------------
+    // DEVELOPMENT LOGGING
+    // ---------------------------------------------------------
+    console.log("\n============================================");
+    console.log(`🔐 [DEV OTP] Verification Code for ${type} (${target})`);
+    console.log(`👉 CODE: ${otp}`);
+    console.log("============================================\n");
+    // ---------------------------------------------------------
+
+    // In production, you would trigger SMS/Email service here
+
+    return res.json({
+      message: "OTP sent successfully",
+      devNote: "Check server terminal for code"
+    });
+  } catch (err) {
+    console.error("SEND OTP ERROR:", err);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+
+/**
+ * Verify OTP
+ * POST /api/companies/otp/verify
+ * Body: { target: string, otp: string }
+ */
+exports.verifyOtp = async (req, res) => {
+  try {
+    const { target, otp } = req.body;
+
+    if (!target || !otp) {
+      return res.status(400).json({ message: "Target and OTP are required" });
+    }
+
+    const data = otpStore.get(target);
+
+    if (!data) {
+      return res.status(400).json({ message: "OTP not found or expired" });
+    }
+
+    if (Date.now() > data.expires) {
+      otpStore.delete(target);
+      return res.status(400).json({ message: "OTP expired" });
+    }
+
+    if (data.otp !== otp) {
+      return res.status(400).json({ message: "Invalid OTP" });
+    }
+
+    // OTP Valid
+    otpStore.delete(target); // Consume OTP
+    return res.json({ message: "Verified successfully", verified: true });
+
+  } catch (err) {
+    console.error("VERIFY OTP ERROR:", err);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+
+// ============================================================================
 // COMPANY REGISTRATION
 // ============================================================================
 
@@ -37,6 +120,11 @@ exports.registerCompany = async (req, res) => {
       adminPassword,
       domain,
       documents,
+      // Enhanced Fields
+      personalEmail,
+      phone,
+      role, // This comes as "Owner", "Admin", "PA", "Manager" or custom string
+
       departments = [], // Will be stored in metadata for later
       workspaceName, // Will be stored in metadata for later
       workspaceDescription, // Will be stored in metadata for later
@@ -77,6 +165,46 @@ exports.registerCompany = async (req, res) => {
       }
     }
 
+    // Process Documents (Simple Local Storage)
+    const fs = require('fs');
+    const path = require('path');
+    const processedDocuments = [];
+
+    if (documents && Array.isArray(documents)) {
+      for (const doc of documents) {
+        // Check if it has content (base64)
+        if (doc.content && doc.name) {
+          try {
+            // Strip header "data:application/pdf;base64,"
+            const base64Data = doc.content.replace(/^data:([A-Za-z-+/]+);base64,/, '');
+            const buffer = Buffer.from(base64Data, 'base64');
+
+            const uniqueName = `${Date.now()}_${doc.name.replace(/\s+/g, '_')}`;
+            const uploadDir = path.join(__dirname, '../uploads/verification_docs');
+
+            if (!fs.existsSync(uploadDir)) {
+              fs.mkdirSync(uploadDir, { recursive: true });
+            }
+
+            const filePath = path.join(uploadDir, uniqueName);
+            fs.writeFileSync(filePath, buffer);
+
+            processedDocuments.push({
+              name: doc.name,
+              url: `/uploads/verification_docs/${uniqueName}`, // Public URL
+              uploadedAt: new Date()
+            });
+
+            console.log(`✅ File saved: ${filePath}`);
+          } catch (err) {
+            console.error("File write error:", err);
+            // Continue without failing (or decide to fail)
+          }
+        }
+      }
+    }
+
+
     // Step 1: Create Company (Status: PENDING)
     // We do NOT create workspaces, channels, or departments yet.
     console.log("📝 Creating pending company...");
@@ -85,7 +213,7 @@ exports.registerCompany = async (req, res) => {
       name: companyName,
       ...(domain ? { domain: domain.toLowerCase() } : {}), // Only set if provided
       domainVerified: false,
-      documents: documents || [],
+      documents: processedDocuments, // Save the processed URLs
       billingEmail: adminEmail,
       verificationStatus: "pending", // Enforce pending status
       metadata: {
@@ -109,7 +237,11 @@ exports.registerCompany = async (req, res) => {
       passwordHash,
       userType: "company",
       companyId: company._id,
-      companyRole: "owner",
+      companyRole: "owner", // Always 'owner' for the creator
+      jobTitle: role || "Owner", // Store the self-declared role as Job Title
+      phone: phone || undefined,
+      phoneCode: req.body.phoneCode || "+1",
+      emails: personalEmail ? [{ email: personalEmail, isPrimary: false, verified: true }] : [], // Assuming auto-verified since we did OTP
       verified: true, // Admin is verified as a user, but their access is blocked by accountStatus
       accountStatus: "pending_company",
       departments: [] // No departments yet
@@ -138,7 +270,7 @@ exports.registerCompany = async (req, res) => {
       resourceType: "company",
       resourceId: company._id,
       companyId: company._id,
-      metadata: { companyName, domain },
+      metadata: { companyName, domain, role },
       req
     });
 
@@ -299,6 +431,49 @@ exports.verifyCompany = async (req, res) => {
 
 
 /**
+ * Start Company Setup (Transition from Confirm -> Wizard)
+ * POST /api/companies/:id/start-setup
+ */
+exports.startSetup = async (req, res) => {
+  try {
+    const companyId = req.params.id;
+    const userId = req.user.sub;
+    const { plan, acceptedTerms } = req.body;
+
+    const company = await Company.findById(companyId);
+    if (!company) return res.status(404).json({ message: "Company not found" });
+
+    // Check admin
+    if (typeof company.isAdmin === 'function' && !company.isAdmin(userId)) {
+      return res.status(403).json({ message: "Only admins can perform setup" });
+    } else if (!company.isAdmin && company.admins.every(a => a.user.toString() !== userId)) {
+      return res.status(403).json({ message: "Only admins can perform setup" });
+    }
+
+    if (company.isSetupComplete) {
+      return res.status(400).json({ message: "Setup already complete" });
+    }
+
+    // Save Selection
+    if (plan) company.plan = plan.toLowerCase(); // free, starter, etc
+    if (acceptedTerms) company.metadata = { ...company.metadata, acceptedTermsAt: new Date(), acceptedTermsBy: userId };
+
+    // Move to Step 1 (Wizard Start)
+    company.setupStep = 1;
+    await company.save();
+
+    return res.json({
+      message: "Setup started",
+      step: company.setupStep
+    });
+
+  } catch (err) {
+    console.error("START SETUP ERROR:", err);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+
+/**
  * Complete Company Setup (Phase 4)
  * PUT /api/companies/:id/setup
  * Body: { step: number, data: object }
@@ -334,7 +509,43 @@ exports.updateCompanySetup = async (req, res) => {
         // For now just ack
       }
       company.setupStep = 2;
-    } else if (step === 3) { // Invites handled separately, just mark step
+    } else if (step === 3) {
+      // Process Invites immediately
+      if (data.invites && Array.isArray(data.invites)) {
+        // We reuse the Invite model logic here
+        // For simplicity, we can loop and create invites
+        const invitesToProcess = data.invites.filter(i => i.email && i.email.trim() !== "");
+
+        for (const inviteData of invitesToProcess) {
+          const { email, role } = inviteData;
+          // Basic dup check
+          const exists = await User.findOne({ email: email.toLowerCase() });
+          if (exists && exists.companyId) continue;
+
+          // Create invite (simplified inline logic, ideally refactor the shared logic)
+          try {
+            const Invite = require("../models/Invite");
+            const rawToken = require("crypto").randomBytes(32).toString("hex");
+            const tokenHash = sha256(rawToken);
+
+            const newInvite = new Invite({
+              email: email.toLowerCase(),
+              tokenHash,
+              company: companyId,
+              role: role || 'member',
+              invitedBy: userId,
+              expiresAt: new Date(Date.now() + 7 * 86400000)
+            });
+            await newInvite.save();
+
+            // Send Mock Email Log
+            const link = `${process.env.FRONTEND_URL}/accept-invite?token=${rawToken}&email=${encodeURIComponent(email)}`;
+            console.log(`📧 [MOCK INVITE] To: ${email} | Role: ${role} | Link: ${link}`);
+          } catch (e) {
+            console.error("Invite Error", e);
+          }
+        }
+      }
       company.setupStep = 3;
     } else if (step === 4) { // Complete
       company.isSetupComplete = true;

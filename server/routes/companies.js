@@ -10,6 +10,20 @@ const requireAuth = require("../middleware/auth");
 // ============================================================================
 
 /**
+ * @route   POST /api/companies/otp/send
+ * @desc    Send OTP to email/phone (Logs to terminal in dev)
+ * @access  Public
+ */
+router.post("/otp/send", companyController.sendOtp);
+
+/**
+ * @route   POST /api/companies/otp/verify
+ * @desc    Verify OTP
+ * @access  Public
+ */
+router.post("/otp/verify", companyController.verifyOtp);
+
+/**
  * @route   POST /api/companies/register
  * @desc    Register a new company with admin user
  * @body    companyName, adminName, adminEmail, domain, documents
@@ -24,6 +38,14 @@ router.post("/register", companyController.registerCompany);
  * @access  Internal Admin
  */
 router.post("/:id/verify", companyController.verifyCompany);
+
+/**
+ * @route   POST /api/companies/:id/start-setup
+ * @desc    Start setup process (Confirm -> Wizard)
+ * @body    plan, acceptedTerms
+ * @access  Private (Admin)
+ */
+router.post("/:id/start-setup", requireAuth, companyController.startSetup);
 
 /**
  * @route   PUT /api/companies/:id/setup
