@@ -42,6 +42,8 @@ import JoinWorkspace from "./pages/JoinWorkspace";
 import JoinChannel from "./pages/JoinChannel";
 import CompanyAdmin from "./pages/CompanyAdmin";
 import RegisterCompany from "./pages/RegisterCompany";
+import CompanyConfirmation from "./pages/CompanyConfirmation";
+import CompanySetup from "./pages/CompanySetup";
 import DepartmentManagement from "./pages/DepartmentManagement";
 
 // Dashboard Pages
@@ -337,6 +339,24 @@ function App() {
                           {/* Landing Page (Feature Showcase) */}
                           <Route path="/" element={<FeatureShowcase />} />
                           <Route path="/features" element={<FeatureShowcase />} />
+
+                          {/* COMPANY SETUP ROUTES */}
+                          <Route
+                            path="/company/confirm"
+                            element={
+                              <RequireAuth>
+                                <CompanyConfirmation />
+                              </RequireAuth>
+                            }
+                          />
+                          <Route
+                            path="/company/setup"
+                            element={
+                              <RequireAuth>
+                                <CompanySetup />
+                              </RequireAuth>
+                            }
+                          />
 
                           {/* PUBLIC ROUTES */}
                           <Route path="/login" element={<LoginPage />} />

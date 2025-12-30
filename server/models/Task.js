@@ -63,7 +63,26 @@ const TaskSchema = new mongoose.Schema({
     completedAt: { type: Date, default: null },
     completedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
     completionNote: { type: String, default: "" }, // Completion note from frontend
-    deleted: { type: Boolean, default: false } // Soft delete support
+    deleted: { type: Boolean, default: false }, // Soft delete support
+
+    // Transfer request tracking (assignee can request to transfer task)
+    transferRequest: {
+        requestedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+        requestedTo: { type: mongoose.Schema.Types.ObjectId, ref: "User" }, // Proposed new assignee
+        requestedAt: { type: Date },
+        status: {
+            type: String,
+            enum: ["pending", "approved", "rejected"]
+        },
+        note: { type: String }
+    },
+
+    // Revoke tracking (assigner can take back task)
+    revokedAt: { type: Date, default: null },
+    revokedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
+
+    // Track users who deleted this task from their view (assignees only)
+    deletedFor: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }]
 
 
 }, { timestamps: true });

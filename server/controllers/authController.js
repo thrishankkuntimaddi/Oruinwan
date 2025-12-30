@@ -290,7 +290,7 @@ exports.login = async (req, res) => {
     if (!email || !password)
       return res.status(400).json({ message: "Email and password required" });
 
-    const user = await User.findOne({ email }).populate("companyId", "name domain defaultWorkspace");
+    const user = await User.findOne({ email }).populate("companyId", "name domain defaultWorkspace isSetupComplete setupStep");
 
     if (!user)
       return res.status(400).json({ message: "Invalid email or password" });
@@ -387,7 +387,9 @@ exports.login = async (req, res) => {
         id: user.companyId._id,
         name: user.companyId.name,
         domain: user.companyId.domain,
-        defaultWorkspace: user.companyId.defaultWorkspace
+        defaultWorkspace: user.companyId.defaultWorkspace,
+        isSetupComplete: user.companyId.isSetupComplete, // Setup Flag
+        setupStep: user.companyId.setupStep // Setup Step
       };
 
       // Check if user is admin/owner
@@ -618,9 +620,9 @@ exports.resetPassword = async (req, res) => {
 // ----------------------------------------------------
 exports.getMe = async (req, res) => {
   try {
-    const user = await User.findById(req.user.sub).select(
-      "-passwordHash -refreshTokens"
-    );
+    const user = await User.findById(req.user.sub)
+      .select("-passwordHash -refreshTokens")
+      .populate('companyId');
 
     // Migration: Ensure primary email is in emails array
     if (!user.emails || user.emails.length === 0) {
@@ -655,6 +657,24 @@ exports.getMe = async (req, res) => {
 
     // Convert user to plain object and map emails with id field
     const userObject = user.toObject();
+
+    // Normalize company data
+    if (userObject.companyId && typeof userObject.companyId === 'object') {
+      userObject.company = {
+        id: userObject.companyId._id,
+        name: userObject.companyId.name,
+        domain: userObject.companyId.domain,
+        defaultWorkspace: userObject.companyId.defaultWorkspace,
+        isSetupComplete: userObject.companyId.isSetupComplete,
+        setupStep: userObject.companyId.setupStep
+      };
+      // Keep companyId as ID string for consistency with some checks if needed, 
+      // or just leave it as object. 
+      // For now, let's keep it consistent with Login which seems to return ID string in user.companyId
+      // But populate() replaced it. 
+      // Let's just rely on user.company for the rich data.
+    }
+
     if (userObject.emails) {
       userObject.emails = userObject.emails.map(e => ({
         id: e._id,

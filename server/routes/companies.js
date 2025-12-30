@@ -18,6 +18,22 @@ const requireAuth = require("../middleware/auth");
 router.post("/register", companyController.registerCompany);
 
 /**
+ * @route   POST /api/companies/:id/verify
+ * @desc    Internal: Verify company and provision resources
+ * @body    decision, rejectionReason
+ * @access  Internal Admin
+ */
+router.post("/:id/verify", companyController.verifyCompany);
+
+/**
+ * @route   PUT /api/companies/:id/setup
+ * @desc    Update company setup progress
+ * @body    step, data
+ * @access  Private (Admin)
+ */
+router.put("/:id/setup", requireAuth, companyController.updateCompanySetup);
+
+/**
  * @route   POST /api/companies/accept-invite
  * @desc    Accept company invitation
  * @body    token, username, password

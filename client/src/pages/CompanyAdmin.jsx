@@ -54,7 +54,7 @@ const CreateCompanyForm = ({ onSuccess }) => {
                         type="text"
                         value={name}
                         onChange={(e) => setName(e.target.value)}
-                        className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all"
+                        className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all text-gray-900 bg-white"
                         placeholder="Chttrix."
                         required
                     />
@@ -68,7 +68,7 @@ const CreateCompanyForm = ({ onSuccess }) => {
                         type="text"
                         value={domain}
                         onChange={(e) => setDomain(e.target.value)}
-                        className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all"
+                        className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all text-gray-900 bg-white"
                         placeholder="chttrix.com"
                     />
                 </div>
@@ -255,7 +255,7 @@ const InviteMemberForm = ({ companyId, workspaces }) => {
                         type="email"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
+                        className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-gray-900 bg-white"
                         placeholder="colleague@company.com"
                         required
                     />
@@ -265,7 +265,7 @@ const InviteMemberForm = ({ companyId, workspaces }) => {
                     <select
                         value={role}
                         onChange={(e) => setRole(e.target.value)}
-                        className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none bg-white"
+                        className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none bg-white text-gray-900"
                     >
                         <option value="member">Member</option>
                         <option value="admin">Admin</option>
@@ -276,7 +276,7 @@ const InviteMemberForm = ({ companyId, workspaces }) => {
                     <select
                         value={workspaceId}
                         onChange={(e) => setWorkspaceId(e.target.value)}
-                        className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none bg-white"
+                        className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none bg-white text-gray-900"
                     >
                         <option value="">None</option>
                         {workspaces.map(ws => (
@@ -426,7 +426,7 @@ const MemberManagement = ({ companyId }) => {
                                         <select
                                             value={newRole}
                                             onChange={(e) => setNewRole(e.target.value)}
-                                            className="px-3 py-1 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
+                                            className="px-3 py-1 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-gray-900 bg-white"
                                         >
                                             <option value="member">Member</option>
                                             <option value="admin">Admin</option>

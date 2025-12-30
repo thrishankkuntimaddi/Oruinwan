@@ -14,6 +14,17 @@ const CompanySchema = new mongoose.Schema({
   domainVerificationToken: { type: String, default: null },
   domainVerificationExpires: { type: Date, default: null },
 
+  // Verification Status (Phase 2 Requirement)
+  verificationStatus: {
+    type: String,
+    enum: ["pending", "verified", "rejected"],
+    default: "pending"
+  },
+
+  // Phase 3 & 4: Setup Tracking
+  isSetupComplete: { type: Boolean, default: false },
+  setupStep: { type: Number, default: 0 }, // 0: Confirmation, 1: Profile, 2: Depts, 3: Invites, 4: Complete
+
   // Auto-join policy
   autoJoinByDomain: { type: Boolean, default: false }, // if true + verified → anyone with @domain.com auto-joins
 

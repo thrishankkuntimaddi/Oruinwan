@@ -390,7 +390,14 @@ const HomePanel = ({ title }) => {
                     label="Channels"
                     isOpen={expanded.channels}
                     onClick={() => toggle("channels")}
-                    onAdd={() => setShowCreateChannelModal(true)}
+                    onAdd={(() => {
+                        const userRole = activeWorkspace?.role?.toLowerCase() || '';
+                        const isAdmin = userRole === 'admin' || userRole === 'owner';
+                        const canCreate = isAdmin || activeWorkspace?.settings?.allowMemberChannelCreation !== false;
+
+                        // Only pass the function if creation is allowed
+                        return canCreate ? () => setShowCreateChannelModal(true) : undefined;
+                    })()}
                 />
                 {expanded.channels && (
                     <div className="space-y-0.5">

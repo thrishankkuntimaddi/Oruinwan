@@ -32,11 +32,15 @@ const HistoryLogSchema = new mongoose.Schema({
             "task_created",
             "task_updated",
             "task_completed",
+            "task_deleted",
+            "task_restored",
+            "task_permanently_deleted",
             "note_created",
             "note_shared",
             "update_posted",
             "domain_verified",
             "settings_changed",
+            "company_registration_requested",
             "other"
         ]
     },

@@ -127,12 +127,14 @@ const WorkspaceHeader = ({
                                     <UserPlus size={16} /> Invite people to {workspaceName}
                                 </button>
                             )}
-                            <button
-                                className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-gray-700 hover:text-blue-600 dark:hover:text-blue-400 flex items-center gap-2"
-                                onClick={() => { setShowSettingsModal(true); setShowWorkspaceMenu(false); }}
-                            >
-                                <Settings size={16} /> Workspace Settings
-                            </button>
+                            {isAdmin && (
+                                <button
+                                    className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-gray-700 hover:text-blue-600 dark:hover:text-blue-400 flex items-center gap-2"
+                                    onClick={() => { setShowSettingsModal(true); setShowWorkspaceMenu(false); }}
+                                >
+                                    <Settings size={16} /> Workspace Settings
+                                </button>
+                            )}
                             {isAdmin && (
                                 <button
                                     className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-gray-700 hover:text-blue-600 dark:hover:text-blue-400 flex items-center gap-2"

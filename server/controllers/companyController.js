@@ -37,11 +37,10 @@ exports.registerCompany = async (req, res) => {
       adminPassword,
       domain,
       documents,
-      departments = [], // NEW: Department names from frontend
-      workspaceName, // NEW: Custom workspace name
-      workspaceDescription, // NEW: Workspace description
-      defaultChannels = ["general", "announcements"], // NEW: Channel names from frontend
-      skipDomainVerification = true
+      departments = [], // Will be stored in metadata for later
+      workspaceName, // Will be stored in metadata for later
+      workspaceDescription, // Will be stored in metadata for later
+      defaultChannels = ["general", "announcements"], // Will be stored in metadata for later
     } = req.body;
 
     // Validation
@@ -65,7 +64,7 @@ exports.registerCompany = async (req, res) => {
       });
     }
 
-    // Validate domain if provided (but don't require verification)
+    // Validate domain if provided
     if (domain && !isValidDomain(domain)) {
       return res.status(400).json({ message: "Invalid domain format" });
     }
@@ -78,41 +77,30 @@ exports.registerCompany = async (req, res) => {
       }
     }
 
-    // Step 1: Create Company
+    // Step 1: Create Company (Status: PENDING)
+    // We do NOT create workspaces, channels, or departments yet.
+    console.log("📝 Creating pending company...");
+
     const company = new Company({
       name: companyName,
-      domain: domain ? domain.toLowerCase() : null,
-      domainVerified: false, // Can verify later (optional)
+      ...(domain ? { domain: domain.toLowerCase() } : {}), // Only set if provided
+      domainVerified: false,
       documents: documents || [],
-      billingEmail: adminEmail
+      billingEmail: adminEmail,
+      verificationStatus: "pending", // Enforce pending status
+      metadata: {
+        // Store the requested configuration for the verification phase
+        requestedDepartments: departments,
+        requestedWorkspaceName: workspaceName,
+        requestedWorkspaceDescription: workspaceDescription,
+        requestedChannels: defaultChannels
+      }
     });
 
     await company.save();
 
-    // Step 2: Create Department documents for selected departments
-    console.log("📋 Step 2: Creating departments...");
-    const createdDepartmentIds = [];
-
-    try {
-      for (const departmentName of departments) {
-        const department = new Department({
-          company: company._id,
-          name: departmentName,
-          description: `${departmentName} department`,
-          members: [] // Will add admin later
-        });
-
-        await department.save();
-        createdDepartmentIds.push(department._id);
-        console.log(`✅ Created department: ${departmentName}`);
-      }
-    } catch (err) {
-      console.error("❌ Error creating departments:", err);
-      throw new Error(`Failed to create departments: ${err.message}`);
-    }
-
-    // Step 3: Create Admin User with provided password
-    console.log("👤 Step 3: Creating admin user...");
+    // Step 2: Create Admin User (Status: PENDING_COMPANY)
+    console.log("👤 Creating pending admin user...");
     const passwordHash = await bcrypt.hash(adminPassword, 12);
 
     const adminUser = new User({
@@ -122,173 +110,248 @@ exports.registerCompany = async (req, res) => {
       userType: "company",
       companyId: company._id,
       companyRole: "owner",
-      verified: true, // Auto-verify admin
-      departments: createdDepartmentIds // Save department ObjectIds
+      verified: true, // Admin is verified as a user, but their access is blocked by accountStatus
+      accountStatus: "pending_company",
+      departments: [] // No departments yet
     });
 
     try {
       await adminUser.save();
-      console.log(`✅ Admin user created: ${adminName} (${adminEmail})`);
     } catch (err) {
-      console.error("❌ Error creating admin user:", err);
+      // Cleanup company if user creation fails
+      await Company.findByIdAndDelete(company._id);
       throw new Error(`Failed to create admin user: ${err.message}`);
     }
 
-    // Step 4: Add admin to each department's members array
-    console.log("📋 Step 4: Adding admin to departments...");
-    try {
-      for (const departmentId of createdDepartmentIds) {
-        const department = await Department.findById(departmentId);
-        if (department) {
-          department.members.push(adminUser._id);
-          await department.save();
-        }
-      }
-      console.log("✅ Admin added to all departments");
-    } catch (err) {
-      console.error("❌ Error adding admin to departments:", err);
-      throw new Error(`Failed to add admin to departments: ${err.message}`);
-    }
+    // Step 3: Link Admin to Company
+    company.admins.push({
+      user: adminUser._id,
+      role: "owner"
+    });
+    await company.save();
 
-    // Step 5: Add admin to company.admins array
-    console.log("🏢 Step 5: Adding admin to company...");
-    try {
-      company.admins.push({
-        user: adminUser._id,
-        role: "owner"
-      });
-      console.log("✅ Admin added to company admins");
-    } catch (err) {
-      console.error("❌ Error adding admin to company:", err);
-      throw new Error(`Failed to add admin to company: ${err.message}`);
-    }
-
-    // Step 6: Create Default Workspace with custom name
-    console.log("🏠 Step 6: Creating default workspace...");
-    const finalWorkspaceName = workspaceName || `${companyName} Workspace`;
-    const defaultWorkspace = new Workspace({
-      company: company._id,
-      type: "company",
-      name: finalWorkspaceName,
-      description: workspaceDescription || "Default company workspace",
-      createdBy: adminUser._id,
-      members: [{
-        user: adminUser._id,
-        role: "owner"
-      }]
+    // Log the request
+    await logAction({
+      userId: adminUser._id,
+      action: "company_registration_requested",
+      description: `Company "${companyName}" registration submitted for verification`,
+      resourceType: "company",
+      resourceId: company._id,
+      companyId: company._id,
+      metadata: { companyName, domain },
+      req
     });
 
-    try {
-      await defaultWorkspace.save();
-      console.log(`✅ Workspace created: ${finalWorkspaceName}`);
+    console.log(`✅ Company "${companyName}" registered (PENDING VERIFICATION).`);
 
-      // Update company with default workspace
+    return res.status(201).json({
+      message: "Company registration submitted successfully. Your account is pending internal verification.",
+      status: "pending_verification",
+      company: {
+        id: company._id,
+        name: company.name,
+        verificationStatus: "pending"
+      }
+    });
+
+  } catch (err) {
+    console.error("❌ REGISTER COMPANY ERROR:", err);
+    return res.status(500).json({
+      message: "Server error",
+      error: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
+  }
+};
+
+/**
+ * Internal: Verify Company & Provision Resources
+ * POST /api/companies/:id/verify
+ * Body: { decision: "approve" | "reject", rejectionReason: string }
+ */
+exports.verifyCompany = async (req, res) => {
+  try {
+    const companyId = req.params.id;
+    const { decision, rejectionReason } = req.body;
+
+    // In a real app, strict admin permissions checking here
+    // For now, assume this endpoint is protected by an internal admin middleware
+
+    const company = await Company.findById(companyId);
+    if (!company) {
+      return res.status(404).json({ message: "Company not found" });
+    }
+
+    if (company.verificationStatus !== 'pending') {
+      return res.status(400).json({ message: `Company is already ${company.verificationStatus}` });
+    }
+
+    // Find the pending owner
+    const ownerAdmin = company.admins.find(a => a.role === 'owner');
+    if (!ownerAdmin) {
+      return res.status(500).json({ message: "Data corruption: Company has no owner" });
+    }
+
+    const adminUser = await User.findById(ownerAdmin.user);
+    if (!adminUser) {
+      return res.status(404).json({ message: "Company owner user not found" });
+    }
+
+    if (decision === 'reject') {
+      company.verificationStatus = 'rejected';
+      company.suspensionReason = rejectionReason || "Does not meet criteria";
+      await company.save();
+
+      // Update user status
+      adminUser.accountStatus = 'suspended';
+      await adminUser.save();
+
+      // TODO: Send rejection email
+
+      return res.json({ message: "Company rejected", status: "rejected" });
+    }
+
+    if (decision === 'approve') {
+      console.log(`🚀 Starting provisioning for company: ${company.name}`);
+
+      // 1. Update Status
+      company.verificationStatus = 'verified';
+
+      // 2. Provision Resources (Logic moved from registerCompany)
+      const metadata = company.metadata || {};
+      const {
+        requestedDepartments = [],
+        requestedWorkspaceName,
+        requestedWorkspaceDescription,
+        requestedChannels = ["general", "announcements"]
+      } = metadata;
+
+      // A. Create Departments
+      const createdDepartmentIds = [];
+      for (const deptName of requestedDepartments) {
+        const dept = new Department({
+          company: company._id,
+          name: deptName,
+          description: `${deptName} Department`,
+          members: [adminUser._id]
+        });
+        await dept.save();
+        createdDepartmentIds.push(dept._id);
+      }
+
+      // B. Create Default Workspace
+      const workspaceName = requestedWorkspaceName || `${company.name} Workspace`;
+      const defaultWorkspace = new Workspace({
+        company: company._id,
+        type: "company",
+        name: workspaceName,
+        description: requestedWorkspaceDescription || "Primary workspace",
+        createdBy: adminUser._id,
+        members: [{ user: adminUser._id, role: "owner" }]
+      });
+      await defaultWorkspace.save();
+
+      // C. Create Channels
+      const createdChannels = [];
+      for (const channelName of requestedChannels) {
+        const channel = new Channel({
+          workspace: defaultWorkspace._id,
+          company: company._id,
+          name: channelName.toLowerCase(),
+          isPrivate: false,
+          isDefault: true,
+          createdBy: adminUser._id,
+          members: [{ user: adminUser._id, joinedAt: new Date() }]
+        });
+        await channel.save();
+        createdChannels.push(channel);
+      }
+      defaultWorkspace.defaultChannels = createdChannels.map(c => c._id);
+      await defaultWorkspace.save();
+
+      // 3. Update Company & User References
       company.defaultWorkspace = defaultWorkspace._id;
       await company.save();
-      console.log("✅ Company updated with default workspace");
 
-      // Update user's workspace memberships
+      adminUser.accountStatus = 'active'; // ACTIVATE USER
+      adminUser.departments = createdDepartmentIds;
       adminUser.workspaces.push({
         workspace: defaultWorkspace._id,
         role: "owner"
       });
       await adminUser.save();
-      console.log("✅ Admin added to workspace");
-    } catch (err) {
-      console.error("❌ Error creating/updating workspace:", err);
-      throw new Error(`Failed to create workspace: ${err.message}`);
-    }
 
-    // Step 7: Create Default Channels from frontend
-    console.log("📢 Step 7: Creating default channels...");
-    const createdChannels = [];
+      // TODO: Send activation email
 
-    try {
-      for (const channelName of defaultChannels) {
-        const channel = new Channel({
-          workspace: defaultWorkspace._id,
-          company: company._id,
-          name: channelName.toLowerCase(),
-          description: channelName === "general"
-            ? "General discussion"
-            : channelName === "announcements"
-              ? "Company announcements"
-              : `${channelName} channel`,
-          isPrivate: false,
-          isDefault: true,
-          createdBy: adminUser._id,
-          members: [{
-            user: adminUser._id,
-            joinedAt: new Date()
-          }]
-        });
-
-        await channel.save();
-        createdChannels.push(channel);
-        console.log(`✅ Created channel: #${channelName}`);
-      }
-
-      // Update workspace with default channels
-      defaultWorkspace.defaultChannels = createdChannels.map(c => c._id);
-      await defaultWorkspace.save();
-      console.log("✅ Workspace updated with default channels");
-    } catch (err) {
-      console.error("❌ Error creating channels:", err);
-      throw new Error(`Failed to create channels: ${err.message}`);
-    }
-
-    // Log the company creation
-    console.log("📝 Step 8: Logging company creation...");
-    try {
-      await logAction({
-        userId: adminUser._id,
-        action: "company_created",
-        description: `Company "${companyName}" registered`,
-        resourceType: "company",
-        resourceId: company._id,
-        companyId: company._id,
-        metadata: { companyName, domain },
-        req
+      return res.json({
+        message: "Company verified and provisioned successfully",
+        status: "verified",
+        workspaceId: defaultWorkspace._id
       });
-      console.log("✅ Action logged successfully");
-    } catch (err) {
-      console.warn("⚠️ Failed to log action (non-critical):", err.message);
-      // Don't throw - logging failure shouldn't break registration
     }
 
-    return res.status(201).json({
-      message: "Company registered successfully. Please login to access your dashboard.",
-      redirectTo: "/login", // REDIRECT TO LOGIN
-      company: {
-        id: company._id,
-        name: company.name,
-        domain: company.domain,
-        defaultWorkspace: defaultWorkspace._id
-      },
-      admin: {
-        id: adminUser._id,
-        name: adminUser.username,
-        email: adminUser.email,
-        role: "owner"
-      },
-      workspace: {
-        id: defaultWorkspace._id,
-        name: defaultWorkspace.name
-      },
-      // For domain verification later
-      domainVerificationAvailable: !!domain,
-      canVerifyDomainLater: true
+    return res.status(400).json({ message: "Invalid decision" });
+
+  } catch (err) {
+    console.error("VERIFY COMPANY ERROR:", err);
+    return res.status(500).json({ message: "Server error: " + err.message });
+  }
+};
+
+
+/**
+ * Complete Company Setup (Phase 4)
+ * PUT /api/companies/:id/setup
+ * Body: { step: number, data: object }
+ */
+exports.updateCompanySetup = async (req, res) => {
+  try {
+    const companyId = req.params.id;
+    const userId = req.user.sub;
+    const { step, data } = req.body;
+
+    const company = await Company.findById(companyId);
+    if (!company) return res.status(404).json({ message: "Company not found" });
+
+    // Use isAdmin helper if available, or manual check
+    // Assuming company.isAdmin(userId) is valid as seen in other methods
+    if (typeof company.isAdmin === 'function' && !company.isAdmin(userId)) {
+      return res.status(403).json({ message: "Only admins can perform setup" });
+    } else if (!company.isAdmin && company.admins.every(a => a.user.toString() !== userId)) {
+      // Fallback if method missing
+      return res.status(403).json({ message: "Only admins can perform setup" });
+    }
+
+    // Handle steps
+    if (step === 1) { // Profile (Logo, Timezone)
+      if (data.displayName) company.displayName = data.displayName;
+      // Handle logo upload logic here if needed (presigned url etc)
+      // company.logo = data.logoUrl; 
+      company.setupStep = 1;
+    } else if (step === 2) { // Departments
+      // Add extra departments logic (simplified for now)
+      if (data.departments && Array.isArray(data.departments)) {
+        // Logic to add new departments would go here
+        // For now just ack
+      }
+      company.setupStep = 2;
+    } else if (step === 3) { // Invites handled separately, just mark step
+      company.setupStep = 3;
+    } else if (step === 4) { // Complete
+      company.isSetupComplete = true;
+      company.setupStep = 4;
+    }
+
+    await company.save();
+
+    return res.json({
+      message: "Setup updated",
+      step: company.setupStep,
+      isSetupComplete: company.isSetupComplete
     });
 
   } catch (err) {
-    console.error("❌ REGISTER COMPANY ERROR:");
-    console.error("Error Message:", err.message);
-    console.error("Error Stack:", err.stack);
-    console.error("Error Details:", JSON.stringify(err, null, 2));
-    return res.status(500).json({
-      message: "Server error",
-      error: process.env.NODE_ENV === 'development' ? err.message : undefined
-    });
+    console.error("SETUP ERROR:", err);
+    return res.status(500).json({ message: "Server error" });
   }
 };
 

@@ -129,6 +129,10 @@ const RegisterCompany = () => {
 
     const handleEdit = (step) => setCurrentStep(step);
 
+    const [isSuccess, setIsSuccess] = useState(false);
+
+    // ... (keep existing code)
+
     const handleFinalSubmit = async () => {
         setIsLoading(true);
         try {
@@ -147,10 +151,7 @@ const RegisterCompany = () => {
                     defaultChannels: formData.defaultChannels
                 }
             );
-            showToast("Registration successful! Redirecting...", "success");
-            setTimeout(() => {
-                navigate("/login", { state: { email: formData.adminEmail, message: "Login to verify account." } });
-            }, 2000);
+            setIsSuccess(true);
         } catch (error) {
             console.error(error);
             showToast(error.response?.data?.message || "Failed to register", "error");
@@ -158,6 +159,42 @@ const RegisterCompany = () => {
             setIsLoading(false);
         }
     };
+
+    if (isSuccess) {
+        return (
+            <div className="h-screen w-full bg-white relative overflow-hidden font-sans flex flex-col items-center justify-center p-4">
+                <style>{`
+                    @keyframes float { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(0, -20px); } }
+                    .animate-float { animation: float 10s ease-in-out infinite; }
+                `}</style>
+                <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
+                    <div className="absolute -top-[10%] -left-[10%] w-[60%] h-[60%] rounded-full bg-gradient-to-br from-blue-100/50 via-purple-50/50 to-transparent blur-[100px] animate-float"></div>
+                </div>
+
+                <div className="relative z-10 w-full max-w-lg bg-white/70 backdrop-blur-xl rounded-[2rem] shadow-2xl p-10 text-center border border-white/50 animate-fadeIn">
+                    <div className="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <CheckCircle size={40} />
+                    </div>
+                    <h1 className="text-3xl font-black text-gray-900 mb-4 tracking-tight">Application Submitted!</h1>
+                    <p className="text-gray-600 mb-8 text-lg leading-relaxed">
+                        Your company <strong>{formData.companyName}</strong> has been registered and is currently <strong>Pending Verification</strong>.
+                    </p>
+                    <div className="bg-blue-50 text-blue-800 p-4 rounded-xl text-sm mb-8 text-left">
+                        <p className="font-bold mb-1 flex items-center gap-2"><Sparkles size={16} /> What happens next?</p>
+                        <p>Our team will review your documents and domain. You will receive an activation email once your workspace is ready (usually within 24 hours).</p>
+                    </div>
+
+                    <button
+                        onClick={() => navigate("/login")}
+                        className="w-full py-4 bg-gray-900 text-white font-bold rounded-xl shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all"
+                    >
+                        Return to Login
+                    </button>
+
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="h-screen w-full bg-white relative overflow-hidden font-sans selection:bg-indigo-100 selection:text-indigo-900 flex flex-col">

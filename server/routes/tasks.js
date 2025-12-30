@@ -62,4 +62,27 @@ router.put("/:id/restore", requireAuth, taskController.restoreTask);
  */
 router.delete("/:id/permanent", requireAuth, taskController.permanentDeleteTask);
 
+/**
+ * @route   POST /api/tasks/:id/revoke
+ * @desc    Revoke a task (brings it back to creator for editing/reassignment)
+ * @access  Private (task creator only)
+ */
+router.post("/:id/revoke", requireAuth, taskController.revokeTask);
+
+/**
+ * @route   POST /api/tasks/:id/transfer-request
+ * @desc    Request to transfer task to another user
+ * @body    newAssigneeId, note
+ * @access  Private (task assignee only)
+ */
+router.post("/:id/transfer-request", requireAuth, taskController.requestTransfer);
+
+/**
+ * @route   POST /api/tasks/:id/transfer-request/:action
+ * @desc    Approve or reject transfer request
+ * @params  action (approve | reject)
+ * @access  Private (task creator only)
+ */
+router.post("/:id/transfer-request/:action", requireAuth, taskController.handleTransferRequest);
+
 module.exports = router;

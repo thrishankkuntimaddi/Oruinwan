@@ -121,7 +121,13 @@ export const AuthProvider = ({ children }) => {
 
     // Then update state (this triggers re-renders)
     setAccessToken(data.accessToken);
-    setUser(data.user);
+
+    // Merge company data into user object for consistency with /me endpoint
+    const userWithCompany = { ...data.user };
+    if (data.company) {
+      userWithCompany.company = data.company;
+    }
+    setUser(userWithCompany);
 
     console.log("✅ Token and user set in context");
 
@@ -194,7 +200,8 @@ export const AuthProvider = ({ children }) => {
         accessToken,
         login,
         logout,
-        loadUser,      // <-- ADD THIS for OAuthSuccess
+        loadUser,
+        refreshUser: loadUser, // Alias for manual refresh
         updateProfile,
         updatePassword,
       }}

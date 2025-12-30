@@ -3,6 +3,7 @@ import { useLocation } from "react-router-dom";
 import api from "../services/api";
 import { useToast } from "./ToastContext";
 import { useAuth } from "./AuthContext";
+import { useSocket } from "./SocketContext";
 
 const TasksContext = createContext();
 
@@ -12,6 +13,7 @@ export const TasksProvider = ({ children }) => {
     const location = useLocation();
     const { showToast } = useToast();
     const { user } = useAuth();
+    const { socket } = useSocket();
 
     const [tasks, setTasks] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -69,7 +71,8 @@ export const TasksProvider = ({ children }) => {
                     updatedAt: task.updatedAt,
                     visibility: task.visibility || "private",
                     assignees: validAssignees, // Keep full valid assignee list
-                    attachments: task.attachments || []
+                    attachments: task.attachments || [],
+                    transferRequest: task.transferRequest || null
                 };
             });
 
@@ -90,7 +93,7 @@ export const TasksProvider = ({ children }) => {
             'in-progress': 'In Progress',
             'review': 'In Progress',
             'done': 'Completed',
-            'cancelled': 'Terminated'
+            'cancelled': 'Cancelled'
         };
         return statusMap[status] || 'To Do';
     }, []);
@@ -101,8 +104,7 @@ export const TasksProvider = ({ children }) => {
             'To Do': 'todo',
             'In Progress': 'in-progress',
             'Completed': 'done',
-            'Done': 'done',
-            'Terminated': 'cancelled'
+            'Cancelled': 'cancelled'
         };
         return statusMap[status] || 'todo';
     }, []);
@@ -134,6 +136,107 @@ export const TasksProvider = ({ children }) => {
         loadTasks();
     }, [loadTasks]);
 
+    // WebSocket listeners for task reassignment
+    useEffect(() => {
+        if (!socket) return;
+
+        const handleTaskAssigned = (task) => {
+            console.log("📋 Task assigned to me:", task);
+            showToast(`New task assigned: ${task.title}`, "info");
+
+            setTasks(prev => {
+                if (prev.some(t => t.id === task._id)) return prev;
+
+                const validAssignees = (task.assignedTo || []).filter(u => u);
+                const assigneeDisplay = validAssignees.length === 1
+                    ? validAssignees[0].username || "Unknown"
+                    : validAssignees.length > 1 ? `${validAssignees.length} members` : "Self";
+
+                return [{
+                    id: task._id,
+                    title: task.title,
+                    description: task.description || "",
+                    assignee: assigneeDisplay,
+                    assigneeId: validAssignees[0]?._id || user?._id,
+                    assigner: task.createdBy?.username || "Unknown",
+                    assignerId: task.createdBy?._id,
+                    status: mapBackendStatus(task.status),
+                    priority: mapBackendPriority(task.priority),
+                    dueDate: task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : null,
+                    project: task.channel?.name || "General",
+                    completedAt: task.completedAt,
+                    completionNote: task.completionNote || "",
+                    deleted: task.deleted || false,
+                    tags: task.tags || [],
+                    createdAt: task.createdAt,
+                    updatedAt: task.updatedAt,
+                    visibility: task.visibility || "private",
+                    assignees: validAssignees,
+                    attachments: task.attachments || [],
+                    transferRequest: task.transferRequest || null
+                }, ...prev];
+            });
+        };
+
+        const handleTaskRemoved = (data) => {
+            console.log("🗑️ Task removed from my view:", data);
+            showToast("A task has been reassigned", "info");
+            setTasks(prev => prev.filter(t => t.id !== data.taskId));
+        };
+
+        // Listen for task updates on shared tasks
+        const handleTaskUpdated = (task) => {
+            console.log("🔄 Task updated:", task);
+
+            setTasks(prev => {
+                const existingIndex = prev.findIndex(t => t.id === task._id);
+                if (existingIndex === -1) return prev; // Task not in my list
+
+                // Map backend task to frontend format
+                const validAssignees = (task.assignedTo || []).filter(u => u);
+                const assigneeDisplay = validAssignees.length === 1
+                    ? validAssignees[0].username || "Unknown"
+                    : validAssignees.length > 1 ? `${validAssignees.length} members` : "Self";
+
+                const updatedTask = {
+                    id: task._id,
+                    title: task.title,
+                    description: task.description || "",
+                    assignee: assigneeDisplay,
+                    assigneeId: validAssignees[0]?._id || user?._id,
+                    assigner: task.createdBy?.username || "Unknown",
+                    assignerId: task.createdBy?._id,
+                    status: mapBackendStatus(task.status),
+                    priority: mapBackendPriority(task.priority),
+                    dueDate: task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : null,
+                    project: task.channel?.name || "General",
+                    completedAt: task.completedAt,
+                    completionNote: task.completionNote || "",
+                    deleted: task.deleted || false,
+                    tags: task.tags || [],
+                    createdAt: task.createdAt,
+                    updatedAt: task.updatedAt,
+                    visibility: task.visibility || "private",
+                    assignees: validAssignees,
+                    attachments: task.attachments || [],
+                    transferRequest: task.transferRequest || null
+                };
+
+                return prev.map((t, idx) => idx === existingIndex ? updatedTask : t);
+            });
+        };
+
+        socket.on("task-assigned", handleTaskAssigned);
+        socket.on("task-removed", handleTaskRemoved);
+        socket.on("task-updated", handleTaskUpdated);
+
+        return () => {
+            socket.off("task-assigned", handleTaskAssigned);
+            socket.off("task-removed", handleTaskRemoved);
+            socket.off("task-updated", handleTaskUpdated);
+        };
+    }, [socket, showToast, user, mapBackendStatus, mapBackendPriority]);
+
     // Create new task
     const createTask = useCallback(async (taskData) => {
         try {
@@ -143,18 +246,33 @@ export const TasksProvider = ({ children }) => {
                 return null;
             }
 
-            const response = await api.post("/api/tasks", {
-                workspaceId,
+            const backendPayload = {
                 title: taskData.title,
                 description: taskData.description || "",
+                workspaceId: workspaceId,
                 assignmentType: taskData.assignmentType || "self",
-                assignedToIds: taskData.assignedToIds || [],
-                channelId: taskData.channelId || null,
+                taskMode: taskData.taskMode, // Add task mode here
                 status: mapFrontendStatus(taskData.status || "To Do"),
                 priority: mapFrontendPriority(taskData.priority || "Medium"),
                 dueDate: taskData.dueDate || null,
-                tags: taskData.tags || []
-            });
+                tags: taskData.tags || [],
+                attachments: taskData.attachments || []
+            };
+
+            // Add assignment-specific fields
+            if (backendPayload.assignmentType === "individual") {
+                backendPayload.assignedToIds = taskData.assignedToIds;
+            } else if (backendPayload.assignmentType === "channel") {
+                backendPayload.channelId = taskData.channelId;
+            }
+
+            // Add channel info
+            if (taskData.project) {
+                backendPayload.channelName = taskData.project;
+            }
+
+            console.log('📤 Sending task to backend:', backendPayload);
+            const response = await api.post('/api/tasks', backendPayload);
 
             // Handle both single task and array of tasks (for split individual assignments)
             const backendTasks = response.data.tasks || [response.data.task];
@@ -192,7 +310,8 @@ export const TasksProvider = ({ children }) => {
                     tags: task.tags || [],
                     visibility: task.visibility || "private",
                     assignees: task.assignedTo || [],
-                    attachments: task.attachments || []
+                    attachments: task.attachments || [],
+                    transferRequest: task.transferRequest || null
                 };
             });
 
@@ -212,15 +331,32 @@ export const TasksProvider = ({ children }) => {
         try {
             const backendUpdates = {};
 
+            // Handle TaskModal format (from full task editing)
             if (updates.title !== undefined) backendUpdates.title = updates.title;
             if (updates.description !== undefined) backendUpdates.description = updates.description;
+            if (updates.project !== undefined) backendUpdates.channelName = updates.project;
             if (updates.status !== undefined) backendUpdates.status = mapFrontendStatus(updates.status);
             if (updates.priority !== undefined) backendUpdates.priority = mapFrontendPriority(updates.priority);
             if (updates.dueDate !== undefined) backendUpdates.dueDate = updates.dueDate;
-            if (updates.assigneeId !== undefined) backendUpdates.assignedTo = updates.assigneeId;
             if (updates.tags !== undefined) backendUpdates.tags = updates.tags;
             if (updates.completionNote !== undefined) backendUpdates.completionNote = updates.completionNote;
             if (updates.completedAt !== undefined) backendUpdates.completedAt = updates.completedAt;
+            if (updates.attachments !== undefined) backendUpdates.attachments = updates.attachments;
+
+            // Handle assignment updates from TaskModal
+            if (updates.assignmentType !== undefined) {
+                if (updates.assignmentType === "self") {
+                    backendUpdates.assignedTo = [user._id];
+                } else if (updates.assignmentType === "individual" && updates.assignedToIds) {
+                    backendUpdates.assignedTo = updates.assignedToIds;
+                } else if (updates.assignmentType === "channel" && updates.channelId) {
+                    // Channel assignment handled differently - might need backend support
+                    backendUpdates.channelId = updates.channelId;
+                }
+            } else if (updates.assigneeId !== undefined) {
+                // Handle simple assignee update (from dropdown)
+                backendUpdates.assignedTo = [updates.assigneeId];
+            }
 
             const response = await api.put(`/api/tasks/${id}`, backendUpdates);
             const updatedBackendTask = response.data.task;
@@ -319,6 +455,79 @@ export const TasksProvider = ({ children }) => {
         }
     }, [showToast]);
 
+    // Handle Transfer Request (Approve/Reject)
+    const handleTransferResponse = useCallback(async (taskId, action) => {
+        try {
+            const response = await api.post(`/api/tasks/${taskId}/transfer-request/${action}`);
+
+            if (action === 'approve') {
+                const updatedBackendTask = response.data.task;
+                // Map and update local state
+                // Note: The structure needs to match other mapping areas
+                const validAssignees = (updatedBackendTask.assignedTo || []).filter(u => u);
+
+                let assigneeDisplay = "Self";
+                if (validAssignees.length > 0) {
+                    if (validAssignees.length === 1) {
+                        assigneeDisplay = validAssignees[0].username || "Unknown";
+                    } else {
+                        assigneeDisplay = `${validAssignees.length} members`;
+                    }
+                }
+
+                const updatedTask = {
+                    id: updatedBackendTask._id,
+                    title: updatedBackendTask.title,
+                    description: updatedBackendTask.description || "",
+                    assignee: assigneeDisplay,
+                    assigneeId: validAssignees.length > 0 ? validAssignees[0]._id : user?._id || null,
+                    assigner: updatedBackendTask.createdBy?.username || user?.username || "Unknown",
+                    assignerId: updatedBackendTask.createdBy?._id || user?._id,
+                    status: mapBackendStatus(updatedBackendTask.status),
+                    priority: mapBackendPriority(updatedBackendTask.priority),
+                    dueDate: updatedBackendTask.dueDate ? new Date(updatedBackendTask.dueDate).toISOString().split('T')[0] : null,
+                    project: updatedBackendTask.channel?.name || "General",
+                    completedAt: updatedBackendTask.completedAt,
+                    completionNote: updatedBackendTask.completionNote || "",
+                    deleted: updatedBackendTask.deleted || false,
+                    tags: updatedBackendTask.tags || [],
+                    createdAt: updatedBackendTask.createdAt,
+                    updatedAt: updatedBackendTask.updatedAt,
+                    visibility: updatedBackendTask.visibility || "private",
+                    assignees: validAssignees,
+                    attachments: updatedBackendTask.attachments || [],
+                    transferRequest: updatedBackendTask.transferRequest || null
+                };
+
+                setTasks(prev => prev.map(task =>
+                    task.id === taskId ? updatedTask : task
+                ));
+                showToast("Transfer request approved", "success");
+            } else {
+                // For reject, we just update the transferRequest status locally or reload
+                // Since backend doesn't return full task on reject (only message), we might need to update locally manually or reload
+                // Let's manually update the transferRequest status locally
+                setTasks(prev => prev.map(task => {
+                    if (task.id === taskId) {
+                        return {
+                            ...task,
+                            transferRequest: {
+                                ...task.transferRequest,
+                                status: 'rejected'
+                            }
+                        };
+                    }
+                    return task;
+                }));
+                showToast("Transfer request rejected", "success");
+            }
+
+        } catch (error) {
+            console.error("Failed to handle transfer request:", error);
+            showToast(error.response?.data?.message || "Failed to process request", "error");
+        }
+    }, [showToast, user, mapBackendStatus, mapBackendPriority]);
+
     return (
         <TasksContext.Provider value={{
             tasks,
@@ -328,6 +537,7 @@ export const TasksProvider = ({ children }) => {
             deleteTask,
             permanentlyDeleteTask,
             restoreTask,
+            handleTransferResponse,
             refreshTasks: loadTasks
         }}>
             {children}

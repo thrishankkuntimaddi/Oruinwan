@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import TaskModal from "../../components/tasksComp/TaskModal";
 import TaskCompletionModal from "../../components/tasksComp/TaskCompletionModal";
+import TransferRequestModal from "../../components/tasksComp/TransferRequestModal";
 import { useContacts } from "../../contexts/ContactsContext";
 import { useTasks } from "../../contexts/TasksContext";
 import { useAuth } from "../../contexts/AuthContext";
@@ -20,9 +21,8 @@ const PRIORITY_ORDER = {
 const STATUS_COLORS = {
   "To Do": "text-gray-600 bg-gray-100 hover:bg-gray-200",
   "In Progress": "text-blue-600 bg-blue-50 hover:bg-blue-100",
-  "Done": "text-emerald-600 bg-emerald-50 hover:bg-emerald-100",
   "Completed": "text-emerald-600 bg-emerald-50 hover:bg-emerald-100",
-  "Terminated": "text-red-600 bg-red-50 hover:bg-red-100"
+  "Cancelled": "text-red-600 bg-red-50 hover:bg-red-100"
 };
 
 const PRIORITY_COLORS = {
@@ -38,10 +38,11 @@ const MyTasks = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [completionTask, setCompletionTask] = useState(null);
   const [deletionTask, setDeletionTask] = useState(null);
+  const [transferRequestTask, setTransferRequestTask] = useState(null);
   const [editingTask, setEditingTask] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const { members, channels } = useContacts();
-  const { tasks, loading, createTask, updateTask, deleteTask, restoreTask, permanentlyDeleteTask } = useTasks();
+  const { tasks, loading, createTask, updateTask, deleteTask, restoreTask, permanentlyDeleteTask, handleTransferResponse } = useTasks();
   const { user } = useAuth();
 
   const [sortOrder, setSortOrder] = useState("priority");
@@ -125,6 +126,34 @@ const MyTasks = () => {
   const handleDelete = (id) => {
     const task = tasks.find(t => t.id === id);
     setDeletionTask(task);
+  };
+
+  const handleTransferRequest = async (newAssigneeId, note) => {
+    try {
+      const response = await fetch(`http://localhost:5000/api/tasks/${transferRequestTask.id}/transfer-request`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({
+          newAssigneeId: newAssigneeId,  // Backend expects 'newAssigneeId', not 'requestedTo'
+          note: note
+        })
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to send transfer request');
+      }
+
+      setTransferRequestTask(null);
+      alert("Transfer request sent to assigner!");
+    } catch (error) {
+      console.error("Failed to send transfer request:", error);
+      alert(`Failed to send transfer request: ${error.message}`);
+    }
   };
 
   const handleConfirmDeletion = () => {
@@ -320,7 +349,28 @@ const MyTasks = () => {
                             <button onClick={() => handleRestore(task.id)} className="p-2 hover:bg-green-100 text-green-600 rounded-lg transition-colors" title="Restore"><RotateCcw size={16} /></button>
                             <button onClick={() => handlePermanentDelete(task.id)} className="p-2 hover:bg-red-100 text-red-600 rounded-lg transition-colors" title="Forever Delete"><Trash2 size={16} /></button>
                           </>
+                        ) : activeTab === "shared-tasks" ? (
+                          // Incoming tasks: show Transfer Request button + delete only if completed
+                          <>
+                            {task.transferRequest?.status === 'pending' ? (
+                              <div className="px-2 py-1 bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 text-xs rounded-md font-semibold whitespace-nowrap">
+                                Transfer Pending
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => setTransferRequestTask(task)}
+                                className="p-2 hover:bg-blue-100 text-blue-600 rounded-lg transition-colors"
+                                title="Request Transfer"
+                              >
+                                <RotateCcw size={16} />
+                              </button>
+                            )}
+                            {task.status === "Completed" && (
+                              <button onClick={() => handleDelete(task.id)} className="p-2 hover:bg-red-50 text-gray-400 hover:text-red-500 rounded-lg transition-colors" title="Delete"><Trash2 size={16} /></button>
+                            )}
+                          </>
                         ) : (
+                          // All other tabs: show delete normally
                           <button onClick={() => handleDelete(task.id)} className="p-2 hover:bg-red-50 text-gray-400 hover:text-red-500 rounded-lg transition-colors" title="Delete"><Trash2 size={16} /></button>
                         )}
                       </div>
@@ -378,6 +428,35 @@ const MyTasks = () => {
 
                   {/* Actions Column */}
                   <div className="flex flex-col items-end gap-3 md:w-36 shrink-0">
+                    {/* Transfer Request Action (Assigner View) */}
+                    {activeTab === "assigned-tasks" && task.transferRequest?.status === "pending" && (
+                      <div className="w-full bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800 rounded-xl p-3 flex flex-col gap-2 shadow-sm">
+                        <div className="flex items-center gap-1 text-xs font-semibold text-purple-700 dark:text-purple-300">
+                          <RotateCcw size={12} />
+                          <span>Transfer Request</span>
+                        </div>
+                        <p className="text-[10px] text-gray-500 leading-tight">
+                          To: <span className="font-medium text-gray-700 dark:text-gray-300">{task.transferRequest.requestedTo?.username || "Unknown"}</span>
+                        </p>
+                        {task.transferRequest.note && (
+                          <p className="text-[10px] italic text-gray-500 line-clamp-2">"{task.transferRequest.note}"</p>
+                        )}
+                        <div className="flex gap-2 mt-1">
+                          <button
+                            onClick={() => handleTransferResponse(task.id, 'approve')}
+                            className="flex-1 bg-purple-600 hover:bg-purple-700 text-white text-xs py-1.5 rounded-lg font-medium transition-colors shadow-sm"
+                          >
+                            Approve
+                          </button>
+                          <button
+                            onClick={() => handleTransferResponse(task.id, 'reject')}
+                            className="flex-1 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 text-xs py-1.5 rounded-lg font-medium transition-colors shadow-sm"
+                          >
+                            Reject
+                          </button>
+                        </div>
+                      </div>
+                    )}
                     {/* Custom Selectors Styled as Badges */}
                     <div className="relative w-full">
                       <select
@@ -419,12 +498,23 @@ const MyTasks = () => {
         />
       )}
 
+      {/* Completion Modal */}
       {completionTask && (
         <TaskCompletionModal
           task={completionTask}
           onClose={() => setCompletionTask(null)}
           onConfirm={handleConfirmCompletion}
           mode="completion"
+        />
+      )}
+
+      {/* Transfer Request Modal */}
+      {transferRequestTask && (
+        <TransferRequestModal
+          task={transferRequestTask}
+          members={members}
+          onClose={() => setTransferRequestTask(null)}
+          onConfirm={handleTransferRequest}
         />
       )}
 

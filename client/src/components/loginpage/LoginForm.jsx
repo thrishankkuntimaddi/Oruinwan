@@ -65,13 +65,22 @@ const LoginForm = ({ onSwitch, initialEmail = "" }) => {
         response?.user?.companyRole === 'owner' ||
         response?.user?.companyRole === 'admin';
 
-      // If user has a company, go to workspaces
-      // If admin without company, go to company creation
-      // Otherwise, go to workspaces
+      const company = response?.company || {};
+      const isSetupComplete = company.isSetupComplete;
+
       if (hasCompany) {
-        navigate("/workspaces");
+        if (isAdmin && !isSetupComplete) {
+          // Redirect to setup flow
+          if (!company.setupStep || company.setupStep === 0) {
+            navigate("/company/confirm");
+          } else {
+            navigate("/company/setup");
+          }
+        } else {
+          navigate("/workspaces");
+        }
       } else if (isAdmin) {
-        navigate("/admin/company");
+        navigate("/admin/company"); // Edge case for admin without company structure (unlikely in new flow)
       } else {
         navigate("/workspaces");
       }

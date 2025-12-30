@@ -13,6 +13,7 @@ export default function TaskModal({ onClose, onAddTask, onUpdateTask, channels =
   const [description, setDescription] = useState("");
   const [project, setProject] = useState("");
   const [assignmentType, setAssignmentType] = useState("self"); // "self", "individual", "channel"
+  const [taskMode, setTaskMode] = useState("split"); // "split" or "shared" (for individual assignments)
   const [selectedMembers, setSelectedMembers] = useState([]); // For multi-select
   const [selectedChannel, setSelectedChannel] = useState(""); // For channel assignment
   const [attachments, setAttachments] = useState([]); // { name, url }
@@ -100,8 +101,21 @@ export default function TaskModal({ onClose, onAddTask, onUpdateTask, channels =
   };
 
   const handleAdd = () => {
-    if (!title || !project || !dueDate) {
-      return showToast("Please fill in all required fields.", "error");
+    // Validate all required fields
+    if (!title.trim()) {
+      return showToast("Task title is required", "error");
+    }
+
+    if (!description.trim()) {
+      return showToast("Description is required", "error");
+    }
+
+    if (!project) {
+      return showToast("Please select a channel", "error");
+    }
+
+    if (!dueDate) {
+      return showToast("Deadline is required", "error");
     }
 
     // Validate due date
@@ -134,6 +148,7 @@ export default function TaskModal({ onClose, onAddTask, onUpdateTask, channels =
       description,
       project,
       assignmentType,
+      taskMode, // Add task mode (split/shared)
       assignedToIds: assignmentType === "individual" ? selectedMembers : [],
       channelId: assignmentType === "channel" ? selectedChannel : null,
       dueDate,
@@ -308,6 +323,44 @@ export default function TaskModal({ onClose, onAddTask, onUpdateTask, channels =
               ))}
             </div>
           </div>
+
+          {/* Task Mode (Split/Shared) - Only show for individual multi-select */}
+          {assignmentType === "individual" && selectedMembers.length > 1 && !isReadOnly && (
+            <div className="space-y-2 p-3 bg-blue-50/30 dark:bg-blue-900/10 border border-blue-100/50 dark:border-blue-800/30 rounded-2xl">
+              <label className="text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                Task Mode
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setTaskMode('split')}
+                  className={`px-3 py-2.5 rounded-xl font-bold text-sm transition-all flex flex-col items-center justify-center gap-1 border ${taskMode === 'split'
+                    ? "bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-500/30"
+                    : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700"
+                    }`}
+                >
+                  <span>📋 Split</span>
+                  <span className="text-[10px] opacity-80">Independent work</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTaskMode('shared')}
+                  className={`px-3 py-2.5 rounded-xl font-bold text-sm transition-all flex flex-col items-center justify-center gap-1 border ${taskMode === 'shared'
+                    ? "bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-500/30"
+                    : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700"
+                    }`}
+                >
+                  <span>🤝 Shared</span>
+                  <span className="text-[10px] opacity-80">Collaborate together</span>
+                </button>
+              </div>
+              <p className="text-xs text-blue-600 dark:text-blue-400 px-1">
+                {taskMode === 'split'
+                  ? "✨ Each person gets their own task copy"
+                  : "✨ Everyone works on the same task together"}
+              </p>
+            </div>
+          )}
 
           {/* Individual Assignment - Multi-select */}
           {assignmentType === "individual" && (

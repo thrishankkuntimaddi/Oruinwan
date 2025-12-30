@@ -118,6 +118,13 @@ const UserSchema = new mongoose.Schema(
       default: 'active'
     },
 
+    // Phase 1: Account Status (for pending companies)
+    accountStatus: {
+      type: String,
+      enum: ["active", "pending_company", "suspended"],
+      default: "active"
+    },
+
     // Favorites (channels and DMs)
     favorites: [{ type: String }], // Array of channel/conversation IDs
 
