@@ -38,13 +38,25 @@ function generateRefreshToken(user) {
 // ----------------------------------------------------
 exports.signup = async (req, res) => {
   try {
-    const { username, email, password, phone, inviteToken } = req.body;
+    const { username, email, password, phone, phoneCode, inviteToken } = req.body;
 
     if (!username || !email || !password)
       return res.status(400).json({ message: "Missing required fields" });
 
     if (await User.findOne({ email }))
       return res.status(409).json({ message: "Email already in use" });
+
+    // Check for duplicate username
+    if (await User.findOne({ username }))
+      return res.status(409).json({ message: "Username already in use" });
+
+    // Check for duplicate phone number (if provided)
+    if (phone) {
+      const existingPhone = await User.findOne({ phone: phone });
+      if (existingPhone) {
+        return res.status(409).json({ message: "Phone number already in use" });
+      }
+    }
 
     const passwordHash = await bcrypt.hash(password, 12);
 
@@ -151,14 +163,15 @@ exports.signup = async (req, res) => {
     const user = new User({
       username,
       email: emailLower,
-      phone,
+      phone: phone || null,
+      phoneCode: phoneCode || "+1",
       passwordHash,
       userType,
       companyId,
       companyRole,
       verificationTokenHash: tokenHash,
       verificationTokenExpires: Date.now() + 86400000,
-      verified: true // Auto-verify for testing (change in production)
+      verified: false // Users must verify email before logging in
     });
 
     await user.save();
@@ -232,13 +245,23 @@ exports.signup = async (req, res) => {
 
     }
 
-    /*
-    await sendEmail({
-      to: email,
-      subject: "Verify your email",
-      html: `Click here to verify: <a href="${verifyUrl}">${verifyUrl}</a>`
-    });
-    */
+    // Send verification email (or log to console in development)
+    try {
+      await sendEmail({
+        to: email,
+        subject: "Verify your email",
+        html: `Click here to verify: <a href="${verifyUrl}">${verifyUrl}</a>`
+      });
+      console.log(`✅ Verification email sent to ${email}`);
+    } catch (emailError) {
+      // If SMTP not configured, log the link to console (for development)
+      console.log("\n" + "=".repeat(80));
+      console.log("📧 EMAIL VERIFICATION LINK (SMTP not configured)");
+      console.log("=".repeat(80));
+      console.log(`User: ${email}`);
+      console.log(`Verification Link: ${verifyUrl}`);
+      console.log("=".repeat(80) + "\n");
+    }
 
     return res.status(201).json({
       message: "Signup successful, verify your email.",
@@ -259,13 +282,31 @@ exports.verifyEmail = async (req, res) => {
   try {
     const { token, email } = req.query;
 
+    console.log("🔐 [VERIFY EMAIL] Request received:");
+    console.log(`   Email: ${email}`);
+    console.log(`   Token: ${token ? token.substring(0, 10) + '...' : 'MISSING'}`);
+
+    if (!token || !email) {
+      console.log("❌ [VERIFY EMAIL] Missing token or email");
+      return res.status(400).json({ message: "Missing token or email" });
+    }
+
+    const tokenHash = sha256(token);
+    console.log(`   Token Hash: ${tokenHash.substring(0, 10)}...`);
+
     const user = await User.findOne({
       email,
-      verificationTokenHash: sha256(token),
+      verificationTokenHash: tokenHash,
       verificationTokenExpires: { $gt: Date.now() }
     });
 
-    if (!user) return res.status(400).json({ message: "Invalid or expired token" });
+    if (!user) {
+      console.log("❌ [VERIFY EMAIL] No matching user found");
+      console.log("   Possible reasons: Invalid token, expired token, or email already verified");
+      return res.status(400).json({ message: "Invalid or expired token" });
+    }
+
+    console.log(`✅ [VERIFY EMAIL] User found: ${user.email}`);
 
     user.verified = true;
     user.verificationTokenHash = undefined;
@@ -273,9 +314,11 @@ exports.verifyEmail = async (req, res) => {
 
     await user.save();
 
+    console.log(`✅ [VERIFY EMAIL] Email verified successfully for ${user.email}`);
+
     return res.json({ message: "Email verified" });
   } catch (err) {
-    console.error("VERIFY EMAIL ERROR:", err);
+    console.error("❌ [VERIFY EMAIL] ERROR:", err);
     res.status(500).json({ message: "Server error" });
   }
 };
@@ -644,11 +687,23 @@ exports.forgotPassword = async (req, res) => {
 
     const url = `${process.env.FRONTEND_URL}/reset-password?token=${raw}&email=${encodeURIComponent(email)}`;
 
-    await sendEmail({
-      to: email,
-      subject: "Password Reset",
-      html: `Reset your password: <a href="${url}">${url}</a>`
-    });
+    // Send reset email (or log to console in development)
+    try {
+      await sendEmail({
+        to: email,
+        subject: "Password Reset",
+        html: `Reset your password: <a href="${url}">${url}</a>`
+      });
+      console.log(`✅ Password reset email sent to ${email}`);
+    } catch (emailError) {
+      // If SMTP not configured, log the link to console (for development)
+      console.log("\n" + "=".repeat(80));
+      console.log("🔐 PASSWORD RESET LINK (SMTP not configured)");
+      console.log("=".repeat(80));
+      console.log(`User: ${email}`);
+      console.log(`Reset Link: ${url}`);
+      console.log("=".repeat(80) + "\n");
+    }
 
     return res.json({ message: "Reset link sent if account exists" });
   } catch (err) {
@@ -758,6 +813,60 @@ exports.getMe = async (req, res) => {
       }));
     }
 
+    // Migration: Handle legacy phone format (combined phone+code in phone field)
+    if (userObject.phone && userObject.phone.startsWith('+')) {
+      // Phone is in old format: "+919381870544"
+      // Parse it to split into phoneCode and phone
+      const phoneMatch = userObject.phone.match(/^(\+\d{1,3})(\d+)$/);
+
+      if (phoneMatch) {
+        const extractedCode = phoneMatch[1]; // e.g., "+91"
+        const extractedPhone = phoneMatch[2]; // e.g., "9381870544"
+
+        // Update user in database with split format
+        user.phoneCode = extractedCode;
+        user.phone = extractedPhone;
+        await user.save();
+
+        // Update the response object
+        userObject.phoneCode = extractedCode;
+        userObject.phone = extractedPhone;
+
+        console.log(`📞 Migrated phone for user ${user.email}: ${extractedCode} ${extractedPhone}`);
+      }
+    } else if (userObject.phone && /^\d{11,13}$/.test(userObject.phone)) {
+      // Phone is stored as plain number without + (e.g., "918989898989")
+      // Try to detect country code from the number itself
+      let extractedCode = "+1"; // Default
+      let extractedPhone = userObject.phone;
+
+      // Check for common country code patterns
+      if (userObject.phone.startsWith('91') && userObject.phone.length === 12) {
+        // Indian number: 91 + 10 digits
+        extractedCode = "+91";
+        extractedPhone = userObject.phone.substring(2);
+      } else if (userObject.phone.startsWith('44') && userObject.phone.length === 12) {
+        // UK number: 44 + 10 digits
+        extractedCode = "+44";
+        extractedPhone = userObject.phone.substring(2);
+      } else if (userObject.phone.startsWith('1') && userObject.phone.length === 11) {
+        // US/Canada number: 1 + 10 digits
+        extractedCode = "+1";
+        extractedPhone = userObject.phone.substring(1);
+      }
+
+      // Update user in database
+      user.phoneCode = extractedCode;
+      user.phone = extractedPhone;
+      await user.save();
+
+      // Update response object
+      userObject.phoneCode = extractedCode;
+      userObject.phone = extractedPhone;
+
+      console.log(`📞 Migrated phone (no prefix) for user ${user.email}: ${extractedCode} ${extractedPhone}`);
+    }
+
     return res.json(userObject);
   } catch (err) {
     console.error("GET ME ERROR:", err);
@@ -780,10 +889,16 @@ exports.updateMe = async (req, res) => {
     // Profile Updates
     if (!user.profile) user.profile = {};
 
-    // Date of Birth validation
-    if (req.body.dob !== undefined) {
+    // Date of Birth validation - only update if a valid non-empty value is provided
+    if (req.body.dob !== undefined && req.body.dob !== "") {
       const dob = new Date(req.body.dob);
       const today = new Date();
+
+      // Check if date is valid
+      if (isNaN(dob.getTime())) {
+        return res.status(400).json({ message: "Invalid date of birth" });
+      }
+
       const age = today.getFullYear() - dob.getFullYear();
 
       if (dob > today) {
@@ -796,8 +911,8 @@ exports.updateMe = async (req, res) => {
       user.profile.dob = dob;
     }
 
-    // About field with character limit
-    if (req.body.about !== undefined) {
+    // About field with character limit - only update if provided
+    if (req.body.about !== undefined && req.body.about !== "") {
       const about = req.body.about.trim();
       if (about.length > 500) {
         return res.status(400).json({ message: "About section must be 500 characters or less" });
@@ -812,6 +927,18 @@ exports.updateMe = async (req, res) => {
     if (!user.preferences) user.preferences = {};
     if (req.body.preferences) {
       if (req.body.preferences.theme) user.preferences.theme = req.body.preferences.theme;
+    }
+
+    // Check for duplicate phone number before saving (if phone is being updated)
+    if (req.body.phone !== undefined && req.body.phone) {
+      const existingUser = await User.findOne({
+        phone: req.body.phone,
+        _id: { $ne: user._id } // Exclude current user
+      });
+
+      if (existingUser) {
+        return res.status(409).json({ message: "Phone number already in use by another account" });
+      }
     }
 
     await user.save();
@@ -837,7 +964,21 @@ exports.updateMe = async (req, res) => {
 
   } catch (err) {
     console.error("UPDATE PROFILE ERROR:", err);
-    return res.status(500).json({ message: "Server error" });
+    console.error("Error details:", {
+      name: err.name,
+      code: err.code,
+      message: err.message
+    });
+
+    // Handle MongoDB duplicate key errors
+    if (err.code === 11000) {
+      const field = Object.keys(err.keyPattern || {})[0];
+      return res.status(409).json({
+        message: `That ${field} is already in use by another account`
+      });
+    }
+
+    return res.status(500).json({ message: err.message || "Server error" });
   }
 };
 
@@ -1217,7 +1358,7 @@ exports.addEmail = async (req, res) => {
 };
 
 // Verify email with code
-exports.verifyEmail = async (req, res) => {
+exports.verifyEmailCode = async (req, res) => {
   try {
     const { id } = req.params;
     const { code } = req.body;

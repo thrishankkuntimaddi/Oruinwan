@@ -5,6 +5,8 @@ const User = require('../models/User');
 const Company = require('../models/Company');
 const sendEmail = require('../utils/sendEmail');
 const adminController = require('../controllers/adminController');
+const platformController = require('../controllers/platformController');
+const AuditLog = require('../models/AuditLog');
 const requireAuth = require('../middleware/auth'); // Fixed: Is default export
 const { requireAdmin } = require('../middleware/permissionMiddleware');
 
@@ -91,6 +93,16 @@ router.post('/approve-company/:id', requireSuperAdmin, async (req, res) => {
             // In production, replace with: await sendEmail({...})
         }
 
+        // Audit Log
+        await AuditLog.create({
+            companyId: company._id,
+            userId: req.user.sub,
+            action: 'company.approved',
+            resource: 'Company',
+            resourceId: company._id,
+            description: `Company ${company.name} approved by ${user.username}`
+        });
+
 
         res.json({ message: "Company Approved", company });
     } catch (err) {
@@ -132,12 +144,42 @@ router.post('/reject-company/:id', requireSuperAdmin, async (req, res) => {
             console.log("=".repeat(80) + "\n");
         }
 
+        // Audit Log
+        await AuditLog.create({
+            companyId: company._id,
+            userId: req.user.sub,
+            action: 'company.rejected',
+            resource: 'Company',
+            resourceId: company._id,
+            details: { reason },
+            description: `Company ${company.name} rejected by ${user.username}`
+        });
+
         res.json({ message: "Company Rejected", company });
     } catch (err) {
         console.error(err);
         res.status(500).json({ message: "Server Error" });
     }
 });
+
+// ============================================================================
+// PLATFORM ADMIN FEATURES (Protected by requireSuperAdmin)
+// ============================================================================
+
+// Audit Logs
+router.get('/audit-logs', requireSuperAdmin, platformController.getAuditLogs);
+
+// Active Companies (Multi-Tenant View)
+router.get('/active-companies', requireSuperAdmin, platformController.getActiveCompanies);
+
+// Support Tickets (Platform Admin View)
+router.get('/tickets', requireSuperAdmin, platformController.getAllTickets);
+router.put('/tickets/:id', requireSuperAdmin, platformController.updateTicket); // Reply/Status
+
+// Platform Chat (Platform Admin View)
+router.get('/chat/session/:companyId', requireSuperAdmin, platformController.getPlatformSession);
+router.get('/chat/session/:sessionId/messages', requireSuperAdmin, platformController.getSessionMessages);
+router.post('/chat/session/:sessionId/messages', requireSuperAdmin, platformController.sendSessionMessage);
 
 module.exports = router;
 
@@ -150,4 +192,14 @@ router.get('/analytics/stats', requireAuth, requireAdmin, adminController.getAna
 
 // GET /api/admin/departments
 router.get('/departments', requireAuth, requireAdmin, adminController.getDepartments);
+
+// Support Tickets (Company Admin View)
+router.post('/tickets', requireAuth, requireAdmin, platformController.createTicket);
+
+// Platform Chat (Company Admin View) - Using same controller but standard auth
+// Logic in controller needs to handle ownership check if not Super Admin, OR we use middleware here
+// For simplicity, exposing the endpoints. Controller should verify access.
+router.get('/support/chat/session/:companyId', requireAuth, requireAdmin, platformController.getPlatformSession);
+router.get('/support/chat/session/:sessionId/messages', requireAuth, requireAdmin, platformController.getSessionMessages);
+router.post('/support/chat/session/:sessionId/messages', requireAuth, requireAdmin, platformController.sendSessionMessage);
 

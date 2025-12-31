@@ -15,6 +15,7 @@ const MessageSchema = new mongoose.Schema({
   workspace: { type: mongoose.Schema.Types.ObjectId, ref: "Workspace", default: null },
   channel: { type: mongoose.Schema.Types.ObjectId, ref: "Channel", default: null },
   dm: { type: mongoose.Schema.Types.ObjectId, ref: "DMSession", default: null },
+  platformSession: { type: mongoose.Schema.Types.ObjectId, ref: "PlatformSession", default: null }, // Link to platform chat session
   sender: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
   text: { type: String, default: "" },
   attachments: [AttachmentSchema],
@@ -37,6 +38,7 @@ const MessageSchema = new mongoose.Schema({
 
 MessageSchema.index({ company: 1, channel: 1, createdAt: -1 });
 MessageSchema.index({ company: 1, dm: 1, createdAt: -1 });
+MessageSchema.index({ platformSession: 1, createdAt: -1 });
 MessageSchema.index({ createdAt: -1 });
 
 module.exports = mongoose.model("Message", MessageSchema);

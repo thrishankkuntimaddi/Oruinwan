@@ -239,7 +239,7 @@ const WorkspaceSelect = () => {
                 onClick={() => navigate("/features")}
                 className="absolute top-6 left-6 flex items-center space-x-2 cursor-pointer hover:opacity-80 transition-opacity"
             >
-                <img src="/assets/ChttrixLogo.svg" alt="Chttrix Logo" className="w-8 h-8 rounded-lg object-cover contrast-125 saturate-110 shadow-sm" />
+                <img src="/chttrix-logo.jpg" alt="Chttrix Logo" className="w-8 h-8 rounded-lg object-cover shadow-sm" />
                 <span className="text-xl font-bold text-gray-900 dark:text-gray-100 tracking-tight">Chttrix</span>
             </div>
 

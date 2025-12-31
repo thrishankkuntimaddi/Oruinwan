@@ -114,7 +114,7 @@ const FeatureShowcase = () => {
                 <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
                     {/* Logo */}
                     <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate("/")}>
-                        <img src="/assets/ChttrixLogo.svg" alt="Chttrix Logo" className="w-8 h-8 rounded-lg object-cover shadow-sm hover:rotate-3 transition-transform duration-300" />
+                        <img src="/chttrix-logo.jpg" alt="Chttrix Logo" className="w-8 h-8 rounded-lg object-cover shadow-sm hover:rotate-3 transition-transform duration-300" />
                         <span className="text-xl font-black text-gray-900 tracking-tight">Chttrix</span>
                     </div>
 
@@ -218,7 +218,7 @@ const FeatureShowcase = () => {
                 {/* Footer */}
                 <div className="w-full mt-4 border-t border-gray-100 py-6 text-center">
                     <div className="flex items-center justify-center gap-2">
-                        <img src="/assets/ChttrixLogo.svg" alt="Logo" className="w-5 h-5 grayscale opacity-70 hover:opacity-100 transition-opacity" />
+                        <img src="/chttrix-logo.jpg" alt="Logo" className="w-5 h-5 rounded grayscale opacity-70 hover:opacity-100 transition-opacity" />
                         <span className="text-sm font-bold text-gray-800">Chttrix</span>
                         <span className="text-gray-300">|</span>
                         <p className="text-gray-500 text-xs">© 2025 Chttrix Inc. All rights reserved.</p>

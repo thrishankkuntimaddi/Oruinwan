@@ -174,7 +174,8 @@ const SignupForm = ({ onSwitch }) => {
         body: JSON.stringify({
           username: formData.username,
           email: formData.email,
-          phone: `${selectedCountry.dial_code}${formData.phone}`,
+          phone: formData.phone, // Send just the number: "1234567890"
+          phoneCode: selectedCountry.dial_code, // Send code separately: "+91"
           password: formData.password
         })
       });

@@ -21,7 +21,7 @@ const {
   revokeSession,
   revokeOtherSessions,
   addEmail,
-  verifyEmail: verifyEmailCode,
+  verifyEmailCode,
   resendVerification,
   setPrimaryEmail,
   deleteEmail
