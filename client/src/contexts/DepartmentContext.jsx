@@ -34,8 +34,16 @@ export const DepartmentProvider = ({ children }) => {
         try {
             setLoading(true);
             const token = localStorage.getItem('accessToken');
+
+            // Extract ID - handle both object and string formats
+            console.log('[DEBUG] user.companyId:', user.companyId);
+            const companyId = typeof user.companyId === 'object' && user.companyId !== null
+                ? (user.companyId._id || user.companyId.id || user.companyId)
+                : user.companyId;
+            console.log('[DEBUG] Extracted companyId:', companyId);
+
             const response = await axios.get(
-                `${API_BASE}/api/departments/${user.companyId}`,
+                `${API_BASE}/api/departments/${companyId}`,
                 {
                     headers: { Authorization: `Bearer ${token}` }
                 }
@@ -71,9 +79,17 @@ export const DepartmentProvider = ({ children }) => {
 
         try {
             const token = localStorage.getItem('accessToken');
+
+            // Extract ID - handle both object and string formats
+            console.log('[DEBUG] user.companyId:', user.companyId);
+            const companyId = typeof user.companyId === 'object' && user.companyId !== null
+                ? (user.companyId._id || user.companyId.id || user.companyId)
+                : user.companyId;
+            console.log('[DEBUG] Extracted companyId:', companyId);
+
             const response = await axios.post(
                 `${API_BASE}/api/departments`,
-                { companyId: user.companyId, name, description },
+                { companyId, name, description },
                 {
                     headers: { Authorization: `Bearer ${token}` }
                 }

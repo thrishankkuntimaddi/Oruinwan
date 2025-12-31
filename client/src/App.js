@@ -1,5 +1,5 @@
-// src/App.jsx
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+// src/App.jsx - Recompile Trigger
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 
 // Context Providers  
 import { WorkspaceProvider } from "./contexts/WorkspaceContext";
@@ -40,23 +40,28 @@ import OAuthSuccess from "./pages/LoginPageComp/OAuthSuccess";
 import AcceptInvite from "./pages/AcceptInvite";
 import JoinWorkspace from "./pages/JoinWorkspace";
 import JoinChannel from "./pages/JoinChannel";
-import CompanyAdmin from "./pages/CompanyAdmin";
+
 import RegisterCompany from "./pages/RegisterCompany";
 import CompanyConfirmation from "./pages/CompanyConfirmation";
 import CompanySetup from "./pages/CompanySetup";
-import DepartmentManagement from "./pages/DepartmentManagement";
+import DepartmentManagement from "./pages/admin/DepartmentManagement"; // Updated path
 
 // Dashboard Pages
 import AdminDashboard from "./pages/dashboards/AdminDashboard";
 import ManagerDashboard from "./pages/dashboards/ManagerDashboard";
+import AdminAnalyticsDashboard from "./pages/dashboards/AdminAnalyticsDashboard"; // NEW
 import EmployeeDashboard from "./pages/dashboards/EmployeeDashboard";
 import AnalyticsDashboard from "./pages/dashboards/AnalyticsDashboard";
 import ChttrixAdminDashboard from "./pages/dashboards/ChttrixAdminDashboard";
 
 // Protected route wrappers
+// Protected route wrappers
 import RequireAuth from "./components/RequireAuth";
 import RequireWorkspace from "./components/RequireWorkspace";
 import RequireAdmin from "./components/RequireAdmin";
+import RequireChttrixAdmin from "./components/RequireChttrixAdmin";
+import RequireCompanyAdmin from "./components/RequireCompanyAdmin"; // Restored
+import RequireDepartmentManager from "./components/RequireDepartmentManager"; // Restored
 
 
 function App() {
@@ -75,6 +80,12 @@ function App() {
                         <Routes>
 
                           {/* PROTECTED AREA (requires login) */}
+
+                          {/* Redirect /personal/workspace to /workspaces to prevent white screen */}
+                          <Route
+                            path="/personal/workspace"
+                            element={<Navigate to="/workspaces" replace />}
+                          />
 
                           {/* Workspace Selection - Must select workspace first */}
                           <Route
@@ -323,17 +334,7 @@ function App() {
                           />
 
 
-                          {/* Company Admin Console - Admin/Owner Only */}
-                          <Route
-                            path="/admin/company"
-                            element={
-                              <RequireAuth>
-                                <RequireAdmin>
-                                  <CompanyAdmin />
-                                </RequireAdmin>
-                              </RequireAuth>
-                            }
-                          />
+
 
                           {/* PUBLIC ROUTES */}
 
@@ -403,20 +404,18 @@ function App() {
                           <Route
                             path="/admin/analytics"
                             element={
-                              <RequireAuth>
-                                <RequireAdmin>
-                                  <AnalyticsDashboard />
-                                </RequireAdmin>
-                              </RequireAuth>
+                              <RequireCompanyAdmin>
+                                <AdminAnalyticsDashboard />
+                              </RequireCompanyAdmin>
                             }
                           />
 
                           <Route
                             path="/manager/dashboard"
                             element={
-                              <RequireAuth>
+                              <RequireDepartmentManager>
                                 <ManagerDashboard />
-                              </RequireAuth>
+                              </RequireDepartmentManager>
                             }
                           />
 
@@ -433,9 +432,9 @@ function App() {
                           <Route
                             path="/chttrix-admin"
                             element={
-                              <RequireAuth>
+                              <RequireChttrixAdmin>
                                 <ChttrixAdminDashboard />
-                              </RequireAuth>
+                              </RequireChttrixAdmin>
                             }
                           />
 

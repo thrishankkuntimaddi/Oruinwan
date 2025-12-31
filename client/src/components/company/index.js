@@ -6,3 +6,5 @@ export { default as RoleBadge } from './RoleBadge';
 export { default as DepartmentCard } from './DepartmentCard';
 export { default as UserCard } from './UserCard';
 export { default as ActivityFeed } from './ActivityFeed';
+export { default as DomainSettings } from './DomainSettings';
+export { default as InviteUserModal } from './InviteUserModal';

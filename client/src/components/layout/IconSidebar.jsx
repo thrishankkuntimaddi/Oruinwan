@@ -67,6 +67,16 @@ const IconSidebar = ({ onProfileClick }) => {
         ...(user?.userType === "company" ? [
             { icon: <Newspaper size={20} strokeWidth={2} />, path: "/updates", label: "Updates" }
         ] : []),
+
+        // Admin Dashboard Link
+        ...((['owner', 'admin'].includes(user?.companyRole) || user?.isCoOwner) ? [
+            { icon: <Shield size={20} strokeWidth={2} />, path: "/admin/analytics", label: "Admin" }
+        ] : []),
+
+        // Manager Dashboard Link
+        ...((user?.companyRole === 'manager' || (user?.managedDepartments && user.managedDepartments.length > 0)) ? [
+            { icon: <Briefcase size={20} strokeWidth={2} />, path: "/manager/dashboard", label: "Manager" }
+        ] : []),
     ];
 
     return (

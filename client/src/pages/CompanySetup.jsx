@@ -23,7 +23,7 @@ const CompanySetup = () => {
     ]);
 
     const [invites, setInvites] = useState([
-        { email: "", role: "member" }
+        { name: "", email: "", role: "member", department: "" }
     ]);
 
     const totalSteps = 4;
@@ -48,7 +48,7 @@ const CompanySetup = () => {
         }
 
         try {
-            await axios.put(
+            const response = await axios.put(
                 `${process.env.REACT_APP_BACKEND_URL}/api/companies/${companyId}/setup`,
                 {
                     step: step,
@@ -63,7 +63,10 @@ const CompanySetup = () => {
                 setStep(step + 1);
             } else {
                 await refreshUser();
-                navigate('/workspaces');
+                // Use backend provided redirect or default to admin dashboard
+                const redirectPath = response.data.redirectTo || '/admin/analytics';
+                console.log("Redirecting to:", redirectPath);
+                navigate(redirectPath);
             }
         } catch (error) {
             console.error("Setup Error", error);
@@ -291,51 +294,92 @@ const CompanySetup = () => {
 
                                     <div className="space-y-4 max-h-[400px]">
                                         {invites.map((invite, idx) => (
-                                            <div key={idx} className="flex items-center gap-3 animate-slideIn">
-                                                <div className="flex-1 relative group">
-                                                    <Mail className="absolute left-4 top-4 text-gray-400 group-focus-within:text-indigo-500 transition-colors" size={18} />
-                                                    <input
-                                                        type="email"
-                                                        value={invite.email}
-                                                        onChange={(e) => {
-                                                            const newInvites = [...invites];
-                                                            newInvites[idx].email = e.target.value;
-                                                            setInvites(newInvites);
-                                                        }}
-                                                        placeholder={`colleague@${user?.company?.domain || 'company.com'}`}
-                                                        className="w-full pl-11 pr-4 py-3.5 bg-white border border-gray-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 rounded-2xl outline-none transition-all shadow-sm text-gray-900"
-                                                    />
-                                                    {invite.email && user?.company?.domain && !invite.email.endsWith(`@${user.company.domain}`) && (
-                                                        <p className="text-xs text-red-500 mt-1 ml-2">⚠️ Email must match company domain (@{user.company.domain})</p>
-                                                    )}
-                                                </div>
-                                                <select
-                                                    className="w-32 py-3.5 px-3 rounded-xl border border-gray-200 bg-white text-sm font-bold text-gray-700 outline-none focus:border-indigo-500"
-                                                    value={invite.role}
-                                                    onChange={(e) => {
-                                                        const newInvites = [...invites];
-                                                        newInvites[idx].role = e.target.value;
-                                                        setInvites(newInvites);
-                                                    }}
-                                                >
-                                                    <option value="member">Member</option>
-                                                    <option value="admin">Admin</option>
-                                                    <option value="owner">Co-Owner</option>
-                                                </select>
+                                            <div key={idx} className="flex flex-col gap-3 animate-slideIn p-4 bg-gray-50 rounded-2xl border border-gray-100 relative">
                                                 {invites.length > 1 && (
                                                     <button
                                                         onClick={() => setInvites(invites.filter((_, i) => i !== idx))}
-                                                        className="p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-colors"
+                                                        className="absolute right-2 top-2 p-1.5 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors z-10"
                                                     >
-                                                        <X size={20} />
+                                                        <X size={16} />
                                                     </button>
+                                                )}
+
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                                    {/* Name */}
+                                                    <div className="relative group">
+                                                        <Users className="absolute left-4 top-4 text-gray-400 group-focus-within:text-indigo-500 transition-colors" size={18} />
+                                                        <input
+                                                            type="text"
+                                                            value={invite.name}
+                                                            onChange={(e) => {
+                                                                const newInvites = [...invites];
+                                                                newInvites[idx].name = e.target.value;
+                                                                setInvites(newInvites);
+                                                            }}
+                                                            placeholder="Full Name"
+                                                            className="w-full pl-11 pr-4 py-3.5 bg-white border border-gray-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 rounded-xl outline-none transition-all shadow-sm text-gray-900"
+                                                        />
+                                                    </div>
+
+                                                    {/* Email */}
+                                                    <div className="relative group">
+                                                        <Mail className="absolute left-4 top-4 text-gray-400 group-focus-within:text-indigo-500 transition-colors" size={18} />
+                                                        <input
+                                                            type="email"
+                                                            value={invite.email}
+                                                            onChange={(e) => {
+                                                                const newInvites = [...invites];
+                                                                newInvites[idx].email = e.target.value;
+                                                                setInvites(newInvites);
+                                                            }}
+                                                            placeholder={`colleague@${user?.company?.domain || 'company.com'}`}
+                                                            className="w-full pl-11 pr-4 py-3.5 bg-white border border-gray-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 rounded-xl outline-none transition-all shadow-sm text-gray-900"
+                                                        />
+                                                    </div>
+                                                </div>
+
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                                    {/* Role */}
+                                                    <select
+                                                        className="w-full py-3.5 px-4 rounded-xl border border-gray-200 bg-white text-sm font-bold text-gray-700 outline-none focus:border-indigo-500"
+                                                        value={invite.role}
+                                                        onChange={(e) => {
+                                                            const newInvites = [...invites];
+                                                            newInvites[idx].role = e.target.value;
+                                                            setInvites(newInvites);
+                                                        }}
+                                                    >
+                                                        <option value="member">Member</option>
+                                                        <option value="manager">Manager</option>
+                                                        <option value="admin">Admin</option>
+                                                    </select>
+
+                                                    {/* Department */}
+                                                    <select
+                                                        className="w-full py-3.5 px-4 rounded-xl border border-gray-200 bg-white text-sm font-bold text-gray-700 outline-none focus:border-indigo-500"
+                                                        value={invite.department}
+                                                        onChange={(e) => {
+                                                            const newInvites = [...invites];
+                                                            newInvites[idx].department = e.target.value;
+                                                            setInvites(newInvites);
+                                                        }}
+                                                    >
+                                                        <option value="">Select Department</option>
+                                                        {departments.map((dept, i) => (
+                                                            <option key={i} value={dept}>{dept}</option>
+                                                        ))}
+                                                    </select>
+                                                </div>
+
+                                                {invite.email && user?.company?.domain && !invite.email.endsWith(`@${user.company.domain}`) && (
+                                                    <p className="text-xs text-red-500 mt-1 ml-2">⚠️ Email must match company domain (@{user.company.domain})</p>
                                                 )}
                                             </div>
                                         ))}
                                     </div>
 
                                     <button
-                                        onClick={() => setInvites([...invites, { email: "", role: "member" }])}
+                                        onClick={() => setInvites([...invites, { name: "", email: "", role: "member", department: "" }])}
                                         className="w-full py-4 border-2 border-dashed border-gray-300 text-gray-500 font-bold rounded-2xl hover:border-indigo-400 hover:text-indigo-600 hover:bg-indigo-50/50 transition-all flex items-center justify-center gap-2"
                                     >
                                         <Plus size={20} /> Add Another Member
@@ -400,7 +444,7 @@ const CompanySetup = () => {
                                     <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                                 ) : (
                                     <>
-                                        {step === 4 ? "Launch Workspace" : "Continue"}
+                                        {step === 4 ? "Finish Setup" : "Continue"}
                                         {step !== 4 && <ArrowRight size={18} />}
                                     </>
                                 )}

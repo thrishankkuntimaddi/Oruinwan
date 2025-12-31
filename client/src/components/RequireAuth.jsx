@@ -10,5 +10,12 @@ export default function RequireAuth({ children }) {
 
   if (!user) return <Navigate to="/login" replace />;
 
+  // STRICT ACCESS CONTROL:
+  // Chttrix Super Admins are RESTRICTED to /chttrix-admin only.
+  // They should not access user workspaces or dashboards.
+  if (user.roles?.includes('chttrix_admin')) {
+    return <Navigate to="/chttrix-admin" replace />;
+  }
+
   return children;
 }

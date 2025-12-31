@@ -11,7 +11,8 @@ import {
 } from 'lucide-react';
 import {
     DashboardCard, StatsWidget,
-    UserCard, ActivityFeed
+    UserCard, ActivityFeed,
+    DomainSettings, InviteUserModal
 } from '../../components/company';
 import { getCompanyMetrics, getCompanyMembers } from '../../services/companyService';
 import { getAuditLogs } from '../../services/auditService';
@@ -34,6 +35,9 @@ const AdminDashboard = () => {
     const [members, setMembers] = useState([]);
     const [recentActivities, setRecentActivities] = useState([]);
     const [searchQuery, setSearchQuery] = useState('');
+    const [workspaces, setWorkspaces] = useState([]);
+    const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
+    const [showSettings, setShowSettings] = useState(false);
 
     // Fetch dashboard data
     useEffect(() => {
@@ -59,6 +63,17 @@ const AdminDashboard = () => {
                 // Fetch recent activity
                 const activityRes = await getAuditLogs(user.companyId, { limit: 10 });
                 setRecentActivities(activityRes.logs || []);
+
+                // Fetch workspaces for Invite Modal
+                try {
+                    const wsRes = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/workspaces/${user.companyId}`, {
+                        headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` }
+                    });
+                    const wsData = await wsRes.json();
+                    if (wsData.workspaces) setWorkspaces(wsData.workspaces);
+                } catch (wsErr) {
+                    console.error("Failed to fetch workspaces", wsErr);
+                }
 
             } catch (error) {
                 console.error('Error fetching dashboard data:', error);
@@ -117,14 +132,24 @@ const AdminDashboard = () => {
 
                         <div className="flex items-center gap-3">
                             <button
+                                onClick={() => setShowSettings(!showSettings)}
+                                className={`px-4 py-2 text-sm font-medium border rounded-lg transition-colors ${showSettings
+                                    ? "bg-gray-100 text-gray-900 border-gray-300"
+                                    : "text-gray-700 bg-white border-gray-300 hover:bg-gray-50"
+                                    }`}
+                            >
+                                <Settings className="w-4 h-4 inline mr-2" />
+                                {showSettings ? "Hide Settings" : "Settings"}
+                            </button>
+                            <button
                                 onClick={() => navigate('/admin/departments')}
                                 className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
                             >
-                                <Settings className="w-4 h-4 inline mr-2" />
-                                Manage Departments
+                                <Building className="w-4 h-4 inline mr-2" />
+                                Departments
                             </button>
                             <button
-                                onClick={() => navigate('/admin/company')}
+                                onClick={() => setIsInviteModalOpen(true)}
                                 className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700"
                             >
                                 <Plus className="w-4 h-4 inline mr-2" />
@@ -146,6 +171,13 @@ const AdminDashboard = () => {
                     </div>
                 ) : (
                     <div className="space-y-8">
+                        {/* SETTINGS AREA */}
+                        {showSettings && (
+                            <div className="animate-slideDown">
+                                <DomainSettings companyId={user?.companyId} />
+                            </div>
+                        )}
+
                         {/* Metrics Overview */}
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                             <StatsWidget
@@ -328,6 +360,14 @@ const AdminDashboard = () => {
                         </DashboardCard>
                     </div>
                 )}
+
+                {/* MODALS */}
+                <InviteUserModal
+                    isOpen={isInviteModalOpen}
+                    onClose={() => setIsInviteModalOpen(false)}
+                    companyId={user?.companyId}
+                    workspaces={workspaces}
+                />
             </div>
         </div>
     );

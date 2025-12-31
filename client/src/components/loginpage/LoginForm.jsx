@@ -72,14 +72,9 @@ const LoginForm = ({ onSwitch, initialEmail = "" }) => {
         response?.user?.companyRole === 'owner' ||
         response?.user?.companyRole === 'admin';
 
-      // Fallback Logic (if redirectTo wasn't sent for some reason)
-      if (hasCompany) {
-        navigate("/workspaces");
-      } else if (isAdmin) {
-        navigate("/admin/company"); // Edge case for admin without company structure (unlikely in new flow)
-      } else {
-        navigate("/workspaces");
-      }
+      // Fallback Logic
+      // User requested to always start at /workspaces (Personal Environment)
+      navigate("/workspaces");
 
     } catch (err) {
       console.error("🔴 Login Error:", err);
