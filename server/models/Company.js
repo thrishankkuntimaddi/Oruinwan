@@ -64,7 +64,16 @@ const CompanySchema = new mongoose.Schema({
 
   // Settings
   settings: {
+    // Permission Settings
+    allowMemberWorkspaceCreation: { type: Boolean, default: false }, // "Members cannot create workspaces without approval"
     allowPersonalWorkspaces: { type: Boolean, default: true },
+
+    // Branding & Localization
+    timezone: { type: String, default: "Asia/Kolkata" },
+    theme: { type: String, default: "light" },
+    logo: { type: String },
+
+    // Limits & Quotas
     maxWorkspaces: { type: Number, default: 10 },
     maxChannelsPerWorkspace: { type: Number, default: 50 },
     maxMembersPerChannel: { type: Number, default: 1000 },

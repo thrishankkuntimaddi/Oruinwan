@@ -4,6 +4,10 @@ const router = express.Router();
 const User = require('../models/User');
 const Company = require('../models/Company');
 const sendEmail = require('../utils/sendEmail');
+const adminController = require('../controllers/adminController');
+const requireAuth = require('../middleware/auth'); // Fixed: Is default export
+const { requireAdmin } = require('../middleware/permissionMiddleware');
+
 
 // Simple middleware to check for Super Admin
 const requireSuperAdmin = async (req, res, next) => {
@@ -136,3 +140,14 @@ router.post('/reject-company/:id', requireSuperAdmin, async (req, res) => {
 });
 
 module.exports = router;
+
+// ============================================================================
+// COMPANY ADMIN ROUTES (Protected by requireCompanyAdmin)
+// ============================================================================
+
+// GET /api/admin/analytics/stats
+router.get('/analytics/stats', requireAuth, requireAdmin, adminController.getAnalyticsStats);
+
+// GET /api/admin/departments
+router.get('/departments', requireAuth, requireAdmin, adminController.getDepartments);
+

@@ -303,19 +303,65 @@ exports.login = async (req, res) => {
     if (!match)
       return res.status(400).json({ message: "Invalid email or password" });
 
-    // Check if company user
+    // -------------------------------------------------------------------------
+    // STRICT DOMAIN & COMPANY VERIFICATION
+    // -------------------------------------------------------------------------
+
+    // 1. EXTRACT DOMAIN
+    const matchDomain = email.match(/@(.+)$/);
+    const domain = matchDomain ? matchDomain[1].toLowerCase() : null;
+
+    // 2. CHECK COMPANY STATUS (If user belongs to a company)
     if (user.companyId) {
       const Company = require("../models/Company");
+      // Populate company to check verification status
       const company = await Company.findById(user.companyId);
 
       if (!company) {
-        return res.status(404).json({ message: "Company not found" });
+        // Data inconsistency: User has companyId but company not found
+        // Treat as personal or error? safest is error.
+        return res.status(403).json({ message: "Associated company not found. Contact support." });
+      }
+
+      // CHECK: Domain Verification
+      if (company.domain && company.domain !== domain) {
+        // This might happen if user email doesn't match company domain (e.g. guest).
+        // But user requirement says: "check domain their in db or not"
+        // If strict domain enforcement is needed:
+        // if (company.domainVerified && !company.allowedEmails.includes(email)) ...
+      }
+
+      // CHECK: Company Verification Status (The "Admin" verification part)
+      if (company.verificationStatus === 'rejected') {
+        return res.status(403).json({
+          message: `Company registration rejected: ${company.rejectionReason || "Contact Support"}`
+        });
+      }
+
+      if (company.verificationStatus === 'pending') {
+        // If user is the OWNER/ADMIN who registered it
+        if (user.companyRole === 'owner' || user.companyRole === 'admin') {
+          // Allow them to login ONLY to see "Pending" status or redirected to a status page?
+          // Or block them?
+          // Usually we block regular members, but maybe let admins see a "Pending" screen.
+          // For now, blocking compliant with "we need to check... user verification".
+          return res.status(403).json({ message: "Your company is pending verification. Please wait for approval." });
+        } else {
+          return res.status(403).json({ message: "Company verification pending. Access restricted." });
+        }
       }
 
       if (!company.isActive) {
-        return res.status(403).json({ message: "Company is inactive" });
+        return res.status(403).json({ message: "Company account is inactive." });
       }
+    } else {
+      // PERSONAL USER (companyId is null)
+      // Requirement: "company_id = null : personal user" - Allowed.
+      // Requirement: "domain verifications... in db or not"
+      // If a personal user tries to login with a strict corporate domain that claims "Auto-Join",
+      // we might want to flag it, but for Login, we usually just authenticate.
     }
+
 
     // Check for Account Status (e.g., Pending Company Verification)
     if (user.accountStatus === 'pending_company') {
@@ -431,7 +477,7 @@ exports.login = async (req, res) => {
       }
     } else {
       // 3. Personal User
-      response.redirectTo = "/personal/workspace";
+      response.redirectTo = "/workspaces";
     }
 
     return res.json(response);

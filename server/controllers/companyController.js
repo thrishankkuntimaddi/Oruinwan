@@ -357,48 +357,68 @@ exports.verifyCompany = async (req, res) => {
         requestedChannels = ["general", "announcements"]
       } = metadata;
 
-      // A. Create Departments
+      // A. Create Departments & Workspaces
       const createdDepartmentIds = [];
+      const workspaceName = requestedWorkspaceName || `${company.name} Workspace`;
+
+      // Helper function to create workspace & channels
+      const createWorkspaceForDept = async (deptName, deptId, isDefault = false) => {
+        const ws = new Workspace({
+          company: company._id,
+          type: "company",
+          name: isDefault ? workspaceName : `${deptName}`, // "Engineering" Workspace
+          description: isDefault ? "Primary company workspace" : `${deptName} Team Workspace`,
+          createdBy: adminUser._id,
+          department: deptId ? deptId : undefined, // Link to Department
+          members: [{ user: adminUser._id, role: "owner" }]
+        });
+        await ws.save();
+
+        // Create Default Channels (General, Announcement)
+        const channelsToCreate = ["general", "announcement"];
+        const createdChanIds = [];
+
+        for (const channelName of channelsToCreate) {
+          const chan = new Channel({
+            workspace: ws._id,
+            company: company._id,
+            name: channelName,
+            isDefault: true,
+            createdBy: adminUser._id,
+            members: [{ user: adminUser._id, joinedAt: new Date() }]
+          });
+          await chan.save();
+          createdChanIds.push(chan._id);
+        }
+
+        ws.defaultChannels = createdChanIds;
+        await ws.save();
+        return ws;
+      };
+
+      // 1. Create Requested Departments + Their Workspaces
       for (const deptName of requestedDepartments) {
         const dept = new Department({
           company: company._id,
           name: deptName,
           description: `${deptName} Department`,
+          head: adminUser._id, // Assign owner as initial head (can be changed later)
           members: [adminUser._id]
         });
         await dept.save();
         createdDepartmentIds.push(dept._id);
+
+        // Auto-create workspace for this department
+        const deptWs = await createWorkspaceForDept(deptName, dept._id);
+
+        // Link workspace to department
+        dept.workspaces = [deptWs._id];
+        await dept.save();
       }
 
-      // B. Create Default Workspace
-      const workspaceName = requestedWorkspaceName || `${company.name} Workspace`;
-      const defaultWorkspace = new Workspace({
-        company: company._id,
-        type: "company",
-        name: workspaceName,
-        description: requestedWorkspaceDescription || "Primary workspace",
-        createdBy: adminUser._id,
-        members: [{ user: adminUser._id, role: "owner" }]
-      });
-      await defaultWorkspace.save();
-
-      // C. Create Channels
-      const createdChannels = [];
-      for (const channelName of requestedChannels) {
-        const channel = new Channel({
-          workspace: defaultWorkspace._id,
-          company: company._id,
-          name: channelName.toLowerCase(),
-          isPrivate: false,
-          isDefault: true,
-          createdBy: adminUser._id,
-          members: [{ user: adminUser._id, joinedAt: new Date() }]
-        });
-        await channel.save();
-        createdChannels.push(channel);
-      }
-      defaultWorkspace.defaultChannels = createdChannels.map(c => c._id);
-      await defaultWorkspace.save();
+      // B. Create MAIN Default Workspace (if not created via departments)
+      // If no departments were requested, we still need at least one workspace
+      const defaultWorkspace = await createWorkspaceForDept("General", null, true);
 
       // 3. Update Company & User References
       company.defaultWorkspace = defaultWorkspace._id;
@@ -503,53 +523,199 @@ exports.updateCompanySetup = async (req, res) => {
       // company.logo = data.logoUrl; 
       company.setupStep = 1;
     } else if (step === 2) { // Departments
-      // Add extra departments logic (simplified for now)
+      // Save departments to metadata for processing in Step 4
       if (data.departments && Array.isArray(data.departments)) {
-        // Logic to add new departments would go here
-        // For now just ack
+        company.metadata = {
+          ...company.metadata,
+          finalDepartments: data.departments
+        };
       }
       company.setupStep = 2;
     } else if (step === 3) {
-      // Process Invites immediately
+      // Step 3: Store Invites for processing in Step 4 (Launch)
       if (data.invites && Array.isArray(data.invites)) {
-        // We reuse the Invite model logic here
-        // For simplicity, we can loop and create invites
-        const invitesToProcess = data.invites.filter(i => i.email && i.email.trim() !== "");
-
-        for (const inviteData of invitesToProcess) {
-          const { email, role } = inviteData;
-          // Basic dup check
-          const exists = await User.findOne({ email: email.toLowerCase() });
-          if (exists && exists.companyId) continue;
-
-          // Create invite (simplified inline logic, ideally refactor the shared logic)
-          try {
-            const Invite = require("../models/Invite");
-            const rawToken = require("crypto").randomBytes(32).toString("hex");
-            const tokenHash = sha256(rawToken);
-
-            const newInvite = new Invite({
-              email: email.toLowerCase(),
-              tokenHash,
-              company: companyId,
-              role: role || 'member',
-              invitedBy: userId,
-              expiresAt: new Date(Date.now() + 7 * 86400000)
-            });
-            await newInvite.save();
-
-            // Send Mock Email Log
-            const link = `${process.env.FRONTEND_URL}/accept-invite?token=${rawToken}&email=${encodeURIComponent(email)}`;
-            console.log(`📧 [MOCK INVITE] To: ${email} | Role: ${role} | Link: ${link}`);
-          } catch (e) {
-            console.error("Invite Error", e);
-          }
-        }
+        company.metadata = {
+          ...company.metadata,
+          finalInvites: data.invites
+        };
       }
       company.setupStep = 3;
     } else if (step === 4) { // Complete
+      console.log("🚀 Finalizing Company Setup & Provisioning Resources...");
+
+      // 1. Get the final list of departments
+      const finalDepartments = company.metadata.finalDepartments || company.metadata.requestedDepartments || [];
+
+      // Helper to create workspace (reused logic)
+      const createWorkspaceForDept = async (deptName, deptId, isDefault = false) => {
+        // Check if workspace already exists for this department
+        if (deptId) {
+          const existingWs = await Workspace.findOne({ company: company._id, department: deptId });
+          if (existingWs) return existingWs;
+        }
+
+        const wsName = isDefault ? `${company.name} Workspace` : `${deptName}`;
+        const wsDesc = isDefault ? "Primary company workspace" : `${deptName} Team Workspace`;
+
+        const ws = new Workspace({
+          company: company._id,
+          type: "company",
+          name: wsName,
+          description: wsDesc,
+          createdBy: userId,
+          department: deptId ? deptId : undefined,
+          members: [{ user: userId, role: "owner" }]
+        });
+        await ws.save();
+
+        // Create Default Channels
+        const channelsToCreate = ["general", "announcement"];
+        const createdChanIds = [];
+        for (const channelName of channelsToCreate) {
+          const chan = new Channel({
+            workspace: ws._id,
+            company: company._id,
+            name: channelName,
+            isDefault: true,
+            createdBy: userId,
+            members: [{ user: userId, joinedAt: new Date() }]
+          });
+          await chan.save();
+          createdChanIds.push(chan._id);
+        }
+        ws.defaultChannels = createdChanIds;
+        await ws.save();
+        return ws;
+      };
+
+      // 2. Process Departments
+      const createdDepartmentIds = [];
+      const user = await User.findById(userId);
+
+      for (const deptName of finalDepartments) {
+        // Check if department already exists
+        let dept = await Department.findOne({ company: company._id, name: deptName });
+
+        if (!dept) {
+          dept = new Department({
+            company: company._id,
+            name: deptName,
+            description: `${deptName} Department`,
+            head: userId,
+            members: [userId]
+          });
+          await dept.save();
+        }
+        createdDepartmentIds.push(dept._id);
+
+        // Ensure Workspace exists for this department
+        const deptWs = await createWorkspaceForDept(deptName, dept._id);
+
+        // Link workspace if not linked
+        if (!dept.workspaces.includes(deptWs._id)) {
+          dept.workspaces.push(deptWs._id);
+          await dept.save();
+        }
+      }
+
+      // 3. Process Invites & Create Users
+      if (company.metadata.finalInvites && company.metadata.finalInvites.length > 0) {
+        console.log("👥 Processing Pending Invites & Creating Accounts...");
+        const invitesToProcess = company.metadata.finalInvites.filter(i => i.email && i.email.trim() !== "");
+        const departmentMap = {}; // Name -> ID mapping
+
+        // Build map from created departments
+        const allDepts = await Department.find({ company: company._id });
+        allDepts.forEach(d => departmentMap[d.name] = d._id);
+
+        for (const inviteData of invitesToProcess) {
+          try {
+            const { name, email, role, department } = inviteData;
+            const normalizedEmail = email.toLowerCase();
+
+            // Check if user already exists
+            let newUser = await User.findOne({ email: normalizedEmail });
+            if (newUser) {
+              console.log(`⚠️ User ${normalizedEmail} already exists, skipping creation.`);
+              continue;
+            }
+
+            // Generate Temporary Password
+            const tempPassword = Math.random().toString(36).slice(-10) + "A1!";
+            const passwordHash = await bcrypt.hash(tempPassword, 10);
+
+            // Resolve Department ID
+            const targetDeptId = department ? departmentMap[department] : null;
+            const userDepts = targetDeptId ? [targetDeptId] : [];
+
+            newUser = new User({
+              username: name || email.split('@')[0],
+              email: normalizedEmail,
+              passwordHash,
+              userType: 'company',
+              companyId: company._id,
+              companyRole: role || 'member',
+              departments: userDepts,
+              accountStatus: 'active', // Or 'pending_invite' if you want them to verify first, but requirement implies immediate access
+              verified: true // Assume verified by admin
+            });
+
+            await newUser.save();
+
+            // Link to Department Member List
+            if (targetDeptId) {
+              await Department.findByIdAndUpdate(targetDeptId, { $addToSet: { members: newUser._id } });
+            }
+
+            // Send Welcome Email (Mock)
+            console.log("\n" + "=".repeat(80));
+            console.log(`📧 WELCOME EMAIL TO: ${normalizedEmail}`);
+            console.log(`Subject: Welcome to ${company.name} - Your Account is Ready`);
+            console.log("-".repeat(80));
+            console.log(`Dear ${name || 'Team Member'},`);
+            console.log(`Your account has been created by your admin.`);
+            console.log(`\nLogin Details:`);
+            console.log(`URL: ${process.env.FRONTEND_URL}/login`);
+            console.log(`Email: ${normalizedEmail}`);
+            console.log(`Temporary Password: ${tempPassword}`);
+            console.log(`\nPlease change this password after your first login.`);
+            console.log("=".repeat(80) + "\n");
+
+          } catch (e) {
+            console.error(`Error creating user for ${inviteData.email}:`, e);
+          }
+        }
+      }
+
+      // 3. Ensure User is linked to these departments
+      const newDeptIds = [...new Set([...(user.departments || []), ...createdDepartmentIds])];
+      user.departments = newDeptIds;
+
+      // Update User Managed Departments
+      user.managedDepartments = [...new Set([...(user.managedDepartments || []), ...createdDepartmentIds])];
+
+      // 4. Ensure Default Workspace exists (fallback)
+      if (!company.defaultWorkspace) {
+        const defWs = await createWorkspaceForDept("General", null, true);
+        company.defaultWorkspace = defWs._id;
+
+        if (!user.workspaces.some(w => w.workspace.toString() === defWs._id.toString())) {
+          user.workspaces.push({ workspace: defWs._id, role: "owner" });
+        }
+      }
+
+      user.isCoOwner = true;
+      await user.save();
+
       company.isSetupComplete = true;
       company.setupStep = 4;
+      await company.save();
+
+      return res.json({
+        message: "Setup complete",
+        isSetupComplete: true,
+        redirectTo: "/admin/analytics"
+      });
     }
 
     await company.save();

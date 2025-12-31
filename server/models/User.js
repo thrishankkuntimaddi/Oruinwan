@@ -60,6 +60,19 @@ const UserSchema = new mongoose.Schema(
       default: "member"
     },
 
+    // For Department Managers: Which departments do they manage?
+    managedDepartments: [{ type: mongoose.Schema.Types.ObjectId, ref: "Department" }],
+
+    // For Owners: Co-owner status flag
+    isCoOwner: { type: Boolean, default: false },
+
+    // Permissions override (optional granular control)
+    permissions: {
+      canCreateWorkspace: { type: Boolean },
+      canManageUsers: { type: Boolean },
+      customPermissions: [String]
+    },
+
     // Job Title (e.g. CTO, PA, etc)
     jobTitle: { type: String },
 

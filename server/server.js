@@ -93,6 +93,7 @@ app.use("/api/messages", require("./routes/messages"));
 app.use("/api/chat", require("./routes/chatList"));
 app.use("/api/channels", require("./routes/channels"));
 app.use("/api/companies", require("./routes/companies"));
+app.use("/api/departments", require("./routes/departments")); // NEW: Departments route
 app.use("/api/workspaces", require("./routes/workspaces"));
 app.use("/api/tasks", require("./routes/tasks"));
 app.use("/api/notes", require("./routes/notes"));
