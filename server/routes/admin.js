@@ -94,13 +94,14 @@ router.post('/approve-company/:id', requireSuperAdmin, async (req, res) => {
         }
 
         // Audit Log
+        const auditUser = await User.findById(req.user.sub);
         await AuditLog.create({
             companyId: company._id,
             userId: req.user.sub,
             action: 'company.approved',
             resource: 'Company',
             resourceId: company._id,
-            description: `Company ${company.name} approved by ${user.username}`
+            description: `Company ${company.name} approved by ${auditUser ? auditUser.username : 'Admin'}`
         });
 
 
@@ -145,6 +146,7 @@ router.post('/reject-company/:id', requireSuperAdmin, async (req, res) => {
         }
 
         // Audit Log
+        const auditUser = await User.findById(req.user.sub);
         await AuditLog.create({
             companyId: company._id,
             userId: req.user.sub,
@@ -152,7 +154,7 @@ router.post('/reject-company/:id', requireSuperAdmin, async (req, res) => {
             resource: 'Company',
             resourceId: company._id,
             details: { reason },
-            description: `Company ${company.name} rejected by ${user.username}`
+            description: `Company ${company.name} rejected by ${auditUser ? auditUser.username : 'Admin'}`
         });
 
         res.json({ message: "Company Rejected", company });

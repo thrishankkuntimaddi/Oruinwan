@@ -68,6 +68,8 @@ exports.signup = async (req, res) => {
     let companyId = null;
     let companyRole = "member";
     let workspacesToJoin = [];
+    let assignedDepartment = null;
+    let assignedManager = null;
 
     // ==================== COMPANY ASSIGNMENT LOGIC ====================
 
@@ -97,17 +99,24 @@ exports.signup = async (req, res) => {
         userType = "company";
         companyId = invite.company;
         companyRole = invite.role || "member";
+        assignedDepartment = invite.department;
+        assignedManager = invite.metadata?.managerId;
 
         if (invite.workspace) {
           workspacesToJoin.push(invite.workspace);
         }
 
         // Mark invite as used
+        invite.status = 'accepted'; // Update status
         invite.used = true;
+        invite.usedBy = null; // Will be set after user creation (requires slight flow adjustment or 2nd save)
         await invite.save();
-
+      } else {
+        // ... invalid token logic
       }
     }
+
+
 
     // 2. Check if email is in any company's allowedEmails list
     if (!companyId) {
@@ -171,7 +180,9 @@ exports.signup = async (req, res) => {
       companyRole,
       verificationTokenHash: tokenHash,
       verificationTokenExpires: Date.now() + 86400000,
-      verified: false // Users must verify email before logging in
+      verified: false, // Users must verify email before logging in,
+      departments: assignedDepartment ? [assignedDepartment] : [],
+      reportsTo: assignedManager
     });
 
     await user.save();

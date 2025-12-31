@@ -131,6 +131,9 @@ exports.registerCompany = async (req, res) => {
       defaultChannels = ["general", "announcements"], // Will be stored in metadata for later
     } = req.body;
 
+    console.log("🚀 [CHECKPOINT 1] Starting company registration...");
+    console.log("📦 Received payload:", { companyName, adminEmail, domain });
+
     // Validation
     if (!companyName || !adminName || !adminEmail) {
       return res.status(400).json({
@@ -287,7 +290,10 @@ exports.registerCompany = async (req, res) => {
     });
 
   } catch (err) {
-    console.error("❌ REGISTER COMPANY ERROR:", err);
+    console.error("❌ REGISTER COMPANY ERROR:");
+    console.error("Error Message:", err.message);
+    console.error("Error Stack:", err.stack);
+    console.error("Full Error:", err);
     return res.status(500).json({
       message: "Server error",
       error: process.env.NODE_ENV === 'development' ? err.message : undefined
@@ -907,7 +913,8 @@ exports.inviteEmployee = async (req, res) => {
   try {
     const companyId = req.params.id;
     const userId = req.user.sub;
-    const { email, role = "member", workspaceId = null } = req.body;
+    // Enhanced to accept departmentId and extra metadata
+    const { email, role = "member", workspaceId = null, departmentId = null, managerId = null } = req.body;
 
     if (!email) {
       return res.status(400).json({ message: "Email is required" });
@@ -944,8 +951,11 @@ exports.inviteEmployee = async (req, res) => {
       workspace: workspaceId,
       role,
       invitedBy: userId,
-      expiresAt: new Date(Date.now() + 7 * 86400000) // 7 days
+      department: departmentId, // Store department
+      metadata: { managerId },  // Store manager
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days
     });
+
 
     await invite.save();
 

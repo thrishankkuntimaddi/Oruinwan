@@ -70,7 +70,7 @@ const IconSidebar = ({ onProfileClick }) => {
 
         // Admin Dashboard Link
         ...((['owner', 'admin'].includes(user?.companyRole) || user?.isCoOwner) ? [
-            { icon: <Shield size={20} strokeWidth={2} />, path: "/admin/analytics", label: "Admin" }
+            { icon: <Shield size={20} strokeWidth={2} />, path: "/admin/analytics", label: "Admin", absolute: true }
         ] : []),
 
         // Manager Dashboard Link
@@ -172,9 +172,11 @@ const IconSidebar = ({ onProfileClick }) => {
             {/* Nav Icons */}
             <div className="flex-1 flex flex-col space-y-4 w-full items-center">
                 {navItems.map((item) => {
-                    const targetPath = workspaceId
-                        ? `/workspace/${workspaceId}${item.path}`
-                        : '/workspaces'; // Fallback to workspace selection if no workspace
+                    const targetPath = item.absolute
+                        ? item.path
+                        : (workspaceId
+                            ? `/workspace/${workspaceId}${item.path}`
+                            : '/workspaces');
 
                     return (
                         <div key={item.path} className="relative group">

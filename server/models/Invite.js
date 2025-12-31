@@ -16,6 +16,7 @@ const InviteSchema = new mongoose.Schema({
   // Workspace is now the primary entity (can be personal or company workspace)
   workspace: { type: mongoose.Schema.Types.ObjectId, ref: "Workspace", required: true },
   company: { type: mongoose.Schema.Types.ObjectId, ref: "Company", default: null }, // Optional
+  department: { type: mongoose.Schema.Types.ObjectId, ref: "Department", default: null }, // NEW for onboarding
 
   role: { type: String, enum: ["owner", "admin", "member", "guest"], default: "member" },
   invitedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" }, // optional
@@ -37,6 +38,9 @@ const InviteSchema = new mongoose.Schema({
   revokedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
   revokedAt: { type: Date, default: null },
   revokeReason: { type: String, default: null },
+
+  // Custom onboarding data (e.g. manager assignment)
+  metadata: { type: mongoose.Schema.Types.Mixed, default: {} },
 
   // Invite type
   inviteType: { type: String, enum: ["link", "email"], default: "link" },

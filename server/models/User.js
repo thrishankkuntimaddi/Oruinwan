@@ -14,7 +14,22 @@ const ProfileSchema = new mongoose.Schema(
     dob: { type: Date },
     about: { type: String },
     company: { type: String },
-    showCompany: { type: Boolean, default: true }
+    showCompany: { type: Boolean, default: true },
+    // Phase 3: Detailed Profile
+    address: {
+      street: String,
+      city: String,
+      state: String,
+      zip: String,
+      country: String
+    },
+    resumeUrl: String,
+    socialLinks: {
+      linkedin: String,
+      twitter: String,
+      github: String,
+      website: String
+    }
   },
   { _id: false }
 );
@@ -63,6 +78,9 @@ const UserSchema = new mongoose.Schema(
     // For Department Managers: Which departments do they manage?
     managedDepartments: [{ type: mongoose.Schema.Types.ObjectId, ref: "Department" }],
 
+    // Direct Reporting Line
+    reportsTo: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
+
     // For Owners: Co-owner status flag
     isCoOwner: { type: Boolean, default: false },
 
@@ -75,6 +93,17 @@ const UserSchema = new mongoose.Schema(
 
     // Job Title (e.g. CTO, PA, etc)
     jobTitle: { type: String },
+
+    // Phase 3: Employee Details
+    joiningDate: { type: Date, default: Date.now },
+    employeeCategory: { type: String, enum: ["Full-time", "Part-time", "Contractor", "Intern"], default: "Full-time" },
+    workHistory: [{
+      company: String,
+      role: String,
+      startDate: Date,
+      endDate: Date,
+      description: String
+    }],
 
     // Departments
     departments: [{ type: mongoose.Schema.Types.ObjectId, ref: "Department" }],

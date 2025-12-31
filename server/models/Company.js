@@ -73,6 +73,21 @@ const CompanySchema = new mongoose.Schema({
     theme: { type: String, default: "light" },
     logo: { type: String },
 
+    // Phase 3: Company Profile
+    phone: { type: String },
+    address: {
+      street: String,
+      city: String,
+      state: String,
+      zip: String,
+      country: String
+    },
+    socialLinks: {
+      linkedin: String,
+      twitter: String,
+      website: String
+    },
+
     // Limits & Quotas
     maxWorkspaces: { type: Number, default: 10 },
     maxChannelsPerWorkspace: { type: Number, default: 50 },
