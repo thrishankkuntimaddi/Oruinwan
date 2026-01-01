@@ -1515,9 +1515,14 @@ exports.getCompanyMembers = async (req, res) => {
       return res.status(403).json({ message: "Access denied" });
     }
 
+    console.log(`[COMPANY] Fetching members for company ${companyId}`);
     const members = await User.find({ companyId })
-      .select("username email profilePicture companyRole createdAt lastLoginAt isOnline")
+      .select("username email profilePicture companyRole createdAt lastLoginAt isOnline departments workspaces")
+      .populate("departments", "name")
+      .populate("workspaces.workspace", "name")
       .lean();
+
+    console.log(`[COMPANY] Found ${members.length} members`);
 
     return res.json({ members });
   } catch (err) {

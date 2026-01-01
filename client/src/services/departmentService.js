@@ -1,76 +1,46 @@
 // client/src/services/departmentService.js
 
-import axios from 'axios';
-
-const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000';
-
-const getAuthHeaders = () => ({
-    Authorization: `Bearer ${localStorage.getItem('accessToken')}`
-});
+import api from './api';
 
 // Get all departments for a company
 export const getDepartments = async (companyId) => {
-    const response = await axios.get(
-        `${API_BASE}/api/departments/${companyId}`,
-        { headers: getAuthHeaders() }
-    );
+    const response = await api.get(`/api/departments/${companyId}`);
     return response.data;
 };
 
 // Create a new department
 export const createDepartment = async (companyId, name, description = '') => {
-    const response = await axios.post(
-        `${API_BASE}/api/departments`,
-        { companyId, name, description },
-        { headers: getAuthHeaders() }
-    );
+    const response = await api.post('/api/departments', { companyId, name, description });
     return response.data;
 };
 
 // Update department
 export const updateDepartment = async (departmentId, data) => {
-    const response = await axios.put(
-        `${API_BASE}/api/departments/${departmentId}`,
-        data,
-        { headers: getAuthHeaders() }
-    );
+    const response = await api.put(`/api/departments/${departmentId}`, data);
     return response.data;
 };
 
 // Delete department
 export const deleteDepartment = async (departmentId) => {
-    const response = await axios.delete(
-        `${API_BASE}/api/departments/${departmentId}`,
-        { headers: getAuthHeaders() }
-    );
+    const response = await api.delete(`/api/departments/${departmentId}`);
     return response.data;
 };
 
 // Get department members
 export const getDepartmentMembers = async (departmentId) => {
-    const response = await axios.get(
-        `${API_BASE}/api/departments/${departmentId}/members`,
-        { headers: getAuthHeaders() }
-    );
+    const response = await api.get(`/api/departments/${departmentId}/members`);
     return response.data;
 };
 
 // Assign user to department
 export const assignUserToDepartment = async (userId, departmentId) => {
-    const response = await axios.post(
-        `${API_BASE}/api/departments/${departmentId}/members`,
-        { userId },
-        { headers: getAuthHeaders() }
-    );
+    const response = await api.post(`/api/departments/${departmentId}/members`, { userId });
     return response.data;
 };
 
 // Remove user from department
 export const removeUserFromDepartment = async (userId, departmentId) => {
-    const response = await axios.delete(
-        `${API_BASE}/api/departments/${departmentId}/members/${userId}`,
-        { headers: getAuthHeaders() }
-    );
+    const response = await api.delete(`/api/departments/${departmentId}/members/${userId}`);
     return response.data;
 };
 

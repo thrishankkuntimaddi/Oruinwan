@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Plus, Users, Search, MoreHorizontal, Edit, Trash2, MessageCircle } from 'lucide-react';
 import { useCompany } from '../../contexts/CompanyContext';

@@ -1,76 +1,46 @@
 // client/src/services/companyService.js
 
-import axios from 'axios';
-
-const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000';
-
-const getAuthHeaders = () => ({
-    Authorization: `Bearer ${localStorage.getItem('accessToken')}`
-});
+import api from './api';
 
 // Get company details
 export const getCompanyDetails = async (companyId) => {
-    const response = await axios.get(
-        `${API_BASE}/api/companies/${companyId}`,
-        { headers: getAuthHeaders() }
-    );
+    const response = await api.get(`/api/companies/${companyId}`);
     return response.data;
 };
 
 // Update company settings
 export const updateCompanySettings = async (companyId, settings) => {
-    const response = await axios.put(
-        `${API_BASE}/api/companies/${companyId}`,
-        settings,
-        { headers: getAuthHeaders() }
-    );
+    const response = await api.put(`/api/companies/${companyId}`, settings);
     return response.data;
 };
 
 // Get company metrics (for admin dashboard)
 export const getCompanyMetrics = async (companyId) => {
-    const response = await axios.get(
-        `${API_BASE}/api/companies/${companyId}/metrics`,
-        { headers: getAuthHeaders() }
-    );
+    const response = await api.get(`/api/companies/${companyId}/metrics`);
     return response.data;
 };
 
 // Get company members
 export const getCompanyMembers = async (companyId) => {
-    const response = await axios.get(
-        `${API_BASE}/api/companies/${companyId}/members`,
-        { headers: getAuthHeaders() }
-    );
+    const response = await api.get(`/api/companies/${companyId}/members`);
     return response.data;
 };
 
 // Update member role
 export const updateMemberRole = async (companyId, userId, role) => {
-    const response = await axios.put(
-        `${API_BASE}/api/companies/${companyId}/members/${userId}/role`,
-        { role },
-        { headers: getAuthHeaders() }
-    );
+    const response = await api.put(`/api/companies/${companyId}/members/${userId}/role`, { role });
     return response.data;
 };
 
 // Remove member
 export const removeMember = async (companyId, userId) => {
-    const response = await axios.delete(
-        `${API_BASE}/api/companies/${companyId}/members/${userId}`,
-        { headers: getAuthHeaders() }
-    );
+    const response = await api.delete(`/api/companies/${companyId}/members/${userId}`);
     return response.data;
 };
 
 // Invite member
 export const inviteMember = async (companyId, inviteData) => {
-    const response = await axios.post(
-        `${API_BASE}/api/companies/${companyId}/invite`,
-        inviteData,
-        { headers: getAuthHeaders() }
-    );
+    const response = await api.post(`/api/companies/${companyId}/invite`, inviteData);
     return response.data;
 };
 

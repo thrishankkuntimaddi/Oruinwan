@@ -85,6 +85,26 @@ router.delete('/:id', requireAuth, async (req, res) => {
             return res.status(404).json({ message: 'Department not found' });
         }
 
+        // Cleanup: Remove this department from all users
+        const User = require('../models/User');
+
+        // 1. Remove from 'departments' array of all users
+        await User.updateMany(
+            { departments: id },
+            { $pull: { departments: id } }
+        );
+
+        // 2. Remove from 'managedDepartments' array of managers
+        await User.updateMany(
+            { managedDepartments: id },
+            { $pull: { managedDepartments: id } }
+        );
+
+        // 3. Optional: If the manager has no more departments, should we downgrade role?
+        // For now, simpler is safer: just remove the reference.
+
+        console.log(`[DEPARTMENTS] Deleted department ${id} and cleaned up user references`);
+
         res.json({ message: 'Department deleted successfully' });
     } catch (error) {
         console.error('[DEPARTMENTS] Error deleting department:', error);
@@ -126,6 +146,12 @@ router.post('/:id/members', requireAuth, async (req, res) => {
         if (!department.members.includes(userId)) {
             department.members.push(userId);
             await department.save();
+
+            // Sync with User model
+            const User = require('../models/User');
+            await User.findByIdAndUpdate(userId, {
+                $addToSet: { departments: id }
+            });
         }
 
         res.json({ department });
@@ -151,6 +177,12 @@ router.delete('/:departmentId/members/:userId', requireAuth, async (req, res) =>
         );
 
         await department.save();
+
+        // Sync with User model
+        const User = require('../models/User');
+        await User.findByIdAndUpdate(userId, {
+            $pull: { departments: departmentId }
+        });
 
         res.json({ department });
     } catch (error) {
