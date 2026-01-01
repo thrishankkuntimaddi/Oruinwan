@@ -126,7 +126,7 @@ export default function FooterInput({
   /* ---------------------------------------------------------
       HANDLING SEND
   --------------------------------------------------------- */
-  const handleSend = () => {
+  const handleSend = React.useCallback(() => {
     // Use stripTags to check if there's actual text content (not just HTML tags)
     const textContent = stripTags(newMessage).trim();
     if (!textContent || blocked) return;
@@ -142,7 +142,7 @@ export default function FooterInput({
 
     // Clear the input immediately after sending
     setNewMessage("");
-  };
+  }, [newMessage, blocked, onSend, setNewMessage]);
 
   // CRITICAL FIX: react-contenteditable doesn't properly support onKeyDown prop
   // We need to use a native event listener instead
@@ -173,8 +173,8 @@ export default function FooterInput({
   const hasText = stripTags(newMessage).trim().length > 0;
 
   return (
-    <div className="px-3 py-2 bg-white dark:bg-gray-900 border-t border-gray-100 dark:border-gray-800 relative">
-      <div className="border border-gray-200 dark:border-gray-700 rounded-2xl transition-all bg-white dark:bg-gray-800 relative shadow-sm hover:shadow-md hover:border-blue-200 dark:hover:border-gray-600 focus-within:ring-2 focus-within:ring-blue-100 dark:focus-within:ring-blue-900/30 focus-within:border-blue-300 dark:focus-within:border-blue-700">
+    <div className="px-4 py-4 bg-white dark:bg-gray-900 relative">
+      <div className="border border-gray-100 dark:border-gray-700 rounded-2xl transition-all bg-white dark:bg-gray-800 relative shadow-md hover:shadow-lg focus-within:ring-2 focus-within:ring-indigo-100 dark:focus-within:ring-indigo-900/30">
 
         {/* Rich Text Input */}
         <div className="w-full px-3 py-2 text-sm max-h-[60vh] overflow-y-auto custom-scrollbar resize-y min-h-[4rem]">

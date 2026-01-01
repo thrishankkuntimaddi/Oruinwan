@@ -255,7 +255,7 @@ const ChttrixAIChat = ({ onClose, isSidebar = false }) => {
       )}
 
       {/* --- Header --- */}
-      <div className="flex justify-between items-center px-4 py-3 border-b border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-900 sticky top-0 z-10">
+      <div className="flex justify-between items-center px-4 py-3 shadow-sm bg-white dark:bg-gray-900 sticky top-0 z-10">
         <div className="flex items-center gap-3">
           <div className="relative">
             <img src="/assets/ChttrixAI-logo.png" alt="AI" className="w-6 h-6 rounded-md object-cover" />
@@ -377,7 +377,7 @@ const ChttrixAIChat = ({ onClose, isSidebar = false }) => {
       )}
 
       {/* --- Input Area --- */}
-      <div className="p-3 bg-white dark:bg-gray-900 border-t border-gray-100 dark:border-gray-700 relative">
+      <div className="p-3 bg-white dark:bg-gray-900 relative">
         {/* Reply Preview Banner */}
         {replyingTo && (
           <div className="flex items-center justify-between bg-gray-50 dark:bg-gray-800 border-l-4 border-blue-500 px-3 py-2 mb-2 rounded-r-lg animate-fade-in-up">
@@ -406,7 +406,7 @@ const ChttrixAIChat = ({ onClose, isSidebar = false }) => {
           </div>
         )}
 
-        <div className="flex items-end gap-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-2 py-2 focus-within:ring-1 focus-within:ring-gray-300 dark:focus-within:ring-gray-600 focus-within:border-gray-300 dark:focus-within:border-gray-600 transition-all shadow-sm">
+        <div className="flex items-end gap-2 bg-white dark:bg-gray-800 border-0 shadow-md ring-1 ring-gray-200 dark:ring-gray-700 rounded-xl px-2 py-2 focus-within:ring-2 focus-within:ring-blue-500/50 transition-all">
           <button
             ref={attachButtonRef}
             onClick={() => setShowAttachMenu(!showAttachMenu)}

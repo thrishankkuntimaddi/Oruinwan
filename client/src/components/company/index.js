@@ -8,3 +8,4 @@ export { default as UserCard } from './UserCard';
 export { default as ActivityFeed } from './ActivityFeed';
 export { default as DomainSettings } from './DomainSettings';
 export { default as InviteUserModal } from './InviteUserModal';
+export { default as PulseWidget } from './PulseWidget';

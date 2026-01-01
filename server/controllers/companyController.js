@@ -1481,9 +1481,51 @@ exports.getCompanyMembers = async (req, res) => {
       .lean();
 
     return res.json({ members });
-
   } catch (err) {
     console.error("GET COMPANY MEMBERS ERROR:", err);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+
+/**
+ * Get company metrics (for admin dashboard)
+ * GET /api/companies/:id/metrics
+ */
+exports.getCompanyMetrics = async (req, res) => {
+  try {
+    const companyId = req.params.id;
+    const userId = req.user.sub;
+
+    const company = await Company.findById(companyId);
+    if (!company) {
+      return res.status(404).json({ message: "Company not found" });
+    }
+
+    // Check access
+    const user = await User.findById(userId);
+    if (user.companyId && user.companyId.toString() !== companyId) {
+      return res.status(403).json({ message: "Access denied" });
+    }
+
+    // Parallel fetch for speed
+    const [totalUsers, activeUsers, totalWorkspaces, totalDepartments] = await Promise.all([
+      User.countDocuments({ companyId }),
+      User.countDocuments({ companyId, isOnline: true }), // Simple "active" check based on online status or lastLogin
+      Workspace.countDocuments({ company: companyId }),
+      Department.countDocuments({ company: companyId })
+    ]);
+
+    return res.json({
+      metrics: {
+        totalUsers,
+        activeUsers,
+        totalWorkspaces,
+        totalDepartments
+      }
+    });
+
+  } catch (err) {
+    console.error("GET COMPANY METRICS ERROR:", err);
     return res.status(500).json({ message: "Server error" });
   }
 };

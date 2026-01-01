@@ -153,9 +153,9 @@ export default function ThreadPanel({ parentMessage, onClose, socket, currentUse
     return (
         <div className="w-[400px] h-full bg-white dark:bg-gray-900 border-l dark:border-gray-800 shadow-xl flex flex-col animate-slide-in-right flex-shrink-0">
             {/* Header */}
-            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900">
+            <div className="flex items-center justify-between px-4 py-1.5 border-b border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900">
                 <div className="flex items-center gap-2">
-                    <h3 className="font-bold text-gray-800 dark:text-gray-100 text-base">Thread</h3>
+                    <h3 className="font-bold text-gray-800 dark:text-gray-100 text-sm">Thread</h3>
                     <span className="text-xs text-gray-400">#{parentMessageState?.channelId?.name || "discussion"}</span>
                 </div>
                 <button
@@ -163,7 +163,7 @@ export default function ThreadPanel({ parentMessage, onClose, socket, currentUse
                     className="p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400 transition-colors"
                     title="Close"
                 >
-                    <X size={20} />
+                    <X size={18} />
                 </button>
             </div>
 

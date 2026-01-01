@@ -15,7 +15,11 @@ import AdminSettings from "../admin/platform/views/AdminSettings";
 import Billing from "../admin/platform/views/Billing";
 import SystemHealth from "../admin/platform/views/SystemHealth";
 
+// ... imports ...
+import { useAuth } from "../../contexts/AuthContext";
+
 const ChttrixAdminDashboard = () => {
+    const { logout } = useAuth(); // Get logout function
     const [currentView, setCurrentView] = useState("overview");
     const [chatTarget, setChatTarget] = useState(null); // ID of company to chat with
     const [detailTarget, setDetailTarget] = useState(null); // ID of company to view details
@@ -24,6 +28,11 @@ const ChttrixAdminDashboard = () => {
     const handleChatStart = (companyId) => {
         setChatTarget(companyId);
         setCurrentView("chat");
+    };
+
+    const handleLogout = async () => {
+        await logout();
+        navigate("/login");
     };
 
     const handleViewDetail = (companyId) => {
@@ -91,7 +100,7 @@ const ChttrixAdminDashboard = () => {
 
                 <div className="p-4 border-t border-gray-800">
                     <button
-                        onClick={() => navigate("/login")}
+                        onClick={handleLogout}
                         className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold text-red-400 hover:bg-red-400/10 transition-colors"
                     >
                         <LogOut size={18} /> Logout

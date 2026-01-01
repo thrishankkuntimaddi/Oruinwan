@@ -1585,7 +1585,7 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
 
         {/* Thread Panel */}
         {activeThread && (
-          <div className="w-[400px] border-l border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-xl z-30 flex flex-col">
+          <div className="w-[400px] bg-white dark:bg-gray-900 shadow-xl z-30 flex flex-col">
             <ThreadPanel
               parentMessage={activeThread}
               onClose={() => setActiveThread(null)}
@@ -1597,7 +1597,7 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
 
         {/* Contact Info Sidebar */}
         {showContactInfo && (
-          <div className="w-80 border-l border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-xl z-40 h-full">
+          <div className="w-80 bg-white dark:bg-gray-900 shadow-xl z-40 h-full">
             <ContactInfoModal
               chat={chat}
               onClose={() => setShowContactInfo(false)}

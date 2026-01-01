@@ -321,7 +321,7 @@ const ProfileMenu = ({ onClose }) => {
   const renderMainMenu = () => (
     <div className="w-72 bg-white dark:bg-gray-900 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col animate-fade-in">
       {/* Header */}
-      <div className="p-4 border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/50">
+      <div className="p-4 bg-gray-50/50 dark:bg-gray-800/50">
         <div
           onClick={() => setView("profile")}
           className="flex items-center gap-3 mb-3 cursor-pointer p-2 -mx-2 rounded-lg hover:bg-white dark:hover:bg-gray-800 hover:shadow-sm transition-all group"
@@ -398,7 +398,7 @@ const ProfileMenu = ({ onClose }) => {
 
   const renderProfileView = () => (
     <div className="w-80 bg-white dark:bg-gray-900 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col max-h-[80vh] animate-fade-in">
-      <div className="p-4 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between bg-gray-50/50 dark:bg-gray-800/50 sticky top-0 z-10">
+      <div className="p-4 flex items-center justify-between bg-gray-50/50 dark:bg-gray-800/50 sticky top-0 z-10">
         <button onClick={() => setView("menu")} className="text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white flex items-center text-xs font-bold transition-colors">
           <ChevronLeft size={14} className="mr-1" /> Back
         </button>
@@ -566,7 +566,7 @@ const ProfileMenu = ({ onClose }) => {
 
   const renderPreferencesView = () => (
     <div className="w-72 bg-white dark:bg-gray-900 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col animate-fade-in">
-      <div className="p-4 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between bg-gray-50/50 dark:bg-gray-800/50 sticky top-0 z-10">
+      <div className="p-4 flex items-center justify-between bg-gray-50/50 dark:bg-gray-800/50 sticky top-0 z-10">
         <button onClick={() => setView("menu")} className="text-gray-500 hover:text-gray-900 dark:hover:text-white flex items-center text-xs font-bold transition-colors">
           <ChevronLeft size={14} className="mr-1" /> Back
         </button>
@@ -624,7 +624,7 @@ const ProfileMenu = ({ onClose }) => {
 
   const renderSecurityView = () => (
     <div className="w-80 bg-white dark:bg-gray-900 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col animate-fade-in max-h-[80vh]">
-      <div className="p-4 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between bg-gray-50/50 dark:bg-gray-800/50 sticky top-0 z-10">
+      <div className="p-4 flex items-center justify-between bg-gray-50/50 dark:bg-gray-800/50 sticky top-0 z-10">
         <button onClick={() => setView("menu")} className="text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white flex items-center text-xs font-bold transition-colors">
           <ChevronLeft size={14} className="mr-1" /> Back
         </button>
@@ -754,7 +754,7 @@ const ProfileMenu = ({ onClose }) => {
 
   const renderHelpView = () => (
     <div className="w-72 bg-white dark:bg-gray-900 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col animate-fade-in">
-      <div className="p-4 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between bg-gray-50/50 dark:bg-gray-800/50 sticky top-0 z-10">
+      <div className="p-4 flex items-center justify-between bg-gray-50/50 dark:bg-gray-800/50 sticky top-0 z-10">
         <button onClick={() => setView("menu")} className="text-gray-500 hover:text-gray-900 flex items-center text-xs font-bold transition-colors">
           <ChevronLeft size={14} className="mr-1" /> Back
         </button>

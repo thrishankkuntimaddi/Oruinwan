@@ -89,7 +89,7 @@ export default function Header({
 
   return (
     <>
-      <div className="flex items-center justify-between px-3 py-1.5 border-b border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 relative z-20">
+      <div className="flex items-center justify-between px-3 py-1.5 bg-white dark:bg-gray-900">
         <div className="flex items-center gap-2 min-w-0">
           {chat.image ? (
             <img src={chat.image} alt={chat.name} className="w-8 h-8 rounded object-cover shadow-sm bg-gray-50" />

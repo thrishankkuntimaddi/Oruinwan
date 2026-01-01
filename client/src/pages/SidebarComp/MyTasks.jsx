@@ -201,7 +201,7 @@ const MyTasks = () => {
     <div className="flex flex-col h-full bg-slate-50 dark:bg-slate-900/50 overflow-hidden font-sans selection:bg-blue-100 selection:text-blue-900">
 
       {/* Glassmorphic Header - Sticky & Blurred */}
-      <div className="shrink-0 px-8 py-5 bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl border-b border-gray-200/60 dark:border-gray-700/60 z-20 sticky top-0 transition-all duration-300">
+      <div className="shrink-0 px-8 py-5 bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl shadow-sm z-20 sticky top-0 transition-all duration-300">
         <div className="flex flex-col gap-5">
           <div className="flex items-center justify-between">
             <div className="space-y-1">
@@ -242,7 +242,7 @@ const MyTasks = () => {
               <input
                 type="text"
                 placeholder="Search tasks..."
-                className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700/50 rounded-xl shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all outline-none text-sm font-medium text-gray-900 dark:text-white placeholder-gray-400 hover:border-gray-300 dark:hover:border-gray-600"
+                className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-gray-900/50 border-0 rounded-xl shadow-md ring-1 ring-gray-100 dark:ring-gray-700/50 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all outline-none text-sm font-medium text-gray-900 dark:text-white placeholder-gray-400 hover:shadow-lg"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />

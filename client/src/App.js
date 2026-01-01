@@ -45,6 +45,8 @@ import RegisterCompany from "./pages/RegisterCompany";
 import CompanyConfirmation from "./pages/CompanyConfirmation";
 import CompanySetup from "./pages/CompanySetup";
 import DepartmentManagement from "./pages/admin/DepartmentManagement"; // Updated path
+import UserManagement from "./pages/admin/UserManagement"; // NEW
+import AdminSettings from "./pages/admin/AdminSettings"; // NEW
 
 // Dashboard Pages
 import AdminDashboard from "./pages/dashboards/AdminDashboard";
@@ -396,6 +398,28 @@ function App() {
                               <RequireAuth>
                                 <RequireAdmin>
                                   <DepartmentManagement />
+                                </RequireAdmin>
+                              </RequireAuth>
+                            }
+                          />
+
+                          <Route
+                            path="/admin/users"
+                            element={
+                              <RequireAuth>
+                                <RequireAdmin>
+                                  <UserManagement />
+                                </RequireAdmin>
+                              </RequireAuth>
+                            }
+                          />
+
+                          <Route
+                            path="/admin/settings"
+                            element={
+                              <RequireAuth>
+                                <RequireAdmin>
+                                  <AdminSettings />
                                 </RequireAdmin>
                               </RequireAuth>
                             }

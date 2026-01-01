@@ -102,7 +102,10 @@ app.use("/api/dashboard", require("./routes/dashboard"));
 app.use("/api/favorites", require("./routes/favorites"));
 app.use("/api/users", require("./routes/user"));
 app.use("/api/search", require("./routes/search"));
+app.use("/api/search", require("./routes/search"));
 app.use("/api/support", require("./routes/support")); // NEW: Support Tickets
+app.use("/api/audit", require("./routes/audit")); // NEW: Audit Logs
+app.use("/api/managers", require("./routes/managers")); // NEW: Manager Dashboard
 
 
 

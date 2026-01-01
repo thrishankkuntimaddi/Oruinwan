@@ -318,7 +318,7 @@ const HomePanel = ({ title }) => {
     const dms = items.filter(i => !i.isFavorite && i.type === 'dm');
 
     return (
-        <div className="flex flex-col h-full bg-gray-50 dark:bg-gray-900 relative border-r border-gray-200 dark:border-gray-800">
+        <div className="flex flex-col h-full bg-gray-50 dark:bg-gray-900 relative">
             {/* Workspace Header with Dropdown */}
             <WorkspaceHeader
                 workspaceName={workspaceName}

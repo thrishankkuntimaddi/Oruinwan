@@ -161,7 +161,7 @@ const Notes = () => {
     return (
         <div className="flex flex-col h-full bg-white dark:bg-gray-900 relative">
             {/* Toolbar / Header */}
-            <div className="h-16 px-8 flex items-center justify-between border-b border-gray-100 dark:border-gray-700 shrink-0">
+            <div className="h-16 px-8 flex items-center justify-between shadow-sm bg-white dark:bg-gray-900 shrink-0 z-10 relative">
                 <div className="flex items-center gap-2 text-xs font-medium text-gray-400 dark:text-gray-500">
                     <Clock size={14} />
                     <span>Last edited {formattedDate}</span>

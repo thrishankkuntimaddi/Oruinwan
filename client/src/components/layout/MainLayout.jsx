@@ -385,7 +385,7 @@ const MainLayout = ({ children, sidePanel }) => {
                 {sidePanel && (
                     <>
                         <div
-                            className="flex-shrink-0 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800"
+                            className="flex-shrink-0 bg-white dark:bg-gray-900"
                             style={{ width: `${sidePanelWidth}px` }}
                         >
                             {React.cloneElement(sidePanel, { title: activeWorkspace?.name || 'Loading...' })}

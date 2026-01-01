@@ -79,6 +79,13 @@ router.post("/check-eligibility", companyController.checkEligibility);
 
 
 /**
+ * @route   GET /api/companies/:id/metrics
+ * @desc    Get company metrics
+ * @access  Private (company members)
+ */
+router.get("/:id/metrics", requireAuth, companyController.getCompanyMetrics);
+
+/**
  * @route   GET /api/companies/:id
  * @desc    Get company details
  * @access  Private (company members)

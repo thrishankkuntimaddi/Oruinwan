@@ -411,9 +411,9 @@ const ChannelsPanel = ({ title }) => {
     };
 
     return (
-        <div className="flex flex-col h-full bg-gray-50/50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800">
+        <div className="flex flex-col h-full bg-gray-50/50 dark:bg-gray-900">
             {/* Header */}
-            <div className="h-16 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between px-5 bg-white dark:bg-gray-900 shrink-0">
+            <div className="h-16 flex items-center justify-between px-5 bg-white dark:bg-gray-900 shrink-0">
                 <h2 className="font-bold text-xl text-gray-800 dark:text-gray-100 tracking-tight flex items-center gap-2">
                     <Hash className="text-blue-600" size={20} />
                     Channels

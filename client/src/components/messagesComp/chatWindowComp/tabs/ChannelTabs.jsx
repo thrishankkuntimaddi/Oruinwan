@@ -57,15 +57,15 @@ export default function ChannelTabs({
     };
 
     return (
-        <div className="flex flex-col bg-gray-50 dark:bg-gray-900/50 border-b border-gray-100 dark:border-gray-800">
-            {/* Tabs Bar - Compact Horizontal Layout */}
-            <div className="flex items-center gap-1 px-3 py-2 overflow-x-auto no-scrollbar">
+        <div className="flex flex-col bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800">
+            {/* Tabs Bar - Modern Underline Layout */}
+            <div className="flex items-center gap-4 px-4 overflow-x-auto no-scrollbar">
                 {/* Main Chat Tab */}
                 <button
                     onClick={() => onTabChange("chat")}
-                    className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${activeTab === "chat"
-                        ? "text-blue-700 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/30 shadow-sm"
-                        : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800"
+                    className={`flex items-center gap-2 py-3 text-sm font-medium transition-all whitespace-nowrap border-b-2 ${activeTab === "chat"
+                        ? "text-blue-600 dark:text-blue-400 border-blue-600 dark:border-blue-400"
+                        : "text-gray-500 dark:text-gray-400 border-transparent hover:text-gray-700 dark:hover:text-gray-200"
                         }`}
                 >
                     <MessageSquare size={16} />
@@ -76,10 +76,11 @@ export default function ChannelTabs({
                 {tabs.map((tab) => (
                     <div
                         key={tab._id}
-                        className={`group flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${activeTab === tab._id
-                            ? "text-blue-700 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/30 shadow-sm"
-                            : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800"
+                        className={`group flex items-center gap-2 py-3 text-sm font-medium transition-all whitespace-nowrap border-b-2 cursor-pointer ${activeTab === tab._id
+                            ? "text-blue-600 dark:text-blue-400 border-blue-600 dark:border-blue-400"
+                            : "text-gray-500 dark:text-gray-400 border-transparent hover:text-gray-700 dark:hover:text-gray-200"
                             }`}
+                        onClick={() => onTabChange(tab._id)}
                     >
                         {editingTabId === tab._id ? (
                             <input
@@ -96,17 +97,19 @@ export default function ChannelTabs({
                                     }
                                 }}
                                 onClick={(e) => e.stopPropagation()}
-                                className="text-sm px-2 py-1 rounded border border-blue-400 focus:outline-none bg-white dark:bg-gray-800 min-w-[100px]"
+                                className="text-sm px-1 py-0.5 rounded border-b border-blue-400 focus:outline-none bg-transparent min-w-[100px]"
                             />
                         ) : (
-                            <button
-                                onClick={() => onTabChange(tab._id)}
-                                onDoubleClick={() => handleDoubleClick(tab)}
+                            <div
+                                onDoubleClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDoubleClick(tab);
+                                }}
                                 className="flex items-center gap-2"
                             >
                                 <FileText size={16} className="shrink-0" />
                                 <span>{tab.name}</span>
-                            </button>
+                            </div>
                         )}
 
                         {/* Delete Tab Button - only show if user can delete */}
@@ -116,22 +119,22 @@ export default function ChannelTabs({
                                     e.stopPropagation();
                                     onDeleteTab(tab._id);
                                 }}
-                                className={`p-1 rounded-full hover:bg-red-100 dark:hover:bg-red-900/30 text-gray-400 hover:text-red-600 ${activeTab === tab._id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} transition-opacity`}
+                                className={`p-0.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity`}
                                 title="Delete canvas"
                             >
-                                <X size={14} />
+                                <X size={12} />
                             </button>
                         )}
                     </div>
                 ))}
 
-                {/* Add Tab Button - disabled at 5 tabs */}
+                {/* Add Tab Button */}
                 <button
                     onClick={handleAddClick}
                     disabled={tabs.length >= 5}
-                    className={`p-2 rounded-lg transition-all ml-1 ${tabs.length >= 5
+                    className={`p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition-all ml-2 ${tabs.length >= 5
                         ? 'text-gray-300 dark:text-gray-700 cursor-not-allowed'
-                        : 'text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20'
+                        : 'text-gray-400 hover:text-blue-600 dark:text-gray-500 dark:hover:text-blue-400'
                         }`}
                     title={tabs.length >= 5 ? "Maximum 5 canvases reached" : "Add Canvas"}
                 >
