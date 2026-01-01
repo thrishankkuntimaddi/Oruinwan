@@ -25,9 +25,32 @@ exports.getManagerScope = async (req, res) => {
             .map(w => w.workspace)
             .filter(Boolean); // Filter out nulls if workspace was deleted
 
+        // 3. Get Company Admin Contact (For "Contact Admin" feature)
+        let companyContact = null;
+        if (user.companyId) {
+            const Company = require('../models/Company');
+            const company = await Company.findById(user.companyId)
+                .populate('admins.user', 'username email profilePicture')
+                .lean();
+
+            if (company && company.admins && company.admins.length > 0) {
+                // Prefer owner, otherwise first admin
+                const admin = company.admins.find(a => a.role === 'owner') || company.admins[0];
+                if (admin && admin.user) {
+                    companyContact = admin.user;
+                }
+            }
+        }
+
+        // 4. Get a valid workspace ID for chat context (User must be in at least one workspace to chat)
+        // Prefer default workspace, or first available
+        const chatWorkspaceId = user.workspaces?.[0]?.workspace?._id || null;
+
         res.json({
             departments: managedDepts,
-            workspaces: managedWorkspaces
+            workspaces: managedWorkspaces,
+            companyContact,
+            chatWorkspaceId
         });
 
     } catch (error) {

@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useAuth } from './AuthContext';
-import axios from 'axios';
+import api from '../services/api';
 
 const CompanyContext = createContext();
 
@@ -41,12 +41,7 @@ export const CompanyProvider = ({ children }) => {
                 : user.companyId;
             console.log('[DEBUG] Extracted companyId:', companyId);
 
-            const response = await axios.get(
-                `${API_BASE}/api/companies/${companyId}`,
-                {
-                    headers: { Authorization: `Bearer ${token}` }
-                }
-            );
+            const response = await api.get(`${API_BASE}/api/companies/${companyId}`);
             setCompany(response.data.company);
             setError(null);
         } catch (err) {
@@ -79,12 +74,9 @@ export const CompanyProvider = ({ children }) => {
                 : user.companyId;
             console.log('[DEBUG] Extracted companyId:', companyId);
 
-            const response = await axios.put(
+            const response = await api.put(
                 `${API_BASE}/api/companies/${companyId}`,
-                settings,
-                {
-                    headers: { Authorization: `Bearer ${token}` }
-                }
+                settings
             );
             setCompany(response.data.company);
             return response.data.company;

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Briefcase, Building, ChevronDown, Check } from 'lucide-react';
 
-const ScopeSelector = ({ onScopeChange }) => {
+const ScopeSelector = ({ onScopeChange, onLoad }) => {
     const [scope, setScope] = useState(null); // { type: 'department'|'workspace', id, name }
     const [options, setOptions] = useState({ departments: [], workspaces: [] });
     const [isOpen, setIsOpen] = useState(false);
@@ -16,6 +16,9 @@ const ScopeSelector = ({ onScopeChange }) => {
                 });
                 const data = await res.json();
                 setOptions(data);
+
+                // Pass full data back to parent
+                if (onLoad) onLoad(data);
 
                 // Default selection: First department, or first workspace
                 if (data.departments && data.departments.length > 0) {
@@ -62,7 +65,7 @@ const ScopeSelector = ({ onScopeChange }) => {
             </button>
 
             {isOpen && (
-                <div className="absolute top-full left-0 mt-2 w-72 bg-white rounded-xl shadow-xl border border-gray-100 p-2 overflow-hidden animate-fadeIn">
+                <div className="absolute top-full right-0 mt-2 w-72 bg-white rounded-xl shadow-xl border border-gray-100 p-2 overflow-hidden animate-fadeIn max-h-96 overflow-y-auto">
                     {/* Departments */}
                     {options.departments.length > 0 && (
                         <div className="mb-2">

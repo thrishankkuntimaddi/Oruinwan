@@ -93,6 +93,13 @@ router.get("/:id/metrics", requireAuth, companyController.getCompanyMetrics);
 router.get("/:id", requireAuth, companyController.getCompany);
 
 /**
+ * @route   PUT /api/companies/:id
+ * @desc    Update company settings
+ * @access  Private (company admin)
+ */
+router.put("/:id", requireAuth, companyController.updateCompany);
+
+/**
  * @route   GET /api/companies/:id/members
  * @desc    Get company members
  * @access  Private (company members)

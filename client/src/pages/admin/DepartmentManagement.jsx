@@ -1,13 +1,15 @@
 
 import React, { useState, useEffect } from 'react';
-import { Plus, Users, Search, MoreHorizontal, Edit, Trash2 } from 'lucide-react';
+import { Plus, Users, Search, MoreHorizontal, Edit, Trash2, MessageCircle } from 'lucide-react';
 import { useCompany } from '../../contexts/CompanyContext';
+import { useNavigate } from 'react-router-dom';
 import AdminSidebar from '../../components/admin/AdminSidebar';
 import DepartmentModal from '../../components/company/DepartmentModal'; // Import Modal
 import { getDepartments } from '../../services/departmentService'; // Use service
 
 const DepartmentManagement = () => {
   const { company } = useCompany();
+  const navigate = useNavigate();
   const [departments, setDepartments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -103,7 +105,22 @@ const DepartmentManagement = () => {
                       </td>
                       <td className="px-6 py-4">
                         {dept.head ? (
-                          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-100">{dept.head?.username || 'Unknown'}</span>
+                          <div className="flex items-center gap-2">
+                            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-100">{dept.head?.username || 'Unknown'}</span>
+                            <button
+                              onClick={() => {
+                                if (company?.defaultWorkspace) {
+                                  navigate(`/workspace/${company.defaultWorkspace}/dm/new/${dept.head._id}`);
+                                } else {
+                                  alert("No default workspace available to start chat.");
+                                }
+                              }}
+                              className="p-1 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-full transition-colors"
+                              title="Message Manager"
+                            >
+                              <MessageCircle size={14} />
+                            </button>
+                          </div>
                         ) : (
                           <span className="text-slate-400 italic text-xs font-medium">Unassigned</span>
                         )}

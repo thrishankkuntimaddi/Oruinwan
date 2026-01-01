@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useAuth } from './AuthContext';
-import axios from 'axios';
+import api from '../services/api';
 
 const DepartmentContext = createContext();
 
@@ -42,12 +42,7 @@ export const DepartmentProvider = ({ children }) => {
                 : user.companyId;
             console.log('[DEBUG] Extracted companyId:', companyId);
 
-            const response = await axios.get(
-                `${API_BASE}/api/departments/${companyId}`,
-                {
-                    headers: { Authorization: `Bearer ${token}` }
-                }
-            );
+            const response = await api.get(`${API_BASE}/api/departments/${companyId}`);
             setDepartments(response.data.departments || []);
 
             // Set user's department if they have one
@@ -87,12 +82,9 @@ export const DepartmentProvider = ({ children }) => {
                 : user.companyId;
             console.log('[DEBUG] Extracted companyId:', companyId);
 
-            const response = await axios.post(
+            const response = await api.post(
                 `${API_BASE}/api/departments`,
-                { companyId, name, description },
-                {
-                    headers: { Authorization: `Bearer ${token}` }
-                }
+                { companyId, name, description }
             );
 
             // Add new department to state
@@ -108,12 +100,9 @@ export const DepartmentProvider = ({ children }) => {
     const updateDepartment = async (departmentId, data) => {
         try {
             const token = localStorage.getItem('accessToken');
-            const response = await axios.put(
+            const response = await api.put(
                 `${API_BASE}/api/departments/${departmentId}`,
-                data,
-                {
-                    headers: { Authorization: `Bearer ${token}` }
-                }
+                data
             );
 
             // Update in state
@@ -133,12 +122,7 @@ export const DepartmentProvider = ({ children }) => {
     const deleteDepartment = async (departmentId) => {
         try {
             const token = localStorage.getItem('accessToken');
-            await axios.delete(
-                `${API_BASE}/api/departments/${departmentId}`,
-                {
-                    headers: { Authorization: `Bearer ${token}` }
-                }
-            );
+            await api.delete(`${API_BASE}/api/departments/${departmentId}`);
 
             // Remove from state
             setDepartments(prev => prev.filter(dept => dept._id !== departmentId));
@@ -152,12 +136,7 @@ export const DepartmentProvider = ({ children }) => {
     const getDepartmentMembers = async (departmentId) => {
         try {
             const token = localStorage.getItem('accessToken');
-            const response = await axios.get(
-                `${API_BASE}/api/departments/${departmentId}/members`,
-                {
-                    headers: { Authorization: `Bearer ${token}` }
-                }
-            );
+            const response = await api.get(`${API_BASE}/api/departments/${departmentId}/members`);
             return response.data.members || [];
         } catch (err) {
             console.error('Error fetching department members:', err);
@@ -169,12 +148,9 @@ export const DepartmentProvider = ({ children }) => {
     const assignUserToDepartment = async (userId, departmentId) => {
         try {
             const token = localStorage.getItem('accessToken');
-            await axios.post(
+            await api.post(
                 `${API_BASE}/api/departments/${departmentId}/members`,
-                { userId },
-                {
-                    headers: { Authorization: `Bearer ${token}` }
-                }
+                { userId }
             );
 
             // Refresh departments to get updated member counts
@@ -189,12 +165,7 @@ export const DepartmentProvider = ({ children }) => {
     const removeUserFromDepartment = async (userId, departmentId) => {
         try {
             const token = localStorage.getItem('accessToken');
-            await axios.delete(
-                `${API_BASE}/api/departments/${departmentId}/members/${userId}`,
-                {
-                    headers: { Authorization: `Bearer ${token}` }
-                }
-            );
+            await api.delete(`${API_BASE}/api/departments/${departmentId}/members/${userId}`);
 
             // Refresh departments
             await fetchDepartments();

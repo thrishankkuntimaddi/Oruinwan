@@ -1457,6 +1457,45 @@ exports.getCompany = async (req, res) => {
 };
 
 /**
+ * Update company settings
+ * PUT /api/companies/:id
+ */
+exports.updateCompany = async (req, res) => {
+  try {
+    const companyId = req.params.id;
+    const userId = req.user.sub;
+    const updates = req.body;
+
+    // Check if user is admin
+    const user = await User.findById(userId);
+    if (!user || user.companyId.toString() !== companyId) {
+      return res.status(403).json({ message: "Access denied" });
+    }
+
+    if (user.companyRole !== 'owner' && user.companyRole !== 'admin') {
+      return res.status(403).json({ message: "Only admins can update company settings" });
+    }
+
+    const company = await Company.findByIdAndUpdate(
+      companyId,
+      { $set: updates },
+      { new: true, runValidators: true }
+    ).populate("admins.user", "username email profilePicture")
+      .populate("defaultWorkspace", "name");
+
+    if (!company) {
+      return res.status(404).json({ message: "Company not found" });
+    }
+
+    return res.json({ company });
+
+  } catch (err) {
+    console.error("UPDATE COMPANY ERROR:", err);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+
+/**
  * Get company members
  * GET /api/companies/:id/members
  */
