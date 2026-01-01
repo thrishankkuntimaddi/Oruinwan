@@ -12,8 +12,9 @@ router.get('/:companyId', requireAuth, async (req, res) => {
         console.log('[DEPARTMENTS] Fetching departments for company:', companyId);
 
         const departments = await Department.find({ company: companyId })
-            .populate('head', 'username email')
-            .populate('members', 'username email')
+            .populate('head', 'username email profilePicture')
+            .populate('members', 'username email profilePicture')
+            .populate('workspaces', 'name description')
             .sort({ name: 1 });
 
         console.log(`[DEPARTMENTS] Found ${departments.length} departments`);
@@ -188,6 +189,39 @@ router.delete('/:departmentId/members/:userId', requireAuth, async (req, res) =>
     } catch (error) {
         console.error('[DEPARTMENTS] Error removing member:', error);
         res.status(500).json({ message: 'Failed to remove member', error: error.message });
+    }
+});
+
+// POST /api/departments/:id/workspaces - Add workspace to department
+router.post('/:id/workspaces', requireAuth, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { workspaceId } = req.body;
+        const department = await Department.findById(id);
+        if (!department) return res.status(404).json({ message: 'Department not found' });
+
+        if (!department.workspaces.includes(workspaceId)) {
+            department.workspaces.push(workspaceId);
+            await department.save();
+        }
+        res.json({ department });
+    } catch (error) {
+        res.status(500).json({ message: 'Failed to add workspace', error: error.message });
+    }
+});
+
+// DELETE /api/departments/:id/workspaces/:wsId - Remove workspace
+router.delete('/:id/workspaces/:wsId', requireAuth, async (req, res) => {
+    try {
+        const { id, wsId } = req.params;
+        const department = await Department.findById(id);
+        if (!department) return res.status(404).json({ message: 'Department not found' });
+
+        department.workspaces = department.workspaces.filter(wId => wId.toString() !== wsId);
+        await department.save();
+        res.json({ department });
+    } catch (error) {
+        res.status(500).json({ message: 'Failed to remove workspace', error: error.message });
     }
 });
 

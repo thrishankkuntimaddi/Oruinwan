@@ -4,7 +4,8 @@ import { useCompany } from '../../contexts/CompanyContext';
 import { useNavigate } from 'react-router-dom';
 import AdminSidebar from '../../components/admin/AdminSidebar';
 import DepartmentModal from '../../components/company/DepartmentModal'; // Import Modal
-import { getDepartments } from '../../services/departmentService'; // Use service
+import DepartmentDetailsModal from '../../components/company/DepartmentDetailsModal'; // Import "Window" (Modal)
+import { getDepartments, deleteDepartment } from '../../services/departmentService'; // Use service
 
 const DepartmentManagement = () => {
   const { company } = useCompany();
@@ -13,6 +14,8 @@ const DepartmentManagement = () => {
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedDept, setSelectedDept] = useState(null);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  const [viewDepartment, setViewDepartment] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
 
   const fetchDepartments = async () => {
@@ -40,6 +43,23 @@ const DepartmentManagement = () => {
   const handleEdit = (dept) => {
     setSelectedDept(dept);
     setIsModalOpen(true);
+  };
+
+  const handleDelete = async (deptId) => {
+    if (window.confirm('Are you sure you want to delete this department? This action cannot be undone.')) {
+      try {
+        await deleteDepartment(deptId);
+        fetchDepartments(); // Refresh list
+      } catch (error) {
+        console.error("Failed to delete department", error);
+        alert("Failed to delete department");
+      }
+    }
+  };
+
+  const handleRowClick = (dept) => {
+    setViewDepartment(dept);
+    setIsDetailsOpen(true);
   };
 
   const filteredDepartments = departments.filter(dept =>
@@ -97,7 +117,11 @@ const DepartmentManagement = () => {
                   <tr><td colSpan="5" className="text-center py-12 text-slate-500">No departments found</td></tr>
                 ) : (
                   filteredDepartments.map(dept => (
-                    <tr key={dept._id} className="hover:bg-slate-50/50 transition-colors group">
+                    <tr
+                      key={dept._id}
+                      className="hover:bg-slate-50/50 transition-colors group cursor-pointer"
+                      onClick={() => handleRowClick(dept)}
+                    >
                       <td className="px-6 py-4">
                         <div className="font-bold text-slate-800">{dept.name}</div>
                         {dept.description && <div className="text-xs text-slate-400">{dept.description}</div>}
@@ -107,7 +131,8 @@ const DepartmentManagement = () => {
                           <div className="flex items-center gap-2">
                             <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-100">{dept.head?.username || 'Unknown'}</span>
                             <button
-                              onClick={() => {
+                              onClick={(e) => {
+                                e.stopPropagation();
                                 if (company?.defaultWorkspace) {
                                   navigate(`/workspace/${company.defaultWorkspace}/dm/new/${dept.head._id}`);
                                 } else {
@@ -132,10 +157,17 @@ const DepartmentManagement = () => {
                       <td className="px-6 py-4 text-xs font-medium text-slate-400">{new Date(dept.createdAt).toLocaleDateString()}</td>
                       <td className="px-6 py-4 text-right">
                         <button
-                          onClick={() => handleEdit(dept)}
-                          className="p-2 hover:bg-indigo-50 rounded-lg text-slate-400 hover:text-indigo-600 transition-colors opacity-0 group-hover:opacity-100"
+                          onClick={(e) => { e.stopPropagation(); handleEdit(dept); }}
+                          className="p-2 hover:bg-indigo-50 rounded-lg text-slate-400 hover:text-indigo-600 transition-colors"
                         >
                           <Edit size={16} />
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleDelete(dept._id); }}
+                          className="p-2 ml-2 hover:bg-red-50 rounded-lg text-slate-400 hover:text-red-600 transition-colors"
+                          title="Delete Department"
+                        >
+                          <Trash2 size={16} />
                         </button>
                       </td>
                     </tr>
@@ -153,6 +185,14 @@ const DepartmentManagement = () => {
         department={selectedDept}
         companyId={company?._id}
         onSuccess={fetchDepartments}
+      />
+
+      <DepartmentDetailsModal
+        isOpen={isDetailsOpen}
+        onClose={() => setIsDetailsOpen(false)}
+        department={viewDepartment}
+        companyId={company?._id}
+        onUpdate={() => { fetchDepartments(); setIsDetailsOpen(false); }}
       />
     </div>
   );

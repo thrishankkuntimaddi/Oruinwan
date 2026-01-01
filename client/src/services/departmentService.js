@@ -44,6 +44,18 @@ export const removeUserFromDepartment = async (userId, departmentId) => {
     return response.data;
 };
 
+// Add workspace to department
+export const addWorkspaceToDepartment = async (departmentId, workspaceId) => {
+    const response = await api.post(`/api/departments/${departmentId}/workspaces`, { workspaceId });
+    return response.data;
+};
+
+// Remove workspace from department
+export const removeWorkspaceFromDepartment = async (departmentId, workspaceId) => {
+    const response = await api.delete(`/api/departments/${departmentId}/workspaces/${workspaceId}`);
+    return response.data;
+};
+
 const departmentService = {
     getDepartments,
     createDepartment,
@@ -51,7 +63,9 @@ const departmentService = {
     deleteDepartment,
     getDepartmentMembers,
     assignUserToDepartment,
-    removeUserFromDepartment
+    removeUserFromDepartment,
+    addWorkspaceToDepartment,
+    removeWorkspaceFromDepartment
 };
 
 export default departmentService;
