@@ -118,7 +118,7 @@ const TeamAllocation = () => {
     if (loading) return <div className="p-8 text-center text-gray-400">Loading Matrix...</div>;
     if (!data) return <div className="p-8 text-center text-red-400">Failed to load allocation data.</div>;
 
-    const filteredMembers = data?.members.filter(m =>
+    const filteredMembers = (data?.members || []).filter(m =>
         m.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
         m.email.toLowerCase().includes(searchTerm.toLowerCase())
     );

@@ -526,7 +526,7 @@ exports.login = async (req, res) => {
         if (isAdmin) {
           response.redirectTo = "/admin/dashboard"; // Admin dashboard
         } else {
-          response.redirectTo = "/workspace"; // Regular workspace view
+          response.redirectTo = "/workspaces"; // Regular workspace view
         }
       }
     } else {
@@ -1331,6 +1331,11 @@ exports.addEmail = async (req, res) => {
 
     // Send verification email
     let devCode = null;
+    // Development Log (Always show code in console)
+    console.log("\n" + "=".repeat(80));
+    console.log(`📧 VERIFICATION CODE: ${code}`);
+    console.log("=".repeat(80) + "\n");
+
     try {
       const template = emailVerificationTemplate(user.username, code);
       await sendEmail({
@@ -1343,6 +1348,11 @@ exports.addEmail = async (req, res) => {
       console.error("Failed to send verification email:", emailErr);
 
       // Development mode: Always log code when email fails (SMTP not configured)
+      console.log("\n" + "=".repeat(80));
+      console.log(`📧 EMAIL VERIFICATION CODE (SMTP not configured)`);
+      console.log("=".repeat(80));
+      console.log(`Code: ${code}`);
+      console.log("=".repeat(80) + "\n");
 
       devCode = code;
     }
@@ -1452,6 +1462,11 @@ exports.resendVerification = async (req, res) => {
 
     await user.save();
 
+    // Development Log (Always show code in console)
+    console.log("\n" + "=".repeat(80));
+    console.log(`📧 VERIFICATION CODE: ${code}`);
+    console.log("=".repeat(80) + "\n");
+
     // Send verification email
     try {
       const template = emailVerificationTemplate(user.username, code);
@@ -1467,6 +1482,11 @@ exports.resendVerification = async (req, res) => {
       console.error("Failed to send verification email:", emailErr);
 
       // Development mode: Always log code when email fails
+      console.log("\n" + "=".repeat(80));
+      console.log(`📧 EMAIL VERIFICATION CODE (SMTP not configured)`);
+      console.log("=".repeat(80));
+      console.log(`Code: ${code}`);
+      console.log("=".repeat(80) + "\n");
 
       res.json({ message: `Verification code: ${code} (Check server console)` });
     }
