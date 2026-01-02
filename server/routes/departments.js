@@ -2,6 +2,8 @@
 const express = require('express');
 const router = express.Router();
 const Department = require('../models/Department');
+const Workspace = require('../models/Workspace');
+const Channel = require('../models/Channel');
 const requireAuth = require('../middleware/auth'); // Fixed: single default export
 
 // GET /api/departments/:companyId - Get all departments for a company
@@ -43,7 +45,68 @@ router.post('/', requireAuth, async (req, res) => {
 
         await department.save();
 
-        // console.log('[DEPARTMENTS] Department created:', department._id);
+        // --- HIERARCHY CREATION LOGIC ---
+        // 1. Create Default Workspace for this Department
+        const workspaceName = `${name}`; // E.g., "Engineering"
+        const workspace = new Workspace({
+            company: companyId,
+            name: workspaceName,
+            description: `${name} Team Workspace`,
+            type: 'company',
+            department: department._id,
+            createdBy: head || req.user.sub, // Use HEAD if assigned, else creating admin
+            members: head ? [{ user: head, role: 'owner' }] : [],
+            settings: {
+                isPrivate: false, // Department workspaces usually visible? Or private? Let's say private by default
+                allowMemberInvite: true
+            }
+        });
+
+        // Ensure creator is a member if head is not the creator (or if head is null)
+        // If 'head' is provided, they are owner. If I am creating it (admin) and not head,
+        // I might want to be added or not. For now, let's ensure the 'head' is the primary owner.
+        // If no head, the creator (admin) is owner.
+        if (!head && req.user && req.user.sub) {
+            workspace.members.push({ user: req.user.sub, role: 'owner' });
+            workspace.createdBy = req.user.sub;
+        } else if (head && req.user && req.user.sub && String(head) !== String(req.user.sub)) {
+            // Admin created it for someone else. Admin stays as member/admin? 
+            // Let's make admin a member too so they can see it.
+            workspace.members.push({ user: req.user.sub, role: 'admin' });
+        }
+
+        await workspace.save();
+
+        // 2. Create Default Channels
+        const channelsToCreate = ['general', 'announcement'];
+        const createdChanIds = [];
+
+        for (const chanName of channelsToCreate) {
+            const channel = new Channel({
+                workspace: workspace._id,
+                company: companyId,
+                name: chanName,
+                isDefault: true,
+                createdBy: head || req.user.sub,
+                // Add all workspace members to channel
+                members: workspace.members.map(m => ({
+                    user: m.user,
+                    joinedAt: new Date()
+                }))
+            });
+            await channel.save();
+            createdChanIds.push(channel._id);
+        }
+
+        // 3. Link Channels to Workspace
+        workspace.defaultChannels = createdChanIds;
+        await workspace.save();
+
+        // 4. Link Workspace to Department
+        department.workspaces.push(workspace._id);
+        await department.save();
+
+        // console.log('[DEPARTMENTS] Created Hierarchy: Dept -> Workspace', workspace._id);
 
         res.status(201).json({ department });
     } catch (error) {
