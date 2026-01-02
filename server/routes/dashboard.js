@@ -6,6 +6,13 @@ const dashboardController = require("../controllers/dashboardController");
 const requireAuth = require("../middleware/auth");
 
 /**
+ * @route   GET /api/dashboard/metrics/:companyId
+ * @desc    Get real-time dashboard metrics for company
+ * @access  Private (admin only)
+ */
+router.get("/metrics/:companyId", requireAuth, dashboardController.getDashboardMetrics);
+
+/**
  * @route   GET /api/dashboard/admin
  * @desc    Get admin dashboard data (company overview, statistics)
  * @access  Private (admin/owner only)

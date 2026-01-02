@@ -345,3 +345,49 @@ exports.addMemberToDepartment = async (req, res) => {
         res.status(500).json({ message: "Server error addding to department" });
     }
 };
+/**
+ * Create Task (Manager Override)
+ * POST /api/managers/tasks
+ * Body: { title, description, priority, dueDate, assignedTo, workspaceId }
+ */
+exports.createTask = async (req, res) => {
+    try {
+        const { title, description, priority, dueDate, assignedTo, workspaceId } = req.body;
+        const managerId = req.user.sub;
+
+        // 1. Verify Access
+        const manager = await User.findById(managerId);
+        const hasAccess = manager.workspaces.some(w =>
+            w.workspace.toString() === workspaceId &&
+            (w.role === 'owner' || w.role === 'admin')
+        );
+
+        if (!hasAccess) {
+            return res.status(403).json({ message: "You don't have permission to create tasks in this workspace" });
+        }
+
+        // 2. Create Task
+        const task = new Task({
+            title,
+            description,
+            priority,
+            dueDate,
+            assignedTo, // Array of User IDs
+            workspace: workspaceId,
+            createdBy: managerId,
+            visibility: 'workspace', // Managers generally create open tasks, or 'private' if specific
+            status: 'todo'
+        });
+
+        await task.save();
+
+        // 3. Populate return data
+        await task.populate('assignedTo', 'username profilePicture');
+
+        res.status(201).json(task);
+
+    } catch (error) {
+        console.error("CREATE MANAGER TASK ERROR:", error);
+        res.status(500).json({ message: "Server error creating task" });
+    }
+};

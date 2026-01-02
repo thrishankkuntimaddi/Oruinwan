@@ -42,3 +42,12 @@ const dashboardService = {
 };
 
 export default dashboardService;
+
+// Get real-time dashboard metrics
+export const getDashboardMetrics = async (companyId) => {
+    const response = await axios.get(
+        `${API_BASE}/api/dashboard/metrics/${companyId}`,
+        { headers: getAuthHeaders() }
+    );
+    return response.data;
+};

@@ -9,7 +9,7 @@ router.get('/:companyId', requireAuth, async (req, res) => {
     try {
         const { companyId } = req.params;
 
-        console.log('[DEPARTMENTS] Fetching departments for company:', companyId);
+        // console.log('[DEPARTMENTS] Fetching departments for company:', companyId);
 
         const departments = await Department.find({ company: companyId })
             .populate('head', 'username email profilePicture')
@@ -17,7 +17,7 @@ router.get('/:companyId', requireAuth, async (req, res) => {
             .populate('workspaces', 'name description')
             .sort({ name: 1 });
 
-        console.log(`[DEPARTMENTS] Found ${departments.length} departments`);
+        // console.log(`[DEPARTMENTS] Found ${departments.length} departments`);
 
         res.json({ departments });
     } catch (error) {
@@ -31,7 +31,7 @@ router.post('/', requireAuth, async (req, res) => {
     try {
         const { companyId, name, description, head } = req.body;
 
-        console.log('[DEPARTMENTS] Creating department:', name, 'for company:', companyId);
+        // console.log('[DEPARTMENTS] Creating department:', name, 'for company:', companyId);
 
         const department = new Department({
             company: companyId,
@@ -43,7 +43,7 @@ router.post('/', requireAuth, async (req, res) => {
 
         await department.save();
 
-        console.log('[DEPARTMENTS] Department created:', department._id);
+        // console.log('[DEPARTMENTS] Department created:', department._id);
 
         res.status(201).json({ department });
     } catch (error) {
@@ -104,7 +104,7 @@ router.delete('/:id', requireAuth, async (req, res) => {
         // 3. Optional: If the manager has no more departments, should we downgrade role?
         // For now, simpler is safer: just remove the reference.
 
-        console.log(`[DEPARTMENTS] Deleted department ${id} and cleaned up user references`);
+        // console.log(`[DEPARTMENTS] Deleted department ${id} and cleaned up user references`);
 
         res.json({ message: 'Department deleted successfully' });
     } catch (error) {

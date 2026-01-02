@@ -47,10 +47,15 @@ import CompanySetup from "./pages/CompanySetup";
 import DepartmentManagement from "./pages/admin/DepartmentManagement"; // Updated path
 import UserManagement from "./pages/admin/UserManagement"; // NEW
 import AdminSettings from "./pages/admin/AdminSettings"; // NEW
+import AdminProfile from "./pages/admin/AdminProfile"; // Personal profile
 
 // Dashboard Pages
 import AdminDashboard from "./pages/dashboards/AdminDashboard";
 import ManagerDashboard from "./pages/dashboards/ManagerDashboard";
+import ManagerOverview from "./components/manager/ManagerOverview";
+import ManagerTasks from "./components/manager/ManagerTasks";
+import ManagerReports from "./components/manager/ManagerReports";
+import TeamAllocation from "./components/manager/TeamAllocation";
 import AdminAnalyticsDashboard from "./pages/dashboards/AdminAnalyticsDashboard"; // NEW
 import EmployeeDashboard from "./pages/dashboards/EmployeeDashboard";
 import AnalyticsDashboard from "./pages/dashboards/AnalyticsDashboard";
@@ -426,6 +431,17 @@ function App() {
                           />
 
                           <Route
+                            path="/admin/profile"
+                            element={
+                              <RequireAuth>
+                                <RequireAdmin>
+                                  <AdminProfile />
+                                </RequireAdmin>
+                              </RequireAuth>
+                            }
+                          />
+
+                          <Route
                             path="/admin/analytics"
                             element={
                               <RequireCompanyAdmin>
@@ -441,7 +457,13 @@ function App() {
                                 <ManagerDashboard />
                               </RequireDepartmentManager>
                             }
-                          />
+                          >
+                            <Route index element={<Navigate to="overview" replace />} />
+                            <Route path="overview" element={<ManagerOverview />} />
+                            <Route path="allocation" element={<TeamAllocation />} />
+                            <Route path="tasks" element={<ManagerTasks />} />
+                            <Route path="reports" element={<ManagerReports />} />
+                          </Route>
 
                           <Route
                             path="/employee/dashboard"

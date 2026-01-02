@@ -106,6 +106,8 @@ app.use("/api/search", require("./routes/search"));
 app.use("/api/support", require("./routes/support")); // NEW: Support Tickets
 app.use("/api/audit", require("./routes/audit")); // NEW: Audit Logs
 app.use("/api/managers", require("./routes/managers")); // NEW: Manager Dashboard
+app.use("/api/analytics", require("./routes/analytics")); // NEW: Analytics Dashboard
+
 
 
 

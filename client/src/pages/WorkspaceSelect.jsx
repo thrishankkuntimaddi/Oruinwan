@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import api from "../services/api";
+import ProfileQuickSettings from "../components/workspace/ProfileQuickSettings";
 
 const WorkspaceSelect = () => {
     const navigate = useNavigate();
@@ -22,6 +23,9 @@ const WorkspaceSelect = () => {
     // Help State
     const [showHelp, setShowHelp] = useState(false);
     const [activeHelpModal, setActiveHelpModal] = useState(null);
+
+    // Profile Quick Settings State
+    const [showProfile, setShowProfile] = useState(false);
 
     // Create Modal State
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -235,10 +239,14 @@ const WorkspaceSelect = () => {
                     )}
                     <div className="h-6 w-px bg-slate-200 hidden md:block"></div>
                     <div className="flex items-center gap-3">
-                        <div className="text-right hidden sm:block">
+                        <button
+                            onClick={() => setShowProfile(true)}
+                            className="text-right hidden sm:block hover:bg-slate-50 px-3 py-2 rounded-lg transition-colors"
+                            title="View Profile"
+                        >
                             <div className="text-sm font-bold text-slate-800">{user?.username || 'User'}</div>
                             <div className="text-xs text-slate-500">{user?.email}</div>
-                        </div>
+                        </button>
                         <button
                             onClick={handleLogout}
                             className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
@@ -520,6 +528,9 @@ const WorkspaceSelect = () => {
                     </div>
                 </div>
             )}
+
+            {/* Profile Quick Settings Modal */}
+            {showProfile && <ProfileQuickSettings onClose={() => setShowProfile(false)} />}
         </div>
     );
 };

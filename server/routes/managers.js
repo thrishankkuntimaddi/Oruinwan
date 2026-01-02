@@ -9,6 +9,7 @@ const requireAuth = require('../middleware/auth');
 router.get('/scope', requireAuth, managerController.getManagerScope);
 router.get('/metrics', requireAuth, managerController.getManagerMetrics);
 router.get('/tasks', requireAuth, managerController.getManagerTasks);
+router.post('/tasks', requireAuth, managerController.createTask);
 router.get('/activity', requireAuth, managerController.getActivitySummary);
 
 // Team Allocation Routes
