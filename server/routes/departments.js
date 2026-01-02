@@ -78,7 +78,7 @@ router.post('/', requireAuth, async (req, res) => {
         await workspace.save();
 
         // 2. Create Default Channels
-        const channelsToCreate = ['general', 'announcement'];
+        const channelsToCreate = ['general', 'announcements'];
         const createdChanIds = [];
 
         for (const chanName of channelsToCreate) {

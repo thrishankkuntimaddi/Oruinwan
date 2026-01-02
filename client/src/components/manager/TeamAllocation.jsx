@@ -174,7 +174,7 @@ const TeamAllocation = () => {
                     <thead className="bg-gray-50 sticky top-0 z-10 shadow-sm">
                         <tr>
                             <th className="p-4 font-bold text-gray-600 text-sm border-b border-r border-gray-200 min-w-[200px]">Team Member</th>
-                            {data.workspaces.map(ws => (
+                            {(data?.workspaces || []).map(ws => (
                                 <th key={ws._id} className="p-4 font-bold text-gray-600 text-xs text-center border-b border-gray-200 min-w-[100px]">
                                     <div className="flex flex-col items-center gap-1">
                                         <Briefcase size={14} className="text-gray-400" />
@@ -205,7 +205,7 @@ const TeamAllocation = () => {
                                     </div>
                                 </td>
 
-                                {data.workspaces.map(ws => {
+                                {(data?.workspaces || []).map(ws => {
                                     const isAssigned = data.allocations[member._id]?.includes(ws._id);
                                     return (
                                         <td key={ws._id} className="p-4 text-center">

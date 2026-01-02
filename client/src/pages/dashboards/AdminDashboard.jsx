@@ -1,7 +1,7 @@
 // client/src/pages/dashboards/AdminDashboard.jsx
 // TRUE OPERATIONAL DASHBOARD - Present State, Not Trends
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCompany } from '../../contexts/CompanyContext';
@@ -9,7 +9,7 @@ import { useToast } from '../../contexts/ToastContext';
 import {
     Building, Users, Briefcase, Activity, Plus, Search, Filter, Bell,
     AlertTriangle, CheckCircle2, MessageSquare, Calendar, UserPlus,
-    Clock, TrendingUp, Settings, BarChart3, AlertCircle
+    Clock, TrendingUp, Settings, BarChart3, AlertCircle, RefreshCw
 } from 'lucide-react';
 import {
     DashboardCard, UserCard, ActivityFeed, InviteUserModal
@@ -39,6 +39,7 @@ const AdminDashboard = () => {
     const [workspaces, setWorkspaces] = useState([]);
     const [searchQuery, setSearchQuery] = useState('');
     const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
+    const [refreshing, setRefreshing] = useState(false);
 
     // Today's activity (would come from backend in real implementation)
     const [todayActivity, setTodayActivity] = useState({
@@ -55,8 +56,11 @@ const AdminDashboard = () => {
             try {
                 setLoading(true);
 
+                // Convert ObjectId to string
+                const companyIdString = String(user.companyId);
+
                 // Fetch real dashboard metrics
-                const dashMetrics = await getDashboardMetrics(user.companyId);
+                const dashMetrics = await getDashboardMetrics(companyIdString);
 
                 // Extract data from API response
                 setMetrics(dashMetrics.snapshot || {
@@ -77,9 +81,9 @@ const AdminDashboard = () => {
 
                 // Fetch members, activities, and departments
                 const [membersRes, activityRes, deptsRes] = await Promise.all([
-                    getCompanyMembers(user.companyId),
-                    getAuditLogs(user.companyId, { limit: 15 }),
-                    getDepartments(user.companyId)
+                    getCompanyMembers(companyIdString),
+                    getAuditLogs(companyIdString, { limit: 15 }),
+                    getDepartments(companyIdString)
                 ]);
 
                 setMembers(membersRes.members || []);
@@ -89,12 +93,53 @@ const AdminDashboard = () => {
             } catch (error) {
                 console.error('Error fetching dashboard data:', error);
             } finally {
+                setRefreshing(false);
                 setLoading(false);
             }
         };
 
         fetchDashboardData();
     }, [user?.companyId, showToast]);
+
+    // Polling - refresh every 30 seconds
+    useEffect(() => {
+        if (!user?.companyId) return;
+        const interval = setInterval(async () => {
+            if (!refreshing && !loading) {
+                try {
+                    setRefreshing(true);
+                    const companyIdString = String(user.companyId);
+                    const dashMetrics = await getDashboardMetrics(companyIdString);
+                    setMetrics(dashMetrics.snapshot || {});
+                    setWorkspaces(dashMetrics.workspaceHealth || []);
+                    const [membersRes, deptsRes] = await Promise.all([getCompanyMembers(companyIdString), getDepartments(companyIdString)]);
+                    setMembers(membersRes.members || []);
+                    setDepartments(deptsRes.departments || []);
+                } catch (error) { console.error('Polling error:', error); }
+                finally { setRefreshing(false); }
+            }
+        }, 30000);
+        return () => clearInterval(interval);
+    }, [user?.companyId, refreshing, loading]);
+
+    // Manual refresh
+    const handleRefresh = async () => {
+        if (refreshing || loading || !user?.companyId) return;
+        try {
+            setRefreshing(true);
+            const companyIdString = String(user.companyId);
+            const dashMetrics = await getDashboardMetrics(companyIdString);
+            setMetrics(dashMetrics.snapshot || {});
+            setTodayActivity(dashMetrics.todayActivity || {});
+            setWorkspaces(dashMetrics.workspaceHealth || []);
+            const [membersRes, activityRes, deptsRes] = await Promise.all([getCompanyMembers(companyIdString), getAuditLogs(companyIdString, { limit: 15 }), getDepartments(companyIdString)]);
+            setMembers(membersRes.members || []);
+            setRecentActivities(activityRes.logs || []);
+            setDepartments(deptsRes.departments || []);
+            showToast('Dashboard refreshed', 'success');
+        } catch (error) { console.error('Error refreshing:', error); showToast('Failed to refresh', 'error'); }
+        finally { setRefreshing(false); }
+    };
 
     // Check admin access
     if (!isCompanyAdmin()) {
@@ -154,6 +199,15 @@ const AdminDashboard = () => {
                         </p>
                     </div>
                     <div className="flex items-center gap-4">
+                        <button
+                            onClick={handleRefresh}
+                            disabled={refreshing || loading}
+                            className="px-4 py-2 bg-white border border-slate-300 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-50 transition-colors shadow-sm flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                            title="Refresh dashboard data"
+                        >
+                            <RefreshCw size={16} className={refreshing ? 'animate-spin' : ''} />
+                            {refreshing ? 'Refreshing...' : 'Refresh'}
+                        </button>
                         <button
                             onClick={() => setIsInviteModalOpen(true)}
                             className="px-4 py-2 bg-indigo-600 text-white text-sm font-bold rounded-lg hover:bg-indigo-700 transition-colors shadow-sm flex items-center gap-2"

@@ -1,11 +1,12 @@
 import React, { useState, useRef, useEffect } from "react";
+import { useLocation } from "react-router-dom"; // Added useLocation
 import IconSidebar from "./IconSidebar";
 import ProfileMenu from "../SidebarComp/ProfileSidebar";
 import ChttrixAIChat from "../ai/ChttrixAIChat/ChttrixAIChat";
 import UniversalSearch from "../common/UniversalSearch";
 import { useWorkspace } from "../../contexts/WorkspaceContext";
 import { useUniversalSearch } from "../../hooks/useUniversalSearch";
-import { Bot, BookOpen, Command, Bug, Sparkles, Search, MessageCircle, X, Loader2 } from "lucide-react";
+import { Bot, BookOpen, Command, Bug, Sparkles, Search, MessageCircle, X, Loader2, Menu } from "lucide-react"; // Added Menu icon
 
 const MainLayout = ({ children, sidePanel }) => {
     const { activeWorkspace } = useWorkspace();
@@ -13,6 +14,15 @@ const MainLayout = ({ children, sidePanel }) => {
     const [showAI, setShowAI] = useState(false);
     const [aiWidth, setAiWidth] = useState(350);
     const [sidePanelWidth, setSidePanelWidth] = useState(270);
+    
+    // Mobile State
+    const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+    const location = useLocation();
+
+    // Auto-close mobile menu on route change
+    useEffect(() => {
+        setMobileMenuOpen(false);
+    }, [location.pathname]);
 
     // Universal Search State
     const [showUniversalSearch, setShowUniversalSearch] = useState(false);
@@ -95,8 +105,8 @@ const MainLayout = ({ children, sidePanel }) => {
 
             {/* Help Modals */}
             {activeHelpModal && (
-                <div className="fixed inset-0 bg-black/60 z-[80] flex items-center justify-center animate-fade-in backdrop-blur-sm">
-                    <div className="bg-white dark:bg-gray-900 rounded-xl shadow-2xl w-[600px] max-h-[80vh] overflow-hidden flex flex-col relative">
+                <div className="fixed inset-0 bg-black/60 z-[80] flex items-center justify-center animate-fade-in backdrop-blur-sm p-4">
+                    <div className="bg-white dark:bg-gray-900 rounded-xl shadow-2xl w-full max-w-[600px] max-h-[80vh] overflow-hidden flex flex-col relative">
                         <button
                             onClick={() => setActiveHelpModal(null)}
                             className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 z-10"
@@ -128,7 +138,7 @@ const MainLayout = ({ children, sidePanel }) => {
                                     <p className="text-gray-400 mt-1">Speed up your workflow.</p>
                                 </div>
                                 <div className="p-6 overflow-y-auto">
-                                    <div className="grid grid-cols-2 gap-4">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                         <div className="flex justify-between items-center p-2 border-b border-gray-100">
                                             <span className="text-gray-600">Quick Search</span>
                                             <kbd className="px-2 py-1 bg-gray-100 rounded text-xs font-mono text-gray-500 border border-gray-300">Cmd + K</kbd>
@@ -221,9 +231,16 @@ const MainLayout = ({ children, sidePanel }) => {
             )}
 
             {/* 1. Top Utility Bar (Full Width) */}
-            <div className="h-12 flex items-center justify-between px-4 bg-white dark:bg-gray-900 flex-shrink-0 z-[60] relative shadow-sm dark:shadow-gray-800">
-                {/* Left: Spacer to balance the right side */}
-                <div className="w-20"></div>
+            <div className="h-12 flex items-center justify-between px-2 sm:px-4 bg-white dark:bg-gray-900 flex-shrink-0 z-[60] relative shadow-sm dark:shadow-gray-800">
+                {/* Left: Menu Button (Mobile) & Spacer */}
+                <div className="w-10 sm:w-20 flex items-center">
+                    <button 
+                        onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                        className="md:hidden p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                    >
+                        {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+                    </button>
+                </div>
 
                 {/* Center: Search Bar */}
                 <div className="flex-1 max-w-xl mx-auto relative z-[70]">
@@ -240,7 +257,7 @@ const MainLayout = ({ children, sidePanel }) => {
                                 if (!showUniversalSearch) setShowUniversalSearch(true);
                             }}
                             onFocus={() => setShowUniversalSearch(true)}
-                            placeholder="Search Chttrix..."
+                            placeholder="Search..."
                             className="flex-1 bg-transparent border-none outline-none text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 min-w-0"
                         />
                         {loading && <Loader2 size={14} className="text-blue-500 animate-spin flex-shrink-0" />}
@@ -252,7 +269,7 @@ const MainLayout = ({ children, sidePanel }) => {
                                 <X size={14} className="text-gray-400" />
                             </button>
                         )}
-                        <div className="ml-auto flex items-center gap-1 flex-shrink-0 pointer-events-none">
+                        <div className="hidden sm:flex ml-auto items-center gap-1 flex-shrink-0 pointer-events-none">
                             <kbd className="px-1.5 py-0.5 bg-white dark:bg-gray-900 rounded text-xs font-mono border border-gray-300 dark:border-gray-600">
                                 {navigator.platform.includes('Mac') ? '⌘' : 'Ctrl'}
                             </kbd>
@@ -283,10 +300,10 @@ const MainLayout = ({ children, sidePanel }) => {
 
 
                 {/* Right: Utilities */}
-                <div className="flex items-center space-x-4 w-20 justify-end relative">
+                <div className="flex items-center space-x-2 sm:space-x-4 w-12 sm:w-20 justify-end relative">
                     <button
                         onClick={() => setShowHelp(!showHelp)}
-                        className={`text-gray-500 hover:text-gray-700 text-sm font-medium transition-colors ${showHelp ? "text-blue-600" : ""}`}
+                        className={`hidden sm:block text-gray-500 hover:text-gray-700 text-sm font-medium transition-colors ${showHelp ? "text-blue-600" : ""}`}
                     >
                         Help
                     </button>
@@ -377,48 +394,74 @@ const MainLayout = ({ children, sidePanel }) => {
             </div>
 
             {/* 2. Main Workspace Area (Below Top Bar) */}
-            <div className="flex-1 flex overflow-hidden">
-                {/* A. Far Left: Icon Sidebar */}
-                <IconSidebar onProfileClick={() => setShowProfile(true)} />
-
-                {/* B. Middle Left: Side Panel (Optional & Resizable) */}
-                {sidePanel && (
-                    <>
-                        <div
-                            className="flex-shrink-0 bg-white dark:bg-gray-900"
-                            style={{ width: `${sidePanelWidth}px` }}
-                        >
-                            {React.cloneElement(sidePanel, { title: activeWorkspace?.name || 'Loading...' })}
-                        </div>
-                        {/* SidePanel Drag Handle */}
-                        <div
-                            className="w-1 bg-transparent hover:bg-blue-400 cursor-col-resize flex-shrink-0 transition-colors z-40"
-                            onMouseDown={startResizingSidePanel}
-                        ></div>
-                    </>
+            <div className="flex-1 flex overflow-hidden relative">
+                
+                {/* Mobile Menu Backdrop */}
+                {mobileMenuOpen && (
+                    <div 
+                        className="fixed inset-0 bg-black/50 z-40 md:hidden backdrop-blur-sm"
+                        onClick={() => setMobileMenuOpen(false)}
+                    />
                 )}
 
+                {/* A. Far Left: Icon Sidebar */}
+                <div className={`
+                    fixed md:static inset-y-0 left-0 z-50 h-full
+                    transform transition-transform duration-300 ease-in-out md:transform-none
+                    ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
+                    md:flex
+                `}>
+                    <div className="flex h-full h-full shadow-2xl md:shadow-none">
+                        <IconSidebar onProfileClick={() => setShowProfile(true)} />
+                        
+                        {/* B. Middle Left: Side Panel (Inside drawer on mobile, static on desktop) */}
+                        {sidePanel && (
+                            <div className="h-full flex">
+                                <div
+                                    className="flex-shrink-0 bg-white dark:bg-gray-900 h-full border-r border-gray-200 dark:border-gray-800"
+                                    style={{ width: `${sidePanelWidth}px` }}
+                                >
+                                    {React.cloneElement(sidePanel, { title: activeWorkspace?.name || 'Loading...' })}
+                                </div>
+                                {/* SidePanel Drag Handle (Desktop Only) */}
+                                <div
+                                    className="hidden md:block w-1 bg-transparent hover:bg-blue-400 cursor-col-resize flex-shrink-0 transition-colors z-40"
+                                    onMouseDown={startResizingSidePanel}
+                                ></div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
                 {/* C. Center: Main Content + Right Sidebar */}
-                <main className="flex-1 flex min-w-0 bg-white dark:bg-gray-900 relative">
+                <main className="flex-1 flex min-w-0 bg-white dark:bg-gray-900 relative w-full">
                     {/* Page Content */}
-                    <div className="flex-1 overflow-hidden relative">
+                    <div className="flex-1 overflow-hidden relative w-full">
                         {children}
                     </div>
 
                     {/* D. Right Sidebar: Chttrix AI (Resizable) */}
                     {showAI && (
                         <>
-                            {/* Drag Handle */}
+                            {/* Drag Handle (Desktop Only) */}
                             <div
-                                className="w-1 bg-transparent hover:bg-blue-400 cursor-col-resize flex-shrink-0 transition-colors z-40"
+                                className="hidden md:block w-1 bg-transparent hover:bg-blue-400 cursor-col-resize flex-shrink-0 transition-colors z-40"
                                 onMouseDown={startResizingAI}
                             ></div>
 
                             {/* AI Panel */}
                             <div
-                                style={{ width: aiWidth }}
-                                className="flex-shrink-0 bg-white dark:bg-gray-900 flex flex-col shadow-xl z-30"
+                                style={{ width: window.innerWidth < 768 ? '100%' : aiWidth }}
+                                className={`
+                                    fixed md:static inset-y-0 right-0 z-30
+                                    bg-white dark:bg-gray-900 flex flex-col shadow-xl md:shadow-none
+                                    ${window.innerWidth < 768 ? (showAI ? 'translate-x-0' : 'translate-x-full') : ''}
+                                `}
                             >
+                                <div className="md:hidden flex items-center justify-between p-2 border-b">
+                                    <span className="font-bold pl-2">Chttrix AI</span>
+                                    <button onClick={() => setShowAI(false)} className="p-2"><X size={20}/></button>
+                                </div>
                                 <ChttrixAIChat onClose={() => setShowAI(false)} isSidebar={true} />
                             </div>
                         </>

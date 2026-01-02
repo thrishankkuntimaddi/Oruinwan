@@ -381,7 +381,7 @@ exports.verifyCompany = async (req, res) => {
         await ws.save();
 
         // Create Default Channels (General, Announcement)
-        const channelsToCreate = ["general", "announcement"];
+        const channelsToCreate = ["general", "announcements"];
         const createdChanIds = [];
 
         for (const channelName of channelsToCreate) {
@@ -575,7 +575,7 @@ exports.updateCompanySetup = async (req, res) => {
         await ws.save();
 
         // Create Default Channels
-        const channelsToCreate = ["general", "announcement"];
+        const channelsToCreate = ["general", "announcements"];
         const createdChanIds = [];
         for (const channelName of channelsToCreate) {
           const chan = new Channel({
