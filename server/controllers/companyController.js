@@ -15,6 +15,7 @@ const {
   isValidDomain
 } = require("../utils/domainVerification");
 const sendEmail = require("../utils/sendEmail");
+const { sendOTP } = require("../utils/sendOTP");
 const crypto = require("crypto");
 const bcrypt = require("bcryptjs");
 
@@ -99,6 +100,102 @@ exports.verifyOtp = async (req, res) => {
 
   } catch (err) {
     console.error("VERIFY OTP ERROR:", err);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+
+// ============================================================================
+// PHONE OTP FOR COMPANY REGISTRATION
+// ============================================================================
+
+/**
+ * Send Phone OTP during company registration
+ * POST /api/companies/phone-otp/send
+ * Body: { phone: string, companyId: string }
+ */
+exports.sendPhoneOtp = async (req, res) => {
+  try {
+    const { phone, companyId } = req.body;
+
+    if (!phone || !companyId) {
+      return res.status(400).json({ message: "Phone and company ID are required" });
+    }
+
+    const company = await Company.findById(companyId);
+    if (!company) {
+      return res.status(404).json({ message: "Company not found" });
+    }
+
+    // Generate 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000);
+
+    // Store OTP in company document
+    company.ownerPhone = phone;
+    company.phoneOTP = otp.toString();
+    company.phoneOTPExpiresAt = Date.now() + 5 * 60 * 1000; // 5 minutes
+    await company.save();
+
+    // Send OTP via Twilio (or log in dev mode)
+    await sendOTP(phone, otp);
+
+    return res.json({
+      message: "OTP sent successfully",
+      devNote: process.env.NODE_ENV !== "production" ? "Check server terminal for code" : undefined
+    });
+  } catch (err) {
+    console.error("SEND PHONE OTP ERROR:", err);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+
+/**
+ * Verify Phone OTP during company registration
+ * POST /api/companies/phone-otp/verify
+ * Body: { companyId: string, otp: string }
+ */
+exports.verifyPhoneOtp = async (req, res) => {
+  try {
+    const { companyId, otp } = req.body;
+
+    if (!companyId || !otp) {
+      return res.status(400).json({ message: "Company ID and OTP are required" });
+    }
+
+    const company = await Company.findById(companyId);
+    if (!company) {
+      return res.status(404).json({ message: "Company not found" });
+    }
+
+    // Check if OTP exists and is valid
+    if (!company.phoneOTP || !company.phoneOTPExpiresAt) {
+      return res.status(400).json({ message: "OTP not found. Please request a new one." });
+    }
+
+    // Check if OTP is expired
+    if (Date.now() > company.phoneOTPExpiresAt) {
+      company.phoneOTP = undefined;
+      company.phoneOTPExpiresAt = undefined;
+      await company.save();
+      return res.status(400).json({ message: "OTP expired. Please request a new one." });
+    }
+
+    // Verify OTP
+    if (company.phoneOTP !== otp) {
+      return res.status(400).json({ message: "Invalid OTP" });
+    }
+
+    // Mark as verified and clear OTP
+    company.phoneVerified = true;
+    company.phoneOTP = undefined;
+    company.phoneOTPExpiresAt = undefined;
+    await company.save();
+
+    return res.json({
+      message: "Phone verified successfully",
+      verified: true
+    });
+  } catch (err) {
+    console.error("VERIFY PHONE OTP ERROR:", err);
     return res.status(500).json({ message: "Server error" });
   }
 };

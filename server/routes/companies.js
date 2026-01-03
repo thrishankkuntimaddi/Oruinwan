@@ -24,6 +24,22 @@ router.post("/otp/send", companyController.sendOtp);
 router.post("/otp/verify", companyController.verifyOtp);
 
 /**
+ * @route   POST /api/companies/phone-otp/send
+ * @desc    Send Phone OTP during company registration
+ * @body    phone, companyId
+ * @access  Public
+ */
+router.post("/phone-otp/send", companyController.sendPhoneOtp);
+
+/**
+ * @route   POST /api/companies/phone-otp/verify
+ * @desc    Verify Phone OTP during company registration
+ * @body    companyId, otp
+ * @access  Public
+ */
+router.post("/phone-otp/verify", companyController.verifyPhoneOtp);
+
+/**
  * @route   POST /api/companies/register
  * @desc    Register a new company with admin user
  * @body    companyName, adminName, adminEmail, domain, documents

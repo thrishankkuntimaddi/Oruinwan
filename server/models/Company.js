@@ -14,6 +14,12 @@ const CompanySchema = new mongoose.Schema({
   domainVerificationToken: { type: String, default: null },
   domainVerificationExpires: { type: Date, default: null },
 
+  // Phone Verification (OTP)
+  ownerPhone: { type: String },
+  phoneOTP: { type: String },
+  phoneOTPExpiresAt: { type: Number },
+  phoneVerified: { type: Boolean, default: false },
+
   // Verification Status (Phase 2 Requirement)
   verificationStatus: {
     type: String,
