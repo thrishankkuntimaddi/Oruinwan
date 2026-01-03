@@ -11,6 +11,24 @@ const Channel = require('../models/Channel');
 exports.getDashboardMetrics = async (req, res) => {
     try {
         const { companyId } = req.params;
+        const userId = req.user.sub;
+
+        // Verify user belongs to this company and has admin rights
+        const requestingUser = await User.findById(userId);
+        if (!requestingUser) {
+            return res.status(401).json({ message: 'User not found' });
+        }
+
+        // Check if user's company matches the requested companyId
+        if (requestingUser.companyId.toString() !== companyId) {
+            return res.status(403).json({ message: 'Access denied: Not authorized for this company' });
+        }
+
+        // Check if user is admin/owner
+        const adminRoles = ['owner', 'admin'];
+        if (!adminRoles.includes(requestingUser.companyRole) && !requestingUser.isCoOwner) {
+            return res.status(403).json({ message: 'Access denied: Admin privileges required' });
+        }
 
         // Get today's start (midnight)
         const todayStart = new Date();
@@ -84,6 +102,7 @@ exports.getDashboardMetrics = async (req, res) => {
                 return {
                     _id: ws._id,
                     name: ws.name,
+                    members: ws.members, // Include full members array
                     memberCount: ws.members?.length || 0,
                     lastActivity,
                     isInactive,
@@ -128,8 +147,10 @@ exports.getDashboardMetrics = async (req, res) => {
         });
 
     } catch (err) {
-        console.error('GET DASHBOARD METRICS ERROR:', err);
-        return res.status(500).json({ message: 'Server error' });
+        return res.status(500).json({
+            message: 'Server error',
+            error: process.env.NODE_ENV === 'development' ? err.message : undefined
+        });
     }
 };
 

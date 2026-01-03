@@ -33,7 +33,6 @@ router.post("/upload", requireAuth, upload.array('files', 5), (req, res) => {
 
     return res.json({ files: fileUrls });
   } catch (err) {
-    console.error("File upload error:", err);
     return res.status(500).json({ message: "File upload failed" });
   }
 });

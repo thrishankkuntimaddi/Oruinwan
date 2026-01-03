@@ -1,53 +1,81 @@
 // client/src/services/dashboardService.js
 
-import axios from 'axios';
+import api from './api';
 
-const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000';
+/**
+ * Get real-time dashboard metrics for admin
+ * This is the primary metrics endpoint used by AdminDashboard
+ */
+export const getDashboardMetrics = async (companyId) => {
+    const response = await api.get(`/api/dashboard/metrics/${companyId}`);
+    return response.data;
+};
 
-const getAuthHeaders = () => ({
-    Authorization: `Bearer ${localStorage.getItem('accessToken')}`
-});
-
-// Get admin dashboard metrics
+/**
+ * Get admin dashboard data (legacy endpoint - may be deprecated)
+ */
 export const getAdminMetrics = async (companyId) => {
-    const response = await axios.get(
-        `${API_BASE}/api/dashboard/admin/${companyId}`,
-        { headers: getAuthHeaders() }
-    );
+    const response = await api.get(`/api/dashboard/admin/${companyId}`);
     return response.data;
 };
 
-// Get manager team data
+/**
+ * Get manager team data
+ */
 export const getManagerTeamData = async (managerId) => {
-    const response = await axios.get(
-        `${API_BASE}/api/dashboard/manager/${managerId}`,
-        { headers: getAuthHeaders() }
-    );
+    const response = await api.get(`/api/dashboard/manager/${managerId}`);
     return response.data;
 };
 
-// Get employee personal data
+/**
+ * Get employee personal data
+ */
 export const getEmployeePersonalData = async (userId) => {
-    const response = await axios.get(
-        `${API_BASE}/api/dashboard/employee/${userId}`,
-        { headers: getAuthHeaders() }
-    );
+    const response = await api.get(`/api/dashboard/employee/${userId}`);
+    return response.data;
+};
+
+/**
+ * Get workspace dashboard data
+ */
+export const getWorkspaceDashboard = async (workspaceId) => {
+    const response = await api.get(`/api/dashboard/workspace/${workspaceId}`);
+    return response.data;
+};
+
+/**
+ * Get analytics summary
+ */
+export const getAnalyticsSummary = async () => {
+    const response = await api.get('/api/dashboard/analytics/summary');
+    return response.data;
+};
+
+/**
+ * Get user activity analytics
+ */
+export const getUserActivityAnalytics = async () => {
+    const response = await api.get('/api/dashboard/analytics/users');
+    return response.data;
+};
+
+/**
+ * Get workspace analytics
+ */
+export const getWorkspaceAnalytics = async () => {
+    const response = await api.get('/api/dashboard/analytics/workspaces');
     return response.data;
 };
 
 const dashboardService = {
+    getDashboardMetrics,
     getAdminMetrics,
     getManagerTeamData,
-    getEmployeePersonalData
+    getEmployeePersonalData,
+    getWorkspaceDashboard,
+    getAnalyticsSummary,
+    getUserActivityAnalytics,
+    getWorkspaceAnalytics
 };
 
 export default dashboardService;
-
-// Get real-time dashboard metrics
-export const getDashboardMetrics = async (companyId) => {
-    const response = await axios.get(
-        `${API_BASE}/api/dashboard/metrics/${companyId}`,
-        { headers: getAuthHeaders() }
-    );
-    return response.data;
-};

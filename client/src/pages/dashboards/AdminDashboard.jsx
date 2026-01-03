@@ -56,8 +56,10 @@ const AdminDashboard = () => {
             try {
                 setLoading(true);
 
-                // Convert ObjectId to string
-                const companyIdString = String(user.companyId);
+                // Convert ObjectId to string - handle both object and string formats
+                const companyIdString = typeof user.companyId === 'object' && user.companyId?._id
+                    ? String(user.companyId._id)
+                    : String(user.companyId);
 
                 // Fetch real dashboard metrics
                 const dashMetrics = await getDashboardMetrics(companyIdString);
@@ -108,7 +110,9 @@ const AdminDashboard = () => {
             if (!refreshing && !loading) {
                 try {
                     setRefreshing(true);
-                    const companyIdString = String(user.companyId);
+                    const companyIdString = typeof user.companyId === 'object' && user.companyId?._id
+                        ? String(user.companyId._id)
+                        : String(user.companyId);
                     const dashMetrics = await getDashboardMetrics(companyIdString);
                     setMetrics(dashMetrics.snapshot || {});
                     setWorkspaces(dashMetrics.workspaceHealth || []);
@@ -127,7 +131,9 @@ const AdminDashboard = () => {
         if (refreshing || loading || !user?.companyId) return;
         try {
             setRefreshing(true);
-            const companyIdString = String(user.companyId);
+            const companyIdString = typeof user.companyId === 'object' && user.companyId?._id
+                ? String(user.companyId._id)
+                : String(user.companyId);
             const dashMetrics = await getDashboardMetrics(companyIdString);
             setMetrics(dashMetrics.snapshot || {});
             setTodayActivity(dashMetrics.todayActivity || {});

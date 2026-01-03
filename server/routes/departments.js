@@ -11,7 +11,7 @@ router.get('/:companyId', requireAuth, async (req, res) => {
     try {
         const { companyId } = req.params;
 
-        // console.log('[DEPARTMENTS] Fetching departments for company:', companyId);
+
 
         const departments = await Department.find({ company: companyId })
             .populate('head', 'username email profilePicture')
@@ -19,11 +19,11 @@ router.get('/:companyId', requireAuth, async (req, res) => {
             .populate('workspaces', 'name description')
             .sort({ name: 1 });
 
-        // console.log(`[DEPARTMENTS] Found ${departments.length} departments`);
+
 
         res.json({ departments });
     } catch (error) {
-        console.error('[DEPARTMENTS] Error fetching departments:', error);
+
         res.status(500).json({ message: 'Failed to fetch departments', error: error.message });
     }
 });
@@ -33,7 +33,7 @@ router.post('/', requireAuth, async (req, res) => {
     try {
         const { companyId, name, description, head } = req.body;
 
-        // console.log('[DEPARTMENTS] Creating department:', name, 'for company:', companyId);
+
 
         const department = new Department({
             company: companyId,
@@ -106,11 +106,11 @@ router.post('/', requireAuth, async (req, res) => {
         department.workspaces.push(workspace._id);
         await department.save();
 
-        // console.log('[DEPARTMENTS] Created Hierarchy: Dept -> Workspace', workspace._id);
+
 
         res.status(201).json({ department });
     } catch (error) {
-        console.error('[DEPARTMENTS] Error creating department:', error);
+
         res.status(500).json({ message: 'Failed to create department', error: error.message });
     }
 });
@@ -133,7 +133,7 @@ router.put('/:id', requireAuth, async (req, res) => {
 
         res.json({ department });
     } catch (error) {
-        console.error('[DEPARTMENTS] Error updating department:', error);
+
         res.status(500).json({ message: 'Failed to update department', error: error.message });
     }
 });
@@ -167,11 +167,11 @@ router.delete('/:id', requireAuth, async (req, res) => {
         // 3. Optional: If the manager has no more departments, should we downgrade role?
         // For now, simpler is safer: just remove the reference.
 
-        // console.log(`[DEPARTMENTS] Deleted department ${id} and cleaned up user references`);
+
 
         res.json({ message: 'Department deleted successfully' });
     } catch (error) {
-        console.error('[DEPARTMENTS] Error deleting department:', error);
+
         res.status(500).json({ message: 'Failed to delete department', error: error.message });
     }
 });
@@ -190,7 +190,7 @@ router.get('/:id/members', requireAuth, async (req, res) => {
 
         res.json({ members: department.members || [] });
     } catch (error) {
-        console.error('[DEPARTMENTS] Error fetching members:', error);
+
         res.status(500).json({ message: 'Failed to fetch members', error: error.message });
     }
 });
@@ -220,7 +220,7 @@ router.post('/:id/members', requireAuth, async (req, res) => {
 
         res.json({ department });
     } catch (error) {
-        console.error('[DEPARTMENTS] Error adding member:', error);
+
         res.status(500).json({ message: 'Failed to add member', error: error.message });
     }
 });
@@ -250,7 +250,7 @@ router.delete('/:departmentId/members/:userId', requireAuth, async (req, res) =>
 
         res.json({ department });
     } catch (error) {
-        console.error('[DEPARTMENTS] Error removing member:', error);
+
         res.status(500).json({ message: 'Failed to remove member', error: error.message });
     }
 });

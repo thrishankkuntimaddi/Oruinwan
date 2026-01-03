@@ -12,7 +12,7 @@ router.get("/users", requireAuth, async (req, res) => {
     const users = await User.find().select("_id username email profilePicture");
     return res.json({ users });
   } catch (err) {
-    console.error("GET USERS ERROR:", err);
+
     res.status(500).json({ message: "Server error" });
   }
 });
@@ -23,7 +23,7 @@ router.get("/channels", requireAuth, async (req, res) => {
     const channels = await Channel.find().select("_id name members");
     return res.json({ channels });
   } catch (err) {
-    console.error("GET CHANNELS ERROR:", err);
+
     res.status(500).json({ message: "Server error" });
   }
 });
@@ -38,7 +38,7 @@ router.get("/contacts", requireAuth, async (req, res) => {
 
     res.json({ contacts: users });
   } catch (err) {
-    console.error("CONTACTS ERROR:", err);
+
     res.status(500).json({ message: "Server error" });
   }
 });

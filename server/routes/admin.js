@@ -14,22 +14,14 @@ const { requireAdmin } = require('../middleware/permissionMiddleware');
 // Simple middleware to check for Super Admin
 const requireSuperAdmin = async (req, res, next) => {
     try {
-        console.log("🔐 [ADMIN AUTH] Checking super admin access...");
-        console.log("🔐 [ADMIN AUTH] req.user:", req.user);
-
         const user = await User.findById(req.user.sub);
-        console.log("🔐 [ADMIN AUTH] User found:", user ? user.email : "NULL");
-        console.log("🔐 [ADMIN AUTH] User roles:", user ? user.roles : "NULL");
 
         if (user && user.roles.includes('chttrix_admin')) {
-            console.log("✅ [ADMIN AUTH] Super admin access granted");
             next();
         } else {
-            console.log("❌ [ADMIN AUTH] Access denied - not a super admin");
             res.status(403).json({ message: "Access denied: Super Admin only" });
         }
     } catch (err) {
-        console.error("❌ [ADMIN AUTH] Error:", err);
         res.status(500).json({ message: "Auth Error" });
     }
 };
@@ -37,17 +29,17 @@ const requireSuperAdmin = async (req, res, next) => {
 // GET /api/admin/pending-companies
 router.get('/pending-companies', requireSuperAdmin, async (req, res) => {
     try {
-        console.log("🔍 [ADMIN] Fetching pending companies...");
+
         const companies = await Company.find({ verificationStatus: 'pending' })
             .populate({
                 path: 'admins.user',
                 select: 'username email phone phoneCode jobTitle emails'
             })
             .sort({ createdAt: -1 });
-        console.log(`✅ [ADMIN] Found ${companies.length} pending companies.`);
+
         res.json(companies);
     } catch (err) {
-        console.error("❌ [ADMIN] Error fetching pending companies:", err);
+
         res.status(500).json({ message: "Server Error" });
     }
 });
@@ -107,7 +99,7 @@ router.post('/approve-company/:id', requireSuperAdmin, async (req, res) => {
 
         res.json({ message: "Company Approved", company });
     } catch (err) {
-        console.error(err);
+
         res.status(500).json({ message: "Server Error" });
     }
 });
@@ -159,7 +151,7 @@ router.post('/reject-company/:id', requireSuperAdmin, async (req, res) => {
 
         res.json({ message: "Company Rejected", company });
     } catch (err) {
-        console.error(err);
+
         res.status(500).json({ message: "Server Error" });
     }
 });
