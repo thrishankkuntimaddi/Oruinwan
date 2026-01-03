@@ -1,3 +1,10 @@
+console.log("🚀 Server file loaded");
+console.log("NODE_ENV:", process.env.NODE_ENV);
+console.log("PORT:", process.env.PORT);
+console.log("MONGO_URI exists:", !!process.env.MONGO_URI);
+
+
+
 // server/server.js
 require("dotenv").config();
 const express = require("express");
