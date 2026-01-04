@@ -17,11 +17,9 @@ const logger = {
         console.warn(...args);
     },
 
-    // Log info only in development
+    // Log info in all environments (important for startup logs)
     info: (...args) => {
-        if (isDevelopment) {
-            console.log(...args);
-        }
+        console.log(...args);
     },
 
     // Log debug only in development
@@ -31,11 +29,9 @@ const logger = {
         }
     },
 
-    // Success messages (with emoji) - development only
+    // Success messages (always show - important for startup confirmation)
     success: (...args) => {
-        if (isDevelopment) {
-            console.log(...args);
-        }
+        console.log(...args);
     },
 };
 

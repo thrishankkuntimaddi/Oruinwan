@@ -9,31 +9,32 @@ const seedSuperAdmin = async () => {
         await mongoose.connect(process.env.MONGO_URI);
         console.log('📦 MongoDB Connected');
 
-        const email = 'chttrix@ch.com';
-        const password = 'Nani123@';
-        const username = 'Chttrix Manager';
+        // Default Chttrix Super Admin Credentials
+        const email = 'chttrix-admin@chttrix.com';
+        const password = 'xm4kcjwf89';
+        const username = 'Chttrix Admin';
 
         // Check if exists
         let admin = await User.findOne({ email });
         if (admin) {
-            console.log('⚠️ Super Admin already exists');
+            console.log('⚠️  Chttrix Super Admin already exists');
+            console.log(`   Email: ${email}`);
         } else {
             const passwordHash = await bcrypt.hash(password, 12);
             admin = new User({
                 username,
                 email,
                 passwordHash,
-                userType: 'company', // Special type or normal? using 'company' generically or needs 'super_admin'
-                // Let's use specific roles for identifying super admin
-                roles: ['user', 'chttrix_admin'],
+                userType: 'personal', // Not tied to any company
+                roles: ['user', 'chttrix_admin'], // Special super admin role
                 verified: true,
                 accountStatus: 'active',
-                // It doesn't need to belong to a specific company in the schema, or we create a "Chttrix" company.
-                // For simplicity, null companyId but 'chttrix_admin' role grants global access.
-                companyId: null
+                companyId: null // Global admin, not tied to any company
             });
             await admin.save();
-            console.log('✅ Super Admin Created: chttrix@ch.com');
+            console.log('✅ Chttrix Super Admin Created!');
+            console.log(`   Email: ${email}`);
+            console.log(`   Password: ${password}`);
         }
 
         process.exit();

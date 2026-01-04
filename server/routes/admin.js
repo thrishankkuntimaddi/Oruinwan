@@ -59,30 +59,87 @@ router.post('/approve-company/:id', requireSuperAdmin, async (req, res) => {
             adminUser.accountStatus = 'active';
             await adminUser.save();
 
-            // Generate Activation Link
-            const loginLink = `${process.env.FRONTEND_URL}/login?email=${encodeURIComponent(adminUser.email)}`;
+            // Send approval email to PERSONAL email (not company email)
+            try {
+                const personalEmail = adminUser.emails && adminUser.emails.length > 0
+                    ? adminUser.emails[0].email
+                    : adminUser.email;
 
-            // LOG ACTIVATION EMAIL TO TERMINAL (DEV MODE)
-            console.log("\n" + "=".repeat(80));
-            console.log("📧 ACTIVATION EMAIL (Development Mode - No SMTP)");
-            console.log("=".repeat(80));
-            console.log(`To: ${adminUser.email}`);
-            console.log(`Subject: 🎉 Your Company "${company.name}" Has Been Approved!`);
-            console.log("-".repeat(80));
-            console.log("Email Content:");
-            console.log(`\nDear ${adminUser.username},\n`);
-            console.log(`Congratulations! Your company registration for "${company.name}" has been`);
-            console.log(`approved by our team. You can now login and complete your workspace setup.\n`);
-            console.log(`👉 LOGIN HERE: ${loginLink}\n`);
-            console.log(`Next Steps:`);
-            console.log(`1. Click the login link above`);
-            console.log(`2. Complete your company profile setup`);
-            console.log(`3. Configure departments and invite your team\n`);
-            console.log(`Welcome to Chttrix!`);
-            console.log(`- The Chttrix Team`);
-            console.log("=".repeat(80) + "\n");
+                const loginUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/login`;
 
-            // In production, replace with: await sendEmail({...})
+                await sendEmail({
+                    to: personalEmail,
+                    subject: `🎉 Welcome to Chttrix - ${company.name} is Verified!`,
+                    html: `
+                        <!DOCTYPE html>
+                        <html>
+                        <head>
+                          <style>
+                            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
+                            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                            .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+                            .content { background: #ffffff; padding: 30px; border: 1px solid #e0e0e0; border-top: none; }
+                            .footer { background: #f5f5f5; padding: 20px; text-align: center; font-size: 12px; color: #666; border-radius: 0 0 10px 10px; }
+                            .success-box { background: #d4edda; border-left: 4px solid #28a745; padding: 15px; margin: 20px 0; border-radius: 4px; }
+                            .credentials { background: #f8f9fa; padding: 15px; margin: 20px 0; border-radius: 4px; border: 1px solid #dee2e6; }
+                            .button { display: inline-block; padding: 12px 30px; background: #667eea; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+                            h1 { margin: 0; font-size: 28px; }
+                            h2 { color: #667eea; margin-top: 0; }
+                            code { background: #f4f4f4; padding: 2px 6px; border-radius: 3px; font-family: monospace; }
+                          </style>
+                        </head>
+                        <body>
+                          <div class="container">
+                            <div class="header">
+                              <h1>🎉 Congratulations!</h1>
+                            </div>
+                            <div class="content">
+                              <h2>Welcome to Chttrix, ${adminUser.username}!</h2>
+                              
+                              <div class="success-box">
+                                <strong>✅ Your company has been verified!</strong><br/>
+                                <strong>${company.name}</strong> is now active on the Chttrix platform.
+                              </div>
+
+                              <p>Your workspace has been provisioned and is ready to use. You can now access all features of the Chttrix collaboration platform.</p>
+                              
+                              <div class="credentials">
+                                <strong>Login Details:</strong><br/>
+                                <strong>Email:</strong> <code>${adminUser.email}</code><br/>
+                                <strong>Login URL:</strong> <a href="${loginUrl}">${loginUrl}</a>
+                              </div>
+
+                              <p><strong>What's Next?</strong></p>
+                              <ul>
+                                <li>Log in to your account</li>
+                                <li>Explore your workspace and channels</li>
+                                <li>Invite team members to join</li>
+                                <li>Start collaborating!</li>
+                              </ul>
+
+                              <center>
+                                <a href="${loginUrl}" class="button">Access Your Workspace →</a>
+                              </center>
+                              
+                              <p>If you have any questions, our support team is here to help.</p>
+                              
+                              <p>Best regards,<br/>
+                              <strong>The Chttrix Team</strong></p>
+                            </div>
+                            <div class="footer">
+                              © ${new Date().getFullYear()} Chttrix. All rights reserved.<br/>
+                              Need help? Contact us at support@chttrix.com
+                            </div>
+                          </div>
+                        </body>
+                        </html>
+                    `
+                });
+                console.log(`📧 Approval email sent to personal email: ${personalEmail}`);
+            } catch (emailError) {
+                console.error('Failed to send approval email:', emailError.message);
+                // Don't fail the request if email fails
+            }
         }
 
         // Audit Log
@@ -115,26 +172,69 @@ router.post('/reject-company/:id', requireSuperAdmin, async (req, res) => {
         company.rejectionReason = reason;
         await company.save();
 
-        // Notify Admin
+        // Notify Admin via email to PERSONAL email
         const adminUser = await User.findOne({ companyId: company._id, companyRole: 'owner' });
         if (adminUser) {
-            // LOG REJECTION EMAIL TO TERMINAL (DEV MODE)
-            console.log("\n" + "=".repeat(80));
-            console.log("📧 REJECTION EMAIL (Development Mode - No SMTP)");
-            console.log("=".repeat(80));
-            console.log(`To: ${adminUser.email}`);
-            console.log(`Subject: Registration Update for "${company.name}"`);
-            console.log("-".repeat(80));
-            console.log("Email Content:");
-            console.log(`\nDear ${adminUser.username},\n`);
-            console.log(`Thank you for your interest in Chttrix. Unfortunately, we cannot approve`);
-            console.log(`your company registration at this time.\n`);
-            console.log(`Reason: ${reason || "Not specified"}\n`);
-            console.log(`If you believe this is an error or would like to discuss further,`);
-            console.log(`please contact our support team.\n`);
-            console.log(`Best regards,`);
-            console.log(`The Chttrix Team`);
-            console.log("=".repeat(80) + "\n");
+            // Send rejection email to personal email (not company email)
+            try {
+                const personalEmail = adminUser.emails && adminUser.emails.length > 0
+                    ? adminUser.emails[0].email
+                    : adminUser.email;
+
+                await sendEmail({
+                    to: personalEmail,
+                    subject: `Company Registration Rejected - ${company.name}`,
+                    html: `
+                        <!DOCTYPE html>
+                        <html>
+                        <head>
+                          <style>
+                            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
+                            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                            .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+                            .content { background: #ffffff; padding: 30px; border: 1px solid #e0e0e0; border-top: none; }
+                            .footer { background: #f5f5f5; padding: 20px; text-align: center; font-size: 12px; color: #666; border-radius: 0 0 10px 10px; }
+                            .reason-box { background: #fff3cd; border-left: 4px solid #ff6b6b; padding: 15px; margin: 20px 0; border-radius: 4px; }
+                            h1 { margin: 0; font-size: 28px; }
+                            h2 { color: #667eea; margin-top: 0; }
+                          </style>
+                        </head>
+                        <body>
+                          <div class="container">
+                            <div class="header">
+                              <h1>⚠️ Registration Update</h1>
+                            </div>
+                            <div class="content">
+                              <h2>Dear ${adminUser.username},</h2>
+                              <p>Thank you for your interest in registering <strong>${company.name}</strong> with Chttrix.</p>
+                              <p>After careful review of your application, we regret to inform you that we are unable to approve your company registration at this time.</p>
+                              
+                              <div class="reason-box">
+                                <strong>Reason:</strong><br/>
+                                ${reason || "Does not meet our current criteria"}
+                              </div>
+
+                              <p>If you believe this was an error or would like to provide additional information, please contact our support team.</p>
+                              
+                              <p>We appreciate your understanding and hope to work with you in the future.</p>
+                              
+                              <p>Best regards,<br/>
+                              <strong>The Chttrix Team</strong></p>
+                            </div>
+                            <div class="footer">
+                              © ${new Date().getFullYear()} Chttrix. All rights reserved.<br/>
+                              Need help? Contact us at support@chttrix.com
+                            </div>
+                          </div>
+                        </body>
+                        </html>
+                    `
+                });
+                console.log(`📧 Rejection email sent to personal email: ${personalEmail}`);
+            } catch (emailError) {
+                console.error('Failed to send rejection email:', emailError.message);
+                // Don't fail the request if email fails
+            }
         }
 
         // Audit Log

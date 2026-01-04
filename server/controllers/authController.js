@@ -263,8 +263,11 @@ exports.signup = async (req, res) => {
         subject: "Verify your email",
         html: `Click here to verify: <a href="${verifyUrl}">${verifyUrl}</a>`
       });
-      console.log(`✅ Verification email sent to ${email}`);
+      console.log(`✅ Verification email sent successfully to ${email}`);
     } catch (emailError) {
+      // Log the actual error
+      console.error("❌ SMTP Error:", emailError.message);
+
       // If SMTP not configured, log the link to console (for development)
       console.log("\n" + "=".repeat(80));
       console.log("📧 EMAIL VERIFICATION LINK (SMTP not configured)");

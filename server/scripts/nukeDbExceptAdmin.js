@@ -51,6 +51,35 @@ const nukeDbExceptAdmin = async () => {
             }
         }
 
+        // Ensure default Chttrix Admin exists
+        console.log('\n🔐 Checking for default Chttrix Admin...');
+        const User = require('../models/User');
+        const bcrypt = require('bcryptjs');
+
+        const defaultAdminEmail = 'chttrix-admin@chttrix.com';
+        let admin = await User.findOne({ email: defaultAdminEmail });
+
+        if (!admin) {
+            console.log('⚡ Creating default Chttrix Admin...');
+            const passwordHash = await bcrypt.hash('xm4kcjwf89', 12);
+            admin = new User({
+                username: 'Chttrix Admin',
+                email: defaultAdminEmail,
+                passwordHash,
+                userType: 'personal',
+                roles: ['user', 'chttrix_admin'],
+                verified: true,
+                accountStatus: 'active',
+                companyId: null
+            });
+            await admin.save();
+            console.log('✅ Default Chttrix Admin created!');
+            console.log(`   Email: ${defaultAdminEmail}`);
+            console.log(`   Password: xm4kcjwf89`);
+        } else {
+            console.log('✓ Default Chttrix Admin already exists');
+        }
+
         console.log('\n✨ Database nuke complete (Admins preserved)!\n');
         process.exit(0);
     } catch (error) {

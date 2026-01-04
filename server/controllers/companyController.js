@@ -45,21 +45,38 @@ exports.sendOtp = async (req, res) => {
       expires: Date.now() + 5 * 60 * 1000
     });
 
-    // ---------------------------------------------------------
-    // DEVELOPMENT LOGGING
-    // ---------------------------------------------------------
-    console.log("\n============================================");
-    console.log(`🔐 [DEV OTP] Verification Code for ${type} (${target})`);
-    console.log(`👉 CODE: ${otp}`);
-    console.log("============================================\n");
-    // ---------------------------------------------------------
+    // Send OTP based on type
+    try {
+      if (type === 'phone') {
+        // Phone number should already be in E.164 format from frontend
+        // E.g., +919381870544 or +14155552671
+        await sendOTP(target, otp);
+        console.log(`✅ Phone OTP sent to ${target}`);
+      } else if (type === 'email') {
+        // Send via Email
+        await sendEmail({
+          to: target,
+          subject: "Chttrix Verification Code",
+          html: `<p>Your verification code is: <strong>${otp}</strong></p><p>This code will expire in 5 minutes.</p>`
+        });
+        console.log(`✅ Email OTP sent to ${target}`);
+      }
 
-    // In production, you would trigger SMS/Email service here
+      return res.json({
+        message: "OTP sent successfully"
+      });
+    } catch (error) {
+      // If sending fails (e.g., Twilio not configured), log to console as fallback
+      console.log("\n" + "=".repeat(44));
+      console.log(`🔐 [DEV OTP] Verification Code for ${type} (${target})`);
+      console.log(`👉 CODE: ${otp}`);
+      console.log("=".repeat(44) + "\n");
 
-    return res.json({
-      message: "OTP sent successfully",
-      devNote: "Check server terminal for code"
-    });
+      return res.json({
+        message: "OTP sent successfully",
+        devNote: "Check server terminal for code"
+      });
+    }
   } catch (err) {
     console.error("SEND OTP ERROR:", err);
     return res.status(500).json({ message: "Server error" });
@@ -135,8 +152,14 @@ exports.sendPhoneOtp = async (req, res) => {
     company.phoneOTPExpiresAt = Date.now() + 5 * 60 * 1000; // 5 minutes
     await company.save();
 
-    // Send OTP via Twilio (or log in dev mode)
-    await sendOTP(phone, otp);
+    // Format phone number to E.164 format for Twilio
+    let formattedPhone = phone;
+    if (!formattedPhone.startsWith('+')) {
+      formattedPhone = `+91${formattedPhone}`;
+    }
+
+    // Send OTP via Twilio
+    await sendOTP(formattedPhone, otp);
 
     return res.json({
       message: "OTP sent successfully",
@@ -440,7 +463,67 @@ exports.verifyCompany = async (req, res) => {
       adminUser.accountStatus = 'suspended';
       await adminUser.save();
 
-      // TODO: Send rejection email
+      // Send rejection email to personal email
+      try {
+        const personalEmail = adminUser.emails && adminUser.emails.length > 0
+          ? adminUser.emails[0].email
+          : adminUser.email;
+
+        await sendEmail({
+          to: personalEmail,
+          subject: `Company Registration Rejected - ${company.name}`,
+          html: `
+            <!DOCTYPE html>
+            <html>
+            <head>
+              <style>
+                body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
+                .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+                .content { background: #ffffff; padding: 30px; border: 1px solid #e0e0e0; border-top: none; }
+                .footer { background: #f5f5f5; padding: 20px; text-align: center; font-size: 12px; color: #666; border-radius: 0 0 10px 10px; }
+                .reason-box { background: #fff3cd; border-left: 4px solid #ff6b6b; padding: 15px; margin: 20px 0; border-radius: 4px; }
+                .button { display: inline-block; padding: 12px 30px; background: #667eea; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+                h1 { margin: 0; font-size: 28px; }
+                h2 { color: #667eea; margin-top: 0; }
+              </style>
+            </head>
+            <body>
+              <div class="container">
+                <div class="header">
+                  <h1>⚠️ Registration Update</h1>
+                </div>
+                <div class="content">
+                  <h2>Dear ${adminUser.username},</h2>
+                  <p>Thank you for your interest in registering <strong>${company.name}</strong> with Chttrix.</p>
+                  <p>After careful review of your application, we regret to inform you that we are unable to approve your company registration at this time.</p>
+                  
+                  <div class="reason-box">
+                    <strong>Reason:</strong><br/>
+                    ${rejectionReason || "Does not meet our current criteria"}
+                  </div>
+
+                  <p>If you believe this was an error or would like to provide additional information, please contact our support team.</p>
+                  
+                  <p>We appreciate your understanding and hope to work with you in the future.</p>
+                  
+                  <p>Best regards,<br/>
+                  <strong>The Chttrix Team</strong></p>
+                </div>
+                <div class="footer">
+                  © ${new Date().getFullYear()} Chttrix. All rights reserved.<br/>
+                  Need help? Contact us at support@chttrix.com
+                </div>
+              </div>
+            </body>
+            </html>
+          `
+        });
+        console.log(`📧 Rejection email sent to ${personalEmail}`);
+      } catch (emailError) {
+        console.error('Failed to send rejection email:', emailError.message);
+        // Don't fail the request if email fails
+      }
 
       return res.json({ message: "Company rejected", status: "rejected" });
     }
@@ -535,7 +618,87 @@ exports.verifyCompany = async (req, res) => {
       });
       await adminUser.save();
 
-      // TODO: Send activation email
+      // Send activation/approval email to personal email
+      try {
+        const personalEmail = adminUser.emails && adminUser.emails.length > 0
+          ? adminUser.emails[0].email
+          : adminUser.email;
+
+        const loginUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/login`;
+
+        await sendEmail({
+          to: personalEmail,
+          subject: `🎉 Welcome to Chttrix - ${company.name} is Verified!`,
+          html: `
+            <!DOCTYPE html>
+            <html>
+            <head>
+              <style>
+                body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
+                .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+                .content { background: #ffffff; padding: 30px; border: 1px solid #e0e0e0; border-top: none; }
+                .footer { background: #f5f5f5; padding: 20px; text-align: center; font-size: 12px; color: #666; border-radius: 0 0 10px 10px; }
+                .success-box { background: #d4edda; border-left: 4px solid #28a745; padding: 15px; margin: 20px 0; border-radius: 4px; }
+                .credentials { background: #f8f9fa; padding: 15px; margin: 20px 0; border-radius: 4px; border: 1px solid #dee2e6; }
+                .button { display: inline-block; padding: 12px 30px; background: #667eea; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+                h1 { margin: 0; font-size: 28px; }
+                h2 { color: #667eea; margin-top: 0; }
+                code { background: #f4f4f4; padding: 2px 6px; border-radius: 3px; font-family: monospace; }
+              </style>
+            </head>
+            <body>
+              <div class="container">
+                <div class="header">
+                  <h1>🎉 Congratulations!</h1>
+                </div>
+                <div class="content">
+                  <h2>Welcome to Chttrix, ${adminUser.username}!</h2>
+                  
+                  <div class="success-box">
+                    <strong>✅ Your company has been verified!</strong><br/>
+                    <strong>${company.name}</strong> is now active on the Chttrix platform.
+                  </div>
+
+                  <p>Your workspace has been provisioned and is ready to use. You can now access all features of the Chttrix collaboration platform.</p>
+                  
+                  <div class="credentials">
+                    <strong>Login Details:</strong><br/>
+                    <strong>Email:</strong> <code>${adminUser.email}</code><br/>
+                    <strong>Login URL:</strong> <a href="${loginUrl}">${loginUrl}</a>
+                  </div>
+
+                  <p><strong>What's Next?</strong></p>
+                  <ul>
+                    <li>Log in to your account</li>
+                    <li>Explore your workspace and channels</li>
+                    <li>Invite team members to join</li>
+                    <li>Start collaborating!</li>
+                  </ul>
+
+                  <center>
+                    <a href="${loginUrl}" class="button">Access Your Workspace →</a>
+                  </center>
+                  
+                  <p>If you have any questions, our support team is here to help.</p>
+                  
+                  <p>Best regards,<br/>
+                  <strong>The Chttrix Team</strong></p>
+                </div>
+                <div class="footer">
+                  © ${new Date().getFullYear()} Chttrix. All rights reserved.<br/>
+                  Need help? Contact us at support@chttrix.com
+                </div>
+              </div>
+            </body>
+            </html>
+          `
+        });
+        console.log(`📧 Approval/Welcome email sent to ${personalEmail}`);
+      } catch (emailError) {
+        console.error('Failed to send approval email:', emailError.message);
+        // Don't fail the request if email fails
+      }
 
       return res.json({
         message: "Company verified and provisioned successfully",

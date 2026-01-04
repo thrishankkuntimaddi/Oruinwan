@@ -1,13 +1,5 @@
-/**********************************************************
- * Chttrix Backend – Production Safe Server Entry
- **********************************************************/
-
-// Load env FIRST (safe locally, ignored by Railway)
+// server/server.js
 require("dotenv").config();
-
-// --------------------------------------------------------
-// Imports
-// --------------------------------------------------------
 const express = require("express");
 const path = require("path");
 const mongoose = require("mongoose");
@@ -17,84 +9,79 @@ const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
 const http = require("http");
 const { Server } = require("socket.io");
-const jwt = require("jsonwebtoken");
-
 const registerChatHandlers = require("./socket");
 const logger = require("./utils/logger");
 
-// --------------------------------------------------------
-// Debug boot logs (very important for Railway)
-// --------------------------------------------------------
-console.log("🚀 Server file loaded");
-console.log("NODE_ENV:", process.env.NODE_ENV);
-console.log("PORT:", process.env.PORT);
-console.log("MONGO_URI exists:", !!process.env.MONGO_URI);
-
-// --------------------------------------------------------
-// App Init
-// --------------------------------------------------------
+// Initialize app
 const app = express();
+
 app.set("trust proxy", 1);
 
-// --------------------------------------------------------
-// Middleware
-// --------------------------------------------------------
-app.use(express.json({ limit: "50mb" }));
-app.use(express.urlencoded({ limit: "50mb", extended: true }));
+// --- Middlewares ---
+// Increase payload size limit for notes with media (images/videos/audio as base64)
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(cookieParser());
 app.use(helmet());
 
-// --------------------------------------------------------
-// CORS Setup
-// --------------------------------------------------------
-const isProduction = process.env.NODE_ENV === "production";
-
+// CORS - Allow development and production origins
+const isProduction = process.env.NODE_ENV === 'production';
 const allowedOrigins = [
-  "http://localhost:3000",
-  process.env.FRONTEND_URL,
+  'http://localhost:3000',
+  process.env.FRONTEND_URL
 ].filter(Boolean);
 
-// Remove localhost in prod
-if (isProduction) {
-  for (let i = allowedOrigins.length - 1; i >= 0; i--) {
-    if (allowedOrigins[i].includes("localhost")) {
-      allowedOrigins.splice(i, 1);
-    }
+// Remove localhost ONLY if we have a production HTTPS frontend URL
+if (isProduction && process.env.FRONTEND_URL && process.env.FRONTEND_URL.startsWith('https://')) {
+  const index = allowedOrigins.indexOf('http://localhost:3000');
+  if (index > -1) {
+    allowedOrigins.splice(index, 1);
   }
 }
 
 app.use(
   cors({
     origin: (origin, callback) => {
+      // Allow requests with no origin (like mobile apps or curl)
       if (!origin) return callback(null, true);
-      if (allowedOrigins.includes(origin)) return callback(null, true);
-      return callback(new Error("Not allowed by CORS"));
+
+      if (allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
     },
     credentials: true,
   })
 );
 
-// --------------------------------------------------------
-// Rate Limiting (Auth Only)
-// --------------------------------------------------------
-const authLimiter = rateLimit({
-  windowMs: 60 * 1000,
-  max: isProduction ? 20 : 100,
+// Rate limiting (protect auth endpoints)
+// Use stricter limits in production
+const limiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: isProduction ? 20 : 100, // Stricter in production
   standardHeaders: true,
   legacyHeaders: false,
-  skip: (req) =>
-    ["/me", "/refresh", "/users"].includes(req.path),
-  handler: (req, res) =>
+  // Skip rate limiting for frequently-called endpoints
+  skip: (req) => {
+    const path = req.path;
+    // Don't rate limit /me, /refresh, /users (used on every page load)
+    return path === '/me' || path === '/refresh' || path === '/users';
+  },
+  // Return JSON instead of plain text
+  handler: (req, res) => {
     res.status(429).json({
-      message: "Too many requests, try again later",
-    }),
+      message: "Too many requests, please try again later.",
+    });
+  },
 });
+app.use("/api/auth", limiter);
 
-app.use("/api/auth", authLimiter);
+// Serve uploaded files as static files
+app.use(express.static(path.join(__dirname, "../client/build")));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// --------------------------------------------------------
 // Routes
-// --------------------------------------------------------
 app.use("/api/auth", require("./routes/auth"));
 app.use("/api/admin", require("./middleware/auth"), require("./routes/admin"));
 app.use("/api/messages", require("./routes/messages"));
@@ -115,15 +102,9 @@ app.use("/api/audit", require("./routes/audit"));
 app.use("/api/managers", require("./routes/managers"));
 app.use("/api/analytics", require("./routes/analytics"));
 
-// --------------------------------------------------------
-// Static files
-// --------------------------------------------------------
-app.use("/uploads", express.static(path.join(__dirname, "uploads")));
-app.use(express.static(path.join(__dirname, "../client/build")));
-
-// --------------------------------------------------------
-// HTTP + SOCKET.IO
-// --------------------------------------------------------
+// ---------------------------------------------------------
+// SOCKET.IO SETUP
+// ---------------------------------------------------------
 const httpServer = http.createServer(app);
 
 const io = new Server(httpServer, {
@@ -136,34 +117,33 @@ const io = new Server(httpServer, {
 
 app.set("io", io);
 
-// Socket authentication
-io.use((socket, next) => {
+// SOCKET AUTH (using Access Token)
+const jwt = require("jsonwebtoken");
+
+io.use(async (socket, next) => {
   try {
     const token = socket.handshake.auth?.token;
     if (!token) return next(new Error("No token"));
 
-    const decoded = jwt.verify(
-      token,
-      process.env.ACCESS_TOKEN_SECRET
-    );
-
+    const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
     socket.user = { id: decoded.sub };
     next();
   } catch (err) {
-    logger.error("Socket auth error:", err.message);
+    if (err.name !== 'TokenExpiredError') {
+      logger.error("Socket auth error:", err.message);
+    }
     next(new Error("Authentication failed"));
   }
 });
 
-// Socket handlers
 io.on("connection", (socket) => {
   logger.debug("Socket connected:", socket.user.id);
   registerChatHandlers(io, socket);
 });
 
-// --------------------------------------------------------
+// ---------------------------------------------------------
 // START SERVER (ONLY AFTER MONGO CONNECTS)
-// --------------------------------------------------------
+// ---------------------------------------------------------
 const PORT = process.env.PORT || 5000;
 
 mongoose
@@ -172,16 +152,13 @@ mongoose
     logger.success("MongoDB Connected ✔");
 
     httpServer.listen(PORT, () => {
-      logger.success(
-        `Server (Express + Socket.IO) running on port ${PORT}`
-      );
-      logger.info(`Environment: ${process.env.NODE_ENV}`);
-      logger.info(
-        `CORS allowed origins: ${allowedOrigins.join(", ")}`
-      );
+      logger.success(`Server (Express + Socket.IO) running on port ${PORT}`);
+      logger.info(`Environment: ${process.env.NODE_ENV || 'development'}`);
+      logger.info(`CORS allowed origins: ${allowedOrigins.join(', ')}`);
     });
   })
   .catch((err) => {
     logger.error("MongoDB Connection Failed ❌", err);
     process.exit(1);
   });
+

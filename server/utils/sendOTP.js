@@ -8,20 +8,35 @@ const client = twilio(
 );
 
 async function sendOTP(phone, otp) {
+    // Always log attempt (helps with debugging)
+    console.log(`📱 Attempting to send OTP to ${phone}...`);
+
     if (process.env.NODE_ENV !== "production") {
         console.log("📱 OTP (DEV):", phone, otp);
         return;
     }
 
+    // Check if Twilio is configured
+    if (!process.env.TWILIO_ACCOUNT_SID || !process.env.TWILIO_AUTH_TOKEN || !process.env.TWILIO_PHONE_NUMBER) {
+        console.error("❌ Twilio not configured! Missing credentials.");
+        throw new Error("Twilio not configured");
+    }
+
     try {
-        await client.messages.create({
+        const result = await client.messages.create({
             body: `Your Chttrix verification code is ${otp}`,
             from: process.env.TWILIO_PHONE_NUMBER,
             to: phone,
         });
 
+        console.log(`✅ SMS sent successfully! SID: ${result.sid}`);
         logger.success(`OTP sent → ${phone}`);
+        return result;
     } catch (err) {
+        console.error("❌ TWILIO ERROR Details:");
+        console.error("  Message:", err.message);
+        console.error("  Code:", err.code);
+        console.error("  Status:", err.status);
         logger.error("TWILIO ERROR ❌", err);
         throw err;
     }

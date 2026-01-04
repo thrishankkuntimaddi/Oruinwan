@@ -164,24 +164,29 @@ const RegisterCompany = () => {
 
         setIsLoading(true);
         try {
+            // For phone, combine country code with phone number
+            const targetValue = field === 'phone'
+                ? `${formData.phoneCode}${target}`
+                : target;
+
             // 1. Send OTP
             await axios.post(`${process.env.REACT_APP_BACKEND_URL}/api/companies/otp/send`, {
-                target,
+                target: targetValue,
                 type: field === 'personalEmail' ? 'email' : 'phone'
             });
 
             setVerificationStatus(prev => ({ ...prev, [field]: "pending" }));
-            showToast(`OTP sent to ${target}. Check server logs.`, "success"); // Helpful for dev
+            showToast(`OTP sent to ${targetValue}. Check server logs.`, "success"); // Helpful for dev
 
             // 2. Prompt for OTP
             setTimeout(async () => {
-                const otp = window.prompt(`Enter OTP sent to ${target}`);
+                const otp = window.prompt(`Enter OTP sent to ${targetValue}`);
 
                 if (otp) {
                     try {
                         // 3. Verify OTP
                         await axios.post(`${process.env.REACT_APP_BACKEND_URL}/api/companies/otp/verify`, {
-                            target,
+                            target: targetValue,
                             otp
                         });
 
