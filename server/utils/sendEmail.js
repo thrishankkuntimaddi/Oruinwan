@@ -1,40 +1,45 @@
 // server/utils/sendEmail.js
-const nodemailer = require('nodemailer');
+const axios = require("axios");
 
 async function sendEmail({ to, subject, text, html }) {
-  if (!process.env.SMTP_HOST) {
-    // Throw error so calling code can handle and log invitation links
-    throw new Error('SMTP not configured');
+  // Development mode - just log
+  if (process.env.NODE_ENV !== "production") {
+    console.log("📧 DEV EMAIL:", { to, subject });
+    return { dev: true };
+  }
+
+  // Check if Brevo API key is configured
+  if (!process.env.BREVO_API_KEY) {
+    console.error("❌ BREVO_API_KEY not configured");
+    throw new Error("BREVO_API_KEY not configured");
   }
 
   try {
-    const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: parseInt(process.env.SMTP_PORT || '587', 10),
-      secure: process.env.SMTP_SECURE === 'true', // true for 465, false for other ports
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS
+    const response = await axios.post(
+      "https://api.brevo.com/v3/smtp/email",
+      {
+        sender: {
+          name: "Chttrix",
+          email: process.env.EMAIL_FROM || "no-reply@chttrix.com",
+        },
+        to: [{ email: to }],
+        subject,
+        htmlContent: html || text,
+      },
+      {
+        headers: {
+          "api-key": process.env.BREVO_API_KEY,
+          "Content-Type": "application/json",
+        },
+        timeout: 5000, // Prevent hanging
       }
-    });
+    );
 
-    const result = await transporter.sendMail({
-      from: process.env.EMAIL_FROM,
-      to,
-      subject,
-      text,
-      html
-    });
-
-    console.log(`📧 Email sent successfully: ${result.messageId}`);
-    return result;
+    console.log(`📧 Email sent successfully to ${to} (ID: ${response.data.messageId})`);
+    return response.data;
   } catch (error) {
-    console.error('❌ SMTP Send Error:', {
-      message: error.message,
-      code: error.code,
-      command: error.command
-    });
-    throw error;
+    console.error("❌ Brevo API Error:", error.response?.data || error.message);
+    throw new Error(`Brevo email failed: ${error.response?.data?.message || error.message}`);
   }
 }
 
