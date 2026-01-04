@@ -24,42 +24,17 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(cookieParser());
 app.use(helmet());
 
-// CORS - Allow development and production origins
-const isProduction = process.env.NODE_ENV === 'production';
+// CORS - Simple and reliable
 const allowedOrigins = [
   'http://localhost:3000',
-  process.env.FRONTEND_URL
-].filter(Boolean);
+  'https://chttrix.vercel.app'
+];
 
-// Remove localhost ONLY if we have a production HTTPS frontend URL
-if (isProduction && process.env.FRONTEND_URL && process.env.FRONTEND_URL.startsWith('https://')) {
-  const index = allowedOrigins.indexOf('http://localhost:3000');
-  if (index > -1) {
-    allowedOrigins.splice(index, 1);
-  }
-}
+console.log('🌐 CORS allowed origins:', allowedOrigins);
 
 app.use(
   cors({
-    origin: (origin, callback) => {
-      // 🔍 DEBUG: Log CORS check
-      console.log('🔍 CORS Check:', {
-        incomingOrigin: origin,
-        allowedOrigins,
-        matches: allowedOrigins.includes(origin)
-      });
-
-      // Allow requests with no origin (like mobile apps or curl)
-      if (!origin) return callback(null, true);
-
-      if (allowedOrigins.includes(origin)) {
-        console.log('✅ CORS: Origin allowed');
-        callback(null, true);
-      } else {
-        console.log('❌ CORS: Origin rejected');
-        callback(new Error('Not allowed by CORS'));
-      }
-    },
+    origin: allowedOrigins,
     credentials: true,
   })
 );
