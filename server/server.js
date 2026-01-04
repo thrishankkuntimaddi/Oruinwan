@@ -42,12 +42,21 @@ if (isProduction && process.env.FRONTEND_URL && process.env.FRONTEND_URL.startsW
 app.use(
   cors({
     origin: (origin, callback) => {
+      // 🔍 DEBUG: Log CORS check
+      console.log('🔍 CORS Check:', {
+        incomingOrigin: origin,
+        allowedOrigins,
+        matches: allowedOrigins.includes(origin)
+      });
+
       // Allow requests with no origin (like mobile apps or curl)
       if (!origin) return callback(null, true);
 
       if (allowedOrigins.includes(origin)) {
+        console.log('✅ CORS: Origin allowed');
         callback(null, true);
       } else {
+        console.log('❌ CORS: Origin rejected');
         callback(new Error('Not allowed by CORS'));
       }
     },
