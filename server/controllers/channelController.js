@@ -2,6 +2,7 @@
 const Channel = require("../models/Channel");
 const User = require("../models/User");
 const Message = require("../models/Message");
+const { saveWithRetry } = require("../utils/mongooseRetry");
 
 /**
  * Create channel (public or private).
@@ -179,7 +180,7 @@ exports.inviteToChannel = async (req, res) => {
 
     }
 
-    await channel.save();
+    await saveWithRetry(channel);
 
     // optional: emit socket event to channel room or to invitee
     const io = req.app?.get("io");
@@ -218,7 +219,7 @@ exports.removeChannelMember = async (req, res) => {
     }
 
     channel.members = channel.members.filter((m) => String(m) !== String(victimId));
-    await channel.save();
+    await saveWithRetry(channel);
 
     const io = req.app?.get("io");
     if (io) {
@@ -267,7 +268,7 @@ exports.joinChannel = async (req, res) => {
         user: userId,
         joinedAt: new Date()
       });
-      await channel.save();
+      await saveWithRetry(channel);
     }
 
     // optional socket: join user to room on server side handled by socket connection when client emits join-channel
@@ -306,7 +307,7 @@ exports.updateChannel = async (req, res) => {
     if (description !== undefined) channel.description = description;
     if (isPrivate !== undefined) channel.isPrivate = !!isPrivate;
 
-    await channel.save();
+    await saveWithRetry(channel);
 
     const payload = { channelId: channel._id, name: channel.name, description: channel.description, isPrivate: channel.isPrivate };
     const io = req.app?.get("io");
@@ -429,7 +430,7 @@ exports.exitChannel = async (req, res) => {
       });
     }
 
-    await channel.save();
+    await saveWithRetry(channel);
 
     // Create system message
     const systemMessage = await Message.create({
@@ -515,7 +516,7 @@ exports.assignAdmin = async (req, res) => {
 
     // Add to admins
     channel.admins.push(targetUserId);
-    await channel.save();
+    await saveWithRetry(channel);
 
     // Get usernames for system message
     const [requesterUser, targetUser] = await Promise.all([
@@ -713,7 +714,7 @@ exports.updateChannelInfo = async (req, res) => {
       channel.description = description;
     }
 
-    await channel.save();
+    await saveWithRetry(channel);
 
     // Create system message if changed
     if (name && name !== oldName) {
@@ -799,7 +800,7 @@ exports.demoteAdmin = async (req, res) => {
 
     // Remove from admins
     channel.admins = channel.admins.filter(adminId => adminId.toString() !== targetUserId.toString());
-    await channel.save();
+    await saveWithRetry(channel);
 
     // Get usernames for system message
     const [requesterUser, targetUser] = await Promise.all([
@@ -904,7 +905,7 @@ exports.removeMember = async (req, res) => {
     // Also remove from admins if they were admin
     channel.admins = channel.admins.filter(adminId => adminId.toString() !== targetUserId.toString());
 
-    await channel.save();
+    await saveWithRetry(channel);
 
     // Get remover username
     const removerUser = await User.findById(userId).select('username');
@@ -987,7 +988,7 @@ exports.toggleChannelPrivacy = async (req, res) => {
 
     const oldPrivacy = channel.isPrivate;
     channel.isPrivate = isPrivate;
-    await channel.save();
+    await saveWithRetry(channel);
 
     // Create system message
     const user = await User.findById(userId).select('username');
@@ -1145,7 +1146,7 @@ exports.joinChannelViaLink = async (req, res) => {
 
     }
 
-    await channel.save();
+    await saveWithRetry(channel);
 
     // 5. Emit socket event
     const io = req.app.get("io");
@@ -1209,7 +1210,7 @@ exports.addTab = async (req, res) => {
     };
 
     channel.tabs.push(newTab);
-    await channel.save();
+    await saveWithRetry(channel);
 
     // The newly created tab will have an _id assigned by Mongoose
     const createdTab = channel.tabs[channel.tabs.length - 1];
@@ -1259,7 +1260,7 @@ exports.updateTab = async (req, res) => {
     if (name) tab.name = name;
     if (content !== undefined) tab.content = content;
 
-    await channel.save();
+    await saveWithRetry(channel);
 
     const io = req.app?.get("io");
     if (io) {
@@ -1304,7 +1305,7 @@ exports.deleteTab = async (req, res) => {
     }
 
     channel.tabs.pull(tabId);
-    await channel.save();
+    await saveWithRetry(channel);
 
     const io = req.app?.get("io");
     if (io) {

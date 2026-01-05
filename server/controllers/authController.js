@@ -8,6 +8,11 @@ const sendEmail = require("../utils/sendEmail");
 const { OAuth2Client } = require("google-auth-library");
 const axios = require("axios");
 
+// Production hardening utilities
+const { saveWithRetry } = require("../utils/mongooseRetry");
+const { setRefreshTokenCookie, clearRefreshTokenCookie } = require("../utils/cookieHelper");
+const { TIME } = require("../constants");
+
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 // ----------------------------------------------------
@@ -185,7 +190,7 @@ exports.signup = async (req, res) => {
       reportsTo: assignedManager
     });
 
-    await user.save();
+    await saveWithRetry(user);
 
     // ==================== WORKSPACE ASSIGNMENT ====================
 
@@ -242,7 +247,7 @@ exports.signup = async (req, res) => {
         }
       }
 
-      await user.save();
+      await saveWithRetry(user);
     }
 
     // NOTE: Removed automatic personal workspace creation
@@ -326,7 +331,7 @@ exports.verifyEmail = async (req, res) => {
     user.verificationTokenHash = undefined;
     user.verificationTokenExpires = undefined;
 
-    await user.save();
+    await saveWithRetry(user);
 
     console.log(`✅ [VERIFY EMAIL] Email verified successfully for ${user.email}`);
 
@@ -471,7 +476,7 @@ exports.login = async (req, res) => {
 
     while (attempts < MAX_RETRIES && !saved) {
       try {
-        await user.save();
+        await saveWithRetry(user);
         saved = true;
       } catch (err) {
         if (err.name === 'VersionError' && attempts < MAX_RETRIES - 1) {
@@ -499,13 +504,8 @@ exports.login = async (req, res) => {
       }
     }
 
-    res.cookie("jwt", refreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-      path: '/',
-      maxAge: REFRESH_DAYS * 86400000,
-    });
+    // Set refresh token cookie
+    setRefreshTokenCookie(res, refreshToken);
 
     // Prepare response based on user type
     const response = {
@@ -649,15 +649,8 @@ exports.refresh = async (req, res) => {
         t => t.expiresAt > new Date()
       );
 
-      await user.save();
-
-      res.cookie("jwt", newRefresh, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-        path: '/',
-        maxAge: REFRESH_DAYS * 86400000
-      });
+      // Set new refresh token cookie
+      setRefreshTokenCookie(res, newRefresh);
 
       return res.json({ accessToken: newAccess });
 
@@ -691,7 +684,7 @@ exports.logout = async (req, res) => {
 
     if (user) {
       user.refreshTokens = user.refreshTokens.filter(t => t.tokenHash !== hash);
-      await user.save();
+      await saveWithRetry(user);
     }
 
     res.clearCookie("jwt");
@@ -750,7 +743,7 @@ exports.forgotPassword = async (req, res) => {
 
     user.resetPasswordTokenHash = hash;
     user.resetPasswordExpires = Date.now() + 3600000;
-    await user.save();
+    await saveWithRetry(user);
 
     const url = `${process.env.FRONTEND_URL}/reset-password?token=${raw}&email=${encodeURIComponent(email)}`;
 
@@ -800,7 +793,7 @@ exports.resetPassword = async (req, res) => {
     user.resetPasswordExpires = undefined;
     user.refreshTokens = [];
 
-    await user.save();
+    await saveWithRetry(user);
 
     return res.json({ message: "Password reset successful" });
 
@@ -827,7 +820,7 @@ exports.getMe = async (req, res) => {
         isPrimary: true,
         addedAt: user.createdAt || new Date()
       }];
-      await user.save();
+      await saveWithRetry(user);
     } else {
       // Check if primary email exists in array
       const primaryExists = user.emails.some(e => e.isPrimary);
@@ -836,7 +829,7 @@ exports.getMe = async (req, res) => {
         const mainEmailEntry = user.emails.find(e => e.email === user.email);
         if (mainEmailEntry) {
           mainEmailEntry.isPrimary = true;
-          await user.save();
+          await saveWithRetry(user);
         } else {
           // Add main email as primary
           user.emails.unshift({
@@ -845,7 +838,7 @@ exports.getMe = async (req, res) => {
             isPrimary: true,
             addedAt: user.createdAt || new Date()
           });
-          await user.save();
+          await saveWithRetry(user);
         }
       }
     }
@@ -893,7 +886,7 @@ exports.getMe = async (req, res) => {
         // Update user in database with split format
         user.phoneCode = extractedCode;
         user.phone = extractedPhone;
-        await user.save();
+        await saveWithRetry(user);
 
         // Update the response object
         userObject.phoneCode = extractedCode;
@@ -925,7 +918,7 @@ exports.getMe = async (req, res) => {
       // Update user in database
       user.phoneCode = extractedCode;
       user.phone = extractedPhone;
-      await user.save();
+      await saveWithRetry(user);
 
       // Update response object
       userObject.phoneCode = extractedCode;
@@ -1008,7 +1001,7 @@ exports.updateMe = async (req, res) => {
       }
     }
 
-    await user.save();
+    await saveWithRetry(user);
 
     return res.json({
       message: "Profile updated",
@@ -1073,7 +1066,7 @@ exports.updatePassword = async (req, res) => {
       return res.status(400).json({ message: "Weak password" });
 
     user.passwordHash = await bcrypt.hash(newPassword, 12);
-    await user.save();
+    await saveWithRetry(user);
 
     return res.json({ message: "Password updated" });
 
@@ -1141,16 +1134,10 @@ exports.googleLogin = async (req, res) => {
       expiresAt: new Date(Date.now() + 7 * 86400000),
     });
 
-    await user.save();
+    await saveWithRetry(user);
 
-    // COOKIE
-    res.cookie("jwt", refreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-      path: '/',
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
+    // Set refresh token cookie
+    setRefreshTokenCookie(res, refreshToken);
 
     return res.json({
       message: "Google login success",
@@ -1214,7 +1201,7 @@ exports.getSessions = async (req, res) => {
 
       user.refreshTokens = uniqueTokens;
       user.markModified('refreshTokens'); // Explicitly mark as modified
-      await user.save();
+      await saveWithRetry(user);
     }
     // ---------------------------------------------------------
 
@@ -1281,7 +1268,7 @@ exports.revokeSession = async (req, res) => {
     // This endpoint is for revoking *other* sessions usually
 
     user.refreshTokens.pull({ _id: sessionId });
-    await user.save();
+    await saveWithRetry(user);
 
     res.json({ message: "Session revoked" });
   } catch (err) {
@@ -1313,7 +1300,7 @@ exports.revokeOtherSessions = async (req, res) => {
     }
 
     user.markModified('refreshTokens');
-    await user.save();
+    await saveWithRetry(user);
 
     res.json({ message: "All other sessions revoked" });
   } catch (err) {
@@ -1384,7 +1371,7 @@ exports.addEmail = async (req, res) => {
       verificationTokenExpires: expiresAt
     });
 
-    await user.save();
+    await saveWithRetry(user);
 
     // Send verification email
     let devCode = null;
@@ -1473,7 +1460,7 @@ exports.verifyEmailCode = async (req, res) => {
     emailEntry.verificationTokenHash = undefined;
     emailEntry.verificationTokenExpires = undefined;
 
-    await user.save();
+    await saveWithRetry(user);
 
     res.json({
       message: "Email verified successfully",
@@ -1517,7 +1504,7 @@ exports.resendVerification = async (req, res) => {
     emailEntry.verificationTokenHash = tokenHash;
     emailEntry.verificationTokenExpires = expiresAt;
 
-    await user.save();
+    await saveWithRetry(user);
 
     // Development Log (Always show code in console)
     console.log("\n" + "=".repeat(80));
@@ -1582,7 +1569,7 @@ exports.setPrimaryEmail = async (req, res) => {
     // Update main email field
     user.email = emailEntry.email;
 
-    await user.save();
+    await saveWithRetry(user);
 
     res.json({
       message: "Primary email updated",
@@ -1626,7 +1613,7 @@ exports.deleteEmail = async (req, res) => {
 
     // Remove email
     user.emails.pull(id);
-    await user.save();
+    await saveWithRetry(user);
 
     res.json({
       message: "Email deleted",

@@ -1,5 +1,31 @@
 // server/server.js
+// CRITICAL: Validate environment variables FIRST before loading anything else
 require("dotenv").config();
+
+// Validate required environment variables
+const requiredEnvVars = [
+  'MONGO_URI',
+  'ACCESS_TOKEN_SECRET',
+  'REFRESH_TOKEN_SECRET',
+  'FRONTEND_URL',
+  'GOOGLE_CLIENT_ID'
+];
+
+console.log('🔍 Validating environment variables...');
+const missing = requiredEnvVars.filter(varName => !process.env[varName]);
+
+if (missing.length > 0) {
+  console.error('❌ FATAL: Missing required environment variables:');
+  missing.forEach(varName => console.error(`   - ${varName}`));
+  console.error('\n💡 Check your .env file or Railway environment settings');
+  console.error('   Required variables:', requiredEnvVars.join(', '));
+  process.exit(1);
+}
+
+console.log('✅ All required environment variables present');
+console.log(`📦 Environment: ${process.env.NODE_ENV || 'development'}`);
+
+// Now safe to load modules
 const express = require("express");
 const path = require("path");
 const mongoose = require("mongoose");
@@ -52,6 +78,12 @@ app.use(
     credentials: true,
   })
 );
+
+// Input sanitization - CRITICAL SECURITY
+// Prevents MongoDB injection attacks by removing $ operators
+const { sanitizeInput } = require('./middleware/validate');
+app.use(sanitizeInput);
+console.log('🛡️ Input sanitization enabled');
 
 // Rate limiting (protect auth endpoints)
 // Use stricter limits in production
@@ -175,6 +207,52 @@ io.use(async (socket, next) => {
 io.on("connection", (socket) => {
   logger.debug("Socket connected:", socket.user.id);
   registerChatHandlers(io, socket);
+});
+
+// ---------------------------------------------------------
+// ERROR HANDLERS (MUST BE AFTER ALL ROUTES)
+// ---------------------------------------------------------
+
+// 404 Handler - catch routes that don't exist
+app.use((req, res) => {
+  res.status(404).json({
+    error: 'Not Found',
+    message: `Cannot ${req.method} ${req.path}`,
+    suggestion: 'Check the API documentation for available endpoints'
+  });
+});
+
+// Global Error Handler - catches all unhandled errors
+app.use((err, req, res, next) => {
+  // Log error with context for debugging
+  logger.error('Global error handler:', {
+    error: err.message,
+    stack: err.stack,
+    path: req.path,
+    method: req.method,
+    user: req.user?.sub,
+    body: req.body,
+    timestamp: new Date().toISOString()
+  });
+
+  // Determine status code
+  const statusCode = err.statusCode || err.status || 500;
+
+  // Construct error response
+  const errorResponse = {
+    error: statusCode === 500 ? 'Internal Server Error' : (err.name || 'Error'),
+    message: isProduction && statusCode === 500
+      ? 'An unexpected error occurred. Please try again later.'
+      : err.message
+  };
+
+  // Add stack trace in development only
+  if (!isProduction) {
+    errorResponse.stack = err.stack;
+    errorResponse.details = err;
+  }
+
+  res.status(statusCode).json(errorResponse);
 });
 
 // ---------------------------------------------------------
