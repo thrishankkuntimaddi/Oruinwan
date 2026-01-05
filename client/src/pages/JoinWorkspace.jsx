@@ -4,8 +4,6 @@ import { useAuth } from "../contexts/AuthContext";
 import { Users, CheckCircle, AlertCircle, Loader } from "lucide-react";
 import api from "../services/api";
 
-const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:5000";
-
 const JoinWorkspace = () => {
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
@@ -27,18 +25,12 @@ const JoinWorkspace = () => {
         // Fetch workspace details
         const fetchDetails = async () => {
             try {
-                const response = await fetch(`${API_BASE}/api/workspaces/invite/${token}`);
-
-                if (!response.ok) {
-                    const error = await response.json();
-                    throw new Error(error.message || "Invalid invitation");
-                }
-
-                const data = await response.json();
+                const response = await api.get(`/api/workspaces/invite/${token}`);
+                const data = response.data;
                 setWorkspaceDetails(data);
                 setLoading(false);
             } catch (err) {
-                setError(err.message);
+                setError(err.response?.data?.message || err.message || "Failed to fetch");
                 setLoading(false);
             }
         };
