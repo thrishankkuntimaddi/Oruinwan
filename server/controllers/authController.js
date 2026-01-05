@@ -464,12 +464,45 @@ exports.login = async (req, res) => {
     user.lastLoginAt = new Date();
     user.isOnline = true;
 
-    await user.save();
+    // Save with retry logic to handle concurrent login attempts (VersionError)
+    const MAX_RETRIES = 3;
+    let attempts = 0;
+    let saved = false;
+
+    while (attempts < MAX_RETRIES && !saved) {
+      try {
+        await user.save();
+        saved = true;
+      } catch (err) {
+        if (err.name === 'VersionError' && attempts < MAX_RETRIES - 1) {
+          attempts++;
+          console.warn(`⚠️  Login VersionError for ${email} (attempt ${attempts}/${MAX_RETRIES}), retrying...`);
+          // Exponential backoff: 50ms, 100ms, 150ms
+          await new Promise(resolve => setTimeout(resolve, 50 * attempts));
+
+          // Reload user document to get latest version
+          const freshUser = await User.findById(user._id);
+          if (!freshUser) {
+            throw new Error('User document not found during retry');
+          }
+
+          // Re-apply changes to fresh document
+          freshUser.refreshTokens = user.refreshTokens;
+          freshUser.lastLoginAt = user.lastLoginAt;
+          freshUser.isOnline = user.isOnline;
+          user = freshUser;
+
+          continue;
+        }
+        // Non-version error or max retries exhausted
+        throw err;
+      }
+    }
 
     res.cookie("jwt", refreshToken, {
       httpOnly: true,
-      secure: false,
-      sameSite: "lax",
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
       maxAge: REFRESH_DAYS * 86400000,
     });
 
@@ -601,8 +634,8 @@ exports.refresh = async (req, res) => {
 
       res.cookie("jwt", newRefresh, {
         httpOnly: true,
-        secure: false,
-        sameSite: "lax",
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
         maxAge: REFRESH_DAYS * 86400000
       });
 
@@ -1093,8 +1126,8 @@ exports.googleLogin = async (req, res) => {
     // COOKIE
     res.cookie("jwt", refreshToken, {
       httpOnly: true,
-      secure: false,
-      sameSite: "lax",
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
