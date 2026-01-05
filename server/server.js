@@ -17,6 +17,19 @@ const app = express();
 
 app.set("trust proxy", 1);
 
+// Force HTTPS in production (for Railway proxy)
+// This ensures sameSite:'none' cookies work properly
+if (process.env.NODE_ENV === 'production') {
+  app.use((req, res, next) => {
+    // Check if request came through as HTTP (from proxy perspective)
+    if (req.headers['x-forwarded-proto'] !== 'https') {
+      console.log('⚠️ HTTP request detected, redirecting to HTTPS');
+      return res.redirect(301, `https://${req.headers.host}${req.url}`);
+    }
+    next();
+  });
+}
+
 // --- Middlewares ---
 // Increase payload size limit for notes with media (images/videos/audio as base64)
 app.use(express.json({ limit: '50mb' }));
