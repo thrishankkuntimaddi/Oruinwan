@@ -5,7 +5,7 @@ import { Trash2, UserPlus, Users, Lock, Unlock, X, AlertTriangle, Eraser, Info }
 import { useToast } from "../../contexts/ToastContext";
 import ConfirmationModal from "../common/ConfirmationModal";
 
-const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:5000";
+const API_BASE = process.env.REACT_APP_BACKEND_URL || "http://localhost:5000";
 
 export default function ChannelManagementModal({ channel, onClose, currentUserId, initialTab = "members" }) {
     const { workspaceId } = useParams();

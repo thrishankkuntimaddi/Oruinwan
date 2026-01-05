@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import { useToast } from "../../contexts/ToastContext";
 
-const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:5000";
+const API_BASE = process.env.REACT_APP_BACKEND_URL || "http://localhost:5000";
 
 export default function JoinChannelModal({ onClose, onJoined, currentUserId }) {
     const { showToast } = useToast();

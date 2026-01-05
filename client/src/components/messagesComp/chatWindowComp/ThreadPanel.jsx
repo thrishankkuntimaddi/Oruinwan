@@ -4,7 +4,7 @@ import { formatTime as fmtTime } from "./helpers/helpers";
 import { useToast } from "../../../contexts/ToastContext";
 import { Bold, Italic, Link, List, Smile, Send, X, Paperclip } from "lucide-react";
 
-const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:5000";
+const API_BASE = process.env.REACT_APP_BACKEND_URL || "http://localhost:5000";
 
 export default function ThreadPanel({ parentMessage, onClose, socket, currentUserId }) {
     const { showToast } = useToast();

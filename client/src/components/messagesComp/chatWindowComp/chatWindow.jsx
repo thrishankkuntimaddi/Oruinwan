@@ -27,7 +27,7 @@ import api from "../../../services/api";
 import { jwtDecode } from "jwt-decode";
 import { useAuth } from "../../../contexts/AuthContext";
 
-const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:5000";
+const API_BASE = process.env.REACT_APP_BACKEND_URL || "http://localhost:5000";
 
 export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat }) {
   const [userRole, setUserRole] = useState(null); // 'owner', 'admin', 'member', etc.

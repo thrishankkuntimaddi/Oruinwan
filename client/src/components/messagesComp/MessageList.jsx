@@ -7,7 +7,7 @@ import JoinChannelModal from "./JoinChannelModal";
 import NewDMModal from "./NewDMModal";
 
 
-const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:5000";
+const API_BASE = process.env.REACT_APP_BACKEND_URL || "http://localhost:5000";
 
 const Tabs = ["All", "Direct Messages", "Channels"];
 
@@ -342,14 +342,14 @@ export default function MessageList({ onSelectChat }) {
       )}
 
       {showNewChat && (
-  <NewDMModal 
-    onClose={() => setShowNewChat(false)} 
-    onStart={(user) => {
-      onSelectChat({ type: "dm", id: user._id, name: user.username });
-      setShowNewChat(false);
-    }}
-  />
-)}
+        <NewDMModal
+          onClose={() => setShowNewChat(false)}
+          onStart={(user) => {
+            onSelectChat({ type: "dm", id: user._id, name: user.username });
+            setShowNewChat(false);
+          }}
+        />
+      )}
 
 
       {showJoin && (
