@@ -122,7 +122,7 @@ const FeatureShowcase = () => {
             </nav>
 
             {/* Hero Section - Split Layout */}
-            <header className="relative pt-32 pb-20 md:pt-48 md:pb-32 overflow-hidden hero-gradient">
+            <header className="relative pt-24 pb-16 md:pt-32 md:pb-24 overflow-hidden hero-gradient">
                 <div className="container mx-auto px-6 relative z-10">
                     <div className="flex flex-col-reverse lg:flex-row items-center gap-12 lg:gap-20">
 
