@@ -499,7 +499,7 @@ const ChttrixDocs = () => {
             </section>
 
             <footer className="mt-16 pt-12 border-t border-slate-200 dark:border-white/5 text-center text-slate-500 dark:text-slate-600 text-sm">
-              <p>© 2025 Chttrix Inc. Documentation v2.1</p>
+              <p>© 2026 Chttrix Inc. Documentation v2.1</p>
             </footer>
           </div>
         </div>

@@ -66,6 +66,14 @@ const LoginForm = ({ onSwitch, initialEmail = "" }) => {
         return;
       }
 
+      // 1. Check for Pending Verification
+      console.log("🔍 Checking companyStatus:", response?.user?.companyStatus);
+      if (response?.user?.companyStatus === 'pending' || response?.user?.companyStatus === 'pending_verification') {
+        console.log("✅ Redirecting to pending verification page");
+        navigate("/pending-verification");
+        return;
+      }
+
       // Determine redirect based on company status
       const hasCompany = response?.user?.companyId;
       const isAdmin = response?.isAdmin ||

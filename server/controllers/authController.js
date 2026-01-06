@@ -415,17 +415,9 @@ exports.login = async (req, res) => {
     }
 
 
-    // Check for Account Status (e.g., Pending Company Verification)
-    if (user.accountStatus === 'pending_company') {
-      const company = user.companyId ? await require("../models/Company").findById(user.companyId) : null;
-      if (company && company.verificationStatus === 'rejected') {
-        return res.status(403).json({
-          message: `Registration Rejected: ${company.rejectionReason || "Contact Support"}`
-        });
-      }
-      return res.status(403).json({ message: "Verification Pending. You will receive an email once approved." });
-    }
-
+    // Check for Account Status - SUSPENDED only  
+    // Note: We allow pending_company users to login so they can see the pending verification page
+    // The redirect logic below will handle sending them to the right place
     if (user.accountStatus === 'suspended') {
       return res.status(403).json({ message: "Account Suspended." });
     }
@@ -548,10 +540,13 @@ exports.login = async (req, res) => {
       const isAdmin = user.companyRole === "owner" || user.companyRole === "admin";
       response.isAdmin = isAdmin;
 
+      // Add companyStatus to user object for frontend redirects
+      response.user.companyStatus = fullCompany ? fullCompany.verificationStatus : 'pending';
+
       // Check verification status first
       if (fullCompany && fullCompany.verificationStatus === 'pending') {
-        // Redirect to application review page for pending companies
-        response.redirectTo = "/application-review";
+        // CRITICAL SECURITY FIX: Redirect pending users to verification page
+        response.redirectTo = "/pending-verification";
       } else if (fullCompany && fullCompany.verificationStatus === 'rejected') {
         // Already handled above with 403 error, but add redirect as fallback
         response.redirectTo = "/application-rejected";

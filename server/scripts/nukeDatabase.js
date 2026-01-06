@@ -25,7 +25,7 @@ const nukeDatabase = async () => {
         });
         console.log(`Connected to MongoDB: ${conn.connection.host}`);
 
-        const adminEmail = "thrishank@ch.com";
+        const adminEmail = "chttrix-admin@chttrix.com";
         const adminUser = await User.findOne({ email: adminEmail });
 
         if (!adminUser) {

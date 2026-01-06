@@ -140,6 +140,11 @@ const RegisterCompany = () => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
         if (errors[name]) setErrors(prev => ({ ...prev, [name]: "" }));
+
+        // Reset verification status if user changes verified email/phone
+        if ((name === 'personalEmail' || name === 'phone') && verificationStatus[name] === 'verified') {
+            setVerificationStatus(prev => ({ ...prev, [name]: "idle" }));
+        }
     };
 
     const handleFileChange = (e) => {
@@ -279,8 +284,8 @@ const RegisterCompany = () => {
             setVerificationStatus(prev => ({ ...prev, [otpModal.field]: "verified" }));
             if (errors[otpModal.field]) setErrors(prev => ({ ...prev, [otpModal.field]: "" }));
 
-            // Close modal
-            setOtpModal({ isOpen: false, target: '', targetType: '', field: '' });
+            // Don't manually close modal here - let OTPModal handle the auto-close after success animation
+            // This prevents double-close race condition
 
             showToast(`${otpModal.targetType === 'email' ? 'Email' : 'Phone'} verified successfully!`, "success");
         } catch (error) {
@@ -302,8 +307,16 @@ const RegisterCompany = () => {
     };
 
     const handleOTPModalClose = () => {
+        // Use functional update to access LATEST verification status
+        // (prevents stale closure issue where function sees old "pending" state after timeout)
+        setVerificationStatus(prev => {
+            const field = otpModal.field;
+            if (field && prev[field] === "pending") {
+                return { ...prev, [field]: "idle" };
+            }
+            return prev;
+        });
         setOtpModal({ isOpen: false, target: '', targetType: '', field: '' });
-        setVerificationStatus(prev => ({ ...prev, [otpModal.field]: "idle" }));
     };
 
 
@@ -360,31 +373,31 @@ const RegisterCompany = () => {
 
     if (isSuccess) {
         return (
-            <div className="h-screen w-full bg-white relative overflow-hidden font-sans flex flex-col items-center justify-center p-4">
+            <div className={`h-screen w-full ${theme === 'dark' ? 'bg-slate-900' : 'bg-white'} relative overflow-hidden font-sans flex flex-col items-center justify-center p-4 transition-colors duration-300`}>
                 <style>{`
                     @keyframes float { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(0, -20px); } }
                     .animate-float { animation: float 10s ease-in-out infinite; }
                 `}</style>
                 <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
-                    <div className="absolute -top-[10%] -left-[10%] w-[60%] h-[60%] rounded-full bg-gradient-to-br from-blue-100/50 via-purple-50/50 to-transparent blur-[100px] animate-float"></div>
+                    <div className={`absolute -top-[10%] -left-[10%] w-[60%] h-[60%] rounded-full ${theme === 'dark' ? 'bg-gradient-to-br from-indigo-900/30 via-purple-900/30 to-transparent' : 'bg-gradient-to-br from-blue-100/50 via-purple-50/50 to-transparent'} blur-[100px] animate-float`}></div>
                 </div>
 
-                <div className="relative z-10 w-full max-w-lg bg-white/70 backdrop-blur-xl rounded-[2rem] shadow-2xl p-10 text-center border border-white/50 animate-fadeIn">
-                    <div className="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-6">
+                <div className={`relative z-10 w-full max-w-lg ${theme === 'dark' ? 'bg-slate-800/70' : 'bg-white/70'} backdrop-blur-xl rounded-[2rem] shadow-2xl p-10 text-center ${theme === 'dark' ? 'border-white/10' : 'border-white/50'} border animate-fadeIn`}>
+                    <div className={`w-20 h-20 ${theme === 'dark' ? 'bg-green-900/50 text-green-400' : 'bg-green-100 text-green-600'} rounded-full flex items-center justify-center mx-auto mb-6`}>
                         <CheckCircle size={40} />
                     </div>
-                    <h1 className="text-3xl font-black text-gray-900 mb-4 tracking-tight">Application Submitted!</h1>
-                    <p className="text-gray-600 mb-8 text-lg leading-relaxed">
+                    <h1 className={`text-3xl font-black ${theme === 'dark' ? 'text-white' : 'text-gray-900'} mb-4 tracking-tight`}>Application Submitted!</h1>
+                    <p className={`${theme === 'dark' ? 'text-gray-300' : 'text-gray-600'} mb-8 text-lg leading-relaxed`}>
                         Your company <strong>{formData.companyName}</strong> has been registered and is currently <strong>Pending Verification</strong>.
                     </p>
-                    <div className="bg-blue-50 text-blue-800 p-4 rounded-xl text-sm mb-8 text-left">
+                    <div className={`${theme === 'dark' ? 'bg-blue-900/30 text-blue-300 border border-blue-800/50' : 'bg-blue-50 text-blue-800'} p-4 rounded-xl text-sm mb-8 text-left`}>
                         <p className="font-bold mb-1 flex items-center gap-2"><Sparkles size={16} /> What happens next?</p>
                         <p>Our team will review your documents and domain. You will receive an activation email once your workspace is ready (usually within 24 hours).</p>
                     </div>
 
                     <button
                         onClick={() => navigate("/login")}
-                        className="w-full py-4 bg-gray-900 text-white font-bold rounded-xl shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all"
+                        className={`w-full py-4 ${theme === 'dark' ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-gray-900 hover:bg-gray-800'} text-white font-bold rounded-xl shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all`}
                     >
                         Return to Login
                     </button>

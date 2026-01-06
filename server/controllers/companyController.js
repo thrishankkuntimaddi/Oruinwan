@@ -36,8 +36,8 @@ exports.sendOtp = async (req, res) => {
     const { target, type } = req.body;
     if (!target) return res.status(400).json({ message: "Target is required" });
 
-    // Generate 4-digit OTP
-    const otp = Math.floor(1000 + Math.random() * 9000).toString();
+    // Generate 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
     // Store with 5-minute expiration
     otpStore.set(target, {
@@ -338,6 +338,7 @@ exports.registerCompany = async (req, res) => {
       domainVerified: false,
       documents: processedDocuments, // Save the processed URLs
       billingEmail: adminEmail,
+      ownerPhone: phone, // Store owner phone for admin review
       verificationStatus: "pending", // Enforce pending status
       metadata: {
         // Store the requested configuration for the verification phase
@@ -356,15 +357,22 @@ exports.registerCompany = async (req, res) => {
 
     const adminUser = new User({
       username: adminName,
+      name: adminName, // Add explicit name field for compatibility
       email: adminEmail,
+      personalEmail: personalEmail || adminEmail, // Store personal email explicitly
       passwordHash,
       userType: "company",
       companyId: company._id,
       companyRole: "owner", // Always 'owner' for the creator
       jobTitle: role || "Owner", // Store the self-declared role as Job Title
       phone: phone || undefined,
-      phoneCode: req.body.phoneCode || "+1",
-      emails: personalEmail ? [{ email: personalEmail, isPrimary: false, verified: true }] : [], // Assuming auto-verified since we did OTP
+      phoneCode: req.body.phoneCode || "+91",
+      profile: {
+        name: adminName // Explicitly set profile.name as well
+      },
+      emails: personalEmail && personalEmail !== adminEmail
+        ? [{ email: personalEmail, isPrimary: false, verified: true }]
+        : [], // Only add to emails array if different from main email
       verified: true, // Admin is verified as a user, but their access is blocked by accountStatus
       accountStatus: "pending_company",
       departments: [] // No departments yet

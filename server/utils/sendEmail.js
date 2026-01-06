@@ -2,11 +2,6 @@
 const axios = require("axios");
 
 async function sendEmail({ to, subject, text, html }) {
-  // Development mode - just log
-  if (process.env.NODE_ENV !== "production") {
-    console.log("📧 DEV EMAIL:", { to, subject });
-    return { dev: true };
-  }
 
   // Check if Brevo API key is configured
   if (!process.env.BREVO_API_KEY) {

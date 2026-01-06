@@ -43,6 +43,7 @@ const UserSchema = new mongoose.Schema(
     // Basic Info
     username: { type: String, required: true }, // primary display name
     email: { type: String, required: true, unique: true, lowercase: true },
+    personalEmail: { type: String, lowercase: true }, // Verified personal email from registration
     phone: { type: String, unique: true, sparse: true },
     phoneCode: { type: String, default: "+1" }, // Country code
 

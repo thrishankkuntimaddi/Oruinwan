@@ -43,6 +43,7 @@ import JoinChannel from "./pages/JoinChannel";
 import ChttrixDocs from "./pages/ChttrixDocs"; // NEW Custom Page
 
 import RegisterCompany from "./pages/RegisterCompany";
+import PendingVerification from "./pages/PendingVerification";
 import ApplicationReview from "./pages/ApplicationReview";
 import CompanyConfirmation from "./pages/CompanyConfirmation";
 import CompanySetup from "./pages/CompanySetup";
@@ -71,6 +72,7 @@ import RequireAdmin from "./components/RequireAdmin";
 import RequireChttrixAdmin from "./components/RequireChttrixAdmin";
 import RequireCompanyAdmin from "./components/RequireCompanyAdmin"; // Restored
 import RequireDepartmentManager from "./components/RequireDepartmentManager"; // Restored
+import VerifiedOnlyRoute from "./components/VerifiedOnlyRoute"; // Block pending users
 
 
 function App() {
@@ -101,7 +103,9 @@ function App() {
                             path="/workspaces"
                             element={
                               <RequireAuth>
-                                <WorkspaceSelect />
+                                <VerifiedOnlyRoute>
+                                  <WorkspaceSelect />
+                                </VerifiedOnlyRoute>
                               </RequireAuth>
                             }
                           />
@@ -373,7 +377,8 @@ function App() {
                           {/* PUBLIC ROUTES */}
                           <Route path="/login" element={<LoginPage />} />
                           <Route path="/register-company" element={<RegisterCompany />} />
-                          <Route path="/verify-email" element={<VerifyEmail />} />
+                          <Route path="/pending-verification" element={<PendingVerification />} />
+                          <Route path="/join-workspace" element={<JoinWorkspace />} />
                           <Route path="/forgot-password" element={<ForgotPassword />} />
                           <Route path="/reset-password" element={<ResetPassword />} />
                           <Route path="/oauth-success" element={<OAuthSuccess />} />

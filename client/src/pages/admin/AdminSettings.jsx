@@ -416,7 +416,7 @@ const AdminSettings = () => {
                                         {[1, 2, 3].map((i) => (
                                             <div key={i} className="flex items-center justify-between py-2">
                                                 <div>
-                                                    <p className="text-sm font-medium text-slate-900">Dec {i}, 2025</p>
+                                                    <p className="text-sm font-medium text-slate-900">Dec {i}, 2026</p>
                                                     <p className="text-xs text-slate-500">Pro Plan - Monthly</p>
                                                 </div>
                                                 <div className="flex items-center gap-3">

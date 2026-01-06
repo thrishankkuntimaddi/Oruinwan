@@ -111,7 +111,7 @@ const LoginPage = () => {
         </div>
 
         <div className={`relative z-10 text-xs mt-12 transition-colors duration-500 ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'}`}>
-          © 2025 Chttrix Inc. All rights reserved.
+          © 2026 Chttrix Inc. All rights reserved.
         </div>
       </div>
 

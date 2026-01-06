@@ -11,10 +11,6 @@ async function sendOTP(phone, otp) {
     // Always log attempt (helps with debugging)
     console.log(`📱 Attempting to send OTP to ${phone}...`);
 
-    if (process.env.NODE_ENV !== "production") {
-        console.log("📱 OTP (DEV):", phone, otp);
-        return;
-    }
 
     // Check if Twilio is configured
     if (!process.env.TWILIO_ACCOUNT_SID || !process.env.TWILIO_AUTH_TOKEN || !process.env.TWILIO_PHONE_NUMBER) {
