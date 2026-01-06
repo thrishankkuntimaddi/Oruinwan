@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
-import { ArrowLeft, CheckCircle, Sparkles, Command, Shield } from "lucide-react";
+import { ArrowLeft, CheckCircle, Sparkles, Command, Shield, Moon, Sun } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
 import LoginForm from "../../components/loginpage/LoginForm";
 import SignupForm from "../../components/loginpage/SignupForm";
@@ -14,7 +14,7 @@ const LoginPage = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const { theme } = useTheme(); // Ensure theme consistency
+  const { theme, toggleTheme } = useTheme(); // Ensure theme consistency
 
   // Get message and email from navigation state (from registration)
   const registrationMessage = location.state?.message;
@@ -116,7 +116,17 @@ const LoginPage = () => {
       </div>
 
       {/* RIGHT SIDE - AUTH FORMS */}
-      <div className="w-full lg:w-1/2 flex flex-col items-center justify-center p-6 sm:p-12 relative">
+      <div className="w-full lg:w-1/2 flex flex-col items-center justify-center p-6 sm:p-8 relative">
+
+        {/* Toggle Theme (Top Right) */}
+        <div className="absolute top-6 right-6">
+          <button
+            onClick={toggleTheme}
+            className="p-3 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+          >
+            {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
+          </button>
+        </div>
 
         {/* Mobile Header */}
         <div className="absolute top-6 left-6 lg:hidden">

@@ -205,12 +205,12 @@ const SignupForm = ({ onSwitch }) => {
 
   return (
     <div className="w-full bg-transparent">
-      <div className="mb-8">
+      <div className="mb-4">
         <h2 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight mb-2">Create Account</h2>
         <p className="text-slate-500 dark:text-slate-400">Join our community of innovators today.</p>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-3">
         {/* Username */}
         <div className="space-y-1">
           <label className="block text-sm font-bold text-slate-700 dark:text-slate-300">Username</label>
@@ -424,7 +424,7 @@ const SignupForm = ({ onSwitch }) => {
       </form>
 
       {/* Divider */}
-      <div className="relative my-8">
+      <div className="relative my-4">
         <div className="absolute inset-0 flex items-center">
           <div className="w-full border-t border-slate-200 dark:border-slate-700"></div>
         </div>

@@ -3,14 +3,16 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
     ArrowLeft, ArrowRight, Building, Users, Home, CheckCircle, Globe, Mail, Lock, User, X, Sparkles,
-    Briefcase, FileText, Phone, UploadCloud, ShieldCheck, Eye, EyeOff, Info, ChevronDown
+    Briefcase, FileText, Phone, UploadCloud, ShieldCheck, Eye, EyeOff, Info, ChevronDown, Moon, Sun
 } from "lucide-react";
 import { useToast } from "../contexts/ToastContext";
+import { useTheme } from "../contexts/ThemeContext";
 import axios from "axios";
 
 const RegisterCompany = () => {
     const navigate = useNavigate();
     const { showToast } = useToast();
+    const { theme, toggleTheme } = useTheme();
     const [currentStep, setCurrentStep] = useState(1);
     const [isLoading, setIsLoading] = useState(false);
     const [isSuccess, setIsSuccess] = useState(false);
@@ -302,7 +304,7 @@ const RegisterCompany = () => {
     }
 
     return (
-        <div className="h-screen w-full bg-white relative overflow-hidden font-sans selection:bg-indigo-100 selection:text-indigo-900 flex flex-col">
+        <div className="h-screen w-full bg-white dark:bg-[#030712] relative overflow-hidden font-sans selection:bg-indigo-100 selection:text-indigo-900 flex flex-col transition-colors duration-500">
             {/* Styles & Animations */}
             <style>{`
                 @keyframes float { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(0, -20px); } }
@@ -326,14 +328,20 @@ const RegisterCompany = () => {
 
             {/* Navbar */}
             <nav className="relative z-50 px-6 py-4 flex justify-between items-center max-w-7xl mx-auto w-full shrink-0">
-                <div onClick={() => navigate("/")} className="flex items-center gap-2 cursor-pointer group">
-                    <div className="w-10 h-10 bg-white rounded-xl shadow-sm border border-gray-100 flex items-center justify-center group-hover:rotate-6 transition-transform">
-                        <Building className="w-5 h-5 text-indigo-600" />
-                    </div>
-                    <span className="text-xl font-bold text-gray-900 tracking-tight">Chttrix</span>
+                <div onClick={() => navigate("/")} className="flex items-center gap-3 cursor-pointer group">
+                    <img src="/chttrix-logo.jpg" alt="Logo" className="w-10 h-10 rounded-xl shadow-md group-hover:scale-110 transition-transform duration-300" />
+                    <span className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">Chttrix</span>
                 </div>
-                <div className="text-sm font-medium text-gray-500">
-                    Already have an account? <button onClick={() => navigate("/login")} className="text-indigo-600 hover:text-indigo-700 font-semibold ml-1">Sign in</button>
+                <div className="flex items-center gap-4">
+                    <button
+                        onClick={toggleTheme}
+                        className="p-2 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                    >
+                        {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+                    </button>
+                    <div className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                        Already have an account? <button onClick={() => navigate("/login")} className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 font-semibold ml-1">Sign in</button>
+                    </div>
                 </div>
             </nav>
 
@@ -341,17 +349,18 @@ const RegisterCompany = () => {
             <div className="relative z-10 flex-1 flex flex-col items-center justify-center p-4 md:p-6 overflow-hidden">
 
                 {/* Glass Card */}
-                <div className="w-full max-w-4xl h-full max-h-[85vh] bg-white/70 backdrop-blur-xl rounded-[2.5rem] shadow-2xl shadow-indigo-100/50 border border-white/50 flex flex-col overflow-hidden transition-all duration-500">
+                {/* Glass Card */}
+                <div className="w-full max-w-4xl h-full max-h-[85vh] bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl rounded-[2.5rem] shadow-2xl shadow-indigo-100/50 dark:shadow-none border border-white/50 dark:border-white/10 flex flex-col overflow-hidden transition-all duration-500">
 
                     {/* Card Header */}
-                    <div className="shrink-0 px-8 pt-8 pb-4 border-b border-gray-100/50 bg-white/30">
+                    <div className="shrink-0 px-8 pt-8 pb-4 border-b border-gray-100/50 dark:border-gray-800/50 bg-white/30 dark:bg-slate-900/30">
                         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                             <div>
                                 <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-600 text-[10px] font-bold uppercase tracking-wider mb-2 border border-indigo-100">
                                     <Sparkles size={10} />
                                     <span>Step {currentStep} of 5</span>
                                 </div>
-                                <h1 className="text-2xl font-black text-gray-900 tracking-tight">
+                                <h1 className="text-2xl font-black text-gray-900 dark:text-white tracking-tight">
                                     {currentStep === 1 && "Start Your Organization"}
                                     {currentStep === 2 && "Administrator Profile"}
                                     {currentStep === 3 && "Secure Account"}
@@ -365,7 +374,7 @@ const RegisterCompany = () => {
                                 {[1, 2, 3, 4, 5].map((step) => (
                                     <div
                                         key={step}
-                                        className={`h-2 rounded-full transition-all duration-500 ${currentStep >= step ? "w-8 bg-indigo-600" : "w-2 bg-gray-200"}`}
+                                        className={`h-2 rounded-full transition-all duration-500 ${currentStep >= step ? "w-8 bg-indigo-600" : "w-2 bg-gray-200 dark:bg-gray-700"}`}
                                     />
                                 ))}
                             </div>
@@ -384,7 +393,7 @@ const RegisterCompany = () => {
 
                                 <div className="space-y-4">
                                     <div className="space-y-2">
-                                        <label className="text-sm font-bold text-gray-700 ml-1">Company Name</label>
+                                        <label className="text-sm font-bold text-gray-700 dark:text-gray-300 ml-1">Company Name</label>
                                         <div className="relative group">
                                             <Building className="absolute left-4 top-3.5 text-gray-400 group-focus-within:text-indigo-500 transition-colors" size={20} />
                                             <input
@@ -392,14 +401,14 @@ const RegisterCompany = () => {
                                                 value={formData.companyName}
                                                 onChange={handleChange}
                                                 placeholder="e.g. Acme Innovations Inc."
-                                                className={`w-full pl-12 pr-4 py-3.5 bg-white border ${errors.companyName ? "border-red-300 ring-2 ring-red-50" : "border-gray-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50"} rounded-2xl outline-none transition-all shadow-sm text-gray-900`}
+                                                className={`w-full pl-12 pr-4 py-3.5 bg-white dark:bg-slate-800 border ${errors.companyName ? "border-red-300 ring-2 ring-red-50" : "border-gray-200 dark:border-gray-700 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 dark:focus:ring-indigo-900"} rounded-2xl outline-none transition-all shadow-sm text-gray-900 dark:text-white placeholder:text-gray-400`}
                                             />
                                         </div>
                                         {errors.companyName && <p className="text-red-500 text-xs font-bold ml-2">{errors.companyName}</p>}
                                     </div>
 
                                     <div className="space-y-2">
-                                        <label className="text-sm font-bold text-gray-700 ml-1">Company Domain</label>
+                                        <label className="text-sm font-bold text-gray-700 dark:text-gray-300 ml-1">Company Domain</label>
                                         <div className="relative group">
                                             <Globe className="absolute left-4 top-3.5 text-gray-400 group-focus-within:text-indigo-500 transition-colors" size={20} />
                                             <input
@@ -407,7 +416,7 @@ const RegisterCompany = () => {
                                                 value={formData.companyDomain}
                                                 onChange={handleChange}
                                                 placeholder="e.g. acme.com (Must match email domain)"
-                                                className={`w-full pl-12 pr-4 py-3.5 bg-white border ${errors.companyDomain ? "border-red-300 ring-2 ring-red-50" : "border-gray-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50"} rounded-2xl outline-none transition-all shadow-sm text-gray-900`}
+                                                className={`w-full pl-12 pr-4 py-3.5 bg-white dark:bg-slate-800 border ${errors.companyDomain ? "border-red-300 ring-2 ring-red-50" : "border-gray-200 dark:border-gray-700 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 dark:focus:ring-indigo-900"} rounded-2xl outline-none transition-all shadow-sm text-gray-900 dark:text-white placeholder:text-gray-400`}
                                             />
                                         </div>
                                         {errors.companyDomain && <p className="text-red-500 text-xs font-bold ml-2">{errors.companyDomain}</p>}
@@ -425,7 +434,7 @@ const RegisterCompany = () => {
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div className="space-y-2 col-span-2 md:col-span-1">
-                                        <label className="text-sm font-bold text-gray-700 ml-1">Your Full Name</label>
+                                        <label className="text-sm font-bold text-gray-700 dark:text-gray-300 ml-1">Your Full Name</label>
                                         <div className="relative group">
                                             <User className="absolute left-4 top-3.5 text-gray-400 group-focus-within:text-indigo-500 transition-colors" size={20} />
                                             <input
@@ -433,21 +442,21 @@ const RegisterCompany = () => {
                                                 value={formData.adminName}
                                                 onChange={handleChange}
                                                 placeholder="John Doe"
-                                                className={`w-full pl-12 pr-4 py-3.5 bg-white border ${errors.adminName ? "border-red-300" : "border-gray-200"} focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 rounded-2xl outline-none transition-all shadow-sm text-gray-900`}
+                                                className={`w-full pl-12 pr-4 py-3.5 bg-white dark:bg-slate-800 border ${errors.adminName ? "border-red-300" : "border-gray-200 dark:border-gray-700"} focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 dark:focus:ring-indigo-900 rounded-2xl outline-none transition-all shadow-sm text-gray-900 dark:text-white placeholder:text-gray-400`}
                                             />
                                         </div>
                                         {errors.adminName && <p className="text-red-500 text-xs font-bold ml-2">{errors.adminName}</p>}
                                     </div>
 
                                     <div className="space-y-2 col-span-2 md:col-span-1">
-                                        <label className="text-sm font-bold text-gray-700 ml-1">Role</label>
+                                        <label className="text-sm font-bold text-gray-700 dark:text-gray-300 ml-1">Role</label>
                                         <div className="relative group">
                                             <Briefcase className="absolute left-4 top-3.5 text-gray-400 group-focus-within:text-indigo-500 transition-colors" size={20} />
                                             <select
                                                 name="role"
                                                 value={formData.role}
                                                 onChange={handleChange}
-                                                className="w-full pl-12 pr-4 py-3.5 bg-white border border-gray-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 rounded-2xl outline-none transition-all shadow-sm text-gray-900 appearance-none"
+                                                className="w-full pl-12 pr-4 py-3.5 bg-white dark:bg-slate-800 border border-gray-200 dark:border-gray-700 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 dark:focus:ring-indigo-900 rounded-2xl outline-none transition-all shadow-sm text-gray-900 dark:text-white appearance-none"
                                             >
                                                 {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
                                             </select>
@@ -474,7 +483,7 @@ const RegisterCompany = () => {
 
                                     {/* Personal Email */}
                                     <div className="col-span-2 space-y-2">
-                                        <label className="text-sm font-bold text-gray-700 ml-1">Personal Email <span className="text-xs font-normal text-gray-400">(For account recovery)</span></label>
+                                        <label className="text-sm font-bold text-gray-700 dark:text-gray-300 ml-1">Personal Email <span className="text-xs font-normal text-gray-400">(For account recovery)</span></label>
                                         <div className="flex gap-2">
                                             <div className="relative group flex-1">
                                                 <Mail className="absolute left-4 top-3.5 text-gray-400 group-focus-within:text-indigo-500 transition-colors" size={20} />
@@ -483,7 +492,7 @@ const RegisterCompany = () => {
                                                     value={formData.personalEmail}
                                                     onChange={handleChange}
                                                     placeholder="john.doe@gmail.com"
-                                                    className={`w-full pl-12 pr-4 py-3.5 bg-white border ${errors.personalEmail ? "border-red-300" : "border-gray-200"} focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 rounded-2xl outline-none transition-all shadow-sm text-gray-900`}
+                                                    className={`w-full pl-12 pr-4 py-3.5 bg-white dark:bg-slate-800 border ${errors.personalEmail ? "border-red-300" : "border-gray-200 dark:border-gray-700"} focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 dark:focus:ring-indigo-900 rounded-2xl outline-none transition-all shadow-sm text-gray-900 dark:text-white placeholder:text-gray-400`}
                                                 />
                                             </div>
                                             <button
@@ -512,7 +521,7 @@ const RegisterCompany = () => {
                                                     name="phoneCode"
                                                     value={formData.phoneCode}
                                                     onChange={handleChange}
-                                                    className="w-full h-full px-3 py-3.5 bg-white border border-gray-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 rounded-2xl outline-none transition-all shadow-sm text-gray-900 appearance-none font-medium text-sm"
+                                                    className="w-full h-full px-3 py-3.5 bg-white dark:bg-slate-800 border border-gray-200 dark:border-gray-700 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 dark:focus:ring-indigo-900 rounded-2xl outline-none transition-all shadow-sm text-gray-900 dark:text-white appearance-none font-medium text-sm"
                                                 >
                                                     {PHONE_CODES.map(c => (
                                                         <option key={c.code} value={c.code}>{c.label}</option>
@@ -527,7 +536,7 @@ const RegisterCompany = () => {
                                                     value={formData.phone}
                                                     onChange={handleChange}
                                                     placeholder="000-000-0000"
-                                                    className={`w-full pl-12 pr-4 py-3.5 bg-white border ${errors.phone ? "border-red-300" : "border-gray-200"} focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 rounded-2xl outline-none transition-all shadow-sm text-gray-900`}
+                                                    className={`w-full pl-12 pr-4 py-3.5 bg-white dark:bg-slate-800 border ${errors.phone ? "border-red-300" : "border-gray-200 dark:border-gray-700"} focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 dark:focus:ring-indigo-900 rounded-2xl outline-none transition-all shadow-sm text-gray-900 dark:text-white placeholder:text-gray-400`}
                                                 />
                                             </div>
                                             <button
@@ -557,7 +566,7 @@ const RegisterCompany = () => {
 
                                 <div className="space-y-6">
                                     <div className="space-y-2">
-                                        <label className="text-sm font-bold text-gray-700 ml-1">Company Email</label>
+                                        <label className="text-sm font-bold text-gray-700 dark:text-gray-300 ml-1">Company Email</label>
                                         <div className="relative group">
                                             <Mail className="absolute left-4 top-3.5 text-gray-400 group-focus-within:text-indigo-500 transition-colors" size={20} />
                                             <input
@@ -565,7 +574,7 @@ const RegisterCompany = () => {
                                                 value={formData.companyEmail}
                                                 onChange={handleChange}
                                                 placeholder={`name@${formData.companyDomain || "company.com"}`}
-                                                className={`w-full pl-12 pr-4 py-3.5 bg-white border ${errors.companyEmail ? "border-red-300" : "border-gray-200"} focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 rounded-2xl outline-none transition-all shadow-sm text-gray-900`}
+                                                className={`w-full pl-12 pr-4 py-3.5 bg-white dark:bg-slate-800 border ${errors.companyEmail ? "border-red-300" : "border-gray-200 dark:border-gray-700"} focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 dark:focus:ring-indigo-900 rounded-2xl outline-none transition-all shadow-sm text-gray-900 dark:text-white placeholder:text-gray-400`}
                                             />
                                         </div>
                                         {errors.companyEmail && <p className="text-red-500 text-xs font-bold ml-2">{errors.companyEmail}</p>}
@@ -575,7 +584,7 @@ const RegisterCompany = () => {
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative">
                                         {/* Password Input */}
                                         <div className="space-y-2">
-                                            <label className="text-sm font-bold text-gray-700 ml-1 flex items-center gap-2">
+                                            <label className="text-sm font-bold text-gray-700 dark:text-gray-300 ml-1 flex items-center gap-2">
                                                 Password
                                                 <div className="relative group cursor-help">
                                                     <Info size={14} className="text-gray-400 hover:text-indigo-500 transition-colors tooltip-trigger" />
@@ -602,7 +611,7 @@ const RegisterCompany = () => {
                                                     value={formData.password}
                                                     onChange={handleChange}
                                                     placeholder="••••••••"
-                                                    className={`w-full pl-12 pr-12 py-3.5 bg-white border ${errors.password ? "border-red-300" : "border-gray-200"} focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 rounded-2xl outline-none transition-all shadow-sm text-gray-900`}
+                                                    className={`w-full pl-12 pr-12 py-3.5 bg-white dark:bg-slate-800 border ${errors.password ? "border-red-300" : "border-gray-200 dark:border-gray-700"} focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 dark:focus:ring-indigo-900 rounded-2xl outline-none transition-all shadow-sm text-gray-900 dark:text-white placeholder:text-gray-400`}
                                                 />
                                                 <button
                                                     onClick={() => setShowPassword(!showPassword)}
@@ -616,7 +625,7 @@ const RegisterCompany = () => {
 
                                         {/* Confirm Password */}
                                         <div className="space-y-2">
-                                            <label className="text-sm font-bold text-gray-700 ml-1">Confirm Password</label>
+                                            <label className="text-sm font-bold text-gray-700 dark:text-gray-300 ml-1">Confirm Password</label>
                                             <div className="relative group">
                                                 <Lock className="absolute left-4 top-3.5 text-gray-400 group-focus-within:text-indigo-500 transition-colors" size={20} />
                                                 <input
@@ -625,7 +634,7 @@ const RegisterCompany = () => {
                                                     value={formData.confirmPassword}
                                                     onChange={handleChange}
                                                     placeholder="••••••••"
-                                                    className={`w-full pl-12 pr-12 py-3.5 bg-white border ${errors.confirmPassword ? "border-red-300" : "border-gray-200"} focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 rounded-2xl outline-none transition-all shadow-sm text-gray-900`}
+                                                    className={`w-full pl-12 pr-12 py-3.5 bg-white dark:bg-slate-800 border ${errors.confirmPassword ? "border-red-300" : "border-gray-200 dark:border-gray-700"} focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 dark:focus:ring-indigo-900 rounded-2xl outline-none transition-all shadow-sm text-gray-900 dark:text-white placeholder:text-gray-400`}
                                                 />
                                                 <button
                                                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
@@ -640,7 +649,7 @@ const RegisterCompany = () => {
 
                                     {/* Password Hints (Visible if typing) */}
                                     {formData.password && (
-                                        <div className="bg-indigo-50/50 rounded-xl p-3 border border-indigo-100 text-xs text-indigo-800">
+                                        <div className="bg-indigo-50/50 dark:bg-indigo-900/20 rounded-xl p-3 border border-indigo-100 dark:border-indigo-800 text-xs text-indigo-800 dark:text-indigo-300">
                                             <div className="flex items-start gap-2">
                                                 <Info size={14} className="shrink-0 mt-0.5" />
                                                 <span>Ensure your password is 8-16 characters, includes uppercase, lowercase, number, and special character.</span>
@@ -660,10 +669,10 @@ const RegisterCompany = () => {
 
                                 <div className="space-y-6">
                                     <div
-                                        className={`border-3 border-dashed rounded-3xl p-10 flex flex-col items-center justify-center text-center transition-all bg-white/50 ${formData.documents ? "border-indigo-400 bg-indigo-50/50" : "border-gray-300 text-gray-500 hover:border-indigo-400 hover:bg-white"
+                                        className={`border-3 border-dashed rounded-3xl p-10 flex flex-col items-center justify-center text-center transition-all bg-white/50 dark:bg-slate-800/50 ${formData.documents ? "border-indigo-400 bg-indigo-50/50 dark:bg-indigo-900/20" : "border-gray-300 dark:border-gray-600 text-gray-500 hover:border-indigo-400 dark:hover:border-indigo-400 hover:bg-white dark:hover:bg-slate-800"
                                             }`}
                                     >
-                                        <div className={`w-20 h-20 rounded-2xl flex items-center justify-center mb-4 transition-transform shadow-sm ${formData.documents ? "bg-white text-indigo-600" : "bg-gray-100 text-gray-400"}`}>
+                                        <div className={`w-20 h-20 rounded-2xl flex items-center justify-center mb-4 transition-transform shadow-sm ${formData.documents ? "bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-400" : "bg-gray-100 dark:bg-gray-800 text-gray-400"}`}>
                                             {formData.documents ? <FileText size={32} /> : <UploadCloud size={32} />}
                                         </div>
 
@@ -701,7 +710,7 @@ const RegisterCompany = () => {
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     {/* Card 1 */}
-                                    <div className="bg-white/60 p-6 rounded-3xl border border-gray-200 hover:border-indigo-300 transition-all cursor-pointer group" onClick={() => setCurrentStep(1)}>
+                                    <div className="bg-white/60 dark:bg-slate-800/60 p-6 rounded-3xl border border-gray-200 dark:border-gray-700 hover:border-indigo-300 dark:hover:border-indigo-400 transition-all cursor-pointer group" onClick={() => setCurrentStep(1)}>
                                         <div className="flex items-center justify-between mb-4">
                                             <h3 className="font-bold text-gray-900 flex items-center gap-2">
                                                 <Building size={18} className="text-indigo-500" /> Organization
@@ -709,13 +718,13 @@ const RegisterCompany = () => {
                                             <span className="text-xs font-bold text-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity">Edit</span>
                                         </div>
                                         <div className="space-y-3">
-                                            <div><span className="text-xs text-gray-500 font-bold uppercase block">Name</span> <span className="text-gray-900">{formData.companyName}</span></div>
-                                            <div><span className="text-xs text-gray-500 font-bold uppercase block">Domain</span> <span className="text-gray-900">{formData.companyDomain}</span></div>
+                                            <div><span className="text-xs text-gray-500 dark:text-gray-400 font-bold uppercase block">Name</span> <span className="text-gray-900 dark:text-white">{formData.companyName}</span></div>
+                                            <div><span className="text-xs text-gray-500 dark:text-gray-400 font-bold uppercase block">Domain</span> <span className="text-gray-900 dark:text-white">{formData.companyDomain}</span></div>
                                         </div>
                                     </div>
 
                                     {/* Card 2 */}
-                                    <div className="bg-white/60 p-6 rounded-3xl border border-gray-200 hover:border-indigo-300 transition-all cursor-pointer group" onClick={() => setCurrentStep(2)}>
+                                    <div className="bg-white/60 dark:bg-slate-300/60 p-6 rounded-3xl border border-gray-200 dark:border-gray-700 hover:border-indigo-300 dark:hover:border-indigo-400 transition-all cursor-pointer group" onClick={() => setCurrentStep(2)}>
                                         <div className="flex items-center justify-between mb-4">
                                             <h3 className="font-bold text-gray-900 flex items-center gap-2">
                                                 <User size={18} className="text-indigo-500" /> Admin
@@ -723,14 +732,14 @@ const RegisterCompany = () => {
                                             <span className="text-xs font-bold text-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity">Edit</span>
                                         </div>
                                         <div className="space-y-3">
-                                            <div><span className="text-xs text-gray-500 font-bold uppercase block">Name</span> <span className="text-gray-900">{formData.adminName}</span></div>
-                                            <div><span className="text-xs text-gray-500 font-bold uppercase block">Role</span> <span className="text-gray-900">{formData.role === "Other" ? formData.roleOther : formData.role}</span></div>
-                                            <div><span className="text-xs text-gray-500 font-bold uppercase block">Contact</span> <span className="text-gray-900 text-sm">{formData.personalEmail}<br />{formData.phoneCode} {formData.phone}</span></div>
+                                            <div><span className="text-xs text-gray-500 dark:text-gray-400 font-bold uppercase block">Name</span> <span className="text-gray-900 dark:text-white">{formData.adminName}</span></div>
+                                            <div><span className="text-xs text-gray-500 dark:text-gray-400 font-bold uppercase block">Role</span> <span className="text-gray-900 dark:text-white">{formData.role === "Other" ? formData.roleOther : formData.role}</span></div>
+                                            <div><span className="text-xs text-gray-500 dark:text-gray-400 font-bold uppercase block">Contact</span> <span className="text-gray-900 dark:text-white text-sm">{formData.personalEmail}<br />{formData.phoneCode} {formData.phone}</span></div>
                                         </div>
                                     </div>
 
                                     {/* Card 3 */}
-                                    <div className="bg-white/60 p-6 rounded-3xl border border-gray-200 hover:border-indigo-300 transition-all cursor-pointer group" onClick={() => setCurrentStep(3)}>
+                                    <div className="bg-white/60 dark:bg-slate-800/60 p-6 rounded-3xl border border-gray-200 dark:border-gray-700 hover:border-indigo-300 dark:hover:border-indigo-400 transition-all cursor-pointer group" onClick={() => setCurrentStep(3)}>
                                         <div className="flex items-center justify-between mb-4">
                                             <h3 className="font-bold text-gray-900 flex items-center gap-2">
                                                 <ShieldCheck size={18} className="text-indigo-500" /> Account
@@ -738,12 +747,12 @@ const RegisterCompany = () => {
                                             <span className="text-xs font-bold text-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity">Edit</span>
                                         </div>
                                         <div className="space-y-3">
-                                            <div><span className="text-xs text-gray-500 font-bold uppercase block">Comp. Email</span> <span className="text-gray-900">{formData.companyEmail}</span></div>
-                                            <div><span className="text-xs text-gray-500 font-bold uppercase block">Password</span> <span className="text-gray-900">••••••••</span></div>
+                                            <div><span className="text-xs text-gray-500 dark:text-gray-400 font-bold uppercase block">Comp. Email</span> <span className="text-gray-900 dark:text-white">{formData.companyEmail}</span></div>
+                                            <div><span className="text-xs text-gray-500 dark:text-gray-400 font-bold uppercase block">Password</span> <span className="text-gray-900 dark:text-white">••••••••</span></div>
                                         </div>
                                     </div>
                                     {/* Card 4 */}
-                                    <div className="bg-white/60 p-6 rounded-3xl border border-gray-200 hover:border-indigo-300 transition-all cursor-pointer group" onClick={() => setCurrentStep(4)}>
+                                    <div className="bg-white/60 dark:bg-slate-800/60 p-6 rounded-3xl border border-gray-200 dark:border-gray-700 hover:border-indigo-300 dark:hover:border-indigo-400 transition-all cursor-pointer group" onClick={() => setCurrentStep(4)}>
                                         <div className="flex items-center justify-between mb-4">
                                             <h3 className="font-bold text-gray-900 flex items-center gap-2">
                                                 <FileText size={18} className="text-indigo-500" /> Documents
@@ -751,7 +760,7 @@ const RegisterCompany = () => {
                                             <span className="text-xs font-bold text-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity">Edit</span>
                                         </div>
                                         <div className="space-y-3">
-                                            <div><span className="text-xs text-gray-500 font-bold uppercase block">File</span> <span className="text-gray-900">{formData.documents?.name}</span></div>
+                                            <div><span className="text-xs text-gray-500 dark:text-gray-400 font-bold uppercase block">File</span> <span className="text-gray-900 dark:text-white">{formData.documents?.name}</span></div>
                                         </div>
                                     </div>
 
@@ -762,7 +771,7 @@ const RegisterCompany = () => {
                     </div>
 
                     {/* Footer Actions */}
-                    <div className="shrink-0 px-8 py-6 border-t border-gray-100/50 bg-white/30 flex items-center justify-between">
+                    <div className="shrink-0 px-8 py-6 border-t border-gray-100/50 dark:border-gray-800/20 bg-white/30 dark:bg-slate-900/30 flex items-center justify-between">
                         {currentStep > 1 ? (
                             <button onClick={handleBack} className="text-gray-500 hover:text-gray-900 font-bold text-sm flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors">
                                 <ArrowLeft size={16} /> Back
