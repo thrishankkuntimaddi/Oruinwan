@@ -1,11 +1,19 @@
 import api from './api';
 
 export const aiService = {
-    // Send a chat message
-    chat: async (message, history = []) => {
+    // Send a chat message with workspace context
+    chat: async (message, history = [], workspaceId = null) => {
         try {
-            const response = await api.post('/api/ai/chat', { message, history });
-            return response.data;
+            const response = await api.post('/api/ai/chat', {
+                message,
+                history,
+                workspaceId
+            });
+            return {
+                text: response.data.text,
+                actionsExecuted: response.data.actionsExecuted || null,
+                hasActions: !!response.data.actionsExecuted
+            };
         } catch (error) {
             console.error('AI Chat Error:', error);
             throw error;

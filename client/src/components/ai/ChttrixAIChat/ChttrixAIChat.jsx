@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { aiService } from "../../../services/aiService";
+import { useWorkspace } from "../../../contexts/WorkspaceContext";
 import { Rnd } from "react-rnd";
 import {
   Send, Mic, Image, FileText, X, Plus, History, Info,
@@ -7,11 +8,23 @@ import {
 } from "lucide-react";
 
 const ChttrixAIChat = ({ onClose, isSidebar = false }) => {
+  // Get workspace context
+  const { activeWorkspace } = useWorkspace();
+
   // State
   const [messages, setMessages] = useState([
     { id: 1, sender: "ai", text: "Hi, I'm ChttrixAI. How can I help you today?", time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) },
   ]);
-  const [chatHistory, setChatHistory] = useState([]);
+  const [chatHistory, setChatHistory] = useState(() => {
+    // Load chat history from localStorage on mount
+    try {
+      const saved = localStorage.getItem('chttrixai_chat_history');
+      return saved ? JSON.parse(saved) : [];
+    } catch (error) {
+      console.error('Failed to load chat history:', error);
+      return [];
+    }
+  });
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
@@ -22,6 +35,15 @@ const ChttrixAIChat = ({ onClose, isSidebar = false }) => {
   const [chatTitle, setChatTitle] = useState("Chttrix AI"); // Dynamic Title
   const [replyingTo, setReplyingTo] = useState(null);
   const [isVisible, setIsVisible] = useState(false);
+
+  // Persist chat history to localStorage whenever it changes
+  useEffect(() => {
+    try {
+      localStorage.setItem('chttrixai_chat_history', JSON.stringify(chatHistory));
+    } catch (error) {
+      console.error('Failed to save chat history:', error);
+    }
+  }, [chatHistory]);
 
   useEffect(() => {
     // Trigger animation after mount
@@ -109,19 +131,22 @@ const ChttrixAIChat = ({ onClose, isSidebar = false }) => {
           text: m.text
         }));
 
-      // Call API
-      const data = await aiService.chat(text, historyForApi.slice(0, -1)); // Exclude the just-added message from history if API expects previous history
+      // Call API with workspace context
+      const data = await aiService.chat(text, historyForApi.slice(0, -1), activeWorkspace?._id);
 
       // OR if your API logic in controller builds history differently, adjust. 
       // My controller expects 'history' as previous messages.
 
       setIsTyping(false);
+
+      // Add AI response with actions if present
       setMessages((prev) => [
         ...prev,
         {
           id: Date.now() + 1,
           sender: "ai",
           text: data.text,
+          actions: data.actionsExecuted || null, // Array of executed actions
           time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         },
       ]);
@@ -196,6 +221,33 @@ const ChttrixAIChat = ({ onClose, isSidebar = false }) => {
     setEditingMessageId(msg.id);
   };
 
+  const handleClose = () => {
+    // Auto-save current conversation before closing
+    if (messages.length > 1 && chatTitle !== "Chttrix AI") {
+      const currentHistoryItem = {
+        id: Date.now(),
+        title: chatTitle,
+        messages: [...messages],
+        date: new Date().toLocaleDateString()
+      };
+      // Check if this chat is already in history (by title and recent date)
+      const existingIndex = chatHistory.findIndex(
+        h => h.title === chatTitle && h.date === currentHistoryItem.date
+      );
+      if (existingIndex === -1) {
+        setChatHistory(prev => [currentHistoryItem, ...prev]);
+      }
+    }
+    onClose();
+  };
+
+  const handleClearHistory = () => {
+    if (window.confirm('Are you sure you want to clear all chat history? This cannot be undone.')) {
+      setChatHistory([]);
+      localStorage.removeItem('chttrixai_chat_history');
+    }
+  };
+
   const QuickAction = ({ icon: Icon, label, onClick }) => (
     <button
       onClick={onClick}
@@ -262,11 +314,21 @@ const ChttrixAIChat = ({ onClose, isSidebar = false }) => {
       {showHistory && (
         <div className="absolute inset-0 z-20 flex">
           <div className="w-64 bg-white dark:bg-gray-800 border-r border-gray-100 dark:border-gray-700 shadow-lg flex flex-col animate-fade-in-left">
-            <div className="p-4 border-b border-gray-50 dark:border-gray-700 flex justify-between items-center">
-              <h3 className="font-semibold text-gray-900 dark:text-white text-sm">History</h3>
-              <button onClick={() => setShowHistory(false)} className="text-gray-400 hover:text-gray-600">
-                <X size={16} />
-              </button>
+            <div className="p-4 border-b border-gray-50 dark:border-gray-700">
+              <div className="flex justify-between items-center mb-2">
+                <h3 className="font-semibold text-gray-900 dark:text-white text-sm">History</h3>
+                <button onClick={() => setShowHistory(false)} className="text-gray-400 hover:text-gray-600">
+                  <X size={16} />
+                </button>
+              </div>
+              {chatHistory.length > 0 && (
+                <button
+                  onClick={handleClearHistory}
+                  className="text-xs text-red-500 hover:text-red-700 transition-colors"
+                >
+                  Clear All History
+                </button>
+              )}
             </div>
             <div className="flex-1 overflow-y-auto p-2 space-y-1">
               {chatHistory.length === 0 ? (
@@ -311,7 +373,7 @@ const ChttrixAIChat = ({ onClose, isSidebar = false }) => {
           <button onClick={handleNewChat} className="p-1.5 text-gray-400 hover:text-blue-600 rounded-md transition-colors" title="New Chat">
             <Plus size={16} />
           </button>
-          <button onClick={onClose} className="p-1.5 text-gray-400 hover:text-red-500 rounded-md transition-colors" title="Close">
+          <button onClick={handleClose} className="p-1.5 text-gray-400 hover:text-red-500 rounded-md transition-colors" title="Close">
             <X size={16} />
           </button>
         </div>
@@ -387,6 +449,25 @@ const ChttrixAIChat = ({ onClose, isSidebar = false }) => {
                       <Edit2 size={12} />
                     </button>
                   )}
+                </div>
+              )}
+
+              {/* Action Badges */}
+              {msg.actions && msg.actions.length > 0 && (
+                <div className="flex flex-wrap gap-1 mt-1.5">
+                  {msg.actions.map((action, i) => (
+                    <div
+                      key={i}
+                      className="inline-flex items-center gap-1 text-xs bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded border border-blue-200 dark:border-blue-700"
+                      title={JSON.stringify(action.result, null, 2)}
+                    >
+                      <span className="text-green-600 dark:text-green-400">✓</span>
+                      <span>{action.function.replace(/_/g, ' ')}</span>
+                      {action.result?.success === false && (
+                        <span className="text-red-600 dark:text-red-400" title={action.result.error}>⚠</span>
+                      )}
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
