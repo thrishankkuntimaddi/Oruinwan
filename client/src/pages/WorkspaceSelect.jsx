@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import {
     Rocket, Briefcase, Zap, Palette, Microscope, Globe,
     Shield, TrendingUp, Lightbulb, Flame, Target, Trophy,
-    Plus, LogOut, LayoutGrid, ArrowRight, User, CircleHelp, X,
+    Plus, LogOut, LayoutGrid, ArrowRight, User, Users as UsersIcon, CircleHelp, X,
     BookOpen, Command, Bug, Sparkles, Search, MessageCircle
 } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
@@ -89,7 +89,7 @@ const WorkspaceSelect = () => {
         setIsCreateModalOpen(false);
         setCreateStep(1);
         setAddMembersLater(false);
-        setCreateData({ name: "", adminName: "", icon: "rocket", color: "#4f46e5", invites: "" });
+        setCreateData({ name: "", description: "", adminName: "", icon: "rocket", color: "#4f46e5", invites: "" });
     };
 
     const handleCreateSubmit = async (e) => {
@@ -98,16 +98,36 @@ const WorkspaceSelect = () => {
         if (!createData.name.trim()) return setNameError("Workspace name is required");
 
         try {
+            // 1. Create Workspace
             const res = await api.post('/api/workspaces', {
                 name: createData.name,
+                description: createData.description,
                 icon: createData.icon,
                 color: createData.color
             });
+
+            const newWorkspaceId = res.data.workspace.id;
+
+            // 2. Send Invites (if any)
+            if (createData.invites && createData.invites.trim()) {
+                try {
+                    await api.post(`/api/workspaces/${newWorkspaceId}/invite`, {
+                        emails: createData.invites,
+                        inviteType: 'email'
+                    });
+                } catch (inviteError) {
+                    console.error("Failed to send invites", inviteError);
+                }
+            }
+
             await loadWorkspaces(); // Refresh list
             resetCreateModal();
-            navigate(`/workspace/${res.data.workspace.id}/home`);
+            navigate(`/workspace/${newWorkspaceId}/home`);
         } catch (error) {
             console.error("Failed to create workspace", error);
+            if (error.response?.data?.message) {
+                setNameError(error.response.data.message);
+            }
         }
     };
 
@@ -338,70 +358,275 @@ const WorkspaceSelect = () => {
                 )}
             </main>
 
-            {/* Create Modal */}
+            {/* Create Modal - Multi-Step Wizard */}
             {isCreateModalOpen && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-fadeIn">
-                    <div className="bg-white dark:bg-slate-800 w-full max-w-md rounded-2xl shadow-2xl overflow-hidden animate-slideUp">
-                        <div className="px-8 py-6 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/50">
-                            <h3 className="font-bold text-xl text-slate-800 dark:text-white">Create Workspace</h3>
-                            <button
-                                onClick={resetCreateModal}
-                                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
-                            >
-                                <Plus size={24} className="rotate-45" />
-                            </button>
-                        </div>
-
-                        <form onSubmit={handleCreateSubmit} className="p-8">
-                            <div className="space-y-6">
-                                <div>
-                                    <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Workspace Name</label>
-                                    <input
-                                        type="text"
-                                        autoFocus
-                                        placeholder="e.g. Engineering Team, Project Alpha"
-                                        value={createData.name}
-                                        onChange={(e) => {
-                                            setCreateData({ ...createData, name: e.target.value });
-                                            setNameError("");
-                                        }}
-                                        className={`w-full px-4 py-3 bg-white dark:bg-slate-900 border ${nameError ? 'border-red-300 focus:border-red-500 focus:ring-red-200' : 'border-slate-200 dark:border-slate-700 focus:border-indigo-500 focus:ring-indigo-200'} rounded-xl focus:outline-none focus:ring-4 transition-all text-slate-800 dark:text-white font-medium`}
-                                    />
-                                    {nameError && <p className="mt-2 text-xs font-bold text-red-500">{nameError}</p>}
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Theme Color</label>
-                                    <div className="flex gap-3">
-                                        {['#4f46e5', '#0ea5e9', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'].map((color) => (
-                                            <button
-                                                key={color}
-                                                type="button"
-                                                onClick={() => setCreateData({ ...createData, color })}
-                                                className={`w-8 h-8 rounded-full border-2 transition-all ${createData.color === color ? 'border-slate-800 scale-110' : 'border-transparent hover:scale-105'}`}
-                                                style={{ backgroundColor: color }}
-                                            />
-                                        ))}
-                                    </div>
-                                </div>
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
+                    <div className="bg-white dark:bg-slate-800 w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden animate-slideUp flex flex-col max-h-[90vh]">
+                        {/* Header with Progress Steps */}
+                        <div className="px-8 py-6 border-b border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50">
+                            <div className="flex justify-between items-center mb-6">
+                                <h3 className="font-bold text-2xl text-slate-800 dark:text-white">Create Workspace</h3>
+                                <button
+                                    onClick={resetCreateModal}
+                                    className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+                                >
+                                    <X size={24} />
+                                </button>
                             </div>
 
-                            <div className="mt-8 pt-6 border-t border-slate-100 flex justify-end gap-3">
+                            {/* Progress Indicators */}
+                            <div className="flex items-center justify-between px-2 relative">
+                                {/* Connector Line */}
+                                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-full h-0.5 bg-slate-200 dark:bg-slate-700 -z-10"></div>
+                                <div className={`absolute left-0 top-1/2 -translate-y-1/2 h-0.5 bg-indigo-500 transition-all duration-300 -z-10`} style={{ width: `${((createStep - 1) / 3) * 100}%` }}></div>
+
+                                {[
+                                    { step: 1, label: "Basics" },
+                                    { step: 2, label: "Branding" },
+                                    { step: 3, label: "Admin" },
+                                    { step: 4, label: "Members" }
+                                ].map((s) => (
+                                    <div key={s.step} className="flex flex-col items-center gap-2 bg-white dark:bg-slate-800 px-2">
+                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm transition-all duration-300 ${createStep >= s.step ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200' : 'bg-slate-200 dark:bg-slate-700 text-slate-500'}`}>
+                                            {createStep > s.step ? "✓" : s.step}
+                                        </div>
+                                        <span className={`text-xs font-bold transition-colors ${createStep >= s.step ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400'}`}>{s.label}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+                            <form onSubmit={handleCreateSubmit}>
+                                {/* Step 1: Basics */}
+                                {createStep === 1 && (
+                                    <div className="space-y-6 animate-fadeIn">
+                                        <div className="text-center mb-8">
+                                            <h2 className="text-xl font-bold text-slate-900 dark:text-white">Let's start with the basics</h2>
+                                            <p className="text-slate-500 dark:text-slate-400">Give your workspace a name and set the ground rules.</p>
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Workspace Name</label>
+                                            <input
+                                                type="text"
+                                                autoFocus
+                                                placeholder="e.g. Engineering Team, Chttrix HQ"
+                                                value={createData.name}
+                                                onChange={(e) => {
+                                                    setCreateData({ ...createData, name: e.target.value });
+                                                    setNameError("");
+                                                }}
+                                                className={`w-full px-4 py-3 bg-white dark:bg-slate-900 border ${nameError ? 'border-red-300 focus:border-red-500 focus:ring-red-200' : 'border-slate-200 dark:border-slate-700 focus:border-indigo-500 focus:ring-indigo-200'} rounded-xl focus:outline-none focus:ring-4 transition-all text-slate-800 dark:text-white font-medium`}
+                                            />
+                                            {nameError && <p className="mt-2 text-xs font-bold text-red-500 animate-pulse">{nameError}</p>}
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Rules & Guidelines (Optional)</label>
+                                            <div className="relative">
+                                                <textarea
+                                                    placeholder="Set the tone for your workspace. E.g., 'Be respectful', 'No spam', 'Updates every Friday'..."
+                                                    value={createData.description || ""} // Using description field for rules
+                                                    onChange={(e) => setCreateData({ ...createData, description: e.target.value })}
+                                                    className="w-full px-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-4 focus:ring-indigo-200 focus:border-indigo-500 transition-all text-slate-800 dark:text-white font-medium h-32 resize-none"
+                                                ></textarea>
+                                                <Shield className="absolute right-4 top-4 text-slate-300" size={18} />
+                                            </div>
+                                            <p className="text-xs text-slate-400 mt-2 px-1">These will be visible in workspace details.</p>
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Workspace Icon</label>
+                                            <div className="flex flex-wrap gap-3">
+                                                {['rocket', 'briefcase', 'zap', 'palette', 'globe', 'trophy', 'target', 'flame'].map((iconName) => {
+                                                    const IconCmp = getIconComponent(iconName);
+                                                    return (
+                                                        <button
+                                                            key={iconName}
+                                                            type="button"
+                                                            onClick={() => setCreateData({ ...createData, icon: iconName })}
+                                                            className={`p-3 rounded-xl border-2 transition-all flex items-center justify-center ${createData.icon === iconName
+                                                                ? 'border-indigo-500 bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400 scale-105'
+                                                                : 'border-slate-100 dark:border-slate-700 text-slate-400 hover:border-indigo-200 hover:bg-slate-50 dark:hover:bg-slate-800'
+                                                                }`}
+                                                        >
+                                                            <IconCmp size={24} />
+                                                        </button>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Step 2: Branding */}
+                                {createStep === 2 && (
+                                    <div className="space-y-8 animate-fadeIn">
+                                        <div className="text-center mb-8">
+                                            <h2 className="text-xl font-bold text-slate-900 dark:text-white">Make it yours</h2>
+                                            <p className="text-slate-500 dark:text-slate-400">Choose a theme color that represents your team.</p>
+                                        </div>
+
+                                        <div className="grid grid-cols-4 gap-4">
+                                            {['#4f46e5', '#0ea5e9', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#6366f1'].map((color) => (
+                                                <button
+                                                    key={color}
+                                                    type="button"
+                                                    onClick={() => setCreateData({ ...createData, color })}
+                                                    className={`aspect-square rounded-2xl flex items-center justify-center transition-all duration-300 group relative overflow-hidden ${createData.color === color ? 'ring-4 ring-offset-2 ring-indigo-500 scale-95' : 'hover:scale-105'}`}
+                                                    style={{ backgroundColor: color }}
+                                                >
+                                                    {createData.color === color && (
+                                                        <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm animate-bounce">
+                                                            <span className="text-white font-bold">✓</span>
+                                                        </div>
+                                                    )}
+                                                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors"></div>
+                                                </button>
+                                            ))}
+                                        </div>
+
+                                        {/* Preview */}
+                                        <div className="mt-8 p-6 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700">
+                                            <label className="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-4 text-center">Preview</label>
+                                            <div className="flex items-center gap-4 bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm mx-auto max-w-sm">
+                                                <div
+                                                    className="w-12 h-12 rounded-xl flex items-center justify-center text-white shadow-lg"
+                                                    style={{ backgroundColor: createData.color }}
+                                                >
+                                                    {React.createElement(getIconComponent(createData.icon), { size: 24 })}
+                                                </div>
+                                                <div>
+                                                    <div className="font-bold text-slate-900 dark:text-white">{createData.name || "Workspace Name"}</div>
+                                                    <div className="text-xs text-slate-500">1 member • just now</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Step 3: Admin */}
+                                {createStep === 3 && (
+                                    <div className="space-y-6 animate-fadeIn">
+                                        <div className="text-center mb-8">
+                                            <h2 className="text-xl font-bold text-slate-900 dark:text-white">Admin Confirmation</h2>
+                                            <p className="text-slate-500 dark:text-slate-400">Confirm who will manage this workspace.</p>
+                                        </div>
+
+                                        <div className="bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800 rounded-2xl p-6 flex flex-col items-center">
+                                            <div className="w-20 h-20 rounded-full bg-indigo-100 dark:bg-indigo-800 flex items-center justify-center text-3xl mb-4 border-4 border-white dark:border-slate-800 shadow-xl relative">
+                                                {user?.profilePicture ? (
+                                                    <img src={user.profilePicture} alt="User" className="w-full h-full rounded-full object-cover" />
+                                                ) : (
+                                                    <span className="text-indigo-600 dark:text-indigo-400 font-black">
+                                                        {user?.username?.charAt(0).toUpperCase()}
+                                                    </span>
+                                                )}
+                                                <div className="absolute -bottom-1 -right-1 bg-yellow-400 p-1.5 rounded-full border-2 border-white dark:border-slate-800">
+                                                    <Shield size={14} className="text-yellow-900 fill-current" />
+                                                </div>
+                                            </div>
+                                            <h3 className="text-lg font-bold text-slate-900 dark:text-white">{user?.username}</h3>
+                                            <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">{user?.email}</p>
+
+                                            <div className="flex items-center gap-2 px-3 py-1.5 bg-indigo-100 dark:bg-indigo-800 rounded-lg">
+                                                <Shield size={14} className="text-indigo-600 dark:text-indigo-400" />
+                                                <span className="text-xs font-bold text-indigo-700 dark:text-indigo-300 uppercase tracking-wide">Workspace Owner</span>
+                                            </div>
+                                        </div>
+
+                                        <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">
+                                            <h4 className="font-bold text-sm text-slate-800 dark:text-white mb-2 flex items-center gap-2">
+                                                <CircleHelp size={16} className="text-slate-400" />
+                                                Permissions
+                                            </h4>
+                                            <ul className="text-sm text-slate-500 dark:text-slate-400 space-y-2 pl-6 list-disc">
+                                                <li>You will have full control over workspace settings.</li>
+                                                <li>You can manage members, roles, and channels.</li>
+                                                <li>You can delete the workspace at any time.</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Step 4: Members */}
+                                {createStep === 4 && (
+                                    <div className="space-y-6 animate-fadeIn">
+                                        <div className="text-center mb-8">
+                                            <h2 className="text-xl font-bold text-slate-900 dark:text-white">Invite your team</h2>
+                                            <p className="text-slate-500 dark:text-slate-400">Collaboration is better together.</p>
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Email Addresses</label>
+                                            <textarea
+                                                placeholder="Enter emails separated by commas (e.g., alex@team.com, sarah@design.co)"
+                                                value={createData.invites || ""}
+                                                onChange={(e) => setCreateData({ ...createData, invites: e.target.value })}
+                                                className="w-full px-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-4 focus:ring-indigo-200 focus:border-indigo-500 transition-all text-slate-800 dark:text-white font-medium h-32 resize-none"
+                                            ></textarea>
+                                            <p className="text-xs text-slate-400 mt-2 flex items-center gap-1">
+                                                <UsersIcon size={12} />
+                                                We'll send them an invite link instantly.
+                                            </p>
+                                        </div>
+
+                                        <div className="flex items-center gap-2 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-100 dark:border-blue-800">
+                                            <div className="p-2 bg-blue-100 dark:bg-blue-800 rounded-lg text-blue-600 dark:text-blue-300">
+                                                <Rocket size={20} />
+                                            </div>
+                                            <div className="flex-1">
+                                                <h4 className="text-sm font-bold text-blue-900 dark:text-blue-300">Skip for now?</h4>
+                                                <p className="text-xs text-blue-700 dark:text-blue-400">You can always add members later from workspace settings.</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                            </form>
+                        </div>
+
+                        {/* Footer / Actions */}
+                        <div className="px-8 py-6 border-t border-slate-100 dark:border-slate-700 bg-slate-50/80 dark:bg-slate-900/80 backdrop-blur flex justify-between items-center">
+                            {createStep > 1 ? (
                                 <button
-                                    type="button"
+                                    onClick={() => setCreateStep(s => s - 1)}
+                                    className="px-6 py-2.5 text-slate-600 dark:text-slate-400 font-bold hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl transition-colors"
+                                >
+                                    Back
+                                </button>
+                            ) : (
+                                <button
                                     onClick={resetCreateModal}
-                                    className="px-5 py-2.5 text-slate-600 dark:text-slate-400 font-bold hover:bg-slate-50 dark:hover:bg-slate-700 rounded-xl transition-colors"
+                                    className="px-6 py-2.5 text-slate-600 dark:text-slate-400 font-bold hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl transition-colors"
                                 >
                                     Cancel
                                 </button>
+                            )}
+
+                            {createStep < 4 ? (
                                 <button
-                                    type="submit"
-                                    className="px-6 py-2.5 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 hover:shadow-indigo-300 transform hover:-translate-y-0.5"
+                                    onClick={() => {
+                                        if (createStep === 1 && !createData.name.trim()) {
+                                            setNameError("Workspace name is required");
+                                            return;
+                                        }
+                                        setCreateStep(s => s + 1);
+                                    }}
+                                    className="px-8 py-2.5 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 hover:shadow-indigo-300 transform hover:-translate-y-0.5 flex items-center gap-2"
                                 >
-                                    Create Workspace
+                                    Next Step <ArrowRight size={16} />
                                 </button>
-                            </div>
-                        </form>
+                            ) : (
+                                <button
+                                    onClick={handleCreateSubmit}
+                                    className="px-8 py-2.5 bg-green-600 text-white font-bold rounded-xl hover:bg-green-700 transition-all shadow-lg shadow-green-200 hover:shadow-green-300 transform hover:-translate-y-0.5 flex items-center gap-2"
+                                >
+                                    <Rocket size={18} />
+                                    Launch Workspace
+                                </button>
+                            )}
+                        </div>
                     </div>
                 </div>
             )}
