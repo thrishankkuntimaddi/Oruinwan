@@ -88,15 +88,15 @@ const ProfileQuickSettings = ({ onClose }) => {
                         <Edit3 size={14} className="text-gray-600" />
                     </button>
                 </div>
-                <h3 className="text-lg font-black text-gray-900">{user?.username}</h3>
-                <p className="text-sm text-gray-500">{user?.email}</p>
+                <h3 className="text-lg font-black text-gray-900 dark:text-slate-100">{user?.username}</h3>
+                <p className="text-sm text-gray-500 dark:text-slate-400">{user?.email}</p>
 
                 {/* Role Badge */}
                 <div className="mt-2 flex items-center justify-center gap-2">
                     <span className={`px-3 py-1 rounded-full text-xs font-bold ${user?.companyRole === 'owner' ? 'bg-purple-100 text-purple-700' :
-                            user?.companyRole === 'admin' ? 'bg-blue-100 text-blue-700' :
-                                user?.companyRole === 'manager' ? 'bg-green-100 text-green-700' :
-                                    'bg-slate-100 text-slate-700'
+                        user?.companyRole === 'admin' ? 'bg-blue-100 text-blue-700' :
+                            user?.companyRole === 'manager' ? 'bg-green-100 text-green-700' :
+                                'bg-slate-100 text-slate-700'
                         }`}>
                         {user?.companyRole?.charAt(0).toUpperCase() + user?.companyRole?.slice(1) || 'Member'}
                     </span>
@@ -112,21 +112,21 @@ const ProfileQuickSettings = ({ onClose }) => {
             {/* Quick Info Cards */}
             <div className="space-y-2">
                 {user?.phone && (
-                    <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                    <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-slate-700 rounded-lg">
                         <Phone size={16} className="text-gray-400" />
                         <div>
                             <p className="text-xs text-gray-500 font-medium">Phone</p>
-                            <p className="text-sm font-semibold text-gray-900">{user.phoneCode} {user.phone}</p>
+                            <p className="text-sm font-semibold text-gray-900 dark:text-slate-100">{user.phoneCode} {user.phone}</p>
                         </div>
                     </div>
                 )}
 
                 {formData.dob && (
-                    <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                    <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-slate-700 rounded-lg">
                         <Calendar size={16} className="text-gray-400" />
                         <div>
                             <p className="text-xs text-gray-500 font-medium">Birthday</p>
-                            <p className="text-sm font-semibold text-gray-900">
+                            <p className="text-sm font-semibold text-gray-900 dark:text-slate-100">
                                 {new Date(formData.dob).toLocaleDateString('en-US', {
                                     month: 'long',
                                     day: 'numeric',
@@ -138,11 +138,11 @@ const ProfileQuickSettings = ({ onClose }) => {
                 )}
 
                 {user?.createdAt && (
-                    <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                    <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-slate-700 rounded-lg">
                         <Calendar size={16} className="text-gray-400" />
                         <div>
                             <p className="text-xs text-gray-500 font-medium">Member Since</p>
-                            <p className="text-sm font-semibold text-gray-900">
+                            <p className="text-sm font-semibold text-gray-900 dark:text-slate-100">
                                 {new Date(user.createdAt).toLocaleDateString('en-US', {
                                     month: 'long',
                                     year: 'numeric'
@@ -154,25 +154,25 @@ const ProfileQuickSettings = ({ onClose }) => {
             </div>
 
             {/* Action Buttons */}
-            <div className="space-y-2 pt-2 border-t border-gray-200">
+            <div className="space-y-2 pt-2 border-t border-gray-200 dark:border-gray-700">
                 <button
                     onClick={() => setView('edit')}
-                    className="w-full flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 transition-colors group"
+                    className="w-full flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors group"
                 >
                     <div className="flex items-center gap-3">
                         <User size={18} className="text-gray-400 group-hover:text-indigo-600 transition-colors" />
-                        <span className="text-sm font-medium text-gray-700">Edit Profile</span>
+                        <span className="text-sm font-medium text-gray-700 dark:text-slate-300">Edit Profile</span>
                     </div>
                     <ChevronRight size={16} className="text-gray-400" />
                 </button>
 
                 <button
                     onClick={() => setView('theme')}
-                    className="w-full flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 transition-colors group"
+                    className="w-full flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors group"
                 >
                     <div className="flex items-center gap-3">
                         <Settings size={18} className="text-gray-400 group-hover:text-indigo-600 transition-colors" />
-                        <span className="text-sm font-medium text-gray-700">Appearance</span>
+                        <span className="text-sm font-medium text-gray-700 dark:text-slate-300">Appearance</span>
                     </div>
                     <ChevronRight size={16} className="text-gray-400" />
                 </button>
@@ -197,7 +197,7 @@ const ProfileQuickSettings = ({ onClose }) => {
 
                 <button
                     onClick={handleLogout}
-                    className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-red-50 transition-colors text-red-600"
+                    className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors text-red-600 dark:text-red-400"
                 >
                     <LogOut size={18} />
                     <span className="text-sm font-medium">Sign Out</span>
@@ -209,14 +209,14 @@ const ProfileQuickSettings = ({ onClose }) => {
     // Edit Profile View
     const renderEditView = () => (
         <div className="space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-gray-200">
+            <div className="flex items-center justify-between pb-3 border-b border-gray-200 dark:border-gray-700">
                 <button
                     onClick={() => setView('main')}
-                    className="text-sm text-gray-500 hover:text-gray-900 font-medium"
+                    className="text-sm text-gray-500 dark:text-slate-400 hover:text-gray-900 dark:hover:text-slate-100 font-medium"
                 >
                     ← Back
                 </button>
-                <h4 className="text-sm font-bold text-gray-900">Edit Profile</h4>
+                <h4 className="text-sm font-bold text-gray-900 dark:text-slate-100">Edit Profile</h4>
                 <div className="w-12"></div>
             </div>
 
@@ -239,31 +239,31 @@ const ProfileQuickSettings = ({ onClose }) => {
 
                 {/* Form Fields */}
                 <div>
-                    <label className="block text-xs font-bold text-gray-600 uppercase tracking-wide mb-1">Full Name</label>
+                    <label className="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wide mb-1">Full Name</label>
                     <input
                         type="text"
                         value={formData.username}
                         onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none"
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none"
                     />
                 </div>
 
                 <div>
-                    <label className="block text-xs font-bold text-gray-600 uppercase tracking-wide mb-1">Email</label>
-                    <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg">
+                    <label className="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wide mb-1">Email</label>
+                    <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-gray-600 rounded-lg">
                         <Mail size={16} className="text-gray-400" />
-                        <span className="text-sm text-gray-500">{user?.email}</span>
+                        <span className="text-sm text-gray-500 dark:text-gray-400">{user?.email}</span>
                     </div>
                     <p className="text-xs text-gray-400 mt-1">Email cannot be changed here</p>
                 </div>
 
                 <div>
-                    <label className="block text-xs font-bold text-gray-600 uppercase tracking-wide mb-1">Phone Number</label>
+                    <label className="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wide mb-1">Phone Number</label>
                     <div className="flex gap-2">
                         <select
                             value={formData.phoneCode}
                             onChange={(e) => setFormData({ ...formData, phoneCode: e.target.value })}
-                            className="w-24 px-2 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none"
+                            className="w-24 px-2 py-2 border border-gray-300 dark:border-gray-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg text-sm bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none"
                         >
                             <option value="+1">+1</option>
                             <option value="+44">+44</option>
@@ -273,52 +273,52 @@ const ProfileQuickSettings = ({ onClose }) => {
                             type="tel"
                             value={formData.phone}
                             onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                            className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none"
+                            className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none"
                             placeholder="123-456-7890"
                         />
                     </div>
                 </div>
 
                 <div>
-                    <label className="block text-xs font-bold text-gray-600 uppercase tracking-wide mb-1">Date of Birth</label>
+                    <label className="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wide mb-1">Date of Birth</label>
                     <input
                         type="date"
                         value={formData.dob}
                         onChange={(e) => setFormData({ ...formData, dob: e.target.value })}
                         max={new Date().toISOString().split('T')[0]}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none"
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none"
                     />
                 </div>
 
                 <div>
-                    <label className="block text-xs font-bold text-gray-600 uppercase tracking-wide mb-1">Address</label>
+                    <label className="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wide mb-1">Address</label>
                     <textarea
                         value={formData.address}
                         onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                         rows={3}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none resize-none"
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none resize-none"
                         placeholder="123 Main St, City, State, ZIP"
                     />
                 </div>
 
                 <div>
-                    <label className="block text-xs font-bold text-gray-600 uppercase tracking-wide mb-1">About</label>
+                    <label className="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wide mb-1">About</label>
                     <textarea
                         value={formData.about}
                         onChange={(e) => setFormData({ ...formData, about: e.target.value })}
                         rows={3}
                         maxLength={500}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none resize-none"
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none resize-none"
                         placeholder="Tell us about yourself..."
                     />
                     <p className="text-xs text-gray-400 mt-1 text-right">{formData.about?.length || 0}/500</p>
                 </div>
             </div>
 
-            <div className="flex gap-2 pt-3 border-t border-gray-200">
+            <div className="flex gap-2 pt-3 border-t border-gray-200 dark:border-gray-700">
                 <button
                     onClick={() => setView('main')}
-                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                    className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium text-gray-700 dark:text-slate-300 dark:bg-slate-700 hover:bg-gray-50 dark:hover:bg-slate-600 transition-colors"
                 >
                     Cancel
                 </button>
@@ -345,19 +345,19 @@ const ProfileQuickSettings = ({ onClose }) => {
     // Theme View
     const renderThemeView = () => (
         <div className="space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-gray-200">
+            <div className="flex items-center justify-between pb-3 border-b border-gray-200 dark:border-gray-700">
                 <button
                     onClick={() => setView('main')}
-                    className="text-sm text-gray-500 hover:text-gray-900 font-medium"
+                    className="text-sm text-gray-500 dark:text-slate-400 hover:text-gray-900 dark:hover:text-slate-100 font-medium"
                 >
                     ← Back
                 </button>
-                <h4 className="text-sm font-bold text-gray-900">Appearance</h4>
+                <h4 className="text-sm font-bold text-gray-900 dark:text-slate-100">Appearance</h4>
                 <div className="w-12"></div>
             </div>
 
             <div>
-                <label className="block text-xs font-bold text-gray-600 uppercase tracking-wide mb-3">Theme</label>
+                <label className="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wide mb-3">Theme</label>
                 <div className="grid grid-cols-3 gap-3">
                     <button
                         onClick={() => {
@@ -365,8 +365,8 @@ const ProfileQuickSettings = ({ onClose }) => {
                             showToast('Theme changed to Light', 'success');
                         }}
                         className={`p-4 border-2 rounded-xl flex flex-col items-center gap-2 transition-all ${theme === 'light'
-                                ? 'border-indigo-500 bg-indigo-50'
-                                : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                            ? 'border-indigo-500 bg-indigo-50'
+                            : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
                             }`}
                     >
                         <Sun size={24} className={theme === 'light' ? 'text-indigo-600' : 'text-gray-400'} />
@@ -382,8 +382,8 @@ const ProfileQuickSettings = ({ onClose }) => {
                             showToast('Theme changed to Dark', 'success');
                         }}
                         className={`p-4 border-2 rounded-xl flex flex-col items-center gap-2 transition-all ${theme === 'dark'
-                                ? 'border-indigo-500 bg-indigo-50'
-                                : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                            ? 'border-indigo-500 bg-indigo-50'
+                            : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
                             }`}
                     >
                         <Moon size={24} className={theme === 'dark' ? 'text-indigo-600' : 'text-gray-400'} />
@@ -399,8 +399,8 @@ const ProfileQuickSettings = ({ onClose }) => {
                             showToast('Theme set to Auto', 'success');
                         }}
                         className={`p-4 border-2 rounded-xl flex flex-col items-center gap-2 transition-all ${theme === 'auto'
-                                ? 'border-indigo-500 bg-indigo-50'
-                                : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                            ? 'border-indigo-500 bg-indigo-50'
+                            : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
                             }`}
                     >
                         <Monitor size={24} className={theme === 'auto' ? 'text-indigo-600' : 'text-gray-400'} />
@@ -416,15 +416,15 @@ const ProfileQuickSettings = ({ onClose }) => {
 
     return (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden animate-slide-up">
+            <div className="w-full max-w-md bg-white dark:bg-slate-800 rounded-2xl shadow-2xl overflow-hidden animate-slide-up">
                 {/* Header */}
-                <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gradient-to-r from-indigo-50 to-purple-50">
-                    <h3 className="text-lg font-black text-gray-900">My Profile</h3>
+                <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-slate-700 dark:to-slate-700">
+                    <h3 className="text-lg font-black text-gray-900 dark:text-slate-100">My Profile</h3>
                     <button
                         onClick={onClose}
-                        className="w-8 h-8 rounded-full hover:bg-gray-200 flex items-center justify-center transition-colors"
+                        className="w-8 h-8 rounded-full hover:bg-gray-200 dark:hover:bg-slate-600 flex items-center justify-center transition-colors"
                     >
-                        <X size={18} className="text-gray-600" />
+                        <X size={18} className="text-gray-600 dark:text-slate-300" />
                     </button>
                 </div>
 

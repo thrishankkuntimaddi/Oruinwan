@@ -392,7 +392,7 @@ export default function MessageList({ onSelectChat }) {
               {channels.length > 0 && (
                 <>
                   <div className="px-4 py-2 bg-gray-50 sticky top-0 z-10 flex justify-between items-center group">
-                    <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                    <p className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide">
                       Channels
                     </p>
                     <button
@@ -416,7 +416,7 @@ export default function MessageList({ onSelectChat }) {
               {dms.length > 0 && (
                 <>
                   <div className="px-4 py-2 bg-gray-50 sticky top-0 z-10 mt-2">
-                    <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                    <p className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide">
                       Direct Messages
                     </p>
                   </div>

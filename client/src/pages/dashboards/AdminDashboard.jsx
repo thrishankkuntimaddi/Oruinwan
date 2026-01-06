@@ -195,7 +195,7 @@ const AdminDashboard = () => {
         <div className="flex h-screen bg-gray-50 font-sans text-slate-900 overflow-hidden">
             <AdminSidebar />
 
-            <main className="flex-1 flex flex-col h-full overflow-hidden bg-slate-50/50 relative">
+            <main className="flex-1 flex flex-col h-full overflow-hidden bg-slate-50/50 dark:bg-slate-900/50 relative">
                 {/* Header */}
                 <header className="h-16 px-8 flex items-center justify-between z-10 bg-white border-b border-slate-200">
                     <div>

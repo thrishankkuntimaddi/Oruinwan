@@ -377,7 +377,7 @@ export default function ChannelManagementModal({ channel, onClose, currentUserId
                             <div className="flex flex-col gap-0.5 mt-1">
                                 <p className="text-xs text-gray-500">{members.length} members • {channel.isPrivate ? "Private" : "Public"} Channel</p>
                                 {channel.description && (
-                                    <p className="text-xs text-gray-600 italic mt-1">{channel.description}</p>
+                                    <p className="text-xs text-gray-600 dark:text-gray-400 italic mt-1">{channel.description}</p>
                                 )}
                                 <p className="text-[10px] text-gray-400">
                                     Created on {new Date(channel.createdAt || Date.now()).toLocaleDateString()} by {channel.creatorName || "Admin"}
@@ -519,7 +519,7 @@ export default function ChannelManagementModal({ channel, onClose, currentUserId
                                                                 <button
                                                                     onClick={() => handleDemoteAdmin(member._id)}
                                                                     disabled={loading}
-                                                                    className="text-xs font-medium text-gray-600 hover:bg-gray-100 px-3 py-1.5 rounded-lg transition-all"
+                                                                    className="text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 px-3 py-1.5 rounded-lg transition-all"
                                                                 >
                                                                     Withdraw as Admin
                                                                 </button>
@@ -632,7 +632,7 @@ export default function ChannelManagementModal({ channel, onClose, currentUserId
                                                 </>
                                             ) : (
                                                 <>
-                                                    <p className="text-sm text-gray-600 text-right">{channel.description || "No description"}</p>
+                                                    <p className="text-sm text-gray-600 dark:text-gray-400 text-right">{channel.description || "No description"}</p>
                                                     <button
                                                         onClick={() => setIsEditingDescription(true)}
                                                         className="text-xs font-bold text-blue-600 hover:bg-blue-50 px-3 py-1.5 rounded-lg transition-colors"
@@ -756,7 +756,7 @@ export default function ChannelManagementModal({ channel, onClose, currentUserId
                                     {searchQuery && (
                                         <button
                                             onClick={() => setSearchQuery('')}
-                                            className="absolute right-3 top-3 text-gray-400 hover:text-gray-600"
+                                            className="absolute right-3 top-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
                                         >
                                             <X size={18} />
                                         </button>
@@ -834,8 +834,8 @@ export default function ChannelManagementModal({ channel, onClose, currentUserId
                                 <AlertTriangle size={20} className="text-red-600" />
                             </div>
                             <div className="flex-1">
-                                <h3 className="text-lg font-bold text-gray-900 mb-2">Remove Member</h3>
-                                <p className="text-sm text-gray-600 mb-6">
+                                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Remove Member</h3>
+                                <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
                                     Are you sure you want to remove this member from the channel? They will no longer have access to this channel.
                                 </p>
                                 <div className="flex gap-3 justify-end">
@@ -870,8 +870,8 @@ export default function ChannelManagementModal({ channel, onClose, currentUserId
                                 <Users size={20} className="text-blue-600" />
                             </div>
                             <div className="flex-1">
-                                <h3 className="text-lg font-bold text-gray-900 mb-2">Promote to Admin</h3>
-                                <p className="text-sm text-gray-600 mb-6">
+                                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Promote to Admin</h3>
+                                <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
                                     Are you sure you want to promote this member to admin? They will be able to manage channel settings and members.
                                 </p>
                                 <div className="flex gap-3 justify-end">
@@ -906,10 +906,10 @@ export default function ChannelManagementModal({ channel, onClose, currentUserId
                                     <AlertTriangle size={20} className="text-orange-600" />
                                 </div>
                                 <div className="flex-1">
-                                    <h3 className="text-lg font-bold text-gray-900 mb-2">
+                                    <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
                                         {String(memberToDemote) === String(currentUserId) ? "Withdraw as Admin" : "Demote to Member"}
                                     </h3>
-                                    <p className="text-sm text-gray-600 mb-6">
+                                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
                                         {String(memberToDemote) === String(currentUserId)
                                             ? "Are you sure you want to withdraw as admin? You will lose admin privileges and won't be able to manage channel settings."
                                             : "Are you sure you want to demote this admin to a regular member? They will lose admin privileges."}

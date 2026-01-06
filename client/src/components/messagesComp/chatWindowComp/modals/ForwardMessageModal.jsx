@@ -93,23 +93,23 @@ export default function ForwardMessageModal({ onClose, onForward, currentChatId,
 
     return (
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm animate-fade-in">
-            <div className="bg-white w-96 rounded-xl shadow-2xl flex flex-col max-h-[80vh]">
+            <div className="bg-white dark:bg-slate-800 w-96 rounded-xl shadow-2xl flex flex-col max-h-[80vh] border border-gray-100 dark:border-gray-700">
 
                 {/* Header */}
                 <div className="p-4 border-b border-gray-100 flex items-center justify-between">
-                    <h3 className="font-bold text-gray-800">Forward message to...</h3>
-                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+                    <h3 className="font-bold text-gray-800 dark:text-white">Forward message to...</h3>
+                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
                         <X size={20} />
                     </button>
                 </div>
 
                 {/* Tabs */}
-                <div className="flex border-b border-gray-200">
+                <div className="flex border-b border-gray-200 dark:border-gray-700">
                     <button
                         onClick={() => setActiveTab('channels')}
                         className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${activeTab === 'channels'
                             ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50/50'
-                            : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
+                            : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-700'
                             }`}
                     >
                         <div className="flex items-center justify-center gap-2">
@@ -121,7 +121,7 @@ export default function ForwardMessageModal({ onClose, onForward, currentChatId,
                         onClick={() => setActiveTab('dms')}
                         className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${activeTab === 'dms'
                             ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50/50'
-                            : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
+                            : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-700'
                             }`}
                     >
                         <div className="flex items-center justify-center gap-2">
@@ -132,13 +132,13 @@ export default function ForwardMessageModal({ onClose, onForward, currentChatId,
                 </div>
 
                 {/* Search */}
-                <div className="p-3 border-b border-gray-100">
+                <div className="p-3 border-b border-gray-100 dark:border-gray-700">
                     <div className="relative">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
                         <input
                             type="text"
                             placeholder={activeTab === 'channels' ? "Search channels..." : "Search people..."}
-                            className="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                            className="w-full pl-9 pr-4 py-2 bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-gray-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-gray-900 dark:text-white"
                             value={search}
                             onChange={e => setSearch(e.target.value)}
                             autoFocus
@@ -163,7 +163,7 @@ export default function ForwardMessageModal({ onClose, onForward, currentChatId,
                                         onClick={() => toggleSelection(channel)}
                                         className={`w-full flex items-center gap-3 p-2 rounded-lg transition-colors ${isSelected
                                             ? "bg-blue-50 border border-blue-200"
-                                            : "hover:bg-gray-50 border border-transparent"
+                                            : "hover:bg-gray-50 dark:hover:bg-slate-700/50 border border-transparent"
                                             }`}
                                     >
                                         <input
@@ -176,8 +176,8 @@ export default function ForwardMessageModal({ onClose, onForward, currentChatId,
                                             <Hash size={14} />
                                         </div>
                                         <div className="text-left flex-1">
-                                            <div className="text-sm font-medium text-gray-900">{channel.label}</div>
-                                            <div className="text-xs text-gray-500">Channel</div>
+                                            <div className="text-sm font-medium text-gray-900 dark:text-white">{channel.label}</div>
+                                            <div className="text-xs text-gray-500 dark:text-gray-400">Channel</div>
                                         </div>
                                     </button>
                                 );
@@ -215,8 +215,8 @@ export default function ForwardMessageModal({ onClose, onForward, currentChatId,
                                             )}
                                         </div>
                                         <div className="text-left flex-1">
-                                            <div className="text-sm font-medium text-gray-900">{member.username}</div>
-                                            <div className="text-xs text-gray-500">{member.email}</div>
+                                            <div className="text-sm font-medium text-gray-900 dark:text-white">{member.username}</div>
+                                            <div className="text-xs text-gray-500 dark:text-gray-400">{member.email}</div>
                                         </div>
                                     </button>
                                 );
@@ -230,14 +230,14 @@ export default function ForwardMessageModal({ onClose, onForward, currentChatId,
                 </div>
 
                 {/* Footer */}
-                <div className="p-4 border-t border-gray-100 flex justify-between items-center">
-                    <div className="text-xs text-gray-500">
+                <div className="p-4 border-t border-gray-100 dark:border-gray-700 flex justify-between items-center">
+                    <div className="text-xs text-gray-500 dark:text-gray-400">
                         {selectedItems.size > 0 && `${selectedItems.size} selected`}
                     </div>
                     <div className="flex gap-2">
                         <button
                             onClick={onClose}
-                            className="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                            className="px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
                         >
                             Cancel
                         </button>

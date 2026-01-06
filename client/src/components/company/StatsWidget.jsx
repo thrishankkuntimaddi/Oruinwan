@@ -13,11 +13,11 @@ const StatsWidget = ({
     iconColor = 'text-blue-600'
 }) => {
     return (
-        <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm hover:shadow-md transition-all">
+        <div className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-all">
             <div className="flex items-start justify-between">
                 <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-600 mb-2">{label}</p>
-                    <p className="text-3xl font-bold text-gray-900">{value}</p>
+                    <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">{label}</p>
+                    <p className="text-3xl font-bold text-gray-900 dark:text-white">{value}</p>
 
                     {trend !== null && (
                         <div className="flex items-center gap-1 mt-2">
@@ -26,7 +26,7 @@ const StatsWidget = ({
                             ) : trend < 0 ? (
                                 <TrendingDown className="w-4 h-4 text-red-500" />
                             ) : null}
-                            <span className={`text-sm font-medium ${trend > 0 ? 'text-green-600' : trend < 0 ? 'text-red-600' : 'text-gray-600'}`}>
+                            <span className={`text-sm font-medium ${trend > 0 ? 'text-green-600 dark:text-green-400' : trend < 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-600 dark:text-gray-400'}`}>
                                 {trend > 0 && '+'}{trend}% {trendLabel}
                             </span>
                         </div>

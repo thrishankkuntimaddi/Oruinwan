@@ -3,9 +3,9 @@
 
 import React, { useState } from 'react';
 import {
-    Settings, Building, Shield, Bell, CreditCard, Users, Globe,
-    Lock, Mail, Palette, Database, Download, Upload, Check, X,
-    AlertCircle, ExternalLink, Key, Zap, FileText, Eye, EyeOff
+    Building, Shield, Bell, CreditCard, Users, Globe,
+    Palette, Database, Download, Upload, Check,
+    AlertCircle, ExternalLink, Key, Zap
 } from 'lucide-react';
 import { useCompany } from '../../contexts/CompanyContext';
 import { useAuth } from '../../contexts/AuthContext';
@@ -14,7 +14,7 @@ import DomainSettings from '../../components/company/DomainSettings';
 
 const AdminSettings = () => {
     const { company } = useCompany();
-    const { user } = useAuth();
+    const { } = useAuth();
     const [activeTab, setActiveTab] = useState('company');
     const [isSaving, setIsSaving] = useState(false);
 
@@ -69,10 +69,10 @@ const AdminSettings = () => {
     };
 
     return (
-        <div className="flex h-screen bg-slate-50 font-sans text-slate-900 overflow-hidden">
+        <div className="flex h-screen bg-slate-50 dark:bg-slate-900 font-sans text-slate-900 dark:text-slate-100 overflow-hidden">
             <AdminSidebar />
 
-            <main className="flex-1 flex flex-col h-full overflow-hidden bg-slate-50/50 relative">
+            <main className="flex-1 flex flex-col h-full overflow-hidden bg-slate-50/50 dark:bg-slate-900/50 relative">
                 {/* Header */}
                 <header className="h-16 px-8 flex items-center justify-between z-10 bg-white border-b border-slate-200">
                     <div>
@@ -108,8 +108,8 @@ const AdminSettings = () => {
                                         key={tab.id}
                                         onClick={() => setActiveTab(tab.id)}
                                         className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${activeTab === tab.id
-                                                ? 'bg-indigo-50 text-indigo-600'
-                                                : 'text-slate-600 hover:bg-slate-50'
+                                            ? 'bg-indigo-50 text-indigo-600'
+                                            : 'text-slate-600 hover:bg-slate-50'
                                             }`}
                                     >
                                         <Icon size={18} />
@@ -307,7 +307,7 @@ const AdminSettings = () => {
                                         </label>
                                     </div>
                                     <p className="text-xs text-slate-500">
-                                        SSO is available on Enterprise plans. <a href="#" className="text-indigo-600 font-medium hover:underline">Upgrade now</a>
+                                        SSO is available on Enterprise plans. <button className="text-indigo-600 font-medium hover:underline bg-transparent border-none cursor-pointer p-0">Upgrade now</button>
                                     </p>
                                 </div>
                             </div>

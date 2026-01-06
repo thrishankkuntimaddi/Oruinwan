@@ -40,13 +40,13 @@ const InviteUserModal = ({ isOpen, onClose, companyId, workspaces = [] }) => {
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-            <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-fadeIn">
+            <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-fadeIn">
                 <div className="flex items-center justify-between p-6 border-b border-gray-100">
-                    <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                    <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
                         <Mail size={20} className="text-indigo-600" />
                         Invite Team Member
                     </h3>
-                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-2 rounded-lg hover:bg-gray-50">
+                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700">
                         <X size={20} />
                     </button>
                 </div>
@@ -58,7 +58,7 @@ const InviteUserModal = ({ isOpen, onClose, companyId, workspaces = [] }) => {
                             type="email"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
-                            className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all text-gray-900 bg-gray-50 focus:bg-white"
+                            className="w-full px-4 py-3 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all text-gray-900 dark:text-white bg-gray-50 dark:bg-slate-900 focus:bg-white dark:focus:bg-slate-800"
                             placeholder="colleague@company.com"
                             required
                         />
@@ -70,7 +70,7 @@ const InviteUserModal = ({ isOpen, onClose, companyId, workspaces = [] }) => {
                             <select
                                 value={role}
                                 onChange={(e) => setRole(e.target.value)}
-                                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none bg-white text-gray-900"
+                                className="w-full px-4 py-3 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none bg-white dark:bg-slate-900 text-gray-900 dark:text-white"
                             >
                                 <option value="member">Member</option>
                                 <option value="manager">Manager</option>
@@ -82,7 +82,7 @@ const InviteUserModal = ({ isOpen, onClose, companyId, workspaces = [] }) => {
                             <select
                                 value={workspaceId}
                                 onChange={(e) => setWorkspaceId(e.target.value)}
-                                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none bg-white text-gray-900"
+                                className="w-full px-4 py-3 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none bg-white dark:bg-slate-900 text-gray-900 dark:text-white"
                             >
                                 <option value="">None (General)</option>
                                 {workspaces.map(ws => (

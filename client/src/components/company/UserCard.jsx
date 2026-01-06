@@ -28,7 +28,7 @@ const UserCard = ({
     return (
         <div
             onClick={onClick}
-            className={`flex items-center justify-between p-4 rounded-lg border border-gray-100 hover:border-gray-200 hover:bg-gray-50 transition-all ${onClick ? 'cursor-pointer' : ''}`}
+            className={`flex items-center justify-between p-4 rounded-lg border border-gray-100 dark:border-gray-700 hover:border-gray-200 dark:hover:border-gray-600 hover:bg-gray-50 dark:hover:bg-slate-700 transition-all ${onClick ? 'cursor-pointer' : ''}`}
         >
             <div className="flex items-center gap-3 flex-1 min-w-0">
                 {/* Avatar */}
@@ -39,19 +39,19 @@ const UserCard = ({
                 {/* User Info */}
                 <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                        <p className="font-semibold text-gray-900 truncate">{user.username || 'Unknown'}</p>
+                        <p className="font-semibold text-gray-900 dark:text-white truncate">{user.username || 'Unknown'}</p>
                         {user.companyRole && <RoleBadge role={user.companyRole} size="sm" />}
                     </div>
 
                     {showEmail && user.email && (
-                        <div className="flex items-center gap-1 text-sm text-gray-500 mt-0.5">
+                        <div className="flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400 mt-0.5">
                             <Mail className="w-3 h-3" />
                             <span className="truncate">{user.email}</span>
                         </div>
                     )}
 
                     {showDepartment && user.departmentName && (
-                        <span className="inline-block text-xs text-gray-600 mt-1 px-2 py-0.5 bg-gray-100 rounded">
+                        <span className="inline-block text-xs text-gray-600 dark:text-gray-300 mt-1 px-2 py-0.5 bg-gray-100 dark:bg-slate-700 rounded">
                             {user.departmentName}
                         </span>
                     )}

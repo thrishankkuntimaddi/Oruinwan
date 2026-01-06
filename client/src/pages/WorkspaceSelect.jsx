@@ -122,16 +122,16 @@ const WorkspaceSelect = () => {
     };
 
     return (
-        <div className="min-h-screen bg-slate-50 font-sans selection:bg-indigo-100 selection:text-indigo-700">
+        <div className="min-h-screen bg-slate-50 dark:bg-slate-900 font-sans selection:bg-indigo-100 dark:selection:bg-indigo-900 selection:text-indigo-700 dark:selection:text-indigo-300">
             {/* Minimal Header */}
-            <header className="fixed top-0 w-full bg-white/80 backdrop-blur-md border-b border-slate-200 z-50 px-8 h-16 flex items-center justify-between">
+            <header className="fixed top-0 w-full bg-white/80 dark:bg-slate-800/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-700 z-50 px-8 h-16 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                     <img
                         src="/chttrix-logo.jpg"
                         alt="Chttrix"
                         className="w-8 h-8 rounded-lg shadow-sm shadow-indigo-200 object-cover"
                     />
-                    <span className="font-extrabold text-slate-800 tracking-tight text-lg">Chttrix</span>
+                    <span className="font-extrabold text-slate-800 dark:text-slate-100 tracking-tight text-lg">Chttrix</span>
                 </div>
 
                 <div className="flex items-center gap-4 relative">
@@ -147,7 +147,7 @@ const WorkspaceSelect = () => {
                     {showHelp && (
                         <>
                             <div className="fixed inset-0 z-[90] cursor-default" onClick={() => setShowHelp(false)}></div>
-                            <div className="absolute top-12 right-0 w-80 bg-white rounded-xl shadow-2xl border border-slate-200 z-[100] overflow-hidden animate-fade-in origin-top-right">
+                            <div className="absolute top-12 right-0 w-80 bg-white dark:bg-slate-800 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-700 z-[100] overflow-hidden animate-fade-in origin-top-right">
                                 {/* Unique Gradient Header */}
                                 <div className="p-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white">
                                     <h3 className="font-bold text-base">Chttrix Support</h3>
@@ -155,13 +155,13 @@ const WorkspaceSelect = () => {
                                 </div>
 
                                 {/* Search */}
-                                <div className="p-3 border-b border-slate-100">
+                                <div className="p-3 border-b border-slate-100 dark:border-slate-700">
                                     <div className="relative">
                                         <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                                         <input
                                             type="text"
                                             placeholder="Find answers..."
-                                            className="w-full pl-9 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-900 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                                            className="w-full pl-9 pr-3 py-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
                                         />
                                     </div>
                                 </div>
@@ -170,36 +170,36 @@ const WorkspaceSelect = () => {
                                 <div className="p-2 grid grid-cols-2 gap-2">
                                     <button
                                         onClick={() => { setShowHelp(false); setActiveHelpModal("academy"); }}
-                                        className="flex flex-col items-center justify-center p-2 hover:bg-indigo-50 rounded-lg transition-colors group"
+                                        className="flex flex-col items-center justify-center p-2 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-colors group"
                                     >
                                         <BookOpen size={20} className="mb-1 group-hover:scale-110 transition-transform text-indigo-600" />
-                                        <span className="text-xs font-medium text-slate-700">Academy</span>
+                                        <span className="text-xs font-medium text-slate-700 dark:text-slate-300">Academy</span>
                                     </button>
                                     <button
                                         onClick={() => { setShowHelp(false); setActiveHelpModal("shortcuts"); }}
-                                        className="flex flex-col items-center justify-center p-2 hover:bg-indigo-50 rounded-lg transition-colors group"
+                                        className="flex flex-col items-center justify-center p-2 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-colors group"
                                     >
                                         <Command size={20} className="mb-1 group-hover:scale-110 transition-transform text-slate-700" />
-                                        <span className="text-xs font-medium text-slate-700">Shortcuts</span>
+                                        <span className="text-xs font-medium text-slate-700 dark:text-slate-300">Shortcuts</span>
                                     </button>
                                     <button
                                         onClick={() => { setShowHelp(false); setActiveHelpModal("bug"); }}
-                                        className="flex flex-col items-center justify-center p-2 hover:bg-indigo-50 rounded-lg transition-colors group"
+                                        className="flex flex-col items-center justify-center p-2 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-colors group"
                                     >
                                         <Bug size={20} className="mb-1 group-hover:scale-110 transition-transform text-red-600" />
-                                        <span className="text-xs font-medium text-slate-700">Report Bug</span>
+                                        <span className="text-xs font-medium text-slate-700 dark:text-slate-300">Report Bug</span>
                                     </button>
                                     <button
                                         onClick={() => { setShowHelp(false); setActiveHelpModal("whatsnew"); }}
-                                        className="flex flex-col items-center justify-center p-2 hover:bg-indigo-50 rounded-lg transition-colors group"
+                                        className="flex flex-col items-center justify-center p-2 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-colors group"
                                     >
                                         <Sparkles size={20} className="mb-1 group-hover:scale-110 transition-transform text-yellow-500" />
-                                        <span className="text-xs font-medium text-slate-700">What's New</span>
+                                        <span className="text-xs font-medium text-slate-700 dark:text-slate-300">What's New</span>
                                     </button>
                                 </div>
 
                                 {/* System Status Footer */}
-                                <div className="border-t border-slate-100 p-2 bg-slate-50 flex items-center justify-between">
+                                <div className="border-t border-slate-100 dark:border-slate-700 p-2 bg-slate-50 dark:bg-slate-900 flex items-center justify-between">
                                     <div className="flex items-center gap-2">
                                         <span className="relative flex h-2 w-2">
                                             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
@@ -261,10 +261,10 @@ const WorkspaceSelect = () => {
             {/* Main Content */}
             <main className="pt-32 pb-20 px-6 max-w-7xl mx-auto">
                 <div className="mb-12 text-center max-w-2xl mx-auto">
-                    <h1 className="text-4xl font-black text-slate-900 mb-4 tracking-tight">
+                    <h1 className="text-4xl font-black text-slate-900 dark:text-slate-100 mb-4 tracking-tight">
                         Welcome back, {user?.username?.split(' ')[0]}
                     </h1>
-                    <p className="text-lg text-slate-500 font-medium">
+                    <p className="text-lg text-slate-500 dark:text-slate-400 font-medium">
                         Select a workspace to jump back in, or create a new one to get started.
                     </p>
                 </div>
@@ -291,7 +291,7 @@ const WorkspaceSelect = () => {
                                 <button
                                     key={ws.id}
                                     onClick={() => handleWorkspaceClick(ws.id)}
-                                    className="group relative flex flex-col h-64 bg-white border border-slate-200 rounded-2xl p-8 hover:shadow-xl hover:shadow-indigo-100/50 hover:border-indigo-200 hover:-translate-y-1 transition-all duration-300 text-left overflow-hidden"
+                                    className="group relative flex flex-col h-64 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-8 hover:shadow-xl hover:shadow-indigo-100/50 dark:hover:shadow-indigo-900/50 hover:border-indigo-200 dark:hover:border-indigo-700 hover:-translate-y-1 transition-all duration-300 text-left overflow-hidden"
                                 >
                                     {/* Decorative gradient blob */}
                                     <div className="absolute -top-10 -right-10 w-32 h-32 bg-gradient-to-br from-indigo-50 to-purple-50 rounded-full blur-2xl group-hover:from-indigo-100 group-hover:to-purple-100 transition-colors"></div>
@@ -304,9 +304,9 @@ const WorkspaceSelect = () => {
                                             <IconComponent size={28} />
                                         </div>
 
-                                        <h3 className="text-xl font-bold text-slate-800 mb-2 truncate pr-4">{ws.name}</h3>
+                                        <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-2 truncate pr-4">{ws.name}</h3>
 
-                                        <div className="flex items-center gap-4 text-sm text-slate-500 font-medium">
+                                        <div className="flex items-center gap-4 text-sm text-slate-500 dark:text-slate-400 font-medium">
                                             <div className="flex items-center gap-1.5">
                                                 <User size={14} className="text-slate-400" />
                                                 {ws.role === 'owner' ? 'Owner' : 'Member'}
@@ -326,13 +326,13 @@ const WorkspaceSelect = () => {
                         {/* New Workspace Card */}
                         <button
                             onClick={() => setIsCreateModalOpen(true)}
-                            className="group relative flex flex-col items-center justify-center h-64 border-2 border-dashed border-slate-300 rounded-2xl hover:border-indigo-400 hover:bg-indigo-50/50 transition-all duration-300"
+                            className="group relative flex flex-col items-center justify-center h-64 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-2xl hover:border-indigo-400 dark:hover:border-indigo-600 hover:bg-indigo-50/50 dark:hover:bg-indigo-900/20 transition-all duration-300"
                         >
                             <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 group-hover:bg-indigo-100 group-hover:text-indigo-600 transition-colors mb-4">
                                 <Plus size={32} />
                             </div>
-                            <span className="font-bold text-slate-600 group-hover:text-indigo-700 text-lg">Create New Workspace</span>
-                            <span className="text-sm text-slate-400 group-hover:text-indigo-500 mt-1">Start a new project or team</span>
+                            <span className="font-bold text-slate-600 dark:text-slate-300 group-hover:text-indigo-700 dark:group-hover:text-indigo-400 text-lg">Create New Workspace</span>
+                            <span className="text-sm text-slate-400 dark:text-slate-500 group-hover:text-indigo-500 dark:group-hover:text-indigo-400 mt-1">Start a new project or team</span>
                         </button>
                     </div>
                 )}
@@ -341,12 +341,12 @@ const WorkspaceSelect = () => {
             {/* Create Modal */}
             {isCreateModalOpen && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-fadeIn">
-                    <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden animate-slideUp">
-                        <div className="px-8 py-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-                            <h3 className="font-bold text-xl text-slate-800">Create Workspace</h3>
+                    <div className="bg-white dark:bg-slate-800 w-full max-w-md rounded-2xl shadow-2xl overflow-hidden animate-slideUp">
+                        <div className="px-8 py-6 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/50">
+                            <h3 className="font-bold text-xl text-slate-800 dark:text-white">Create Workspace</h3>
                             <button
                                 onClick={resetCreateModal}
-                                className="text-slate-400 hover:text-slate-600"
+                                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
                             >
                                 <Plus size={24} className="rotate-45" />
                             </button>
@@ -355,7 +355,7 @@ const WorkspaceSelect = () => {
                         <form onSubmit={handleCreateSubmit} className="p-8">
                             <div className="space-y-6">
                                 <div>
-                                    <label className="block text-sm font-bold text-slate-700 mb-2">Workspace Name</label>
+                                    <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Workspace Name</label>
                                     <input
                                         type="text"
                                         autoFocus
@@ -365,13 +365,13 @@ const WorkspaceSelect = () => {
                                             setCreateData({ ...createData, name: e.target.value });
                                             setNameError("");
                                         }}
-                                        className={`w-full px-4 py-3 bg-white border ${nameError ? 'border-red-300 focus:border-red-500 focus:ring-red-200' : 'border-slate-200 focus:border-indigo-500 focus:ring-indigo-200'} rounded-xl focus:outline-none focus:ring-4 transition-all text-slate-800 font-medium`}
+                                        className={`w-full px-4 py-3 bg-white dark:bg-slate-900 border ${nameError ? 'border-red-300 focus:border-red-500 focus:ring-red-200' : 'border-slate-200 dark:border-slate-700 focus:border-indigo-500 focus:ring-indigo-200'} rounded-xl focus:outline-none focus:ring-4 transition-all text-slate-800 dark:text-white font-medium`}
                                     />
                                     {nameError && <p className="mt-2 text-xs font-bold text-red-500">{nameError}</p>}
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-bold text-slate-700 mb-2">Theme Color</label>
+                                    <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Theme Color</label>
                                     <div className="flex gap-3">
                                         {['#4f46e5', '#0ea5e9', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'].map((color) => (
                                             <button
@@ -390,7 +390,7 @@ const WorkspaceSelect = () => {
                                 <button
                                     type="button"
                                     onClick={resetCreateModal}
-                                    className="px-5 py-2.5 text-slate-600 font-bold hover:bg-slate-50 rounded-xl transition-colors"
+                                    className="px-5 py-2.5 text-slate-600 dark:text-slate-400 font-bold hover:bg-slate-50 dark:hover:bg-slate-700 rounded-xl transition-colors"
                                 >
                                     Cancel
                                 </button>
@@ -409,10 +409,10 @@ const WorkspaceSelect = () => {
             {/* Help Modals (Detailed Content) */}
             {activeHelpModal && (
                 <div className="fixed inset-0 bg-slate-900/40 z-[120] flex items-center justify-center animate-fade-in backdrop-blur-sm p-4">
-                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col relative animate-slideUp">
+                    <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col relative animate-slideUp">
                         <button
                             onClick={() => setActiveHelpModal(null)}
-                            className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 z-10"
+                            className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 z-10"
                         >
                             <X size={24} />
                         </button>
@@ -425,9 +425,9 @@ const WorkspaceSelect = () => {
                                 </div>
                                 <div className="p-6 overflow-y-auto max-h-[60vh] space-y-4">
                                     {["Getting Started Guide", "Advanced Search Techniques", "Managing Notifications", "Integrations 101"].map((guide, i) => (
-                                        <div key={i} className="p-4 border border-slate-200 rounded-lg hover:border-indigo-300 hover:bg-indigo-50 cursor-pointer transition-all group">
-                                            <h3 className="font-bold text-slate-800 group-hover:text-indigo-700">{guide}</h3>
-                                            <p className="text-sm text-slate-500 mt-1">Learn the basics and become a pro user in no time.</p>
+                                        <div key={i} className="p-4 border border-slate-200 dark:border-slate-700 rounded-lg hover:border-indigo-300 dark:hover:border-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 cursor-pointer transition-all group">
+                                            <h3 className="font-bold text-slate-800 dark:text-white group-hover:text-indigo-700 dark:group-hover:text-indigo-400">{guide}</h3>
+                                            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Learn the basics and become a pro user in no time.</p>
                                         </div>
                                     ))}
                                 </div>
@@ -442,17 +442,17 @@ const WorkspaceSelect = () => {
                                 </div>
                                 <div className="p-6 overflow-y-auto max-h-[60vh]">
                                     <div className="grid grid-cols-1 gap-4">
-                                        <div className="flex justify-between items-center p-3 bg-slate-50 rounded-lg">
-                                            <span className="text-slate-600 font-medium">Quick Search</span>
-                                            <kbd className="px-2 py-1 bg-white rounded text-xs font-mono text-slate-500 border border-slate-300 shadow-sm">Cmd + K</kbd>
+                                        <div className="flex justify-between items-center p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
+                                            <span className="text-slate-600 dark:text-slate-300 font-medium">Quick Search</span>
+                                            <kbd className="px-2 py-1 bg-white dark:bg-slate-800 rounded text-xs font-mono text-slate-500 dark:text-slate-400 border border-slate-300 dark:border-slate-600 shadow-sm">Cmd + K</kbd>
                                         </div>
-                                        <div className="flex justify-between items-center p-3 bg-slate-50 rounded-lg">
-                                            <span className="text-slate-600 font-medium">New Message</span>
-                                            <kbd className="px-2 py-1 bg-white rounded text-xs font-mono text-slate-500 border border-slate-300 shadow-sm">Cmd + N</kbd>
+                                        <div className="flex justify-between items-center p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
+                                            <span className="text-slate-600 dark:text-slate-300 font-medium">New Message</span>
+                                            <kbd className="px-2 py-1 bg-white dark:bg-slate-800 rounded text-xs font-mono text-slate-500 dark:text-slate-400 border border-slate-300 dark:border-slate-600 shadow-sm">Cmd + N</kbd>
                                         </div>
-                                        <div className="flex justify-between items-center p-3 bg-slate-50 rounded-lg">
-                                            <span className="text-slate-600 font-medium">Toggle AI</span>
-                                            <kbd className="px-2 py-1 bg-white rounded text-xs font-mono text-slate-500 border border-slate-300 shadow-sm">Cmd + J</kbd>
+                                        <div className="flex justify-between items-center p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
+                                            <span className="text-slate-600 dark:text-slate-300 font-medium">Toggle AI</span>
+                                            <kbd className="px-2 py-1 bg-white dark:bg-slate-800 rounded text-xs font-mono text-slate-500 dark:text-slate-400 border border-slate-300 dark:border-slate-600 shadow-sm">Cmd + J</kbd>
                                         </div>
                                     </div>
                                 </div>
@@ -461,14 +461,14 @@ const WorkspaceSelect = () => {
 
                         {activeHelpModal === "bug" && (
                             <>
-                                <div className="p-6 bg-red-50 border-b border-red-100">
-                                    <h2 className="text-2xl font-bold text-red-700 flex items-center gap-2"><Bug size={28} /> Report a Bug</h2>
-                                    <p className="text-red-600 mt-1">Found something broken? Let us know.</p>
+                                <div className="p-6 bg-red-50 dark:bg-red-900/20 border-b border-red-100 dark:border-red-900/30">
+                                    <h2 className="text-2xl font-bold text-red-700 dark:text-red-400 flex items-center gap-2"><Bug size={28} /> Report a Bug</h2>
+                                    <p className="text-red-600 dark:text-red-300 mt-1">Found something broken? Let us know.</p>
                                 </div>
                                 <div className="p-6 space-y-4">
                                     <div>
-                                        <label className="block text-sm font-bold text-slate-700 mb-1">What happened?</label>
-                                        <textarea className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-red-500 focus:border-red-500 h-32 resize-none" placeholder="Describe the issue..."></textarea>
+                                        <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1">What happened?</label>
+                                        <textarea className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-white rounded-xl focus:ring-red-500 focus:border-red-500 h-32 resize-none" placeholder="Describe the issue..."></textarea>
                                     </div>
                                     <button className="w-full py-3 bg-red-600 text-white rounded-xl font-bold hover:bg-red-700 transition-colors shadow-lg shadow-red-200">
                                         Submit Report
@@ -484,31 +484,31 @@ const WorkspaceSelect = () => {
                                     <p className="text-white/90 mt-1">Latest updates and improvements.</p>
                                 </div>
                                 <div className="p-6 overflow-y-auto max-h-[60vh] space-y-6">
-                                    <div className="relative pl-4 border-l-2 border-slate-200">
+                                    <div className="relative pl-4 border-l-2 border-slate-200 dark:border-slate-700">
                                         <div className="absolute -left-[5px] top-0 w-2.5 h-2.5 rounded-full bg-pink-500"></div>
                                         <span className="text-xs font-bold text-pink-500 uppercase">Nov 2025</span>
-                                        <h3 className="text-lg font-bold text-slate-900 mt-1">Chttrix AI 2.0</h3>
-                                        <p className="text-slate-600 text-sm mt-1">Smarter responses, faster generation, and context-aware suggestions.</p>
+                                        <h3 className="text-lg font-bold text-slate-900 dark:text-white mt-1">Chttrix AI 2.0</h3>
+                                        <p className="text-slate-600 dark:text-slate-400 text-sm mt-1">Smarter responses, faster generation, and context-aware suggestions.</p>
                                     </div>
-                                    <div className="relative pl-4 border-l-2 border-slate-200">
+                                    <div className="relative pl-4 border-l-2 border-slate-200 dark:border-slate-700">
                                         <div className="absolute -left-[5px] top-0 w-2.5 h-2.5 rounded-full bg-orange-500"></div>
                                         <span className="text-xs font-bold text-orange-500 uppercase">Oct 2025</span>
-                                        <h3 className="text-lg font-bold text-slate-900 mt-1">Dark Mode Beta</h3>
-                                        <p className="text-slate-600 text-sm mt-1">Easy on the eyes. Try it out in settings.</p>
+                                        <h3 className="text-lg font-bold text-slate-900 dark:text-white mt-1">Dark Mode Beta</h3>
+                                        <p className="text-slate-600 dark:text-slate-400 text-sm mt-1">Easy on the eyes. Try it out in settings.</p>
                                     </div>
                                 </div>
                             </>
                         )}
                         {activeHelpModal === "contact" && (
                             <>
-                                <div className="p-6 bg-blue-50 border-b border-blue-100">
-                                    <h2 className="text-2xl font-bold text-blue-900 flex items-center gap-2"><MessageCircle size={28} /> Contact Support</h2>
-                                    <p className="text-blue-700 mt-1">We're here to help with any questions.</p>
+                                <div className="p-6 bg-blue-50 dark:bg-blue-900/20 border-b border-blue-100 dark:border-blue-900/30">
+                                    <h2 className="text-2xl font-bold text-blue-900 dark:text-blue-300 flex items-center gap-2"><MessageCircle size={28} /> Contact Support</h2>
+                                    <p className="text-blue-700 dark:text-blue-400 mt-1">We're here to help with any questions.</p>
                                 </div>
                                 <div className="p-6 space-y-4">
                                     <div>
-                                        <label className="block text-sm font-bold text-slate-700 mb-1">Subject</label>
-                                        <select className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-blue-500 focus:border-blue-500 font-medium text-slate-700">
+                                        <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1">Subject</label>
+                                        <select className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-700 dark:text-white rounded-xl focus:ring-blue-500 focus:border-blue-500 font-medium">
                                             <option>General Inquiry</option>
                                             <option>Billing Issue</option>
                                             <option>Technical Support</option>
@@ -516,8 +516,8 @@ const WorkspaceSelect = () => {
                                         </select>
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-bold text-slate-700 mb-1">Message</label>
-                                        <textarea className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-blue-500 focus:border-blue-500 h-32 resize-none" placeholder="How can we help you?"></textarea>
+                                        <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1">Message</label>
+                                        <textarea className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-700 dark:text-white rounded-xl focus:ring-blue-500 focus:border-blue-500 h-32 resize-none" placeholder="How can we help you?"></textarea>
                                     </div>
                                     <button className="w-full py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-colors shadow-lg shadow-blue-200">
                                         Send Message

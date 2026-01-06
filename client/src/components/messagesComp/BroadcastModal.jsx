@@ -98,7 +98,7 @@ export default function BroadcastModal({ workspaceId, onClose, onSendBroadcast }
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in p-4">
-            <div className="bg-white dark:bg-gray-800 w-full max-w-7xl h-[85vh] rounded-xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col">
+            <div className="bg-white dark:bg-slate-800 w-full max-w-7xl h-[85vh] rounded-xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col">
                 {/* Header */}
                 <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between flex-shrink-0">
                     <div className="flex items-center gap-3">
@@ -272,9 +272,9 @@ export default function BroadcastModal({ workspaceId, onClose, onSendBroadcast }
                     </div>
 
                     {/* Right Column - Message Area */}
-                    <div className="flex-1 flex flex-col bg-gray-50 dark:bg-gray-900/50">
+                    <div className="flex-1 flex flex-col bg-gray-50 dark:bg-slate-900/50">
                         {/* Selected Recipients Header - Aligned with Tabs */}
-                        <div className="border-b border-gray-200 dark:border-gray-700 flex-shrink-0 min-h-[61px] flex items-center px-4 bg-white dark:bg-gray-800">
+                        <div className="border-b border-gray-200 dark:border-gray-700 flex-shrink-0 min-h-[61px] flex items-center px-4 bg-white dark:bg-slate-800">
                             <span className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                                 To:
                             </span>
@@ -309,7 +309,7 @@ export default function BroadcastModal({ workspaceId, onClose, onSendBroadcast }
                                 placeholder="Type your broadcast message here..."
                                 value={message}
                                 onChange={(e) => setMessage(e.target.value)}
-                                className="flex-1 p-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-white"
+                                className="flex-1 p-4 bg-white dark:bg-slate-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-white"
                             />
                         </div>
 

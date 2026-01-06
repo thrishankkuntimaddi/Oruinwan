@@ -49,10 +49,10 @@ const AdminAnalyticsDashboard = () => {
   if (!isCompanyAdmin()) return null;
 
   return (
-    <div className="flex h-screen bg-slate-50 font-sans text-slate-900 overflow-hidden">
+    <div className="flex h-screen bg-slate-50 dark:bg-slate-900 font-sans text-slate-900 dark:text-slate-100 overflow-hidden">
       <AdminSidebar />
 
-      <main className="flex-1 flex flex-col h-full overflow-hidden bg-slate-50/50 relative">
+      <main className="flex-1 flex flex-col h-full overflow-hidden bg-slate-50/50 dark:bg-slate-900/50 relative">
         <header className="h-16 px-8 flex items-center justify-between z-10 bg-white border-b border-slate-200">
           <div>
             <h2 className="text-xl font-black text-slate-800">Analytics & Insights Hub</h2>

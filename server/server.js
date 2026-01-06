@@ -169,6 +169,7 @@ app.use("/api/support", require("./routes/support"));
 app.use("/api/audit", require("./routes/audit"));
 app.use("/api/managers", require("./routes/managers"));
 app.use("/api/analytics", require("./routes/analytics"));
+app.use("/api/ai", require("./routes/aiRoutes"));
 
 // ---------------------------------------------------------
 // SOCKET.IO SETUP

@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { aiService } from "../../../services/aiService";
 import { Rnd } from "react-rnd";
 import {
   Send, Mic, Image, FileText, X, Plus, History, Info,
@@ -70,7 +71,7 @@ const ChttrixAIChat = ({ onClose, isSidebar = false }) => {
 
   // --- Handlers ---
 
-  const handleSend = (text = input) => {
+  const handleSend = async (text = input) => {
     if (!text.trim()) return;
 
     const newMessage = {
@@ -81,7 +82,9 @@ const ChttrixAIChat = ({ onClose, isSidebar = false }) => {
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     };
 
-    setMessages(prev => [...prev, newMessage]);
+    // Optimistic Update
+    const updatedMessages = [...messages, newMessage];
+    setMessages(updatedMessages);
     setInput("");
     setReplyingTo(null); // Clear reply
     setIsTyping(true);
@@ -91,19 +94,51 @@ const ChttrixAIChat = ({ onClose, isSidebar = false }) => {
       setChatTitle(text.substring(0, 25) + (text.length > 25 ? "..." : ""));
     }
 
-    // Simulate AI response
-    setTimeout(() => {
+    try {
+      // Prepare history for API (exclude failures, system messages if needed)
+      // Simple mapping: 
+      const historyForApi = updatedMessages
+        .filter((m, index) => {
+          // EXCLUDE valid system/error messages AND the initial welcome message (id: 1)
+          if (m.isError) return false;
+          if (m.id === 1 && m.sender === 'ai') return false; // Don't send local welcome msg to API
+          return m.sender === 'user' || m.sender === 'ai';
+        })
+        .map(m => ({
+          sender: m.sender,
+          text: m.text
+        }));
+
+      // Call API
+      const data = await aiService.chat(text, historyForApi.slice(0, -1)); // Exclude the just-added message from history if API expects previous history
+
+      // OR if your API logic in controller builds history differently, adjust. 
+      // My controller expects 'history' as previous messages.
+
       setIsTyping(false);
       setMessages((prev) => [
         ...prev,
         {
           id: Date.now() + 1,
           sender: "ai",
-          text: "I'm processing your request. As an AI, I can help with code, summaries, and more!",
+          text: data.text,
           time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         },
       ]);
-    }, 1500);
+    } catch (error) {
+      setIsTyping(false);
+      console.error("Failed to get AI response", error);
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: Date.now() + 1,
+          sender: "ai",
+          text: "Sorry, I'm having trouble connecting to the server. Please try again later.",
+          isError: true,
+          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        },
+      ]);
+    }
   };
 
   const handleSaveEdit = (id, newText) => {

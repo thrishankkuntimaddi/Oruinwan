@@ -66,9 +66,9 @@ const DomainSettings = ({ companyId }) => {
     };
 
     return (
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-200">
+        <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700">
             <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
                     <Shield size={20} className="text-gray-400" />
                     Domain Verification
                 </h3>
@@ -78,8 +78,8 @@ const DomainSettings = ({ companyId }) => {
             {!status && !tokenData && (
                 <div className="flex items-center justify-between">
                     <div className="pr-4">
-                        <p className="text-sm text-gray-500">Verify your company domain to enable auto-join functionality.</p>
-                        <p className="text-xs text-gray-400 mt-1">Users with @yourdomain.com will automatically join your company.</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">Verify your company domain to enable auto-join functionality.</p>
+                        <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Users with @yourdomain.com will automatically join your company.</p>
                     </div>
                     <button onClick={generateToken} disabled={loading} className="shrink-0 px-4 py-2 bg-gray-900 text-white rounded-lg text-sm font-medium hover:bg-gray-800">
                         {loading ? <Loader className="animate-spin" size={16} /> : "Verify Domain"}
@@ -89,13 +89,13 @@ const DomainSettings = ({ companyId }) => {
 
             {(status === "generated" || tokenData) && status !== "verified" && (
                 <div className="space-y-4 animate-fade-in">
-                    <div className="bg-yellow-50 border border-yellow-100 p-4 rounded-xl">
-                        <h4 className="font-bold text-yellow-800 flex items-center gap-2 mb-2">
+                    <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-100 dark:border-yellow-800/50 p-4 rounded-xl">
+                        <h4 className="font-bold text-yellow-800 dark:text-yellow-400 flex items-center gap-2 mb-2">
                             <AlertCircle size={16} /> DNS Configuration Required
                         </h4>
-                        <p className="text-sm text-yellow-700 mb-3">Add the following TXT record to your DNS settings:</p>
+                        <p className="text-sm text-yellow-700 dark:text-yellow-300 mb-3">Add the following TXT record to your DNS settings:</p>
 
-                        <div className="bg-white border border-yellow-200 p-3 rounded-lg font-mono text-xs text-gray-700 break-all select-all cursor-pointer hover:bg-gray-50 transition-colors" title="Click to copy" onClick={() => { navigator.clipboard.writeText(tokenData?.instructions?.[0] || tokenData?.token); showToast("Copied to clipboard", "success") }}>
+                        <div className="bg-white dark:bg-slate-900 border border-yellow-200 dark:border-yellow-800 p-3 rounded-lg font-mono text-xs text-gray-700 dark:text-gray-300 break-all select-all cursor-pointer hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors" title="Click to copy" onClick={() => { navigator.clipboard.writeText(tokenData?.instructions?.[0] || tokenData?.token); showToast("Copied to clipboard", "success") }}>
                             {tokenData?.instructions?.[0] || `TXT record: ${tokenData?.token}`}
                         </div>
                     </div>
@@ -104,7 +104,7 @@ const DomainSettings = ({ companyId }) => {
                         <button onClick={checkVerification} disabled={loading} className="flex-1 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium flex items-center justify-center gap-2">
                             {loading ? <Loader className="animate-spin" size={16} /> : <><RefreshCw size={16} /> Check Status</>}
                         </button>
-                        <button onClick={clearVerification} className="px-4 py-2 bg-white border border-gray-200 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                        <button onClick={clearVerification} className="px-4 py-2 bg-white dark:bg-slate-700 border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors">
                             <Trash2 size={16} />
                         </button>
                     </div>
@@ -112,13 +112,13 @@ const DomainSettings = ({ companyId }) => {
             )}
 
             {status === "verified" && (
-                <div className="bg-green-50 border border-green-100 p-4 rounded-xl flex items-center gap-3">
-                    <div className="bg-green-100 p-2 rounded-full text-green-600">
+                <div className="bg-green-50 dark:bg-green-900/20 border border-green-100 dark:border-green-800/50 p-4 rounded-xl flex items-center gap-3">
+                    <div className="bg-green-100 dark:bg-green-900/30 p-2 rounded-full text-green-600 dark:text-green-400">
                         <CheckCircle size={20} />
                     </div>
                     <div>
-                        <p className="text-sm font-bold text-green-800">Domain Successfully Verified</p>
-                        <p className="text-xs text-green-600">Employees with this email domain can now auto-join.</p>
+                        <p className="text-sm font-bold text-green-800 dark:text-green-400">Domain Successfully Verified</p>
+                        <p className="text-xs text-green-600 dark:text-green-300">Employees with this email domain can now auto-join.</p>
                     </div>
                 </div>
             )}

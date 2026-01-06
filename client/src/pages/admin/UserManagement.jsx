@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Users, Search, MoreHorizontal, Mail, Shield, Filter, CheckSquare, Plus, ArrowRight, BarChart2, Briefcase } from 'lucide-react';
+import { Search, MoreHorizontal, Mail, BarChart2, Briefcase } from 'lucide-react';
 import { useCompany } from '../../contexts/CompanyContext';
 import AdminSidebar from '../../components/admin/AdminSidebar';
 import { getCompanyMembers } from '../../services/companyService';
@@ -55,7 +55,7 @@ const UserManagement = () => {
 
     useEffect(() => {
         fetchData();
-    }, [company?._id]);
+    }, [company?._id, fetchData]);
 
     // Filtering Logic
     useEffect(() => {
@@ -187,10 +187,10 @@ const UserManagement = () => {
     }, [filteredMembers, deptFilter]);
 
     return (
-        <div className="flex h-screen bg-slate-50 font-sans text-slate-900 overflow-hidden">
+        <div className="flex h-screen bg-slate-50 dark:bg-slate-900 font-sans text-slate-900 dark:text-slate-100 overflow-hidden">
             <AdminSidebar />
 
-            <main className="flex-1 flex flex-col h-full overflow-hidden bg-slate-50/50 relative">
+            <main className="flex-1 flex flex-col h-full overflow-hidden bg-slate-50/50 dark:bg-slate-900/50 relative">
                 <header className="h-16 px-8 flex items-center justify-between z-10 bg-white border-b border-slate-200">
                     <div>
                         <h2 className="text-xl font-black text-slate-800">People</h2>
@@ -321,8 +321,8 @@ const UserManagement = () => {
                                     key={t}
                                     onClick={() => setTab(t)}
                                     className={`px-4 py-1.5 text-sm font-bold rounded-md transition-all ${tab === t
-                                            ? 'bg-slate-100 text-slate-900 shadow-sm'
-                                            : 'text-slate-500 hover:text-slate-700'
+                                        ? 'bg-slate-100 text-slate-900 shadow-sm'
+                                        : 'text-slate-500 hover:text-slate-700'
                                         }`}
                                 >
                                     {t.charAt(0).toUpperCase() + t.slice(1)}
@@ -434,9 +434,9 @@ const UserManagement = () => {
                                             </td>
                                             <td className="px-6 py-4">
                                                 <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold border capitalize ${member.companyRole === 'owner' ? 'bg-purple-50 text-purple-700 border-purple-100' :
-                                                        member.companyRole === 'admin' ? 'bg-indigo-50 text-indigo-700 border-indigo-100' :
-                                                            member.companyRole === 'manager' ? 'bg-blue-50 text-blue-700 border-blue-100' :
-                                                                'bg-slate-50 text-slate-600 border-slate-100'
+                                                    member.companyRole === 'admin' ? 'bg-indigo-50 text-indigo-700 border-indigo-100' :
+                                                        member.companyRole === 'manager' ? 'bg-blue-50 text-blue-700 border-blue-100' :
+                                                            'bg-slate-50 text-slate-600 border-slate-100'
                                                     }`}>
                                                     {member.companyRole}
                                                 </span>
