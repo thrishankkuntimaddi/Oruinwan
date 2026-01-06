@@ -204,30 +204,32 @@ const SignupForm = ({ onSwitch }) => {
   };
 
   return (
-    <div className="w-full max-w-sm bg-white rounded-2xl shadow-xl p-5 border border-gray-100">
-      <div className="text-center mb-5">
-        <h1 className="text-xl font-bold text-gray-900 tracking-tight">Create Account</h1>
-        <p className="text-gray-500 mt-1.5 text-xs">Join our community of innovators.</p>
+    <div className="w-full bg-transparent">
+      <div className="mb-8">
+        <h2 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight mb-2">Create Account</h2>
+        <p className="text-slate-500 dark:text-slate-400">Join our community of innovators today.</p>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-3">
+      <form onSubmit={handleSubmit} className="space-y-4">
         {/* Username */}
-        <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">Username</label>
+        <div className="space-y-1">
+          <label className="block text-sm font-bold text-slate-700 dark:text-slate-300">Username</label>
           <input
             name="username"
             value={formData.username}
             onChange={handleChange}
             onBlur={handleBlur}
             placeholder="Choose a username"
-            className={getInputClass("username").replace("py-2.5", "py-2").replace("px-4", "px-3")}
+            className={getInputClass("username").replace(/border-gray-300|border-red-500/g, (match) =>
+              `${match === 'border-red-500' ? 'border-red-500' : 'border-slate-200 dark:border-slate-700'} bg-slate-50 dark:bg-slate-900/50 text-slate-900 dark:text-white placeholder:text-slate-400`
+            ).replace("px-4", "px-4").replace("py-2.5", "py-3")}
           />
-          {errors.username && touched.username && <p className="text-red-500 text-xs mt-1">{errors.username}</p>}
+          {errors.username && touched.username && <p className="text-red-500 text-xs mt-1 font-medium">{errors.username}</p>}
         </div>
 
         {/* Email */}
-        <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">Email</label>
+        <div className="space-y-1">
+          <label className="block text-sm font-bold text-slate-700 dark:text-slate-300">Email</label>
           <input
             name="email"
             type="email"
@@ -235,11 +237,13 @@ const SignupForm = ({ onSwitch }) => {
             onChange={handleChange}
             onBlur={handleBlur}
             placeholder="Enter your email"
-            className={getInputClass("email").replace("py-2.5", "py-2").replace("px-4", "px-3")}
+            className={getInputClass("email").replace(/border-gray-300|border-red-500/g, (match) =>
+              `${match === 'border-red-500' ? 'border-red-500' : 'border-slate-200 dark:border-slate-700'} bg-slate-50 dark:bg-slate-900/50 text-slate-900 dark:text-white placeholder:text-slate-400`
+            ).replace("px-4", "px-4").replace("py-2.5", "py-3")}
           />
-          {errors.email && touched.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
+          {errors.email && touched.email && <p className="text-red-500 text-xs mt-1 font-medium">{errors.email}</p>}
           {companyContext && (
-            <div className="flex items-center gap-2 mt-2 p-2 bg-indigo-50 border border-indigo-100 rounded-lg text-indigo-700 text-xs font-medium animate-fade-in">
+            <div className="flex items-center gap-2 mt-2 p-3 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800 rounded-lg text-indigo-700 dark:text-indigo-300 text-xs font-bold animate-fade-in">
               <Building size={14} />
               <span>Looks like you're joining {companyContext.name}</span>
             </div>
@@ -247,22 +251,22 @@ const SignupForm = ({ onSwitch }) => {
         </div>
 
         {/* Phone */}
-        <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">Phone</label>
-          <div className="flex gap-2 relative">
+        <div className="space-y-1">
+          <label className="block text-sm font-bold text-slate-700 dark:text-slate-300">Phone</label>
+          <div className="flex gap-3 relative">
             {/* Country Dropdown */}
             <div className="relative">
               <button
                 type="button"
                 onClick={() => setShowCountryDropdown(!showCountryDropdown)}
-                className={`flex items-center gap-1 px-2 py-2 rounded-lg border bg-white transition-all text-sm shrink-0 ${errors.phone && touched.phone
+                className={`flex items-center gap-2 px-3 py-3 rounded-lg border bg-slate-50 dark:bg-slate-900/50 transition-all text-sm shrink-0 ${errors.phone && touched.phone
                   ? "border-red-500"
-                  : "border-gray-300 hover:border-blue-500"
+                  : "border-slate-200 dark:border-slate-700 hover:border-indigo-500"
                   }`}
               >
                 <span className="text-xl leading-none">{selectedCountry.flag}</span>
-                <span className="text-gray-700 font-medium ml-1">{selectedCountry.dial_code}</span>
-                <ChevronDown size={14} className="text-gray-400 ml-1" />
+                <span className="text-slate-700 dark:text-slate-200 font-bold ml-1">{selectedCountry.dial_code}</span>
+                <ChevronDown size={14} className="text-slate-400 ml-1" />
               </button>
 
               {showCountryDropdown && (
@@ -271,7 +275,7 @@ const SignupForm = ({ onSwitch }) => {
                     className="fixed inset-0 z-10"
                     onClick={() => setShowCountryDropdown(false)}
                   ></div>
-                  <div className="absolute top-full left-0 mt-1 w-40 bg-white rounded-lg shadow-lg border border-gray-100 py-1 z-20 max-h-60 overflow-y-auto">
+                  <div className="absolute top-full left-0 mt-2 w-64 bg-white dark:bg-[#0B0F19] rounded-xl shadow-xl shadow-slate-900/20 border border-slate-200 dark:border-slate-700 py-2 z-20 max-h-60 overflow-y-auto custom-scrollbar">
                     {countries.map((country) => (
                       <button
                         key={country.code}
@@ -279,17 +283,16 @@ const SignupForm = ({ onSwitch }) => {
                         onClick={() => {
                           setSelectedCountry(country);
                           setShowCountryDropdown(false);
-                          // Re-validate with new country
                           const error = validate("phone", formData.phone, country);
                           setErrors(prev => ({ ...prev, phone: error }));
                         }}
-                        className="w-full flex items-center gap-2 px-3 py-1.5 hover:bg-gray-50 text-left transition-colors"
+                        className="w-full flex items-center gap-3 px-4 py-2 hover:bg-slate-50 dark:hover:bg-slate-800 text-left transition-colors"
                       >
                         <span className="text-lg leading-none">{country.flag}</span>
-                        <span className="text-sm font-medium text-gray-900">{country.name}</span>
-                        <span className="text-xs text-gray-500">{country.dial_code}</span>
+                        <span className="text-sm font-medium text-slate-900 dark:text-white flex-1">{country.name}</span>
+                        <span className="text-xs text-slate-500 font-mono">{country.dial_code}</span>
                         {selectedCountry.code === country.code && (
-                          <div className="ml-auto w-1.5 h-1.5 rounded-full bg-blue-600"></div>
+                          <div className="w-2 h-2 rounded-full bg-indigo-600"></div>
                         )}
                       </button>
                     ))}
@@ -307,17 +310,19 @@ const SignupForm = ({ onSwitch }) => {
                 onChange={handleChange}
                 onBlur={handleBlur}
                 placeholder={`${"0".repeat(selectedCountry.length)}`}
-                className={getInputClass("phone").replace("py-2.5", "py-2").replace("px-4", "px-3")}
+                className={getInputClass("phone").replace(/border-gray-300|border-red-500/g, (match) =>
+                  `${match === 'border-red-500' ? 'border-red-500' : 'border-slate-200 dark:border-slate-700'} bg-slate-50 dark:bg-slate-900/50 text-slate-900 dark:text-white placeholder:text-slate-400`
+                ).replace("px-4", "px-4").replace("py-2.5", "py-3")}
               />
             </div>
           </div>
-          {errors.phone && touched.phone && <p className="text-red-500 text-xs mt-1">{errors.phone}</p>}
+          {errors.phone && touched.phone && <p className="text-red-500 text-xs mt-1 font-medium">{errors.phone}</p>}
         </div>
 
         {/* Password */}
-        <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">Password</label>
-          <div className="relative">
+        <div className="space-y-1">
+          <label className="block text-sm font-bold text-slate-700 dark:text-slate-300">Password</label>
+          <div className="relative group">
             <input
               name="password"
               type={showPwd ? "text" : "password"}
@@ -325,29 +330,29 @@ const SignupForm = ({ onSwitch }) => {
               onChange={handleChange}
               onBlur={handleBlur}
               placeholder="Create a password"
-              className={getInputClass("password").replace("py-2.5", "py-2").replace("px-4", "px-3")}
+              className={getInputClass("password").replace(/border-gray-300|border-red-500/g, (match) =>
+                `${match === 'border-red-500' ? 'border-red-500' : 'border-slate-200 dark:border-slate-700'} bg-slate-50 dark:bg-slate-900/50 text-slate-900 dark:text-white placeholder:text-slate-400`
+              ).replace("px-4", "px-4").replace("py-2.5", "py-3")}
             />
-
-
             <button
               type="button"
               onClick={() => setShowPwd(!showPwd)}
-              className="absolute right-3 top-2 text-gray-400 hover:text-gray-600"
+              className="absolute right-4 top-3.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
             >
-              {showPwd ? <EyeOff size={16} /> : <Eye size={16} />}
+              {showPwd ? <EyeOff size={20} /> : <Eye size={20} />}
             </button>
           </div>
 
           {/* Password Strength Meter */}
           {formData.password && (
             <div className="mt-2 transition-all duration-300 ease-in-out">
-              <div className="flex justify-between text-xs mb-1">
-                <span className="text-gray-500">Strength</span>
-                <span className={`font-medium ${strength === 4 ? 'text-green-600' : 'text-gray-600'}`}>
+              <div className="flex justify-between text-[10px] sm:text-xs mb-1">
+                <span className="text-slate-500 dark:text-slate-400 font-bold">Security</span>
+                <span className={`font-bold ${strength === 4 ? 'text-green-600 dark:text-green-400' : 'text-slate-600 dark:text-slate-400'}`}>
                   {strengthText[strength]}
                 </span>
               </div>
-              <div className="h-1 w-full bg-gray-100 rounded-full overflow-hidden">
+              <div className="h-1.5 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
                 <div
                   className={`h-full ${strengthColor[strength]} transition-all duration-500 ease-out`}
                   style={{ width: `${(strength / 4) * 100}%` }}
@@ -355,18 +360,18 @@ const SignupForm = ({ onSwitch }) => {
               </div>
 
               {/* Rules Checklist */}
-              <div className="mt-2 grid grid-cols-2 gap-1 text-[10px] text-gray-500">
-                <div className={`flex items-center transition-colors ${passwordRules.length ? "text-green-600 font-medium" : ""}`}>
-                  <span className="mr-1">{passwordRules.length ? "✓" : "○"}</span> 8-16 chars
+              <div className="mt-3 grid grid-cols-2 gap-2 text-[10px] text-slate-500 dark:text-slate-400">
+                <div className={`flex items-center transition-colors ${passwordRules.length ? "text-green-600 dark:text-green-400 font-bold" : ""}`}>
+                  <span className="mr-1.5">{passwordRules.length ? <Check size={10} /> : "○"}</span> 8-16 chars
                 </div>
-                <div className={`flex items-center transition-colors ${passwordRules.upper ? "text-green-600 font-medium" : ""}`}>
-                  <span className="mr-1">{passwordRules.upper ? "✓" : "○"}</span> Uppercase
+                <div className={`flex items-center transition-colors ${passwordRules.upper ? "text-green-600 dark:text-green-400 font-bold" : ""}`}>
+                  <span className="mr-1.5">{passwordRules.upper ? <Check size={10} /> : "○"}</span> Uppercase
                 </div>
-                <div className={`flex items-center transition-colors ${passwordRules.number ? "text-green-600 font-medium" : ""}`}>
-                  <span className="mr-1">{passwordRules.number ? "✓" : "○"}</span> Number
+                <div className={`flex items-center transition-colors ${passwordRules.number ? "text-green-600 dark:text-green-400 font-bold" : ""}`}>
+                  <span className="mr-1.5">{passwordRules.number ? <Check size={10} /> : "○"}</span> Number
                 </div>
-                <div className={`flex items-center transition-colors ${passwordRules.special ? "text-green-600 font-medium" : ""}`}>
-                  <span className="mr-1">{passwordRules.special ? "✓" : "○"}</span> Special char
+                <div className={`flex items-center transition-colors ${passwordRules.special ? "text-green-600 dark:text-green-400 font-bold" : ""}`}>
+                  <span className="mr-1.5">{passwordRules.special ? <Check size={10} /> : "○"}</span> Special char
                 </div>
               </div>
             </div>
@@ -374,9 +379,9 @@ const SignupForm = ({ onSwitch }) => {
         </div>
 
         {/* Confirm Password */}
-        <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">Confirm Password</label>
-          <div className="relative">
+        <div className="space-y-1">
+          <label className="block text-sm font-bold text-slate-700 dark:text-slate-300">Confirm Password</label>
+          <div className="relative group">
             <input
               name="confirmPassword"
               type={showConfirmPwd ? "text" : "password"}
@@ -384,49 +389,52 @@ const SignupForm = ({ onSwitch }) => {
               onChange={handleChange}
               onBlur={handleBlur}
               placeholder="Retype password"
-              className={getInputClass("confirmPassword").replace("py-2.5", "py-2").replace("px-4", "px-3")}
+              className={getInputClass("confirmPassword").replace(/border-gray-300|border-red-500/g, (match) =>
+                `${match === 'border-red-500' ? 'border-red-500' : 'border-slate-200 dark:border-slate-700'} bg-slate-50 dark:bg-slate-900/50 text-slate-900 dark:text-white placeholder:text-slate-400`
+              ).replace("px-4", "px-4").replace("py-2.5", "py-3")}
             />
             <button
               type="button"
               onClick={() => setShowConfirmPwd(!showConfirmPwd)}
-              className="absolute right-3 top-2 text-gray-400 hover:text-gray-600"
+              className="absolute right-4 top-3.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
             >
-              {showConfirmPwd ? <EyeOff size={16} /> : <Eye size={16} />}
+              {showConfirmPwd ? <EyeOff size={20} /> : <Eye size={20} />}
             </button>
           </div>
           {formData.confirmPassword && formData.password === formData.confirmPassword && (
-            <div className="flex items-center gap-1 mt-1 text-green-600 text-xs font-medium">
+            <div className="flex items-center gap-1 mt-1 text-green-600 dark:text-green-400 text-xs font-bold animate-pulse">
               <Check size={12} />
               <span>Passwords match</span>
             </div>
           )}
           {errors.confirmPassword && touched.confirmPassword && (
-            <p className="text-red-500 text-xs mt-1">{errors.confirmPassword}</p>
+            <p className="text-red-500 text-xs mt-1 font-medium">{errors.confirmPassword}</p>
           )}
         </div>
 
         <button
           type="submit"
-          className={`w-full py-2 rounded-lg text-white font-semibold text-sm shadow-md transition-all transform hover:-translate-y-0.5 mt-2 ${isFormValid
-            ? "bg-blue-600 hover:bg-blue-700 hover:shadow-lg"
-            : "bg-blue-400 hover:bg-blue-500"
+          className={`w-full py-3.5 rounded-xl text-white font-bold text-lg shadow-lg shadow-indigo-500/20 transition-all transform hover:-translate-y-1 mt-4 ${isFormValid
+            ? "bg-indigo-600 hover:bg-indigo-700 hover:shadow-indigo-500/40"
+            : "bg-slate-300 dark:bg-slate-700 cursor-not-allowed"
             }`}
         >
-          Sign Up
+          Create Account
         </button>
       </form>
 
-      <div className="relative my-5">
+      {/* Divider */}
+      <div className="relative my-8">
         <div className="absolute inset-0 flex items-center">
-          <div className="w-full border-t border-gray-200"></div>
+          <div className="w-full border-t border-slate-200 dark:border-slate-700"></div>
         </div>
-        <div className="relative flex justify-center text-xs">
-          <span className="px-4 bg-white text-gray-500 text-xs">Already have an account?</span>
+        <div className="relative flex justify-center text-xs uppercase tracking-widest font-bold">
+          <span className="px-4 bg-white dark:bg-[#030712] text-slate-400">Already a member?</span>
         </div>
       </div>
 
-      <p className="text-center text-xs">
-        <button onClick={onSwitch} className="text-blue-600 font-semibold hover:underline">
+      <p className="text-center text-sm">
+        <button onClick={onSwitch} className="text-indigo-600 dark:text-indigo-400 font-bold hover:underline">
           Log in instead
         </button>
       </p>

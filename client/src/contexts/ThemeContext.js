@@ -96,9 +96,15 @@ export const ThemeProvider = ({ children }) => {
         return () => mediaQuery.removeEventListener('change', handleChange);
     }, [theme]);
 
+    const toggleTheme = () => {
+        const newTheme = theme === 'dark' ? 'light' : 'dark';
+        handleSetTheme(newTheme);
+    };
+
     const value = {
         theme,
-        setTheme: handleSetTheme
+        setTheme: handleSetTheme,
+        toggleTheme // Exposed for easier usage
     };
 
     return (

@@ -649,14 +649,28 @@ const WorkspaceSelect = () => {
                                     <p className="text-indigo-100 mt-1">Master your workflow with these guides.</p>
                                 </div>
                                 <div className="p-6 overflow-y-auto max-h-[60vh] space-y-4">
+                                    <a
+                                        href="/chttrix-docs"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="block p-4 border border-indigo-200 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-900/30 rounded-lg hover:border-indigo-400 dark:hover:border-indigo-500 cursor-pointer transition-all group"
+                                    >
+                                        <h3 className="font-bold text-indigo-700 dark:text-indigo-300 group-hover:underline flex items-center justify-between">
+                                            <span>Full Documentation</span>
+                                            <ArrowRight size={16} />
+                                        </h3>
+                                        <p className="text-sm text-indigo-600/80 dark:text-indigo-300/80 mt-1">Explore all features, settings, and guides in detail.</p>
+                                    </a>
+
                                     {["Getting Started Guide", "Advanced Search Techniques", "Managing Notifications", "Integrations 101"].map((guide, i) => (
-                                        <div key={i} className="p-4 border border-slate-200 dark:border-slate-700 rounded-lg hover:border-indigo-300 dark:hover:border-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 cursor-pointer transition-all group">
+                                        <div key={i} className="p-4 border border-slate-200 dark:border-slate-700 rounded-lg hover:border-indigo-300 dark:hover:border-indigo-500 hover:bg-slate-50 dark:hover:bg-indigo-900/10 cursor-pointer transition-all group">
                                             <h3 className="font-bold text-slate-800 dark:text-white group-hover:text-indigo-700 dark:group-hover:text-indigo-400">{guide}</h3>
                                             <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Learn the basics and become a pro user in no time.</p>
                                         </div>
                                     ))}
                                 </div>
                             </>
+
                         )}
 
                         {activeHelpModal === "shortcuts" && (

@@ -109,16 +109,16 @@ const LoginForm = ({ onSwitch, initialEmail = "" }) => {
   });
 
   return (
-    <div className="w-full max-w-sm bg-white rounded-2xl shadow-xl p-5 border border-gray-100">
-      <div className="text-center mb-5">
-        <h1 className="text-xl font-bold text-gray-900 tracking-tight">Welcome to Chttrix</h1>
-        <p className="text-gray-500 mt-1.5 text-xs">Enter your details to access your workspace.</p>
+    <div className="w-full bg-transparent">
+      <div className="mb-10">
+        <h2 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight mb-2">Welcome back</h2>
+        <p className="text-slate-500 dark:text-slate-400">Enter your credentials to access your workspace.</p>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-3">
+      <form onSubmit={handleSubmit} className="space-y-5">
         {/* Email */}
-        <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">Email</label>
+        <div className="space-y-1.5">
+          <label className="block text-sm font-bold text-slate-700 dark:text-slate-300">Email</label>
           <input
             name="email"
             type="email"
@@ -126,16 +126,19 @@ const LoginForm = ({ onSwitch, initialEmail = "" }) => {
             required
             value={formData.email}
             onChange={handleChange}
-            className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-sm text-gray-900 bg-white"
+            className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 text-slate-900 dark:text-white placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all duration-200"
           />
         </div>
 
         {/* Password */}
-        <div>
-          <div className="flex justify-between items-center mb-1">
-            <label className="block text-xs font-medium text-gray-700">Password</label>
+        <div className="space-y-1.5">
+          <div className="flex justify-between items-center">
+            <label className="block text-sm font-bold text-slate-700 dark:text-slate-300">Password</label>
+            <Link to="/forgot-password" className="text-sm font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 hover:underline">
+              Forgot password?
+            </Link>
           </div>
-          <div className="relative">
+          <div className="relative group">
             <input
               name="password"
               type={showPassword ? "text" : "password"}
@@ -143,22 +146,15 @@ const LoginForm = ({ onSwitch, initialEmail = "" }) => {
               required
               value={formData.password}
               onChange={handleChange}
-              className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-sm text-gray-900 bg-white"
+              className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 text-slate-900 dark:text-white placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all duration-200"
             />
-
-
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-2 text-gray-400 hover:text-gray-600"
+              className="absolute right-4 top-3.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
             >
-              {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
             </button>
-          </div>
-          <div className="flex justify-end mt-1">
-            <Link to="/forgot-password" className="text-xs text-blue-600 hover:text-blue-700 font-medium">
-              Forgot password?
-            </Link>
           </div>
         </div>
 
@@ -166,52 +162,49 @@ const LoginForm = ({ onSwitch, initialEmail = "" }) => {
         <button
           type="submit"
           disabled={!isFormValid}
-          className={`w-full py-2 rounded-lg text-white font-semibold text-sm shadow-md transition-all transform hover:-translate-y-0.5 ${isFormValid
-            ? "bg-blue-600 hover:bg-blue-700 hover:shadow-lg"
-            : "bg-gray-300 cursor-not-allowed"
+          className={`w-full py-3.5 rounded-xl text-white font-bold text-lg shadow-lg shadow-indigo-500/20 transition-all transform hover:-translate-y-1 hover:shadow-indigo-500/40 active:translate-y-0 ${isFormValid
+            ? "bg-indigo-600 hover:bg-indigo-700"
+            : "bg-slate-300 dark:bg-slate-700 cursor-not-allowed"
             }`}
         >
-          Log In
+          Sign In
         </button>
       </form>
 
       {/* Divider */}
-      <div className="relative my-5">
+      <div className="relative my-8">
         <div className="absolute inset-0 flex items-center">
-          <div className="w-full border-t border-gray-200"></div>
+          <div className="w-full border-t border-slate-200 dark:border-slate-700"></div>
         </div>
-        <div className="relative flex justify-center text-xs">
-          <span className="px-4 bg-white text-gray-500 text-xs">or login with</span>
+        <div className="relative flex justify-center text-xs uppercase tracking-widest font-bold">
+          <span className="px-4 bg-white dark:bg-[#030712] text-slate-400">Or continue with</span>
         </div>
       </div>
 
       {/* OAuth Buttons */}
-      <div className="grid grid-cols-3 gap-2">
-        <div className="flex justify-center">
-          {/* Google Button Wrapper to fit design */}
-          <button
-            type="button"
-            onClick={() => googleLogin()}
-            className="flex items-center justify-center w-full h-9 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-          >
-            <GoogleIcon />
-          </button>
-        </div>
+      <div className="grid grid-cols-3 gap-3">
+        <button
+          type="button"
+          onClick={() => googleLogin()}
+          className="flex items-center justify-center h-12 border border-slate-200 dark:border-slate-700 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-all"
+        >
+          <GoogleIcon />
+        </button>
 
-        <button className="flex items-center justify-center h-9 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-lg">
+        <button className="flex items-center justify-center h-12 border border-slate-200 dark:border-slate-700 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-all text-slate-900 dark:text-white">
           <GitHubIcon />
         </button>
 
-        <button className="flex items-center justify-center h-9 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-lg text-blue-700">
+        <button className="flex items-center justify-center h-12 border border-slate-200 dark:border-slate-700 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-all text-[#0077b5]">
           <LinkedInIcon />
         </button>
       </div>
 
       {/* Footer */}
-      <p className="text-center mt-5 text-xs text-gray-600">
-        Don’t have an account?{" "}
-        <button onClick={onSwitch} className="text-blue-600 font-semibold hover:underline">
-          Sign up
+      <p className="text-center mt-8 text-sm text-slate-500 dark:text-slate-400">
+        New to Chttrix?{" "}
+        <button onClick={onSwitch} className="text-indigo-600 dark:text-indigo-400 font-bold hover:underline">
+          Create an account
         </button>
       </p>
     </div>

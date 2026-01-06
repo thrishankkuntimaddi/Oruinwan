@@ -40,6 +40,7 @@ import OAuthSuccess from "./pages/LoginPageComp/OAuthSuccess";
 import AcceptInvite from "./pages/AcceptInvite";
 import JoinWorkspace from "./pages/JoinWorkspace";
 import JoinChannel from "./pages/JoinChannel";
+import ChttrixDocs from "./pages/ChttrixDocs"; // NEW Custom Page
 
 import RegisterCompany from "./pages/RegisterCompany";
 import CompanyConfirmation from "./pages/CompanyConfirmation";
@@ -348,6 +349,7 @@ function App() {
                           {/* Landing Page (Feature Showcase) */}
                           <Route path="/" element={<FeatureShowcase />} />
                           <Route path="/features" element={<FeatureShowcase />} />
+                          <Route path="/chttrix-docs" element={<ChttrixDocs />} />
 
                           {/* COMPANY SETUP ROUTES */}
                           <Route

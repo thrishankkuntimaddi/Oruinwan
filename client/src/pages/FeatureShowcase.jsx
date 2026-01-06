@@ -1,231 +1,369 @@
-
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
+import { useTheme } from "../contexts/ThemeContext";
 import {
     MessageSquare,
-    Users,
-    CheckSquare,
-    Bell,
-    FileText,
-    Bot,
-    ArrowRight,
-    Brain,
-    Sparkles,
     Zap,
-    GitMerge
+    CheckSquare,
+    Globe,
+    Shield,
+    Sparkles,
+    ArrowRight,
+    Play,
+    Sun,
+    Moon,
+    Laptop,
+    Briefcase,
+    Building2,
+    CheckCircle2
 } from "lucide-react";
+
+// Video Assets
+const VIDEO_HERO_LOGO = "/hover-animation.mp4";
+const VIDEO_AI = "/ChttrixAI-animation.mp4";
 
 const FeatureShowcase = () => {
     const navigate = useNavigate();
     const { user } = useAuth();
-    const [isVisible, setIsVisible] = useState(false);
+    const { theme, toggleTheme } = useTheme();
+    const [scrolled, setScrolled] = useState(false);
+
+    // Refs for video control
+    const heroVideoRef = useRef(null);
 
     useEffect(() => {
-        setIsVisible(true);
         if (user) {
             navigate("/workspaces");
         }
+        const handleScroll = () => setScrolled(window.scrollY > 20);
+        window.addEventListener("scroll", handleScroll);
+        return () => window.removeEventListener("scroll", handleScroll);
     }, [user, navigate]);
+
+    // Force autoplay on mount for reliability
+    useEffect(() => {
+        const video = heroVideoRef.current;
+        if (video) {
+            // Muted allows autoplay in most policies
+            video.muted = true;
+            video.play().catch(error => {
+                console.log("Autoplay prevented:", error);
+            });
+        }
+    }, []);
 
     if (user) return null;
 
-    const features = [
-        {
-            icon: <MessageSquare size={24} />,
-            label: "Channels",
-            desc: "Dedicated spaces that keep projects and teams organized.",
-            color: "text-blue-600",
-            bg: "bg-blue-50"
-        },
-        {
-            icon: <GitMerge size={24} />,
-            label: "Directions",
-            desc: "Threaded discussions to maintain focus and context.",
-            color: "text-indigo-600",
-            bg: "bg-indigo-50"
-        },
-        {
-            icon: <Users size={24} />,
-            label: "Direct Messages",
-            desc: "Private, encrypted 1:1 communication for instant collaboration.",
-            color: "text-purple-600",
-            bg: "bg-purple-50"
-        },
-        {
-            icon: <CheckSquare size={24} />,
-            label: "Tasks",
-            desc: "Seamlessly manage personal, incoming, and delegated to-dos.",
-            color: "text-green-600",
-            bg: "bg-green-50"
-        },
-        {
-            icon: <FileText size={24} />,
-            label: "Notes",
-            desc: "A unified space for ideas, documentation, and real-time editing.",
-            color: "text-orange-600",
-            bg: "bg-orange-50"
-        },
-        {
-            icon: <Bell size={24} />,
-            label: "Updates",
-            desc: "Broadcast announcements and track team pulses in one place.",
-            color: "text-pink-600",
-            bg: "bg-pink-50"
-        },
-        {
-            icon: <Bot size={24} />,
-            label: "Chttrix AI",
-            desc: "An embedded assistant that connects dots across chats, docs, and tasks.",
-            color: "text-violet-600 dark:text-violet-400",
-            bg: "bg-violet-50 dark:bg-violet-900/20"
-        }
-    ];
-
     return (
-        <div className={`h-screen w-full bg-white overflow-y-auto overflow-x-hidden transition-opacity duration-700 ${isVisible ? "opacity-100" : "opacity-0"}`}>
+        <div className="min-h-screen w-full bg-white dark:bg-[#030712] text-slate-900 dark:text-white transition-colors duration-500">
 
-            {/* Custom Animations */}
             <style>{`
-                @keyframes float {
-                    0%, 100% { transform: translate(0, 0); }
-                    50% { transform: translate(0, -20px); }
+                @keyframes float-slow {
+                    0%, 100% { transform: translateY(0px); }
+                    50% { transform: translateY(-20px); }
                 }
-                @keyframes float-delayed {
-                    0%, 100% { transform: translate(0, 0); }
-                    50% { transform: translate(0, 20px); }
+                .animate-float-slow {
+                    animation: float-slow 8s ease-in-out infinite;
                 }
-                .animate-float { animation: float 10s ease-in-out infinite; }
-                .animate-float-delayed { animation: float-delayed 12s ease-in-out infinite; }
-                
-                @keyframes text-shimmer {
-                    0% { background-position: 0% 50%; }
-                    50% { background-position: 100% 50%; }
-                    100% { background-position: 0% 50%; }
+                .glass-card {
+                    background: rgba(255, 255, 255, 0.7);
+                    backdrop-filter: blur(20px);
+                    border: 1px solid rgba(0, 0, 0, 0.05);
                 }
-                .animate-text-shimmer {
-                    background-size: 200% auto;
-                    animation: text-shimmer 5s ease infinite;
+                .dark .glass-card {
+                    background: rgba(17, 24, 39, 0.4);
+                    border: 1px solid rgba(255, 255, 255, 0.05);
+                }
+                .text-glow {
+                     text-shadow: 0 0 30px rgba(99, 102, 241, 0.3);
+                }
+                 .hero-gradient {
+                    background: radial-gradient(circle at top right, rgba(99, 102, 241, 0.1) 0%, rgba(255, 255, 255, 0) 60%);
+                }
+                .dark .hero-gradient {
+                    background: radial-gradient(circle at top right, rgba(99, 102, 241, 0.15) 0%, rgba(3, 7, 18, 0) 60%);
                 }
             `}</style>
 
             {/* Navbar */}
-            <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-100 transition-all duration-300">
-                <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-                    {/* Logo */}
-                    <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate("/")}>
-                        <img src="/chttrix-logo.jpg" alt="Chttrix Logo" className="w-8 h-8 rounded-lg object-cover shadow-sm hover:rotate-3 transition-transform duration-300" />
-                        <span className="text-xl font-black text-gray-900 tracking-tight">Chttrix</span>
+            <nav className={`fixed top-0 w-full z-50 transition-all duration-300 ${scrolled ? "bg-white/80 dark:bg-[#030712]/80 backdrop-blur-xl border-b border-slate-200 dark:border-white/5 shadow-sm" : "bg-transparent border-transparent"}`}>
+                <div className="max-w-7xl mx-auto px-6 h-20 flex justify-between items-center">
+                    <div className="flex items-center gap-3 cursor-pointer group" onClick={() => navigate("/")}>
+                        <img src="/chttrix-logo.jpg" alt="Logo" className="w-10 h-10 rounded-xl shadow-md group-hover:scale-110 transition-transform" />
+                        <span className="font-exul font-black text-2xl tracking-tighter text-slate-900 dark:text-white">Chttrix</span>
                     </div>
 
-                    {/* Auth Buttons */}
-                    <div className="flex items-center gap-3">
+                    <div className="hidden md:flex items-center gap-8 text-sm font-bold text-slate-500 dark:text-slate-400">
+                        <a href="#platform" className="hover:text-indigo-600 dark:hover:text-white transition-colors">Platform</a>
+                        <a href="#ai" className="hover:text-indigo-600 dark:hover:text-white transition-colors">AI Intelligence</a>
+                        <a href="#accounts" className="hover:text-indigo-600 dark:hover:text-white transition-colors">Solutions</a>
+                        <button onClick={() => navigate("/chttrix-docs")} className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">Documentation</button>
+                    </div>
+
+                    <div className="flex items-center gap-4">
                         <button
-                            onClick={() => navigate("/register-company")}
-                            className="group flex items-center gap-2 px-5 py-2 bg-white hover:bg-gray-50 text-gray-900 text-sm font-semibold rounded-full border border-gray-200 transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 active:scale-95"
+                            onClick={toggleTheme}
+                            className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-white/10 text-slate-500 dark:text-slate-400 transition-colors"
+                            aria-label="Toggle Theme"
                         >
-                            <span>Register Company</span>
+                            {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
                         </button>
+                        <div className="h-6 w-px bg-slate-200 dark:bg-white/10 mx-2"></div>
+                        <button onClick={() => navigate("/login")} className="text-sm font-bold text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-white transition-colors">Log in</button>
                         <button
-                            onClick={() => navigate("/login")}
-                            className="group flex items-center gap-2 px-5 py-2 bg-gray-900 hover:bg-gray-800 text-white text-sm font-semibold rounded-full transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 active:scale-95"
+                            onClick={() => document.getElementById("accounts").scrollIntoView({ behavior: 'smooth' })}
+                            className="bg-slate-900 dark:bg-indigo-600 text-white px-6 py-2.5 rounded-full text-sm font-bold hover:bg-slate-800 dark:hover:bg-indigo-500 transition-all hover:-translate-y-0.5 hover:shadow-lg dark:hover:shadow-[0_0_20px_rgba(99,102,241,0.5)]"
                         >
-                            <span>Sign in</span>
-                            <ArrowRight size={14} className="text-gray-300 group-hover:translate-x-1 transition-transform" />
+                            Get Started
                         </button>
                     </div>
                 </div>
             </nav>
 
-            {/* Background Elements */}
-            <div className="fixed inset-0 overflow-hidden pointer-events-none -z-10">
-                <div className="absolute -top-[20%] -left-[10%] w-[70%] h-[70%] rounded-full bg-gradient-to-br from-blue-100/40 via-purple-50/40 to-transparent blur-[120px] animate-float"></div>
-                <div className="absolute top-[20%] -right-[10%] w-[60%] h-[60%] rounded-full bg-gradient-to-bl from-indigo-100/40 via-pink-50/40 to-transparent blur-[120px] animate-float-delayed"></div>
-            </div>
+            {/* Hero Section - Split Layout */}
+            <header className="relative pt-32 pb-20 md:pt-48 md:pb-32 overflow-hidden hero-gradient">
+                <div className="container mx-auto px-6 relative z-10">
+                    <div className="flex flex-col-reverse lg:flex-row items-center gap-12 lg:gap-20">
 
-            <div className="relative pt-32 pb-6 px-6 flex flex-col items-center w-full max-w-7xl mx-auto">
+                        {/* Text Content (Left) */}
+                        <div className="flex-1 text-center lg:text-left">
+                            <h1 className="text-6xl md:text-8xl font-black tracking-tighter text-slate-900 dark:text-white mb-6 leading-[0.9] dark:text-glow">
+                                One Platform.<br />
+                                <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-400 dark:via-purple-400 dark:to-indigo-400 animate-text-shimmer">Limitless Possibilities.</span>
+                            </h1>
 
-                {/* Hero Section */}
-                <div className={`transform transition-all duration-1000 delay-100 flex flex-col items-center text-center max-w-4xl mx-auto mb-24 ${isVisible ? "scale-100 translate-y-0 opacity-100" : "scale-95 translate-y-10 opacity-0"}`}>
-                    <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-indigo-50 text-indigo-600 text-xs font-bold uppercase tracking-wider mb-8 border border-indigo-100 shadow-sm hover:shadow-md hover:scale-105 transition-all duration-300 cursor-default">
-                        <Sparkles size={14} className="animate-pulse" />
-                        <span>Collaboration Redefined</span>
-                    </div>
-                    <h1 className="text-5xl md:text-7xl font-black text-gray-900 tracking-tight leading-[1.1] mb-8 drop-shadow-sm">
-                        One Platform.<br />
-                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 animate-text-shimmer">Limitless Possibilities.</span>
-                    </h1>
-                    <p className="text-xl text-gray-600 font-medium tracking-wide max-w-2xl mx-auto mb-10 leading-relaxed">
-                        Seamlessly integrated apps for notes, tasks, brainstorming, and AI-driven workflows. Everything you need, all in one place.
-                    </p>
-                    <button
-                        onClick={() => navigate("/login")}
-                        className="group relative px-9 py-4 bg-gray-900 text-white text-base font-bold rounded-2xl shadow-xl hover:shadow-2xl hover:shadow-purple-500/20 hover:-translate-y-1 hover:scale-105 transition-all duration-300 overflow-hidden"
-                    >
-                        <div className="absolute inset-0 bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-500 opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-[length:200%_auto] animate-text-shimmer"></div>
-                        <span className="relative flex items-center gap-2">
-                            Get Started for Free <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
-                        </span>
-                    </button>
-                </div>
+                            <p className="text-xl md:text-2xl text-slate-600 dark:text-slate-400 mb-10 leading-relaxed font-medium">
+                                The operating system for the future of work. <br className="hidden md:block" />
+                                Seamlessly combining <span className="font-bold text-slate-900 dark:text-white">Channels, Huddles, Tasks, Notes, Updates</span> and <span className="font-bold text-purple-600 dark:text-purple-400">ChttrixAI</span>.
+                            </p>
 
-                <div className="w-full mb-16">
-                    <div className="text-center mb-16">
-                        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white text-gray-800 text-xs font-bold uppercase tracking-wider mb-6 border border-gray-200 shadow-sm">
-                            <Zap size={12} className="text-yellow-500" />
-                            <span>Core Foundation</span>
-                        </div>
-                        <h2 className="text-4xl font-bold text-gray-900 mb-4 tracking-tight">Everything you need to run your team.</h2>
-                        <p className="text-lg text-gray-500 max-w-2xl mx-auto">Built on a robust communication layer that keeps everyone in sync.</p>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full">
-                        {features.map((feature, index) => {
-                            const isAI = feature.label === "Chttrix AI";
-                            return (
-                                <div
-                                    key={index}
-                                    className={`transform transition-all duration-700 ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-20"} ${isAI ? "md:col-span-2 lg:col-span-1 lg:col-start-2 md:w-3/4 lg:w-full md:justify-self-center" : ""}`}
-                                    style={{ transitionDelay: `${400 + (index * 100)}ms` }}
+                            <div className="flex flex-col sm:flex-row items-center lg:justify-start justify-center gap-4 mb-12">
+                                <button
+                                    onClick={() => document.getElementById("accounts").scrollIntoView({ behavior: 'smooth' })}
+                                    className="w-full sm:w-auto px-8 py-4 bg-indigo-600 dark:bg-white text-white dark:text-black text-lg font-bold rounded-2xl hover:bg-indigo-700 dark:hover:bg-indigo-50 transition-all hover:scale-105 hover:shadow-xl dark:hover:shadow-[0_0_40px_rgba(255,255,255,0.3)] flex items-center justify-center gap-3"
                                 >
-                                    <div className={`group relative rounded-3xl p-8 shadow-sm transition-all duration-500 h-48 overflow-hidden cursor-default ${isAI
-                                        ? "bg-gradient-to-br from-white to-violet-50/80 border border-violet-200 hover:shadow-2xl hover:shadow-violet-500/10 hover:border-violet-300"
-                                        : "bg-white/60 backdrop-blur-md border border-gray-200 hover:shadow-xl hover:border-indigo-100 hover:bg-white"
-                                        }`}>
+                                    Start Building HQ <ArrowRight size={20} />
+                                </button>
+                                <div className="flex items-center gap-2 text-sm font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest px-4">
+                                    <span className="relative flex h-2 w-2 mr-2">
+                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                                        <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                                    </span>
+                                    Waitlist Open
+                                </div>
+                            </div>
+                        </div>
 
-                                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center transition-all duration-500 group-hover:left-8 group-hover:translate-x-0 group-hover:items-start group-hover:max-w-[40%]">
-                                            <div className={`w-16 h-16 rounded-2xl ${feature.bg} ${feature.color} flex items-center justify-center mb-4 shadow-sm transition-all duration-500 group-hover:scale-75 group-hover:origin-top-left group-hover:mb-2`}>
-                                                {feature.icon}
-                                            </div>
-                                            <h3 className="text-xl font-bold text-gray-800 whitespace-nowrap transition-all duration-500 group-hover:text-base group-hover:whitespace-normal group-hover:leading-tight">{feature.label}</h3>
-                                        </div>
-
-                                        {/* Description (Visible on Hover - Right Side) */}
-                                        <div className="absolute top-1/2 right-8 -translate-y-1/2 w-[50%] opacity-0 translate-x-10 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-500 delay-75">
-                                            <p className="text-sm text-gray-600 leading-relaxed font-medium text-left">
-                                                {feature.desc}
-                                            </p>
-                                        </div>
-
+                        {/* Interactive Video (Right) */}
+                        <div className="flex-1 w-full max-w-lg lg:max-w-xl">
+                            <div
+                                className="relative aspect-square rounded-[3rem] overflow-hidden shadow-2xl shadow-indigo-500/10 dark:shadow-indigo-500/20 border border-slate-200 dark:border-white/10 group cursor-default bg-slate-100 dark:bg-white/5"
+                            >
+                                {/* Static / Placeholder State */}
+                                <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-0 transition-opacity duration-300 z-10">
+                                    <div className="w-20 h-20 bg-white/20 backdrop-blur rounded-full flex items-center justify-center text-indigo-500 dark:text-white">
+                                        <Play fill="currentColor" size={32} className="ml-1" />
                                     </div>
                                 </div>
-                            );
-                        })}
+
+                                <video
+                                    ref={heroVideoRef}
+                                    src={VIDEO_HERO_LOGO}
+                                    autoPlay
+                                    muted
+                                    playsInline
+                                    loop
+                                    className="w-full h-full object-cover transition-transform duration-700 hover:scale-105"
+                                />
+                            </div>
+                        </div>
+
                     </div>
                 </div>
+            </header>
 
+            {/* Powerful Features Grid */}
+            <section id="platform" className="scroll-mt-24 py-32 bg-slate-50 dark:bg-[#030712] relative border-y border-slate-200 dark:border-white/5">
+                <div className="container mx-auto px-6">
+                    <div className="text-center mb-24">
+                        <h2 className="text-4xl md:text-5xl font-black text-slate-900 dark:text-white mb-6">Simplicity meets <span className="text-indigo-600 dark:text-indigo-500">Power</span>.</h2>
+                        <p className="text-xl text-slate-500 dark:text-slate-400 max-w-2xl mx-auto">Everything you need to run your company, in one tab.</p>
+                    </div>
 
-                {/* Footer */}
-                <div className="w-full mt-4 border-t border-gray-100 py-6 text-center">
-                    <div className="flex items-center justify-center gap-2">
-                        <img src="/chttrix-logo.jpg" alt="Logo" className="w-5 h-5 rounded grayscale opacity-70 hover:opacity-100 transition-opacity" />
-                        <span className="text-sm font-bold text-gray-800">Chttrix</span>
-                        <span className="text-gray-300">|</span>
-                        <p className="text-gray-500 text-xs">© 2025 Chttrix Inc. All rights reserved.</p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                        {[
+                            {
+                                icon: <MessageSquare size={32} className="text-blue-500 dark:text-blue-400" />,
+                                title: "Channels",
+                                desc: "Structured, threaded conversations for every project and topic. Keep the noise down and the focus up."
+                            },
+                            {
+                                icon: <Zap size={32} className="text-yellow-500 dark:text-yellow-400" />,
+                                title: "Video Huddles",
+                                desc: "Jump into a voice or video call instantly. Screen share and collaborate without scheduling a meeting."
+                            },
+                            {
+                                icon: <CheckSquare size={32} className="text-green-500 dark:text-green-400" />,
+                                title: "Tasks",
+                                desc: "Native project management. Assign to-dos, set due dates, and track progress via Kanban boards."
+                            },
+                            {
+                                icon: <Globe size={32} className="text-orange-500 dark:text-orange-400" />,
+                                title: "Notes",
+                                desc: "Collaborative documents that live right alongside your chat. Write specs, meeting notes, and wikis."
+                            },
+                            {
+                                icon: <Shield size={32} className="text-pink-500 dark:text-pink-400" />,
+                                title: "Updates",
+                                desc: "Async status reports for companies. Share weekly goals and blockers without the meetings."
+                            },
+                            {
+                                icon: <Sparkles size={32} className="text-purple-500 dark:text-purple-400" />,
+                                title: "ChttrixAI",
+                                desc: "The intelligence layer that connects it all. Summarize chats, generate tasks, and find answers."
+                            }
+                        ].map((item, i) => (
+                            <div key={i} className="glass-card p-8 rounded-2xl hover:bg-white hover:shadow-xl dark:hover:bg-white/5 transition-all duration-300 group hover:-translate-y-2 cursor-default">
+                                <div className="mb-6 p-4 bg-slate-100 dark:bg-white/5 rounded-2xl inline-block group-hover:scale-110 transition-transform">
+                                    {item.icon}
+                                </div>
+                                <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-3">{item.title}</h3>
+                                <p className="text-slate-500 dark:text-slate-400 leading-relaxed font-medium">{item.desc}</p>
+                            </div>
+                        ))}
                     </div>
                 </div>
+            </section>
 
-            </div>
+            {/* AI Integration - Video Showcase */}
+            {/* AI Integration - Video Showcase */}
+            <section id="ai" className="scroll-mt-24 py-32 bg-white dark:bg-[#0B0F19] relative overflow-hidden">
+                <div className="container mx-auto px-6 relative z-10">
+                    <div className="flex flex-col lg:flex-row items-center gap-20">
+                        {/* Video Left */}
+                        <div className="flex-1 w-full">
+                            <div className="relative rounded-3xl overflow-hidden shadow-2xl shadow-purple-900/20 border border-slate-200 dark:border-white/10 group">
+                                {/* Video Background Glow */}
+                                <div className="absolute inset-0 bg-purple-500/10 blur-[50px] group-hover:bg-purple-500/20 transition-colors"></div>
+
+                                <video
+                                    src={VIDEO_AI}
+                                    autoPlay
+                                    loop
+                                    muted
+                                    playsInline
+                                    className="relative w-full h-auto rounded-3xl transform group-hover:scale-[1.02] transition-transform duration-700"
+                                />
+
+
+                            </div>
+                        </div>
+
+                        {/* Text Right */}
+                        <div className="flex-1">
+                            <div className="inline-block px-4 py-2 bg-purple-100 dark:bg-purple-500/10 border border-purple-200 dark:border-purple-500/20 rounded-lg text-purple-600 dark:text-purple-400 font-bold mb-8">
+                                Chttrix Intelligence ™
+                            </div>
+                            <h2 className="text-5xl font-black text-slate-900 dark:text-white mb-8 leading-tight">
+                                Your teammate that <br />
+                                <span className="text-purple-600 dark:text-purple-400">never sleeps.</span>
+                            </h2>
+                            <p className="text-xl text-slate-500 dark:text-slate-400 mb-10 leading-relaxed">
+                                Chttrix AI doesn't just chat. It understands your entire workspace context. It writes code, summarizes threads, and automates your busy work.
+                                <br /><br />
+                                <span className="text-base font-bold text-slate-700 dark:text-slate-300">
+                                    Mention @ChttrixAI in any channel, DM, or thread to summon help.
+                                </span>
+                            </p>
+
+                            <button className="flex items-center gap-3 text-lg font-bold text-purple-600 dark:text-purple-400 hover:gap-4 transition-all">
+                                See capabilities <ArrowRight size={20} />
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            {/* Account Types / Solutions */}
+            <section id="accounts" className="scroll-mt-24 py-32 bg-slate-50 dark:bg-[#030712] border-t border-slate-200 dark:border-white/5">
+                <div className="container mx-auto px-6">
+                    <div className="text-center mb-16">
+                        <h2 className="text-4xl font-black text-slate-900 dark:text-white mb-4">Choose your HQ.</h2>
+                        <p className="text-lg text-slate-500 dark:text-slate-400">Tailored experiences for individuals and ambitious companies.</p>
+                    </div>
+
+                    <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+                        {/* Personal Account */}
+                        <div className="bg-white dark:bg-[#0B0F19] p-10 rounded-3xl border border-slate-200 dark:border-white/5 hover:border-indigo-500 dark:hover:border-indigo-500 transition-colors shadow-sm hover:shadow-xl group relative overflow-hidden">
+                            <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity transform group-hover:scale-110 duration-500">
+                                <Laptop size={120} />
+                            </div>
+                            <div className="w-12 h-12 bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 rounded-2xl flex items-center justify-center mb-8">
+                                <Briefcase size={24} />
+                            </div>
+                            <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">Personal Workspace</h3>
+                            <p className="text-slate-500 dark:text-slate-400 mb-8 h-12">
+                                Perfect for freelancers, students, and side-projects.
+                            </p>
+                            <ul className="space-y-4 mb-8">
+                                <li className="flex items-center gap-3 text-slate-700 dark:text-slate-300 font-medium">
+                                    <CheckCircle2 size={18} className="text-blue-500" /> Unlimited Personal Projects
+                                </li>
+                                <li className="flex items-center gap-3 text-slate-700 dark:text-slate-300 font-medium">
+                                    <CheckCircle2 size={18} className="text-blue-500" /> Basic AI Assistance
+                                </li>
+                                <li className="flex items-center gap-3 text-slate-700 dark:text-slate-300 font-medium">
+                                    <CheckCircle2 size={18} className="text-blue-500" /> Free Forever
+                                </li>
+                            </ul>
+                            <button onClick={() => navigate("/login?mode=signup")} className="w-full py-4 rounded-xl border-2 border-slate-200 dark:border-slate-700 hover:border-blue-500 dark:hover:border-blue-500 text-slate-900 dark:text-white font-bold transition-all">
+                                Create Personal Account
+                            </button>
+                        </div>
+
+                        {/* Company Account */}
+                        <div className="bg-indigo-50 dark:bg-[#0F1623] p-10 rounded-3xl border border-indigo-100 dark:border-white/10 hover:border-indigo-500 transition-colors shadow-2xl group relative overflow-hidden">
+                            <div className="absolute top-0 right-0 p-8 opacity-5 dark:opacity-10 group-hover:opacity-10 dark:group-hover:opacity-20 transition-opacity transform group-hover:scale-110 duration-500">
+                                <Building2 size={120} className="text-indigo-900 dark:text-white" />
+                            </div>
+                            <div className="w-12 h-12 bg-indigo-600 text-white rounded-2xl flex items-center justify-center mb-8 shadow-lg shadow-indigo-500/30">
+                                <Building2 size={24} />
+                            </div>
+                            <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">Company HQ</h3>
+                            <p className="text-slate-500 dark:text-slate-400 mb-8 h-12">
+                                For teams that want to ship faster. Includes Admin controls.
+                            </p>
+                            <ul className="space-y-4 mb-8">
+                                <li className="flex items-center gap-3 text-slate-700 dark:text-white font-medium">
+                                    <CheckCircle2 size={18} className="text-indigo-500 dark:text-indigo-400" /> Team Updates & Goals
+                                </li>
+                                <li className="flex items-center gap-3 text-slate-700 dark:text-white font-medium">
+                                    <CheckCircle2 size={18} className="text-indigo-500 dark:text-indigo-400" /> Unlimited History & AI
+                                </li>
+                                <li className="flex items-center gap-3 text-slate-700 dark:text-white font-medium">
+                                    <CheckCircle2 size={18} className="text-indigo-500 dark:text-indigo-400" /> Admin Dashboard (Build HQ)
+                                </li>
+                            </ul>
+                            <button onClick={() => navigate("/register-company")} className="w-full py-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold transition-all shadow-lg shadow-indigo-500/25">
+                                Register Company HQ
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            {/* Footer */}
+            <footer className="bg-white dark:bg-[#02050b] border-t border-slate-200 dark:border-white/5 py-12 text-slate-500 text-sm transition-colors">
+                <div className="container mx-auto px-6 flex flex-col md:flex-row justify-between items-center">
+                    <p>© 2025 Chttrix Inc. Not yet launched.</p>
+                    <div className="flex gap-6 mt-4 md:mt-0">
+                        <a href="#" className="hover:text-slate-900 dark:hover:text-white transition-colors">Contact</a>
+                        <a href="#" className="hover:text-slate-900 dark:hover:text-white transition-colors">Twitter</a>
+                        <a href="#" className="hover:text-slate-900 dark:hover:text-white transition-colors">Events</a>
+                    </div>
+                </div>
+            </footer>
         </div>
     );
 };
