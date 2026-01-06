@@ -3,19 +3,14 @@ import { Link } from "react-router-dom";
 import { useTheme } from "../contexts/ThemeContext";
 import {
   BookOpen,
-  MessageSquare,
   CheckSquare,
-  Zap,
-  LifeBuoy,
   Shield,
   Users,
   Search,
-  Command,
   Sparkles,
   Menu,
   X,
   ArrowRight,
-  Video,
   FileText,
   BellRing,
   Sun,
@@ -25,7 +20,7 @@ import {
   UserCheck,
   CreditCard,
   AlertTriangle,
-  Globe
+  Check
 } from "lucide-react";
 
 const ChttrixDocs = () => {
@@ -56,7 +51,7 @@ const ChttrixDocs = () => {
   );
 
   return (
-    <div className="h-full w-full bg-white dark:bg-[#030712] text-slate-900 dark:text-white overflow-hidden flex flex-col md:flex-row font-sans selection:bg-indigo-500 selection:text-white transition-colors duration-500">
+    <div className="h-screen w-full bg-white dark:bg-[#030712] text-slate-900 dark:text-white overflow-hidden flex flex-col md:flex-row font-sans selection:bg-indigo-500 selection:text-white transition-colors duration-500">
 
       {/* Global Styles for Docs */}
       <style>{`
@@ -108,12 +103,21 @@ const ChttrixDocs = () => {
       <aside className={`fixed inset-0 z-40 bg-slate-50 dark:bg-[#0B0F19] border-r border-slate-200 dark:border-white/5 w-72 transform transition-transform duration-300 md:relative md:translate-x-0 ${mobileMenuOpen ? "translate-x-0" : "-translate-x-full"}`}>
         <div className="h-full flex flex-col overflow-y-auto custom-scrollbar p-6">
           <div className="flex items-center justify-between mb-10 px-2 mt-2">
-            <div className="flex items-center gap-3">
-              <img src="/chttrix-logo.jpg" alt="Logo" className="w-10 h-10 rounded-xl shadow-md" />
-              <div>
-                <h1 className="font-bold text-lg leading-tight text-slate-900 dark:text-white">Chttrix</h1>
-                <p className="text-xs text-indigo-600 dark:text-indigo-400 font-bold uppercase tracking-wider">Docs</p>
-              </div>
+            <div className="flex items-center justify-between w-full">
+              <Link to="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
+                <img src="/chttrix-logo.jpg" alt="Logo" className="w-10 h-10 rounded-xl shadow-md" />
+                <div className="flex items-center gap-2">
+                  <h1 className="font-bold text-xl leading-tight text-slate-900 dark:text-white">Chttrix</h1>
+                  <span className="px-2 py-0.5 rounded-md bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 text-xs font-bold uppercase tracking-wider">Docs</span>
+                </div>
+              </Link>
+              <button
+                onClick={toggleTheme}
+                className="p-2 rounded-full hover:bg-slate-200 dark:hover:bg-white/10 text-slate-500 dark:text-slate-400 transition-colors"
+                aria-label="Toggle Theme"
+              >
+                {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
+              </button>
             </div>
           </div>
 
@@ -140,8 +144,8 @@ const ChttrixDocs = () => {
               <p className="px-4 text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">Features</p>
               <div className="space-y-1">
                 <NavItem id="ai" label="Chttrix AI" icon={Sparkles} />
-                <NavItem id="updates" label="Updates & Goals" icon={BellRing} />
                 <NavItem id="productivity" label="Tasks & Notes" icon={CheckSquare} />
+                <NavItem id="updates" label="Updates & Goals" icon={BellRing} />
               </div>
             </div>
 
@@ -154,13 +158,7 @@ const ChttrixDocs = () => {
           </div>
 
           <div className="mt-8 pt-8 border-t border-slate-200 dark:border-white/5 space-y-4">
-            <button
-              onClick={toggleTheme}
-              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-white/5 transition-colors"
-            >
-              {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
-              <span className="text-sm font-medium">{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>
-            </button>
+
 
             <Link to="/" className="flex items-center gap-2 text-sm font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 transition-colors px-4">
               <ArrowRight size={16} className="rotate-180" /> Back to App
@@ -171,7 +169,7 @@ const ChttrixDocs = () => {
 
       {/* Main Content Area */}
       <main className="flex-1 h-full overflow-y-auto scroll-smooth bg-white dark:bg-[#030712] relative">
-        <div className="max-w-4xl mx-auto px-8 py-20 pb-40 text-slate-600 dark:text-slate-400">
+        <div className="max-w-4xl mx-auto px-8 py-20 pb-20 text-slate-600 dark:text-slate-400">
 
           {/* Hero */}
           <section id="overview" className="mb-24">
@@ -179,7 +177,7 @@ const ChttrixDocs = () => {
               Complete Manual
             </div>
             <h1 className="text-5xl md:text-6xl font-black text-slate-900 dark:text-white mb-8 leading-tight">
-              The Chttrix <br /><span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-400 dark:to-purple-400">Operating System.</span>
+              The Chttrix <br /><span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-400 dark:to-purple-400">Collaboration Platform.</span>
             </h1>
             <p className="text-xl text-slate-500 dark:text-slate-400 leading-relaxed max-w-2xl">
               A deep dive into the features, governance, and architecture of the platform. Designed for individual power users and enterprise teams.
@@ -366,6 +364,48 @@ const ChttrixDocs = () => {
               </div>
             </section>
 
+            {/* Productivity: Tasks & Notes */}
+            <section id="productivity" className="scroll-mt-20 mb-20">
+              <div className="flex items-center gap-4 mb-6">
+                <div className="p-3 bg-green-100 dark:bg-green-500/10 rounded-xl text-green-600 dark:text-green-400"><CheckSquare size={28} /></div>
+                <h2 className="!m-0 text-slate-900 dark:text-white">Tasks & Notes</h2>
+              </div>
+              <p>
+                Built-in productivity tools eliminate the need for external software like Trello or Notion.
+              </p>
+
+              <div className="grid md:grid-cols-2 gap-8 mt-8">
+                <div className="bg-white dark:bg-[#0F1623] p-6 rounded-2xl border border-slate-200 dark:border-white/5 shadow-sm">
+                  <h3 className="mt-0 text-slate-900 dark:text-white flex items-center gap-2">
+                    <CheckSquare size={20} className="text-green-500" /> Native Tasks
+                  </h3>
+                  <p className="text-sm">
+                    Manage projects with powerful <strong>Kanban Boards</strong>.
+                  </p>
+                  <ul className="text-sm space-y-2">
+                    <li><strong>Assignees:</strong> Assign tasks to team members.</li>
+                    <li><strong>Due Dates:</strong> Get reminders before deadlines.</li>
+                    <li><strong>Labels:</strong> Categorize work with custom tags.</li>
+                  </ul>
+                </div>
+
+                <div className="bg-white dark:bg-[#0F1623] p-6 rounded-2xl border border-slate-200 dark:border-white/5 shadow-sm">
+                  <h3 className="mt-0 text-slate-900 dark:text-white flex items-center gap-2">
+                    <FileText size={20} className="text-orange-500" /> Real-time Notes
+                  </h3>
+
+                  <p className="text-sm">
+                    Collaborative documents that live inside your workspace.
+                  </p>
+                  <ul className="text-sm space-y-2">
+                    <li><strong>Multi-player:</strong> Edit together in real-time.</li>
+                    <li><strong>/ Slash Commands:</strong> Format text instantly.</li>
+                    <li><strong>Linking:</strong> Reference tasks and chats directly in docs.</li>
+                  </ul>
+                </div>
+              </div>
+            </section>
+
             {/* Updates */}
             <section id="updates" className="scroll-mt-20 mb-20">
               <h2 className="text-slate-900 dark:text-white">Company Updates</h2>
@@ -385,38 +425,80 @@ const ChttrixDocs = () => {
             <section id="plans" className="scroll-mt-20 mb-20">
               <h2 className="text-slate-900 dark:text-white">Plans & Billing</h2>
               <div className="grid md:grid-cols-3 gap-6 not-prose mt-8">
-                <div className="p-6 rounded-2xl border border-slate-200 dark:border-white/5">
-                  <h3 className="mt-0 text-xl font-bold">Free</h3>
-                  <p className="text-sm text-slate-500 mb-4">For Personal Use</p>
-                  <ul className="text-sm space-y-2">
-                    <li>1 Personal Workspace</li>
-                    <li>Basic AI</li>
-                    <li>Community Support</li>
+
+                {/* Free Tier */}
+                <div className="flex flex-col p-8 rounded-3xl border border-slate-200 dark:border-white/5 bg-white dark:bg-[#0F1623] hover:border-slate-300 dark:hover:border-white/10 transition-all">
+                  <h3 className="mt-0 text-2xl font-bold text-slate-900 dark:text-white">Free</h3>
+                  <p className="text-sm text-slate-500 mb-6">For Personal Use</p>
+                  <div className="text-3xl font-black text-slate-900 dark:text-white mb-6">$0<span className="text-sm font-medium text-slate-500">/mo</span></div>
+
+                  <ul className="space-y-4 mb-8 flex-1">
+                    <li className="flex items-center gap-3 text-sm text-slate-600 dark:text-slate-300">
+                      <Check size={16} className="text-green-500 shrink-0" /> 1 Personal Workspace
+                    </li>
+                    <li className="flex items-center gap-3 text-sm text-slate-600 dark:text-slate-300">
+                      <Check size={16} className="text-green-500 shrink-0" /> Basic AI
+                    </li>
+                    <li className="flex items-center gap-3 text-sm text-slate-600 dark:text-slate-300">
+                      <Check size={16} className="text-green-500 shrink-0" /> Community Support
+                    </li>
                   </ul>
+                  <button className="w-full py-3 rounded-xl border border-slate-200 dark:border-white/10 font-bold hover:bg-slate-50 dark:hover:bg-white/5 transition-colors text-sm">
+                    Get Started
+                  </button>
                 </div>
-                <div className="p-6 rounded-2xl border-2 border-indigo-500 relative">
-                  <div className="absolute top-0 right-0 px-3 py-1 bg-indigo-500 text-white text-xs font-bold rounded-bl-xl rounded-tr-lg">POPULAR</div>
-                  <h3 className="mt-0 text-xl font-bold text-indigo-600">Pro</h3>
-                  <p className="text-sm text-slate-500 mb-4">For Growing Teams</p>
-                  <ul className="text-sm space-y-2">
-                    <li>Auto Domain Verification</li>
-                    <li>Unlimited History</li>
-                    <li>Advanced AI Models</li>
+
+                {/* Pro Tier - Highlighted */}
+                <div className="flex flex-col p-8 rounded-3xl border-2 border-indigo-500 bg-indigo-50/50 dark:bg-indigo-900/10 relative shadow-xl shadow-indigo-500/10 scale-105">
+                  <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 bg-indigo-600 text-white text-xs font-bold uppercase tracking-wider rounded-full shadow-lg">Most Popular</div>
+                  <h3 className="mt-0 text-2xl font-bold text-indigo-600 dark:text-indigo-400">Pro</h3>
+                  <p className="text-sm text-slate-500 mb-6">For Growing Teams</p>
+                  <div className="text-3xl font-black text-slate-900 dark:text-white mb-6">$12<span className="text-sm font-medium text-slate-500">/user/mo</span></div>
+
+                  <ul className="space-y-4 mb-8 flex-1">
+                    <li className="flex items-center gap-3 text-sm text-slate-700 dark:text-white font-medium">
+                      <div className="p-0.5 bg-indigo-100 dark:bg-indigo-500/20 rounded-full"><Check size={14} className="text-indigo-600 dark:text-indigo-400 shrink-0" /></div>
+                      Auto Domain Verification
+                    </li>
+                    <li className="flex items-center gap-3 text-sm text-slate-700 dark:text-white font-medium">
+                      <div className="p-0.5 bg-indigo-100 dark:bg-indigo-500/20 rounded-full"><Check size={14} className="text-indigo-600 dark:text-indigo-400 shrink-0" /></div>
+                      Unlimited History
+                    </li>
+                    <li className="flex items-center gap-3 text-sm text-slate-700 dark:text-white font-medium">
+                      <div className="p-0.5 bg-indigo-100 dark:bg-indigo-500/20 rounded-full"><Check size={14} className="text-indigo-600 dark:text-indigo-400 shrink-0" /></div>
+                      Advanced AI Models
+                    </li>
                   </ul>
+                  <button className="w-full py-3 rounded-xl bg-indigo-600 text-white font-bold hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-500/25 text-sm">
+                    Upgrade to Pro
+                  </button>
                 </div>
-                <div className="p-6 rounded-2xl border border-slate-200 dark:border-white/5">
-                  <h3 className="mt-0 text-xl font-bold">Enterprise</h3>
-                  <p className="text-sm text-slate-500 mb-4">For Large Orgs</p>
-                  <ul className="text-sm space-y-2">
-                    <li>SAML / SSO</li>
-                    <li>Dedicated Success Manager</li>
-                    <li>Audit Logs</li>
+
+                {/* Enterprise Tier */}
+                <div className="flex flex-col p-8 rounded-3xl border border-slate-200 dark:border-white/5 bg-white dark:bg-[#0F1623] hover:border-slate-300 dark:hover:border-white/10 transition-all">
+                  <h3 className="mt-0 text-2xl font-bold text-slate-900 dark:text-white">Enterprise</h3>
+                  <p className="text-sm text-slate-500 mb-6">For Large Orgs</p>
+                  <div className="text-3xl font-black text-slate-900 dark:text-white mb-6">Custom</div>
+
+                  <ul className="space-y-4 mb-8 flex-1">
+                    <li className="flex items-center gap-3 text-sm text-slate-600 dark:text-slate-300">
+                      <Check size={16} className="text-slate-400 shrink-0" /> SAML / SSO
+                    </li>
+                    <li className="flex items-center gap-3 text-sm text-slate-600 dark:text-slate-300">
+                      <Check size={16} className="text-slate-400 shrink-0" /> Dedicated Success Manager
+                    </li>
+                    <li className="flex items-center gap-3 text-sm text-slate-600 dark:text-slate-300">
+                      <Check size={16} className="text-slate-400 shrink-0" /> Audit Logs
+                    </li>
                   </ul>
+                  <button className="w-full py-3 rounded-xl border border-slate-200 dark:border-white/10 font-bold hover:bg-slate-50 dark:hover:bg-white/5 transition-colors text-sm">
+                    Contact Sales
+                  </button>
                 </div>
               </div>
             </section>
 
-            <footer className="mt-32 pt-12 border-t border-slate-200 dark:border-white/5 text-center text-slate-500 dark:text-slate-600 text-sm">
+            <footer className="mt-16 pt-12 border-t border-slate-200 dark:border-white/5 text-center text-slate-500 dark:text-slate-600 text-sm">
               <p>© 2025 Chttrix Inc. Documentation v2.1</p>
             </footer>
           </div>

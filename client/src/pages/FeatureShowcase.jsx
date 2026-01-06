@@ -370,9 +370,9 @@ const FeatureShowcase = () => {
                 <div className="container mx-auto px-6 flex flex-col md:flex-row justify-between items-center">
                     <p>© 2025 Chttrix Inc. Not yet launched.</p>
                     <div className="flex gap-6 mt-4 md:mt-0">
-                        <a href="#" className="hover:text-slate-900 dark:hover:text-white transition-colors">Contact</a>
-                        <a href="#" className="hover:text-slate-900 dark:hover:text-white transition-colors">Twitter</a>
-                        <a href="#" className="hover:text-slate-900 dark:hover:text-white transition-colors">Events</a>
+                        <button className="hover:text-slate-900 dark:hover:text-white transition-colors bg-transparent border-0 cursor-pointer font-medium">Contact</button>
+                        <button className="hover:text-slate-900 dark:hover:text-white transition-colors bg-transparent border-0 cursor-pointer font-medium">Twitter</button>
+                        <button className="hover:text-slate-900 dark:hover:text-white transition-colors bg-transparent border-0 cursor-pointer font-medium">Events</button>
                     </div>
                 </div>
             </footer>
