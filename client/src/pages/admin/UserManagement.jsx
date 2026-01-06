@@ -35,8 +35,11 @@ const UserManagement = () => {
     const [selectedBulkDept, setSelectedBulkDept] = useState('');
     const [bulkProcessing, setBulkProcessing] = useState(false);
 
-    const fetchData = async () => {
-        if (!company?._id) return;
+    const fetchData = React.useCallback(async () => {
+        if (!company?._id) {
+            setLoading(false);
+            return;
+        }
         try {
             setLoading(true);
             const [membersRes, deptsRes] = await Promise.all([
@@ -51,11 +54,11 @@ const UserManagement = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [company?._id, showToast]);
 
     useEffect(() => {
         fetchData();
-    }, [company?._id, fetchData]);
+    }, [fetchData]);
 
     // Filtering Logic
     useEffect(() => {

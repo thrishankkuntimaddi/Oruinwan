@@ -123,6 +123,19 @@ exports.createNote = async (req, res) => {
             .populate("owner", "username profilePicture")
             .populate("sharedWith", "username profilePicture");
 
+        // ✅ REAL-TIME SOCKET EMISSION
+        if (req.io) {
+            if (populatedNote.isPublic && populatedNote.workspace) {
+                req.io.to(`workspace_${populatedNote.workspace}`).emit("note-created", populatedNote);
+            } else {
+                // Private/Shared
+                const recipients = new Set([userId, ...populatedNote.sharedWith.map(u => u._id.toString())]);
+                recipients.forEach(readerId => {
+                    req.io.to(`user_${readerId}`).emit("note-created", populatedNote);
+                });
+            }
+        }
+
         return res.status(201).json({
             message: "Note created successfully",
             note: populatedNote
@@ -176,6 +189,21 @@ exports.updateNote = async (req, res) => {
             .populate("owner", "username profilePicture")
             .populate("sharedWith", "username profilePicture");
 
+        // ✅ REAL-TIME SOCKET EMISSION
+        if (req.io) {
+            if (populatedNote.isPublic && populatedNote.workspace) {
+                req.io.to(`workspace_${populatedNote.workspace}`).emit("note-updated", populatedNote);
+            } else {
+                const recipients = new Set([
+                    populatedNote.owner._id.toString(),
+                    ...populatedNote.sharedWith.map(u => u._id.toString())
+                ]);
+                recipients.forEach(readerId => {
+                    req.io.to(`user_${readerId}`).emit("note-updated", populatedNote);
+                });
+            }
+        }
+
         return res.json({
             message: "Note updated successfully",
             note: populatedNote
@@ -214,6 +242,20 @@ exports.deleteNote = async (req, res) => {
             note.isArchived = true;
             note.archivedAt = new Date();
             await note.save();
+
+            // ✅ REAL-TIME SOCKET EMISSION (Archive)
+            if (req.io) {
+                // Only notify if public or shared
+                if (note.isPublic && note.workspace) {
+                    req.io.to(`workspace_${note.workspace}`).emit("note-deleted", { noteId });
+                } else {
+                    const recipients = new Set([userId, ...note.sharedWith.map(id => id.toString())]);
+                    recipients.forEach(readerId => {
+                        req.io.to(`user_${readerId}`).emit("note-deleted", { noteId });
+                    });
+                }
+            }
+
             return res.json({ message: "Note archived" });
         }
 
@@ -269,6 +311,23 @@ exports.shareNote = async (req, res) => {
         const populatedNote = await Note.findById(note._id)
             .populate("owner", "username profilePicture")
             .populate("sharedWith", "username profilePicture");
+
+        // ✅ REAL-TIME SOCKET EMISSION
+        if (req.io) {
+            // If already public, sharing just updates list
+            if (populatedNote.isPublic && populatedNote.workspace) {
+                req.io.to(`workspace_${populatedNote.workspace}`).emit("note-updated", populatedNote);
+            } else {
+                // Notify all shared users (including new ones)
+                const recipients = new Set([
+                    populatedNote.owner._id.toString(),
+                    ...populatedNote.sharedWith.map(u => u._id.toString())
+                ]);
+                recipients.forEach(readerId => {
+                    req.io.to(`user_${readerId}`).emit("note-shared", populatedNote);
+                });
+            }
+        }
 
         return res.json({
             message: "Note shared successfully",

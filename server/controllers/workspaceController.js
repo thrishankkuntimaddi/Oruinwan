@@ -291,6 +291,12 @@ exports.deleteWorkspace = async (req, res) => {
       { $unset: { personalWorkspace: "" } }
     );
 
+    // Emit socket event BEFORE deletion so clients can react
+    const io = req.app?.get("io");
+    if (io) {
+      io.to(`workspace_${workspaceId}`).emit("workspace-deleted", { workspaceId });
+    }
+
     // Delete the workspace itself
     await Workspace.findByIdAndDelete(workspaceId);
 
@@ -895,6 +901,14 @@ exports.renameWorkspace = async (req, res) => {
     workspace.name = name.trim();
     await workspace.save();
 
+    const io = req.app?.get("io");
+    if (io) {
+      io.to(`workspace_${id}`).emit("workspace-updated", {
+        workspaceId: workspace._id,
+        name: workspace.name
+      });
+    }
+
     return res.json({
       message: "Workspace renamed successfully",
       workspace: {
@@ -949,6 +963,18 @@ exports.updateWorkspace = async (req, res) => {
     }
 
     await workspace.save();
+
+    const io = req.app?.get("io");
+    if (io) {
+      io.to(`workspace_${id}`).emit("workspace-updated", {
+        workspaceId: workspace._id,
+        name: workspace.name,
+        icon: workspace.icon,
+        color: workspace.color,
+        description: workspace.description,
+        settings: workspace.settings
+      });
+    }
 
     return res.json({
       message: "Workspace updated successfully",

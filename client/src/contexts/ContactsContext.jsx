@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, useCallback } from "rea
 import { channelService } from "../services/channelService";
 import { messageService } from "../services/messageService";
 import api from "../services/api";
+import { useSocket } from "./SocketContext";
 
 const ContactsContext = createContext();
 export const useContacts = () => useContext(ContactsContext);
@@ -25,6 +26,7 @@ export default function ContactsProvider({ children }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [favoriteIds, setFavoriteIds] = useState([]);
+  const { socket } = useSocket();
 
   const loadAllData = useCallback(async (workspaceId) => {
     try {
@@ -145,6 +147,88 @@ export default function ContactsProvider({ children }) {
       }
     }
   }, [loadAllData]);
+
+  // Real-time updates for channels/contacts
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleChannelCreated = (channel) => {
+      // Only add public channels or if I'm a member (implicit in logic)
+      // Check if belongs to current workspace
+      const currentWsId = getCurrentWorkspaceId();
+      if (channel.workspace !== currentWsId) return;
+
+      console.log("🆕 Channel created (socket):", channel);
+      const newChannel = {
+        id: channel._id,
+        type: 'channel',
+        label: channel.name,
+        path: `/channels/${channel._id}`,
+        isFavorite: false,
+        isPrivate: channel.isPrivate,
+        description: channel.description
+      };
+      setChannels(prev => [...prev, newChannel]);
+    };
+
+    const handleChannelUpdated = (data) => {
+      const { channelId, name, description } = data;
+      setChannels(prev => prev.map(ch =>
+        ch.id === channelId
+          ? { ...ch, label: name || ch.label, description: description || ch.description }
+          : ch
+      ));
+    };
+
+    const handleChannelDeleted = (data) => {
+      setChannels(prev => prev.filter(ch => ch.id !== data.channelId));
+    };
+
+    const handleInvited = (data) => {
+      // Similar to created, but specifically for me
+      // We might need to fetch full channel details if not provided
+      const currentWsId = getCurrentWorkspaceId();
+      // But we don't have workspaceId in data usually? Controller emits { channelId, channelName }
+      // We should probably just refresh or fetch details.
+      // For now, let's refresh to be safe as we need full channel object.
+      if (currentWsId) loadAllData(currentWsId);
+    };
+
+    const handleRemoved = (data) => {
+      setChannels(prev => prev.filter(ch => ch.id !== data.channelId));
+    };
+
+    const handleNewDMSession = (data) => {
+      console.log("🆕 New DM Session (socket):", data);
+      // Refreshing all data is safest for now to get the full session object
+      const currentWsId = getCurrentWorkspaceId();
+      if (currentWsId) loadAllData(currentWsId);
+    };
+
+    socket.on('channel-created', handleChannelCreated);
+    socket.on('channel-updated', handleChannelUpdated);
+    socket.on('channel-deleted', handleChannelDeleted);
+    socket.on('invited-to-channel', handleInvited);
+    socket.on('removed-from-channel', handleRemoved);
+    socket.on('new-dm-session', handleNewDMSession);
+    socket.on('channel-privacy-changed', (data) => {
+      setChannels(prev => prev.map(ch =>
+        ch.id === data.channelId
+          ? { ...ch, isPrivate: data.isPrivate }
+          : ch
+      ));
+    });
+
+    return () => {
+      socket.off('channel-created', handleChannelCreated);
+      socket.off('channel-updated', handleChannelUpdated);
+      socket.off('channel-deleted', handleChannelDeleted);
+      socket.off('invited-to-channel', handleInvited);
+      socket.off('removed-from-channel', handleRemoved);
+      socket.off('new-dm-session', handleNewDMSession);
+      socket.off('channel-privacy-changed');
+    };
+  }, [socket, loadAllData]);
 
   // Combine channels and DMs into allItems
   const allItems = [...channels, ...dms];

@@ -114,6 +114,11 @@ exports.postUpdate = async (req, res) => {
             .populate("postedBy", "username profilePicture")
             .populate("mentions", "username");
 
+        // ✅ REAL-TIME SOCKET EMISSION
+        if (req.io) {
+            req.io.to(`workspace_${workspaceId}`).emit("update-created", populatedUpdate);
+        }
+
         return res.status(201).json({
             message: "Update posted successfully",
             update: populatedUpdate
@@ -166,6 +171,11 @@ exports.updateUpdate = async (req, res) => {
             .populate("postedBy", "username profilePicture")
             .populate("mentions", "username");
 
+        // ✅ REAL-TIME SOCKET EMISSION
+        if (req.io) {
+            req.io.to(`workspace_${update.workspace}`).emit("update-updated", populatedUpdate);
+        }
+
         return res.json({
             message: "Update edited successfully",
             update: populatedUpdate
@@ -206,6 +216,11 @@ exports.deleteUpdate = async (req, res) => {
         // Soft delete
         update.isDeleted = true;
         await update.save();
+
+        // ✅ REAL-TIME SOCKET EMISSION (Delete)
+        if (req.io) {
+            req.io.to(`workspace_${update.workspace}`).emit("update-deleted", { updateId });
+        }
 
         return res.json({ message: "Update deleted successfully" });
 
@@ -250,6 +265,14 @@ exports.addReaction = async (req, res) => {
         }
 
         await update.save();
+
+        // ✅ REAL-TIME SOCKET EMISSION (Reaction)
+        if (req.io) {
+            const populatedUpdate = await Update.findById(update._id)
+                .populate("postedBy", "username profilePicture")
+                .populate("mentions", "username");
+            req.io.to(`workspace_${update.workspace}`).emit("update-updated", populatedUpdate);
+        }
 
         return res.json({
             message: existingReaction ? "Reaction removed" : "Reaction added",

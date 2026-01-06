@@ -283,6 +283,23 @@ exports.createTask = async (req, res) => {
                 .populate("channel", "name")
         ));
 
+        // ✅ REAL-TIME SOCKET EMISSION
+        if (req.io) {
+            populatedTasks.forEach(task => {
+                if (task.visibility === "workspace") {
+                    req.io.to(`workspace_${workspaceId}`).emit("task-created", task);
+                } else if (task.visibility === "channel" && task.channel) {
+                    req.io.to(`channel_${task.channel._id || task.channel}`).emit("task-created", task);
+                } else {
+                    // Private/Specific - emit to creator and assignees
+                    const recipients = new Set([userId, ...task.assignedTo.map(a => a._id.toString())]);
+                    recipients.forEach(recipientId => {
+                        req.io.to(`user_${recipientId}`).emit("task-created", task);
+                    });
+                }
+            });
+        }
+
         return res.status(201).json({
             message: "Tasks created successfully",
             tasks: populatedTasks
@@ -435,7 +452,26 @@ exports.updateTask = async (req, res) => {
 
         const populatedTask = await Task.findById(task._id)
             .populate("createdBy", "username profilePicture")
-            .populate("assignedTo", "username profilePicture");
+            .populate("assignedTo", "username profilePicture")
+            .populate("channel", "name");
+
+        // ✅ REAL-TIME SOCKET EMISSION (General Update)
+        if (req.io) {
+            if (task.visibility === "workspace") {
+                req.io.to(`workspace_${task.workspace}`).emit("task-updated", populatedTask);
+            } else if (task.visibility === "channel" && task.channel) {
+                req.io.to(`channel_${task.channel}`).emit("task-updated", populatedTask);
+            } else {
+                // Private - emit to participants
+                const recipients = new Set([
+                    task.createdBy.toString(),
+                    ...task.assignedTo.map(id => id.toString())
+                ]);
+                recipients.forEach(recipientId => {
+                    req.io.to(`user_${recipientId}`).emit("task-updated", populatedTask);
+                });
+            }
+        }
 
         return res.json({
             message: "Task updated successfully",
@@ -526,6 +562,23 @@ exports.deleteTask = async (req, res) => {
                 companyId: task.company,
                 req
             });
+
+            // ✅ REAL-TIME SOCKET EMISSION
+            if (req.io) {
+                if (task.visibility === "workspace") {
+                    req.io.to(`workspace_${task.workspace}`).emit("task-deleted", { taskId });
+                } else if (task.visibility === "channel" && task.channel) {
+                    req.io.to(`channel_${task.channel}`).emit("task-deleted", { taskId });
+                } else {
+                    const recipients = new Set([
+                        task.createdBy.toString(),
+                        ...task.assignedTo.map(id => id.toString())
+                    ]);
+                    recipients.forEach(recipientId => {
+                        req.io.to(`user_${recipientId}`).emit("task-deleted", { taskId });
+                    });
+                }
+            }
 
             return res.json({ message: "Task deleted successfully" });
 

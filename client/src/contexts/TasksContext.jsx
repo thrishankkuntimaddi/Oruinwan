@@ -136,101 +136,90 @@ export const TasksProvider = ({ children }) => {
         loadTasks();
     }, [loadTasks]);
 
-    // WebSocket listeners for task reassignment
+    // WebSocket listeners for task events
     useEffect(() => {
         if (!socket) return;
 
-        const handleTaskAssigned = (task) => {
-            console.log("📋 Task assigned to me:", task);
-            showToast(`New task assigned: ${task.title}`, "info");
+        const mapTaskToFrontend = (task) => {
+            const validAssignees = (task.assignedTo || []).filter(u => u);
+            const assigneeDisplay = validAssignees.length === 1
+                ? validAssignees[0].username || "Unknown"
+                : validAssignees.length > 1 ? `${validAssignees.length} members` : "Self";
 
+            return {
+                id: task._id,
+                title: task.title,
+                description: task.description || "",
+                assignee: assigneeDisplay,
+                assigneeId: validAssignees[0]?._id || user?._id,
+                assigner: task.createdBy?.username || "Unknown",
+                assignerId: task.createdBy?._id,
+                status: mapBackendStatus(task.status),
+                priority: mapBackendPriority(task.priority),
+                dueDate: task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : null,
+                project: task.channel?.name || "General",
+                completedAt: task.completedAt,
+                completionNote: task.completionNote || "",
+                deleted: task.deleted || false,
+                tags: task.tags || [],
+                createdAt: task.createdAt,
+                updatedAt: task.updatedAt,
+                visibility: task.visibility || "private",
+                assignees: validAssignees,
+                attachments: task.attachments || [],
+                transferRequest: task.transferRequest || null
+            };
+        };
+
+        const handleTaskCreated = (task) => {
+            console.log("🆕 Task created:", task);
+            setTasks(prev => {
+                if (prev.some(t => t.id === task._id)) return prev; // Prevent duplicates
+                return [mapTaskToFrontend(task), ...prev];
+            });
+        };
+
+        const handleTaskDeleted = (data) => {
+            console.log("🗑️ Task deleted:", data);
+            setTasks(prev => prev.filter(t => t.id !== data.taskId));
+        };
+
+        const handleTaskAssigned = (task) => {
+            console.log("📋 Task assigned to me (websocket):", task);
+            showToast(`New task assigned: ${task.title}`, "info");
             setTasks(prev => {
                 if (prev.some(t => t.id === task._id)) return prev;
-
-                const validAssignees = (task.assignedTo || []).filter(u => u);
-                const assigneeDisplay = validAssignees.length === 1
-                    ? validAssignees[0].username || "Unknown"
-                    : validAssignees.length > 1 ? `${validAssignees.length} members` : "Self";
-
-                return [{
-                    id: task._id,
-                    title: task.title,
-                    description: task.description || "",
-                    assignee: assigneeDisplay,
-                    assigneeId: validAssignees[0]?._id || user?._id,
-                    assigner: task.createdBy?.username || "Unknown",
-                    assignerId: task.createdBy?._id,
-                    status: mapBackendStatus(task.status),
-                    priority: mapBackendPriority(task.priority),
-                    dueDate: task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : null,
-                    project: task.channel?.name || "General",
-                    completedAt: task.completedAt,
-                    completionNote: task.completionNote || "",
-                    deleted: task.deleted || false,
-                    tags: task.tags || [],
-                    createdAt: task.createdAt,
-                    updatedAt: task.updatedAt,
-                    visibility: task.visibility || "private",
-                    assignees: validAssignees,
-                    attachments: task.attachments || [],
-                    transferRequest: task.transferRequest || null
-                }, ...prev];
+                return [mapTaskToFrontend(task), ...prev];
             });
         };
 
         const handleTaskRemoved = (data) => {
-            console.log("🗑️ Task removed from my view:", data);
+            console.log("🗑️ Task removed from my view (websocket):", data);
             showToast("A task has been reassigned", "info");
             setTasks(prev => prev.filter(t => t.id !== data.taskId));
         };
 
-        // Listen for task updates on shared tasks
         const handleTaskUpdated = (task) => {
-            console.log("🔄 Task updated:", task);
-
+            console.log("🔄 Task updated (websocket):", task);
             setTasks(prev => {
                 const existingIndex = prev.findIndex(t => t.id === task._id);
-                if (existingIndex === -1) return prev; // Task not in my list
+                if (existingIndex === -1) return prev; // Task not in list? Maybe we should add it if it's now relevant?
+                // For now, only update if existing.
 
-                // Map backend task to frontend format
-                const validAssignees = (task.assignedTo || []).filter(u => u);
-                const assigneeDisplay = validAssignees.length === 1
-                    ? validAssignees[0].username || "Unknown"
-                    : validAssignees.length > 1 ? `${validAssignees.length} members` : "Self";
-
-                const updatedTask = {
-                    id: task._id,
-                    title: task.title,
-                    description: task.description || "",
-                    assignee: assigneeDisplay,
-                    assigneeId: validAssignees[0]?._id || user?._id,
-                    assigner: task.createdBy?.username || "Unknown",
-                    assignerId: task.createdBy?._id,
-                    status: mapBackendStatus(task.status),
-                    priority: mapBackendPriority(task.priority),
-                    dueDate: task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : null,
-                    project: task.channel?.name || "General",
-                    completedAt: task.completedAt,
-                    completionNote: task.completionNote || "",
-                    deleted: task.deleted || false,
-                    tags: task.tags || [],
-                    createdAt: task.createdAt,
-                    updatedAt: task.updatedAt,
-                    visibility: task.visibility || "private",
-                    assignees: validAssignees,
-                    attachments: task.attachments || [],
-                    transferRequest: task.transferRequest || null
-                };
-
+                const updatedTask = mapTaskToFrontend(task);
                 return prev.map((t, idx) => idx === existingIndex ? updatedTask : t);
             });
         };
 
+        socket.on("task-created", handleTaskCreated);
+        socket.on("task-deleted", handleTaskDeleted);
         socket.on("task-assigned", handleTaskAssigned);
         socket.on("task-removed", handleTaskRemoved);
         socket.on("task-updated", handleTaskUpdated);
 
         return () => {
+            socket.off("task-created", handleTaskCreated);
+            socket.off("task-deleted", handleTaskDeleted);
             socket.off("task-assigned", handleTaskAssigned);
             socket.off("task-removed", handleTaskRemoved);
             socket.off("task-updated", handleTaskUpdated);

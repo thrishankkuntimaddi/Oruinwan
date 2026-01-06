@@ -74,11 +74,11 @@ import RequireDepartmentManager from "./components/RequireDepartmentManager"; //
 function App() {
 
   return (
-    <ContactsProvider>
-      <ToastProvider>
-        <ThemeProvider>
-          <Router>
-            <SocketProvider>
+    <ToastProvider>
+      <ThemeProvider>
+        <Router>
+          <SocketProvider>
+            <ContactsProvider>
               <CompanyProvider>
                 <DepartmentProvider>
                   <NotesProvider>
@@ -490,11 +490,11 @@ function App() {
                   </NotesProvider>
                 </DepartmentProvider>
               </CompanyProvider>
-            </SocketProvider>
-          </Router>
-        </ThemeProvider>
-      </ToastProvider>
-    </ContactsProvider >
+            </ContactsProvider>
+          </SocketProvider>
+        </Router>
+      </ThemeProvider>
+    </ToastProvider>
   );
 }
 

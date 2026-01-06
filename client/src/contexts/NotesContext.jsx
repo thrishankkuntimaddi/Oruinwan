@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import { useNavigate, useLocation, useParams } from "react-router-dom";
 import api from "../services/api";
 import { useToast } from "./ToastContext";
+import { useSocket } from "./SocketContext";
 
 const NotesContext = createContext();
 
@@ -12,6 +13,7 @@ export const NotesProvider = ({ children }) => {
     const location = useLocation();
     const { workspaceId } = useParams();
     const { showToast } = useToast();
+    const { socket } = useSocket();
 
     const [notes, setNotes] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -69,6 +71,79 @@ export const NotesProvider = ({ children }) => {
     useEffect(() => {
         loadNotes();
     }, [loadNotes]);
+
+    // WebSocket listeners for note events
+    useEffect(() => {
+        if (!socket) return;
+
+        const mapNoteToFrontend = (note) => ({
+            id: note._id,
+            title: note.title || "",
+            content: note.content || "",
+            createdAt: note.createdAt,
+            updatedAt: note.updatedAt,
+            owner: note.owner,
+            sharedWith: note.sharedWith || [],
+            isPublic: note.isPublic || false,
+            isPinned: note.isPinned || false,
+            tags: note.tags || [],
+            type: note.type || "note"
+        });
+
+        const handleNoteCreated = (note) => {
+            console.log("📝 Note created (websocket):", note);
+            setNotes(prev => {
+                if (prev.some(n => n.id === note._id)) return prev;
+                // Only add if belongs to current workspace view (or no workspace view)
+                // If we are in "All My Notes" (no workspaceId in URL) we show it.
+                // If we are in a workspace, ensure note matches.
+                // But simplified: Just add it, filtering usually happens on render or derived state if strictly needed,
+                // but here 'notes' is main state.
+                // Let's check workspace match if possible.
+                const currentWsId = getWorkspaceId();
+                if (currentWsId && note.workspace && note.workspace !== currentWsId) return prev;
+
+                return [mapNoteToFrontend(note), ...prev];
+            });
+        };
+
+        const handleNoteUpdated = (note) => {
+            console.log("🔄 Note updated (websocket):", note);
+            setNotes(prev => prev.map(n =>
+                n.id === note._id ? mapNoteToFrontend(note) : n
+            ));
+        };
+
+        const handleNoteDeleted = (data) => {
+            console.log("🗑️ Note deleted (websocket):", data);
+            setNotes(prev => prev.filter(n => n.id !== data.noteId));
+        };
+
+        const handleNoteShared = (note) => {
+            console.log("🤝 Note shared with me (websocket):", note);
+            showToast(`Note shared with you: ${note.title}`, "info");
+            setNotes(prev => {
+                if (prev.some(n => n.id === note._id)) {
+                    // Update existing
+                    return prev.map(n => n.id === note._id ? mapNoteToFrontend(note) : n);
+                }
+                // Add new
+                return [mapNoteToFrontend(note), ...prev];
+            });
+        };
+
+        socket.on("note-created", handleNoteCreated);
+        socket.on("note-updated", handleNoteUpdated);
+        socket.on("note-deleted", handleNoteDeleted);
+        socket.on("note-shared", handleNoteShared);
+
+        return () => {
+            socket.off("note-created", handleNoteCreated);
+            socket.off("note-updated", handleNoteUpdated);
+            socket.off("note-deleted", handleNoteDeleted);
+            socket.off("note-shared", handleNoteShared);
+        };
+    }, [socket, getWorkspaceId, showToast]);
 
     // Create new note
     const addNote = useCallback(async () => {
