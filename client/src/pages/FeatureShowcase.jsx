@@ -16,7 +16,9 @@ import {
     Laptop,
     Briefcase,
     Building2,
-    CheckCircle2
+    CheckCircle2,
+    MessageCircle,
+    GitBranch
 } from "lucide-react";
 
 // Video Assets
@@ -191,12 +193,22 @@ const FeatureShowcase = () => {
                         <p className="text-xl text-slate-500 dark:text-slate-400 max-w-2xl mx-auto">Everything you need to run your company, in one tab.</p>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
                         {[
                             {
                                 icon: <MessageSquare size={32} className="text-blue-500 dark:text-blue-400" />,
                                 title: "Channels",
                                 desc: "Structured, threaded conversations for every project and topic. Keep the noise down and the focus up."
+                            },
+                            {
+                                icon: <MessageCircle size={32} className="text-indigo-500 dark:text-indigo-400" />,
+                                title: "Direct Messages",
+                                desc: "Private 1:1 conversations and small group chats. Secure, fast, and built for focused collaboration."
+                            },
+                            {
+                                icon: <GitBranch size={32} className="text-violet-500 dark:text-violet-400" />,
+                                title: "Threads",
+                                desc: "Keep conversations organized. Reply to any message to start a side discussion without cluttering the main channel."
                             },
                             {
                                 icon: <Zap size={32} className="text-yellow-500 dark:text-yellow-400" />,
@@ -277,7 +289,7 @@ const FeatureShowcase = () => {
                                 </span>
                             </p>
 
-                            <button className="flex items-center gap-3 text-lg font-bold text-purple-600 dark:text-purple-400 hover:gap-4 transition-all">
+                            <button onClick={() => navigate("/chttrix-docs")} className="flex items-center gap-3 text-lg font-bold text-purple-600 dark:text-purple-400 hover:gap-4 transition-all">
                                 See capabilities <ArrowRight size={20} />
                             </button>
                         </div>
