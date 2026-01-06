@@ -12,8 +12,7 @@ const { logAction } = require("../utils/historyLogger");
 exports.getUpdates = async (req, res) => {
     try {
         const userId = req.user.sub;
-        const { workspaceId } = req.params;
-        const { type, priority, limit = 50 } = req.query;
+        const { workspaceId, message, type, priority, mentions = [], attachments = [], title } = req.body;
 
         const workspace = await Workspace.findById(workspaceId);
         if (!workspace) {
@@ -90,6 +89,7 @@ exports.postUpdate = async (req, res) => {
             company: workspace.company,
             workspace: workspaceId,
             postedBy: userId,
+            title,
             message,
             type,
             priority,
@@ -112,11 +112,14 @@ exports.postUpdate = async (req, res) => {
 
         const populatedUpdate = await Update.findById(update._id)
             .populate("postedBy", "username profilePicture")
-            .populate("mentions", "username");
+            .populate("mentions", "username")
+            .populate("workspace", "name");
 
-        // ✅ REAL-TIME SOCKET EMISSION
+        // ✅ REAL-TIME SOCKET EMISSION (Company-wide)
         if (req.io) {
-            req.io.to(`workspace_${workspaceId}`).emit("update-created", populatedUpdate);
+            req.io.to(`company_${workspace.company}`).emit("update-created", populatedUpdate);
+            // Also emit to workspace for legacy support if needed, but client should listen to company events
+            // req.io.to(`workspace_${workspaceId}`).emit("update-created", populatedUpdate);
         }
 
         return res.status(201).json({
@@ -158,7 +161,7 @@ exports.updateUpdate = async (req, res) => {
         }
 
         // Update allowed fields
-        const allowedFields = ["message", "type", "priority", "isPinned"];
+        const allowedFields = ["message", "type", "priority", "isPinned", "title"];
         allowedFields.forEach(field => {
             if (updates[field] !== undefined) {
                 update[field] = updates[field];
@@ -169,11 +172,12 @@ exports.updateUpdate = async (req, res) => {
 
         const populatedUpdate = await Update.findById(update._id)
             .populate("postedBy", "username profilePicture")
-            .populate("mentions", "username");
+            .populate("mentions", "username")
+            .populate("workspace", "name");
 
-        // ✅ REAL-TIME SOCKET EMISSION
+        // ✅ REAL-TIME SOCKET EMISSION (Company-wide)
         if (req.io) {
-            req.io.to(`workspace_${update.workspace}`).emit("update-updated", populatedUpdate);
+            req.io.to(`company_${update.company}`).emit("update-updated", populatedUpdate);
         }
 
         return res.json({
@@ -217,9 +221,9 @@ exports.deleteUpdate = async (req, res) => {
         update.isDeleted = true;
         await update.save();
 
-        // ✅ REAL-TIME SOCKET EMISSION (Delete)
+        // ✅ REAL-TIME SOCKET EMISSION (Company-wide)
         if (req.io) {
-            req.io.to(`workspace_${update.workspace}`).emit("update-deleted", { updateId });
+            req.io.to(`company_${update.company}`).emit("update-deleted", { updateId });
         }
 
         return res.json({ message: "Update deleted successfully" });
@@ -266,12 +270,13 @@ exports.addReaction = async (req, res) => {
 
         await update.save();
 
-        // ✅ REAL-TIME SOCKET EMISSION (Reaction)
+        // ✅ REAL-TIME SOCKET EMISSION (Company-wide)
         if (req.io) {
             const populatedUpdate = await Update.findById(update._id)
                 .populate("postedBy", "username profilePicture")
-                .populate("mentions", "username");
-            req.io.to(`workspace_${update.workspace}`).emit("update-updated", populatedUpdate);
+                .populate("mentions", "username")
+                .populate("workspace", "name");
+            req.io.to(`company_${update.company}`).emit("update-updated", populatedUpdate);
         }
 
         return res.json({
@@ -308,6 +313,46 @@ exports.markAsRead = async (req, res) => {
 
     } catch (err) {
         console.error("MARK AS READ ERROR:", err);
+        return res.status(500).json({ message: "Server error" });
+    }
+};
+
+/**
+ * Get updates for a company
+ * GET /api/updates/company/:companyId
+ */
+exports.getCompanyUpdates = async (req, res) => {
+    try {
+        const userId = req.user.sub;
+        const { companyId } = req.params;
+        const { type, priority, limit = 50 } = req.query;
+
+        // Verify user belongs to company
+        const user = await User.findById(userId);
+        if (!user || user.companyId.toString() !== companyId) {
+            return res.status(403).json({ message: "Access denied" });
+        }
+
+        const query = {
+            company: companyId,
+            isDeleted: false
+        };
+
+        if (type) query.type = type;
+        if (priority) query.priority = priority;
+
+        const updates = await Update.find(query)
+            .populate("postedBy", "username profilePicture")
+            .populate("mentions", "username")
+            .populate("workspace", "name") // Useful for context
+            .sort({ isPinned: -1, createdAt: -1 })
+            .limit(parseInt(limit))
+            .lean();
+
+        return res.json({ updates });
+
+    } catch (err) {
+        console.error("GET COMPANY UPDATES ERROR:", err);
         return res.status(500).json({ message: "Server error" });
     }
 };

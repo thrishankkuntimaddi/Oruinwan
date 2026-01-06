@@ -7,11 +7,23 @@ const Workspace = require("../models/Workspace");
 const User = require("../models/User");
 const logger = require("../utils/logger");
 
-module.exports = function registerChatHandlers(io, socket) {
+module.exports = async function registerChatHandlers(io, socket) {
   const userId = socket.user.id; // extracted from JWT
 
   // ✅ JOIN USER-SPECIFIC ROOM for targeted events
   socket.join(`user_${userId}`);
+
+  // ✅ JOIN COMPANY ROOM (Auto-join)
+  try {
+    const user = await User.findById(userId).select('companyId');
+    if (user && user.companyId) {
+      const companyRoom = `company_${user.companyId.toString()}`;
+      socket.join(companyRoom);
+      // console.log(`📢 User ${userId} auto-joined ${companyRoom}`);
+    }
+  } catch (err) {
+    console.error("Error auto-joining company room:", err);
+  }
 
   /* ----------------------------------------------------
      JOIN DM SESSION ROOM

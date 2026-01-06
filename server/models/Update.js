@@ -8,6 +8,7 @@ const UpdateSchema = new mongoose.Schema({
     postedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
 
     message: { type: String, required: true },
+    title: { type: String },
 
     // Update type for filtering
     type: {

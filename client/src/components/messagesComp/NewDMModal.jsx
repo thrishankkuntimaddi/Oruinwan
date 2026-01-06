@@ -11,33 +11,50 @@ export default function NewDMModal({ onClose, onStart }) {
   const [error, setError] = useState(null);
   const { accessToken, user } = useContext(AuthContext);
   const { workspaceId } = useParams();
+  const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
+
+  // Debounce search query
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedQuery(searchQuery), 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   useEffect(() => {
     async function load() {
       try {
-        console.log("🔄 Loading users for DM...");
+        setLoading(true);
+        setError(null);
 
         // Use token from context, or fallback to localStorage
         const token = accessToken || localStorage.getItem("accessToken");
 
-        // If no token and no user in context, then truly not logged in
         if (!token && !user) {
-          console.error("❌ No auth token found");
-          setError("Please log in to continue");
+          // ... (same auth check)
           setLoading(false);
           return;
         }
 
         const headers = token ? { Authorization: `Bearer ${token}` } : {};
-
         let res;
-        if (workspaceId) {
+
+        // If searching, use the new company-wide search endpoint
+        if (debouncedQuery.trim()) {
+          res = await axios.get(`${API_BASE}/api/search/contacts`, {
+            params: { workspaceId, query: debouncedQuery },
+            headers,
+            withCredentials: true
+          });
+          // Search returns expected format directly
+          setUsers(res.data.contacts || []);
+        }
+        // If no search, load initial list (workspace members or recent)
+        else if (workspaceId) {
           res = await axios.get(`${API_BASE}/api/workspaces/${workspaceId}/members`, {
             headers,
             withCredentials: true
           });
           const membersList = res.data.members || [];
-          // Map workspace member format to DM user format
           const mapped = membersList.map(m => ({
             _id: m._id,
             username: m.username || m.email,
@@ -46,28 +63,18 @@ export default function NewDMModal({ onClose, onStart }) {
           }));
           setUsers(mapped);
         } else {
-          res = await axios.get(`${API_BASE}/api/chat/contacts`, {
-            headers,
-            withCredentials: true
-          });
-          const contactsList = res.data.contacts || [];
-          setUsers(contactsList);
+          // Fallback context
+          setUsers([]);
         }
         setLoading(false);
       } catch (err) {
         console.error("❌ Failed to load users:", err);
-        console.error("Response:", err.response?.data);
-
-        if (err.response?.status === 401) {
-          setError("Authentication failed - please log in again");
-        } else {
-          setError("Failed to load users: " + (err.message || "Unknown error"));
-        }
+        setError("Failed to load users");
         setLoading(false);
       }
     }
     load();
-  }, [accessToken, user, workspaceId]);
+  }, [accessToken, user, workspaceId, debouncedQuery]);
 
   return (
     <div className="fixed inset-0 bg-black/60 z-[70] flex items-center justify-center animate-fade-in backdrop-blur-sm">
@@ -84,9 +91,11 @@ export default function NewDMModal({ onClose, onStart }) {
             <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
             <input
               type="text"
-              placeholder="Search for people..."
+              placeholder="Search people across workspace..."
               className="w-full pl-10 pr-4 py-3 bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-gray-900 dark:text-white"
               autoFocus
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
         </div>

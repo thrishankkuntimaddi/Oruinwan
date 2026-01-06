@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import api from "../services/api";
 import { useSocket } from "./SocketContext";
+import { useAuth } from "./AuthContext"; // Import AuthContext
 import { useLocation } from "react-router-dom";
 
 const BlogsContext = createContext();
@@ -9,21 +10,25 @@ export const useBlogs = () => useContext(BlogsContext);
 
 export const BlogsProvider = ({ children }) => {
     const { socket } = useSocket();
+    const { user } = useAuth(); // Get user
     const location = useLocation();
 
     const [posts, setPosts] = useState([]);
     const [loading, setLoading] = useState(true);
     const [activeFilter, setActiveFilter] = useState("all");
 
-    // Extract workspaceId from URL or other source
+    // Extract workspaceId from URL (still useful for creation context)
     const getWorkspaceId = useCallback(() => {
         const match = location.pathname.match(/\/workspace\/([^/]+)/);
         return match ? match[1] : null;
     }, [location.pathname]);
 
+    // Fetch Company Updates
     const loadUpdates = useCallback(async () => {
-        const workspaceId = getWorkspaceId();
-        if (!workspaceId) {
+        // Use company ID from user object
+        const companyId = user?.companyId?._id || user?.companyId; // Handle populated or string ID
+
+        if (!companyId) {
             setPosts([]);
             setLoading(false);
             return;
@@ -31,7 +36,8 @@ export const BlogsProvider = ({ children }) => {
 
         try {
             setLoading(true);
-            const response = await api.get(`/api/updates/${workspaceId}`);
+            // Fetch from NEW company updates endpoint
+            const response = await api.get(`/api/updates/company/${companyId}`);
 
             // Map backend updates to frontend 'posts' format
             const mappedPosts = response.data.updates.map(update => ({
@@ -39,18 +45,18 @@ export const BlogsProvider = ({ children }) => {
                 author: {
                     name: update.postedBy?.username || "Unknown",
                     avatar: update.postedBy?.profilePicture || "",
-                    role: "Team Member", // Backend user schema might need role check
+                    role: "Team Member",
                     id: update.postedBy?._id
                 },
-                // Fallback for title/context since backend model is simpler
-                context: update.type || "General",
-                title: update.type === 'announcement' ? "Announcement" : "Update",
+                context: update.type || "general",
+                title: update.title || (update.type === 'announcement' ? "Announcement" : ""), // Don't default to "Update"
                 content: update.message || "",
                 tags: update.priority ? [update.priority] : [],
                 likes: update.reactions?.length || 0,
-                comments: [], // Comments not yet supported on backend Updates
+                comments: [],
                 timestamp: update.createdAt,
-                workspaceId: update.workspace,
+                workspaceId: update.workspace?._id || update.workspace,
+                workspace: update.workspace?.name || "Workspace", // Map to 'workspace' for UI
                 isPinned: update.isPinned
             }));
 
@@ -60,7 +66,7 @@ export const BlogsProvider = ({ children }) => {
         } finally {
             setLoading(false);
         }
-    }, [getWorkspaceId]);
+    }, [user?.companyId]); // Depend on user.companyId
 
     useEffect(() => {
         loadUpdates();
@@ -68,20 +74,23 @@ export const BlogsProvider = ({ children }) => {
 
     const addPost = async (newPostData) => {
         const workspaceId = getWorkspaceId();
-        if (!workspaceId) return;
+        // If no workspace in URL, we might need a fallback, but for now strict check
+        if (!workspaceId) {
+            console.error("Workspace ID required for creating update");
+            return;
+        }
 
         try {
             const payload = {
                 workspaceId,
-                message: newPostData.content, // Map content to message
-                type: newPostData.context || "general", // Map context to type
+                title: newPostData.title, // ✅ Pass title
+                message: newPostData.content,
+                type: (newPostData.context || "general").toLowerCase(), // ✅ FORCE LOWERCASE
                 priority: "normal"
             };
 
-            const response = await api.post("/api/updates", payload);
-            // Optimistic update handled by socket or we can just append
-            // But let's rely on socket for real-time consistency or append manually
-            // Not appending here to avoid duplication if socket is fast
+            await api.post("/api/updates", payload);
+            // Socket handles UI update
         } catch (error) {
             console.error("Failed to post update:", error);
         }
@@ -89,16 +98,13 @@ export const BlogsProvider = ({ children }) => {
 
     const likePost = async (id) => {
         try {
-            // Toggle reaction
             await api.post(`/api/updates/${id}/react`, { emoji: "👍" });
-            // UI update handled by socket
         } catch (error) {
             console.error("Failed to like post:", error);
         }
     };
 
     const addComment = (postId, text) => {
-        // Backend currently doesn't support comments on Updates
         console.warn("Comments on updates not yet implemented in backend");
     };
 
@@ -122,22 +128,21 @@ export const BlogsProvider = ({ children }) => {
                 role: "Team Member",
                 id: update.postedBy?._id
             },
-            context: update.type || "General",
-            title: update.type === 'announcement' ? "Announcement" : "Update",
+            context: update.type || "general",
+            title: update.title || (update.type === 'announcement' ? "Announcement" : ""),
             content: update.message || "",
             tags: update.priority ? [update.priority] : [],
             likes: update.reactions?.length || 0,
             comments: [],
             timestamp: update.createdAt,
-            workspaceId: update.workspace,
+            workspaceId: update.workspace?._id || update.workspace, // might not be populated in socket event
+            workspace: update.workspace?.name || "Workspace", // Map to 'workspace' for UI
             isPinned: update.isPinned
         });
 
         socket.on("update-created", (update) => {
             console.log("📢 Update created (socket):", update);
-            const currentWsId = getWorkspaceId();
-            if (currentWsId && update.workspace !== currentWsId) return;
-
+            // ✅ REMOVED WORKSPACE FILTER to allow company-wide updates
             setPosts(prev => [mapUpdateToFrontend(update), ...prev]);
         });
 
@@ -158,7 +163,7 @@ export const BlogsProvider = ({ children }) => {
             socket.off("update-updated");
             socket.off("update-deleted");
         };
-    }, [socket, getWorkspaceId]);
+    }, [socket]);
 
     const filteredPosts = posts.filter(post => {
         if (activeFilter === "my-posts") return post.author.name === "You";

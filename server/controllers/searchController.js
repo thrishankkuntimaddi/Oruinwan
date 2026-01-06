@@ -72,6 +72,30 @@ exports.universalSearch = async (req, res) => {
 };
 
 /**
+ * Search contacts endpoint
+ * GET /api/search/contacts?workspaceId=xxx&query=xxx
+ */
+exports.searchContactsHandler = async (req, res) => {
+    try {
+        const userId = req.user.sub;
+        const { workspaceId, query } = req.query;
+
+        if (!workspaceId) {
+            return res.status(400).json({ message: "Workspace ID is required" });
+        }
+
+        const searchTerm = (query || "").trim();
+        const searchRegex = new RegExp(searchTerm, "i");
+
+        const contacts = await searchContacts(workspaceId, userId, searchRegex);
+        return res.json({ contacts });
+    } catch (err) {
+        logger.error("SEARCH CONTACTS ERROR:", err);
+        return res.status(500).json({ message: "Server error" });
+    }
+};
+
+/**
  * Search channels by name and description
  */
 async function searchChannels(workspaceId, userId, searchRegex) {
@@ -90,8 +114,7 @@ async function searchChannels(workspaceId, userId, searchRegex) {
                 {
                     $or: [
                         { isPrivate: false }, // Public channels
-                        { 'members.user': userId }, // New format: user is a member
-                        { 'members': userId } // Old format: user ID directly in array
+                        { 'members.user': userId } // New format: user is a member
                     ]
                 }
             ]
@@ -133,40 +156,36 @@ async function searchChannels(workspaceId, userId, searchRegex) {
  */
 async function searchContacts(workspaceId, userId, searchRegex) {
     try {
-        // Get workspace to find all members
-        const workspace = await Workspace.findById(workspaceId)
-            .populate({
-                path: "members.user",
-                match: {
-                    _id: { $ne: userId }, // Exclude current user
-                    $or: [
-                        { username: searchRegex },
-                        { email: searchRegex }
-                    ]
-                },
-                select: "username email profilePicture isOnline userStatus"
-            })
-            .lean();
+        // Get workspace to find company ID
+        const workspace = await Workspace.findById(workspaceId);
 
-        if (!workspace || !workspace.members) {
+        if (!workspace) {
             return [];
         }
 
-        // Filter out null users (those that didn't match) and format
-        const contacts = workspace.members
-            .filter(m => m.user != null)
-            .map(m => ({
-                id: m.user._id,
-                type: "contact",
-                name: m.user.username,
-                email: m.user.email,
-                profilePicture: m.user.profilePicture,
-                isOnline: m.user.isOnline || false,
-                userStatus: m.user.userStatus || "active"
-            }))
-            .slice(0, 10); // Limit to 10 contact results
+        // Find users in the same company
+        const contacts = await User.find({
+            company: workspace.company,
+            _id: { $ne: userId }, // Exclude current user
+            $or: [
+                { username: searchRegex },
+                { email: searchRegex }
+            ]
+        })
+            .select("username email profilePicture isOnline userStatus")
+            .limit(10)
+            .lean();
 
-        return contacts;
+        return contacts.map(user => ({
+            id: user._id,
+            type: "contact",
+            name: user.username,
+            email: user.email,
+            profilePicture: user.profilePicture,
+            isOnline: user.isOnline || false,
+            userStatus: user.userStatus || "active"
+        }));
+
     } catch (err) {
         logger.error("Search contacts error:", err);
         return [];

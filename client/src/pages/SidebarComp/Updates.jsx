@@ -48,11 +48,11 @@ const Updates = () => {
 
     setTimeout(() => {
       addPost({
-        title: newPostTitle || "Project Update",
+        title: newPostTitle,
         content: newPostContent,
         tags: tags,
-        context: "General",
-        workspace: "Engineering", // Mock workspace
+        context: "general",
+        // workspace: "Engineering", // Removed to rely on dynamic context
         image: null // Placeholder for image logic
       });
       setNewPostTitle("");
@@ -62,9 +62,10 @@ const Updates = () => {
     }, 600);
   };
 
-  const handleDiscuss = (authorName) => {
+  const handleDiscuss = (post) => {
     // ✅ CORRECT: Use workspace-scoped DM navigation
-    navigate(`/workspace/${workspaceId}/dm/1?initialMessage=Hi ${authorName}, regarding your update "${newPostTitle || '...'}"...`);
+    const titleContext = post.title || post.content.substring(0, 30) + (post.content.length > 30 ? "..." : "");
+    navigate(`/workspace/${workspaceId}/dm/${post.author.id}?initialMessage=Hi ${post.author.name}, regarding your update "${titleContext}"...`);
   };
 
   const handleCopyLink = (postId) => {
@@ -204,7 +205,7 @@ const Updates = () => {
                   {activeMenuId === post.id && (
                     <div ref={menuRef} className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-100 dark:border-gray-700 py-1 z-20 animate-in fade-in zoom-in-95 duration-100 origin-top-right">
                       <button
-                        onClick={() => handleDiscuss(post.author.name)}
+                        onClick={() => handleDiscuss(post)}
                         className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50 flex items-center gap-2 transition-colors"
                       >
                         <MessageCircle size={14} className="text-gray-400" /> Discuss
@@ -251,7 +252,7 @@ const Updates = () => {
 
                 {post.tags && post.tags.length > 0 && (
                   <div className="flex flex-wrap gap-2 mt-3">
-                    {post.tags.map(tag => (
+                    {post.tags.filter(tag => tag !== 'normal').map(tag => (
                       <span key={tag} className="text-blue-600 text-xs font-medium hover:underline cursor-pointer">
                         #{tag}
                       </span>
@@ -261,9 +262,11 @@ const Updates = () => {
               </div>
 
               {/* Post Stats */}
-              <div className="px-4 py-3 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 border-b border-gray-50 dark:border-gray-700/50">
-                <span>{post.likes} appreciations</span>
-              </div>
+              {(post.likes > 0 || (post.comments && post.comments.length > 0)) && (
+                <div className="px-4 py-3 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 border-b border-gray-50 dark:border-gray-700/50">
+                  {post.likes > 0 && <span>{post.likes} appreciations</span>}
+                </div>
+              )}
 
               {/* Actions */}
               <div className="flex items-center px-2 py-1">
@@ -275,7 +278,7 @@ const Updates = () => {
                   <span className="text-sm font-medium group-hover:text-red-500">Appreciate</span>
                 </button>
                 <button
-                  onClick={() => handleDiscuss(post.author.name)}
+                  onClick={() => handleDiscuss(post)}
                   className="flex-1 flex items-center justify-center gap-2 py-2 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-lg transition-colors group"
                 >
                   <MessageCircle size={18} className="group-hover:text-blue-500 transition-colors" />

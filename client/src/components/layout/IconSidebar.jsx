@@ -75,7 +75,7 @@ const IconSidebar = ({ onProfileClick }) => {
 
         // Manager Dashboard Link
         ...((user?.companyRole === 'manager' || (user?.managedDepartments && user.managedDepartments.length > 0)) ? [
-            { icon: <Briefcase size={20} strokeWidth={2} />, path: "/manager/dashboard", label: "Manager" }
+            { icon: <Briefcase size={20} strokeWidth={2} />, path: "/manager/dashboard/overview", label: "Manager", absolute: true }
         ] : []),
     ];
 

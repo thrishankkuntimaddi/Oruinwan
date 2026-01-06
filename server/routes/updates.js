@@ -9,6 +9,14 @@ const requireAuth = require("../middleware/auth");
 
 
 /**
+ * @route   GET /api/updates/company/:companyId
+ * @desc    Get updates for a company (Company-wide)
+ * @query   type, priority, limit
+ * @access  Private (company members)
+ */
+router.get("/company/:companyId", requireAuth, updateController.getCompanyUpdates);
+
+/**
  * @route   GET /api/updates/:workspaceId
  * @desc    Get updates for a workspace
  * @query   type, priority, limit
