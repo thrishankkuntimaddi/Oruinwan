@@ -163,3 +163,86 @@ exports.updateStatus = async (req, res) => {
         return res.status(500).json({ message: "Server error" });
     }
 };
+
+/**
+ * Check if username is already taken
+ * POST /api/users/check-username
+ */
+exports.checkUsername = async (req, res) => {
+    try {
+        const { username } = req.body;
+
+        if (!username || !username.trim()) {
+            return res.status(400).json({ message: "Username is required" });
+        }
+
+        const exists = await User.findOne({
+            username: { $regex: new RegExp(`^${username}$`, 'i') }
+        }).select('_id');
+
+        return res.json({
+            exists: !!exists,
+            available: !exists
+        });
+    } catch (err) {
+        console.error("CHECK USERNAME ERROR:", err);
+        return res.status(500).json({ message: "Server error" });
+    }
+};
+
+/**
+ * Check if email is already registered
+ * POST /api/users/check-email
+ */
+exports.checkEmail = async (req, res) => {
+    try {
+        const { email } = req.body;
+
+        if (!email || !email.trim()) {
+            return res.status(400).json({ message: "Email is required" });
+        }
+
+        const exists = await User.findOne({
+            email: email.toLowerCase()
+        }).select('_id');
+
+        return res.json({
+            exists: !!exists,
+            available: !exists
+        });
+    } catch (err) {
+        console.error("CHECK EMAIL ERROR:", err);
+        return res.status(500).json({ message: "Server error" });
+    }
+};
+
+/**
+ * Check if phone number is already registered
+ * POST /api/users/check-phone
+ */
+exports.checkPhone = async (req, res) => {
+    try {
+        const { phone, phoneCode } = req.body;
+
+        if (!phone || !phone.trim()) {
+            return res.status(400).json({ message: "Phone number is required" });
+        }
+
+        if (!phoneCode || !phoneCode.trim()) {
+            return res.status(400).json({ message: "Phone code is required" });
+        }
+
+        const exists = await User.findOne({
+            phone,
+            phoneCode
+        }).select('_id');
+
+        return res.json({
+            exists: !!exists,
+            available: !exists
+        });
+    } catch (err) {
+        console.error("CHECK PHONE ERROR:", err);
+        return res.status(500).json({ message: "Server error" });
+    }
+};

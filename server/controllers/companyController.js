@@ -1997,4 +1997,56 @@ exports.checkEligibility = async (req, res) => {
   }
 };
 
+/**
+ * Check if company name is already taken
+ * POST /api/companies/check-name
+ */
+exports.checkCompanyName = async (req, res) => {
+  try {
+    const { name } = req.body;
+
+    if (!name || !name.trim()) {
+      return res.status(400).json({ message: "Company name is required" });
+    }
+
+    const exists = await Company.findOne({
+      name: { $regex: new RegExp(`^${name}$`, 'i') }
+    }).select('_id');
+
+    return res.json({
+      exists: !!exists,
+      available: !exists
+    });
+  } catch (err) {
+    console.error("CHECK COMPANY NAME ERROR:", err);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+
+/**
+ * Check if company domain is already registered
+ * POST /api/companies/check-domain
+ */
+exports.checkCompanyDomain = async (req, res) => {
+  try {
+    const { domain } = req.body;
+
+    if (!domain || !domain.trim()) {
+      return res.status(400).json({ message: "Domain is required" });
+    }
+
+    const exists = await Company.findOne({
+      domain: domain.toLowerCase()
+    }).select('_id');
+
+    return res.json({
+      exists: !!exists,
+      available: !exists
+    });
+  } catch (err) {
+    console.error("CHECK COMPANY DOMAIN ERROR:", err);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+
 module.exports = exports;

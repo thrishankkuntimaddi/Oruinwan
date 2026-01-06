@@ -43,6 +43,7 @@ import JoinChannel from "./pages/JoinChannel";
 import ChttrixDocs from "./pages/ChttrixDocs"; // NEW Custom Page
 
 import RegisterCompany from "./pages/RegisterCompany";
+import ApplicationReview from "./pages/ApplicationReview";
 import CompanyConfirmation from "./pages/CompanyConfirmation";
 import CompanySetup from "./pages/CompanySetup";
 import DepartmentManagement from "./pages/admin/DepartmentManagement"; // Updated path

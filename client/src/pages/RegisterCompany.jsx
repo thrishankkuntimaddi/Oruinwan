@@ -1,12 +1,15 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
     ArrowLeft, ArrowRight, Building, Users, Home, CheckCircle, Globe, Mail, Lock, User, X, Sparkles,
-    Briefcase, FileText, Phone, UploadCloud, ShieldCheck, Eye, EyeOff, Info, ChevronDown, Moon, Sun
+    Briefcase, FileText, Phone, UploadCloud, ShieldCheck, Eye, EyeOff, Info, ChevronDown, Moon, Sun,
+    AlertCircle, CheckCircle2
 } from "lucide-react";
 import { useToast } from "../contexts/ToastContext";
 import { useTheme } from "../contexts/ThemeContext";
+import OTPModal from "../components/shared/OTPModal";
+import CustomDropdown from "../components/shared/CustomDropdown";
 import axios from "axios";
 
 const RegisterCompany = () => {
@@ -21,10 +24,24 @@ const RegisterCompany = () => {
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-    // Mock Verification States
+    // Verification States
     const [verificationStatus, setVerificationStatus] = useState({
         personalEmail: "idle", // idle, pending, verified
         phone: "idle"
+    });
+
+    // Inline Validation States
+    const [validationStatus, setValidationStatus] = useState({
+        companyName: 'idle', // idle | checking | available | taken
+        companyDomain: 'idle'
+    });
+
+    // OTP Modal State
+    const [otpModal, setOtpModal] = useState({
+        isOpen: false,
+        target: '',
+        targetType: '', // 'email' or 'phone'
+        field: '' // 'personalEmail' or 'phone'
     });
 
     const [formData, setFormData] = useState({
@@ -62,6 +79,62 @@ const RegisterCompany = () => {
     ];
 
     const currentPhoneCode = PHONE_CODES.find(c => c.code === formData.phoneCode) || PHONE_CODES[0];
+
+    // Debounced validation for company name
+    useEffect(() => {
+        const timer = setTimeout(async () => {
+            if (formData.companyName && formData.companyName.trim().length >= 2) {
+                setValidationStatus(prev => ({ ...prev, companyName: 'checking' }));
+                try {
+                    const res = await axios.post(`${process.env.REACT_APP_BACKEND_URL}/api/companies/check-name`, {
+                        name: formData.companyName
+                    });
+
+                    if (res.data.exists) {
+                        setErrors(prev => ({ ...prev, companyName: 'Company name already registered' }));
+                        setValidationStatus(prev => ({ ...prev, companyName: 'taken' }));
+                    } else {
+                        setErrors(prev => ({ ...prev, companyName: '' }));
+                        setValidationStatus(prev => ({ ...prev, companyName: 'available' }));
+                    }
+                } catch (err) {
+                    setValidationStatus(prev => ({ ...prev, companyName: 'idle' }));
+                }
+            } else {
+                setValidationStatus(prev => ({ ...prev, companyName: 'idle' }));
+            }
+        }, 500);
+
+        return () => clearTimeout(timer);
+    }, [formData.companyName]);
+
+    // Debounced validation for company domain
+    useEffect(() => {
+        const timer = setTimeout(async () => {
+            if (formData.companyDomain && formData.companyDomain.trim().length >= 3) {
+                setValidationStatus(prev => ({ ...prev, companyDomain: 'checking' }));
+                try {
+                    const res = await axios.post(`${process.env.REACT_APP_BACKEND_URL}/api/companies/check-domain`, {
+                        domain: formData.companyDomain
+                    });
+
+                    if (res.data.exists) {
+                        setErrors(prev => ({ ...prev, companyDomain: 'Domain already registered' }));
+                        setValidationStatus(prev => ({ ...prev, companyDomain: 'taken' }));
+                    } else {
+                        setErrors(prev => ({ ...prev, companyDomain: '' }));
+                        setValidationStatus(prev => ({ ...prev, companyDomain: 'available' }));
+                    }
+                } catch (err) {
+                    setValidationStatus(prev => ({ ...prev, companyDomain: 'idle' }));
+                }
+            } else {
+                setValidationStatus(prev => ({ ...prev, companyDomain: 'idle' }));
+            }
+        }, 500);
+
+        return () => clearTimeout(timer);
+    }, [formData.companyDomain]);
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -171,48 +244,66 @@ const RegisterCompany = () => {
                 ? `${formData.phoneCode}${target}`
                 : target;
 
-            // 1. Send OTP
+            // Send OTP
             await axios.post(`${process.env.REACT_APP_BACKEND_URL}/api/companies/otp/send`, {
                 target: targetValue,
                 type: field === 'personalEmail' ? 'email' : 'phone'
             });
 
             setVerificationStatus(prev => ({ ...prev, [field]: "pending" }));
-            showToast(`OTP sent to ${targetValue}. Check server logs.`, "success"); // Helpful for dev
 
-            // 2. Prompt for OTP
-            setTimeout(async () => {
-                const otp = window.prompt(`Enter OTP sent to ${targetValue}`);
+            // Open OTP Modal instead of window.prompt
+            setOtpModal({
+                isOpen: true,
+                target: targetValue,
+                targetType: field === 'personalEmail' ? 'email' : 'phone',
+                field
+            });
 
-                if (otp) {
-                    try {
-                        // 3. Verify OTP
-                        await axios.post(`${process.env.REACT_APP_BACKEND_URL}/api/companies/otp/verify`, {
-                            target: targetValue,
-                            otp
-                        });
-
-                        setVerificationStatus(prev => ({ ...prev, [field]: "verified" }));
-                        showToast(`${field === 'phone' ? 'Phone' : 'Email'} verified successfully!`, "success");
-                        // Clear error if any
-                        if (errors[field]) setErrors(prev => ({ ...prev, [field]: "" }));
-
-                    } catch (verifyErr) {
-                        console.error(verifyErr);
-                        setVerificationStatus(prev => ({ ...prev, [field]: "idle" }));
-                        showToast(verifyErr.response?.data?.message || "Invalid OTP", "error");
-                    }
-                } else {
-                    setVerificationStatus(prev => ({ ...prev, [field]: "idle" }));
-                }
-                setIsLoading(false);
-            }, 500);
-
+            setIsLoading(false);
         } catch (error) {
             console.error(error);
             setIsLoading(false);
             showToast(error.response?.data?.message || "Failed to send OTP", "error");
         }
+    };
+
+    // Handle OTP verification from modal
+    const handleOTPVerify = async (otp) => {
+        try {
+            await axios.post(`${process.env.REACT_APP_BACKEND_URL}/api/companies/otp/verify`, {
+                target: otpModal.target,
+                otp
+            });
+
+            setVerificationStatus(prev => ({ ...prev, [otpModal.field]: "verified" }));
+            if (errors[otpModal.field]) setErrors(prev => ({ ...prev, [otpModal.field]: "" }));
+
+            // Close modal
+            setOtpModal({ isOpen: false, target: '', targetType: '', field: '' });
+
+            showToast(`${otpModal.targetType === 'email' ? 'Email' : 'Phone'} verified successfully!`, "success");
+        } catch (error) {
+            throw new Error(error.response?.data?.message || "Invalid OTP");
+        }
+    };
+
+    // Handle OTP resend from modal
+    const handleOTPResend = async () => {
+        try {
+            await axios.post(`${process.env.REACT_APP_BACKEND_URL}/api/companies/otp/send`, {
+                target: otpModal.target,
+                type: otpModal.targetType
+            });
+            showToast("OTP resent successfully", "success");
+        } catch (error) {
+            throw new Error(error.response?.data?.message || "Failed to resend OTP");
+        }
+    };
+
+    const handleOTPModalClose = () => {
+        setOtpModal({ isOpen: false, target: '', targetType: '', field: '' });
+        setVerificationStatus(prev => ({ ...prev, [otpModal.field]: "idle" }));
     };
 
 
@@ -401,8 +492,19 @@ const RegisterCompany = () => {
                                                 value={formData.companyName}
                                                 onChange={handleChange}
                                                 placeholder="e.g. Acme Innovations Inc."
-                                                className={`w-full pl-12 pr-4 py-3.5 bg-white dark:bg-slate-800 border ${errors.companyName ? "border-red-300 ring-2 ring-red-50" : "border-gray-200 dark:border-gray-700 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 dark:focus:ring-indigo-900"} rounded-2xl outline-none transition-all shadow-sm text-gray-900 dark:text-white placeholder:text-gray-400`}
+                                                className={`w-full pl-12 pr-12 py-3.5 bg-white dark:bg-slate-800 border ${errors.companyName ? "border-red-300 ring-2 ring-red-50" : "border-gray-200 dark:border-gray-700 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 dark:focus:ring-indigo-900"} rounded-2xl outline-none transition-all shadow-sm text-gray-900 dark:text-white placeholder:text-gray-400`}
                                             />
+                                            {validationStatus.companyName === 'checking' && (
+                                                <div className="absolute right-4 top-3.5">
+                                                    <div className="w-5 h-5 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+                                                </div>
+                                            )}
+                                            {validationStatus.companyName === 'available' && (
+                                                <CheckCircle2 className="absolute right-4 top-3.5 text-green-500" size={20} />
+                                            )}
+                                            {validationStatus.companyName === 'taken' && (
+                                                <AlertCircle className="absolute right-4 top-3.5 text-red-500" size={20} />
+                                            )}
                                         </div>
                                         {errors.companyName && <p className="text-red-500 text-xs font-bold ml-2">{errors.companyName}</p>}
                                     </div>
@@ -416,8 +518,19 @@ const RegisterCompany = () => {
                                                 value={formData.companyDomain}
                                                 onChange={handleChange}
                                                 placeholder="e.g. acme.com (Must match email domain)"
-                                                className={`w-full pl-12 pr-4 py-3.5 bg-white dark:bg-slate-800 border ${errors.companyDomain ? "border-red-300 ring-2 ring-red-50" : "border-gray-200 dark:border-gray-700 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 dark:focus:ring-indigo-900"} rounded-2xl outline-none transition-all shadow-sm text-gray-900 dark:text-white placeholder:text-gray-400`}
+                                                className={`w-full pl-12 pr-12 py-3.5 bg-white dark:bg-slate-800 border ${errors.companyDomain ? "border-red-300 ring-2 ring-red-50" : "border-gray-200 dark:border-gray-700 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 dark:focus:ring-indigo-900"} rounded-2xl outline-none transition-all shadow-sm text-gray-900 dark:text-white placeholder:text-gray-400`}
                                             />
+                                            {validationStatus.companyDomain === 'checking' && (
+                                                <div className="absolute right-4 top-3.5">
+                                                    <div className="w-5 h-5 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+                                                </div>
+                                            )}
+                                            {validationStatus.companyDomain === 'available' && (
+                                                <CheckCircle2 className="absolute right-4 top-3.5 text-green-500" size={20} />
+                                            )}
+                                            {validationStatus.companyDomain === 'taken' && (
+                                                <AlertCircle className="absolute right-4 top-3.5 text-red-500" size={20} />
+                                            )}
                                         </div>
                                         {errors.companyDomain && <p className="text-red-500 text-xs font-bold ml-2">{errors.companyDomain}</p>}
                                     </div>
@@ -449,18 +562,14 @@ const RegisterCompany = () => {
                                     </div>
 
                                     <div className="space-y-2 col-span-2 md:col-span-1">
-                                        <label className="text-sm font-bold text-gray-700 dark:text-gray-300 ml-1">Role</label>
-                                        <div className="relative group">
-                                            <Briefcase className="absolute left-4 top-3.5 text-gray-400 group-focus-within:text-indigo-500 transition-colors" size={20} />
-                                            <select
-                                                name="role"
-                                                value={formData.role}
-                                                onChange={handleChange}
-                                                className="w-full pl-12 pr-4 py-3.5 bg-white dark:bg-slate-800 border border-gray-200 dark:border-gray-700 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 dark:focus:ring-indigo-900 rounded-2xl outline-none transition-all shadow-sm text-gray-900 dark:text-white appearance-none"
-                                            >
-                                                {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
-                                            </select>
-                                        </div>
+                                        <CustomDropdown
+                                            label="Role"
+                                            options={ROLES.map(r => ({ value: r, label: r }))}
+                                            value={formData.role}
+                                            onChange={(value) => setFormData(prev => ({ ...prev, role: value }))}
+                                            placeholder="Select your role"
+                                            icon={Briefcase}
+                                        />
                                     </div>
 
                                     {formData.role === "Other" && (
@@ -803,6 +912,16 @@ const RegisterCompany = () => {
                     </div>
                 </div>
             </div>
+
+            {/* OTP Modal */}
+            <OTPModal
+                isOpen={otpModal.isOpen}
+                onClose={handleOTPModalClose}
+                target={otpModal.target}
+                targetType={otpModal.targetType}
+                onVerify={handleOTPVerify}
+                onResend={handleOTPResend}
+            />
         </div>
     );
 };

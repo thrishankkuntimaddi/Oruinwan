@@ -393,25 +393,15 @@ exports.login = async (req, res) => {
         // if (company.domainVerified && !company.allowedEmails.includes(email)) ...
       }
 
-      // CHECK: Company Verification Status (The "Admin" verification part)
+      // CHECK: Company Verification Status
       if (company.verificationStatus === 'rejected') {
         return res.status(403).json({
           message: `Company registration rejected: ${company.rejectionReason || "Contact Support"}`
         });
       }
 
-      if (company.verificationStatus === 'pending') {
-        // If user is the OWNER/ADMIN who registered it
-        if (user.companyRole === 'owner' || user.companyRole === 'admin') {
-          // Allow them to login ONLY to see "Pending" status or redirected to a status page?
-          // Or block them?
-          // Usually we block regular members, but maybe let admins see a "Pending" screen.
-          // For now, blocking compliant with "we need to check... user verification".
-          return res.status(403).json({ message: "Your company is pending verification. Please wait for approval." });
-        } else {
-          return res.status(403).json({ message: "Company verification pending. Access restricted." });
-        }
-      }
+      // Allow login for pending companies - they'll be redirected to ApplicationReview page
+      // The redirect logic is handled below in the response section
 
       if (!company.isActive) {
         return res.status(403).json({ message: "Company account is inactive." });
@@ -541,25 +531,35 @@ exports.login = async (req, res) => {
     }
     // 2. Company User
     else if (user.companyId) { // user.companyId is populated
+      const Company = require("../models/Company");
+      const fullCompany = await Company.findById(user.companyId._id);
+
       response.company = {
         id: user.companyId._id,
         name: user.companyId.name,
         domain: user.companyId.domain,
         defaultWorkspace: user.companyId.defaultWorkspace,
-        isSetupComplete: user.companyId.isSetupComplete, // Setup Flag
-        setupStep: user.companyId.setupStep // Setup Step
+        isSetupComplete: user.companyId.isSetupComplete,
+        setupStep: user.companyId.setupStep,
+        verificationStatus: fullCompany ? fullCompany.verificationStatus : 'pending' // Add verification status
       };
 
       // Check if user is admin/owner
       const isAdmin = user.companyRole === "owner" || user.companyRole === "admin";
       response.isAdmin = isAdmin;
 
-      // Logic for Setup Flow
-      if (!user.companyId.isSetupComplete) {
-        // Not setup yet -> Go to Confirmation (or Resume Setup)
+      // Check verification status first
+      if (fullCompany && fullCompany.verificationStatus === 'pending') {
+        // Redirect to application review page for pending companies
+        response.redirectTo = "/application-review";
+      } else if (fullCompany && fullCompany.verificationStatus === 'rejected') {
+        // Already handled above with 403 error, but add redirect as fallback
+        response.redirectTo = "/application-rejected";
+      } else if (!user.companyId.isSetupComplete) {
+        // Company verified but setup not complete -> Go to setup
         response.redirectTo = "/company/confirm";
       } else {
-        // Normal Flow
+        // Normal Flow - Company verified and setup complete
         if (isAdmin) {
           response.redirectTo = "/admin/dashboard"; // Admin dashboard
         } else {

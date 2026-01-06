@@ -1,7 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useToast } from "../../contexts/ToastContext";
-import { Eye, EyeOff, ChevronDown, Check, Building } from "lucide-react";
-import { useEffect } from 'react';
+import { Eye, EyeOff, ChevronDown, Check, AlertCircle, Info, CheckCircle2 } from "lucide-react";
 
 const SignupForm = ({ onSwitch }) => {
   const [formData, setFormData] = useState({
@@ -13,36 +12,15 @@ const SignupForm = ({ onSwitch }) => {
   });
 
   const [errors, setErrors] = useState({});
-  const [touched, setTouched] = useState({});
+  const [validationStatus, setValidationStatus] = useState({
+    username: 'idle', // idle | checking | available | taken
+    email: 'idle',
+    phone: 'idle'
+  });
   const { showToast } = useToast();
 
   const [showPwd, setShowPwd] = useState(false);
   const [showConfirmPwd, setShowConfirmPwd] = useState(false);
-  const [companyContext, setCompanyContext] = useState(null);
-
-  useEffect(() => {
-    const email = formData.email;
-    if (email && email.includes("@")) {
-      const domain = email.split("@")[1];
-      if (domain && domain.includes(".")) {
-        const timer = setTimeout(async () => {
-          try {
-            const res = await fetch(`/api/companies/check-domain?domain=${domain}`);
-            if (res.ok) {
-              const data = await res.json();
-              setCompanyContext(data.company);
-            } else {
-              setCompanyContext(null);
-            }
-          } catch (e) {
-            // ignore
-          }
-        }, 500);
-        return () => clearTimeout(timer);
-      }
-    }
-    setCompanyContext(null);
-  }, [formData.email]);
 
   const countries = [
     { code: 'IN', name: 'IND', dial_code: '+91', length: 10, flag: '🇮🇳' },
@@ -57,150 +35,166 @@ const SignupForm = ({ onSwitch }) => {
   const [selectedCountry, setSelectedCountry] = useState(countries[0]);
   const [showCountryDropdown, setShowCountryDropdown] = useState(false);
 
-  // Password Rules
-  const passwordRules = {
-    length: formData.password.length >= 8 && formData.password.length <= 16,
-    upper: /[A-Z]/.test(formData.password),
-    number: /[0-9]/.test(formData.password),
-    special: /[^A-Za-z0-9]/.test(formData.password)
-  };
+  // Debounced validation for username
+  useEffect(() => {
+    const timer = setTimeout(async () => {
+      if (formData.username && formData.username.trim().length >= 3) {
+        setValidationStatus(prev => ({ ...prev, username: 'checking' }));
+        try {
+          const res = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/users/check-username`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: formData.username })
+          });
+          const data = await res.json();
 
-  const calculateStrength = () => {
-    let score = 0;
-    if (passwordRules.length) score++;
-    if (passwordRules.upper) score++;
-    if (passwordRules.number) score++;
-    if (passwordRules.special) score++;
-    return score;
-  };
-
-  const strength = calculateStrength();
-  const strengthColor = ["bg-red-500", "bg-red-400", "bg-yellow-400", "bg-yellow-500", "bg-green-500"];
-  const strengthText = ["Weak", "Weak", "Fair", "Good", "Strong"];
-  const isPasswordStrong = strength === 4;
-
-  // Validation Logic
-  const validate = (name, value, country = null) => {
-    let error = "";
-    switch (name) {
-      case "username":
-        if (!value.trim()) error = "Username is required";
-        else if (value.length < 3) error = "Username must be at least 3 characters";
-        break;
-      case "email":
-        if (!value) error = "Email is required";
-        else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) error = "Invalid email address";
-        break;
-      case "phone":
-        if (!value) error = "Phone number is required";
-        else {
-          const digits = value.replace(/\D/g, '');
-          const requiredLength = (country || selectedCountry).length;
-          if (digits.length !== requiredLength) {
-            error = `Phone number must be ${requiredLength} digits`;
+          if (data.exists) {
+            setErrors(prev => ({ ...prev, username: 'Username already exists' }));
+            setValidationStatus(prev => ({ ...prev, username: 'taken' }));
+          } else {
+            setErrors(prev => ({ ...prev, username: '' }));
+            setValidationStatus(prev => ({ ...prev, username: 'available' }));
           }
+        } catch (err) {
+          setValidationStatus(prev => ({ ...prev, username: 'idle' }));
         }
-        break;
-      case "password":
-        // Password strength is handled visually, but we can add error if needed
-        if (!value) error = "Password is required";
-        break;
-      case "confirmPassword":
-        if (!value) error = "Confirm Password is required";
-        else if (value !== formData.password) error = "Passwords do not match";
-        break;
-      default:
-        break;
-    }
-    return error;
-  };
+      } else {
+        setValidationStatus(prev => ({ ...prev, username: 'idle' }));
+      }
+    }, 500);
 
-  // Handle Change with Real-time Validation
+    return () => clearTimeout(timer);
+  }, [formData.username]);
+
+  // Debounced validation for email
+  useEffect(() => {
+    const timer = setTimeout(async () => {
+      if (formData.email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+        setValidationStatus(prev => ({ ...prev, email: 'checking' }));
+        try {
+          const res = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/users/check-email`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: formData.email })
+          });
+          const data = await res.json();
+
+          if (data.exists) {
+            setErrors(prev => ({ ...prev, email: 'Email already registered' }));
+            setValidationStatus(prev => ({ ...prev, email: 'taken' }));
+          } else {
+            setErrors(prev => ({ ...prev, email: '' }));
+            setValidationStatus(prev => ({ ...prev, email: 'available' }));
+          }
+        } catch (err) {
+          setValidationStatus(prev => ({ ...prev, email: 'idle' }));
+        }
+      } else {
+        setValidationStatus(prev => ({ ...prev, email: 'idle' }));
+      }
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [formData.email]);
+
+  // Debounced validation for phone
+  useEffect(() => {
+    const timer = setTimeout(async () => {
+      const digits = formData.phone.replace(/\D/g, '');
+      if (digits.length === selectedCountry.length) {
+        setValidationStatus(prev => ({ ...prev, phone: 'checking' }));
+        try {
+          const res = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/users/check-phone`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              phone: formData.phone,
+              phoneCode: selectedCountry.dial_code
+            })
+          });
+          const data = await res.json();
+
+          if (data.exists) {
+            setErrors(prev => ({ ...prev, phone: 'Phone number already registered' }));
+            setValidationStatus(prev => ({ ...prev, phone: 'taken' }));
+          } else {
+            setErrors(prev => ({ ...prev, phone: '' }));
+            setValidationStatus(prev => ({ ...prev, phone: 'available' }));
+          }
+        } catch (err) {
+          setValidationStatus(prev => ({ ...prev, phone: 'idle' }));
+        }
+      } else {
+        setValidationStatus(prev => ({ ...prev, phone: 'idle' }));
+      }
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [formData.phone, selectedCountry]);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
 
-    // Validate immediately if already touched or just validate to clear error
-    const error = validate(name, value);
-    setErrors((prev) => ({ ...prev, [name]: error }));
-
-    // Special case for confirm password to sync with password changes
-    if (name === "password") {
-      if (formData.confirmPassword && formData.confirmPassword !== value) {
-        setErrors(prev => ({ ...prev, confirmPassword: "Passwords do not match" }));
-      } else {
-        setErrors(prev => ({ ...prev, confirmPassword: "" }));
-      }
-    }
+    // Clear error when user types
+    setErrors((prev) => ({ ...prev, [name]: '' }));
   };
 
   const handleBlur = (e) => {
     const { name, value } = e.target;
-    setTouched((prev) => ({ ...prev, [name]: true }));
-    const error = validate(name, value);
-    setErrors((prev) => ({ ...prev, [name]: error }));
+
+    // Basic validation on blur
+    if (!value.trim()) {
+      setErrors(prev => ({ ...prev, [name]: `${name.charAt(0).toUpperCase() + name.slice(1)} is required` }));
+    }
   };
 
-  // Check overall form validity
+  // Check if passwords match (for border color)
+  const passwordsMatch = formData.password && formData.confirmPassword && formData.password === formData.confirmPassword;
+  const passwordsDontMatch = formData.password && formData.confirmPassword && formData.password !== formData.confirmPassword;
+
   const isFormValid =
-    Object.values(formData).every(val => val) && // All fields filled
-    Object.values(errors).every(err => !err) && // No errors
-    isPasswordStrong; // Password meets requirements
+    formData.username &&
+    formData.email &&
+    formData.phone &&
+    formData.password &&
+    formData.confirmPassword &&
+    validationStatus.username === 'available' &&
+    validationStatus.email === 'available' &&
+    validationStatus.phone === 'available' &&
+    passwordsMatch &&
+    !Object.values(errors).some(err => err);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("🔵 SIGNUP SUBMIT:", formData);
 
-    // Final validation check
-    const newErrors = {};
-    Object.keys(formData).forEach(key => {
-      const error = validate(key, formData[key]);
-      if (error) newErrors[key] = error;
-    });
-
-    if (Object.keys(newErrors).length > 0 || !isPasswordStrong) {
-      console.log("🔴 Validation Errors:", newErrors);
-      setErrors(newErrors);
-      setTouched(Object.keys(formData).reduce((acc, key) => ({ ...acc, [key]: true }), {}));
-      showToast("Please fix the errors in the form", "error");
+    if (!isFormValid) {
       return;
     }
 
     try {
-      console.log("🔵 Sending request to:", `${process.env.REACT_APP_BACKEND_URL}/api/auth/signup`);
       const res = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/auth/signup`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           username: formData.username,
           email: formData.email,
-          phone: formData.phone, // Send just the number: "1234567890"
-          phoneCode: selectedCountry.dial_code, // Send code separately: "+91"
+          phone: formData.phone,
+          phoneCode: selectedCountry.dial_code,
           password: formData.password
         })
       });
 
       const data = await res.json();
-      console.log("🔵 Response:", data);
 
       if (!res.ok) throw new Error(data.message || "Signup failed");
 
-      showToast("Signup successful! Please check your email.", "success");
-      onSwitch(); // Switch to login
+      showToast("Account created successfully!", "success");
+      onSwitch();
     } catch (err) {
-      console.error("🔴 Signup Error:", err);
-      // Backend errors (like duplicate email) can be shown as alert or general error
+      console.error("Signup Error:", err);
       showToast(err.message, "error");
     }
-  };
-
-  // Helper for input classes
-  const getInputClass = (fieldName) => {
-    const hasError = errors[fieldName] && touched[fieldName];
-    return `w-full px-4 py-2.5 rounded-lg border outline-none transition-all text-sm ${hasError
-      ? "border-red-500 focus:ring-2 focus:ring-red-200 focus:border-red-500"
-      : "border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-      }`;
   };
 
   return (
@@ -214,230 +208,215 @@ const SignupForm = ({ onSwitch }) => {
         {/* Username */}
         <div className="space-y-1">
           <label className="block text-sm font-bold text-slate-700 dark:text-slate-300">Username</label>
-          <input
-            name="username"
-            value={formData.username}
-            onChange={handleChange}
-            onBlur={handleBlur}
-            placeholder="Choose a username"
-            className={getInputClass("username").replace(/border-gray-300|border-red-500/g, (match) =>
-              `${match === 'border-red-500' ? 'border-red-500' : 'border-slate-200 dark:border-slate-700'} bg-slate-50 dark:bg-slate-900/50 text-slate-900 dark:text-white placeholder:text-slate-400`
-            ).replace("px-4", "px-4").replace("py-2.5", "py-3")}
-          />
-          {errors.username && touched.username && <p className="text-red-500 text-xs mt-1 font-medium">{errors.username}</p>}
+          <div className="relative">
+            <input
+              name="username"
+              value={formData.username}
+              onChange={handleChange}
+              onBlur={handleBlur}
+              placeholder="Choose a username"
+              className="w-full px-4 py-3 pr-10 border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 text-slate-900 dark:text-white placeholder:text-slate-400 border rounded-lg outline-none transition-all"
+            />
+            {validationStatus.username === 'checking' && (
+              <div className="absolute right-3 top-3.5">
+                <div className="w-5 h-5 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+              </div>
+            )}
+            {validationStatus.username === 'available' && (
+              <CheckCircle2 className="absolute right-3 top-3.5 text-green-500" size={20} />
+            )}
+            {validationStatus.username === 'taken' && (
+              <AlertCircle className="absolute right-3 top-3.5 text-red-500" size={20} />
+            )}
+          </div>
+          {errors.username && <p className="text-red-500 text-xs mt-1">{errors.username}</p>}
         </div>
 
         {/* Email */}
         <div className="space-y-1">
           <label className="block text-sm font-bold text-slate-700 dark:text-slate-300">Email</label>
-          <input
-            name="email"
-            type="email"
-            value={formData.email}
-            onChange={handleChange}
-            onBlur={handleBlur}
-            placeholder="Enter your email"
-            className={getInputClass("email").replace(/border-gray-300|border-red-500/g, (match) =>
-              `${match === 'border-red-500' ? 'border-red-500' : 'border-slate-200 dark:border-slate-700'} bg-slate-50 dark:bg-slate-900/50 text-slate-900 dark:text-white placeholder:text-slate-400`
-            ).replace("px-4", "px-4").replace("py-2.5", "py-3")}
-          />
-          {errors.email && touched.email && <p className="text-red-500 text-xs mt-1 font-medium">{errors.email}</p>}
-          {companyContext && (
-            <div className="flex items-center gap-2 mt-2 p-3 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800 rounded-lg text-indigo-700 dark:text-indigo-300 text-xs font-bold animate-fade-in">
-              <Building size={14} />
-              <span>Looks like you're joining {companyContext.name}</span>
-            </div>
-          )}
+          <div className="relative">
+            <input
+              name="email"
+              type="email"
+              value={formData.email}
+              onChange={handleChange}
+              onBlur={handleBlur}
+              placeholder="Enter your email"
+              className="w-full px-4 py-3 pr-10 border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 text-slate-900 dark:text-white placeholder:text-slate-400 border rounded-lg outline-none transition-all"
+            />
+            {validationStatus.email === 'checking' && (
+              <div className="absolute right-3 top-3.5">
+                <div className="w-5 h-5 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+              </div>
+            )}
+            {validationStatus.email === 'available' && (
+              <CheckCircle2 className="absolute right-3 top-3.5 text-green-500" size={20} />
+            )}
+            {validationStatus.email === 'taken' && (
+              <AlertCircle className="absolute right-3 top-3.5 text-red-500" size={20} />
+            )}
+          </div>
+          {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
         </div>
 
         {/* Phone */}
         <div className="space-y-1">
-          <label className="block text-sm font-bold text-slate-700 dark:text-slate-300">Phone</label>
-          <div className="flex gap-3 relative">
-            {/* Country Dropdown */}
-            <div className="relative">
+          <label className="block text-sm font-bold text-slate-700 dark:text-slate-300">Phone Number</label>
+          <div className="flex gap-2">
+            {/* Country Selector */}
+            <div className="relative w-32">
               <button
                 type="button"
                 onClick={() => setShowCountryDropdown(!showCountryDropdown)}
-                className={`flex items-center gap-2 px-3 py-3 rounded-lg border bg-slate-50 dark:bg-slate-900/50 transition-all text-sm shrink-0 ${errors.phone && touched.phone
-                  ? "border-red-500"
-                  : "border-slate-200 dark:border-slate-700 hover:border-indigo-500"
-                  }`}
+                className="w-full flex items-center justify-between px-3 py-3 border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 text-slate-900 dark:text-white border rounded-lg outline-none"
               >
-                <span className="text-xl leading-none">{selectedCountry.flag}</span>
-                <span className="text-slate-700 dark:text-slate-200 font-bold ml-1">{selectedCountry.dial_code}</span>
-                <ChevronDown size={14} className="text-slate-400 ml-1" />
+                <span className="flex items-center gap-2 text-sm">
+                  <span>{selectedCountry.flag}</span>
+                  <span>{selectedCountry.dial_code}</span>
+                </span>
+                <ChevronDown size={14} className={`transition-transform ${showCountryDropdown ? 'rotate-180' : ''}`} />
               </button>
-
               {showCountryDropdown && (
-                <>
-                  <div
-                    className="fixed inset-0 z-10"
-                    onClick={() => setShowCountryDropdown(false)}
-                  ></div>
-                  <div className="absolute top-full left-0 mt-2 w-64 bg-white dark:bg-[#0B0F19] rounded-xl shadow-xl shadow-slate-900/20 border border-slate-200 dark:border-slate-700 py-2 z-20 max-h-60 overflow-y-auto custom-scrollbar">
-                    {countries.map((country) => (
-                      <button
-                        key={country.code}
-                        type="button"
-                        onClick={() => {
-                          setSelectedCountry(country);
-                          setShowCountryDropdown(false);
-                          const error = validate("phone", formData.phone, country);
-                          setErrors(prev => ({ ...prev, phone: error }));
-                        }}
-                        className="w-full flex items-center gap-3 px-4 py-2 hover:bg-slate-50 dark:hover:bg-slate-800 text-left transition-colors"
-                      >
-                        <span className="text-lg leading-none">{country.flag}</span>
-                        <span className="text-sm font-medium text-slate-900 dark:text-white flex-1">{country.name}</span>
-                        <span className="text-xs text-slate-500 font-mono">{country.dial_code}</span>
-                        {selectedCountry.code === country.code && (
-                          <div className="w-2 h-2 rounded-full bg-indigo-600"></div>
-                        )}
-                      </button>
-                    ))}
-                  </div>
-                </>
+                <div className="absolute z-50 w-48 mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-xl max-h-60 overflow-y-auto">
+                  {countries.map((country) => (
+                    <button
+                      key={country.code}
+                      type="button"
+                      onClick={() => {
+                        setSelectedCountry(country);
+                        setShowCountryDropdown(false);
+                      }}
+                      className="w-full flex items-center gap-2 px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-700 text-left text-sm"
+                    >
+                      <span>{country.flag}</span>
+                      <span className="flex-1">{country.name}</span>
+                      <span className="text-slate-500">{country.dial_code}</span>
+                    </button>
+                  ))}
+                </div>
               )}
             </div>
 
             {/* Phone Input */}
-            <div className="flex-1">
+            <div className="relative flex-1">
               <input
                 name="phone"
-                type="tel"
                 value={formData.phone}
                 onChange={handleChange}
                 onBlur={handleBlur}
-                placeholder={`${"0".repeat(selectedCountry.length)}`}
-                className={getInputClass("phone").replace(/border-gray-300|border-red-500/g, (match) =>
-                  `${match === 'border-red-500' ? 'border-red-500' : 'border-slate-200 dark:border-slate-700'} bg-slate-50 dark:bg-slate-900/50 text-slate-900 dark:text-white placeholder:text-slate-400`
-                ).replace("px-4", "px-4").replace("py-2.5", "py-3")}
+                placeholder={`${selectedCountry.length} digits`}
+                className="w-full px-4 py-3 pr-10 border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 text-slate-900 dark:text-white placeholder:text-slate-400 border rounded-lg outline-none transition-all"
               />
+              {validationStatus.phone === 'checking' && (
+                <div className="absolute right-3 top-3.5">
+                  <div className="w-5 h-5 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+                </div>
+              )}
+              {validationStatus.phone === 'available' && (
+                <CheckCircle2 className="absolute right-3 top-3.5 text-green-500" size={20} />
+              )}
+              {validationStatus.phone === 'taken' && (
+                <AlertCircle className="absolute right-3 top-3.5 text-red-500" size={20} />
+              )}
             </div>
           </div>
-          {errors.phone && touched.phone && <p className="text-red-500 text-xs mt-1 font-medium">{errors.phone}</p>}
+          {errors.phone && <p className="text-red-500 text-xs mt-1">{errors.phone}</p>}
         </div>
 
-        {/* Password */}
+        {/* Password with Hover Tooltip */}
         <div className="space-y-1">
-          <label className="block text-sm font-bold text-slate-700 dark:text-slate-300">Password</label>
-          <div className="relative group">
+          <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 flex items-center gap-2">
+            Password
+            <div className="relative group">
+              <Info size={14} className="text-slate-400 hover:text-indigo-500 cursor-help transition-colors" />
+              {/* Tooltip */}
+              <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 w-64 p-3 bg-slate-900 text-white text-xs rounded-xl shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 pointer-events-none">
+                <div className="absolute left-0 top-1/2 -translate-x-1 -translate-y-1/2 w-2 h-2 bg-slate-900 rotate-45" />
+                <p className="font-bold mb-2 text-indigo-300">Password Requirements:</p>
+                <ul className="space-y-1 text-slate-300">
+                  <li>• 8-16 characters</li>
+                  <li>• At least one uppercase letter</li>
+                  <li>• At least one lowercase letter</li>
+                  <li>• At least one number</li>
+                  <li>• At least one special character</li>
+                  <li>• No spaces</li>
+                </ul>
+              </div>
+            </div>
+          </label>
+          <div className="relative">
             <input
-              name="password"
               type={showPwd ? "text" : "password"}
+              name="password"
               value={formData.password}
               onChange={handleChange}
               onBlur={handleBlur}
               placeholder="Create a password"
-              className={getInputClass("password").replace(/border-gray-300|border-red-500/g, (match) =>
-                `${match === 'border-red-500' ? 'border-red-500' : 'border-slate-200 dark:border-slate-700'} bg-slate-50 dark:bg-slate-900/50 text-slate-900 dark:text-white placeholder:text-slate-400`
-              ).replace("px-4", "px-4").replace("py-2.5", "py-3")}
+              className="w-full px-4 py-3 pr-10 border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 text-slate-900 dark:text-white placeholder:text-slate-400 border rounded-lg outline-none transition-all"
             />
             <button
               type="button"
               onClick={() => setShowPwd(!showPwd)}
-              className="absolute right-4 top-3.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+              className="absolute right-3 top-3.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
             >
-              {showPwd ? <EyeOff size={20} /> : <Eye size={20} />}
+              {showPwd ? <EyeOff size={18} /> : <Eye size={18} />}
             </button>
           </div>
-
-          {/* Password Strength Meter */}
-          {formData.password && (
-            <div className="mt-2 transition-all duration-300 ease-in-out">
-              <div className="flex justify-between text-[10px] sm:text-xs mb-1">
-                <span className="text-slate-500 dark:text-slate-400 font-bold">Security</span>
-                <span className={`font-bold ${strength === 4 ? 'text-green-600 dark:text-green-400' : 'text-slate-600 dark:text-slate-400'}`}>
-                  {strengthText[strength]}
-                </span>
-              </div>
-              <div className="h-1.5 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                <div
-                  className={`h-full ${strengthColor[strength]} transition-all duration-500 ease-out`}
-                  style={{ width: `${(strength / 4) * 100}%` }}
-                ></div>
-              </div>
-
-              {/* Rules Checklist */}
-              <div className="mt-3 grid grid-cols-2 gap-2 text-[10px] text-slate-500 dark:text-slate-400">
-                <div className={`flex items-center transition-colors ${passwordRules.length ? "text-green-600 dark:text-green-400 font-bold" : ""}`}>
-                  <span className="mr-1.5">{passwordRules.length ? <Check size={10} /> : "○"}</span> 8-16 chars
-                </div>
-                <div className={`flex items-center transition-colors ${passwordRules.upper ? "text-green-600 dark:text-green-400 font-bold" : ""}`}>
-                  <span className="mr-1.5">{passwordRules.upper ? <Check size={10} /> : "○"}</span> Uppercase
-                </div>
-                <div className={`flex items-center transition-colors ${passwordRules.number ? "text-green-600 dark:text-green-400 font-bold" : ""}`}>
-                  <span className="mr-1.5">{passwordRules.number ? <Check size={10} /> : "○"}</span> Number
-                </div>
-                <div className={`flex items-center transition-colors ${passwordRules.special ? "text-green-600 dark:text-green-400 font-bold" : ""}`}>
-                  <span className="mr-1.5">{passwordRules.special ? <Check size={10} /> : "○"}</span> Special char
-                </div>
-              </div>
-            </div>
-          )}
         </div>
 
-        {/* Confirm Password */}
+        {/* Confirm Password with Border Color Indicator */}
         <div className="space-y-1">
           <label className="block text-sm font-bold text-slate-700 dark:text-slate-300">Confirm Password</label>
-          <div className="relative group">
+          <div className="relative">
             <input
-              name="confirmPassword"
               type={showConfirmPwd ? "text" : "password"}
+              name="confirmPassword"
               value={formData.confirmPassword}
               onChange={handleChange}
               onBlur={handleBlur}
-              placeholder="Retype password"
-              className={getInputClass("confirmPassword").replace(/border-gray-300|border-red-500/g, (match) =>
-                `${match === 'border-red-500' ? 'border-red-500' : 'border-slate-200 dark:border-slate-700'} bg-slate-50 dark:bg-slate-900/50 text-slate-900 dark:text-white placeholder:text-slate-400`
-              ).replace("px-4", "px-4").replace("py-2.5", "py-3")}
+              placeholder="Confirm your password"
+              className={`w-full px-4 py-3 pr-10 bg-slate-50 dark:bg-slate-900/50 text-slate-900 dark:text-white placeholder:text-slate-400 border-2 rounded-lg outline-none transition-all ${passwordsMatch
+                  ? 'border-green-500 focus:ring-2 focus:ring-green-200'
+                  : passwordsDontMatch
+                    ? 'border-red-500 focus:ring-2 focus:ring-red-200'
+                    : 'border-slate-200 dark:border-slate-700'
+                }`}
             />
             <button
               type="button"
               onClick={() => setShowConfirmPwd(!showConfirmPwd)}
-              className="absolute right-4 top-3.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+              className="absolute right-3 top-3.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
             >
-              {showConfirmPwd ? <EyeOff size={20} /> : <Eye size={20} />}
+              {showConfirmPwd ? <EyeOff size={18} /> : <Eye size={18} />}
             </button>
           </div>
-          {formData.confirmPassword && formData.password === formData.confirmPassword && (
-            <div className="flex items-center gap-1 mt-1 text-green-600 dark:text-green-400 text-xs font-bold animate-pulse">
-              <Check size={12} />
-              <span>Passwords match</span>
-            </div>
-          )}
-          {errors.confirmPassword && touched.confirmPassword && (
-            <p className="text-red-500 text-xs mt-1 font-medium">{errors.confirmPassword}</p>
-          )}
         </div>
 
+        {/* Submit Button */}
         <button
           type="submit"
-          className={`w-full py-3.5 rounded-xl text-white font-bold text-lg shadow-lg shadow-indigo-500/20 transition-all transform hover:-translate-y-1 mt-4 ${isFormValid
-            ? "bg-indigo-600 hover:bg-indigo-700 hover:shadow-indigo-500/40"
-            : "bg-slate-300 dark:bg-slate-700 cursor-not-allowed"
-            }`}
+          disabled={!isFormValid}
+          className="w-full py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 disabled:from-slate-300 disabled:to-slate-400 dark:disabled:from-slate-700 dark:disabled:to-slate-800 text-white font-bold rounded-lg transition-all disabled:cursor-not-allowed mt-4"
         >
           Create Account
         </button>
-      </form>
 
-      {/* Divider */}
-      <div className="relative my-4">
-        <div className="absolute inset-0 flex items-center">
-          <div className="w-full border-t border-slate-200 dark:border-slate-700"></div>
+        {/* Already have account */}
+        <div className="my-4 flex items-center gap-4">
+          <div className="flex-1 h-px bg-slate-200 dark:bg-slate-700"></div>
+          <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">Already have an account?</span>
+          <div className="flex-1 h-px bg-slate-200 dark:bg-slate-700"></div>
         </div>
-        <div className="relative flex justify-center text-xs uppercase tracking-widest font-bold">
-          <span className="px-4 bg-white dark:bg-[#030712] text-slate-400">Already a member?</span>
-        </div>
-      </div>
 
-      <p className="text-center text-sm">
-        <button onClick={onSwitch} className="text-indigo-600 dark:text-indigo-400 font-bold hover:underline">
-          Log in instead
+        <button
+          type="button"
+          onClick={onSwitch}
+          className="w-full py-3 border-2 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/50 text-slate-700 dark:text-slate-300 font-bold rounded-lg transition-all"
+        >
+          Sign In
         </button>
-      </p>
+      </form>
     </div>
   );
 };

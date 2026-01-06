@@ -40,6 +40,22 @@ router.post("/phone-otp/send", companyController.sendPhoneOtp);
 router.post("/phone-otp/verify", companyController.verifyPhoneOtp);
 
 /**
+ * @route   POST /api/companies/check-name
+ * @desc    Check if company name already exists
+ * @body    name
+ * @access  Public
+ */
+router.post("/check-name", companyController.checkCompanyName);
+
+/**
+ * @route   POST /api/companies/check-domain
+ * @desc    Check if company domain already exists
+ * @body    domain
+ * @access  Public
+ */
+router.post("/check-domain", companyController.checkCompanyDomain);
+
+/**
  * @route   POST /api/companies/register
  * @desc    Register a new company with admin user
  * @body    companyName, adminName, adminEmail, domain, documents
