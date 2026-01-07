@@ -1,256 +1,204 @@
+// client/src/components/manager/TeamAllocation.jsx
+// Team tab for Manager Dashboard - Manage department members
+
 import React, { useState, useEffect } from 'react';
-import { User, Briefcase, Plus, MessageSquare, Check, X, Search } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useOutletContext } from 'react-router-dom';
+import {
+    Shield, Calendar, MoreVertical,
+    Search, Filter, UserPlus
+} from 'lucide-react';
+import axios from 'axios';
 
 const TeamAllocation = () => {
-    const [data, setData] = useState(null);
+    const { selectedDepartment } = useOutletContext();
+    const [teamData, setTeamData] = useState(null);
     const [loading, setLoading] = useState(true);
-    const [searchTerm, setSearchTerm] = useState("");
-    const [isAdding, setIsAdding] = useState(false);
-    const [newEmail, setNewEmail] = useState("");
-
-    const navigate = useNavigate();
-    const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000';
-
-    const fetchData = async () => {
-        try {
-            const res = await fetch(`${API_BASE}/api/managers/allocations`, {
-                headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` }
-            });
-            const json = await res.json();
-            setData(json);
-        } catch (err) {
-            console.error("Allocation fetch error", err);
-        } finally {
-            setLoading(false);
-        }
-    };
+    const [searchQuery, setSearchQuery] = useState('');
 
     useEffect(() => {
-        fetchData();
-    }, []);
+        const fetchTeam = async () => {
+            if (!selectedDepartment?._id) return;
 
-    const handleToggle = async (userId, workspaceId, currentStatus) => {
-        const action = currentStatus ? 'remove' : 'add';
-
-        // Optimistic UI Update
-        const newData = { ...data };
-        const userLocs = newData.allocations[userId];
-        if (action === 'add') {
-            userLocs.push(workspaceId);
-        } else {
-            const idx = userLocs.indexOf(workspaceId);
-            if (idx > -1) userLocs.splice(idx, 1);
-        }
-        setData(newData);
-
-        try {
-            await fetch(`${API_BASE}/api/managers/allocations/update`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${localStorage.getItem('accessToken')}`
-                },
-                body: JSON.stringify({ userId, workspaceId, action })
-            });
-        } catch (err) {
-            console.error("Update failed", err);
-            fetchData(); // Revert on error
-        }
-    };
-
-    const handleAddMember = async (e) => {
-        e.preventDefault();
-
-        // Find the first managed department (simplification for MVP)
-        // In full version, user selects which dept to add to if they manage multiple
-        // We'll assumne user manages *some* department if they are here
-        // Ideally we fetch user scope logic again or pass dept ID.
-        // For now let's just use the first dept we find logic in Backend or here.
-        // Actually, let's ask user which dept? 
-        // Simpler: Just try to add to their first managed department.
-
-        // Note: The UI for selecting dept is omitted for brevity as per "Execution Focused" prompt
-        // Let's assume the backend handles finding the right dept or default to first.
-
-        // Wait, we need a department ID. 
-        // Let's use the ID from the first member we have? Or we need to fetch scope.
-        // Let's just pass null and let backend decide or error? 
-        // Backend expects 'departmentId'. 
-        // Let's just fetch scope first to get Dept ID.
-        // Actually, `data.members` has `department` name, not ID.
-        // We might need to refactor `getAllocations` to return dept ID logic.
-        // OR: Just navigate user to "Add Member" modal.
-
-        // Let's keep it simple: "Add to Team" adds to the FIRST valid dept.
-
-        setIsAdding(true);
-        try {
-            // We need a department ID. Let's fetch scope quickly if not present.
-            const scopeRes = await fetch(`${API_BASE}/api/managers/scope`, {
-                headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` }
-            });
-            const scopeData = await scopeRes.json();
-            if (!scopeData.departments.length) {
-                alert("You don't manage any departments!");
-                return;
+            try {
+                setLoading(true);
+                const response = await axios.get(
+                    `${process.env.REACT_APP_BACKEND_URL}/api/manager/team/${selectedDepartment._id}`,
+                    { withCredentials: true }
+                );
+                setTeamData(response.data);
+            } catch (error) {
+                console.error('Error fetching team:', error);
+            } finally {
+                setLoading(false);
             }
+        };
 
-            await fetch(`${API_BASE}/api/managers/allocations/department/add`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${localStorage.getItem('accessToken')}`
-                },
-                body: JSON.stringify({ email: newEmail, departmentId: scopeData.departments[0]._id })
-            });
-
-            setNewEmail("");
-            fetchData(); // Refresh list
-
-        } catch (err) {
-            alert("Failed to add user");
-        } finally {
-            setIsAdding(false);
+        if (selectedDepartment) {
+            fetchTeam();
         }
-    };
+    }, [selectedDepartment]);
 
-    if (loading) return <div className="p-8 text-center text-gray-400">Loading Matrix...</div>;
-    if (!data) return <div className="p-8 text-center text-red-400">Failed to load allocation data.</div>;
+    if (loading) {
+        return (
+            <div className="flex items-center justify-center h-full">
+                <div className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+            </div>
+        );
+    }
 
-    const filteredMembers = (data?.members || []).filter(m =>
-        m.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        m.email.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    if (!teamData) {
+        return (
+            <div className="flex items-center justify-center h-full">
+                <p className="text-gray-500">No team data available</p>
+            </div>
+        );
+    }
+
+    const filteredMembers = teamData.members?.filter(member =>
+        member.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        member.email.toLowerCase().includes(searchQuery.toLowerCase())
+    ) || [];
 
     return (
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden flex flex-col h-[600px]">
+        <div className="h-full bg-gray-50 flex flex-col">
             {/* Header */}
-            <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
-                <div>
-                    <h3 className="font-bold text-gray-800 flex items-center gap-2">
-                        <User size={18} className="text-indigo-600" />
-                        Team Allocation Matrix
-                    </h3>
-                    <p className="text-xs text-gray-500 mt-1">Assign people to workspaces instantly.</p>
+            <div className="bg-white border-b border-gray-200 px-8 py-6">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                        <h1 className="text-2xl font-black text-gray-900">My Team</h1>
+                        <p className="text-sm text-gray-500 mt-1">
+                            Managing members of {selectedDepartment?.name}
+                        </p>
+                    </div>
+                    <button className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium transition-colors">
+                        <UserPlus size={18} />
+                        Add Member
+                    </button>
                 </div>
 
-                <div className="flex items-center gap-3">
-                    {/* Add Member Input */}
-                    <form onSubmit={handleAddMember} className="flex items-center gap-2">
-                        <div className="relative">
-                            <Plus size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                            <input
-                                type="email"
-                                placeholder="Add by email..."
-                                value={newEmail}
-                                onChange={e => setNewEmail(e.target.value)}
-                                className="pl-8 pr-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none w-48 transition-all"
-                            />
-                        </div>
-                        <button disabled={isAdding} className="bg-indigo-600 hover:bg-indigo-700 text-white p-1.5 rounded-lg transition-colors">
-                            {isAdding ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> : <Check size={16} />}
-                        </button>
-                    </form>
-
-                    <div className="h-6 w-px bg-gray-200 mx-1"></div>
-
-                    <div className="relative">
-                        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                {/* Search & Filter */}
+                <div className="mt-6 flex flex-col md:flex-row gap-4">
+                    <div className="relative flex-1">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
                         <input
                             type="text"
-                            placeholder="Filter people..."
-                            value={searchTerm}
-                            onChange={e => setSearchTerm(e.target.value)}
-                            className="pl-8 pr-3 py-1.5 text-sm bg-gray-100 border-transparent rounded-lg focus:bg-white focus:ring-2 focus:ring-gray-200 outline-none w-40 transition-all"
+                            placeholder="Search members..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                         />
                     </div>
+                    <button className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 font-medium text-gray-700">
+                        <Filter size={18} />
+                        Filter
+                    </button>
                 </div>
             </div>
 
-            {/* Matrix Grid */}
-            <div className="flex-1 overflow-auto custom-scrollbar">
-                <table className="w-full text-left border-collapse">
-                    <thead className="bg-gray-50 sticky top-0 z-10 shadow-sm">
-                        <tr>
-                            <th className="p-4 font-bold text-gray-600 text-sm border-b border-r border-gray-200 min-w-[200px]">Team Member</th>
-                            {(data?.workspaces || []).map(ws => (
-                                <th key={ws._id} className="p-4 font-bold text-gray-600 text-xs text-center border-b border-gray-200 min-w-[100px]">
-                                    <div className="flex flex-col items-center gap-1">
-                                        <Briefcase size={14} className="text-gray-400" />
-                                        {ws.name}
-                                    </div>
-                                </th>
-                            ))}
-                            <th className="p-4 font-bold text-gray-600 text-sm text-center border-b border-l border-gray-200 bg-gray-50 w-24 sticky right-0">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100">
-                        {filteredMembers.map(member => (
-                            <tr key={member._id} className="hover:bg-gray-50/50 transition-colors group">
-                                <td className="p-4 border-r border-gray-100 sticky left-0 bg-white group-hover:bg-gray-50/50">
-                                    <div className="flex items-center gap-3">
-                                        <div className="relative">
-                                            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-100 to-purple-100 flex items-center justify-center text-indigo-700 font-bold text-sm border-2 border-white shadow-sm">
-                                                {member.username[0]}
-                                            </div>
-                                            {member.isOnline && (
-                                                <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-white rounded-full"></div>
-                                            )}
-                                        </div>
-                                        <div>
-                                            <div className="font-bold text-gray-900 text-sm">{member.username}</div>
-                                            <div className="text-xs text-gray-400 truncate max-w-[120px]">{member.email}</div>
-                                        </div>
-                                    </div>
-                                </td>
-
-                                {(data?.workspaces || []).map(ws => {
-                                    const isAssigned = data.allocations[member._id]?.includes(ws._id);
-                                    return (
-                                        <td key={ws._id} className="p-4 text-center">
-                                            <label className="relative inline-flex items-center justify-center cursor-pointer group/check">
-                                                <input
-                                                    type="checkbox"
-                                                    className="peer sr-only"
-                                                    checked={isAssigned || false}
-                                                    onChange={() => handleToggle(member._id, ws._id, isAssigned)}
-                                                />
-                                                <div className={`w-6 h-6 rounded-md border-2 transition-all flex items-center justify-center
-                                                    ${isAssigned
-                                                        ? 'bg-indigo-600 border-indigo-600 text-white'
-                                                        : 'border-gray-300 bg-white text-transparent hover:border-indigo-300'
-                                                    }
-                                                `}>
-                                                    <Check size={14} strokeWidth={3} />
-                                                </div>
-                                            </label>
-                                        </td>
-                                    );
-                                })}
-
-                                <td className="p-4 text-center border-l border-gray-100 bg-white sticky right-0 group-hover:bg-gray-50/50">
-                                    <button
-                                        onClick={() => navigate(`/workspace/${data.workspaces[0]?._id}/home/dm/new/${member._id}`)} // Rough heuristic to jump to DM
-                                        // Better: Just go to /workspaces -> Messages? No, jumping to a specific workspace context is how DMs work right now.
-                                        // We will try using the first managed workspace as the context for the DM.
-                                        className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
-                                        title="Send Message"
-                                    >
-                                        <MessageSquare size={18} />
-                                    </button>
-                                </td>
+            {/* Team List */}
+            <div className="flex-1 overflow-y-auto p-8">
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                    <table className="w-full text-left">
+                        <thead className="bg-gray-50 border-b border-gray-200">
+                            <tr>
+                                <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase">Member</th>
+                                <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase">Role</th>
+                                <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase">Status</th>
+                                <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase">Joined</th>
+                                <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase text-right">Actions</th>
                             </tr>
-                        ))}
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody className="divide-y divide-gray-200">
+                            {/* Department Head */}
+                            {teamData.head && (
+                                <tr className="bg-indigo-50/30">
+                                    <td className="px-6 py-4">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold">
+                                                {teamData.head.username?.charAt(0)?.toUpperCase()}
+                                            </div>
+                                            <div>
+                                                <p className="font-bold text-gray-900">{teamData.head.username} <span className="text-xs font-normal text-indigo-600 bg-indigo-100 px-2 py-0.5 rounded-full ml-1">Head</span></p>
+                                                <p className="text-sm text-gray-500">{teamData.head.email}</p>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        <div className="flex items-center gap-2 text-gray-700">
+                                            <Shield size={16} className="text-indigo-600" />
+                                            <span className="text-sm font-medium capitalize">Manager</span>
+                                        </div>
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                            Active
+                                        </span>
+                                    </td>
+                                    <td className="px-6 py-4 text-sm text-gray-500">
+                                        -
+                                    </td>
+                                    <td className="px-6 py-4 text-right">
+                                        <button className="text-gray-400 hover:text-gray-600">
+                                            <MoreVertical size={18} />
+                                        </button>
+                                    </td>
+                                </tr>
+                            )}
 
-                {filteredMembers.length === 0 && (
-                    <div className="text-center py-12 text-gray-400">
-                        <User size={32} className="mx-auto mb-2 opacity-50" />
-                        <p>No team members found.</p>
-                    </div>
-                )}
+                            {filteredMembers.map((member) => {
+                                if (member._id === teamData.head?._id) return null; // Skip head if in listing
+                                return (
+                                    <tr key={member._id} className="hover:bg-gray-50 transition-colors">
+                                        <td className="px-6 py-4">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 font-bold">
+                                                    {member.username?.charAt(0)?.toUpperCase()}
+                                                </div>
+                                                <div>
+                                                    <p className="font-medium text-gray-900">{member.username}</p>
+                                                    <p className="text-sm text-gray-500">{member.email}</p>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <div className="flex items-center gap-2 text-gray-700">
+                                                <Shield size={16} className="text-gray-400" />
+                                                <span className="text-sm capitalize">{member.companyRole}</span>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${member.accountStatus === 'active'
+                                                    ? 'bg-green-100 text-green-800'
+                                                    : 'bg-yellow-100 text-yellow-800'
+                                                }`}>
+                                                {member.accountStatus || 'Unknown'}
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-4 text-sm text-gray-500">
+                                            <div className="flex items-center gap-2">
+                                                <Calendar size={14} />
+                                                {new Date(member.createdAt).toLocaleDateString()}
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-4 text-right">
+                                            <button className="text-gray-400 hover:text-gray-600">
+                                                <MoreVertical size={18} />
+                                            </button>
+                                        </td>
+                                    </tr>
+                                );
+                            })}
+
+                            {filteredMembers.length === 0 && (
+                                <tr>
+                                    <td colSpan="5" className="px-6 py-10 text-center text-gray-500">
+                                        No team members found matching "{searchQuery}"
+                                    </td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     );

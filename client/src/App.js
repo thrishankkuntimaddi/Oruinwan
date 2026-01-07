@@ -59,21 +59,20 @@ import ContactAdmin from "./pages/admin/ContactAdmin"; // NEW - Contact platform
 import AdminDashboard from "./pages/dashboards/AdminDashboard";
 import ManagerDashboard from "./pages/dashboards/ManagerDashboard";
 import ManagerOverview from "./components/manager/ManagerOverview";
+import ManagerLocation from "./components/manager/ManagerLocation"; // NEW
 import ManagerTasks from "./components/manager/ManagerTasks";
 import ManagerReports from "./components/manager/ManagerReports";
+import ManagerContactAdmin from "./components/manager/ManagerContactAdmin";
+import ManagerSettings from "./components/manager/ManagerSettings"; // NEW
 import TeamAllocation from "./components/manager/TeamAllocation";
-import AdminAnalyticsDashboard from "./pages/dashboards/AdminAnalyticsDashboard"; // NEW
 import EmployeeDashboard from "./pages/dashboards/EmployeeDashboard";
-import AnalyticsDashboard from "./pages/dashboards/AnalyticsDashboard";
 import ChttrixAdminDashboard from "./pages/dashboards/ChttrixAdminDashboard";
 
-// Protected route wrappers
 // Protected route wrappers
 import RequireAuth from "./components/RequireAuth";
 import RequireWorkspace from "./components/RequireWorkspace";
 import RequireAdmin from "./components/RequireAdmin";
 import RequireChttrixAdmin from "./components/RequireChttrixAdmin";
-import RequireCompanyAdmin from "./components/RequireCompanyAdmin"; // Restored
 import RequireDepartmentManager from "./components/RequireDepartmentManager"; // Restored
 import VerifiedOnlyRoute from "./components/VerifiedOnlyRoute"; // Block pending users
 
@@ -426,9 +425,12 @@ function App() {
                           >
                             <Route index element={<Navigate to="overview" replace />} />
                             <Route path="overview" element={<ManagerOverview />} />
-                            <Route path="allocation" element={<TeamAllocation />} />
+                            <Route path="team" element={<TeamAllocation />} />
+                            <Route path="location" element={<ManagerLocation />} />
                             <Route path="tasks" element={<ManagerTasks />} />
                             <Route path="reports" element={<ManagerReports />} />
+                            <Route path="contact" element={<ManagerContactAdmin />} />
+                            <Route path="settings" element={<ManagerSettings />} />
                           </Route>
 
                           <Route

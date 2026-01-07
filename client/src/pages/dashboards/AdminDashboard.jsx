@@ -1,27 +1,26 @@
 // client/src/pages/dashboards/AdminDashboard.jsx
 // TRUE OPERATIONAL DASHBOARD - Present State, Not Trends
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCompany } from '../../contexts/CompanyContext';
 import { useToast } from '../../contexts/ToastContext';
 import {
-    Building, Users, Briefcase, Activity, Plus, Search, Filter, Bell,
-    AlertTriangle, CheckCircle2, MessageSquare, Calendar, UserPlus,
-    Clock, TrendingUp, Settings, BarChart3, AlertCircle, RefreshCw
+    Building, Users, Activity, Bell, Plus, Briefcase,
+    CheckCircle2, MessageSquare, Calendar, UserPlus,
+    Clock, TrendingUp, Settings, BarChart3, RefreshCw, Shield
 } from 'lucide-react';
 import {
-    DashboardCard, UserCard, ActivityFeed, InviteUserModal
+    ActivityFeed, InviteUserModal
 } from '../../components/company';
-import { getCompanyMetrics, getCompanyMembers } from '../../services/companyService';
+import { getCompanyMembers } from '../../services/companyService';
 import { getAuditLogs } from '../../services/auditService';
-import { getDepartments } from '../../services/departmentService';
 import { getDashboardMetrics } from '../../services/dashboardService';
 
 const AdminDashboard = () => {
     const { user } = useAuth();
-    const { company, isCompanyAdmin } = useCompany();
+    const { isCompanyAdmin } = useCompany();
     const { showToast } = useToast();
     const navigate = useNavigate();
 
@@ -33,10 +32,8 @@ const AdminDashboard = () => {
         totalDepartments: 0,
     });
     const [members, setMembers] = useState([]);
-    const [departments, setDepartments] = useState([]);
     const [recentActivities, setRecentActivities] = useState([]);
     const [workspaces, setWorkspaces] = useState([]);
-    const [searchQuery, setSearchQuery] = useState('');
     const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
 
@@ -81,15 +78,13 @@ const AdminDashboard = () => {
                 setWorkspaces(dashMetrics.workspaceHealth || []);
 
                 // Fetch members, activities, and departments
-                const [membersRes, activityRes, deptsRes] = await Promise.all([
+                const [membersRes, activityRes] = await Promise.all([
                     getCompanyMembers(companyIdString),
-                    getAuditLogs(companyIdString, { limit: 15 }),
-                    getDepartments(companyIdString)
+                    getAuditLogs(companyIdString, { limit: 15 })
                 ]);
 
                 setMembers(membersRes.members || []);
                 setRecentActivities(activityRes.logs || []);
-                setDepartments(deptsRes.departments || []);
 
             } catch (error) {
                 console.error('Error fetching dashboard data:', error);
@@ -115,9 +110,8 @@ const AdminDashboard = () => {
                     const dashMetrics = await getDashboardMetrics(companyIdString);
                     setMetrics(dashMetrics.snapshot || {});
                     setWorkspaces(dashMetrics.workspaceHealth || []);
-                    const [membersRes, deptsRes] = await Promise.all([getCompanyMembers(companyIdString), getDepartments(companyIdString)]);
+                    const membersRes = await getCompanyMembers(companyIdString);
                     setMembers(membersRes.members || []);
-                    setDepartments(deptsRes.departments || []);
                 } catch (error) { console.error('Polling error:', error); }
                 finally { setRefreshing(false); }
             }
@@ -137,10 +131,9 @@ const AdminDashboard = () => {
             setMetrics(dashMetrics.snapshot || {});
             setTodayActivity(dashMetrics.todayActivity || {});
             setWorkspaces(dashMetrics.workspaceHealth || []);
-            const [membersRes, activityRes, deptsRes] = await Promise.all([getCompanyMembers(companyIdString), getAuditLogs(companyIdString, { limit: 15 }), getDepartments(companyIdString)]);
+            const [membersRes, activityRes] = await Promise.all([getCompanyMembers(companyIdString), getAuditLogs(companyIdString, { limit: 15 })]);
             setMembers(membersRes.members || []);
             setRecentActivities(activityRes.logs || []);
-            setDepartments(deptsRes.departments || []);
             showToast('Dashboard refreshed', 'success');
         } catch (error) { console.error('Error refreshing:', error); showToast('Failed to refresh', 'error'); }
         finally { setRefreshing(false); }
@@ -164,12 +157,6 @@ const AdminDashboard = () => {
             </div>
         );
     }
-
-    // Filter members
-    const filteredMembers = members.filter(member =>
-        member.username?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        member.email?.toLowerCase().includes(searchQuery.toLowerCase())
-    );
 
     // Get pending invites (from members with pending status)
     const pendingInvites = members.filter(m => m.accountStatus === 'pending' || m.accountStatus === 'invited');
@@ -201,6 +188,13 @@ const AdminDashboard = () => {
                     </p>
                 </div>
                 <div className="flex items-center gap-4">
+                    <button
+                        onClick={() => navigate('/manager/dashboard')}
+                        className="px-4 py-2 bg-white border border-slate-300 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-50 transition-colors shadow-sm flex items-center gap-2"
+                    >
+                        <Shield size={16} />
+                        Manager Console
+                    </button>
                     <button
                         onClick={handleRefresh}
                         disabled={refreshing || loading}

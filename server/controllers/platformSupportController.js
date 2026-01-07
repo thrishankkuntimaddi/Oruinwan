@@ -35,26 +35,51 @@ exports.sendMessage = async (req, res) => {
     try {
         const { companyId, content } = req.body;
 
+        // Validate user authentication
+        if (!req.user || !req.user.sub) {
+            console.error('SEND MESSAGE ERROR: User not authenticated', { user: req.user });
+            return res.status(401).json({ message: 'Authentication required' });
+        }
+
+        // Validate content
         if (!content || !content.trim()) {
             return res.status(400).json({ message: 'Message content is required' });
         }
 
+        // Validate companyId
+        if (!companyId) {
+            return res.status(400).json({ message: 'Company ID is required' });
+        }
+
+        console.log('[PLATFORM SUPPORT] Sending message:', {
+            companyId,
+            userId: req.user.sub,
+            userRoles: req.user.roles
+        });
+
         const message = await SupportMessage.create({
             companyId,
-            sender: req.user._id,
+            sender: req.user.sub, // Use sub from JWT payload
             content: content.trim(),
             isFromPlatformAdmin: false
         });
 
         await message.populate('sender', 'username email');
 
-        // TODO: Emit socket event to platform admins
-        // io.to('platform-admins').emit('new-support-message', message);
+        console.log('[PLATFORM SUPPORT] Message created successfully:', message._id);
+
+        // Emit socket event to platform admins
+        if (req.app.get('io')) {
+            req.app.get('io').to('platform-admins').emit('platform-message', message);
+        }
 
         return res.status(201).json({ message });
     } catch (error) {
         console.error('SEND MESSAGE ERROR:', error);
-        return res.status(500).json({ message: 'Server error' });
+        return res.status(500).json({
+            message: 'Failed to send message',
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
     }
 };
 

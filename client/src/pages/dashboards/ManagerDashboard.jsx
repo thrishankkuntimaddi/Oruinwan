@@ -1,147 +1,229 @@
+// client/src/pages/dashboards/ManagerDashboard.jsx
+// Manager Dashboard - Complete console for department managers
 
 import React, { useState, useEffect } from 'react';
-import ManagerSidebar from '../../components/manager/ManagerSidebar';
-import ScopeSelector from '../../components/manager/ScopeSelector';
-import { HelpCircle, Search, Bell } from 'lucide-react';
-import { useNavigate, Outlet, useLocation } from 'react-router-dom';
+import { Outlet, useNavigate, useLocation } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
+import { useCompany } from '../../contexts/CompanyContext';
+import {
+  LayoutDashboard, Users, MapPin, CheckSquare, BarChart3,
+  MessageSquare, Settings, ChevronDown
+} from 'lucide-react';
+import axios from 'axios';
 
 const ManagerDashboard = () => {
-  const [scope, setScope] = useState(null);
-  const [metrics, setMetrics] = useState(null);
-  const [tasks, setTasks] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-
-  // New state for communication
-  const [companyContact, setCompanyContact] = useState(null);
-  const [chatWorkspaceId, setChatWorkspaceId] = useState(null);
-
+  const { user } = useAuth();
+  const { company } = useCompany();
   const navigate = useNavigate();
   const location = useLocation();
-  const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000';
 
-  // Determine active tab based on path for Sidebar sync
-  const getActiveTab = () => {
-    const path = location.pathname;
-    if (path.includes('/allocation')) return 'allocation';
-    if (path.includes('/tasks')) return 'tasks';
-    if (path.includes('/reports')) return 'reports';
-    return 'overview';
-  };
+  const [departments, setDepartments] = useState([]);
+  const [selectedDepartment, setSelectedDepartment] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  const handleSidebarChange = (tabId) => {
-    navigate(`/manager/dashboard/${tabId}`);
-  };
-
-  // Handle data load from ScopeSelector
-  const handleScopeDataLoad = (data) => {
-    if (data.companyContact) setCompanyContact(data.companyContact);
-    if (data.chatWorkspaceId) setChatWorkspaceId(data.chatWorkspaceId);
-  };
-
-  const handleContactAdmin = () => {
-    if (!chatWorkspaceId || !companyContact) {
-      alert("Admin contact info not available yet. Please try again in a moment.");
-      return;
-    }
-    // Navigate to DM creation route
-    navigate(`/workspace/${chatWorkspaceId}/dm/new/${companyContact._id}`);
-  };
-
-  // Fetch data when scope changes
+  // Fetch user's managed departments
   useEffect(() => {
-    if (!scope) return;
-
-    const fetchData = async () => {
-      setLoading(true);
-      console.log("Fetching dashboard data for scope:", scope);
+    const fetchDepartments = async () => {
       try {
-        const token = localStorage.getItem('accessToken');
-        const headers = { Authorization: `Bearer ${token}` };
-        const params = `?scopeType=${scope.type}&scopeId=${scope.id}`;
+        setLoading(true);
+        const response = await axios.get(
+          `${process.env.REACT_APP_BACKEND_URL}/api/manager/my-departments`,
+          { withCredentials: true }
+        );
 
-        // Parallel Fetch
-        const [metricsRes, tasksRes] = await Promise.all([
-          fetch(`${API_BASE}/api/managers/metrics${params}`, { headers }),
-          fetch(`${API_BASE}/api/managers/tasks${params}`, { headers })
-        ]);
+        const depts = response.data.departments || [];
+        setDepartments(depts);
 
-        const metricsData = await metricsRes.json();
-        const tasksData = await tasksRes.json();
-
-        setMetrics(metricsData);
-        setTasks(tasksData);
-
-      } catch (err) {
-        console.error("Dashboard fetch error", err);
+        // Auto-select first department if available
+        if (depts.length > 0 && !selectedDepartment) {
+          setSelectedDepartment(depts[0]);
+        }
+      } catch (error) {
+        console.error('Error fetching departments:', error);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchData();
-  }, [scope]);
+    if (user) {
+      fetchDepartments();
+    }
+  }, [user]);
+
+  // Navigation items
+  const navItems = [
+    { id: 'overview', label: 'Overview', icon: LayoutDashboard, path: '/manager/dashboard' },
+    { id: 'team', label: 'My Team', icon: Users, path: '/manager/dashboard/team' },
+    { id: 'location', label: 'My Location', icon: MapPin, path: '/manager/dashboard/location' },
+    { id: 'tasks', label: 'Tasks', icon: CheckSquare, path: '/manager/dashboard/tasks' },
+    { id: 'reports', label: 'Reports', icon: BarChart3, path: '/manager/dashboard/reports' },
+    { id: 'contact', label: 'Contact Admin', icon: MessageSquare, path: '/manager/dashboard/contact' }
+  ];
+
+  const isActive = (path) => {
+    if (path === '/manager/dashboard') {
+      return location.pathname === path || location.pathname === '/manager/dashboard/overview';
+    }
+    // Specific check for settings to highlight nothing else or maybe a settings icon if we had one
+    if (location.pathname === '/manager/dashboard/settings') return false;
+
+    return location.pathname.startsWith(path);
+  };
+
+  // Check if user has manager or admin role
+  const isManager = user?.companyRole === 'manager' || ['owner', 'admin'].includes(user?.companyRole);
+
+  if (!isManager) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h2>
+          <p className="text-gray-500 mb-6">You need manager privileges to access this page</p>
+          <button
+            onClick={() => navigate('/')}
+            className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+          >
+            Go Home
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
+  if (departments.length === 0) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center max-w-md">
+          <Users className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">No Department Assigned</h2>
+          <p className="text-gray-500 mb-6">
+            You are not currently managing any departments. Please contact your company administrator.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="flex h-screen bg-gray-50 font-sans text-slate-900 overflow-hidden">
-      {/* Sidebar - Shared component style */}
-      <ManagerSidebar activeTab={getActiveTab()} setActiveTab={handleSidebarChange} />
-
-      {/* Main Content */}
-      <main className="flex-1 flex flex-col h-full overflow-hidden bg-slate-50/50 dark:bg-slate-900/50 relative">
-        {/* Topbar - Matches AdminDashboard Header */}
-        <header className="h-16 px-8 flex items-center justify-between z-40 bg-white border-b border-slate-200">
-          <div>
-            <h2 className="text-xl font-black text-slate-800">Manager Console</h2>
-            <p className="text-xs text-slate-500 font-medium">Execution & Delivery</p>
-          </div>
-
-          <div className="flex items-center gap-4">
-            <button
-              onClick={handleContactAdmin}
-              className="flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-indigo-600 transition-colors mr-2 px-3 py-2 rounded-lg hover:bg-slate-50"
-              title={companyContact ? `Contact ${companyContact.username}` : 'Contact Admin'}
-            >
-              <HelpCircle size={18} />
-              <span className="hidden lg:inline">Contact Admin</span>
-            </button>
-            <div className="h-6 w-px bg-slate-200"></div>
-
-            <div className="relative hidden md:block">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-              <input
-                placeholder="Search tasks, members..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 w-64 shadow-sm"
-              />
+    <div className="flex h-screen bg-gray-50 font-sans text-gray-900 overflow-hidden">
+      {/* Sidebar */}
+      <aside className="w-64 bg-white border-r border-gray-200 flex flex-col">
+        {/* Logo/Header - Updated to match AdminSidebar branding */}
+        <div className="h-20 flex items-center px-6 border-b border-gray-100">
+          <div className="flex items-center gap-3">
+            <img
+              src="/chttrix-logo.jpg"
+              alt="Chttrix Logo"
+              className="w-10 h-10 rounded-xl shadow-md object-cover"
+            />
+            <div className="flex flex-col justify-center">
+              <span className="font-black text-2xl leading-none text-slate-800 tracking-tighter">
+                Chttrix
+              </span>
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] leading-tight mt-1 ml-0.5">
+                Manager Console
+              </span>
             </div>
-
-            <ScopeSelector onScopeChange={setScope} onLoad={handleScopeDataLoad} />
-
-            <button className="w-9 h-9 bg-white border border-slate-200 rounded-lg flex items-center justify-center text-slate-500 hover:text-indigo-600 shadow-sm relative">
-              <Bell size={18} />
-              <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border border-white"></span>
-            </button>
           </div>
-        </header>
+        </div>
 
-        {/* Scrollable Area */}
-        <div className="flex-1 overflow-y-auto w-full px-8 py-8 z-10 custom-scrollbar">
-          {loading || !metrics ? (
-            <div className="flex items-center justify-center py-20">
-              <div className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+        {/* Context Header (Company/Dept) */}
+        <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/50">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-6 h-6 bg-indigo-100 rounded-md flex items-center justify-center">
+              <LayoutDashboard className="w-3 h-3 text-indigo-600" />
+            </div>
+            <span className="text-xs font-bold text-gray-500">{company?.name}</span>
+          </div>
+
+          {/* Department Selector (if admin viewing multiple) */}
+          {['owner', 'admin'].includes(user?.companyRole) && departments.length > 1 ? (
+            <div className="relative">
+              <select
+                value={selectedDepartment?._id || ''}
+                onChange={(e) => {
+                  const dept = departments.find(d => d._id === e.target.value);
+                  setSelectedDepartment(dept);
+                }}
+                className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm font-bold text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 appearance-none pr-8 shadow-sm"
+              >
+                {departments.map(dept => (
+                  <option key={dept._id} value={dept._id}>
+                    {dept.name}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
             </div>
           ) : (
-            <div className="w-full h-full">
-              <Outlet context={{ metrics, tasks, scope, loading }} />
+            <div className="text-sm font-black text-gray-900 px-1">
+              {selectedDepartment?.name || 'My Department'}
             </div>
           )}
         </div>
+
+        {/* Navigation */}
+        <nav className="flex-1 overflow-y-auto p-4">
+          <div className="space-y-1">
+            {navItems.map((item) => {
+              const Icon = item.icon;
+              const active = isActive(item.path);
+
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => navigate(item.path)}
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all ${active
+                    ? 'bg-indigo-50 text-indigo-600 font-bold shadow-sm'
+                    : 'text-gray-700 hover:bg-gray-50 font-medium'
+                    }`}
+                >
+                  <Icon
+                    size={20}
+                    className={active ? 'text-indigo-600' : 'text-gray-400'}
+                  />
+                  <span className="text-sm">{item.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </nav>
+
+        {/* User Profile Section */}
+        <div className="p-4 border-t border-gray-200">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold">
+              {user?.username?.charAt(0)?.toUpperCase()}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-bold text-gray-900 truncate">{user?.username}</p>
+              <p className="text-xs text-gray-500 capitalize">{user?.companyRole}</p>
+            </div>
+            <button
+              onClick={() => navigate('/manager/dashboard/settings')}
+              className="p-2 hover:bg-gray-50 rounded-lg transition-colors"
+              title="Settings"
+            >
+              <Settings size={16} className="text-gray-400 hover:text-indigo-600" />
+            </button>
+          </div>
+        </div>
+      </aside>
+
+      {/* Main Content */}
+      <main className="flex-1 flex flex-col overflow-hidden">
+        <Outlet context={{ selectedDepartment, departments }} />
       </main>
     </div>
   );
 };
 
 export default ManagerDashboard;
-

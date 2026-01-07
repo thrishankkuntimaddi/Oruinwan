@@ -159,6 +159,8 @@ app.use("/api/companies", require("./routes/companies"));
 app.use("/api/departments", require("./routes/departments"));
 app.use("/api/workspaces", require("./routes/workspaces"));
 app.use("/api/platform/support", require("./routes/platformSupport"));
+app.use("/api/internal", require("./routes/internalMessaging"));
+app.use("/api/manager", require("./routes/managerDashboard"));
 app.use("/api/tasks", require("./routes/tasks"));
 app.use("/api/notes", require("./routes/notes"));
 app.use("/api/updates", require("./routes/updates"));
