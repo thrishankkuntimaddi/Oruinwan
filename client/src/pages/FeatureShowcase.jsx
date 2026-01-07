@@ -509,9 +509,6 @@ const FeatureShowcase = () => {
 
                     <div className="pt-8 border-t border-slate-200 dark:border-white/5 flex flex-col md:flex-row justify-between items-center gap-6">
                         <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 text-sm font-medium">
-                            <div className="w-8 h-8 bg-white dark:bg-white/10 rounded-lg flex items-center justify-center text-slate-900 dark:text-white">
-                                <MessageCircle size={16} fill="currentColor" />
-                            </div>
                             © 2026 Chttrix Inc. All rights reserved.
                         </div>
                         <div className="flex gap-6 text-sm font-bold text-slate-500 dark:text-slate-400">
