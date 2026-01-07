@@ -50,6 +50,14 @@ const FeatureShowcase = () => {
     const navigate = useNavigate();
     const { user } = useAuth();
     const { theme, toggleTheme } = useTheme();
+
+    const scrollToSection = (id) => {
+        const element = document.getElementById(id);
+        if (element) {
+            element.scrollIntoView({ behavior: 'smooth' });
+        }
+    };
+
     const [scrolled, setScrolled] = useState(false);
 
     // Refs for video control
@@ -459,14 +467,11 @@ const FeatureShowcase = () => {
                         <div>
                             <h4 className="font-bold mb-6 text-slate-900 dark:text-white">Product</h4>
                             <ul className="space-y-4 text-sm text-slate-500 dark:text-slate-400">
-                                <li><button onClick={() => navigate('/features')} className="hover:text-indigo-600 dark:hover:text-white transition-colors">Features</button></li>
-                                <li><button className="hover:text-indigo-600 dark:hover:text-white transition-colors">Chttrix AI</button></li>
-                                <li><button className="hover:text-indigo-600 dark:hover:text-white transition-colors">Enterprise</button></li>
+                                <li><button onClick={() => scrollToSection('platform')} className="hover:text-indigo-600 dark:hover:text-white transition-colors">Features</button></li>
+                                <li><button onClick={() => scrollToSection('ai')} className="hover:text-indigo-600 dark:hover:text-white transition-colors">Chttrix AI</button></li>
+                                <li><button onClick={() => scrollToSection('accounts')} className="hover:text-indigo-600 dark:hover:text-white transition-colors">Enterprise</button></li>
                                 <li><button onClick={() => navigate('/security')} className="hover:text-indigo-600 dark:hover:text-white transition-colors">Security</button></li>
-                                <li><button onClick={() => {
-                                    const element = document.getElementById('downloads');
-                                    if (element) element.scrollIntoView({ behavior: 'smooth' });
-                                }} className="hover:text-indigo-600 dark:hover:text-white transition-colors">Downloads</button></li>
+                                <li><button onClick={() => scrollToSection('downloads')} className="hover:text-indigo-600 dark:hover:text-white transition-colors">Downloads</button></li>
                             </ul>
                         </div>
                         <div>
@@ -475,7 +480,7 @@ const FeatureShowcase = () => {
                                 <li><button onClick={() => navigate('/about')} className="hover:text-indigo-600 dark:hover:text-white transition-colors">About Us</button></li>
                                 <li className="flex items-center gap-2">
                                     <button onClick={() => navigate('/careers')} className="hover:text-indigo-600 dark:hover:text-white transition-colors">Careers</button>
-                                    <span className="bg-indigo-600 text-[10px] font-bold px-2 py-0.5 rounded-full text-white">Hiring</span>
+                                    {/* <span className="bg-indigo-600 text-[10px] font-bold px-2 py-0.5 rounded-full text-white">Hiring</span> */}
                                 </li>
                                 <li><button onClick={() => navigate('/blog')} className="hover:text-indigo-600 dark:hover:text-white transition-colors">Blog</button></li>
                                 <li><button onClick={() => navigate('/brand')} className="hover:text-indigo-600 dark:hover:text-white transition-colors">Brand & Media</button></li>
