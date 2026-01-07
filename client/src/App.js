@@ -92,6 +92,7 @@ import RequireAdmin from "./components/RequireAdmin";
 import RequireChttrixAdmin from "./components/RequireChttrixAdmin";
 import RequireDepartmentManager from "./components/RequireDepartmentManager"; // Restored
 import VerifiedOnlyRoute from "./components/VerifiedOnlyRoute"; // Block pending users
+import ScrollToTop from "./components/ScrollToTop"; // Fix scroll position on route change
 
 
 function App() {
@@ -100,6 +101,7 @@ function App() {
     <ToastProvider>
       <ThemeProvider>
         <Router>
+          <ScrollToTop />
           <SocketProvider>
             <ContactsProvider>
               <CompanyProvider>
