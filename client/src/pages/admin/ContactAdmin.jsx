@@ -170,9 +170,9 @@ const ContactAdmin = () => {
     };
 
     return (
-        <div className="flex-1 bg-gray-50 dark:bg-gray-900 overflow-hidden flex flex-col">
+        <div className="h-full bg-gray-50 dark:bg-gray-900 overflow-hidden flex flex-col transition-colors duration-200">
             {/* Header */}
-            <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-8 py-6">
+            <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-8 py-6 flex-shrink-0">
                 <div className="flex items-center justify-between">
                     <div>
                         <h1 className="text-2xl font-black text-gray-900 dark:text-white">Contact Platform Admin</h1>
@@ -208,22 +208,25 @@ const ContactAdmin = () => {
             </div>
 
             {/* Content */}
-            <div className="flex-1 overflow-hidden">
+            <div className="flex-1 overflow-hidden relative">
                 {activeTab === 'chat' ? (
                     /* LIVE CHAT VIEW */
                     <div className="h-full flex flex-col">
                         {/* Messages Container */}
-                        <div className="flex-1 overflow-y-auto p-6 space-y-4">
+                        <div className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar">
                             {loadingMessages ? (
                                 <div className="flex items-center justify-center h-full">
                                     <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
                                 </div>
                             ) : messages.length === 0 ? (
-                                <div className="flex flex-col items-center justify-center h-full text-center">
-                                    <MessageSquare className="w-16 h-16 text-gray-300 mb-4" />
-                                    <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">No messages yet</h3>
-                                    <p className="text-gray-500 dark:text-gray-400 max-w-md">
-                                        Start a conversation with the Chttrix platform team. They'll respond as soon as possible.
+                                <div className="flex flex-col items-center justify-center h-full text-center pb-20 opacity-0 animate-fadeIn" style={{ animationFillMode: 'forwards' }}>
+                                    <div className="p-6 bg-indigo-50 dark:bg-indigo-900/20 rounded-full mb-6 relative">
+                                        <MessageSquare className="w-12 h-12 text-indigo-600 dark:text-indigo-400" />
+                                        <div className="absolute top-0 right-0 w-4 h-4 bg-green-500 rounded-full border-2 border-white dark:border-gray-900 animate-pulse"></div>
+                                    </div>
+                                    <h3 className="text-xl font-black text-gray-900 dark:text-white mb-2">How can we help?</h3>
+                                    <p className="text-gray-500 dark:text-gray-400 max-w-sm mx-auto leading-relaxed">
+                                        Start a conversation with the Chttrix platform team. Our experts typically respond within minutes.
                                     </p>
                                 </div>
                             ) : (
@@ -231,17 +234,17 @@ const ContactAdmin = () => {
                                     {messages.map((msg, idx) => (
                                         <div
                                             key={idx}
-                                            className={`flex ${msg.sender === user._id ? 'justify-end' : 'justify-start'}`}
+                                            className={`flex ${msg.sender === user._id ? 'justify-end' : 'justify-start'} animate-slideIn`}
                                         >
                                             <div
-                                                className={`max-w-md px-4 py-3 rounded-2xl ${msg.sender === user._id
-                                                    ? 'bg-indigo-600 text-white'
-                                                    : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-700'
+                                                className={`max-w-md px-5 py-3.5 rounded-2xl shadow-sm ${msg.sender === user._id
+                                                    ? 'bg-indigo-600 text-white rounded-br-none'
+                                                    : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-700 rounded-bl-none'
                                                     }`}
                                             >
-                                                <p className="text-sm">{msg.content}</p>
-                                                <p className={`text-xs mt-1 ${msg.sender === user._id ? 'text-indigo-200' : 'text-gray-500 dark:text-gray-400'}`}>
-                                                    {new Date(msg.createdAt).toLocaleTimeString()}
+                                                <p className="text-sm leading-relaxed">{msg.content}</p>
+                                                <p className={`text-[10px] mt-1.5 font-medium ${msg.sender === user._id ? 'text-indigo-200' : 'text-gray-400 dark:text-gray-500'}`}>
+                                                    {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                 </p>
                                             </div>
                                         </div>
@@ -252,11 +255,12 @@ const ContactAdmin = () => {
                         </div>
 
                         {/* Message Input */}
-                        <div className="border-t border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800">
-                            <form onSubmit={handleSendMessage} className="flex gap-2">
+                        <div className="relative z-10 p-6 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 shadow-[0_-4px_20px_rgba(0,0,0,0.03)] dark:shadow-none transition-colors">
+                            <form onSubmit={handleSendMessage} className="flex gap-3 max-w-5xl mx-auto">
                                 <button
                                     type="button"
-                                    className="p-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                                    className="p-3.5 text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl transition-all duration-200"
+                                    title="Attach File"
                                 >
                                     <Paperclip size={20} />
                                 </button>
@@ -265,94 +269,98 @@ const ContactAdmin = () => {
                                     value={newMessage}
                                     onChange={(e) => setNewMessage(e.target.value)}
                                     placeholder="Type your message..."
-                                    className="flex-1 px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900 dark:text-white"
+                                    className="flex-1 px-5 py-3.5 bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 transition-all shadow-sm"
                                 />
                                 <button
                                     type="submit"
                                     disabled={!newMessage.trim()}
-                                    className="px-6 py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                                    className="px-8 py-3.5 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 hover:shadow-lg hover:shadow-indigo-500/20 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none flex items-center gap-2.5"
                                 >
                                     <Send size={18} />
-                                    Send
+                                    <span>Send</span>
                                 </button>
                             </form>
                         </div>
                     </div>
                 ) : (
                     /* SUPPORT TICKETS VIEW */
-                    <div className="h-full p-6 overflow-y-auto">
-                        {/* Tickets Header */}
-                        <div className="flex items-center justify-between mb-6">
-                            <div className="relative flex-1 max-w-md">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                                <input
-                                    type="text"
-                                    placeholder="Search tickets..."
-                                    className="w-full pl-10 pr-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900 dark:text-white"
-                                />
-                            </div>
-                            <button
-                                onClick={() => setIsCreateTicketOpen(true)}
-                                className="px-4 py-2 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-2"
-                            >
-                                <Ticket size={18} />
-                                New Ticket
-                            </button>
-                        </div>
-
-                        {/* Tickets List */}
-                        {loadingTickets ? (
-                            <div className="flex items-center justify-center py-20">
-                                <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
-                            </div>
-                        ) : tickets.length === 0 ? (
-                            <div className="flex flex-col items-center justify-center py-20 text-center">
-                                <Ticket className="w-16 h-16 text-gray-300 mb-4" />
-                                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">No tickets yet</h3>
-                                <p className="text-gray-500 dark:text-gray-400 max-w-md mb-6">
-                                    Create a support ticket and our team will get back to you shortly.
-                                </p>
+                    <div className="h-full p-8 overflow-y-auto custom-scrollbar">
+                        <div className="max-w-5xl mx-auto">
+                            {/* Tickets Header */}
+                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+                                <div className="relative flex-1 max-w-md">
+                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                                    <input
+                                        type="text"
+                                        placeholder="Search tickets..."
+                                        className="w-full pl-10 pr-4 py-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-gray-900 dark:text-white transition-all shadow-sm"
+                                    />
+                                </div>
                                 <button
                                     onClick={() => setIsCreateTicketOpen(true)}
-                                    className="px-6 py-3 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700 transition-colors"
+                                    className="px-6 py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-500/20 flex items-center gap-2"
                                 >
-                                    Create Your First Ticket
+                                    <Ticket size={18} />
+                                    New Ticket
                                 </button>
                             </div>
-                        ) : (
-                            <div className="grid gap-4">
-                                {tickets.map((ticket) => (
-                                    <div
-                                        key={ticket._id}
-                                        onClick={() => setSelectedTicket(ticket)}
-                                        className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6 hover:shadow-md transition-shadow cursor-pointer"
-                                    >
-                                        <div className="flex items-start justify-between mb-3">
-                                            <div className="flex-1">
-                                                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1">
-                                                    {ticket.subject}
-                                                </h3>
-                                                <p className="text-sm text-gray-500 dark:text-gray-400 line-clamp-2">
-                                                    {ticket.description}
-                                                </p>
-                                            </div>
-                                            <span className={`px-3 py-1 rounded-full text-xs font-bold border ${getStatusColor(ticket.status)}`}>
-                                                {ticket.status}
-                                            </span>
-                                        </div>
-                                        <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
-                                            <span className={`px-2 py-1 rounded-md font-bold ${getPriorityColor(ticket.priority)}`}>
-                                                {ticket.priority}
-                                            </span>
-                                            <span className="flex items-center gap-1">
-                                                <Clock size={14} />
-                                                {new Date(ticket.createdAt).toLocaleDateString()}
-                                            </span>
-                                        </div>
+
+                            {/* Tickets List */}
+                            {loadingTickets ? (
+                                <div className="flex items-center justify-center py-20">
+                                    <div className="w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+                                </div>
+                            ) : tickets.length === 0 ? (
+                                <div className="flex flex-col items-center justify-center py-20 text-center bg-white dark:bg-gray-800 rounded-2xl border border-dashed border-gray-300 dark:border-gray-700 p-12">
+                                    <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-full mb-4">
+                                        <Ticket className="w-10 h-10 text-gray-400 dark:text-gray-500" />
                                     </div>
-                                ))}
-                            </div>
-                        )}
+                                    <h3 className="text-xl font-black text-gray-900 dark:text-white mb-2">No tickets yet</h3>
+                                    <p className="text-gray-500 dark:text-gray-400 max-w-md mb-8">
+                                        Create a support ticket and our team will get back to you shortly.
+                                    </p>
+                                    <button
+                                        onClick={() => setIsCreateTicketOpen(true)}
+                                        className="px-6 py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-colors shadow-md"
+                                    >
+                                        Create Your First Ticket
+                                    </button>
+                                </div>
+                            ) : (
+                                <div className="grid gap-4">
+                                    {tickets.map((ticket) => (
+                                        <div
+                                            key={ticket._id}
+                                            onClick={() => setSelectedTicket(ticket)}
+                                            className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6 hover:shadow-lg dark:hover:shadow-gray-900/30 hover:border-indigo-200 dark:hover:border-indigo-900 transition-all cursor-pointer group"
+                                        >
+                                            <div className="flex items-start justify-between mb-3">
+                                                <div className="flex-1 pr-4">
+                                                    <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                                                        {ticket.subject}
+                                                    </h3>
+                                                    <p className="text-sm text-gray-500 dark:text-gray-400 line-clamp-2">
+                                                        {ticket.description}
+                                                    </p>
+                                                </div>
+                                                <span className={`px-3 py-1 rounded-full text-xs font-bold border capitalize ${getStatusColor(ticket.status)}`}>
+                                                    {ticket.status}
+                                                </span>
+                                            </div>
+                                            <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400 border-t border-gray-100 dark:border-gray-700 pt-4 mt-2">
+                                                <span className={`px-2 py-0.5 rounded uppercase text-[10px] font-black tracking-wider ${getPriorityColor(ticket.priority)}`}>
+                                                    {ticket.priority}
+                                                </span>
+                                                <span className="flex items-center gap-1 font-medium">
+                                                    <Clock size={14} className="text-gray-400" />
+                                                    {new Date(ticket.createdAt).toLocaleDateString()}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
                     </div>
                 )}
             </div>
@@ -360,7 +368,7 @@ const ContactAdmin = () => {
             {/* Create Ticket Modal */}
             {isCreateTicketOpen && (
                 <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                    <div className="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-2xl shadow-2xl">
+                    <div className="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-2xl shadow-2xl animate-scaleIn">
                         <div className="p-6 border-b border-gray-200 dark:border-gray-700">
                             <h2 className="text-2xl font-black text-gray-900 dark:text-white">Create Support Ticket</h2>
                         </div>
@@ -372,7 +380,7 @@ const ContactAdmin = () => {
                                     required
                                     value={newTicket.subject}
                                     onChange={(e) => setNewTicket(prev => ({ ...prev, subject: e.target.value }))}
-                                    className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900 dark:text-white"
+                                    className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900 dark:text-white"
                                     placeholder="Brief description of your issue"
                                 />
                             </div>
@@ -381,7 +389,7 @@ const ContactAdmin = () => {
                                 <select
                                     value={newTicket.priority}
                                     onChange={(e) => setNewTicket(prev => ({ ...prev, priority: e.target.value }))}
-                                    className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900 dark:text-white"
+                                    className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900 dark:text-white"
                                 >
                                     <option value="low">Low</option>
                                     <option value="medium">Medium</option>
@@ -396,11 +404,11 @@ const ContactAdmin = () => {
                                     rows={6}
                                     value={newTicket.description}
                                     onChange={(e) => setNewTicket(prev => ({ ...prev, description: e.target.value }))}
-                                    className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900 dark:text-white resize-none"
+                                    className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900 dark:text-white resize-none"
                                     placeholder="Provide detailed information about your issue..."
                                 />
                             </div>
-                            <div className="flex justify-end gap-3 pt-4">
+                            <div className="flex justify-end gap-3 pt-4 border-t border-gray-100 dark:border-gray-700 mt-4">
                                 <button
                                     type="button"
                                     onClick={() => setIsCreateTicketOpen(false)}
@@ -410,7 +418,7 @@ const ContactAdmin = () => {
                                 </button>
                                 <button
                                     type="submit"
-                                    className="px-6 py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-colors"
+                                    className="px-6 py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-colors shadow-md"
                                 >
                                     Create Ticket
                                 </button>
