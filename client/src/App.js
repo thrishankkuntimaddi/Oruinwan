@@ -1,4 +1,4 @@
-// src/App.jsx - Recompile Trigger
+// src/App.jsx - Recompile Trigger (Updated)
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 
 // Context Providers  
@@ -40,7 +40,26 @@ import OAuthSuccess from "./pages/LoginPageComp/OAuthSuccess";
 import AcceptInvite from "./pages/AcceptInvite";
 import JoinWorkspace from "./pages/JoinWorkspace";
 import JoinChannel from "./pages/JoinChannel";
-import ChttrixDocs from "./pages/ChttrixDocs"; // NEW Custom Page
+
+import ChttrixDocs from "./pages/ChttrixDocs";
+import Careers from "./pages/Careers";
+// import PagePlaceholder from "./pages/PagePlaceholder"; // Removed unused
+
+// Footer Pages
+import About from "./pages/company/About";
+import Contact from "./pages/company/Contact";
+import Brand from "./pages/company/Brand";
+import Blog from "./pages/company/Blog";
+import Security from "./pages/company/Security";
+
+import HelpCenter from "./pages/resources/HelpCenter";
+import Community from "./pages/resources/Community";
+import Partners from "./pages/resources/Partners";
+import Status from "./pages/resources/Status";
+
+import Privacy from "./pages/legal/Privacy";
+import Terms from "./pages/legal/Terms";
+import CookieSettings from "./pages/legal/CookieSettings";
 
 import RegisterCompany from "./pages/RegisterCompany";
 import PendingVerification from "./pages/PendingVerification";
@@ -346,15 +365,29 @@ function App() {
                             }
                           />
 
-
-
-
                           {/* PUBLIC ROUTES */}
-
-                          {/* Landing Page (Feature Showcase) */}
                           <Route path="/" element={<FeatureShowcase />} />
                           <Route path="/features" element={<FeatureShowcase />} />
                           <Route path="/chttrix-docs" element={<ChttrixDocs />} />
+                          <Route path="/login" element={<LoginPage />} />
+                          <Route path="/register" element={<Navigate to="/login?mode=signup" replace />} />
+
+                          {/* Footer Routes */}
+                          <Route path="/about" element={<About />} />
+                          <Route path="/contact" element={<Contact />} />
+                          <Route path="/brand" element={<Brand />} />
+                          <Route path="/blog" element={<Blog />} />
+                          <Route path="/security" element={<Security />} />
+                          <Route path="/careers" element={<Careers />} />
+
+                          <Route path="/help" element={<HelpCenter />} />
+                          <Route path="/community" element={<Community />} />
+                          <Route path="/partners" element={<Partners />} />
+                          <Route path="/status" element={<Status />} />
+
+                          <Route path="/privacy" element={<Privacy />} />
+                          <Route path="/terms" element={<Terms />} />
+                          <Route path="/cookies" element={<CookieSettings />} />
 
                           {/* COMPANY SETUP ROUTES */}
                           <Route

@@ -8,7 +8,7 @@ import { useCompany } from '../../contexts/CompanyContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import {
   LayoutDashboard, Users, MapPin, CheckSquare, BarChart3,
-  MessageSquare, Settings, ChevronDown, Globe, Moon, Sun, ChevronUp, LogOut, Search, Bell
+  MessageSquare, Settings, ChevronDown, Globe, Moon, Sun, ChevronUp, LogOut
 } from 'lucide-react';
 import axios from 'axios';
 

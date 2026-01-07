@@ -6,7 +6,6 @@ import {
     Globe, LogOut, Building, BarChart3, ChevronUp, User, HelpCircle
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
-import { useCompany } from '../../contexts/CompanyContext';
 
 const AdminSidebar = () => {
     const navigate = useNavigate();

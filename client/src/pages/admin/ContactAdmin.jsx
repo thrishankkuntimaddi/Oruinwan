@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { MessageSquare, Ticket, Send, Paperclip, Clock, CheckCircle, AlertCircle, Search } from 'lucide-react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { MessageSquare, Ticket, Send, Paperclip, Clock, Search } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCompany } from '../../contexts/CompanyContext';
 import { useToast } from '../../contexts/ToastContext';
@@ -23,7 +23,7 @@ const ContactAdmin = () => {
     const [tickets, setTickets] = useState([]);
     const [loadingTickets, setLoadingTickets] = useState(false);
     const [isCreateTicketOpen, setIsCreateTicketOpen] = useState(false);
-    const [selectedTicket, setSelectedTicket] = useState(null);
+    // const [selectedTicket, setSelectedTicket] = useState(null); // Unused
     const [newTicket, setNewTicket] = useState({
         subject: '',
         priority: 'medium',
@@ -49,26 +49,8 @@ const ContactAdmin = () => {
         }
     }, [user, activeTab]);
 
-    // Fetch chat messages
-    useEffect(() => {
-        if (activeTab === 'chat' && company?._id) {
-            fetchMessages();
-        }
-    }, [activeTab, company?._id]);
-
-    // Fetch tickets
-    useEffect(() => {
-        if (activeTab === 'tickets' && company?._id) {
-            fetchTickets();
-        }
-    }, [activeTab, company?._id]);
-
-    // Auto-scroll to bottom of chat
-    useEffect(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, [messages]);
-
-    const fetchMessages = async () => {
+    const fetchMessages = useCallback(async () => {
+        if (!company?._id) return;
         try {
             setLoadingMessages(true);
             const response = await axios.get(
@@ -82,9 +64,10 @@ const ContactAdmin = () => {
         } finally {
             setLoadingMessages(false);
         }
-    };
+    }, [company?._id, showToast]);
 
-    const fetchTickets = async () => {
+    const fetchTickets = useCallback(async () => {
+        if (!company?._id) return;
         try {
             setLoadingTickets(true);
             const response = await axios.get(
@@ -98,7 +81,26 @@ const ContactAdmin = () => {
         } finally {
             setLoadingTickets(false);
         }
-    };
+    }, [company?._id, showToast]);
+
+    // Fetch chat messages
+    useEffect(() => {
+        if (activeTab === 'chat' && company?._id) {
+            fetchMessages();
+        }
+    }, [activeTab, company?._id, fetchMessages]);
+
+    // Fetch tickets
+    useEffect(() => {
+        if (activeTab === 'tickets' && company?._id) {
+            fetchTickets();
+        }
+    }, [activeTab, company?._id, fetchTickets]);
+
+    // Auto-scroll to bottom of chat
+    useEffect(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, [messages]);
 
     const handleSendMessage = async (e) => {
         e.preventDefault();
@@ -331,8 +333,7 @@ const ContactAdmin = () => {
                                     {tickets.map((ticket) => (
                                         <div
                                             key={ticket._id}
-                                            onClick={() => setSelectedTicket(ticket)}
-                                            className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6 hover:shadow-lg dark:hover:shadow-gray-900/30 hover:border-indigo-200 dark:hover:border-indigo-900 transition-all cursor-pointer group"
+                                            className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6 hover:shadow-lg dark:hover:shadow-gray-900/30 hover:border-indigo-200 dark:hover:border-indigo-900 transition-all cursor-default group"
                                         >
                                             <div className="flex items-start justify-between mb-3">
                                                 <div className="flex-1 pr-4">

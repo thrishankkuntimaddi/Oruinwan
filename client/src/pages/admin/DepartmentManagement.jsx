@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Plus, Users, Search, MoreHorizontal, Edit, Trash2, MessageCircle } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Plus, Users, Search, Edit, Trash2, MessageCircle } from 'lucide-react';
 import { useCompany } from '../../contexts/CompanyContext';
 import { useNavigate } from 'react-router-dom';
 import DepartmentModal from '../../components/company/DepartmentModal'; // Import Modal
@@ -17,7 +17,7 @@ const DepartmentManagement = () => {
   const [viewDepartment, setViewDepartment] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
 
-  const fetchDepartments = async () => {
+  const fetchDepartments = useCallback(async () => {
     if (!company?._id) return;
     try {
       setLoading(true);
@@ -28,11 +28,11 @@ const DepartmentManagement = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [company?._id]);
 
   useEffect(() => {
     fetchDepartments();
-  }, [company?._id]);
+  }, [fetchDepartments]);
 
   const handleCreate = () => {
     setSelectedDept(null);

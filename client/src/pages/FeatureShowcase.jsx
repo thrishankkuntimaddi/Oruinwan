@@ -18,12 +18,33 @@ import {
     Building2,
     CheckCircle2,
     MessageCircle,
-    GitBranch
+    GitBranch,
+    Monitor,
+    Smartphone,
+    Apple
 } from "lucide-react";
 
 // Video Assets
 const VIDEO_HERO_LOGO = "/hover-animation.mp4";
 const VIDEO_AI = "/ChttrixAI-animation.mp4";
+
+const DownloadButton = ({ children, className }) => {
+    const [label, setLabel] = useState(null);
+
+    const handleClick = () => {
+        setLabel("Coming Soon");
+        setTimeout(() => setLabel(null), 2000);
+    };
+
+    return (
+        <button
+            onClick={handleClick}
+            className={`${className} transition-all duration-300`}
+        >
+            {label || children}
+        </button>
+    );
+};
 
 const FeatureShowcase = () => {
     const navigate = useNavigate();
@@ -98,9 +119,9 @@ const FeatureShowcase = () => {
 
                     <div className="hidden md:flex items-center gap-8 text-sm font-bold text-slate-500 dark:text-slate-400">
                         <a href="#platform" className="hover:text-indigo-600 dark:hover:text-white transition-colors">Platform</a>
-                        <a href="#ai" className="hover:text-indigo-600 dark:hover:text-white transition-colors">AI Intelligence</a>
+                        <a href="#ai" className="hover:text-indigo-600 dark:hover:text-white transition-colors">Chttrix Intelligence</a>
                         <a href="#accounts" className="hover:text-indigo-600 dark:hover:text-white transition-colors">Solutions</a>
-                        <button onClick={() => navigate("/chttrix-docs")} className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">Documentation</button>
+                        <a href="#downloads" className="hover:text-indigo-600 dark:hover:text-white transition-colors">Downloads</a>
                     </div>
 
                     <div className="flex items-center gap-4">
@@ -365,14 +386,134 @@ const FeatureShowcase = () => {
                 </div>
             </section>
 
+            {/* Downloads Section */}
+            <section id="downloads" className="scroll-mt-24 py-32 bg-white dark:bg-[#0B0F19] relative border-t border-slate-200 dark:border-white/5">
+                <div className="container mx-auto px-6">
+                    <div className="text-center mb-16">
+                        <h2 className="text-4xl font-black text-slate-900 dark:text-white mb-4">Available Everywhere.</h2>
+                        <p className="text-lg text-slate-500 dark:text-slate-400">Seamlessly sync across all your devices.</p>
+                    </div>
+
+                    <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+                        {/* Web App */}
+                        <div className="bg-slate-50 dark:bg-[#030712] p-8 rounded-3xl border border-slate-200 dark:border-white/10 hover:border-indigo-500 dark:hover:border-indigo-500 transition-all hover:-translate-y-1 hover:shadow-xl group">
+                            <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-2xl flex items-center justify-center mb-6 text-3xl">
+                                <Globe size={32} />
+                            </div>
+                            <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-3">Web App</h3>
+                            <p className="text-slate-500 dark:text-slate-400 mb-8 h-12">
+                                Access your workspace from any browser. No installation required.
+                            </p>
+                            <button onClick={() => navigate("/login")} className="w-full py-3.5 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-black font-bold hover:opacity-90 transition-all flex items-center justify-center gap-2">
+                                Launch Chttrix Web
+                            </button>
+                        </div>
+
+                        {/* Desktop App */}
+                        <div className="bg-slate-50 dark:bg-[#030712] p-8 rounded-3xl border border-slate-200 dark:border-white/10 hover:border-purple-500 dark:hover:border-purple-500 transition-all hover:-translate-y-1 hover:shadow-xl group font-sans">
+                            <div className="w-16 h-16 bg-purple-100 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 rounded-2xl flex items-center justify-center mb-6 text-3xl">
+                                <Monitor size={32} />
+                            </div>
+                            <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-3">Desktop App</h3>
+                            <p className="text-slate-500 dark:text-slate-400 mb-8 h-12">
+                                Native performance, system notifications, and offline support.
+                            </p>
+                            <div className="space-y-3">
+                                <DownloadButton className="w-full py-3.5 rounded-xl bg-slate-200 dark:bg-white/10 text-slate-900 dark:text-white font-bold hover:bg-slate-300 dark:hover:bg-white/20 transition-all flex items-center justify-center gap-2">
+                                    <Apple size={18} /> Download for Mac
+                                </DownloadButton>
+                                <DownloadButton className="w-full py-3.5 rounded-xl bg-slate-200 dark:bg-white/10 text-slate-900 dark:text-white font-bold hover:bg-slate-300 dark:hover:bg-white/20 transition-all flex items-center justify-center gap-2">
+                                    <Monitor size={18} /> Download for Windows
+                                </DownloadButton>
+                            </div>
+                        </div>
+
+                        {/* Mobile App */}
+                        <div className="bg-slate-50 dark:bg-[#030712] p-8 rounded-3xl border border-slate-200 dark:border-white/10 hover:border-green-500 dark:hover:border-green-500 transition-all hover:-translate-y-1 hover:shadow-xl group">
+                            <div className="w-16 h-16 bg-green-100 dark:bg-green-900/20 text-green-600 dark:text-green-400 rounded-2xl flex items-center justify-center mb-6 text-3xl">
+                                <Smartphone size={32} />
+                            </div>
+                            <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-3">Mobile App</h3>
+                            <p className="text-slate-500 dark:text-slate-400 mb-8 h-12">
+                                Stay connected on the go. Available for iOS and Android.
+                            </p>
+                            <div className="grid grid-cols-2 gap-3">
+                                <DownloadButton className="py-3.5 rounded-xl bg-slate-200 dark:bg-white/10 text-slate-900 dark:text-white font-bold hover:bg-slate-300 dark:hover:bg-white/20 transition-all flex flex-col items-center justify-center gap-1">
+                                    <span className="text-xs font-medium opacity-60">Download on the</span>
+                                    <span className="flex items-center gap-1"><Apple size={14} /> App Store</span>
+                                </DownloadButton>
+                                <DownloadButton className="py-3.5 rounded-xl bg-slate-200 dark:bg-white/10 text-slate-900 dark:text-white font-bold hover:bg-slate-300 dark:hover:bg-white/20 transition-all flex flex-col items-center justify-center gap-1">
+                                    <span className="text-xs font-medium opacity-60">GET IT ON</span>
+                                    <span className="flex items-center gap-1"><Play size={14} fill="currentColor" /> Google Play</span>
+                                </DownloadButton>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
             {/* Footer */}
-            <footer className="bg-white dark:bg-[#02050b] border-t border-slate-200 dark:border-white/5 py-12 text-slate-500 text-sm transition-colors">
-                <div className="container mx-auto px-6 flex flex-col md:flex-row justify-between items-center">
-                    <p>© 2026 Chttrix Inc.</p>
-                    <div className="flex gap-6 mt-4 md:mt-0">
-                        <button className="hover:text-slate-900 dark:hover:text-white transition-colors bg-transparent border-0 cursor-pointer font-medium">Contact</button>
-                        <button className="hover:text-slate-900 dark:hover:text-white transition-colors bg-transparent border-0 cursor-pointer font-medium">Twitter</button>
-                        <button className="hover:text-slate-900 dark:hover:text-white transition-colors bg-transparent border-0 cursor-pointer font-medium">Events</button>
+            <footer className="bg-white dark:bg-[#030712] pt-20 pb-12 border-t border-slate-200 dark:border-white/5 transition-colors duration-500">
+                <div className="container mx-auto px-6">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-12 mb-16">
+                        <div>
+                            <h4 className="font-bold mb-6 text-slate-900 dark:text-white">Product</h4>
+                            <ul className="space-y-4 text-sm text-slate-500 dark:text-slate-400">
+                                <li><button onClick={() => navigate('/features')} className="hover:text-indigo-600 dark:hover:text-white transition-colors">Features</button></li>
+                                <li><button className="hover:text-indigo-600 dark:hover:text-white transition-colors">Chttrix AI</button></li>
+                                <li><button className="hover:text-indigo-600 dark:hover:text-white transition-colors">Enterprise</button></li>
+                                <li><button onClick={() => navigate('/security')} className="hover:text-indigo-600 dark:hover:text-white transition-colors">Security</button></li>
+                                <li><button onClick={() => {
+                                    const element = document.getElementById('downloads');
+                                    if (element) element.scrollIntoView({ behavior: 'smooth' });
+                                }} className="hover:text-indigo-600 dark:hover:text-white transition-colors">Downloads</button></li>
+                            </ul>
+                        </div>
+                        <div>
+                            <h4 className="font-bold mb-6 text-slate-900 dark:text-white">Company</h4>
+                            <ul className="space-y-4 text-sm text-slate-500 dark:text-slate-400">
+                                <li><button onClick={() => navigate('/about')} className="hover:text-indigo-600 dark:hover:text-white transition-colors">About Us</button></li>
+                                <li className="flex items-center gap-2">
+                                    <button onClick={() => navigate('/careers')} className="hover:text-indigo-600 dark:hover:text-white transition-colors">Careers</button>
+                                    <span className="bg-indigo-600 text-[10px] font-bold px-2 py-0.5 rounded-full text-white">Hiring</span>
+                                </li>
+                                <li><button onClick={() => navigate('/blog')} className="hover:text-indigo-600 dark:hover:text-white transition-colors">Blog</button></li>
+                                <li><button onClick={() => navigate('/brand')} className="hover:text-indigo-600 dark:hover:text-white transition-colors">Brand & Media</button></li>
+                                <li><button onClick={() => navigate('/contact')} className="hover:text-indigo-600 dark:hover:text-white transition-colors">Contact</button></li>
+                            </ul>
+                        </div>
+                        <div>
+                            <h4 className="font-bold mb-6 text-slate-900 dark:text-white">Resources</h4>
+                            <ul className="space-y-4 text-sm text-slate-500 dark:text-slate-400">
+                                <li><button onClick={() => navigate('/chttrix-docs')} className="hover:text-indigo-600 dark:hover:text-white transition-colors">Documentation</button></li>
+                                <li><button onClick={() => navigate('/help')} className="hover:text-indigo-600 dark:hover:text-white transition-colors">Help Center</button></li>
+                                <li><button onClick={() => navigate('/community')} className="hover:text-indigo-600 dark:hover:text-white transition-colors">Community</button></li>
+                                <li><button onClick={() => navigate('/partners')} className="hover:text-indigo-600 dark:hover:text-white transition-colors">Partners</button></li>
+                                <li><button onClick={() => navigate('/status')} className="hover:text-indigo-600 dark:hover:text-white transition-colors">Status</button></li>
+                            </ul>
+                        </div>
+                        <div>
+                            <h4 className="font-bold mb-6 text-slate-900 dark:text-white">Legal</h4>
+                            <ul className="space-y-4 text-sm text-slate-500 dark:text-slate-400">
+                                <li><button onClick={() => navigate('/privacy')} className="hover:text-indigo-600 dark:hover:text-white transition-colors">Privacy Policy</button></li>
+                                <li><button onClick={() => navigate('/terms')} className="hover:text-indigo-600 dark:hover:text-white transition-colors">Terms of Service</button></li>
+                                <li><button onClick={() => navigate('/cookies')} className="hover:text-indigo-600 dark:hover:text-white transition-colors">Cookie Settings</button></li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div className="pt-8 border-t border-slate-200 dark:border-white/5 flex flex-col md:flex-row justify-between items-center gap-6">
+                        <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 text-sm font-medium">
+                            <div className="w-8 h-8 bg-white dark:bg-white/10 rounded-lg flex items-center justify-center text-slate-900 dark:text-white">
+                                <MessageCircle size={16} fill="currentColor" />
+                            </div>
+                            © 2026 Chttrix Inc. All rights reserved.
+                        </div>
+                        <div className="flex gap-6 text-sm font-bold text-slate-500 dark:text-slate-400">
+                            <button className="hover:text-indigo-600 dark:hover:text-white transition-colors">Twitter/X</button>
+                            <button className="hover:text-indigo-600 dark:hover:text-white transition-colors">LinkedIn</button>
+                            <button className="hover:text-indigo-600 dark:hover:text-white transition-colors">GitHub</button>
+                        </div>
                     </div>
                 </div>
             </footer>
