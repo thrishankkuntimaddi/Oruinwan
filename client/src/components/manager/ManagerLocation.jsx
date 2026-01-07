@@ -17,12 +17,12 @@ const ManagerLocation = () => {
     };
 
     return (
-        <div className="h-full bg-gray-50 flex flex-col">
+        <div className="h-full bg-gray-50 dark:bg-gray-900 flex flex-col transition-colors duration-200">
             {/* Header */}
-            <div className="bg-white border-b border-gray-200 px-8 py-6">
+            <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-8 py-6">
                 <div className="flex flex-col">
-                    <h1 className="text-2xl font-black text-gray-900">My Location</h1>
-                    <p className="text-sm text-gray-500 mt-1">
+                    <h1 className="text-2xl font-bold text-gray-900 dark:text-white">My Location</h1>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                         Physical workspace details for {selectedDepartment?.name}
                     </p>
                 </div>
@@ -34,45 +34,45 @@ const ManagerLocation = () => {
 
                     {/* Main Info Card */}
                     <div className="lg:col-span-2 space-y-6">
-                        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                            <div className="h-48 bg-indigo-50 relative flex items-center justify-center">
+                        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+                            <div className="h-48 bg-indigo-50 dark:bg-indigo-900/20 relative flex items-center justify-center">
                                 {/* Map Placeholder */}
                                 <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#4f46e5_1px,transparent_1px)] [background-size:16px_16px]"></div>
-                                <MapPin size={48} className="text-indigo-600 relative z-10 animate-bounce" />
-                                <div className="absolute bottom-4 right-4 bg-white/90 backdrop-blur px-3 py-1 rounded text-xs font-bold text-gray-600 shadow-sm border border-gray-100">
+                                <MapPin size={48} className="text-indigo-600 dark:text-indigo-400 relative z-10 animate-bounce" />
+                                <div className="absolute bottom-4 right-4 bg-white/90 dark:bg-gray-800/90 backdrop-blur px-3 py-1 rounded text-xs font-bold text-gray-600 dark:text-gray-300 shadow-sm border border-gray-100 dark:border-gray-600">
                                     Map View Coming Soon
                                 </div>
                             </div>
                             <div className="p-6">
-                                <h3 className="text-xl font-bold text-gray-900 mb-2">{locationDetails.name}</h3>
-                                <p className="text-gray-500 flex items-start gap-2">
+                                <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">{locationDetails.name}</h3>
+                                <p className="text-gray-500 dark:text-gray-400 flex items-start gap-2">
                                     <MapPin size={18} className="mt-1 shrink-0 text-gray-400" />
                                     {locationDetails.address}<br />{locationDetails.city}
                                 </p>
                             </div>
                         </div>
 
-                        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                            <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
+                        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+                            <h3 className="font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
                                 <Building size={20} className="text-gray-400" />
                                 Department Facilities
                             </h3>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className="p-4 bg-gray-50 rounded-lg border border-gray-100">
-                                    <span className="text-xs font-bold text-gray-500 uppercase">Meeting Rooms</span>
-                                    <p className="text-lg font-bold text-gray-900 mt-1">4 Available</p>
+                                <div className="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg border border-gray-100 dark:border-gray-700">
+                                    <span className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Meeting Rooms</span>
+                                    <p className="text-lg font-bold text-gray-900 dark:text-white mt-1">4 Available</p>
                                 </div>
-                                <div className="p-4 bg-gray-50 rounded-lg border border-gray-100">
-                                    <span className="text-xs font-bold text-gray-500 uppercase">Capacity</span>
-                                    <p className="text-lg font-bold text-gray-900 mt-1">45/50 Seats</p>
+                                <div className="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg border border-gray-100 dark:border-gray-700">
+                                    <span className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Capacity</span>
+                                    <p className="text-lg font-bold text-gray-900 dark:text-white mt-1">45/50 Seats</p>
                                 </div>
-                                <div className="p-4 bg-gray-50 rounded-lg border border-gray-100">
-                                    <span className="text-xs font-bold text-gray-500 uppercase">Floor</span>
-                                    <p className="text-lg font-bold text-gray-900 mt-1">4th Floor</p>
+                                <div className="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg border border-gray-100 dark:border-gray-700">
+                                    <span className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Floor</span>
+                                    <p className="text-lg font-bold text-gray-900 dark:text-white mt-1">4th Floor</p>
                                 </div>
-                                <div className="p-4 bg-gray-50 rounded-lg border border-gray-100">
-                                    <span className="text-xs font-bold text-gray-500 uppercase">Access Code</span>
-                                    <p className="text-lg font-bold text-gray-900 mt-1">#9821</p>
+                                <div className="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg border border-gray-100 dark:border-gray-700">
+                                    <span className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Access Code</span>
+                                    <p className="text-lg font-bold text-gray-900 dark:text-white mt-1">#9821</p>
                                 </div>
                             </div>
                         </div>
@@ -80,28 +80,28 @@ const ManagerLocation = () => {
 
                     {/* Sidebar Info */}
                     <div className="space-y-6">
-                        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                            <h3 className="font-bold text-gray-900 mb-4">Quick Details</h3>
+                        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+                            <h3 className="font-bold text-gray-900 dark:text-white mb-4">Quick Details</h3>
                             <ul className="space-y-4">
                                 <li className="flex items-center gap-3 text-sm">
                                     <Globe className="text-gray-400" size={18} />
                                     <div>
-                                        <p className="font-bold text-gray-900">Timezone</p>
-                                        <p className="text-gray-500">{locationDetails.timezone}</p>
+                                        <p className="font-bold text-gray-900 dark:text-white">Timezone</p>
+                                        <p className="text-gray-500 dark:text-gray-400">{locationDetails.timezone}</p>
                                     </div>
                                 </li>
                                 <li className="flex items-center gap-3 text-sm">
                                     <Navigation className="text-gray-400" size={18} />
                                     <div>
-                                        <p className="font-bold text-gray-900">Coordinates</p>
-                                        <p className="text-gray-500">{locationDetails.coordinates}</p>
+                                        <p className="font-bold text-gray-900 dark:text-white">Coordinates</p>
+                                        <p className="text-gray-500 dark:text-gray-400">{locationDetails.coordinates}</p>
                                     </div>
                                 </li>
                                 <li className="flex items-center gap-3 text-sm">
                                     <Phone className="text-gray-400" size={18} />
                                     <div>
-                                        <p className="font-bold text-gray-900">Desk Support</p>
-                                        <p className="text-gray-500">{locationDetails.contact}</p>
+                                        <p className="font-bold text-gray-900 dark:text-white">Desk Support</p>
+                                        <p className="text-gray-500 dark:text-gray-400">{locationDetails.contact}</p>
                                     </div>
                                 </li>
                             </ul>

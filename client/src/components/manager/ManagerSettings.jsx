@@ -44,20 +44,20 @@ const ManagerSettings = () => {
     };
 
     return (
-        <div className="h-full bg-gray-50 flex flex-col">
+        <div className="h-full bg-gray-50 dark:bg-gray-900 flex flex-col transition-colors duration-200">
             {/* Header */}
-            <div className="bg-white border-b border-gray-200 px-8 py-6">
+            <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-8 py-6">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div>
-                        <h1 className="text-2xl font-black text-gray-900">My Settings</h1>
-                        <p className="text-sm text-gray-500 mt-1">Manage your profile and preferences</p>
+                        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">My Settings</h1>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Manage your profile and preferences</p>
                     </div>
                     <div className="flex items-center gap-3">
                         {isEditing ? (
                             <>
                                 <button
                                     onClick={handleCancel}
-                                    className="px-4 py-2 bg-white border border-gray-200 text-gray-600 text-sm font-bold rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2"
+                                    className="px-4 py-2 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 text-sm font-bold rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors flex items-center gap-2"
                                 >
                                     <X size={16} /> Cancel
                                 </button>
@@ -85,18 +85,18 @@ const ManagerSettings = () => {
             <div className="flex-1 overflow-y-auto p-8">
                 <div className="max-w-4xl mx-auto space-y-6">
                     {/* Profile Card */}
-                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                        <div className="p-6 border-b border-gray-200">
-                            <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-                                <User className="w-5 h-5 text-indigo-600" />
+                    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+                        <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+                            <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                                <User className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
                                 Personal Information
                             </h3>
                         </div>
                         <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-8">
                             {/* Avatar Section */}
-                            <div className="flex flex-col items-center justify-center p-6 bg-gray-50 rounded-xl border border-dashed border-gray-300">
+                            <div className="flex flex-col items-center justify-center p-6 bg-gray-50 dark:bg-gray-700/30 rounded-xl border border-dashed border-gray-300 dark:border-gray-600">
                                 <div className="relative group">
-                                    <div className="w-32 h-32 rounded-full bg-indigo-100 flex items-center justify-center text-4xl font-black text-indigo-600 border-4 border-white shadow-md">
+                                    <div className="w-32 h-32 rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center text-4xl font-black text-indigo-600 dark:text-indigo-400 border-4 border-white dark:border-gray-800 shadow-md">
                                         {profileData.username?.charAt(0)?.toUpperCase()}
                                     </div>
                                     {isEditing && (
@@ -106,47 +106,47 @@ const ManagerSettings = () => {
                                     )}
                                 </div>
                                 <div className="mt-4 text-center">
-                                    <p className="text-sm font-bold text-gray-900 capitalize">{user?.companyRole || 'Manager'}</p>
-                                    <p className="text-xs text-gray-500">{company?.name}</p>
+                                    <p className="text-sm font-bold text-gray-900 dark:text-white capitalize">{user?.companyRole || 'Manager'}</p>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400">{company?.name}</p>
                                 </div>
                             </div>
 
                             {/* Form Fields */}
                             <div className="space-y-4">
                                 <div>
-                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Full Name</label>
+                                    <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1">Full Name</label>
                                     <div className="relative">
-                                        <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                                        <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500" />
                                         <input
                                             type="text"
                                             value={profileData.username}
                                             onChange={(e) => setProfileData({ ...profileData, username: e.target.value })}
                                             disabled={!isEditing}
-                                            className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-60 disabled:cursor-not-allowed"
+                                            className="w-full pl-10 pr-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-60 disabled:cursor-not-allowed text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
                                         />
                                     </div>
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Email Address</label>
+                                    <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1">Email Address</label>
                                     <div className="relative">
-                                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500" />
                                         <input
                                             type="email"
                                             value={profileData.email}
                                             disabled={true} // Email usually not editable directly
-                                            className="w-full pl-10 pr-4 py-2 bg-gray-100 border border-gray-200 rounded-lg text-gray-500 cursor-not-allowed"
+                                            className="w-full pl-10 pr-4 py-2 bg-gray-100 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-lg text-gray-500 dark:text-gray-400 cursor-not-allowed"
                                         />
                                     </div>
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Department</label>
+                                    <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1">Department</label>
                                     <div className="relative">
-                                        <Building className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                                        <Building className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500" />
                                         <input
                                             type="text"
                                             value="Design (Head)" // Placeholder - normally fetched dynamically
                                             disabled={true}
-                                            className="w-full pl-10 pr-4 py-2 bg-gray-100 border border-gray-200 rounded-lg text-gray-500 cursor-not-allowed"
+                                            className="w-full pl-10 pr-4 py-2 bg-gray-100 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-lg text-gray-500 dark:text-gray-400 cursor-not-allowed"
                                         />
                                     </div>
                                 </div>

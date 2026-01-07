@@ -128,26 +128,26 @@ const ManagerContactAdmin = () => {
 
     if (!admin) {
         return (
-            <div className="h-full flex items-center justify-center bg-gray-50">
+            <div className="h-full flex items-center justify-center bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
                 <div className="text-center">
-                    <User className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                    <p className="text-gray-500">No company admin found</p>
+                    <User className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+                    <p className="text-gray-500 dark:text-gray-400">No company admin found</p>
                 </div>
             </div>
         );
     }
 
     return (
-        <div className="h-full flex flex-col bg-gray-50">
+        <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
             {/* Header */}
-            <div className="bg-white border-b border-gray-200 px-8 py-6">
+            <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-8 py-6">
                 <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold text-lg">
+                    <div className="w-12 h-12 rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-bold text-lg">
                         {admin.username?.charAt(0)?.toUpperCase()}
                     </div>
                     <div>
-                        <h1 className="text-2xl font-black text-gray-900">Contact Company Admin</h1>
-                        <p className="text-sm text-gray-500">
+                        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Contact Company Admin</h1>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
                             Messaging {admin.username} • {admin.email}
                         </p>
                     </div>
@@ -155,16 +155,16 @@ const ManagerContactAdmin = () => {
             </div>
 
             {/* Messages Area */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-4">
+            <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-gray-50 dark:bg-gray-900">
                 {loading ? (
                     <div className="flex items-center justify-center h-full">
                         <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
                     </div>
                 ) : messages.length === 0 ? (
                     <div className="flex flex-col items-center justify-center h-full text-center">
-                        <MessageSquare className="w-16 h-16 text-gray-300 mb-4" />
-                        <h3 className="text-lg font-bold text-gray-900 mb-2">No messages yet</h3>
-                        <p className="text-gray-500 max-w-md">
+                        <MessageSquare className="w-16 h-16 text-gray-300 dark:text-gray-600 mb-4" />
+                        <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">No messages yet</h3>
+                        <p className="text-gray-500 dark:text-gray-400 max-w-md">
                             Start a conversation with your company admin. They'll be notified and can respond directly.
                         </p>
                     </div>
@@ -179,13 +179,13 @@ const ManagerContactAdmin = () => {
                                 >
                                     <div
                                         className={`max-w-md px-4 py-3 rounded-2xl ${isFromMe
-                                                ? 'bg-indigo-600 text-white'
-                                                : 'bg-white border border-gray-200 text-gray-900'
+                                            ? 'bg-indigo-600 text-white'
+                                            : 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white'
                                             }`}
                                     >
                                         <p className="text-sm">{msg.content}</p>
                                         <p
-                                            className={`text-xs mt-1 ${isFromMe ? 'text-indigo-200' : 'text-gray-500'
+                                            className={`text-xs mt-1 ${isFromMe ? 'text-indigo-200' : 'text-gray-500 dark:text-gray-400'
                                                 }`}
                                         >
                                             {new Date(msg.createdAt).toLocaleTimeString()}
@@ -200,11 +200,11 @@ const ManagerContactAdmin = () => {
             </div>
 
             {/* Message Input */}
-            <div className="border-t border-gray-200 p-4 bg-white">
+            <div className="border-t border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800">
                 <form onSubmit={handleSendMessage} className="flex gap-2">
                     <button
                         type="button"
-                        className="p-3 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                        className="p-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
                     >
                         <Paperclip size={20} />
                     </button>
@@ -213,7 +213,7 @@ const ManagerContactAdmin = () => {
                         value={newMessage}
                         onChange={(e) => setNewMessage(e.target.value)}
                         placeholder="Type your message..."
-                        className="flex-1 px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                        className="flex-1 px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
                     />
                     <button
                         type="submit"

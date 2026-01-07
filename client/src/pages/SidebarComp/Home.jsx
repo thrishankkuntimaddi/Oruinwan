@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useParams, useLocation } from "react-router-dom";
+import { useParams, useLocation, useNavigate } from "react-router-dom";
 import ChatWindow from "../../components/messagesComp/chatWindowComp/chatWindow";
 import { useWorkspace } from "../../contexts/WorkspaceContext";
 import api from "../../services/api";
@@ -8,6 +8,7 @@ import { useSocket } from "../../contexts/SocketContext";
 const Home = () => {
   const { workspaceId, id, dmId } = useParams();
   const location = useLocation();
+  const navigate = useNavigate();
   const { activeWorkspace } = useWorkspace();
   const [activeChat, setActiveChat] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -165,8 +166,15 @@ const Home = () => {
           <div className="relative z-10 flex flex-col items-center max-w-lg text-center p-8">
             <div className="w-24 h-24 mb-8 relative group">
               <div className="absolute inset-0 bg-gradient-to-tr from-indigo-500 to-purple-500 rounded-2xl blur-xl opacity-20 group-hover:opacity-40 transition-opacity duration-500"></div>
-              <div className="relative w-full h-full bg-white dark:bg-gray-800 rounded-2xl shadow-xl flex items-center justify-center border border-indigo-50 dark:border-gray-700 group-hover:-translate-y-1 transition-transform duration-300">
-                <span className="text-5xl">👋</span>
+              <div className="relative w-full h-full bg-white dark:bg-gray-800 rounded-2xl shadow-xl flex items-center justify-center border border-indigo-50 dark:border-gray-700 group-hover:-translate-y-1 transition-transform duration-300 overflow-hidden">
+                <video
+                  src="/hover-animation.mp4"
+                  autoPlay
+                  loop
+                  muted
+                  playsInline
+                  className="w-full h-full object-cover"
+                />
               </div>
             </div>
 
@@ -179,22 +187,28 @@ const Home = () => {
             </p>
 
             <div className="grid grid-cols-2 gap-4 w-full">
-              <div className="p-4 bg-white dark:bg-gray-800 rounded-xl border border-slate-100 dark:border-gray-700 shadow-sm flex items-center gap-3">
-                <div className="p-2 bg-indigo-50 dark:bg-indigo-900/30 rounded-lg text-indigo-600 dark:text-indigo-400">
+              <div
+                onClick={() => navigate(`/workspace/${workspaceId}/channels`)}
+                className="p-4 bg-white dark:bg-gray-800 rounded-xl border border-slate-100 dark:border-gray-700 shadow-sm flex items-center gap-3 cursor-pointer hover:shadow-md hover:border-indigo-200 transition-all group"
+              >
+                <div className="p-2 bg-indigo-50 dark:bg-indigo-900/30 rounded-lg text-indigo-600 dark:text-indigo-400 group-hover:bg-indigo-100 transition-colors">
                   <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
                 </div>
                 <div className="text-left">
-                  <div className="font-bold text-slate-800 dark:text-gray-200 text-sm">Channels</div>
+                  <div className="font-bold text-slate-800 dark:text-gray-200 text-sm group-hover:text-indigo-600 transition-colors">Channels</div>
                   <div className="text-xs text-slate-400 dark:text-gray-500">Team discussions</div>
                 </div>
               </div>
 
-              <div className="p-4 bg-white dark:bg-gray-800 rounded-xl border border-slate-100 dark:border-gray-700 shadow-sm flex items-center gap-3">
-                <div className="p-2 bg-purple-50 dark:bg-purple-900/30 rounded-lg text-purple-600 dark:text-purple-400">
+              <div
+                onClick={() => navigate(`/workspace/${workspaceId}/messages`)}
+                className="p-4 bg-white dark:bg-gray-800 rounded-xl border border-slate-100 dark:border-gray-700 shadow-sm flex items-center gap-3 cursor-pointer hover:shadow-md hover:border-purple-200 transition-all group"
+              >
+                <div className="p-2 bg-purple-50 dark:bg-purple-900/30 rounded-lg text-purple-600 dark:text-purple-400 group-hover:bg-purple-100 transition-colors">
                   <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><line x1="22" y1="21" x2="22" y2="21"></line><path d="M20 8v6"></path><path d="M23 11h-6"></path></svg>
                 </div>
                 <div className="text-left">
-                  <div className="font-bold text-slate-800 dark:text-gray-200 text-sm">Direct Messages</div>
+                  <div className="font-bold text-slate-800 dark:text-gray-200 text-sm group-hover:text-purple-600 transition-colors">Direct Messages</div>
                   <div className="text-xs text-slate-400 dark:text-gray-500">Private chats</div>
                 </div>
               </div>

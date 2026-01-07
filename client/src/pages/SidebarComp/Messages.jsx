@@ -4,13 +4,18 @@ import ChatWindow from "../../components/messagesComp/chatWindowComp/chatWindow"
 import BroadcastChatWindow from "../../components/messagesComp/BroadcastChatWindow";
 import { useContacts } from "../../contexts/ContactsContext";
 import api from "../../services/api";
+import { MessageSquarePlus } from "lucide-react";
+import NewDMModal from "../../components/messagesComp/NewDMModal";
+import { useParams } from "react-router-dom";
 
 export default function Messages() {
   const [selectedChat, setSelectedChat] = useState(null);
   const [currentBroadcast, setCurrentBroadcast] = useState(null);
+  const [showCreateDM, setShowCreateDM] = useState(false);
   const { contacts, deleteItem } = useContacts();
   const location = useLocation();
   const navigate = useNavigate();
+  const { workspaceId } = useParams();
   const [searchParams] = useSearchParams();
 
   // Handle Routing for Selected Chat
@@ -322,6 +327,14 @@ export default function Messages() {
     navigate("/messages"); // Go back to empty state in messages
   };
 
+  const handleStartDM = (selectedUser) => {
+    setShowCreateDM(false);
+    // Navigate to the "new" DM route with the target user's ID
+    if (workspaceId) {
+      navigate(`/workspace/${workspaceId}/messages/dm/${selectedUser._id || selectedUser.id}`);
+    }
+  };
+
   return (
     <div className="flex flex-col h-full w-full">
       <div className="flex flex-1 overflow-hidden">
@@ -337,15 +350,58 @@ export default function Messages() {
               onDeleteChat={() => handleDeleteChat(selectedChat)}
             />
           ) : (
-            <div className="flex flex-col items-center justify-center h-full text-gray-400 bg-white dark:bg-gray-900">
-              <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mb-4">
-                <span className="text-3xl">💬</span>
+            <div className="flex flex-col items-center justify-center h-full bg-slate-50 dark:bg-gray-900 relative overflow-hidden">
+              {/* Background Decor */}
+              <div className="absolute top-1/4 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl animate-pulse"></div>
+              <div className="absolute bottom-1/4 left-1/4 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
+
+              <div className="relative z-10 flex flex-col items-center max-w-lg text-center p-8">
+
+                {/* Video Container */}
+                <div className="w-24 h-24 mb-6 relative group">
+                  <div className="absolute inset-0 bg-gradient-to-tr from-purple-500 to-indigo-500 rounded-2xl blur-xl opacity-20 group-hover:opacity-40 transition-opacity duration-500"></div>
+                  <div className="relative w-full h-full bg-white dark:bg-gray-800 rounded-2xl shadow-xl flex items-center justify-center border border-purple-50 dark:border-gray-700 overflow-hidden transform group-hover:scale-105 transition-transform duration-300">
+                    <video
+                      src="/hover-animation.mp4"
+                      autoPlay
+                      loop
+                      muted
+                      playsInline
+                      className="w-full h-full object-cover opacity-90"
+                    />
+                  </div>
+                </div>
+
+                <h2 className="text-2xl font-black text-slate-900 dark:text-white mb-2 tracking-tight">
+                  Direct Messages
+                </h2>
+                <p className="text-slate-500 dark:text-gray-400 mb-8 max-w-xs mx-auto leading-relaxed">
+                  Select a conversation from the sidebar or start a new private chat.
+                </p>
+
+                {/* Visual Hint */}
+                {/* Visual Hint */}
+                <button
+                  onClick={() => setShowCreateDM(true)}
+                  className="flex items-center gap-2 text-sm font-bold text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/20 px-4 py-2 rounded-full border border-purple-100 dark:border-purple-800/50 hover:bg-purple-100 dark:hover:bg-purple-900/40 transition-colors cursor-pointer"
+                >
+                  <MessageSquarePlus size={18} />
+                  <span>Start a new chat</span>
+                </button>
+
               </div>
-              <p className="text-lg font-medium text-gray-500 dark:text-gray-400">Select a conversation to start chatting</p>
             </div>
           )}
         </div>
       </div>
+
+      {/* New DM Modal */}
+      {showCreateDM && (
+        <NewDMModal
+          onClose={() => setShowCreateDM(false)}
+          onStart={handleStartDM}
+        />
+      )}
     </div>
   );
 }

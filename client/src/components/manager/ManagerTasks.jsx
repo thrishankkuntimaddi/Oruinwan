@@ -68,47 +68,47 @@ const ManagerTasks = () => {
         }
     };
 
-    const StatusColumn = ({ title, items, status, icon: Icon, color }) => (
-        <div className="flex-1 min-w-[300px] bg-gray-50 rounded-xl p-4 flex flex-col h-full max-h-full">
-            <div className={`flex items-center gap-2 mb-4 font-bold ${color}`}>
+    const StatusColumn = ({ title, items, status, icon: Icon, color, darkColor }) => (
+        <div className="flex-1 min-w-[300px] bg-gray-50 dark:bg-gray-800 rounded-xl p-4 flex flex-col h-full max-h-full">
+            <div className={`flex items-center gap-2 mb-4 font-bold ${color} ${darkColor}`}>
                 <Icon size={18} />
                 <h3>{title}</h3>
-                <span className="ml-auto bg-white px-2 py-0.5 rounded-full text-xs shadow-sm text-gray-600">
+                <span className="ml-auto bg-white dark:bg-gray-700 px-2 py-0.5 rounded-full text-xs shadow-sm text-gray-600 dark:text-gray-300">
                     {items.length}
                 </span>
             </div>
 
             <div className="flex-1 overflow-y-auto space-y-3 pr-2 custom-scrollbar">
                 {items.length === 0 ? (
-                    <div className="text-center py-8 text-gray-400 border-2 border-dashed border-gray-200 rounded-lg">
+                    <div className="text-center py-8 text-gray-400 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-lg">
                         <p className="text-sm">No tasks</p>
                     </div>
                 ) : (
                     items.map(task => (
-                        <div key={task._id} className="bg-white p-4 rounded-lg shadow-sm border border-gray-100 hover:shadow-md transition-shadow group">
+                        <div key={task._id} className="bg-white dark:bg-gray-700 p-4 rounded-lg shadow-sm border border-gray-100 dark:border-gray-600 hover:shadow-md transition-shadow group">
                             <div className="flex justify-between items-start mb-2">
                                 <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide
-                  ${task.priority === 'urgent' ? 'bg-red-100 text-red-600' :
-                                        task.priority === 'high' ? 'bg-orange-100 text-orange-600' :
-                                            task.priority === 'medium' ? 'bg-blue-100 text-blue-600' :
-                                                'bg-gray-100 text-gray-600'
+                  ${task.priority === 'urgent' ? 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400' :
+                                        task.priority === 'high' ? 'bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400' :
+                                            task.priority === 'medium' ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400' :
+                                                'bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-300'
                                     }`}>
                                     {task.priority}
                                 </span>
-                                <button className="text-gray-300 hover:text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button className="text-gray-300 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity">
                                     <MoreVertical size={14} />
                                 </button>
                             </div>
 
-                            <h4 className="font-bold text-gray-800 mb-1">{task.title}</h4>
-                            <p className="text-xs text-gray-500 mb-3 line-clamp-2">{task.description}</p>
+                            <h4 className="font-bold text-gray-800 dark:text-gray-100 mb-1">{task.title}</h4>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mb-3 line-clamp-2">{task.description}</p>
 
-                            <div className="flex items-center justify-between pt-3 border-t border-gray-50">
+                            <div className="flex items-center justify-between pt-3 border-t border-gray-50 dark:border-gray-600">
                                 <div className="flex items-center gap-2">
                                     {task.assignedTo && task.assignedTo.length > 0 ? (
                                         <div className="flex -space-x-2">
                                             {task.assignedTo.map((assignee, idx) => (
-                                                <div key={idx} className="w-6 h-6 rounded-full bg-indigo-100 border-2 border-white flex items-center justify-center text-[10px] font-bold text-indigo-700" title={assignee.username}>
+                                                <div key={idx} className="w-6 h-6 rounded-full bg-indigo-100 dark:bg-indigo-900 border-2 border-white dark:border-gray-700 flex items-center justify-center text-[10px] font-bold text-indigo-700 dark:text-indigo-300" title={assignee.username}>
                                                     {assignee.username?.charAt(0).toUpperCase()}
                                                 </div>
                                             ))}
@@ -125,7 +125,7 @@ const ManagerTasks = () => {
                                     {status === 'open' && (
                                         <button
                                             onClick={() => handleStatusChange(task._id, 'in-progress')}
-                                            className="p-1 hover:bg-blue-50 text-gray-400 hover:text-blue-600 rounded" title="Start"
+                                            className="p-1 hover:bg-blue-50 dark:hover:bg-blue-900/20 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 rounded" title="Start"
                                         >
                                             <Clock size={14} />
                                         </button>
@@ -133,7 +133,7 @@ const ManagerTasks = () => {
                                     {status === 'in-progress' && (
                                         <button
                                             onClick={() => handleStatusChange(task._id, 'done')}
-                                            className="p-1 hover:bg-green-50 text-gray-400 hover:text-green-600 rounded" title="Complete"
+                                            className="p-1 hover:bg-green-50 dark:hover:bg-green-900/20 text-gray-400 hover:text-green-600 dark:hover:text-green-400 rounded" title="Complete"
                                         >
                                             <CheckCircle2 size={14} />
                                         </button>
@@ -147,15 +147,15 @@ const ManagerTasks = () => {
         </div>
     );
 
-    if (loading) return <div className="p-8 text-center text-gray-500">Loading tasks...</div>;
+    if (loading) return <div className="p-8 text-center text-gray-500 dark:text-gray-400">Loading tasks...</div>;
 
     return (
-        <div className="h-full flex flex-col bg-white">
+        <div className="h-full flex flex-col bg-white dark:bg-gray-900 transition-colors duration-200">
             {/* Header */}
-            <div className="px-8 py-6 border-b border-gray-200 flex justify-between items-center">
+            <div className="px-8 py-6 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex justify-between items-center">
                 <div>
-                    <h2 className="text-2xl font-black text-gray-900">Task Board</h2>
-                    <p className="text-sm text-gray-500">Manage tasks for {selectedDepartment?.name}</p>
+                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Task Board</h2>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Manage tasks for {selectedDepartment?.name}</p>
                 </div>
                 <button
                     onClick={() => setIsCreateModalOpen(true)}
@@ -166,7 +166,7 @@ const ManagerTasks = () => {
             </div>
 
             {/* Kanban Board */}
-            <div className="flex-1 overflow-x-auto p-6">
+            <div className="flex-1 overflow-x-auto p-6 bg-gray-50 dark:bg-gray-900">
                 <div className="flex gap-6 h-full min-w-max">
                     <StatusColumn
                         title="To Do"
@@ -174,6 +174,7 @@ const ManagerTasks = () => {
                         status="open"
                         icon={AlertCircle}
                         color="text-gray-600"
+                        darkColor="dark:text-gray-300"
                     />
                     <StatusColumn
                         title="In Progress"
@@ -181,6 +182,7 @@ const ManagerTasks = () => {
                         status="in-progress"
                         icon={Clock}
                         color="text-blue-600"
+                        darkColor="dark:text-blue-400"
                     />
                     <StatusColumn
                         title="Completed"
@@ -188,6 +190,7 @@ const ManagerTasks = () => {
                         status="done"
                         icon={CheckCircle2}
                         color="text-green-600"
+                        darkColor="dark:text-green-400"
                     />
                 </div>
             </div>
@@ -195,42 +198,42 @@ const ManagerTasks = () => {
             {/* Create Task Modal */}
             {isCreateModalOpen && (
                 <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-                    <div className="bg-white rounded-xl w-full max-w-md shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
-                        <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
-                            <h3 className="font-bold text-gray-900">Create New Task</h3>
-                            <button onClick={() => setIsCreateModalOpen(false)} className="text-gray-400 hover:text-gray-700">
+                    <div className="bg-white dark:bg-gray-800 rounded-xl w-full max-w-md shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
+                        <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-900/50">
+                            <h3 className="font-bold text-gray-900 dark:text-white">Create New Task</h3>
+                            <button onClick={() => setIsCreateModalOpen(false)} className="text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">
                                 <X size={20} />
                             </button>
                         </div>
                         <form onSubmit={handleCreateTask} className="p-6 space-y-4">
                             <div>
-                                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Task Title <span className="text-red-500">*</span></label>
+                                <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1">Task Title <span className="text-red-500">*</span></label>
                                 <input
                                     type="text"
                                     required
                                     value={newTask.title}
                                     onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                                     placeholder="e.g. Update API Documentation"
                                 />
                             </div>
                             <div>
-                                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Description</label>
+                                <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1">Description</label>
                                 <textarea
                                     value={newTask.description}
                                     onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
                                     rows="3"
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+                                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
                                     placeholder="Add details about this task..."
                                 />
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Priority</label>
+                                    <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1">Priority</label>
                                     <select
                                         value={newTask.priority}
                                         onChange={(e) => setNewTask({ ...newTask, priority: e.target.value })}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                                     >
                                         <option value="low">Low</option>
                                         <option value="medium">Medium</option>
@@ -239,12 +242,12 @@ const ManagerTasks = () => {
                                     </select>
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Due Date</label>
+                                    <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1">Due Date</label>
                                     <input
                                         type="date"
                                         value={newTask.dueDate}
                                         onChange={(e) => setNewTask({ ...newTask, dueDate: e.target.value })}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                                     />
                                 </div>
                             </div>
@@ -252,7 +255,7 @@ const ManagerTasks = () => {
                                 <button
                                     type="button"
                                     onClick={() => setIsCreateModalOpen(false)}
-                                    className="px-4 py-2 text-sm font-bold text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                                    className="px-4 py-2 text-sm font-bold text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
                                 >
                                     Cancel
                                 </button>
