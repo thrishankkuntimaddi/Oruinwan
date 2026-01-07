@@ -22,16 +22,17 @@ import FooterInput from "./footer/footerInput.jsx";
 
 import { pickFile } from "./helpers/helpers.js";
 
-import { io } from "socket.io-client";
 import api from "../../../services/api";
 import { jwtDecode } from "jwt-decode";
 import { useAuth } from "../../../contexts/AuthContext";
+import { useSocket } from "../../../contexts/SocketContext";
 
-const API_BASE = process.env.REACT_APP_BACKEND_URL || "http://localhost:5000";
+
 
 export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat }) {
   const [userRole, setUserRole] = useState(null); // 'owner', 'admin', 'member', etc.
   const { accessToken } = useAuth();
+  const { socket: sharedSocket, isConnected: sharedSocketConnected } = useSocket();
   /* ---------------------------------------------------------
       STATE
   --------------------------------------------------------- */
@@ -332,170 +333,23 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
   useEffect(() => {
     if (!chat) return;
 
-    // Helper function to check and refresh token if needed
-    const ensureValidToken = async () => {
-      // Use context token OR fallback to localStorage for socket auth
-      let token = accessToken || localStorage.getItem("accessToken");
-      if (!token) return null;
-
-      try {
-        // Check if token is expired or about to expire
-        const decoded = jwtDecode(token);
-        const now = Date.now() / 1000;
-
-        // If token expires in less than 60 seconds, refresh it proactively
-        if (decoded.exp && decoded.exp - now < 60) {
-          console.log('🔄 [ChatWindow] Token expiring soon, refreshing proactively...');
-
-          try {
-            const response = await api.post('/api/auth/refresh', {}, {
-              withCredentials: true
-            });
-
-            token = response.data.accessToken;
-            localStorage.setItem('accessToken', token);
-            console.log('✅ [ChatWindow] Token refreshed before socket connection');
-          } catch (refreshError) {
-            console.error('❌ [ChatWindow] Failed to refresh token:', refreshError);
-            showToast("Session expired. Please login again.", "error");
-            return null;
-          }
-        }
-      } catch (err) {
-        console.error('[ChatWindow] Token decode error:', err);
-        // If token is malformed, try to continue anyway and let server reject
+    // Use shared socket from context instead of creating new one
+    const setupSocket = async () => {
+      if (!sharedSocket) {
+        console.log('⚠️ [ChatWindow] Shared socket not available yet');
+        return;
       }
 
-      return token;
-    };
-
-    // Connect socket with valid token
-    const connectSocket = async () => {
-      const validToken = await ensureValidToken();
-      if (!validToken) return;
-
-      const socket = io(API_BASE, {
-        auth: { token: validToken },
-        transports: ["websocket"],
-      });
-
+      console.log('✅ [ChatWindow] Using shared socket:', sharedSocket.id);
+      const socket = sharedSocket;
       socketRef.current = socket;
+      setConnected(sharedSocketConnected);
 
-      /* --- Connection --- */
-      socket.on("connect", () => {
-        setConnected(true);
-        console.log('✅ [ChatWindow] Socket connected');
-
-        if (!chat) return;
-
-        // Join appropriate room AFTER socket is connected
-        if (chat.type === "dm") {
-          if (chat.isNew) {
-            console.log('📝 [ChatWindow] New DM - not joining room yet');
-          } else {
-            console.log(`🚪 [ChatWindow] Joining DM room: ${chat.id}`);
-            socket.emit("join-dm", { dmSessionId: chat.id });
-          }
-        } else {
-          console.log(`🚪 [ChatWindow] Joining channel room: ${chat.id}`);
-          socket.emit("join-channel", { channelId: chat.id });
-        }
-      });
-
-      socket.on("connect_error", async (err) => {
-        console.error('❌ [ChatWindow] Socket connection error:', err.message);
-        setConnected(false);
-
-        // If authentication failed, try to refresh the token
-        if (err.message.includes('Authentication') || err.message.includes('jwt') || err.message.includes('token')) {
-          console.log('🔄 [ChatWindow] Attempting token refresh due to auth failure...');
-
-          try {
-            // Try to refresh the token
-            // The refresh token is in HTTP-only cookie, so we don't need to pass it
-            // Just make the request with credentials: 'include' to send cookies
-            const response = await api.post('/api/auth/refresh', {}, {
-              withCredentials: true  // This sends the HTTP-only cookie
-            });
-
-            const newAccessToken = response.data.accessToken;
-
-            if (newAccessToken) {
-              localStorage.setItem('accessToken', newAccessToken);
-              console.log('✅ [ChatWindow] Token refreshed successfully');
-
-              // Show success message and reload to reconnect
-              showToast("Reconnecting with fresh session...", "success");
-
-              // Reload page to reinitialize with fresh token
-              setTimeout(() => {
-                window.location.reload();
-              }, 500);
-              return;
-            }
-
-            // If refresh failed, show error
-            showToast("Session expired. Please login again.", "error");
-          } catch (refreshErr) {
-            console.error('❌ [ChatWindow] Token refresh failed:', refreshErr);
-
-            // Check if it's a 401 (no refresh token) or other error
-            if (refreshErr.response?.status === 401) {
-              showToast("Please login to continue.", "info");
-            } else {
-              showToast("Session expired. Please login again.", "error");
-            }
-          }
-        } else {
-          showToast("Connection error. Retrying...", "error");
-        }
-      });
-
-      /* --- SOCKET DISCONNECT --- */
-      socket.on("disconnect", (reason) => {
-        console.log("🔌 [ChatWindow] Socket disconnected:", reason);
-        setConnected(false);
-
-        // Don't show toast for intentional disconnects (navigation, refresh, etc.)
-        // Socket will auto-reconnect if it was a network issue
-        if (reason === "transport close" || reason === "transport error") {
-          // Network issue - socket.io will auto-reconnect
-          console.log("⚠️ Network disconnect - will auto-reconnect");
-        }
-        // Removed annoying toast - disconnects during navigation are normal
-      });
-
-      /* --- MEMBER LEFT CHANNEL --- */
-      socket.on("member-left", ({ channelId, userId, systemMessage }) => {
-        console.log("👋 [ChatWindow] Member left channel:", { channelId, userId });
-
-        // If it's the current user who left, close the chat window
-        if (String(userId) === String(currentUserIdRef.current)) {
-          console.log("✅ Current user left channel - closing chat window");
-          showToast("You have left this channel", "info");
-          onClose(); // Close the chat window
-          if (onDeleteChat) {
-            onDeleteChat(); // Trigger parent to refresh channel list
-          }
-        } else {
-          // Another user left - just show the system message
-          if (systemMessage) {
-            const mappedMsg = mapBackendMsgToUI(systemMessage);
-            setMessages((prev) => [...prev, mappedMsg]);
-          }
-        }
-      });
-
-      /* --- CHANNEL DELETED --- */
-      socket.on("channel-deleted", ({ channelId, channelName }) => {
-        console.log("🗑️ [ChatWindow] Channel deleted:", { channelId, channelName });
-
-        showToast(`#${channelName} has been deleted`, "warning");
-        onClose(); // Close the chat window
-        if (onDeleteChat) {
-          onDeleteChat(); // Trigger parent to refresh channel list
-        }
-      });
+      /* ========================================================
+         ✅ CRITICAL: Register ALL event listeners FIRST
+         before joining any rooms. This ensures we can receive
+         messages immediately after joining.
+      ======================================================== */
 
       /* --- NEW MESSAGE --- */
       socket.on("new-message", ({ message, clientTempId }) => {
@@ -632,32 +486,6 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
         );
       });
 
-      /* --- TABS --- */
-      socket.on("tab-added", ({ tab }) => {
-        console.log('📡 Socket: tab-added event', tab._id);
-        // Don't add if we already have this tab (prevents duplicates from optimistic updates)
-        setTabs(prev => {
-          const exists = prev.find(t => t._id === tab._id);
-          if (exists) {
-            console.log('⚠️ Tab already exists, skipping:', tab._id);
-            return prev;
-          }
-          console.log('➕ Adding new tab:', tab._id);
-          return [...prev, tab];
-        });
-      });
-
-      socket.on("tab-updated", ({ tabId, name, content }) => {
-        setTabs(prev => prev.map(t =>
-          t._id === tabId ? { ...t, name, content } : t
-        ));
-      });
-
-      socket.on("tab-deleted", ({ tabId }) => {
-        setTabs(prev => prev.filter(t => t._id !== tabId));
-        if (activeTab === tabId) setActiveTab("chat");
-      });
-
       socket.on("reaction-removed", ({ messageId, userId, reactions }) => {
         setMessages((prev) =>
           prev.map((m) =>
@@ -679,7 +507,7 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
           });
         } else if (isUniversal) {
           // Universal deletion - mark as deleted but keep in list
-          console.log('🔄 Updating messages for universal delete');
+          console.log('� Updating messages for universal delete');
           setMessages((prev) => {
             const updated = prev.map((m) => {
               // Check both id and backend._id
@@ -724,17 +552,178 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
       socket.on("pin-error", ({ error }) => {
         showToast(error, "error");
       });
-    }; // End of connectSocket function
 
-    // Call the async connect function
-    connectSocket();
+      /* --- TABS --- */
+      socket.on("tab-added", ({ tab }) => {
+        console.log('📡 Socket: tab-added event', tab._id);
+        // Don't add if we already have this tab (prevents duplicates from optimistic updates)
+        setTabs(prev => {
+          const exists = prev.find(t => t._id === tab._id);
+          if (exists) {
+            console.log('⚠️ Tab already exists, skipping:', tab._id);
+            return prev;
+          }
+          console.log('➕ Adding new tab:', tab._id);
+          return [...prev, tab];
+        });
+      });
+
+      socket.on("tab-updated", ({ tabId, name, content }) => {
+        setTabs(prev => prev.map(t =>
+          t._id === tabId ? { ...t, name, content } : t
+        ));
+      });
+
+      socket.on("tab-deleted", ({ tabId }) => {
+        setTabs(prev => prev.filter(t => t._id !== tabId));
+        if (activeTab === tabId) setActiveTab("chat");
+      });
+
+      /* --- MEMBER LEFT CHANNEL --- */
+      socket.on("member-left", ({ channelId, userId, systemMessage }) => {
+        console.log("👋 [ChatWindow] Member left channel:", { channelId, userId });
+
+        // If it's the current user who left, close the chat window
+        if (String(userId) === String(currentUserIdRef.current)) {
+          console.log("✅ Current user left channel - closing chat window");
+          showToast("You have left this channel", "info");
+          onClose(); // Close the chat window
+          if (onDeleteChat) {
+            onDeleteChat(); // Trigger parent to refresh channel list
+          }
+        } else {
+          // Another user left - just show the system message
+          if (systemMessage) {
+            const mappedMsg = mapBackendMsgToUI(systemMessage);
+            setMessages((prev) => [...prev, mappedMsg]);
+          }
+        }
+      });
+
+      /* --- CHANNEL DELETED --- */
+      socket.on("channel-deleted", ({ channelId, channelName }) => {
+        console.log("🗑️ [ChatWindow] Channel deleted:", { channelId, channelName });
+
+        showToast(`#${channelName} has been deleted`, "warning");
+        onClose(); // Close the chat window
+        if (onDeleteChat) {
+          onDeleteChat(); // Trigger parent to refresh channel list
+        }
+      });
+
+      /* --- SOCKET DISCONNECT --- */
+      socket.on("disconnect", (reason) => {
+        console.log("🔌 [ChatWindow] Socket disconnected:", reason);
+        setConnected(false);
+
+        // Don't show toast for intentional disconnects (navigation, refresh, etc.)
+        // Socket will auto-reconnect if it was a network issue
+        if (reason === "transport close" || reason === "transport error") {
+          // Network issue - socket.io will auto-reconnect
+          console.log("⚠️ Network disconnect - will auto-reconnect");
+        }
+        // Removed annoying toast - disconnects during navigation are normal
+      });
+
+      /* --- Connection --- */
+      socket.on("connect", () => {
+        setConnected(true);
+        console.log('✅ [ChatWindow] Socket connected');
+
+        if (!chat) return;
+
+        // Join appropriate room AFTER socket is connected
+        if (chat.type === "dm") {
+          if (chat.isNew) {
+            console.log('📝 [ChatWindow] New DM - not joining room yet');
+          } else {
+            console.log(`🚪 [ChatWindow] Joining DM room: ${chat.id}`);
+            socket.emit("join-dm", { dmSessionId: chat.id });
+          }
+        } else {
+          console.log(`🚪 [ChatWindow] Joining channel room: ${chat.id}`);
+          socket.emit("join-channel", { channelId: chat.id });
+        }
+      });
+
+      socket.on("connect_error", async (err) => {
+        console.error('❌ [ChatWindow] Socket connection error:', err.message);
+        setConnected(false);
+
+        // If authentication failed, try to refresh the token
+        if (err.message.includes('Authentication') || err.message.includes('jwt') || err.message.includes('token')) {
+          console.log('🔄 [ChatWindow] Attempting token refresh due to auth failure...');
+
+          try {
+            // Try to refresh the token
+            // The refresh token is in HTTP-only cookie, so we don't need to pass it
+            // Just make the request with credentials: 'include' to send cookies
+            const response = await api.post('/api/auth/refresh', {}, {
+              withCredentials: true  // This sends the HTTP-only cookie
+            });
+
+            const newAccessToken = response.data.accessToken;
+
+            if (newAccessToken) {
+              localStorage.setItem('accessToken', newAccessToken);
+              console.log('✅ [ChatWindow] Token refreshed successfully');
+
+              // Show success message and reload to reconnect
+              showToast("Reconnecting with fresh session...", "success");
+
+              // Reload page to reinitialize with fresh token
+              setTimeout(() => {
+                window.location.reload();
+              }, 500);
+              return;
+            }
+
+            // If refresh failed, show error
+            showToast("Session expired. Please login again.", "error");
+          } catch (refreshErr) {
+            console.error('❌ [ChatWindow] Token refresh failed:', refreshErr);
+
+            // Check if it's a 401 (no refresh token) or other error
+            if (refreshErr.response?.status === 401) {
+              showToast("Please login to continue.", "info");
+            } else {
+              showToast("Session expired. Please login again.", "error");
+            }
+          }
+        } else {
+          showToast("Connection error. Retrying...", "error");
+        }
+      });
+
+
+      /* ========================================================
+         ✅ ALL LISTENERS NOW REGISTERED
+         Now join the room if socket is already connected
+      ======================================================== */
+
+      // ✅ CRITICAL: Join room immediately if socket is already connected
+      // This ensures we receive real-time messages even if socket connected before this component mounted
+      if (socket.connected) {
+        console.log('✅ [ChatWindow] Socket already connected, joining room immediately');
+        if (chat.type === "dm" && !chat.isNew) {
+          console.log(`� [ChatWindow] Joining DM room (immediate): ${chat.id}`);
+          socket.emit("join-dm", { dmSessionId: chat.id });
+        } else if (chat.type === "channel") {
+          console.log(`� [ChatWindow] Joining channel room (immediate): ${chat.id}`);
+          socket.emit("join-channel", { channelId: chat.id });
+        }
+      }
+    }; // End of setupSocket function
+
+    // Call the socket setup function
+    setupSocket();
 
     // Return cleanup function that will be called when component unmounts
     return () => {
       const socket = socketRef.current;
       if (!socket) return;
 
-      // Clean up ALL socket listeners before disconnect
+      // Clean up ALL socket listeners - DON'T disconnect since it's shared
       socket.off("connect");
       socket.off("disconnect");
       socket.off("channel-member-joined");
@@ -753,10 +742,11 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
       socket.off("message-unpinned");
       socket.off("pin-error");
 
-      socket.disconnect();
+      // DO NOT disconnect - socket is shared across all chat windows
+      // socket.disconnect(); // REMOVED
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [chat, accessToken]);
+  }, [chat, sharedSocket, sharedSocketConnected]);
 
   /* ---------------------------------------------------------
       SEND MESSAGE

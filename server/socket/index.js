@@ -39,6 +39,8 @@ module.exports = async function registerChatHandlers(io, socket) {
   socket.on("join-channel", ({ channelId }) => {
     const room = `channel_${channelId}`;
     socket.join(room);
+    console.log(`✅ User ${userId} joined room: ${room}`);
+    console.log(`📊 Room ${room} now has ${io.sockets.adapter.rooms.get(room)?.size || 0} sockets`);
   });
 
   /* ----------------------------------------------------
@@ -182,6 +184,8 @@ module.exports = async function registerChatHandlers(io, socket) {
         }
       } else if (channelId) {
         console.log("📢 [SOCKET] Broadcasting to channel room:", `channel_${channelId}`);
+        const roomSockets = io.sockets.adapter.rooms.get(`channel_${channelId}`);
+        console.log(`📊 [SOCKET] Room has ${roomSockets?.size || 0} sockets:`, Array.from(roomSockets || []));
         io.to(`channel_${channelId}`).emit(eventName, payload);
       }
 
