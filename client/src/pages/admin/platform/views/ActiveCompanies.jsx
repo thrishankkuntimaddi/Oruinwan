@@ -44,10 +44,10 @@ const ActiveCompanies = () => {
                 </div>
             </div>
 
-            <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden transition-colors">
+            <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-700 overflow-hidden transition-colors">
                 <div className="overflow-x-auto">
-                    <table className="w-full text-left bg-white dark:bg-gray-800">
-                        <thead className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-100 dark:border-gray-700">
+                    <table className="w-full text-left bg-white dark:bg-slate-800">
+                        <thead className="bg-gray-50 dark:bg-slate-900/50 border-b border-gray-100 dark:border-slate-700">
                             <tr>
                                 <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Company</th>
                                 <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Plan</th>
@@ -58,7 +58,7 @@ const ActiveCompanies = () => {
                         </thead>
                         <tbody className="divide-y divide-gray-50 dark:divide-gray-700">
                             {filtered.map(company => (
-                                <tr key={company._id} className="hover:bg-gray-50/50 dark:hover:bg-gray-700/50 transition-colors">
+                                <tr key={company._id} className="hover:bg-gray-50/50 dark:hover:bg-slate-700/50 transition-colors">
                                     <td className="px-6 py-4">
                                         <div className="flex items-center gap-3">
                                             <div className="w-10 h-10 bg-indigo-50 dark:bg-indigo-900/30 rounded-xl flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-bold shrink-0">

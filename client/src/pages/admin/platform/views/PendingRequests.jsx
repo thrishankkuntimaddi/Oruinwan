@@ -55,15 +55,15 @@ const PendingRequests = () => {
 
     return (
         <div className="space-y-6">
-            <h2 className="text-2xl font-black text-gray-900">Pending Registrations</h2>
+            <h2 className="text-2xl font-black text-gray-900 dark:text-white">Pending Registrations</h2>
 
             {companies.length === 0 ? (
-                <div className="text-center py-20 bg-white rounded-3xl shadow-sm border border-gray-100">
-                    <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4 text-green-600">
+                <div className="text-center py-20 bg-white dark:bg-slate-800 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-700 text-gray-900 dark:text-white transition-colors duration-300">
+                    <div className="w-16 h-16 bg-green-100 dark:bg-green-500/10 rounded-full flex items-center justify-center mx-auto mb-4 text-green-600 dark:text-green-400">
                         <Check size={32} />
                     </div>
-                    <h2 className="text-xl font-bold text-gray-900">All Caught Up!</h2>
-                    <p className="text-gray-500">No pending verifications.</p>
+                    <h2 className="text-xl font-bold">All Caught Up!</h2>
+                    <p className="text-gray-500 dark:text-gray-400">No pending verifications.</p>
                 </div>
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
