@@ -33,11 +33,6 @@ const ManagerDashboard = () => {
 
         const depts = response.data.departments || [];
         setDepartments(depts);
-
-        // Auto-select first department if available
-        if (depts.length > 0 && !selectedDepartment) {
-          setSelectedDepartment(depts[0]);
-        }
       } catch (error) {
         console.error('Error fetching departments:', error);
       } finally {
@@ -49,6 +44,13 @@ const ManagerDashboard = () => {
       fetchDepartments();
     }
   }, [user]);
+
+  // Auto-select first department if available
+  useEffect(() => {
+    if (departments.length > 0 && !selectedDepartment) {
+      setSelectedDepartment(departments[0]);
+    }
+  }, [departments, selectedDepartment]);
 
   // Navigation items
   const navItems = [

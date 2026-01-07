@@ -34,7 +34,6 @@ import FeatureShowcase from "./pages/FeatureShowcase";
 
 // Auth Pages (Public)
 import LoginPage from "./pages/LoginPageComp/LoginPage";
-import VerifyEmail from "./pages/VerifyEmail";
 import ForgotPassword from "./pages/LoginPageComp/ForgotPassword";
 import ResetPassword from "./pages/LoginPageComp/ResetPassword";
 import OAuthSuccess from "./pages/LoginPageComp/OAuthSuccess";
@@ -45,7 +44,6 @@ import ChttrixDocs from "./pages/ChttrixDocs"; // NEW Custom Page
 
 import RegisterCompany from "./pages/RegisterCompany";
 import PendingVerification from "./pages/PendingVerification";
-import ApplicationReview from "./pages/ApplicationReview";
 import CompanyConfirmation from "./pages/CompanyConfirmation";
 import CompanySetup from "./pages/CompanySetup";
 import DepartmentManagement from "./pages/admin/DepartmentManagement"; // Updated path
