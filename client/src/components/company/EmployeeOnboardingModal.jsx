@@ -59,13 +59,38 @@ const EmployeeOnboardingModal = ({ isOpen, onClose, companyId }) => {
     useEffect(() => {
         if (currentStep === 3 && selectedDepartments.length > 0) {
             selectedDepartments.forEach(async (deptId) => {
-                if (!workspacesByDept[deptId]) {
+                // Determine if we need to fetch
+                const alreadyHasWorkspaces = workspacesByDept[deptId] && workspacesByDept[deptId].length > 0;
+
+                if (!alreadyHasWorkspaces) {
                     try {
                         const res = await api.get(`/api/admin/departments/${deptId}/workspaces`);
-                        setWorkspacesByDept(prev => ({ ...prev, [deptId]: res.data || [] }));
+                        const fetchedWorkspaces = res.data || [];
+
+                        setWorkspacesByDept(prev => ({ ...prev, [deptId]: fetchedWorkspaces }));
+
+                        // Auto-select all workspaces by default when department is first selected
+                        setSelectedWorkspaces(prev => {
+                            // Only set if not already set (preserve user choices if toggling back and forth)
+                            if (!prev[deptId]) {
+                                return { ...prev, [deptId]: fetchedWorkspaces.map(w => w._id) };
+                            }
+                            return prev;
+                        });
                     } catch (error) {
                         console.error(`Failed to fetch workspaces for dept ${deptId}:`, error);
                     }
+                } else {
+                    // If we already have workspaces but no selection state for this dept, auto-select all
+                    setSelectedWorkspaces(prev => {
+                        if (!prev[deptId]) {
+                            return {
+                                ...prev,
+                                [deptId]: workspacesByDept[deptId].map(w => w._id)
+                            };
+                        }
+                        return prev;
+                    });
                 }
             });
         }
@@ -141,10 +166,13 @@ const EmployeeOnboardingModal = ({ isOpen, onClose, companyId }) => {
     };
 
     const handleDepartmentToggle = (deptId) => {
+        // Ensure we are working with string IDs
+        const idStr = String(deptId);
+
         setSelectedDepartments(prev =>
-            prev.includes(deptId)
-                ? prev.filter(id => id !== deptId)
-                : [...prev, deptId]
+            prev.includes(idStr)
+                ? prev.filter(id => id !== idStr)
+                : [...prev, idStr]
         );
     };
 
@@ -500,7 +528,7 @@ const EmployeeOnboardingModal = ({ isOpen, onClose, companyId }) => {
                                                 <label className="flex items-center gap-3 cursor-pointer">
                                                     <input
                                                         type="checkbox"
-                                                        checked={selectedDepartments.includes(dept._id)}
+                                                        checked={selectedDepartments.includes(String(dept._id))}
                                                         onChange={() => handleDepartmentToggle(dept._id)}
                                                         className="w-5 h-5 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
                                                     />

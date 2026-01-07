@@ -1,6 +1,7 @@
 // server/middleware/permissionMiddleware.js
 const Company = require('../models/Company');
 const Department = require('../models/Department');
+const User = require('../models/User');
 
 /**
  * Generic middleware to check if user has one of the required roles
@@ -39,11 +40,29 @@ const requireOwner = async (req, res, next) => {
  * Check if user is Company Admin or Owner
  */
 const requireAdmin = async (req, res, next) => {
-    const adminRoles = ['owner', 'admin'];
-    if (adminRoles.includes(req.user.companyRole) || req.user.isCoOwner) {
-        next();
-    } else {
-        res.status(403).json({ message: "Access denied: Admin privileges required" });
+    try {
+        // Fetch full user if not already fully populated
+        // We check for companyRole because JWT payload doesn't have it
+        if (!req.user.companyRole || !req.user.companyId) {
+            const userId = req.user.sub || req.user._id;
+            const fullUser = await User.findById(userId);
+
+            if (!fullUser) {
+                return res.status(401).json({ message: "User not found" });
+            }
+            // Update req.user with full DB object
+            req.user = fullUser;
+        }
+
+        const adminRoles = ['owner', 'admin'];
+        if (adminRoles.includes(req.user.companyRole) || req.user.isCoOwner) {
+            next();
+        } else {
+            res.status(403).json({ message: "Access denied: Admin privileges required" });
+        }
+    } catch (error) {
+        console.error("RequireAdmin Middleware Error:", error);
+        res.status(500).json({ message: "Server error during permission check" });
     }
 };
 

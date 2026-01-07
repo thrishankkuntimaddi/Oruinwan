@@ -513,13 +513,13 @@ const AdminDashboard = () => {
             <InviteUserModal
                 isOpen={isInviteModalOpen}
                 onClose={() => setIsInviteModalOpen(false)}
-                companyId={user?.companyId}
+                companyId={typeof user?.companyId === 'object' ? user?.companyId?._id : user?.companyId}
                 workspaces={workspaces}
             />
             <EmployeeOnboardingModal
                 isOpen={isOnboardModalOpen}
                 onClose={() => setIsOnboardModalOpen(false)}
-                companyId={user?.companyId}
+                companyId={typeof user?.companyId === 'object' ? user?.companyId?._id : user?.companyId}
             />
         </React.Fragment>
     );
