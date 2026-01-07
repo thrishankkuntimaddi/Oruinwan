@@ -14,6 +14,7 @@ import {
 import {
     ActivityFeed, InviteUserModal
 } from '../../components/company';
+import EmployeeOnboardingModal from '../../components/company/EmployeeOnboardingModal';
 import { getCompanyMembers } from '../../services/companyService';
 import { getAuditLogs } from '../../services/auditService';
 import { getDashboardMetrics } from '../../services/dashboardService';
@@ -35,6 +36,7 @@ const AdminDashboard = () => {
     const [recentActivities, setRecentActivities] = useState([]);
     const [workspaces, setWorkspaces] = useState([]);
     const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
+    const [isOnboardModalOpen, setIsOnboardModalOpen] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
 
     // Today's activity (would come from backend in real implementation)
@@ -203,6 +205,12 @@ const AdminDashboard = () => {
                     >
                         <RefreshCw size={16} className={refreshing ? 'animate-spin' : ''} />
                         {refreshing ? 'Refreshing...' : 'Refresh'}
+                    </button>
+                    <button
+                        onClick={() => setIsOnboardModalOpen(true)}
+                        className="px-4 py-2 bg-black dark:bg-indigo-600 text-white text-sm font-bold rounded-lg hover:bg-gray-800 dark:hover:bg-indigo-700 transition-colors shadow-sm flex items-center gap-2"
+                    >
+                        <UserPlus size={16} /> Onboard Employee
                     </button>
                     <button
                         onClick={() => setIsInviteModalOpen(true)}
@@ -507,6 +515,11 @@ const AdminDashboard = () => {
                 onClose={() => setIsInviteModalOpen(false)}
                 companyId={user?.companyId}
                 workspaces={workspaces}
+            />
+            <EmployeeOnboardingModal
+                isOpen={isOnboardModalOpen}
+                onClose={() => setIsOnboardModalOpen(false)}
+                companyId={user?.companyId}
             />
         </React.Fragment>
     );

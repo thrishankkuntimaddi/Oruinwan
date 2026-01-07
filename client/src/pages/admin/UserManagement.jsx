@@ -1,10 +1,12 @@
 
+
 import React, { useState, useEffect } from 'react';
-import { Search, MoreHorizontal, Mail, BarChart2, Briefcase } from 'lucide-react';
+import { Search, Mail, BarChart2, Briefcase } from 'lucide-react';
 import { useCompany } from '../../contexts/CompanyContext';
 import { getCompanyMembers } from '../../services/companyService';
 import { getDepartments, assignUserToDepartment } from '../../services/departmentService';
 import { InviteUserModal } from '../../components/company';
+import EmployeeActionsMenu from '../../components/company/EmployeeActionsMenu';
 import { useToast } from '../../contexts/ToastContext';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
 
@@ -461,9 +463,11 @@ const UserManagement = () => {
                                             </div>
                                         </td>
                                         <td className="px-6 py-4 text-right">
-                                            <button className="p-2 hover:bg-slate-100 dark:hover:bg-gray-700 rounded-lg text-slate-400 dark:text-gray-500 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors opacity-0 group-hover:opacity-100">
-                                                <MoreHorizontal size={16} />
-                                            </button>
+                                            <EmployeeActionsMenu
+                                                employee={member}
+                                                departments={departments}
+                                                onUpdate={fetchData}
+                                            />
                                         </td>
                                     </tr>
                                 ))

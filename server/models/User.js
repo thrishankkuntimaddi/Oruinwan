@@ -44,6 +44,7 @@ const UserSchema = new mongoose.Schema(
     username: { type: String, required: true }, // primary display name
     email: { type: String, required: true, unique: true, lowercase: true },
     personalEmail: { type: String, lowercase: true }, // Verified personal email from registration
+    companyEmail: { type: String, lowercase: true }, // Company-provided email (admin input)
     phone: { type: String, unique: true, sparse: true },
     phoneCode: { type: String, default: "+1" }, // Country code
 
@@ -116,6 +117,9 @@ const UserSchema = new mongoose.Schema(
       joinedAt: { type: Date, default: Date.now }
     }],
 
+    // Assigned Workspaces (IDs for quick lookup)
+    assignedWorkspaces: [{ type: mongoose.Schema.Types.ObjectId, ref: "Workspace" }],
+
     // Personal workspace for personal users
     personalWorkspace: { type: mongoose.Schema.Types.ObjectId, ref: "Workspace", default: null },
 
@@ -164,12 +168,17 @@ const UserSchema = new mongoose.Schema(
       default: 'active'
     },
 
-    // Phase 1: Account Status (for pending companies)
+    // Account Status
     accountStatus: {
       type: String,
-      enum: ["active", "pending_company", "suspended"],
+      enum: ["active", "pending_company", "suspended", "removed"],
       default: "active"
     },
+
+    // Suspension tracking
+    suspendedAt: { type: Date },
+    suspendedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+    suspensionReason: { type: String },
 
     // Favorites (channels and DMs)
     favorites: [{ type: String }], // Array of channel/conversation IDs

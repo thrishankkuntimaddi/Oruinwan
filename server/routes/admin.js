@@ -599,8 +599,6 @@ router.get('/health/metrics', requireSuperAdmin, async (req, res) => {
   }
 });
 
-module.exports = router;
-
 // ============================================================================
 // COMPANY ADMIN ROUTES (Protected by requireCompanyAdmin)
 // ============================================================================
@@ -621,3 +619,215 @@ router.get('/support/chat/session/:companyId', requireAuth, requireAdmin, platfo
 router.get('/support/chat/session/:sessionId/messages', requireAuth, requireAdmin, platformController.getSessionMessages);
 router.post('/support/chat/session/:sessionId/messages', requireAuth, requireAdmin, platformController.sendSessionMessage);
 
+// ============================================================================
+// PEOPLE MANAGEMENT ROUTES
+// ============================================================================
+
+// GET /api/admin/employees - Get all employees in company
+router.get('/employees', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const userId = req.user.sub || req.user._id;
+    const user = await User.findById(userId).populate('companyId');
+
+    if (!user || !user.companyId) {
+      return res.status(403).json({ message: 'User not part of a company' });
+    }
+
+    const employees = await User.find({ companyId: user.companyId._id })
+      .populate('departments')
+      .populate('managedDepartments')
+      .select('-passwordHash -refreshTokens')
+      .sort({ createdAt: -1 });
+
+    res.json(employees);
+  } catch (error) {
+    console.error('Error fetching employees:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// PUT /api/admin/employees/:id/suspend - Suspend employee
+router.put('/employees/:id/suspend', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const { reason } = req.body;
+    const adminId = req.user.sub || req.user._id;
+
+    const employee = await User.findById(req.params.id);
+    if (!employee) {
+      return res.status(404).json({ message: 'Employee not found' });
+    }
+
+    // Prevent suspending owners
+    if (employee.companyRole === 'owner') {
+      return res.status(403).json({ message: 'Cannot suspend company owner' });
+    }
+
+    employee.accountStatus = 'suspended';
+    employee.suspendedAt = new Date();
+    employee.suspendedBy = adminId;
+    employee.suspensionReason = reason || 'No reason provided';
+
+    await employee.save();
+
+    res.json({ message: 'Employee suspended successfully', employee });
+  } catch (error) {
+    console.error('Error suspending employee:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// PUT /api/admin/employees/:id/activate - Activate suspended employee
+router.put('/employees/:id/activate', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const employee = await User.findById(req.params.id);
+    if (!employee) {
+      return res.status(404).json({ message: 'Employee not found' });
+    }
+
+    employee.accountStatus = 'active';
+    employee.suspendedAt = null;
+    employee.suspendedBy = null;
+    employee.suspensionReason = null;
+
+    await employee.save();
+
+    res.json({ message: 'Employee activated successfully', employee });
+  } catch (error) {
+    console.error('Error activating employee:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// DELETE /api/admin/employees/:id - Remove employee (soft delete)
+router.delete('/employees/:id', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const employee = await User.findById(req.params.id);
+    if (!employee) {
+      return res.status(404).json({ message: 'Employee not found' });
+    }
+
+    // Prevent removing owners
+    if (employee.companyRole === 'owner') {
+      return res.status(403).json({ message: 'Cannot remove company owner' });
+    }
+
+    employee.accountStatus = 'removed';
+    employee.deactivatedAt = new Date();
+
+    await employee.save();
+
+    res.json({ message: 'Employee removed successfully' });
+  } catch (error) {
+    console.error('Error removing employee:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// PUT /api/admin/employees/:id/assign-department - Assign to department
+router.put('/employees/:id/assign-department', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const { departmentIds } = req.body;
+
+    if (!Array.isArray(departmentIds)) {
+      return res.status(400).json({ message: 'Department IDs must be an array' });
+    }
+
+    const employee = await User.findById(req.params.id);
+    if (!employee) {
+      return res.status(404).json({ message: 'Employee not found' });
+    }
+
+    employee.departments = departmentIds;
+    await employee.save();
+
+    res.json({ message: 'Department assignment updated', employee });
+  } catch (error) {
+    console.error('Error assigning department:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// PUT /api/admin/employees/:id/change-role - Change employee role
+router.put('/employees/:id/change-role', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const { role, managedDepartments } = req.body;
+
+    if (!['member', 'guest', 'manager', 'admin'].includes(role)) {
+      return res.status(400).json({ message: 'Invalid role' });
+    }
+
+    const employee = await User.findById(req.params.id);
+    if (!employee) {
+      return res.status(404).json({ message: 'Employee not found' });
+    }
+
+    // Prevent changing owner role
+    if (employee.companyRole === 'owner') {
+      return res.status(403).json({ message: 'Cannot change owner role' });
+    }
+
+    employee.companyRole = role;
+
+    // If promoting to manager, set managed departments
+    if (role === 'manager' && managedDepartments) {
+      employee.managedDepartments = managedDepartments;
+    } else if (role !== 'manager') {
+      employee.managedDepartments = [];
+    }
+
+    await employee.save();
+
+    res.json({ message: 'Employee role updated', employee });
+  } catch (error) {
+    console.error('Error changing role:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// GET /api/admin/departments/:id/workspaces - Get workspaces in a department
+router.get('/departments/:id/workspaces', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const Department = require('../models/Department');
+    const Workspace = require('../models/Workspace');
+
+    const department = await Department.findById(req.params.id);
+    if (!department) {
+      return res.status(404).json({ message: 'Department not found' });
+    }
+
+    const workspaces = await Workspace.find({ departmentId: req.params.id })
+      .populate('members', 'username email')
+      .select('name description members createdAt');
+
+    res.json(workspaces);
+  } catch (error) {
+    console.error('Error fetching workspaces:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// POST /api/admin/employees/:id/assign-workspace - Assign employee to workspaces
+router.post('/employees/:id/assign-workspace', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const { workspaceIds } = req.body;
+
+    if (!Array.isArray(workspaceIds)) {
+      return res.status(400).json({ message: 'Workspace IDs must be an array' });
+    }
+
+    const employee = await User.findById(req.params.id);
+    if (!employee) {
+      return res.status(404).json({ message: 'Employee not found' });
+    }
+
+    employee.assignedWorkspaces = workspaceIds;
+    await employee.save();
+
+    res.json({ message: 'Workspace assignment updated', employee });
+  } catch (error) {
+    console.error('Error assigning workspace:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+module.exports = router;

@@ -152,6 +152,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 // Routes
 app.use("/api/auth", require("./routes/auth"));
 app.use("/api/admin", require("./middleware/auth"), require("./routes/admin"));
+app.use("/api/admin", require("./middleware/auth"), require("./routes/onboardRoutes"));
 app.use("/api/messages", require("./routes/messages"));
 app.use("/api/chat", require("./routes/chatList"));
 app.use("/api/channels", require("./routes/channels"));

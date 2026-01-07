@@ -111,11 +111,11 @@ const PendingRequests = () => {
             {/* REVIEW MODAL - Simplified from original for brevity but keeping core logic */}
             {selectedCompany && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm overflow-y-auto">
-                    <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-4xl overflow-hidden my-8 p-8 max-h-[90vh] overflow-y-auto custom-scrollbar">
+                    <div className="bg-white dark:bg-slate-800 rounded-[2rem] shadow-2xl w-full max-w-4xl overflow-hidden my-8 p-8 max-h-[90vh] overflow-y-auto custom-scrollbar transition-colors">
                         <div className="flex justify-between items-start mb-6">
                             <div>
-                                <h2 className="text-2xl font-black text-gray-900 mb-1">Review Application</h2>
-                                <p className="text-gray-500">Detailed verification for <strong className="text-gray-900">{selectedCompany.name}</strong></p>
+                                <h2 className="text-2xl font-black text-gray-900 dark:text-white mb-1">Review Application</h2>
+                                <p className="text-gray-500 dark:text-gray-400">Detailed verification for <strong className="text-gray-900 dark:text-white">{selectedCompany.name}</strong></p>
                             </div>
                             <button onClick={() => setSelectedCompany(null)} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
                                 <X size={24} className="text-gray-400" />
@@ -126,46 +126,46 @@ const PendingRequests = () => {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
                             {/* Company Details */}
                             <div className="space-y-4">
-                                <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider border-b border-gray-100 pb-2">Company Information</h3>
+                                <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider border-b border-gray-100 dark:border-slate-700 pb-2">Company Information</h3>
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
                                         <p className="text-xs text-gray-400 font-bold mb-1">Company Name</p>
-                                        <p className="text-sm font-bold text-gray-900">{selectedCompany.name}</p>
+                                        <p className="text-sm font-bold text-gray-900 dark:text-white">{selectedCompany.name}</p>
                                     </div>
                                     <div>
                                         <p className="text-xs text-gray-400 font-bold mb-1">Domain</p>
-                                        <p className="text-sm font-bold text-gray-900">{selectedCompany.domain || "N/A"}</p>
+                                        <p className="text-sm font-bold text-gray-900 dark:text-white">{selectedCompany.domain || "N/A"}</p>
                                     </div>
                                     <div>
                                         <p className="text-xs text-gray-400 font-bold mb-1">Company Email</p>
-                                        <p className="text-sm font-bold text-gray-900">{selectedCompany.billingEmail || "N/A"}</p>
+                                        <p className="text-sm font-bold text-gray-900 dark:text-white">{selectedCompany.billingEmail || "N/A"}</p>
                                     </div>
                                     <div>
                                         <p className="text-xs text-gray-400 font-bold mb-1">Phone</p>
-                                        <p className="text-sm font-bold text-gray-900">{selectedCompany.settings?.phone || selectedCompany.ownerPhone || "N/A"}</p>
+                                        <p className="text-sm font-bold text-gray-900 dark:text-white">{selectedCompany.settings?.phone || selectedCompany.ownerPhone || "N/A"}</p>
                                     </div>
                                 </div>
                             </div>
 
                             {/* Admin Details */}
                             <div className="space-y-4">
-                                <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider border-b border-gray-100 pb-2">Admin Information</h3>
+                                <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider border-b border-gray-100 dark:border-slate-700 pb-2">Admin Information</h3>
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
                                         <p className="text-xs text-gray-400 font-bold mb-1">Full Name</p>
-                                        <p className="text-sm font-bold text-gray-900">{selectedCompany.admins[0]?.user?.username || selectedCompany.admins[0]?.user?.name || "N/A"}</p>
+                                        <p className="text-sm font-bold text-gray-900 dark:text-white">{selectedCompany.admins[0]?.user?.username || selectedCompany.admins[0]?.user?.name || "N/A"}</p>
                                     </div>
                                     <div>
                                         <p className="text-xs text-gray-400 font-bold mb-1">Personal Email</p>
-                                        <p className="text-sm font-bold text-gray-900">{selectedCompany.admins[0]?.user?.personalEmail || selectedCompany.admins[0]?.user?.email}</p>
+                                        <p className="text-sm font-bold text-gray-900 dark:text-white">{selectedCompany.admins[0]?.user?.personalEmail || selectedCompany.admins[0]?.user?.email}</p>
                                     </div>
                                     <div>
                                         <p className="text-xs text-gray-400 font-bold mb-1">Job Title</p>
-                                        <p className="text-sm font-bold text-gray-900">{selectedCompany.admins[0]?.user?.jobTitle || selectedCompany.admins[0]?.user?.role || "Admin"}</p>
+                                        <p className="text-sm font-bold text-gray-900 dark:text-white">{selectedCompany.admins[0]?.user?.jobTitle || selectedCompany.admins[0]?.user?.role || "Admin"}</p>
                                     </div>
                                     <div>
                                         <p className="text-xs text-gray-400 font-bold mb-1">Phone</p>
-                                        <p className="text-sm font-bold text-gray-900">{selectedCompany.admins[0]?.user?.phone || "N/A"}</p>
+                                        <p className="text-sm font-bold text-gray-900 dark:text-white">{selectedCompany.admins[0]?.user?.phone || "N/A"}</p>
                                     </div>
                                 </div>
                             </div>
@@ -173,11 +173,11 @@ const PendingRequests = () => {
 
                         {/* Documents */}
                         <div className="mb-8">
-                            <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider border-b border-gray-100 pb-2 mb-3">Supporting Documents</h3>
+                            <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider border-b border-gray-100 dark:border-slate-700 pb-2 mb-3">Supporting Documents</h3>
                             <div className="flex gap-3 flex-wrap">
                                 {selectedCompany.documents && selectedCompany.documents.length > 0 ? (
                                     selectedCompany.documents.map((doc, i) => (
-                                        <a key={i} href={doc.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-4 py-3 bg-indigo-50 text-indigo-700 rounded-xl hover:bg-indigo-100 transition-colors font-bold text-sm">
+                                        <a key={i} href={doc.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-4 py-3 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 rounded-xl hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors font-bold text-sm">
                                             <ExternalLink size={16} /> {doc.name || `Document ${i + 1}`}
                                         </a>
                                     ))
@@ -187,9 +187,9 @@ const PendingRequests = () => {
 
                         {/* Action Message */}
                         <div className="mb-6">
-                            <label className="block text-sm font-bold text-gray-700 mb-2">Message to User (Reason or Appreciation)</label>
+                            <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Message to User (Reason or Appreciation)</label>
                             <textarea
-                                className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all resize-none bg-gray-50 focus:bg-white"
+                                className="w-full px-4 py-3 border border-gray-200 dark:border-slate-600 rounded-xl text-sm outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all resize-none bg-gray-50 dark:bg-slate-900 focus:bg-white dark:focus:bg-slate-800 text-gray-900 dark:text-white"
                                 placeholder="E.g. 'Congratulations! Welcome to the future of work.' or 'Please upload a valid business license.'"
                                 rows="4"
                                 value={reason}
@@ -198,10 +198,10 @@ const PendingRequests = () => {
                             <p className="text-xs text-gray-400 mt-2">This message will be included in the email sent to the user.</p>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-100">
+                        <div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-100 dark:border-slate-700">
                             <button
                                 onClick={() => handleReject(selectedCompany._id)}
-                                className="py-4 bg-red-50 text-red-600 font-black rounded-xl hover:bg-red-100 transition-colors flex items-center justify-center gap-2"
+                                className="py-4 bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 font-black rounded-xl hover:bg-red-100 dark:hover:bg-red-500/20 transition-colors flex items-center justify-center gap-2"
                             >
                                 <X size={20} /> Reject Application
                             </button>

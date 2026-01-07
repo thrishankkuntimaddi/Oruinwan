@@ -489,10 +489,14 @@ exports.login = async (req, res) => {
     // Set refresh token cookie
     setRefreshTokenCookie(res, refreshToken);
 
+    // Detect first login (for admin-created employees)
+    const firstLogin = user.lastLoginAt === null;
+
     // Prepare response based on user type
     const response = {
       message: "Login successful",
       accessToken,
+      firstLogin, // Frontend will show password change modal if true
       user: {
         id: user._id,
         username: user.username,
