@@ -979,6 +979,11 @@ exports.updateMe = async (req, res) => {
       user.profile.about = about;
     }
 
+    // Address update
+    if (req.body.address !== undefined) {
+      user.profile.address = req.body.address;
+    }
+
     if (req.body.company !== undefined) user.profile.company = req.body.company;
     if (req.body.showCompany !== undefined) user.profile.showCompany = req.body.showCompany;
 
@@ -1012,6 +1017,7 @@ exports.updateMe = async (req, res) => {
         phoneCode: user.phoneCode,
         dob: user.profile?.dob || "",
         about: user.profile?.about || "",
+        address: user.profile?.address || "",
         company: user.profile?.company || "",
         showCompany: user.profile?.showCompany ?? true,
         verified: user.verified,

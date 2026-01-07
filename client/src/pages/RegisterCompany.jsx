@@ -10,6 +10,7 @@ import { useToast } from "../contexts/ToastContext";
 import { useTheme } from "../contexts/ThemeContext";
 import OTPModal from "../components/shared/OTPModal";
 import CustomDropdown from "../components/shared/CustomDropdown";
+
 import axios from "axios";
 
 const RegisterCompany = () => {
@@ -691,10 +692,10 @@ const RegisterCompany = () => {
                                                     onChange={handleChange}
                                                     placeholder="john.doe@gmail.com"
                                                     className={`w-full pl-12 pr-4 py-3.5 bg-white dark:bg-slate-800 border ${errors.personalEmail || validationStatus.personalEmail === 'taken'
-                                                            ? "border-red-500 bg-red-50 dark:bg-red-900/20"
-                                                            : validationStatus.personalEmail === 'available' && verificationStatus.personalEmail === 'verified'
-                                                                ? "border-green-500 bg-green-50 dark:bg-green-900/20"
-                                                                : "border-gray-200 dark:border-gray-700"
+                                                        ? "border-red-500 bg-red-50 dark:bg-red-900/20"
+                                                        : validationStatus.personalEmail === 'available' && verificationStatus.personalEmail === 'verified'
+                                                            ? "border-green-500 bg-green-50 dark:bg-green-900/20"
+                                                            : "border-gray-200 dark:border-gray-700"
                                                         } focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 dark:focus:ring-indigo-900 rounded-2xl outline-none transition-all shadow-sm text-gray-900 dark:text-white placeholder:text-gray-400`}
                                                 />
                                             </div>

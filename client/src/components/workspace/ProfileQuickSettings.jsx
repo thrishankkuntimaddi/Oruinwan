@@ -26,7 +26,7 @@ const ProfileQuickSettings = ({ onClose }) => {
         username: user?.username || '',
         phone: user?.phone || '',
         phoneCode: user?.phoneCode || '+1',
-        address: user?.address || '',
+        address: user?.address || user?.profile?.address || '',
         dob: user?.profile?.dob ? new Date(user.profile.dob).toISOString().split('T')[0] : '',
         about: user?.profile?.about || ''
     });
@@ -38,7 +38,7 @@ const ProfileQuickSettings = ({ onClose }) => {
                 username: user.username || '',
                 phone: user.phone || '',
                 phoneCode: user.phoneCode || '+1',
-                address: user.address || '',
+                address: user.address || user.profile?.address || '',
                 dob: user.profile?.dob ? new Date(user.profile.dob).toISOString().split('T')[0] : '',
                 about: user.profile?.about || ''
             });

@@ -264,7 +264,7 @@ const WorkspaceSelect = () => {
                             className="text-right hidden sm:block hover:bg-slate-50 px-3 py-2 rounded-lg transition-colors"
                             title="View Profile"
                         >
-                            <div className="text-sm font-bold text-slate-800">{user?.username || 'User'}</div>
+                            <div className="text-sm font-bold text-slate-800 dark:text-slate-200">{user?.username || 'User'}</div>
                             <div className="text-xs text-slate-500">{user?.email}</div>
                         </button>
                         <button
@@ -361,9 +361,9 @@ const WorkspaceSelect = () => {
             {/* Create Modal - Multi-Step Wizard */}
             {isCreateModalOpen && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
-                    <div className="bg-white dark:bg-slate-800 w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden animate-slideUp flex flex-col max-h-[90vh]">
+                    <div className="bg-white dark:bg-slate-900 w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden animate-slideUp flex flex-col max-h-[90vh] border dark:border-slate-800">
                         {/* Header with Progress Steps */}
-                        <div className="px-8 py-6 border-b border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50">
+                        <div className="px-8 py-6 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900">
                             <div className="flex justify-between items-center mb-6">
                                 <h3 className="font-bold text-2xl text-slate-800 dark:text-white">Create Workspace</h3>
                                 <button
@@ -386,8 +386,8 @@ const WorkspaceSelect = () => {
                                     { step: 3, label: "Admin" },
                                     { step: 4, label: "Members" }
                                 ].map((s) => (
-                                    <div key={s.step} className="flex flex-col items-center gap-2 bg-white dark:bg-slate-800 px-2">
-                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm transition-all duration-300 ${createStep >= s.step ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200' : 'bg-slate-200 dark:bg-slate-700 text-slate-500'}`}>
+                                    <div key={s.step} className="flex flex-col items-center gap-2 bg-white dark:bg-slate-900 px-2">
+                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm transition-all duration-300 ${createStep >= s.step ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200' : 'bg-slate-200 dark:bg-slate-800 text-slate-500'}`}>
                                             {createStep > s.step ? "✓" : s.step}
                                         </div>
                                         <span className={`text-xs font-bold transition-colors ${createStep >= s.step ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400'}`}>{s.label}</span>
@@ -417,7 +417,7 @@ const WorkspaceSelect = () => {
                                                     setCreateData({ ...createData, name: e.target.value });
                                                     setNameError("");
                                                 }}
-                                                className={`w-full px-4 py-3 bg-white dark:bg-slate-900 border ${nameError ? 'border-red-300 focus:border-red-500 focus:ring-red-200' : 'border-slate-200 dark:border-slate-700 focus:border-indigo-500 focus:ring-indigo-200'} rounded-xl focus:outline-none focus:ring-4 transition-all text-slate-800 dark:text-white font-medium`}
+                                                className={`w-full px-4 py-3 bg-white dark:bg-slate-950 border ${nameError ? 'border-red-300 focus:border-red-500 focus:ring-red-200' : 'border-slate-200 dark:border-slate-800 focus:border-indigo-500 focus:ring-indigo-200 dark:focus:ring-indigo-900'} rounded-xl focus:outline-none focus:ring-4 transition-all text-slate-800 dark:text-white font-medium`}
                                             />
                                             {nameError && <p className="mt-2 text-xs font-bold text-red-500 animate-pulse">{nameError}</p>}
                                         </div>
@@ -429,7 +429,7 @@ const WorkspaceSelect = () => {
                                                     placeholder="Set the tone for your workspace. E.g., 'Be respectful', 'No spam', 'Updates every Friday'..."
                                                     value={createData.description || ""} // Using description field for rules
                                                     onChange={(e) => setCreateData({ ...createData, description: e.target.value })}
-                                                    className="w-full px-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-4 focus:ring-indigo-200 focus:border-indigo-500 transition-all text-slate-800 dark:text-white font-medium h-32 resize-none"
+                                                    className="w-full px-4 py-3 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl focus:outline-none focus:ring-4 focus:ring-indigo-200 dark:focus:ring-indigo-900 focus:border-indigo-500 transition-all text-slate-800 dark:text-white font-medium h-32 resize-none"
                                                 ></textarea>
                                                 <Shield className="absolute right-4 top-4 text-slate-300" size={18} />
                                             </div>
@@ -564,7 +564,7 @@ const WorkspaceSelect = () => {
                                                 placeholder="Enter emails separated by commas (e.g., alex@team.com, sarah@design.co)"
                                                 value={createData.invites || ""}
                                                 onChange={(e) => setCreateData({ ...createData, invites: e.target.value })}
-                                                className="w-full px-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-4 focus:ring-indigo-200 focus:border-indigo-500 transition-all text-slate-800 dark:text-white font-medium h-32 resize-none"
+                                                className="w-full px-4 py-3 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl focus:outline-none focus:ring-4 focus:ring-indigo-200 dark:focus:ring-indigo-900 focus:border-indigo-500 transition-all text-slate-800 dark:text-white font-medium h-32 resize-none"
                                             ></textarea>
                                             <p className="text-xs text-slate-400 mt-2 flex items-center gap-1">
                                                 <UsersIcon size={12} />
@@ -587,7 +587,7 @@ const WorkspaceSelect = () => {
                         </div>
 
                         {/* Footer / Actions */}
-                        <div className="px-8 py-6 border-t border-slate-100 dark:border-slate-700 bg-slate-50/80 dark:bg-slate-900/80 backdrop-blur flex justify-between items-center">
+                        <div className="px-8 py-6 border-t border-slate-100 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/80 backdrop-blur flex justify-between items-center">
                             {createStep > 1 ? (
                                 <button
                                     onClick={() => setCreateStep(s => s - 1)}

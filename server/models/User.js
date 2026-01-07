@@ -16,13 +16,7 @@ const ProfileSchema = new mongoose.Schema(
     company: { type: String },
     showCompany: { type: Boolean, default: true },
     // Phase 3: Detailed Profile
-    address: {
-      street: String,
-      city: String,
-      state: String,
-      zip: String,
-      country: String
-    },
+    address: { type: String },
     resumeUrl: String,
     socialLinks: {
       linkedin: String,

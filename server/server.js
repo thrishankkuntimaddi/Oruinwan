@@ -35,7 +35,7 @@ const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
 const http = require("http");
 const { Server } = require("socket.io");
-const registerChatHandlers = require("./socket");
+const registerChatHandlers = require("./socket/index");
 const logger = require("./utils/logger");
 
 // Initialize app

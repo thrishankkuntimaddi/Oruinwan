@@ -528,6 +528,24 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
         });
       });
 
+      /* --- MESSAGE SENT ACK --- */
+      socket.on("message-sent", ({ message, clientTempId }) => {
+        console.log('✅ [ChatWindow] Received message-sent ACK:', { messageId: message._id, clientTempId });
+        const realMsg = mapBackendMsgToUI(message);
+
+        // Replace optimistic message with real message
+        if (clientTempId && pendingMessagesRef.current[clientTempId]) {
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === clientTempId
+                ? { ...realMsg, sending: false, temp: false }
+                : m
+            )
+          );
+          delete pendingMessagesRef.current[clientTempId];
+        }
+      });
+
       /* --- SEND ERROR --- */
       socket.on("send-error", ({ clientTempId, message }) => {
         console.error('❌ [ChatWindow] Send error:', message);
@@ -723,6 +741,7 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
       socket.off("channel-member-left");
       socket.off("channel-deleted");
       socket.off("new-message");
+      socket.off("message-sent");
       socket.off("send-error");
       socket.off("read-update");
       socket.off("typing");

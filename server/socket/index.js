@@ -53,6 +53,7 @@ module.exports = async function registerChatHandlers(io, socket) {
      SEND MESSAGE (DM or Channel) + ACK
   ---------------------------------------------------- */
   socket.on("send-message", async (data) => {
+    console.log("🔵 [SOCKET] Received send-message event. Data:", JSON.stringify(data, null, 2));
     try {
       const {
         dmSessionId,
@@ -65,7 +66,10 @@ module.exports = async function registerChatHandlers(io, socket) {
         clientTempId
       } = data;
 
+      console.log("🔍 [SOCKET] Parsed data - channelId:", channelId, "dmSessionId:", dmSessionId, "clientTempId:", clientTempId);
+
       if (!dmSessionId && !channelId && !receiverId) {
+        console.log("❌ [SOCKET] Validation failed: missing dmSessionId/channelId/receiverId");
         socket.emit("send-error", {
           clientTempId,
           message: "dmSessionId, channelId or receiverId required",
@@ -74,12 +78,15 @@ module.exports = async function registerChatHandlers(io, socket) {
       }
 
       if (!workspaceId) {
+        console.log("❌ [SOCKET] Validation failed: missing workspaceId");
         socket.emit("send-error", {
           clientTempId,
           message: "workspaceId required",
         });
         return;
       }
+
+      console.log("✅ [SOCKET] Validation passed, proceeding with message creation");
 
       let actualDMSessionId = dmSessionId;
 
@@ -143,8 +150,9 @@ module.exports = async function registerChatHandlers(io, socket) {
       }
 
       // Save message
-
+      console.log("💾 [SOCKET] Creating message document in DB...");
       const saved = await Message.create(doc);
+      console.log("✅ [SOCKET] Message created with ID:", saved._id);
 
       const populated = await Message.findById(saved._id)
         .populate("sender", "username profilePicture")
@@ -152,6 +160,7 @@ module.exports = async function registerChatHandlers(io, socket) {
           path: "threadParent",
           populate: { path: "sender", select: "username profilePicture" }
         });
+      console.log("✅ [SOCKET] Message populated successfully");
 
       // ---------------- broadcast ----------------
       const eventName = replyTo ? "thread-reply" : "new-message";
@@ -161,6 +170,7 @@ module.exports = async function registerChatHandlers(io, socket) {
 
       if (actualDMSessionId) {
         // Emit to DM room
+        console.log("📢 [SOCKET] Broadcasting to DM room:", `dm_${actualDMSessionId}`);
         io.to(`dm_${actualDMSessionId}`).emit(eventName, payload);
 
         // Also emit to each participant's personal user room for real-time delivery
@@ -171,21 +181,27 @@ module.exports = async function registerChatHandlers(io, socket) {
           });
         }
       } else if (channelId) {
+        console.log("📢 [SOCKET] Broadcasting to channel room:", `channel_${channelId}`);
         io.to(`channel_${channelId}`).emit(eventName, payload);
       }
 
       // ---------------- ack to sender ----------------
+      console.log("✅ [SOCKET] Emitting message-sent ACK to sender with clientTempId:", clientTempId);
       socket.emit("message-sent", {
         message: populated,
         clientTempId,
       });
+      console.log("✅ [SOCKET] message-sent ACK emitted successfully");
 
     } catch (err) {
+      console.error("❌ [SOCKET] ERROR in send-message handler:", err);
+      console.error("❌ [SOCKET] Stack trace:", err.stack);
       logger.error("❌ SOCKET SEND ERROR:", err);
       socket.emit("send-error", {
         clientTempId: data.clientTempId,
         message: err.message || "Failed to send message",
       });
+      console.log("📤 [SOCKET] send-error event emitted to client");
     }
   });
 

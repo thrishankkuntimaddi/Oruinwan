@@ -320,6 +320,7 @@ const SignupForm = ({ onSwitch }) => {
                 <AlertCircle className="absolute right-3 top-3.5 text-red-500" size={20} />
               )}
             </div>
+
           </div>
           {errors.phone && <p className="text-red-500 text-xs mt-1">{errors.phone}</p>}
         </div>
@@ -377,10 +378,10 @@ const SignupForm = ({ onSwitch }) => {
               onBlur={handleBlur}
               placeholder="Confirm your password"
               className={`w-full px-4 py-3 pr-10 bg-slate-50 dark:bg-slate-900/50 text-slate-900 dark:text-white placeholder:text-slate-400 border-2 rounded-lg outline-none transition-all ${passwordsMatch
-                  ? 'border-green-500 focus:ring-2 focus:ring-green-200'
-                  : passwordsDontMatch
-                    ? 'border-red-500 focus:ring-2 focus:ring-red-200'
-                    : 'border-slate-200 dark:border-slate-700'
+                ? 'border-green-500 focus:ring-2 focus:ring-green-200'
+                : passwordsDontMatch
+                  ? 'border-red-500 focus:ring-2 focus:ring-red-200'
+                  : 'border-slate-200 dark:border-slate-700'
                 }`}
             />
             <button
