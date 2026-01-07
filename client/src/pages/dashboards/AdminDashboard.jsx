@@ -14,7 +14,6 @@ import {
 import {
     DashboardCard, UserCard, ActivityFeed, InviteUserModal
 } from '../../components/company';
-import AdminSidebar from '../../components/admin/AdminSidebar';
 import { getCompanyMetrics, getCompanyMembers } from '../../services/companyService';
 import { getAuditLogs } from '../../services/auditService';
 import { getDepartments } from '../../services/departmentService';
@@ -192,334 +191,330 @@ const AdminDashboard = () => {
     });
 
     return (
-        <div className="flex h-screen bg-gray-50 font-sans text-slate-900 overflow-hidden">
-            <AdminSidebar />
+        <React.Fragment>
+            {/* Header */}
+            <header className="h-16 px-8 flex items-center justify-between z-10 bg-white border-b border-slate-200">
+                <div>
+                    <h2 className="text-xl font-black text-slate-800">Company Dashboard</h2>
+                    <p className="text-xs text-slate-500 font-medium">
+                        Real-time operational overview · {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
+                    </p>
+                </div>
+                <div className="flex items-center gap-4">
+                    <button
+                        onClick={handleRefresh}
+                        disabled={refreshing || loading}
+                        className="px-4 py-2 bg-white border border-slate-300 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-50 transition-colors shadow-sm flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                        title="Refresh dashboard data"
+                    >
+                        <RefreshCw size={16} className={refreshing ? 'animate-spin' : ''} />
+                        {refreshing ? 'Refreshing...' : 'Refresh'}
+                    </button>
+                    <button
+                        onClick={() => setIsInviteModalOpen(true)}
+                        className="px-4 py-2 bg-indigo-600 text-white text-sm font-bold rounded-lg hover:bg-indigo-700 transition-colors shadow-sm flex items-center gap-2"
+                    >
+                        <Plus size={16} /> Invite People
+                    </button>
+                    <button className="w-9 h-9 bg-white border border-slate-200 rounded-lg flex items-center justify-center text-slate-500 hover:text-indigo-600 shadow-sm relative">
+                        <Bell size={18} />
+                        {(pendingInvites.length > 0 || atRiskWorkspaces.length > 0) && (
+                            <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border border-white"></span>
+                        )}
+                    </button>
+                </div>
+            </header>
 
-            <main className="flex-1 flex flex-col h-full overflow-hidden bg-slate-50/50 dark:bg-slate-900/50 relative">
-                {/* Header */}
-                <header className="h-16 px-8 flex items-center justify-between z-10 bg-white border-b border-slate-200">
-                    <div>
-                        <h2 className="text-xl font-black text-slate-800">Company Dashboard</h2>
-                        <p className="text-xs text-slate-500 font-medium">
-                            Real-time operational overview · {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
-                        </p>
+            <div className="flex-1 overflow-y-auto w-full px-8 py-8 z-10 custom-scrollbar">
+                {loading ? (
+                    <div className="flex items-center justify-center py-20">
+                        <div className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
                     </div>
-                    <div className="flex items-center gap-4">
-                        <button
-                            onClick={handleRefresh}
-                            disabled={refreshing || loading}
-                            className="px-4 py-2 bg-white border border-slate-300 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-50 transition-colors shadow-sm flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                            title="Refresh dashboard data"
-                        >
-                            <RefreshCw size={16} className={refreshing ? 'animate-spin' : ''} />
-                            {refreshing ? 'Refreshing...' : 'Refresh'}
-                        </button>
-                        <button
-                            onClick={() => setIsInviteModalOpen(true)}
-                            className="px-4 py-2 bg-indigo-600 text-white text-sm font-bold rounded-lg hover:bg-indigo-700 transition-colors shadow-sm flex items-center gap-2"
-                        >
-                            <Plus size={16} /> Invite People
-                        </button>
-                        <button className="w-9 h-9 bg-white border border-slate-200 rounded-lg flex items-center justify-center text-slate-500 hover:text-indigo-600 shadow-sm relative">
-                            <Bell size={18} />
-                            {(pendingInvites.length > 0 || atRiskWorkspaces.length > 0) && (
-                                <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border border-white"></span>
-                            )}
-                        </button>
-                    </div>
-                </header>
-
-                <div className="flex-1 overflow-y-auto w-full px-8 py-8 z-10 custom-scrollbar">
-                    {loading ? (
-                        <div className="flex items-center justify-center py-20">
-                            <div className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
-                        </div>
-                    ) : (
-                        <div className="space-y-6">
-                            {/* SECTION 1: COMPANY SNAPSHOT - "Is the company active?" */}
-                            <section>
-                                <div className="mb-4">
-                                    <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wide">Company Snapshot</h3>
-                                    <p className="text-xs text-slate-500">Instant health check</p>
-                                </div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                                    {/* Simple cards - NO CHARTS */}
-                                    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-                                        <div className="flex items-center justify-between mb-2">
-                                            <div className="p-2 bg-blue-50 rounded-lg">
-                                                <Users className="w-5 h-5 text-blue-600" />
-                                            </div>
-                                        </div>
-                                        <div className="text-3xl font-black text-slate-900">{metrics.totalUsers || 0}</div>
-                                        <div className="text-sm text-slate-500 font-medium mt-1">Total Employees</div>
-                                    </div>
-
-                                    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-                                        <div className="flex items-center justify-between mb-2">
-                                            <div className="p-2 bg-green-50 rounded-lg">
-                                                <Activity className="w-5 h-5 text-green-600" />
-                                            </div>
-                                        </div>
-                                        <div className="text-3xl font-black text-slate-900">{metrics.activeUsers || 0}</div>
-                                        <div className="text-sm text-slate-500 font-medium mt-1">Active Users (7d)</div>
-                                    </div>
-
-                                    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-                                        <div className="flex items-center justify-between mb-2">
-                                            <div className="p-2 bg-purple-50 rounded-lg">
-                                                <Briefcase className="w-5 h-5 text-purple-600" />
-                                            </div>
-                                        </div>
-                                        <div className="text-3xl font-black text-slate-900">{metrics.totalWorkspaces || 0}</div>
-                                        <div className="text-sm text-slate-500 font-medium mt-1">Active Workspaces</div>
-                                    </div>
-
-                                    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-                                        <div className="flex items-center justify-between mb-2">
-                                            <div className="p-2 bg-orange-50 rounded-lg">
-                                                <CheckCircle2 className="w-5 h-5 text-orange-600" />
-                                            </div>
-                                        </div>
-                                        <div className="text-3xl font-black text-slate-900">-</div>
-                                        <div className="text-sm text-slate-500 font-medium mt-1">Open Tasks</div>
-                                        <div className="text-xs text-slate-400 mt-1">Coming soon</div>
-                                    </div>
-                                </div>
-                            </section>
-
-                            {/* SECTION 2: ACTIVITY & MOMENTUM - "Is work happening?" */}
-                            <section>
-                                <div className="mb-4">
-                                    <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wide">Today's Activity</h3>
-                                    <p className="text-xs text-slate-500">Is collaboration alive?</p>
-                                </div>
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
-                                        <div className="flex items-center gap-3">
-                                            <div className="p-2 bg-blue-50 rounded-lg">
-                                                <MessageSquare className="w-4 h-4 text-blue-600" />
-                                            </div>
-                                            <div>
-                                                <div className="text-2xl font-black text-slate-900">{todayActivity.messagesToday}</div>
-                                                <div className="text-xs text-slate-500 font-medium">Messages Sent</div>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
-                                        <div className="flex items-center gap-3">
-                                            <div className="p-2 bg-green-50 rounded-lg">
-                                                <CheckCircle2 className="w-4 h-4 text-green-600" />
-                                            </div>
-                                            <div>
-                                                <div className="text-2xl font-black text-slate-900">{todayActivity.tasksCompletedToday}</div>
-                                                <div className="text-xs text-slate-500 font-medium">Tasks Completed</div>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
-                                        <div className="flex items-center gap-3">
-                                            <div className="p-2 bg-purple-50 rounded-lg">
-                                                <Calendar className="w-4 h-4 text-purple-600" />
-                                            </div>
-                                            <div>
-                                                <div className="text-2xl font-black text-slate-900">{todayActivity.meetingsToday}</div>
-                                                <div className="text-xs text-slate-500 font-medium">Meetings Started</div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </section>
-
-                            {/* SECTION 3: WORKSPACE HEALTH - "Are teams collaborating?" */}
-                            <section>
-                                <div className="mb-4">
-                                    <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wide">Workspace Health</h3>
-                                    <p className="text-xs text-slate-500">Monitor team activity</p>
-                                </div>
-                                <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                                    {workspaces.length === 0 ? (
-                                        <div className="p-8 text-center text-slate-500">
-                                            <Briefcase className="w-12 h-12 mx-auto mb-2 text-slate-300" />
-                                            <p className="text-sm">No workspaces yet</p>
-                                        </div>
-                                    ) : (
-                                        <table className="w-full">
-                                            <thead className="bg-slate-50 border-b border-slate-200">
-                                                <tr>
-                                                    <th className="text-left py-3 px-6 text-xs font-bold text-slate-500 uppercase">Workspace</th>
-                                                    <th className="text-left py-3 px-6 text-xs font-bold text-slate-500 uppercase">Members</th>
-                                                    <th className="text-left py-3 px-6 text-xs font-bold text-slate-500 uppercase">Last Activity</th>
-                                                    <th className="text-left py-3 px-6 text-xs font-bold text-slate-500 uppercase">Open Tasks</th>
-                                                    <th className="text-right py-3 px-6 text-xs font-bold text-slate-500 uppercase">Status</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody className="divide-y divide-slate-100">
-                                                {workspaces.slice(0, 5).map((ws) => {
-                                                    const isInactive = false; // Would check lastActivityAt from backend
-                                                    return (
-                                                        <tr key={ws._id} className="hover:bg-slate-50/50">
-                                                            <td className="py-3 px-6 font-bold text-slate-800">{ws.name}</td>
-                                                            <td className="py-3 px-6 text-sm text-slate-600">{ws.members?.length || 0}</td>
-                                                            <td className="py-3 px-6 text-sm text-slate-500">
-                                                                <Clock className="inline w-3 h-3 mr-1" />
-                                                                Just now
-                                                            </td>
-                                                            <td className="py-3 px-6 text-sm text-slate-600">-</td>
-                                                            <td className="py-3 px-6 text-right">
-                                                                <span className={`inline-flex px-3 py-1 rounded-full text-xs font-bold ${isInactive ? 'bg-orange-100 text-orange-700' : 'bg-green-100 text-green-700'
-                                                                    }`}>
-                                                                    {isInactive ? '⚠️ Inactive' : '✓ Active'}
-                                                                </span>
-                                                            </td>
-                                                        </tr>
-                                                    );
-                                                })}
-                                            </tbody>
-                                        </table>
-                                    )}
-                                    {workspaces.length > 5 && (
-                                        <div className="p-4 bg-slate-50 border-t border-slate-200 text-center">
-                                            <button className="text-sm text-indigo-600 font-bold hover:text-indigo-700">
-                                                View all {workspaces.length} workspaces
-                                            </button>
-                                        </div>
-                                    )}
-                                </div>
-                            </section>
-
-                            {/* SECTION 4: PEOPLE & ACCESS - "What needs attention?" */}
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                                {/* Pending Invites */}
+                ) : (
+                    <div className="space-y-6">
+                        {/* SECTION 1: COMPANY SNAPSHOT - "Is the company active?" */}
+                        <section>
+                            <div className="mb-4">
+                                <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wide">Company Snapshot</h3>
+                                <p className="text-xs text-slate-500">Instant health check</p>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                                {/* Simple cards - NO CHARTS */}
                                 <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-                                    <div className="flex items-center justify-between mb-4">
-                                        <div>
-                                            <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wide">Pending Invites</h3>
-                                            <p className="text-xs text-slate-500">Awaiting response</p>
-                                        </div>
-                                        <div className="p-2 bg-yellow-50 rounded-lg">
-                                            <UserPlus className="w-4 h-4 text-yellow-600" />
+                                    <div className="flex items-center justify-between mb-2">
+                                        <div className="p-2 bg-blue-50 rounded-lg">
+                                            <Users className="w-5 h-5 text-blue-600" />
                                         </div>
                                     </div>
-                                    {pendingInvites.length === 0 ? (
-                                        <p className="text-sm text-slate-500">No pending invites</p>
-                                    ) : (
-                                        <div className="space-y-2">
-                                            {pendingInvites.slice(0, 3).map((invite) => (
-                                                <div key={invite._id} className="flex items-center justify-between p-2 bg-slate-50 rounded-lg">
-                                                    <div className="text-sm">
-                                                        <div className="font-medium text-slate-900">{invite.email}</div>
-                                                        <div className="text-xs text-slate-500">Invited {new Date(invite.createdAt).toLocaleDateString()}</div>
-                                                    </div>
-                                                    <span className="text-xs px-2 py-1 bg-yellow-100 text-yellow-700 rounded-full font-bold">Pending</span>
-                                                </div>
-                                            ))}
-                                            {pendingInvites.length > 3 && (
-                                                <p className="text-xs text-slate-500 text-center pt-2">
-                                                    +{pendingInvites.length - 3} more
-                                                </p>
-                                            )}
-                                        </div>
-                                    )}
+                                    <div className="text-3xl font-black text-slate-900">{metrics.totalUsers || 0}</div>
+                                    <div className="text-sm text-slate-500 font-medium mt-1">Total Employees</div>
                                 </div>
 
-                                {/* Recently Joined */}
                                 <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-                                    <div className="flex items-center justify-between mb-4">
-                                        <div>
-                                            <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wide">Recently Joined</h3>
-                                            <p className="text-xs text-slate-500">Last 7 days</p>
-                                        </div>
+                                    <div className="flex items-center justify-between mb-2">
                                         <div className="p-2 bg-green-50 rounded-lg">
-                                            <TrendingUp className="w-4 h-4 text-green-600" />
+                                            <Activity className="w-5 h-5 text-green-600" />
                                         </div>
                                     </div>
-                                    {recentlyJoined.length === 0 ? (
-                                        <p className="text-sm text-slate-500">No new members this week</p>
-                                    ) : (
-                                        <div className="space-y-2">
-                                            {recentlyJoined.map((member) => (
-                                                <div key={member._id} className="flex items-center gap-3 p-2 bg-slate-50 rounded-lg">
-                                                    <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-sm font-bold text-indigo-600">
-                                                        {member.username?.[0]?.toUpperCase()}
-                                                    </div>
-                                                    <div className="flex-1 min-w-0">
-                                                        <div className="text-sm font-medium text-slate-900 truncate">{member.username}</div>
-                                                        <div className="text-xs text-slate-500">{new Date(member.createdAt).toLocaleDateString()}</div>
-                                                    </div>
-                                                </div>
-                                            ))}
+                                    <div className="text-3xl font-black text-slate-900">{metrics.activeUsers || 0}</div>
+                                    <div className="text-sm text-slate-500 font-medium mt-1">Active Users (7d)</div>
+                                </div>
+
+                                <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                                    <div className="flex items-center justify-between mb-2">
+                                        <div className="p-2 bg-purple-50 rounded-lg">
+                                            <Briefcase className="w-5 h-5 text-purple-600" />
                                         </div>
-                                    )}
+                                    </div>
+                                    <div className="text-3xl font-black text-slate-900">{metrics.totalWorkspaces || 0}</div>
+                                    <div className="text-sm text-slate-500 font-medium mt-1">Active Workspaces</div>
+                                </div>
+
+                                <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                                    <div className="flex items-center justify-between mb-2">
+                                        <div className="p-2 bg-orange-50 rounded-lg">
+                                            <CheckCircle2 className="w-5 h-5 text-orange-600" />
+                                        </div>
+                                    </div>
+                                    <div className="text-3xl font-black text-slate-900">-</div>
+                                    <div className="text-sm text-slate-500 font-medium mt-1">Open Tasks</div>
+                                    <div className="text-xs text-slate-400 mt-1">Coming soon</div>
                                 </div>
                             </div>
+                        </section>
 
-                            {/* SECTION 5: RECENT STRUCTURAL ACTIVITY - "What changed?" */}
-                            <section>
-                                <div className="mb-4">
-                                    <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wide">Recent Changes</h3>
-                                    <p className="text-xs text-slate-500">Governance awareness - structural activity only</p>
-                                </div>
-                                <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-                                    <div className="max-h-[300px] overflow-y-auto custom-scrollbar pr-2">
-                                        <ActivityFeed
-                                            activities={recentActivities}
-                                            emptyMessage="No recent structural changes"
-                                        />
+                        {/* SECTION 2: ACTIVITY & MOMENTUM - "Is work happening?" */}
+                        <section>
+                            <div className="mb-4">
+                                <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wide">Today's Activity</h3>
+                                <p className="text-xs text-slate-500">Is collaboration alive?</p>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-2 bg-blue-50 rounded-lg">
+                                            <MessageSquare className="w-4 h-4 text-blue-600" />
+                                        </div>
+                                        <div>
+                                            <div className="text-2xl font-black text-slate-900">{todayActivity.messagesToday}</div>
+                                            <div className="text-xs text-slate-500 font-medium">Messages Sent</div>
+                                        </div>
                                     </div>
                                 </div>
-                            </section>
 
-                            {/* SECTION 6: QUICK ACTIONS - Simple action buttons */}
-                            <section>
-                                <div className="mb-4">
-                                    <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wide">Quick Actions</h3>
+                                <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-2 bg-green-50 rounded-lg">
+                                            <CheckCircle2 className="w-4 h-4 text-green-600" />
+                                        </div>
+                                        <div>
+                                            <div className="text-2xl font-black text-slate-900">{todayActivity.tasksCompletedToday}</div>
+                                            <div className="text-xs text-slate-500 font-medium">Tasks Completed</div>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                    <button
-                                        onClick={() => setIsInviteModalOpen(true)}
-                                        className="bg-white hover:bg-indigo-50 border-2 border-slate-200 hover:border-indigo-300 rounded-xl p-4 text-left transition-all group"
-                                    >
-                                        <UserPlus className="w-5 h-5 text-slate-600 group-hover:text-indigo-600 mb-2" />
-                                        <div className="text-sm font-bold text-slate-900">Invite Users</div>
-                                    </button>
-                                    <button
-                                        onClick={() => navigate('/admin/departments')}
-                                        className="bg-white hover:bg-indigo-50 border-2 border-slate-200 hover:border-indigo-300 rounded-xl p-4 text-left transition-all group"
-                                    >
-                                        <Briefcase className="w-5 h-5 text-slate-600 group-hover:text-indigo-600 mb-2" />
-                                        <div className="text-sm font-bold text-slate-900">Manage Departments</div>
-                                    </button>
-                                    <button
-                                        onClick={() => navigate('/admin/analytics')}
-                                        className="bg-white hover:bg-indigo-50 border-2 border-slate-200 hover:border-indigo-300 rounded-xl p-4 text-left transition-all group"
-                                    >
-                                        <BarChart3 className="w-5 h-5 text-slate-600 group-hover:text-indigo-600 mb-2" />
-                                        <div className="text-sm font-bold text-slate-900">View Analytics</div>
-                                    </button>
-                                    <button
-                                        onClick={() => navigate('/admin/settings')}
-                                        className="bg-white hover:bg-indigo-50 border-2 border-slate-200 hover:border-indigo-300 rounded-xl p-4 text-left transition-all group"
-                                    >
-                                        <Settings className="w-5 h-5 text-slate-600 group-hover:text-indigo-600 mb-2" />
-                                        <div className="text-sm font-bold text-slate-900">Settings</div>
-                                    </button>
+
+                                <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-2 bg-purple-50 rounded-lg">
+                                            <Calendar className="w-4 h-4 text-purple-600" />
+                                        </div>
+                                        <div>
+                                            <div className="text-2xl font-black text-slate-900">{todayActivity.meetingsToday}</div>
+                                            <div className="text-xs text-slate-500 font-medium">Meetings Started</div>
+                                        </div>
+                                    </div>
                                 </div>
-                            </section>
+                            </div>
+                        </section>
+
+                        {/* SECTION 3: WORKSPACE HEALTH - "Are teams collaborating?" */}
+                        <section>
+                            <div className="mb-4">
+                                <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wide">Workspace Health</h3>
+                                <p className="text-xs text-slate-500">Monitor team activity</p>
+                            </div>
+                            <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                                {workspaces.length === 0 ? (
+                                    <div className="p-8 text-center text-slate-500">
+                                        <Briefcase className="w-12 h-12 mx-auto mb-2 text-slate-300" />
+                                        <p className="text-sm">No workspaces yet</p>
+                                    </div>
+                                ) : (
+                                    <table className="w-full">
+                                        <thead className="bg-slate-50 border-b border-slate-200">
+                                            <tr>
+                                                <th className="text-left py-3 px-6 text-xs font-bold text-slate-500 uppercase">Workspace</th>
+                                                <th className="text-left py-3 px-6 text-xs font-bold text-slate-500 uppercase">Members</th>
+                                                <th className="text-left py-3 px-6 text-xs font-bold text-slate-500 uppercase">Last Activity</th>
+                                                <th className="text-left py-3 px-6 text-xs font-bold text-slate-500 uppercase">Open Tasks</th>
+                                                <th className="text-right py-3 px-6 text-xs font-bold text-slate-500 uppercase">Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-100">
+                                            {workspaces.slice(0, 5).map((ws) => {
+                                                const isInactive = false; // Would check lastActivityAt from backend
+                                                return (
+                                                    <tr key={ws._id} className="hover:bg-slate-50/50">
+                                                        <td className="py-3 px-6 font-bold text-slate-800">{ws.name}</td>
+                                                        <td className="py-3 px-6 text-sm text-slate-600">{ws.members?.length || 0}</td>
+                                                        <td className="py-3 px-6 text-sm text-slate-500">
+                                                            <Clock className="inline w-3 h-3 mr-1" />
+                                                            Just now
+                                                        </td>
+                                                        <td className="py-3 px-6 text-sm text-slate-600">-</td>
+                                                        <td className="py-3 px-6 text-right">
+                                                            <span className={`inline-flex px-3 py-1 rounded-full text-xs font-bold ${isInactive ? 'bg-orange-100 text-orange-700' : 'bg-green-100 text-green-700'
+                                                                }`}>
+                                                                {isInactive ? '⚠️ Inactive' : '✓ Active'}
+                                                            </span>
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })}
+                                        </tbody>
+                                    </table>
+                                )}
+                                {workspaces.length > 5 && (
+                                    <div className="p-4 bg-slate-50 border-t border-slate-200 text-center">
+                                        <button className="text-sm text-indigo-600 font-bold hover:text-indigo-700">
+                                            View all {workspaces.length} workspaces
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        </section>
+
+                        {/* SECTION 4: PEOPLE & ACCESS - "What needs attention?" */}
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            {/* Pending Invites */}
+                            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                                <div className="flex items-center justify-between mb-4">
+                                    <div>
+                                        <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wide">Pending Invites</h3>
+                                        <p className="text-xs text-slate-500">Awaiting response</p>
+                                    </div>
+                                    <div className="p-2 bg-yellow-50 rounded-lg">
+                                        <UserPlus className="w-4 h-4 text-yellow-600" />
+                                    </div>
+                                </div>
+                                {pendingInvites.length === 0 ? (
+                                    <p className="text-sm text-slate-500">No pending invites</p>
+                                ) : (
+                                    <div className="space-y-2">
+                                        {pendingInvites.slice(0, 3).map((invite) => (
+                                            <div key={invite._id} className="flex items-center justify-between p-2 bg-slate-50 rounded-lg">
+                                                <div className="text-sm">
+                                                    <div className="font-medium text-slate-900">{invite.email}</div>
+                                                    <div className="text-xs text-slate-500">Invited {new Date(invite.createdAt).toLocaleDateString()}</div>
+                                                </div>
+                                                <span className="text-xs px-2 py-1 bg-yellow-100 text-yellow-700 rounded-full font-bold">Pending</span>
+                                            </div>
+                                        ))}
+                                        {pendingInvites.length > 3 && (
+                                            <p className="text-xs text-slate-500 text-center pt-2">
+                                                +{pendingInvites.length - 3} more
+                                            </p>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Recently Joined */}
+                            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                                <div className="flex items-center justify-between mb-4">
+                                    <div>
+                                        <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wide">Recently Joined</h3>
+                                        <p className="text-xs text-slate-500">Last 7 days</p>
+                                    </div>
+                                    <div className="p-2 bg-green-50 rounded-lg">
+                                        <TrendingUp className="w-4 h-4 text-green-600" />
+                                    </div>
+                                </div>
+                                {recentlyJoined.length === 0 ? (
+                                    <p className="text-sm text-slate-500">No new members this week</p>
+                                ) : (
+                                    <div className="space-y-2">
+                                        {recentlyJoined.map((member) => (
+                                            <div key={member._id} className="flex items-center gap-3 p-2 bg-slate-50 rounded-lg">
+                                                <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-sm font-bold text-indigo-600">
+                                                    {member.username?.[0]?.toUpperCase()}
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="text-sm font-medium text-slate-900 truncate">{member.username}</div>
+                                                    <div className="text-xs text-slate-500">{new Date(member.createdAt).toLocaleDateString()}</div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
                         </div>
-                    )}
-                </div>
 
-                {/* Modals */}
-                <InviteUserModal
-                    isOpen={isInviteModalOpen}
-                    onClose={() => setIsInviteModalOpen(false)}
-                    companyId={user?.companyId}
-                    workspaces={workspaces}
-                />
-            </main>
-        </div>
+                        {/* SECTION 5: RECENT STRUCTURAL ACTIVITY - "What changed?" */}
+                        <section>
+                            <div className="mb-4">
+                                <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wide">Recent Changes</h3>
+                                <p className="text-xs text-slate-500">Governance awareness - structural activity only</p>
+                            </div>
+                            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                                <div className="max-h-[300px] overflow-y-auto custom-scrollbar pr-2">
+                                    <ActivityFeed
+                                        activities={recentActivities}
+                                        emptyMessage="No recent structural changes"
+                                    />
+                                </div>
+                            </div>
+                        </section>
+
+                        {/* SECTION 6: QUICK ACTIONS - Simple action buttons */}
+                        <section>
+                            <div className="mb-4">
+                                <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wide">Quick Actions</h3>
+                            </div>
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                <button
+                                    onClick={() => setIsInviteModalOpen(true)}
+                                    className="bg-white hover:bg-indigo-50 border-2 border-slate-200 hover:border-indigo-300 rounded-xl p-4 text-left transition-all group"
+                                >
+                                    <UserPlus className="w-5 h-5 text-slate-600 group-hover:text-indigo-600 mb-2" />
+                                    <div className="text-sm font-bold text-slate-900">Invite Users</div>
+                                </button>
+                                <button
+                                    onClick={() => navigate('/admin/departments')}
+                                    className="bg-white hover:bg-indigo-50 border-2 border-slate-200 hover:border-indigo-300 rounded-xl p-4 text-left transition-all group"
+                                >
+                                    <Briefcase className="w-5 h-5 text-slate-600 group-hover:text-indigo-600 mb-2" />
+                                    <div className="text-sm font-bold text-slate-900">Manage Departments</div>
+                                </button>
+                                <button
+                                    onClick={() => navigate('/admin/analytics')}
+                                    className="bg-white hover:bg-indigo-50 border-2 border-slate-200 hover:border-indigo-300 rounded-xl p-4 text-left transition-all group"
+                                >
+                                    <BarChart3 className="w-5 h-5 text-slate-600 group-hover:text-indigo-600 mb-2" />
+                                    <div className="text-sm font-bold text-slate-900">View Analytics</div>
+                                </button>
+                                <button
+                                    onClick={() => navigate('/admin/settings')}
+                                    className="bg-white hover:bg-indigo-50 border-2 border-slate-200 hover:border-indigo-300 rounded-xl p-4 text-left transition-all group"
+                                >
+                                    <Settings className="w-5 h-5 text-slate-600 group-hover:text-indigo-600 mb-2" />
+                                    <div className="text-sm font-bold text-slate-900">Settings</div>
+                                </button>
+                            </div>
+                        </section>
+                    </div>
+                )}
+            </div>
+
+            {/* Modals */}
+            <InviteUserModal
+                isOpen={isInviteModalOpen}
+                onClose={() => setIsInviteModalOpen(false)}
+                companyId={user?.companyId}
+                workspaces={workspaces}
+            />
+        </React.Fragment>
     );
 };
 

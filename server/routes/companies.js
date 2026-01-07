@@ -56,6 +56,22 @@ router.post("/check-name", companyController.checkCompanyName);
 router.post("/check-domain", companyController.checkCompanyDomain);
 
 /**
+ * @route   POST /api/companies/check-email
+ * @desc    Check if email already exists
+ * @body    email
+ * @access  Public
+ */
+router.post("/check-email", companyController.checkEmail);
+
+/**
+ * @route   POST /api/companies/check-phone
+ * @desc    Check if phone number already exists
+ * @body    phone
+ * @access  Public
+ */
+router.post("/check-phone", companyController.checkPhone);
+
+/**
  * @route   POST /api/companies/register
  * @desc    Register a new company with admin user
  * @body    companyName, adminName, adminEmail, domain, documents
@@ -132,11 +148,39 @@ router.get("/:id", requireAuth, companyController.getCompany);
 router.put("/:id", requireAuth, companyController.updateCompany);
 
 /**
+ * @route   PUT /api/companies/:id/settings/profile
+ * @desc    Update company profile settings
+ * @access  Private (company admin)
+ */
+router.put("/:id/settings/profile", requireAuth, companyController.updateCompanyProfile);
+
+/**
+ * @route   PUT /api/companies/:id/settings/security
+ * @desc    Update security settings
+ * @access  Private (company admin)
+ */
+router.put("/:id/settings/security", requireAuth, companyController.updateSecuritySettings);
+
+/**
+ * @route   PUT /api/companies/:id/settings/domain
+ * @desc    Update domain & SSO settings
+ * @access  Private (company admin)
+ */
+router.put("/:id/settings/domain", requireAuth, companyController.updateDomainSettings);
+
+/**
  * @route   GET /api/companies/:id/members
  * @desc    Get company members
  * @access  Private (company members)
  */
 router.get("/:id/members", requireAuth, companyController.getCompanyMembers);
+
+/**
+ * @route   GET /api/companies/:id/analytics
+ * @desc    Get company analytics data
+ * @access  Private (company admin)
+ */
+router.get("/:id/analytics", requireAuth, companyController.getCompanyAnalytics);
 
 /**
  * @route   PUT /api/companies/:id/members/:userId/role

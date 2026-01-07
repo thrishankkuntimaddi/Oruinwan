@@ -3,10 +3,11 @@ import axios from 'axios';
 import { Globe, MessageSquare, Shield, ExternalLink, MoreHorizontal, Search } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
-const ActiveCompanies = ({ onChatStart, onViewDetail }) => {
+const ActiveCompanies = () => {
     const [companies, setCompanies] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
+    const navigate = useNavigate();
 
     useEffect(() => {
         fetchCompanies();
@@ -89,14 +90,14 @@ const ActiveCompanies = ({ onChatStart, onViewDetail }) => {
                                     <td className="px-6 py-4 text-right">
                                         <div className="flex justify-end gap-2">
                                             <button
-                                                onClick={() => onChatStart(company._id)}
+                                                onClick={() => navigate(`/chttrix-admin/dm/${company._id}`)}
                                                 className="inline-flex items-center gap-2 px-3 py-2 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-xs font-bold text-gray-700 dark:text-white hover:bg-indigo-50 dark:hover:bg-indigo-900/30 hover:text-indigo-600 dark:hover:text-indigo-400 hover:border-indigo-100 dark:hover:border-indigo-500/30 transition-all shadow-sm"
                                                 title="Message Admin"
                                             >
                                                 <MessageSquare size={14} />
                                             </button>
+                                            {/* TODO: Add view details modal or page */}
                                             <button
-                                                onClick={() => onViewDetail(company._id)}
                                                 className="inline-flex items-center gap-2 px-4 py-2 bg-gray-900 dark:bg-indigo-600 border border-transparent rounded-xl text-xs font-bold text-white hover:bg-black dark:hover:bg-indigo-700 transition-all shadow-md shadow-gray-200 dark:shadow-none"
                                             >
                                                 Manage

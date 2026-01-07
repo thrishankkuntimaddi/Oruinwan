@@ -15,6 +15,7 @@ import { DepartmentProvider } from "./contexts/DepartmentContext";
 
 // Layout + Components
 import MainLayout from "./components/layout/MainLayout";
+import CompanyAdminLayout from "./components/layout/CompanyAdminLayout";
 import HomePanel from "./components/home/panels/HomePanel";
 import ChannelsPanel from "./components/layout/panels/ChannelsPanel";
 import MessagesPanel from "./components/layout/panels/MessagesPanel";
@@ -49,8 +50,10 @@ import CompanyConfirmation from "./pages/CompanyConfirmation";
 import CompanySetup from "./pages/CompanySetup";
 import DepartmentManagement from "./pages/admin/DepartmentManagement"; // Updated path
 import UserManagement from "./pages/admin/UserManagement"; // NEW
-import AdminSettings from "./pages/admin/AdminSettings"; // NEW
+import CompanySettings from "./pages/admin/settings/CompanySettings"; // NEW - 8 section settings
 import AdminProfile from "./pages/admin/AdminProfile"; // Personal profile
+import Analytics from "./pages/admin/Analytics"; // NEW - Analytics dashboard
+import ContactAdmin from "./pages/admin/ContactAdmin"; // NEW - Contact platform admin
 
 // Dashboard Pages
 import AdminDashboard from "./pages/dashboards/AdminDashboard";
@@ -394,69 +397,24 @@ function App() {
                           />
 
                           {/* Dashboard Routes - Smart redirect based on role */}
+                          {/* Company Admin Routes - Wrapped in Layout */}
                           <Route
-                            path="/admin/dashboard"
                             element={
                               <RequireAuth>
                                 <RequireAdmin>
-                                  <AdminDashboard />
+                                  <CompanyAdminLayout />
                                 </RequireAdmin>
                               </RequireAuth>
                             }
-                          />
-
-                          <Route
-                            path="/admin/departments"
-                            element={
-                              <RequireAuth>
-                                <RequireAdmin>
-                                  <DepartmentManagement />
-                                </RequireAdmin>
-                              </RequireAuth>
-                            }
-                          />
-
-                          <Route
-                            path="/admin/users"
-                            element={
-                              <RequireAuth>
-                                <RequireAdmin>
-                                  <UserManagement />
-                                </RequireAdmin>
-                              </RequireAuth>
-                            }
-                          />
-
-                          <Route
-                            path="/admin/settings"
-                            element={
-                              <RequireAuth>
-                                <RequireAdmin>
-                                  <AdminSettings />
-                                </RequireAdmin>
-                              </RequireAuth>
-                            }
-                          />
-
-                          <Route
-                            path="/admin/profile"
-                            element={
-                              <RequireAuth>
-                                <RequireAdmin>
-                                  <AdminProfile />
-                                </RequireAdmin>
-                              </RequireAuth>
-                            }
-                          />
-
-                          <Route
-                            path="/admin/analytics"
-                            element={
-                              <RequireCompanyAdmin>
-                                <AdminAnalyticsDashboard />
-                              </RequireCompanyAdmin>
-                            }
-                          />
+                          >
+                            <Route path="/admin/dashboard" element={<AdminDashboard />} />
+                            <Route path="/admin/analytics" element={<Analytics />} />
+                            <Route path="/admin/departments" element={<DepartmentManagement />} />
+                            <Route path="/admin/users" element={<UserManagement />} />
+                            <Route path="/admin/settings" element={<CompanySettings />} />
+                            <Route path="/admin/profile" element={<AdminProfile />} />
+                            <Route path="/contact-admin" element={<ContactAdmin />} />
+                          </Route>
 
                           <Route
                             path="/manager/dashboard"
@@ -482,9 +440,9 @@ function App() {
                             }
                           />
 
-                          {/* Chttrix Super Admin */}
+                          {/* Chttrix Super Admin - Nested Routes */}
                           <Route
-                            path="/chttrix-admin"
+                            path="/chttrix-admin/*"
                             element={
                               <RequireChttrixAdmin>
                                 <ChttrixAdminDashboard />

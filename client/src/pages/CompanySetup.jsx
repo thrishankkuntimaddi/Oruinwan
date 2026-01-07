@@ -119,8 +119,8 @@ const CompanySetup = () => {
             {/* Navbar */}
             <nav className="relative z-50 px-8 py-6 flex justify-between items-center max-w-7xl mx-auto w-full shrink-0">
                 <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-white/80 backdrop-blur rounded-xl shadow-lg shadow-indigo-100/50 border border-white flex items-center justify-center">
-                        <Building className="w-5 h-5 text-indigo-600" />
+                    <div className="w-10 h-10 bg-white/80 backdrop-blur rounded-xl shadow-lg shadow-indigo-100/50 border border-white overflow-hidden">
+                        <img src="/chttrix-logo.jpg" alt="Chttrix" className="w-full h-full object-cover" />
                     </div>
                 </div>
                 <div className="flex gap-2">

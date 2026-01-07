@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
     LayoutDashboard, Users, Settings,
-    Globe, LogOut, Building, BarChart3, ChevronUp, User
+    Globe, LogOut, Building, BarChart3, ChevronUp, User, HelpCircle
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCompany } from '../../contexts/CompanyContext';
@@ -20,7 +20,7 @@ const AdminSidebar = () => {
         { path: '/admin/analytics', label: 'Analytics', icon: BarChart3 },
         { path: '/admin/departments', label: 'Departments', icon: Building },
         { path: '/admin/users', label: 'People', icon: Users },
-        { path: '/admin/settings', label: 'Settings', icon: Settings },
+        { path: '/admin/profile', label: 'My Profile', icon: User },
     ];
 
     const isActive = (path) => location.pathname === path;
@@ -67,8 +67,20 @@ const AdminSidebar = () => {
                     ))}
                 </div>
 
-                <div className="mt-8 pt-8 border-t border-slate-100">
-                    <p className="px-4 text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Workspace</p>
+                <div className="mt-8 pt-8 border-t border-slate-100 space-y-1">
+                    <p className="px-4 text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">More</p>
+                    <button
+                        onClick={() => navigate('/admin/settings')}
+                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${isActive('/admin/settings') ? 'bg-indigo-50 text-indigo-600' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'}`}
+                    >
+                        <Settings size={18} /> Settings
+                    </button>
+                    <button
+                        onClick={() => navigate('/contact-admin')}
+                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${isActive('/contact-admin') ? 'bg-indigo-50 text-indigo-600' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'}`}
+                    >
+                        <HelpCircle size={18} /> Contact Admin
+                    </button>
                     <button
                         onClick={() => navigate('/workspaces')}
                         className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-500 hover:bg-slate-50 hover:text-slate-900"

@@ -12,21 +12,62 @@ const Company = require('../models/Company');
 exports.getAuditLogs = async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
-        const limit = parseInt(req.query.limit) || 20;
+        const limit = parseInt(req.query.limit) || 100; // Increased for better UX
+        const { action, resource, userId, dateFrom, dateTo } = req.query;
 
-        const logs = await AuditLog.find()
+        // Build filter object
+        const filter = {};
+
+        if (action && action !== 'all') {
+            filter.action = action;
+        }
+
+        if (resource && resource !== 'all') {
+            filter.resource = resource;
+        }
+
+        if (userId) {
+            filter.userId = userId;
+        }
+
+        // Date range filtering
+        if (dateFrom || dateTo) {
+            filter.createdAt = {};
+            if (dateFrom) {
+                filter.createdAt.$gte = new Date(dateFrom);
+            }
+            if (dateTo) {
+                const endDate = new Date(dateTo);
+                endDate.setHours(23, 59, 59, 999);
+                filter.createdAt.$lte = endDate;
+            }
+        }
+
+        const logs = await AuditLog.find(filter)
             .sort({ createdAt: -1 })
             .skip((page - 1) * limit)
             .limit(limit)
             .populate('userId', 'username email')
-            .populate('companyId', 'name');
+            .populate('companyId', 'name')
+            .lean();
 
-        const total = await AuditLog.countDocuments();
+        const total = await AuditLog.countDocuments(filter);
+
+        // If no pagination requested, return all logs
+        if (!req.query.page) {
+            const allLogs = await AuditLog.find(filter)
+                .sort({ createdAt: -1 })
+                .populate('userId', 'username email')
+                .populate('companyId', 'name')
+                .lean();
+            return res.json(allLogs);
+        }
 
         res.json({
             logs,
             totalPages: Math.ceil(total / limit),
-            currentPage: page
+            currentPage: page,
+            total
         });
     } catch (err) {
         console.error("AUDIT LOG ERROR:", err);

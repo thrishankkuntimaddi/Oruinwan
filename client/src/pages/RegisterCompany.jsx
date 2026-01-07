@@ -33,7 +33,9 @@ const RegisterCompany = () => {
     // Inline Validation States
     const [validationStatus, setValidationStatus] = useState({
         companyName: 'idle', // idle | checking | available | taken
-        companyDomain: 'idle'
+        companyDomain: 'idle',
+        personalEmail: 'idle', // idle | checking | available | taken
+        phone: 'idle' // idle | checking | available | taken
     });
 
     // OTP Modal State
@@ -136,6 +138,68 @@ const RegisterCompany = () => {
         return () => clearTimeout(timer);
     }, [formData.companyDomain]);
 
+    // Debounced validation for personal email (check if already exists)
+    useEffect(() => {
+        const timer = setTimeout(async () => {
+            if (formData.personalEmail && /\S+@\S+\.\S+/.test(formData.personalEmail)) {
+                setValidationStatus(prev => ({ ...prev, personalEmail: 'checking' }));
+                try {
+                    const res = await axios.post(`${process.env.REACT_APP_BACKEND_URL}/api/companies/check-email`, {
+                        email: formData.personalEmail
+                    });
+
+                    if (res.data.exists) {
+                        setErrors(prev => ({ ...prev, personalEmail: 'Email already registered' }));
+                        setValidationStatus(prev => ({ ...prev, personalEmail: 'taken' }));
+                    } else {
+                        if (!errors.personalEmail || errors.personalEmail === 'Email already registered') {
+                            setErrors(prev => ({ ...prev, personalEmail: '' }));
+                        }
+                        setValidationStatus(prev => ({ ...prev, personalEmail: 'available' }));
+                    }
+                } catch (err) {
+                    setValidationStatus(prev => ({ ...prev, personalEmail: 'idle' }));
+                }
+            } else {
+                setValidationStatus(prev => ({ ...prev, personalEmail: 'idle' }));
+            }
+        }, 500);
+
+        return () => clearTimeout(timer);
+    }, [formData.personalEmail]);
+
+    // Debounced validation for phone (check if already exists)
+    useEffect(() => {
+        const timer = setTimeout(async () => {
+            const phoneDigits = formData.phone.replace(/\D/g, '');
+            if (phoneDigits.length === currentPhoneCode.len) {
+                setValidationStatus(prev => ({ ...prev, phone: 'checking' }));
+                try {
+                    const fullPhone = `${formData.phoneCode}${phoneDigits}`;
+                    const res = await axios.post(`${process.env.REACT_APP_BACKEND_URL}/api/companies/check-phone`, {
+                        phone: fullPhone
+                    });
+
+                    if (res.data.exists) {
+                        setErrors(prev => ({ ...prev, phone: 'Phone number already registered' }));
+                        setValidationStatus(prev => ({ ...prev, phone: 'taken' }));
+                    } else {
+                        if (!errors.phone || errors.phone === 'Phone number already registered') {
+                            setErrors(prev => ({ ...prev, phone: '' }));
+                        }
+                        setValidationStatus(prev => ({ ...prev, phone: 'available' }));
+                    }
+                } catch (err) {
+                    setValidationStatus(prev => ({ ...prev, phone: 'idle' }));
+                }
+            } else {
+                setValidationStatus(prev => ({ ...prev, phone: 'idle' }));
+            }
+        }, 500);
+
+        return () => clearTimeout(timer);
+    }, [formData.phone, formData.phoneCode]);
+
     const handleChange = (e) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
@@ -166,16 +230,28 @@ const RegisterCompany = () => {
 
     const validateStep2 = () => {
         const newErrors = {};
+
+        // Basic field validation
         if (!formData.adminName.trim()) newErrors.adminName = "Name is required";
         if (!formData.personalEmail.trim()) newErrors.personalEmail = "Personal Email is required";
         else if (!/\S+@\S+\.\S+/.test(formData.personalEmail)) newErrors.personalEmail = "Invalid email";
+        else if (validationStatus.personalEmail === 'taken') newErrors.personalEmail = "Email already registered";
 
         if (!formData.phone.trim()) newErrors.phone = "Phone is required";
         else if (formData.phone.replace(/\D/g, '').length !== currentPhoneCode.len) {
             newErrors.phone = `Must be ${currentPhoneCode.len} digits for ${currentPhoneCode.country}`;
         }
+        else if (validationStatus.phone === 'taken') newErrors.phone = "Phone number already registered";
 
         if (formData.role === "Other" && !formData.roleOther.trim()) newErrors.roleOther = "Please specify your role";
+
+        // CRITICAL: Enforce verification before proceeding
+        if (verificationStatus.personalEmail !== "verified") {
+            newErrors.personalEmail = newErrors.personalEmail || "Please verify your email before proceeding";
+        }
+        if (verificationStatus.phone !== "verified") {
+            newErrors.phone = newErrors.phone || "Please verify your phone number before proceeding";
+        }
 
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
@@ -614,7 +690,12 @@ const RegisterCompany = () => {
                                                     value={formData.personalEmail}
                                                     onChange={handleChange}
                                                     placeholder="john.doe@gmail.com"
-                                                    className={`w-full pl-12 pr-4 py-3.5 bg-white dark:bg-slate-800 border ${errors.personalEmail ? "border-red-300" : "border-gray-200 dark:border-gray-700"} focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 dark:focus:ring-indigo-900 rounded-2xl outline-none transition-all shadow-sm text-gray-900 dark:text-white placeholder:text-gray-400`}
+                                                    className={`w-full pl-12 pr-4 py-3.5 bg-white dark:bg-slate-800 border ${errors.personalEmail || validationStatus.personalEmail === 'taken'
+                                                            ? "border-red-500 bg-red-50 dark:bg-red-900/20"
+                                                            : validationStatus.personalEmail === 'available' && verificationStatus.personalEmail === 'verified'
+                                                                ? "border-green-500 bg-green-50 dark:bg-green-900/20"
+                                                                : "border-gray-200 dark:border-gray-700"
+                                                        } focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 dark:focus:ring-indigo-900 rounded-2xl outline-none transition-all shadow-sm text-gray-900 dark:text-white placeholder:text-gray-400`}
                                                 />
                                             </div>
                                             <button
@@ -658,7 +739,12 @@ const RegisterCompany = () => {
                                                     value={formData.phone}
                                                     onChange={handleChange}
                                                     placeholder="000-000-0000"
-                                                    className={`w-full pl-12 pr-4 py-3.5 bg-white dark:bg-slate-800 border ${errors.phone ? "border-red-300" : "border-gray-200 dark:border-gray-700"} focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 dark:focus:ring-indigo-900 rounded-2xl outline-none transition-all shadow-sm text-gray-900 dark:text-white placeholder:text-gray-400`}
+                                                    className={`w-full pl-12 pr-4 py-3.5 bg-white dark:bg-slate-800 border ${errors.phone || validationStatus.phone === 'taken'
+                                                        ? "border-red-500 bg-red-50 dark:bg-red-900/20"
+                                                        : validationStatus.phone === 'available' && verificationStatus.phone === 'verified'
+                                                            ? "border-green-500 bg-green-50 dark:bg-green-900/20"
+                                                            : "border-gray-200 dark:border-gray-700"
+                                                        } focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 dark:focus:ring-indigo-900 rounded-2xl outline-none transition-all shadow-sm text-gray-900 dark:text-white placeholder:text-gray-400`}
                                                 />
                                             </div>
                                             <button
