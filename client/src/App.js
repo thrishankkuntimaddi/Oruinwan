@@ -91,6 +91,7 @@ import ChttrixAdminDashboard from "./pages/dashboards/ChttrixAdminDashboard";
 import RequireAuth from "./components/RequireAuth";
 import RequireWorkspace from "./components/RequireWorkspace";
 import RequireAdmin from "./components/RequireAdmin";
+import RequireOwner from "./components/RequireOwner";
 import RequireChttrixAdmin from "./components/RequireChttrixAdmin";
 import RequireDepartmentManager from "./components/RequireDepartmentManager"; // Restored
 import VerifiedOnlyRoute from "./components/VerifiedOnlyRoute"; // Block pending users
@@ -430,8 +431,25 @@ function App() {
                             }
                           />
 
-                          {/* Dashboard Routes - Smart redirect based on role */}
-                          {/* Company Admin Routes - Wrapped in Layout */}
+                          {/* ============================================ */}
+                          {/* DASHBOARD ROUTES - SEPARATED BY ROLE        */}
+                          {/* ============================================ */}
+
+                          {/* OWNER DASHBOARD - Owner ONLY */}
+                          <Route
+                            path="/owner/dashboard"
+                            element={
+                              <RequireAuth>
+                                <RequireOwner>
+                                  <CompanyAdminLayout />
+                                </RequireOwner>
+                              </RequireAuth>
+                            }
+                          >
+                            <Route index element={<OwnerDashboard />} />
+                          </Route>
+
+                          {/* ADMIN DASHBOARD & TOOLS - Admin + Owner */}
                           <Route
                             element={
                               <RequireAuth>
@@ -441,9 +459,7 @@ function App() {
                               </RequireAuth>
                             }
                           >
-                            <Route path="/owner/dashboard" element={<OwnerDashboard />} />
                             <Route path="/admin/dashboard" element={<AdminDashboard />} />
-                            <Route path="/manager/dashboard" element={<ManagerDashboard />} />
                             <Route path="/admin/analytics" element={<Analytics />} />
                             <Route path="/admin/departments" element={<DepartmentManagement />} />
                             <Route path="/admin/users" element={<UserManagement />} />
@@ -453,23 +469,17 @@ function App() {
                             <Route path="/contact-admin" element={<ContactAdmin />} />
                           </Route>
 
+                          {/* MANAGER DASHBOARD - Manager + Admin + Owner */}
                           <Route
                             path="/manager/dashboard"
                             element={
-                              <RequireDepartmentManager>
-                                <ManagerDashboard />
-                              </RequireDepartmentManager>
+                              <RequireAuth>
+                                <RequireDepartmentManager>
+                                  <ManagerDashboard />
+                                </RequireDepartmentManager>
+                              </RequireAuth>
                             }
-                          >
-                            <Route index element={<Navigate to="overview" replace />} />
-                            <Route path="overview" element={<ManagerOverview />} />
-                            <Route path="team" element={<TeamAllocation />} />
-                            <Route path="location" element={<ManagerLocation />} />
-                            <Route path="tasks" element={<ManagerTasks />} />
-                            <Route path="reports" element={<ManagerReports />} />
-                            <Route path="contact" element={<ManagerContactAdmin />} />
-                            <Route path="settings" element={<ManagerSettings />} />
-                          </Route>
+                          />
 
                           <Route
                             path="/employee/dashboard"

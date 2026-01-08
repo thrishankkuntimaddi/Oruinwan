@@ -18,7 +18,11 @@ const AdminSidebar = () => {
         {
             group: 'OVERVIEW',
             items: [
-                { path: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+                {
+                    path: user?.companyRole === 'owner' ? '/owner/dashboard' : '/admin/dashboard',
+                    label: 'Dashboard',
+                    icon: LayoutDashboard
+                },
                 { path: '/admin/analytics', label: 'Analytics', icon: BarChart3 },
             ]
         },
