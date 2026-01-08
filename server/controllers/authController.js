@@ -12,13 +12,14 @@ const axios = require("axios");
 const { saveWithRetry } = require("../utils/mongooseRetry");
 const { setRefreshTokenCookie, clearRefreshTokenCookie } = require("../utils/cookieHelper");
 const { TIME } = require("../constants");
+const { sha256 } = require("../utils/hashUtils");
+const { handleError } = require("../utils/responseHelpers");
 
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 // ----------------------------------------------------
 // HELPERS
 // ----------------------------------------------------
-const sha256 = (v) => crypto.createHash("sha256").update(v).digest("hex");
 const ACCESS_EXPIRES = process.env.ACCESS_EXPIRES || "15m";
 const REFRESH_DAYS = parseInt(process.env.REFRESH_TOKEN_DAYS || "7", 10);
 
@@ -289,8 +290,7 @@ exports.signup = async (req, res) => {
     });
 
   } catch (err) {
-    console.error("SIGNUP ERROR:", err);
-    return res.status(500).json({ message: "Server error" });
+    return handleError(res, err, "SIGNUP ERROR");
   }
 };
 
@@ -573,8 +573,7 @@ exports.login = async (req, res) => {
     return res.json(response);
 
   } catch (err) {
-    console.error("LOGIN ERROR:", err);
-    return res.status(500).json({ message: "Server error" });
+    return handleError(res, err, "LOGIN ERROR");
   }
 };
 
@@ -690,8 +689,7 @@ exports.logout = async (req, res) => {
 
     return res.json({ message: "Logged out" });
   } catch (err) {
-    console.error("LOGOUT ERROR:", err);
-    return res.status(500).json({ message: "Server error" });
+    return handleError(res, err, "LOGOUT ERROR");
   }
 };
 
@@ -718,8 +716,7 @@ exports.logoutAll = async (req, res) => {
     return res.json({ message: "Logged out from all devices" });
 
   } catch (err) {
-    console.error("LOGOUT ALL ERROR:", err);
-    return res.status(500).json({ message: "Server error" });
+    return handleError(res, err, "LOGOUT ALL ERROR");
   }
 };
 

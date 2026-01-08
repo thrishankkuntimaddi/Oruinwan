@@ -3,8 +3,7 @@ import axios from "axios";
 import { formatTime as fmtTime } from "./helpers/helpers";
 import { useToast } from "../../../contexts/ToastContext";
 import { Bold, Italic, Link, List, Smile, Send, X, Paperclip } from "lucide-react";
-
-const API_BASE = process.env.REACT_APP_BACKEND_URL || "http://localhost:5000";
+import { API_BASE } from "../../../services/api";
 
 export default function ThreadPanel({ parentMessage, onClose, socket, currentUserId }) {
     const { showToast } = useToast();

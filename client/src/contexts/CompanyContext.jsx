@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useAuth } from './AuthContext';
-import api from '../services/api';
+import api, { API_BASE } from '../services/api';
 
 const CompanyContext = createContext();
 
@@ -20,8 +20,6 @@ export const CompanyProvider = ({ children }) => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
-    const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000';
-
     // Fetch company details
     const fetchCompanyDetails = useCallback(async () => {
         if (!user?.companyId) {
@@ -32,7 +30,6 @@ export const CompanyProvider = ({ children }) => {
 
         try {
             setLoading(true);
-            const token = localStorage.getItem('accessToken');
 
             // Extract ID - handle both object and string formats  
             console.log('[DEBUG] user.companyId:', user.companyId);
@@ -51,7 +48,7 @@ export const CompanyProvider = ({ children }) => {
         } finally {
             setLoading(false);
         }
-    }, [user?.companyId, API_BASE]);
+    }, [user?.companyId]);
 
     // Fetch company on mount or when user changes
     useEffect(() => {
@@ -65,7 +62,6 @@ export const CompanyProvider = ({ children }) => {
         }
 
         try {
-            const token = localStorage.getItem('accessToken');
 
             // Extract ID - handle both object and string formats  
             console.log('[DEBUG] user.companyId:', user.companyId);

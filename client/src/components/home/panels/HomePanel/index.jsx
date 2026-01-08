@@ -7,7 +7,7 @@ import { useAuth } from "../../../../contexts/AuthContext";
 import { useToast } from "../../../../contexts/ToastContext";
 // import { useUsers } from "../../../../hooks/useUsers"; // Currently unused
 import { useWorkspace } from "../../../../contexts/WorkspaceContext";
-import api from "../../../../services/api";
+import api, { API_BASE } from "../../../../services/api";
 import { io } from "socket.io-client";
 
 // Import sub-components
@@ -19,7 +19,6 @@ import WorkspaceSettingsModal from "./WorkspaceSettingsModal";
 import DeleteWorkspaceModal from "./DeleteWorkspaceModal";
 import { CreateChannelModal, NewDMModal } from "./ChannelDMModals";
 
-const API_BASE = process.env.REACT_APP_BACKEND_URL || "http://localhost:5000";
 
 const HomePanel = ({ title }) => {
     const navigate = useNavigate();

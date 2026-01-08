@@ -11,6 +11,9 @@ const Favorite = require("../models/Favorite");
 const Invite = require("../models/Invite");
 const { createInvite } = require("../utils/invite");
 const sendEmail = require("../utils/sendEmail");
+const { handleError, notFound, badRequest, forbidden } = require("../utils/responseHelpers");
+const { isMember, normalizeMemberFormat } = require("../utils/memberHelpers");
+const { emitToWorkspace } = require("../utils/socketHelpers");
 
 /**
  * Create new workspace (Personal or Company)
@@ -110,6 +113,35 @@ exports.createWorkspace = async (req, res) => {
 
     await user.save();
 
+    // ✅ FIX: Emit workspace-created event to company room
+    const io = req.app?.get("io");
+    if (io) {
+      // Emit to company room if company workspace
+      if (companyId) {
+        io.to(`company_${companyId}`).emit("workspace-created", {
+          workspaceId: workspace._id,
+          workspace: {
+            id: workspace._id,
+            name: workspace.name,
+            type: workspace.type,
+            icon: workspace.icon,
+            color: workspace.color
+          }
+        });
+      }
+      // Also emit to creator's user room
+      io.to(`user_${userId}`).emit("workspace-created", {
+        workspaceId: workspace._id,
+        workspace: {
+          id: workspace._id,
+          name: workspace.name,
+          type: workspace.type,
+          icon: workspace.icon,
+          color: workspace.color
+        }
+      });
+    }
+
     return res.status(201).json({
       message: "Workspace created successfully",
       workspace: {
@@ -122,8 +154,7 @@ exports.createWorkspace = async (req, res) => {
       }
     });
   } catch (err) {
-    console.error("CREATE WORKSPACE ERROR:", err);
-    return res.status(500).json({ message: "Server error" });
+    return handleError(res, err, "CREATE WORKSPACE ERROR");
   }
 };
 
@@ -172,8 +203,7 @@ exports.listMyWorkspaces = async (req, res) => {
 
     return res.json({ workspaces: workspacesWithOwner });
   } catch (err) {
-    console.error("LIST MY WORKSPACES ERROR:", err);
-    return res.status(500).json({ message: "Server error" });
+    return handleError(res, err, "LIST MY WORKSPACES ERROR");
   }
 };
 
@@ -188,8 +218,7 @@ exports.listWorkspaces = async (req, res) => {
     const workspaces = await Workspace.find({ company: companyId }).select("-__v").lean();
     return res.json({ workspaces });
   } catch (err) {
-    console.error("LIST WORKSPACES ERROR:", err);
-    return res.status(500).json({ message: "Server error" });
+    return handleError(res, err, "LIST WORKSPACES ERROR");
   }
 };
 
@@ -230,8 +259,7 @@ exports.getWorkspaceMembers = async (req, res) => {
 
     return res.json({ members: formattedMembers });
   } catch (err) {
-    console.error("GET WORKSPACE MEMBERS ERROR:", err);
-    return res.status(500).json({ message: "Server error" });
+    return handleError(res, err, "GET WORKSPACE MEMBERS ERROR");
   }
 };
 
@@ -302,8 +330,7 @@ exports.deleteWorkspace = async (req, res) => {
 
     return res.json({ message: "Workspace deleted successfully" });
   } catch (err) {
-    console.error("DELETE WORKSPACE ERROR:", err);
-    return res.status(500).json({ message: "Server error" });
+    return handleError(res, err, "DELETE WORKSPACE ERROR");
   }
 };
 
@@ -452,8 +479,7 @@ exports.getInviteDetails = async (req, res) => {
       role: invite.role
     });
   } catch (err) {
-    console.error("GET INVITE DETAILS ERROR:", err);
-    return res.status(500).json({ message: "Server error" });
+    return handleError(res, err, "GET INVITE DETAILS ERROR");
   }
 };
 
@@ -538,15 +564,7 @@ exports.joinWorkspace = async (req, res) => {
       if (!isAlreadyMember) {
         // 🔧 FIX: Convert all existing members to new format before adding new member
         // This prevents validation errors when Mongoose validates the entire array
-        channel.members = channel.members.map(m => {
-          // If it's already in new format, keep it
-          if (m.user) return m;
-          // If it's old format (just an ID), convert it
-          return {
-            user: m,
-            joinedAt: channel.createdAt || new Date()
-          };
-        });
+        channel.members = normalizeMemberFormat(channel.members, channel.createdAt);
 
         // Now add the new member
         channel.members.push({

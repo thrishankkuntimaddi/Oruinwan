@@ -2,8 +2,8 @@ import { useEffect, useState, useContext } from "react";
 import { useParams } from "react-router-dom";
 import axios from "axios";
 import { AuthContext } from "../../contexts/AuthContext";
-
-const API_BASE = process.env.REACT_APP_BACKEND_URL || "http://localhost:5000";
+import { API_BASE } from "../../services/api";
+import { getErrorMessage } from "../../utils/apiHelpers";
 
 export default function NewDMModal({ onClose, onStart }) {
   const [users, setUsers] = useState([]);
@@ -69,7 +69,7 @@ export default function NewDMModal({ onClose, onStart }) {
         setLoading(false);
       } catch (err) {
         console.error("❌ Failed to load users:", err);
-        setError("Failed to load users");
+        setError(getErrorMessage(err));
         setLoading(false);
       }
     }

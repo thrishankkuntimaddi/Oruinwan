@@ -2,14 +2,12 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Phone, Video, MoreVertical, X, Loader2 } from "lucide-react";
 import { io } from "socket.io-client";
-import api from "../../services/api";
+import api, { API_BASE } from "../../services/api";
 import { jwtDecode } from "jwt-decode";
 import { useAuth } from "../../contexts/AuthContext";
 import { useToast } from "../../contexts/ToastContext";
 import DMMessageItem from "./chatWindowComp/messages/DMMessageItem";
 import { groupByDate } from "./chatWindowComp/helpers/helpers";
-
-const API_BASE = process.env.REACT_APP_BACKEND_URL || "http://localhost:5000";
 
 export default function DMChatWindow({ chat, onClose, onDeleteChat }) {
     const { accessToken } = useAuth();

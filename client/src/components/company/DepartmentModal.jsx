@@ -1,47 +1,46 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { X } from 'lucide-react';
 import { createDepartment, updateDepartment } from '../../services/departmentService';
+import { useForm } from '../../hooks/useForm';
+import { getErrorMessage } from '../../utils/apiHelpers';
 
 const DepartmentModal = ({ isOpen, onClose, companyId, department, onSuccess }) => {
-    const [name, setName] = useState('');
-    const [description, setDescription] = useState('');
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState('');
+
+    const { values, errors, handleChange, handleSubmit, isSubmitting, resetForm, setMultipleValues } = useForm(
+        { name: '', description: '' },
+        async (formValues) => {
+            try {
+                if (department) {
+                    await updateDepartment(department._id, formValues);
+                } else {
+                    await createDepartment(companyId, formValues.name, formValues.description);
+                }
+                onSuccess();
+                onClose();
+            } catch (err) {
+                console.error("Failed to save department", err);
+                const error = new Error(getErrorMessage(err));
+                error.fieldErrors = { submit: getErrorMessage(err) };
+                throw error;
+            }
+        }
+    );
 
     useEffect(() => {
-        if (department) {
-            setName(department.name || '');
-            setDescription(department.description || '');
-        } else {
-            setName('');
-            setDescription('');
+        if (isOpen) {
+            if (department) {
+                setMultipleValues({
+                    name: department.name || '',
+                    description: department.description || ''
+                });
+            } else {
+                resetForm();
+            }
         }
-        setError('');
-    }, [department, isOpen]);
+    }, [department, isOpen, setMultipleValues, resetForm]);
 
     if (!isOpen) return null;
-
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        setLoading(true);
-        setError('');
-
-        try {
-            if (department) {
-                await updateDepartment(department._id, { name, description });
-            } else {
-                await createDepartment(companyId, name, description);
-            }
-            onSuccess();
-            onClose();
-        } catch (err) {
-            console.error("Failed to save department", err);
-            setError(err.response?.data?.message || "Failed to save department");
-        } finally {
-            setLoading(false);
-        }
-    };
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fadeIn">
@@ -56,9 +55,9 @@ const DepartmentModal = ({ isOpen, onClose, companyId, department, onSuccess }) 
                 </div>
 
                 <form onSubmit={handleSubmit} className="p-6 space-y-4">
-                    {error && (
+                    {errors.submit && (
                         <div className="p-3 bg-red-50 text-red-600 text-sm rounded-lg border border-red-100">
-                            {error}
+                            {errors.submit}
                         </div>
                     )}
 
@@ -66,9 +65,10 @@ const DepartmentModal = ({ isOpen, onClose, companyId, department, onSuccess }) 
                         <label className="block text-sm font-bold text-slate-700 mb-1">Department Name <span className="text-red-500">*</span></label>
                         <input
                             type="text"
+                            name="name"
                             required
-                            value={name}
-                            onChange={(e) => setName(e.target.value)}
+                            value={values.name}
+                            onChange={handleChange}
                             placeholder="e.g. Engineering"
                             className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 font-medium"
                         />
@@ -77,8 +77,9 @@ const DepartmentModal = ({ isOpen, onClose, companyId, department, onSuccess }) 
                     <div>
                         <label className="block text-sm font-bold text-slate-700 mb-1">Description</label>
                         <textarea
-                            value={description}
-                            onChange={(e) => setDescription(e.target.value)}
+                            name="description"
+                            value={values.description}
+                            onChange={handleChange}
                             placeholder="Brief description..."
                             rows="3"
                             className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 font-medium resize-none"
@@ -95,10 +96,10 @@ const DepartmentModal = ({ isOpen, onClose, companyId, department, onSuccess }) 
                         </button>
                         <button
                             type="submit"
-                            disabled={loading}
+                            disabled={isSubmitting}
                             className="flex-1 px-4 py-2.5 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-100 disabled:opacity-50"
                         >
-                            {loading ? (department ? 'Saving...' : 'Creating...') : (department ? 'Save Changes' : 'Create Department')}
+                            {isSubmitting ? (department ? 'Saving...' : 'Creating...') : (department ? 'Save Changes' : 'Create Department')}
                         </button>
                     </div>
                 </form>

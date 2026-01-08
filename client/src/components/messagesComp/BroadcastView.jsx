@@ -3,8 +3,7 @@ import axios from "axios";
 import { AuthContext } from "../../contexts/AuthContext";
 import { useToast } from "../../contexts/ToastContext";
 import { Search, X, Send, Users, Check } from "lucide-react";
-
-const API_BASE = process.env.REACT_APP_BACKEND_URL || "http://localhost:5000";
+import { API_BASE } from "../../services/api";
 
 export default function BroadcastView() {
     const [users, setUsers] = useState([]);

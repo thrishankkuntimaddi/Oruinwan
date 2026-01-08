@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import { useToast } from "../../contexts/ToastContext";
-
-const API_BASE = process.env.REACT_APP_BACKEND_URL || "http://localhost:5000";
+import { API_BASE } from "../../services/api";
+import { getErrorMessage } from "../../utils/apiHelpers";
 
 export default function JoinChannelModal({ onClose, onJoined, currentUserId }) {
     const { showToast } = useToast();
@@ -47,7 +47,7 @@ export default function JoinChannelModal({ onClose, onJoined, currentUserId }) {
             onClose();
         } catch (err) {
             console.error("Join failed:", err);
-            showToast(err?.response?.data?.message || "Join failed", "error");
+            showToast(getErrorMessage(err), "error");
         } finally {
             setLoading(false);
         }

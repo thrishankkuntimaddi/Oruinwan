@@ -18,8 +18,8 @@ const sendEmail = require("../utils/sendEmail");
 const { sendOTP } = require("../utils/sendOTP");
 const crypto = require("crypto");
 const bcrypt = require("bcryptjs");
-
-const sha256 = (v) => crypto.createHash("sha256").update(v).digest("hex");
+const { sha256 } = require("../utils/hashUtils");
+const { handleError } = require("../utils/responseHelpers");
 
 // ============================================================================
 // OTP STORE (In-Memory for Development)
@@ -78,8 +78,7 @@ exports.sendOtp = async (req, res) => {
       });
     }
   } catch (err) {
-    console.error("SEND OTP ERROR:", err);
-    return res.status(500).json({ message: "Server error" });
+    return handleError(res, err, "SEND OTP ERROR");
   }
 };
 
@@ -116,8 +115,7 @@ exports.verifyOtp = async (req, res) => {
     return res.json({ message: "Verified successfully", verified: true });
 
   } catch (err) {
-    console.error("VERIFY OTP ERROR:", err);
-    return res.status(500).json({ message: "Server error" });
+    return handleError(res, err, "VERIFY OTP ERROR");
   }
 };
 
@@ -166,8 +164,7 @@ exports.sendPhoneOtp = async (req, res) => {
       devNote: process.env.NODE_ENV !== "production" ? "Check server terminal for code" : undefined
     });
   } catch (err) {
-    console.error("SEND PHONE OTP ERROR:", err);
-    return res.status(500).json({ message: "Server error" });
+    return handleError(res, err, "SEND PHONE OTP ERROR");
   }
 };
 
@@ -218,8 +215,7 @@ exports.verifyPhoneOtp = async (req, res) => {
       verified: true
     });
   } catch (err) {
-    console.error("VERIFY PHONE OTP ERROR:", err);
-    return res.status(500).json({ message: "Server error" });
+    return handleError(res, err, "VERIFY PHONE OTP ERROR");
   }
 };
 

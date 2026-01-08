@@ -1,13 +1,16 @@
 // client/src/components/messagesComp/MessageList.jsx
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useContext, useEffect, useState, useRef, useCallback } from "react";
 import axios from "axios";
 import { io } from "socket.io-client";
+import { Search, Plus, Archive, Users, Hash, Lock, MessageCircle, MoreVertical, CheckCheck, X } from "lucide-react";
+import { useParams, useNavigate } from "react-router-dom";
 import CreateChannelModal from "./CreateChannelModal";
 import JoinChannelModal from "./JoinChannelModal";
 import NewDMModal from "./NewDMModal";
+import { AuthContext } from "../../contexts/AuthContext";
+import { SocketContext } from "../../contexts/SocketContext";
+import { API_BASE } from "../../services/api";
 
-
-const API_BASE = process.env.REACT_APP_BACKEND_URL || "http://localhost:5000";
 
 const Tabs = ["All", "Direct Messages", "Channels"];
 

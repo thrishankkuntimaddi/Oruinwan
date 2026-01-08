@@ -37,6 +37,32 @@ const ChttrixDocs = () => {
     setMobileMenuOpen(false);
   };
 
+  React.useEffect(() => {
+    const observerOptions = {
+      root: null,
+      rootMargin: '-20% 0px -35% 0px', // Adjust trigger area to be more central
+      threshold: 0.1
+    };
+
+    const observerCallback = (entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          setActiveTab(entry.target.id);
+        }
+      });
+    };
+
+    const observer = new IntersectionObserver(observerCallback, observerOptions);
+    const sections = ['overview', 'personal', 'company', 'roles', 'channels', 'search', 'ai', 'productivity', 'updates', 'plans'];
+
+    sections.forEach(id => {
+      const element = document.getElementById(id);
+      if (element) observer.observe(element);
+    });
+
+    return () => observer.disconnect();
+  }, []);
+
   const NavItem = ({ id, label, icon: Icon }) => (
     <button
       onClick={() => scrollToSection(id)}

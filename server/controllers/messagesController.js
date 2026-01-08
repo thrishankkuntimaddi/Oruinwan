@@ -5,6 +5,8 @@ const User = require("../models/User");
 const DMSession = require("../models/DMSession");
 const Workspace = require("../models/Workspace");
 const Task = require("../models/Task");
+const { handleError } = require("../utils/responseHelpers");
+const { isMember } = require("../utils/memberHelpers");
 
 // -----------------------------------------------------
 // SEND DIRECT MESSAGE (user → user)
@@ -61,8 +63,7 @@ exports.sendDirectMessage = async (req, res) => {
 
     return res.status(201).json({ message });
   } catch (err) {
-    console.error("SEND DM ERROR:", err);
-    return res.status(500).json({ message: "Server error" });
+    return handleError(res, err, "SEND DM ERROR");
   }
 };
 
@@ -102,8 +103,7 @@ exports.sendChannelMessage = async (req, res) => {
 
     return res.status(201).json({ message });
   } catch (err) {
-    console.error("SEND CHANNEL ERROR:", err);
-    return res.status(500).json({ message: "Server error" });
+    return handleError(res, err, "SEND CHANNEL ERROR");
   }
 };
 
@@ -163,8 +163,7 @@ exports.getDMs = async (req, res) => {
       total: totalCount
     });
   } catch (err) {
-    console.error("GET DMs ERROR:", err);
-    return res.status(500).json({ message: "Server error" });
+    return handleError(res, err, "GET DMs ERROR");
   }
 };
 
@@ -184,13 +183,10 @@ exports.getChannelMessages = async (req, res) => {
     if (!channel)
       return res.status(404).json({ message: "Channel not found" });
 
-    // Ensure user is a member of the channel (handle both formats)
-    const isMember = channel.members.some(m => {
-      const memberId = m.user ? m.user.toString() : m.toString();
-      return memberId === userId.toString();
-    });
+    // Ensure user is a member of the channel
+    const isUserMember = isMember(channel.members, userId);
 
-    if (!isMember)
+    if (!isUserMember)
       return res.status(403).json({ message: "Not a channel member" });
 
     // Build query
@@ -295,8 +291,7 @@ exports.getChannelMessages = async (req, res) => {
       total: totalCount
     });
   } catch (err) {
-    console.error("GET CHANNEL ERROR:", err);
-    return res.status(500).json({ message: "Server error" });
+    return handleError(res, err, "GET CHANNEL ERROR");
   }
 };
 
@@ -343,8 +338,7 @@ exports.getWorkspaceDMList = async (req, res) => {
 
     return res.json({ sessions: sessionList });
   } catch (err) {
-    console.error("GET WORKSPACE DM LIST ERROR:", err);
-    return res.status(500).json({ message: "Server error" });
+    return handleError(res, err, "GET WORKSPACE DM LIST ERROR");
   }
 };
 

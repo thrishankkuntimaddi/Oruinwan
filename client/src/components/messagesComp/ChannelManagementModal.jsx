@@ -3,9 +3,8 @@ import { useParams } from "react-router-dom";
 import axios from "axios";
 import { Trash2, UserPlus, Users, Lock, Unlock, X, AlertTriangle, Eraser, Info } from "lucide-react";
 import { useToast } from "../../contexts/ToastContext";
+import { API_BASE } from "../../services/api";
 import ConfirmationModal from "../common/ConfirmationModal";
-
-const API_BASE = process.env.REACT_APP_BACKEND_URL || "http://localhost:5000";
 
 export default function ChannelManagementModal({ channel, onClose, currentUserId, initialTab = "members" }) {
     const { workspaceId } = useParams();

@@ -1,8 +1,7 @@
 import React, { useState } from "react";
 import { Shield, CheckCircle, AlertCircle, RefreshCw, Trash2, Loader } from "lucide-react";
 import { useToast } from "../../contexts/ToastContext";
-
-const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000';
+import { API_BASE } from "../../services/api";
 
 const DomainSettings = ({ companyId }) => {
     const { showToast } = useToast();

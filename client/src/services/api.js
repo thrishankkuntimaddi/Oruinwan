@@ -1,7 +1,8 @@
 // client/src/services/api.js
 import axios from 'axios';
 
-const API_BASE = process.env.REACT_APP_BACKEND_URL || '';
+// Export API_BASE so components can import it instead of redefining
+export const API_BASE = process.env.REACT_APP_BACKEND_URL || '';
 
 const api = axios.create({
     headers: {

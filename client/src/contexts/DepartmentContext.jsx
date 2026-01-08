@@ -1,8 +1,8 @@
 // client/src/contexts/DepartmentContext.jsx
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
 import { useAuth } from './AuthContext';
-import api from '../services/api';
+import api, { API_BASE } from '../services/api';
 
 const DepartmentContext = createContext();
 
@@ -21,8 +21,6 @@ export const DepartmentProvider = ({ children }) => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
-    const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000';
-
     // Fetch all departments for the company
     const fetchDepartments = useCallback(async () => {
         if (!user?.companyId) {
@@ -33,7 +31,6 @@ export const DepartmentProvider = ({ children }) => {
 
         try {
             setLoading(true);
-            const token = localStorage.getItem('accessToken');
 
             // Extract ID - handle both object and string formats
             console.log('[DEBUG] user.companyId:', user.companyId);
@@ -59,7 +56,7 @@ export const DepartmentProvider = ({ children }) => {
         } finally {
             setLoading(false);
         }
-    }, [user?.companyId, user?.departmentId, API_BASE]);
+    }, [user?.companyId, user?.departmentId]);
 
     // Fetch on mount or when user changes
     useEffect(() => {
@@ -73,7 +70,6 @@ export const DepartmentProvider = ({ children }) => {
         }
 
         try {
-            const token = localStorage.getItem('accessToken');
 
             // Extract ID - handle both object and string formats
             console.log('[DEBUG] user.companyId:', user.companyId);
@@ -99,7 +95,6 @@ export const DepartmentProvider = ({ children }) => {
     // Update department
     const updateDepartment = async (departmentId, data) => {
         try {
-            const token = localStorage.getItem('accessToken');
             const response = await api.put(
                 `${API_BASE}/api/departments/${departmentId}`,
                 data
@@ -121,7 +116,6 @@ export const DepartmentProvider = ({ children }) => {
     // Delete department
     const deleteDepartment = async (departmentId) => {
         try {
-            const token = localStorage.getItem('accessToken');
             await api.delete(`${API_BASE}/api/departments/${departmentId}`);
 
             // Remove from state
@@ -135,7 +129,6 @@ export const DepartmentProvider = ({ children }) => {
     // Get department members
     const getDepartmentMembers = async (departmentId) => {
         try {
-            const token = localStorage.getItem('accessToken');
             const response = await api.get(`${API_BASE}/api/departments/${departmentId}/members`);
             return response.data.members || [];
         } catch (err) {
@@ -147,7 +140,6 @@ export const DepartmentProvider = ({ children }) => {
     // Assign user to department
     const assignUserToDepartment = async (userId, departmentId) => {
         try {
-            const token = localStorage.getItem('accessToken');
             await api.post(
                 `${API_BASE}/api/departments/${departmentId}/members`,
                 { userId }
@@ -164,7 +156,6 @@ export const DepartmentProvider = ({ children }) => {
     // Remove user from department
     const removeUserFromDepartment = async (userId, departmentId) => {
         try {
-            const token = localStorage.getItem('accessToken');
             await api.delete(`${API_BASE}/api/departments/${departmentId}/members/${userId}`);
 
             // Refresh departments

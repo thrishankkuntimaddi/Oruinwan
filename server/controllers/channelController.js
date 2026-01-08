@@ -3,6 +3,9 @@ const Channel = require("../models/Channel");
 const User = require("../models/User");
 const Message = require("../models/Message");
 const { saveWithRetry } = require("../utils/mongooseRetry");
+const { handleError, notFound, badRequest, forbidden } = require("../utils/responseHelpers");
+const { extractMemberId, isMember, normalizeMemberFormat } = require("../utils/memberHelpers");
+const { emitToWorkspace, emitToChannel, emitToUser, emitToUsers } = require("../utils/socketHelpers");
 
 /**
  * Create channel (public or private).
@@ -70,8 +73,7 @@ exports.createChannel = async (req, res) => {
 
     return res.status(201).json({ channel: payload });
   } catch (err) {
-    console.error("CREATE CHANNEL ERROR:", err);
-    return res.status(500).json({ message: "Server error" });
+    return handleError(res, err, "CREATE CHANNEL ERROR");
   }
 };
 
@@ -103,8 +105,7 @@ exports.getMyChannels = async (req, res) => {
 
     return res.json({ channels });
   } catch (err) {
-    console.error("GET MY CHANNELS ERROR:", err);
-    return res.status(500).json({ message: "Server error" });
+    return handleError(res, err, "GET MY CHANNELS ERROR");
   }
 };
 
@@ -121,8 +122,7 @@ exports.getPublicChannels = async (req, res) => {
 
     return res.json({ channels });
   } catch (err) {
-    console.error("GET PUBLIC CHANNELS ERROR:", err);
-    return res.status(500).json({ message: "Server error" });
+    return handleError(res, err, "GET PUBLIC CHANNELS ERROR");
   }
 };
 
@@ -140,33 +140,21 @@ exports.inviteToChannel = async (req, res) => {
     const channel = await Channel.findById(channelId);
     if (!channel) return res.status(404).json({ message: "Channel not found" });
 
-    // permission: only members can invite (handle both formats)
-    const isMember = channel.members.some(m => {
-      const memberId = m.user ? m.user.toString() : m.toString();
-      return memberId === userId.toString();
-    });
+    // permission: only members can invite
+    const isUserMember = isMember(channel.members, userId);
 
-    if (!isMember) {
-      return res.status(403).json({ message: "Not a channel member" });
+    if (!isUserMember) {
+      return forbidden(res, "Not a channel member");
     }
 
-    const isAlreadyMember = channel.members.some(m => {
-      const memberId = m.user ? m.user.toString() : m.toString();
-      return memberId === inviteeId.toString();
-    });
+    const isAlreadyMember = isMember(channel.members, inviteeId);
 
     if (isAlreadyMember) {
       return res.status(400).json({ message: "User already a member" });
     }
 
     // 🔧 FIX: Convert all existing members to new format before adding new member
-    channel.members = channel.members.map(m => {
-      if (m.user) return m;
-      return {
-        user: m,
-        joinedAt: channel.createdAt || new Date()
-      };
-    });
+    channel.members = normalizeMemberFormat(channel.members, channel.createdAt);
 
     channel.members.push({
       user: inviteeId,
@@ -194,8 +182,7 @@ exports.inviteToChannel = async (req, res) => {
 
     return res.json({ channelId, userId: inviteeId });
   } catch (err) {
-    console.error("INVITE ERROR:", err);
-    return res.status(500).json({ message: "Server error" });
+    return handleError(res, err, "INVITE ERROR");
   }
 };
 
@@ -248,21 +235,12 @@ exports.joinChannel = async (req, res) => {
 
     if (channel.isPrivate) return res.status(403).json({ message: "Cannot join private channel" });
 
-    // Check if already member (handle both formats)
-    const isAlreadyMember = channel.members.some(m => {
-      const memberId = m.user ? m.user.toString() : m.toString();
-      return memberId === userId.toString();
-    });
+    // Check if already member
+    const isAlreadyMember = isMember(channel.members, userId);
 
     if (!isAlreadyMember) {
       // 🔧 FIX: Convert all existing members to new format before adding new member
-      channel.members = channel.members.map(m => {
-        if (m.user) return m;
-        return {
-          user: m,
-          joinedAt: channel.createdAt || new Date()
-        };
-      });
+      channel.members = normalizeMemberFormat(channel.members, channel.createdAt);
 
       channel.members.push({
         user: userId,
@@ -279,8 +257,7 @@ exports.joinChannel = async (req, res) => {
 
     return res.json({ channelId, joined: true });
   } catch (err) {
-    console.error("JOIN CHANNEL ERROR:", err);
-    return res.status(500).json({ message: "Server error" });
+    return handleError(res, err, "JOIN CHANNEL ERROR");
   }
 };
 
@@ -315,8 +292,7 @@ exports.updateChannel = async (req, res) => {
 
     return res.json({ channel: payload });
   } catch (err) {
-    console.error("UPDATE CHANNEL ERROR:", err);
-    return res.status(500).json({ message: "Server error" });
+    return handleError(res, err, "UPDATE CHANNEL ERROR");
   }
 };
 
@@ -349,8 +325,7 @@ exports.getChannelMembers = async (req, res) => {
 
     return res.json({ members: formattedMembers });
   } catch (err) {
-    console.error("GET CHANNEL MEMBERS ERROR:", err);
-    return res.status(500).json({ message: "Server error" });
+    return handleError(res, err, "GET CHANNEL MEMBERS ERROR");
   }
 };
 /**
@@ -382,8 +357,8 @@ exports.exitChannel = async (req, res) => {
       return memberId === userId.toString();
     });
 
-    if (!isMember) {
-      return res.status(400).json({ message: "You are not a member of this channel" });
+    if (!isUserMember) {
+      return badRequest(res, "You are not a member of this channel");
     }
 
     // Check if user is the ONLY admin and there are OTHER members
@@ -468,8 +443,7 @@ exports.exitChannel = async (req, res) => {
       systemMessage
     });
   } catch (err) {
-    console.error("EXIT CHANNEL ERROR:", err);
-    return res.status(500).json({ message: "Server error" });
+    return handleError(res, err, "EXIT CHANNEL ERROR");
   }
 };
 
@@ -500,10 +474,7 @@ exports.assignAdmin = async (req, res) => {
     }
 
     // Check if target user is a channel member
-    const isMember = channel.members.some(m => {
-      const memberId = m.user ? m.user.toString() : m.toString();
-      return memberId === targetUserId.toString();
-    });
+    const isTargetMember = isMember(channel.members, targetUserId);
 
     if (!isMember) {
       return res.status(400).json({ message: "User is not a member of this channel" });
@@ -563,8 +534,7 @@ exports.assignAdmin = async (req, res) => {
       systemMessage
     });
   } catch (err) {
-    console.error("ASSIGN ADMIN ERROR:", err);
-    return res.status(500).json({ message: "Server error" });
+    return handleError(res, err, "ASSIGN ADMIN ERROR");
   }
 };
 
@@ -620,8 +590,7 @@ exports.deleteChannel = async (req, res) => {
       deletedMessages: deletedMessages.deletedCount
     });
   } catch (err) {
-    console.error("DELETE CHANNEL ERROR:", err);
-    return res.status(500).json({ message: "Server error" });
+    return handleError(res, err, "DELETE CHANNEL ERROR");
   }
 };
 /**
@@ -649,8 +618,8 @@ exports.getChannelDetails = async (req, res) => {
       return memberId === userId.toString();
     });
 
-    if (!isMember) {
-      return res.status(403).json({ message: "You are not a member of this channel" });
+    if (!isUserMember) {
+      return forbidden(res, "You are not a member of this channel");
     }
 
     // Format response
@@ -672,8 +641,7 @@ exports.getChannelDetails = async (req, res) => {
 
     return res.json({ channel: response });
   } catch (err) {
-    console.error("GET CHANNEL DETAILS ERROR:", err);
-    return res.status(500).json({ message: "Server error" });
+    return handleError(res, err, "GET CHANNEL DETAILS ERROR");
   }
 };
 
@@ -753,8 +721,7 @@ exports.updateChannelInfo = async (req, res) => {
       }
     });
   } catch (err) {
-    console.error("UPDATE CHANNEL INFO ERROR:", err);
-    return res.status(500).json({ message: "Server error" });
+    return handleError(res, err, "UPDATE CHANNEL INFO ERROR");
   }
 };
 

@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Briefcase, Building, ChevronDown, Check } from 'lucide-react';
+import { API_BASE } from "../../services/api";
 
 const ScopeSelector = ({ onScopeChange, onLoad }) => {
     const [scope, setScope] = useState(null); // { type: 'department'|'workspace', id, name }
     const [options, setOptions] = useState({ departments: [], workspaces: [] });
     const [isOpen, setIsOpen] = useState(false);
     const [loading, setLoading] = useState(true);
-    const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000';
 
     useEffect(() => {
         const fetchScope = async () => {

@@ -29,26 +29,52 @@ module.exports = async function registerChatHandlers(io, socket) {
      JOIN DM SESSION ROOM
   ---------------------------------------------------- */
   socket.on("join-dm", ({ dmSessionId }) => {
-    const room = `dm_${dmSessionId}`;
-    socket.join(room);
+    try {
+      if (!dmSessionId) {
+        logger.error("join-dm: missing dmSessionId");
+        return;
+      }
+      const room = `dm_${dmSessionId}`;
+      socket.join(room);
+      console.log(`✅ User ${userId} joined DM room: ${room}`);
+    } catch (err) {
+      logger.error("Error joining DM room:", err);
+    }
   });
 
   /* ----------------------------------------------------
      JOIN CHANNEL ROOM
   ---------------------------------------------------- */
   socket.on("join-channel", ({ channelId }) => {
-    const room = `channel_${channelId}`;
-    socket.join(room);
-    console.log(`✅ User ${userId} joined room: ${room}`);
-    console.log(`📊 Room ${room} now has ${io.sockets.adapter.rooms.get(room)?.size || 0} sockets`);
+    try {
+      if (!channelId) {
+        logger.error("join-channel: missing channelId");
+        return;
+      }
+      const room = `channel_${channelId}`;
+      socket.join(room);
+      console.log(`✅ User ${userId} joined room: ${room}`);
+      console.log(`📊 Room ${room} now has ${io.sockets.adapter.rooms.get(room)?.size || 0} sockets`);
+    } catch (err) {
+      logger.error("Error joining channel room:", err);
+    }
   });
 
   /* ----------------------------------------------------
      JOIN WORKSPACE ROOM (For real-time updates like invites)
   ---------------------------------------------------- */
   socket.on("join-workspace", ({ workspaceId }) => {
-    const room = `workspace_${workspaceId}`;
-    socket.join(room);
+    try {
+      if (!workspaceId) {
+        logger.error("join-workspace: missing workspaceId");
+        return;
+      }
+      const room = `workspace_${workspaceId}`;
+      socket.join(room);
+      console.log(`✅ User ${userId} joined workspace room: ${room}`);
+    } catch (err) {
+      logger.error("Error joining workspace room:", err);
+    }
   });
 
   /* ----------------------------------------------------
