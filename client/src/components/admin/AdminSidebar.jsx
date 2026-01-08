@@ -14,13 +14,15 @@ const AdminSidebar = () => {
     // const { company } = useCompany(); // Not strictly needed here if we move company name to top bar, but good for context if needed later.
     const [showUserMenu, setShowUserMenu] = useState(false);
 
+    const isOwner = user?.companyRole === 'owner';
+
     const navGroups = [
         {
             group: 'OVERVIEW',
             items: [
                 {
-                    path: user?.companyRole === 'owner' ? '/owner/dashboard' : '/admin/dashboard',
-                    label: 'Dashboard',
+                    path: isOwner ? '/owner/dashboard' : '/admin/dashboard',
+                    label: isOwner ? 'Owner Dashboard' : 'Dashboard',
                     icon: LayoutDashboard
                 },
                 { path: '/admin/analytics', label: 'Analytics', icon: BarChart3 },

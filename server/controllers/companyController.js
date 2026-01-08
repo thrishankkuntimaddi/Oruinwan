@@ -1684,7 +1684,15 @@ exports.getCompany = async (req, res) => {
 
     const company = await Company.findById(companyId)
       .populate("admins.user", "username email profilePicture")
-      .populate("defaultWorkspace", "name");
+      .populate("defaultWorkspace", "name")
+      .populate({
+        path: 'departments',
+        select: 'name head memberCount',
+        populate: {
+          path: 'head',
+          select: 'username email'
+        }
+      });
 
     if (!company) {
       return res.status(404).json({ message: "Company not found" });

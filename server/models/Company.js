@@ -109,6 +109,9 @@ const CompanySchema = new mongoose.Schema({
     uploadedAt: { type: Date, default: Date.now }
   }],
 
+  // Organization Structure
+  departments: [{ type: mongoose.Schema.Types.ObjectId, ref: "Department" }],
+
   // Additional metadata
   metadata: { type: mongoose.Schema.Types.Mixed }
 

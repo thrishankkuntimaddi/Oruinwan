@@ -17,13 +17,13 @@ router.get('/users-access', requireAuth, requireAdmin, async (req, res) => {
         const user = await User.findById(userId);
         const companyId = user.companyId;
 
-        const [total, active, pending, suspended, guests, blocked] = await Promise.all([
+        const [total, active, pending, suspended, blocked, guests] = await Promise.all([
             User.countDocuments({ companyId }),
             User.countDocuments({ companyId, accountStatus: 'active' }),
             User.countDocuments({ companyId, accountStatus: 'pending' }),
             User.countDocuments({ companyId, accountStatus: 'suspended' }),
-            User.countDocuments({ companyId, companyRole: 'guest' }),
-            User.countDocuments({ companyId, accountStatus: 'blocked' })
+            User.countDocuments({ companyId, accountStatus: 'blocked' }),
+            User.countDocuments({ companyId, companyRole: 'guest' })
         ]);
 
         // Get recent invites (last 7 days)
@@ -44,8 +44,8 @@ router.get('/users-access', requireAuth, requireAdmin, async (req, res) => {
                 active,
                 pending,
                 suspended,
-                guests,
-                blocked
+                blocked,
+                guests
             },
             recentInvites,
             actions: {

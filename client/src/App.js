@@ -75,6 +75,7 @@ import ContactAdmin from "./pages/admin/ContactAdmin"; // NEW - Contact platform
 
 // Dashboard Pages
 import AdminDashboard from "./pages/AdminDashboard";
+import ManagerLayout from "./components/layout/ManagerLayout.jsx";
 import OwnerDashboard from './pages/OwnerDashboard';
 import ManagerDashboard from "./pages/ManagerDashboard";
 import ManagerOverview from "./components/manager/ManagerOverview";
@@ -475,11 +476,18 @@ function App() {
                             element={
                               <RequireAuth>
                                 <RequireDepartmentManager>
-                                  <ManagerDashboard />
+                                  <ManagerLayout />
                                 </RequireDepartmentManager>
                               </RequireAuth>
                             }
-                          />
+                          >
+                            <Route index element={<Navigate to="overview" replace />} />
+                            <Route path="overview" element={<ManagerOverview />} />
+                            <Route path="allocation" element={<TeamAllocation />} />
+                            <Route path="tasks" element={<ManagerTasks />} />
+                            <Route path="reports" element={<ManagerReports />} />
+                            <Route path="settings" element={<ManagerSettings />} />
+                          </Route>
 
                           <Route
                             path="/employee/dashboard"

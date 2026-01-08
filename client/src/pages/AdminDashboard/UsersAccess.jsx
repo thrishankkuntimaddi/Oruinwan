@@ -7,6 +7,7 @@ const UsersAccess = ({ data }) => {
         active: 0,
         pending: 0,
         suspended: 0,
+        blocked: 0,
         guests: 0
     };
 
@@ -53,8 +54,8 @@ const UsersAccess = ({ data }) => {
                         <div className="text-2xl font-black text-slate-900 dark:text-white">{stats.suspended}</div>
                     </div>
                     <div className="bg-white dark:bg-gray-800 p-4 rounded-xl border border-slate-200 dark:border-gray-700 shadow-sm">
-                        <div className="text-slate-800 dark:text-gray-300 mb-2 truncate text-xs font-bold uppercase">Blocked</div>
-                        <div className="text-2xl font-black text-slate-900 dark:text-white">{stats.blocked || 0}</div>
+                        <div className="text-slate-800 dark:text-slate-300 mb-2 truncate text-xs font-bold uppercase">Blocked</div>
+                        <div className="text-2xl font-black text-slate-900 dark:text-white">{stats.blocked}</div>
                     </div>
                 </div>
 
@@ -87,7 +88,7 @@ const UsersAccess = ({ data }) => {
                     </div>
                 </div>
             </div>
-        </section >
+        </section>
     );
 };
 

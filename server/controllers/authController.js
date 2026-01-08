@@ -559,15 +559,10 @@ exports.login = async (req, res) => {
         response.redirectTo = "/company/confirm";
       } else {
         // Normal Flow - Company verified and setup complete
-        // FIXED: Separate redirects for owner, admin, and manager
-        if (user.companyRole === "owner") {
-          response.redirectTo = "/owner/dashboard"; // Owner dashboard
-        } else if (user.companyRole === "admin") {
+        if (isAdmin) {
           response.redirectTo = "/admin/dashboard"; // Admin dashboard
-        } else if (user.companyRole === "manager") {
-          response.redirectTo = "/manager/dashboard"; // Manager dashboard
         } else {
-          response.redirectTo = "/workspaces"; // Members and guests
+          response.redirectTo = "/workspaces"; // Regular workspace view
         }
       }
     } else {
