@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
     LayoutDashboard, Users, Settings,
-    Globe, LogOut, Building, BarChart3, ChevronUp, User, HelpCircle
+    Globe, LogOut, Building, BarChart3, ChevronUp, User, HelpCircle, UserPlus
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -27,6 +27,7 @@ const AdminSidebar = () => {
             items: [
                 { path: '/admin/departments', label: 'Departments', icon: Building },
                 { path: '/admin/users', label: 'People', icon: Users },
+                { path: '/admin/onboard', label: 'Onboard', icon: UserPlus },
             ]
         },
         {

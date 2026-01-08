@@ -67,6 +67,7 @@ import CompanyConfirmation from "./pages/CompanyConfirmation";
 import CompanySetup from "./pages/CompanySetup";
 import DepartmentManagement from "./pages/admin/DepartmentManagement"; // Updated path
 import UserManagement from "./pages/admin/UserManagement"; // NEW
+import OnboardingPage from "./pages/admin/OnboardingPage"; // NEW
 import CompanySettings from "./pages/admin/settings/CompanySettings"; // NEW - 8 section settings
 import AdminProfile from "./pages/admin/AdminProfile"; // Personal profile
 import Analytics from "./pages/admin/Analytics"; // NEW - Analytics dashboard
@@ -443,6 +444,7 @@ function App() {
                             <Route path="/admin/analytics" element={<Analytics />} />
                             <Route path="/admin/departments" element={<DepartmentManagement />} />
                             <Route path="/admin/users" element={<UserManagement />} />
+                            <Route path="/admin/onboard" element={<OnboardingPage />} />
                             <Route path="/admin/settings" element={<CompanySettings />} />
                             <Route path="/admin/profile" element={<AdminProfile />} />
                             <Route path="/contact-admin" element={<ContactAdmin />} />
