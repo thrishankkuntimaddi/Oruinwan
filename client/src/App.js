@@ -77,12 +77,13 @@ import ContactAdmin from "./pages/admin/ContactAdmin"; // NEW - Contact platform
 import AdminDashboard from "./pages/AdminDashboard";
 import ManagerLayout from "./components/layout/ManagerLayout.jsx";
 import OwnerDashboard from './pages/OwnerDashboard';
-import ManagerDashboard from "./pages/ManagerDashboard";
+import OwnerAnalytics from './pages/OwnerDashboard/OwnerAnalytics'; // NEW
+// import ManagerDashboard from "./pages/ManagerDashboard"; // Unused
 import ManagerOverview from "./components/manager/ManagerOverview";
-import ManagerLocation from "./components/manager/ManagerLocation"; // NEW
+// import ManagerLocation from "./components/manager/ManagerLocation"; // NEW - Unused
 import ManagerTasks from "./components/manager/ManagerTasks";
 import ManagerReports from "./components/manager/ManagerReports";
-import ManagerContactAdmin from "./components/manager/ManagerContactAdmin";
+// import ManagerContactAdmin from "./components/manager/ManagerContactAdmin"; // Unused
 import ManagerSettings from "./components/manager/ManagerSettings"; // NEW
 import TeamAllocation from "./components/manager/TeamAllocation";
 import EmployeeDashboard from "./pages/dashboards/EmployeeDashboard";
@@ -436,9 +437,8 @@ function App() {
                           {/* DASHBOARD ROUTES - SEPARATED BY ROLE        */}
                           {/* ============================================ */}
 
-                          {/* OWNER DASHBOARD - Owner ONLY */}
+                          {/* OWNER ROUTES - Wrapped in CompanyAdminLayout */}
                           <Route
-                            path="/owner/dashboard"
                             element={
                               <RequireAuth>
                                 <RequireOwner>
@@ -447,7 +447,18 @@ function App() {
                               </RequireAuth>
                             }
                           >
-                            <Route index element={<OwnerDashboard />} />
+                            <Route path="/owner/dashboard" element={<OwnerDashboard />} />
+                            <Route path="/owner/dashboard/activity" element={<OwnerAnalytics />} />
+                            <Route path="/owner/dashboard/billing" element={<OwnerDashboard />} /> {/* Fallback to dashboard for now */}
+                            <Route path="/owner/dashboard/security" element={<OwnerDashboard />} />
+
+                            <Route path="/owner/analytics" element={<OwnerAnalytics />} />
+
+                            <Route path="/owner/admins" element={<UserManagement />} />
+                            <Route path="/owner/departments" element={<DepartmentManagement />} />
+                            <Route path="/owner/users" element={<UserManagement />} />
+                            <Route path="/owner/onboard" element={<OnboardingPage />} />
+                            <Route path="/owner/settings" element={<CompanySettings />} />
                           </Route>
 
                           {/* ADMIN DASHBOARD & TOOLS - Admin + Owner */}
@@ -487,6 +498,10 @@ function App() {
                             <Route path="tasks" element={<ManagerTasks />} />
                             <Route path="reports" element={<ManagerReports />} />
                             <Route path="settings" element={<ManagerSettings />} />
+
+                            {/* New Manager Routes - Placeholders pointing to relevant components */}
+                            <Route path="projects" element={<ManagerTasks />} /> {/* Reuse Tasks for Projects for now */}
+                            <Route path="unassigned" element={<TeamAllocation />} /> {/* Reuse Team Allocation */}
                           </Route>
 
                           <Route

@@ -2,17 +2,22 @@
 import React from 'react';
 import { Outlet } from 'react-router-dom';
 import AdminSidebar from '../admin/AdminSidebar';
+import OwnerSidebar from '../../pages/OwnerDashboard/OwnerSidebar'; // Import OwnerSidebar
 import { useCompany } from '../../contexts/CompanyContext';
+import { useAuth } from '../../contexts/AuthContext'; // Import useAuth
 import { useTheme } from '../../contexts/ThemeContext';
 import { Sun, Moon } from 'lucide-react';
 
 const CompanyAdminLayout = () => {
-    const { company } = useCompany();
+    const { company, isOwner: contextIsOwner } = useCompany(); // Assume isOwner might be in context, or check user
+    const { user } = useAuth();
     const { theme, toggleTheme } = useTheme();
+
+    const isOwner = user?.companyRole === 'owner' || contextIsOwner;
 
     return (
         <div className="flex h-screen bg-gray-50 dark:bg-gray-900 font-sans text-gray-900 dark:text-gray-100 overflow-hidden transition-colors duration-200">
-            <AdminSidebar />
+            {isOwner ? <OwnerSidebar /> : <AdminSidebar />}
 
             <div className="flex-1 flex flex-col h-full overflow-hidden relative">
                 {/* Top Context Bar - Sticky */}

@@ -138,6 +138,9 @@ const LoginForm = ({ onSwitch, initialEmail = "" }) => {
         if (isPlatformAdmin) {
           console.log("🛡️ Platform admin detected (Google), redirecting to /chttrix-admin");
           navigate("/chttrix-admin");
+        } else if (res.data.user?.companyRole === 'owner') {
+          console.log("👑 Owner detected (Google), redirecting to /owner/dashboard");
+          navigate("/owner/dashboard");
         } else {
           navigate("/workspaces");
         }

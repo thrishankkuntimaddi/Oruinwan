@@ -33,8 +33,12 @@ const LoginPage = () => {
     if (!loading && user) {
       // Check if user is Chttrix platform admin
       const isChttrixAdmin = user.roles && user.roles.includes('chttrix_admin');
+      const isOwner = user.companyRole === 'owner';
+
       if (isChttrixAdmin) {
         navigate("/chttrix-admin", { replace: true });
+      } else if (isOwner) {
+        navigate("/owner/dashboard", { replace: true });
       } else {
         navigate("/workspaces", { replace: true });
       }

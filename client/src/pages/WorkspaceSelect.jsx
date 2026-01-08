@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import {
     Rocket, Briefcase, Zap, Palette, Microscope, Globe,
     Shield, TrendingUp, Lightbulb, Flame, Target, Trophy,
-    Plus, LogOut, LayoutGrid, ArrowRight, User, Users as UsersIcon, CircleHelp, X,
+    Plus, LogOut, ArrowRight, User, Users as UsersIcon, CircleHelp, X,
     BookOpen, Command, Bug, Sparkles, Search, MessageCircle
 } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
@@ -21,6 +21,7 @@ const WorkspaceSelect = () => {
             console.log('🛡️ Platform admin detected in WorkspaceSelect, redirecting to /chttrix-admin');
             navigate('/chttrix-admin', { replace: true });
         }
+        // REMOVED: Owner redirect. Owners land on dashboard on login, but can visit here via "Go to App".
     }, [user, navigate]);
 
     // State
@@ -47,7 +48,7 @@ const WorkspaceSelect = () => {
         color: "#4f46e5",
         invites: ""
     });
-    const [isCopied, setIsCopied] = useState(false);
+    // const [isCopied, setIsCopied] = useState(false); // Unused
 
     // Load Workspaces
     const loadWorkspaces = React.useCallback(async () => {
@@ -246,7 +247,19 @@ const WorkspaceSelect = () => {
                         </>
                     )}
 
-                    {(user?.companyRole === 'admin' || user?.companyRole === 'owner') && (
+                    {/* Owner Console Link */}
+                    {(user?.companyRole === 'owner') && (
+                        <button
+                            onClick={() => navigate('/owner/dashboard')}
+                            className="hidden md:flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-indigo-600 transition-colors px-3 py-2 rounded-lg hover:bg-slate-50"
+                        >
+                            <Shield size={16} />
+                            Owner Console
+                        </button>
+                    )}
+
+                    {/* Admin Console Link - Hide for Owners as they have their own dashboard */}
+                    {(user?.companyRole === 'admin') && (
                         <button
                             onClick={() => navigate('/admin/dashboard')}
                             className="hidden md:flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-indigo-600 transition-colors px-3 py-2 rounded-lg hover:bg-slate-50"
@@ -256,7 +269,8 @@ const WorkspaceSelect = () => {
                         </button>
                     )}
 
-                    {(user?.companyRole === 'manager' || user?.companyRole === 'admin' || user?.companyRole === 'owner') && (
+                    {/* Manager Console Link - Hide for Owners */}
+                    {(user?.companyRole === 'manager' || user?.companyRole === 'admin') && (
                         <button
                             onClick={() => navigate('/manager/dashboard')}
                             className="hidden md:flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-indigo-600 transition-colors px-3 py-2 rounded-lg hover:bg-slate-50"

@@ -22,7 +22,7 @@ const UserManagement = () => {
     const [showStats, setShowStats] = useState(true);
 
     // Filters
-    const [tab, setTab] = useState('all'); // all, managers, members, guests
+    const [tab, setTab] = useState('all'); // all, admins, managers, members, guests
     const [searchQuery, setSearchQuery] = useState('');
     const [deptFilter, setDeptFilter] = useState('all');
     const [roleFilter, setRoleFilter] = useState('all');
@@ -66,8 +66,10 @@ const UserManagement = () => {
         let result = allMembers;
 
         // 1. Tab Filter
-        if (tab === 'managers') {
-            result = result.filter(m => ['owner', 'admin', 'manager'].includes(m.companyRole));
+        if (tab === 'admins') {
+            result = result.filter(m => ['owner', 'admin'].includes(m.companyRole));
+        } else if (tab === 'managers') {
+            result = result.filter(m => m.companyRole === 'manager');
         } else if (tab === 'members') {
             result = result.filter(m => m.companyRole === 'member');
         } else if (tab === 'guests') {
@@ -318,7 +320,7 @@ const UserManagement = () => {
                 {/* Tabs & Actions */}
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
                     <div className="flex p-1 bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-lg transition-colors">
-                        {['all', 'managers', 'members', 'guests'].map((t) => (
+                        {['all', 'admins', 'managers', 'members', 'guests'].map((t) => (
                             <button
                                 key={t}
                                 onClick={() => setTab(t)}

@@ -4,13 +4,13 @@ import {
     FileText, Globe, LogOut
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
-import { useCompany } from '../../contexts/CompanyContext';
+
 import { useNavigate, useLocation } from 'react-router-dom';
 
 const ManagerSidebar = () => {
     const navigate = useNavigate();
     const { logout, user } = useAuth();
-    const { company } = useCompany();
+    // const { company } = useCompany(); // Unused
     const location = useLocation();
 
     // Check if path is active (ends with the id or is the exact path)
@@ -20,11 +20,30 @@ const ManagerSidebar = () => {
     };
 
     const menuItems = [
-        { id: 'overview', path: 'overview', label: 'Overview', icon: LayoutDashboard },
-        { id: 'allocation', path: 'allocation', label: 'Team Allocation', icon: Users },
-        { id: 'tasks', path: 'tasks', label: 'Task Master', icon: CheckSquare },
-        { id: 'reports', path: 'reports', label: 'Reports', icon: FileText },
-        { id: 'settings', path: 'settings', label: 'Settings', icon: Users },
+        // OVERVIEW
+        {
+            group: 'OVERVIEW', items: [
+                { path: '/manager/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+                { path: '/workspaces', label: 'My Workspace', icon: Globe }
+            ]
+        },
+        // ORGANIZATION
+        {
+            group: 'ORGANIZATION', items: [
+                { path: '/manager/dashboard/allocation', label: 'Team Load', icon: Users },
+                { path: '/manager/dashboard/projects', label: 'Projects', icon: FileText },
+                { path: '/manager/dashboard/unassigned', label: 'Unassigned Employees', icon: Users }
+            ]
+        },
+        // SYSTEM
+        {
+            group: 'SYSTEM', items: [
+                { path: '/manager/dashboard/reports', label: 'Limited Visibility', icon: FileText }, // Reports
+                { path: '/manager/dashboard/settings', label: 'Settings', icon: Users }, // Assuming settings icon
+                { path: '/manager/dashboard/tasks', label: 'TaskMaster', icon: CheckSquare },
+                { path: '/workspaces', label: 'Go to App', icon: Globe }
+            ]
+        }
     ];
 
     return (
@@ -47,34 +66,33 @@ const ManagerSidebar = () => {
                 </div>
             </div>
 
-            <div className="p-4 flex-1 overflow-y-auto bg-white dark:bg-gray-800">
-                <div className="space-y-1">
-                    {menuItems.map(item => {
-                        const active = isActive(item.path);
-                        return (
-                            <button
-                                key={item.id}
-                                onClick={() => navigate(item.path === 'overview' ? '/manager/dashboard/overview' : `/manager/dashboard/${item.path}`)}
-                                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all duration-200 ${active
-                                    ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 shadow-sm translate-x-1'
-                                    : 'text-slate-500 dark:text-gray-400 hover:bg-slate-50 dark:hover:bg-gray-700/50 hover:text-slate-900 dark:hover:text-gray-200'
-                                    }`}
-                            >
-                                <item.icon size={20} className={active ? 'stroke-2' : 'stroke-1.5'} />
-                                {item.label}
-                            </button>
-                        );
-                    })}
-                </div>
-
-                <div className="mt-8 pt-8 border-t border-slate-100 dark:border-gray-700">
-                    <p className="px-4 text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Workspace</p>
-                    <button
-                        onClick={() => navigate('/workspaces')}
-                        className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-500 hover:bg-slate-50 hover:text-slate-900"
-                    >
-                        <Globe size={18} /> Go to App
-                    </button>
+            <div className="flex-1 overflow-y-auto bg-white dark:bg-gray-800 pt-6">
+                <div className="space-y-8 px-4">
+                    {menuItems.map((group, idx) => (
+                        <div key={idx}>
+                            <h3 className="px-4 text-xs font-bold text-slate-400 dark:text-gray-500 uppercase tracking-wider mb-2">
+                                {group.group}
+                            </h3>
+                            <div className="space-y-1">
+                                {group.items.map(item => {
+                                    const active = isActive(item.path);
+                                    return (
+                                        <button
+                                            key={item.label}
+                                            onClick={() => navigate(item.path)}
+                                            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all duration-200 ${active
+                                                ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 shadow-sm translate-x-1'
+                                                : 'text-slate-500 dark:text-gray-400 hover:bg-slate-50 dark:hover:bg-gray-700/50 hover:text-slate-900 dark:hover:text-gray-200'
+                                                }`}
+                                        >
+                                            <item.icon size={20} className={active ? 'stroke-2' : 'stroke-1.5'} />
+                                            {item.label}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    ))}
                 </div>
             </div>
 

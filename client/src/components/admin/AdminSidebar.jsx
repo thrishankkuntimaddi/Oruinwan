@@ -2,8 +2,7 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
-    LayoutDashboard, Users, Settings,
-    Globe, LogOut, Building, BarChart3, ChevronUp, User, HelpCircle, UserPlus
+    Globe, LogOut, Building, BarChart3, ChevronUp, User, HelpCircle, UserPlus, Shield, LayoutDashboard, Users
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -14,17 +13,13 @@ const AdminSidebar = () => {
     // const { company } = useCompany(); // Not strictly needed here if we move company name to top bar, but good for context if needed later.
     const [showUserMenu, setShowUserMenu] = useState(false);
 
-    const isOwner = user?.companyRole === 'owner';
+    // const isOwner = user?.companyRole === 'owner'; // REMOVED: Owner has their own sidebar now
 
     const navGroups = [
         {
             group: 'OVERVIEW',
             items: [
-                {
-                    path: isOwner ? '/owner/dashboard' : '/admin/dashboard',
-                    label: isOwner ? 'Owner Dashboard' : 'Dashboard',
-                    icon: LayoutDashboard
-                },
+                { path: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
                 { path: '/admin/analytics', label: 'Analytics', icon: BarChart3 },
             ]
         },
@@ -32,6 +27,7 @@ const AdminSidebar = () => {
             group: 'ORGANIZATION',
             items: [
                 { path: '/admin/departments', label: 'Departments', icon: Building },
+                { path: '/admin/workspaces', label: 'Workspaces', icon: Globe },
                 { path: '/admin/users', label: 'People', icon: Users },
                 { path: '/admin/onboard', label: 'Onboard', icon: UserPlus },
             ]
@@ -39,7 +35,8 @@ const AdminSidebar = () => {
         {
             group: 'SYSTEM',
             items: [
-                { path: '/admin/settings', label: 'Settings', icon: Settings },
+                { path: '/admin/security', label: 'Audit & Security', icon: Shield },
+                { path: '/manager/dashboard', label: 'Cross Visibility', icon: LayoutDashboard }, // Link to manager console
                 { path: '/contact-admin', label: 'Contact Admin', icon: HelpCircle },
                 { path: '/workspaces', label: 'Go to App', icon: Globe },
             ]

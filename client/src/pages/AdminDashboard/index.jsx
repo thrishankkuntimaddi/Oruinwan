@@ -17,9 +17,28 @@ import {
 } from '../../services/adminDashboardService';
 
 const AdminDashboard = () => {
-    const { isCompanyAdmin } = useCompany();
+    const { isCompanyAdmin } = useCompany(); // Assuming useCompany exposes isOwner or we check user role
     const { showToast } = useToast();
     const navigate = useNavigate();
+
+    // 👑 Explicit Owner Redirect
+    useEffect(() => {
+        // If the context doesn't expose isOwner directly, we can check it via user object or role
+        // For now, assuming useCompany or AuthContext provides this info.
+        // Let's use a safer approach getting user from AuthContext if strictly needed, 
+        // but let's see if we can just redirect if companyRole is owner.
+        const userStr = localStorage.getItem('user');
+        if (userStr) {
+            try {
+                const user = JSON.parse(userStr);
+                if (user.companyRole === 'owner') {
+                    navigate('/owner/dashboard', { replace: true });
+                }
+            } catch (e) {
+                // ignore
+            }
+        }
+    }, [navigate]);
 
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
