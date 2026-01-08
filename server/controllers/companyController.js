@@ -586,7 +586,7 @@ exports.verifyCompany = async (req, res) => {
         return ws;
       };
 
-      // 1. Create Requested Departments + Their Workspaces
+      // 1. Create Requested Departments (without auto-creating workspaces)
       for (const deptName of requestedDepartments) {
         const dept = new Department({
           company: company._id,
@@ -597,13 +597,6 @@ exports.verifyCompany = async (req, res) => {
         });
         await dept.save();
         createdDepartmentIds.push(dept._id);
-
-        // Auto-create workspace for this department
-        const deptWs = await createWorkspaceForDept(deptName, dept._id);
-
-        // Link workspace to department
-        dept.workspaces = [deptWs._id];
-        await dept.save();
       }
 
       // B. Create MAIN Default Workspace (if not created via departments)
@@ -858,7 +851,7 @@ exports.updateCompanySetup = async (req, res) => {
         return ws;
       };
 
-      // 2. Process Departments
+      // 2. Process Departments (without auto-creating workspaces)
       const createdDepartmentIds = [];
       const user = await User.findById(userId);
 
@@ -877,15 +870,6 @@ exports.updateCompanySetup = async (req, res) => {
           await dept.save();
         }
         createdDepartmentIds.push(dept._id);
-
-        // Ensure Workspace exists for this department
-        const deptWs = await createWorkspaceForDept(deptName, dept._id);
-
-        // Link workspace if not linked
-        if (!dept.workspaces.includes(deptWs._id)) {
-          dept.workspaces.push(deptWs._id);
-          await dept.save();
-        }
       }
 
       // 3. Process Invites & Create Users

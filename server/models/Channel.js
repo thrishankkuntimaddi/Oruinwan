@@ -48,7 +48,7 @@ const ChannelSchema = new mongoose.Schema({
 // Indexes
 ChannelSchema.index({ workspace: 1, name: 1 });
 ChannelSchema.index({ company: 1, isPrivate: 1 });
-ChannelSchema.index({ members: 1 });
+ChannelSchema.index({ "members.user": 1 }); // Correct nested path for member queries
 
 // Helper to check if user is member
 ChannelSchema.methods.isMember = function (userId) {

@@ -7,8 +7,11 @@ const DepartmentSchema = new mongoose.Schema({
     name: { type: String, required: true },
     description: { type: String, default: "" },
 
-    // Department head
+    // Department head (single primary head)
     head: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
+
+    // Department managers (multiple team leads/supervisors)
+    managers: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
 
     // Members
     members: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
@@ -28,6 +31,7 @@ const DepartmentSchema = new mongoose.Schema({
 
 // Indexes
 DepartmentSchema.index({ company: 1, name: 1 });
+DepartmentSchema.index({ company: 1, createdAt: -1 }); // For growth rate queries
 DepartmentSchema.index({ head: 1 });
 
 module.exports = mongoose.model("Department", DepartmentSchema);

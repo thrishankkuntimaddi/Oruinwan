@@ -38,6 +38,7 @@ const MessageSchema = new mongoose.Schema({
 
 MessageSchema.index({ company: 1, channel: 1, createdAt: -1 });
 MessageSchema.index({ company: 1, dm: 1, createdAt: -1 });
+MessageSchema.index({ workspace: 1, createdAt: -1 }); // For dashboard activity queries
 MessageSchema.index({ platformSession: 1, createdAt: -1 });
 MessageSchema.index({ createdAt: -1 });
 

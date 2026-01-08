@@ -11,6 +11,9 @@ const WorkspaceSchema = new mongoose.Schema({
     default: "company"
   },
 
+  // Department association (for company workspaces)
+  department: { type: mongoose.Schema.Types.ObjectId, ref: "Department", default: null },
+
   name: { type: String, required: true },
   description: { type: String, default: "" },
   icon: { type: String, default: "📁" }, // emoji or icon identifier
@@ -62,6 +65,7 @@ const WorkspaceSchema = new mongoose.Schema({
 
 // Indexes
 WorkspaceSchema.index({ company: 1, name: 1 });
+WorkspaceSchema.index({ company: 1, createdAt: -1 }); // For growth rate queries
 WorkspaceSchema.index({ "members.user": 1 });
 WorkspaceSchema.index({ type: 1, isActive: 1 });
 

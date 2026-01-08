@@ -74,8 +74,9 @@ import Analytics from "./pages/admin/Analytics"; // NEW - Analytics dashboard
 import ContactAdmin from "./pages/admin/ContactAdmin"; // NEW - Contact platform admin
 
 // Dashboard Pages
-import AdminDashboard from "./pages/dashboards/AdminDashboard";
-import ManagerDashboard from "./pages/dashboards/ManagerDashboard";
+import AdminDashboard from "./pages/AdminDashboard";
+import OwnerDashboard from './pages/OwnerDashboard';
+import ManagerDashboard from "./pages/ManagerDashboard";
 import ManagerOverview from "./components/manager/ManagerOverview";
 import ManagerLocation from "./components/manager/ManagerLocation"; // NEW
 import ManagerTasks from "./components/manager/ManagerTasks";
@@ -440,7 +441,9 @@ function App() {
                               </RequireAuth>
                             }
                           >
+                            <Route path="/owner/dashboard" element={<OwnerDashboard />} />
                             <Route path="/admin/dashboard" element={<AdminDashboard />} />
+                            <Route path="/manager/dashboard" element={<ManagerDashboard />} />
                             <Route path="/admin/analytics" element={<Analytics />} />
                             <Route path="/admin/departments" element={<DepartmentManagement />} />
                             <Route path="/admin/users" element={<UserManagement />} />

@@ -15,6 +15,14 @@ const WorkspaceSelect = () => {
     const navigate = useNavigate();
     const { user, logout } = useAuth();
 
+    // ⚡ PLATFORM ADMIN REDIRECT - Platform admins should NEVER be here
+    React.useEffect(() => {
+        if (user?.roles?.includes('chttrix_admin')) {
+            console.log('🛡️ Platform admin detected in WorkspaceSelect, redirecting to /chttrix-admin');
+            navigate('/chttrix-admin', { replace: true });
+        }
+    }, [user, navigate]);
+
     // State
     const [workspaces, setWorkspaces] = useState([]);
     const [isLoadingWorkspaces, setIsLoadingWorkspaces] = useState(true);

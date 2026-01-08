@@ -95,6 +95,7 @@ const CompanySchema = new mongoose.Schema({
     },
 
     // Limits & Quotas
+    maxUsers: { type: Number, default: 50 }, // Seat limit based on plan
     maxWorkspaces: { type: Number, default: 10 },
     maxChannelsPerWorkspace: { type: Number, default: 50 },
     maxMembersPerChannel: { type: Number, default: 1000 },

@@ -74,14 +74,39 @@ const LoginForm = ({ onSwitch, initialEmail = "" }) => {
         return;
       }
 
-      // Determine redirect based on company status
-      const hasCompany = response?.user?.companyId;
-      const isAdmin = response?.isAdmin ||
-        response?.user?.companyRole === 'owner' ||
-        response?.user?.companyRole === 'admin';
+      // 2. PRIORITY: Check for Platform Admin (chttrix_admin role)
+      const isPlatformAdmin = response?.user?.roles?.includes('chttrix_admin');
+      if (isPlatformAdmin) {
+        console.log("🛡️ Platform admin detected, redirecting to /chttrix-admin");
+        navigate("/chttrix-admin");
+        return;
+      }
 
-      // Fallback Logic
-      // User requested to always start at /workspaces (Personal Environment)
+      // 3. Check company role and redirect accordingly
+      const hasCompany = response?.user?.companyId;
+      const companyRole = response?.user?.companyRole;
+
+      if (hasCompany && companyRole) {
+        // Company users - route to their dashboard based on role
+        if (companyRole === 'owner') {
+          console.log("👑 Company owner detected, redirecting to /owner/dashboard");
+          navigate("/owner/dashboard");
+          return;
+        }
+        if (companyRole === 'admin') {
+          console.log("🛡️ Company admin detected, redirecting to /admin/dashboard");
+          navigate("/admin/dashboard");
+          return;
+        }
+        if (companyRole === 'manager') {
+          console.log("👔 Manager detected, redirecting to /manager/dashboard");
+          navigate("/manager/dashboard");
+          return;
+        }
+      }
+
+      // 4. Fallback - Regular members and guests go to workspaces
+      console.log("📁 Regular user, redirecting to /workspaces");
       navigate("/workspaces");
 
     } catch (err) {
@@ -107,7 +132,15 @@ const LoginForm = ({ onSwitch, initialEmail = "" }) => {
         setUser(res.data.user);
 
         showToast("Google login successful!", "success");
-        navigate("/workspaces");
+
+        // Check if user is platform admin
+        const isPlatformAdmin = res.data.user?.roles?.includes('chttrix_admin');
+        if (isPlatformAdmin) {
+          console.log("🛡️ Platform admin detected (Google), redirecting to /chttrix-admin");
+          navigate("/chttrix-admin");
+        } else {
+          navigate("/workspaces");
+        }
       } catch (err) {
         console.error("Google login failed:", err);
         showToast("Google login failed", "error");

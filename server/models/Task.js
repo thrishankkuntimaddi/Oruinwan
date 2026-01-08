@@ -10,14 +10,32 @@ const mongoose = require("mongoose");
  * - workspace: All workspace members
  */
 const TaskSchema = new mongoose.Schema({
+    // ============ IDENTIFICATION ============
     company: { type: mongoose.Schema.Types.ObjectId, ref: "Company", default: null },
     workspace: { type: mongoose.Schema.Types.ObjectId, ref: "Workspace", required: true },
+    project: { type: String, default: null },
 
-    title: { type: String, required: true },
+    // ============ TAXONOMY ============
+    type: {
+        type: String,
+        enum: ['task', 'subtask', 'bug', 'epic'],
+        default: 'task',
+        required: true
+    },
+
+    // ============ HIERARCHY ============
+    parentTask: { type: mongoose.Schema.Types.ObjectId, ref: "Task", default: null },
+    epic: { type: mongoose.Schema.Types.ObjectId, ref: "Task", default: null },
+    subtasks: [{ type: mongoose.Schema.Types.ObjectId, ref: "Task" }],
+
+    // ============ CONTENT ============
+    title: { type: String, required: true, trim: true },
     description: { type: String, default: "" },
 
+    // ============ OWNERSHIP (MULTI-ASSIGNEE) ============
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
     assignedTo: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }], // Multiple assignees
+    watchers: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
 
     // 🔒 CRITICAL: Visibility controls
     visibility: {
@@ -29,72 +47,103 @@ const TaskSchema = new mongoose.Schema({
     // Optional channel link (required if visibility = "channel")
     channel: { type: mongoose.Schema.Types.ObjectId, ref: "Channel", default: null },
 
+    // ============ ENHANCED WORKFLOW ============
     status: {
         type: String,
-        enum: ["todo", "in-progress", "review", "done", "cancelled"],
-        default: "todo"
+        enum: ['backlog', 'todo', 'in_progress', 'review', 'blocked', 'done', 'cancelled'],
+        default: 'backlog',
+        required: true
     },
+    previousStatus: { type: String, default: null },
 
+    // Enhanced blocked state
+    blockedReason: { type: String, default: null },
+    blockedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
+    blockedAt: { type: Date, default: null },
+
+    // ============ SCHEDULING ============
+    dueDate: { type: Date, default: null },
+    startDate: { type: Date, default: null },
+
+    // ============ ESTIMATION ============
     priority: {
         type: String,
-        enum: ["low", "medium", "high", "urgent"],
-        default: "medium"
+        enum: ['lowest', 'low', 'medium', 'high', 'highest'],
+        default: 'medium'
     },
+    storyPoints: { type: Number, min: 0, default: null },
+    estimatedHours: { type: Number, min: 0, default: null },
+    actualHours: { type: Number, min: 0, default: null },
 
-    dueDate: { type: Date, default: null },
+    // ============ COMPLETION ============
+    completedAt: { type: Date, default: null },
+    completedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
+    completionNote: { type: String, default: "" },
+    resolution: { type: String, default: "" },
 
-    // Optional links to conversation context
+    // ============ AI INTEGRATION ============
+    source: {
+        type: String,
+        enum: ['manual', 'ai'],
+        default: 'manual'
+    },
+    aiContext: { type: mongoose.Schema.Types.Mixed },
     linkedMessage: { type: mongoose.Schema.Types.ObjectId, ref: "Message", default: null },
     linkedDM: { type: mongoose.Schema.Types.ObjectId, ref: "DMSession", default: null },
 
-    // AI-generated task flag
-    aiGenerated: { type: Boolean, default: false },
-    aiContext: { type: mongoose.Schema.Types.Mixed }, // store AI context
-
-    // Task metadata
+    // ============ METADATA ============
     tags: [{ type: String }],
     attachments: [{
         name: String,
         url: String,
         type: String,
-        size: Number
+        size: Number,
+        uploadedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+        uploadedAt: { type: Date, default: Date.now }
     }],
 
-    completedAt: { type: Date, default: null },
-    completedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
-    completionNote: { type: String, default: "" }, // Completion note from frontend
-    deleted: { type: Boolean, default: false }, // Soft delete support
-
+    // ============ TRANSFER ============
     // Transfer request tracking (assignee can request to transfer task)
     transferRequest: {
         requestedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
-        requestedTo: { type: mongoose.Schema.Types.ObjectId, ref: "User" }, // Proposed new assignee
+        requestedTo: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
         requestedAt: { type: Date },
         status: {
             type: String,
             enum: ["pending", "approved", "rejected"]
         },
-        note: { type: String }
+        reason: { type: String }
     },
 
-    // Revoke tracking (assigner can take back task)
-    revokedAt: { type: Date, default: null },
-    revokedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
+    // ============ SOFT DELETE ============
+    deleted: { type: Boolean, default: false },
+    deletedFor: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+    deletedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
+    deletedAt: { type: Date, default: null }
 
-    // Track users who deleted this task from their view (assignees only)
-    deletedFor: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }]
 
+}, {
+    timestamps: true,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true }
+});
 
-}, { timestamps: true });
-
-// Indexes for performance
+// ============ INDEXES ============
+TaskSchema.index({ workspace: 1, status: 1, deleted: 1 });
 TaskSchema.index({ workspace: 1, visibility: 1, status: 1 });
 TaskSchema.index({ channel: 1, status: 1 });
 TaskSchema.index({ assignedTo: 1, status: 1 });
 TaskSchema.index({ createdBy: 1 });
-TaskSchema.index({ dueDate: 1 });
+TaskSchema.index({ parentTask: 1 });
+TaskSchema.index({ epic: 1 });
+TaskSchema.index({ type: 1, workspace: 1 });
+TaskSchema.index({ dueDate: 1, status: 1 });
+TaskSchema.index({ project: 1 });
+TaskSchema.index({ workspace: 1, createdAt: -1, status: 1 }); // For dashboard activity queries
 
-// Helper: Check if user can view task
+// ============ HELPER METHODS ============
+
+// Check if user can view task
 TaskSchema.methods.canView = function (userId, userChannels = []) {
     const userIdStr = userId.toString();
 
@@ -102,11 +151,40 @@ TaskSchema.methods.canView = function (userId, userChannels = []) {
     if (this.createdBy.toString() === userIdStr) return true;
     if (this.assignedTo.some(id => id.toString() === userIdStr)) return true;
 
+    // Watchers can view
+    if (this.watchers && this.watchers.some(id => id.toString() === userIdStr)) return true;
+
     // Visibility-based access
     if (this.visibility === "workspace") return true;
     if (this.visibility === "channel" && userChannels.includes(this.channel?.toString())) return true;
 
     return false;
+};
+
+// Check if user is assigned to this task
+TaskSchema.methods.isAssignee = function (userId) {
+    return this.assignedTo.some(id => id.toString() === userId.toString());
+};
+
+// Check if user is creator
+TaskSchema.methods.isCreator = function (userId) {
+    return this.createdBy.toString() === userId.toString();
+};
+
+// Check if user is watcher
+TaskSchema.methods.isWatcher = function (userId) {
+    return this.watchers && this.watchers.some(id => id.toString() === userId.toString());
+};
+
+// Get all stakeholders (creator + assignees + watchers)
+TaskSchema.methods.getStakeholders = function () {
+    const stakeholders = new Set();
+    stakeholders.add(this.createdBy.toString());
+    this.assignedTo.forEach(id => stakeholders.add(id.toString()));
+    if (this.watchers) {
+        this.watchers.forEach(id => stakeholders.add(id.toString()));
+    }
+    return Array.from(stakeholders);
 };
 
 module.exports = mongoose.model("Task", TaskSchema);

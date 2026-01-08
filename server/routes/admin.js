@@ -11,6 +11,12 @@ const sendEmail = require('../utils/sendEmail');
 const adminController = require('../controllers/adminController');
 const platformController = require('../controllers/platformController');
 const AuditLog = require('../models/AuditLog');
+const Department = require('../models/Department');
+const Workspace = require('../models/Workspace');
+const Channel = require('../models/Channel');
+const Message = require('../models/Message');
+const Task = require('../models/Task');
+const Note = require('../models/Note');
 const requireAuth = require('../middleware/auth');
 const { requireAdmin } = require('../middleware/permissionMiddleware');
 

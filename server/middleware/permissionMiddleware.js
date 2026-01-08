@@ -133,10 +133,40 @@ const canCreateWorkspace = async (req, res, next) => {
     }
 };
 
+/**
+ * Check if user is a Manager, Admin, or Owner
+ * Used for manager dashboard access
+ */
+const requireManager = async (req, res, next) => {
+    try {
+        // Fetch full user if needed
+        if (!req.user.companyRole || !req.user.companyId) {
+            const userId = req.user.sub || req.user._id;
+            const fullUser = await User.findById(userId);
+
+            if (!fullUser) {
+                return res.status(401).json({ message: "User not found" });
+            }
+            req.user = fullUser;
+        }
+
+        const managerRoles = ['owner', 'admin', 'manager'];
+        if (managerRoles.includes(req.user.companyRole) || req.user.isCoOwner) {
+            next();
+        } else {
+            res.status(403).json({ message: "Access denied: Manager privileges required" });
+        }
+    } catch (error) {
+        console.error("RequireManager Middleware Error:", error);
+        res.status(500).json({ message: "Server error during permission check" });
+    }
+};
+
 module.exports = {
     checkRole,
     requireOwner,
     requireAdmin,
+    requireManager,
     requireDepartmentManager,
     canCreateWorkspace
 };

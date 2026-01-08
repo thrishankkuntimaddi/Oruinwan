@@ -2,9 +2,12 @@ const mongoose = require("mongoose");
 const Message = require("../models/Message");
 const DMSession = require("../models/DMSession");
 const Task = require("../models/Task");
+const TaskActivity = require("../models/TaskActivity");
 const User = require("../models/User");
 const Workspace = require("../models/Workspace");
 const { logAction } = require("../utils/historyLogger");
+const { isValidTransition, getAllowedTransitions, validateBlocked } = require("../utils/workflowValidator");
+const { isWorkspaceManager, canEditTask, canChangeStatus, canManageAssignees, canDelete, canAddSubtask } = require("../utils/taskPermissions");
 
 /**
  * Get tasks for a workspace
@@ -203,13 +206,29 @@ exports.createTask = async (req, res) => {
                 priority,
                 dueDate: dueDate ? new Date(dueDate) : null,
                 linkedMessage,
-                tags: tags || []
+                tags: tags || [],
+                source: req.body.source || 'manual',  // Track if AI-generated or manual
+                type: req.body.type || 'task'  // Default to 'task' type
             });
 
             await task.save();
             createdTasks.push(task);
 
-            // Log Action
+            // Create audit trail activity
+            await TaskActivity.create({
+                task: task._id,
+                user: userId,
+                action: 'created',
+                metadata: {
+                    assignmentType,
+                    visibility: def.visibility,
+                    source: task.source
+                },
+                ipAddress: req.ip,
+                userAgent: req.get('user-agent')
+            });
+
+            // Log Action (existing history logger)
             await logAction({
                 userId,
                 action: "task_created",
@@ -322,17 +341,12 @@ exports.updateTask = async (req, res) => {
         const updates = req.body;
 
         const task = await Task.findById(taskId);
-        if (!task) {
+        if (!task || task.deleted) {
             return res.status(404).json({ message: "Task not found" });
         }
 
         const workspace = await Workspace.findById(task.workspace);
-
-        // Handle orphaned tasks (workspace deleted)
         if (!workspace) {
-            // If workspace is gone, only allow updates if user is creator? 
-            // Or maybe block updates entirely since context is lost.
-            // For now, let's block updates unless creator, but better to just say workspace not found
             return res.status(404).json({ message: "Workspace for this task not found" });
         }
 
@@ -340,72 +354,135 @@ exports.updateTask = async (req, res) => {
             return res.status(403).json({ message: "Access denied" });
         }
 
-        // Update fields
-        const allowedFields = [
-            "title",
-            "description",
-            "status",
-            "priority",
-            "dueDate",
-            "assignedTo",
-            "tags",
-            "completionNote" // Add support for completion notes
-        ];
+        // Check workspace manager status
+        const isManager = await isWorkspaceManager(userId, task.workspace);
 
-        allowedFields.forEach(field => {
-            if (updates[field] !== undefined) {
-                task[field] = updates[field];
+        const changes = []; // Track changes for audit
+
+        // ============ STATUS CHANGE (WITH WORKFLOW VALIDATION) ============
+        if (updates.status && updates.status !== task.status) {
+            // Permission check
+            if (!canChangeStatus(task, userId, isManager)) {
+                return res.status(403).json({
+                    message: "Only assignees or workspace managers can change task status"
+                });
             }
-        });
 
-        // Track completion
-        // Track completion and notify
-        if (updates.status === "done" && task.status !== "done") {
-            task.completedAt = new Date();
-            task.completedBy = userId;
+            // Workflow validation
+            if (!isValidTransition(task.status, updates.status)) {
+                return res.status(400).json({
+                    message: `Invalid status transition from "${task.status}" to "${updates.status}"`,
+                    allowedTransitions: getAllowedTransitions(task.status)
+                });
+            }
 
-            // 1. Notify Channel (System Message)
-            if (task.channel) {
-                try {
-                    const msg = new Message({
-                        company: task.company || null,
-                        workspace: task.workspace,
-                        channel: task.channel,
-                        sender: userId,
-                        text: `✅ **Completed Task:** ${task.title}`
-                    });
-                    await msg.save();
-                    await msg.populate("sender", "username profilePicture");
+            // Validate blocked requirements
+            if (updates.status === 'blocked') {
+                const validation = validateBlocked(updates.status, updates.blockedReason);
+                if (!validation.valid) {
+                    return res.status(400).json({ message: validation.error });
+                }
+            }
 
-                    if (req.io) {
-                        req.io.to(`channel_${task.channel}`).emit("new-message", msg);
+            // Log status change
+            changes.push({
+                action: 'status_changed',
+                field: 'status',
+                from: task.status,
+                to: updates.status,
+                metadata: updates.blockedReason ? { reason: updates.blockedReason } : {}
+            });
+
+            task.previousStatus = task.status;
+            task.status = updates.status;
+
+            // Handle blocked state
+            if (updates.status === 'blocked') {
+                task.blockedBy = userId;
+                task.blockedAt = new Date();
+                task.blockedReason = updates.blockedReason;
+            } else if (task.blockedReason && updates.status !== 'blocked') {
+                // Unblocking
+                changes.push({
+                    action: 'unblocked',
+                    field: 'status',
+                    from: task.status,
+                    to: updates.status
+                });
+                task.blockedBy = null;
+                task.blockedAt = null;
+                task.blockedReason = null;
+            }
+
+            // Handle completion
+            if (updates.status === 'done' && task.status !== 'done') {
+                task.completedBy = userId;
+                task.completedAt = new Date();
+                if (updates.completionNote) {
+                    task.completionNote = updates.completionNote;
+                }
+
+                // Notify Channel
+                if (task.channel) {
+                    try {
+                        const msg = new Message({
+                            company: task.company || null,
+                            workspace: task.workspace,
+                            channel: task.channel,
+                            sender: userId,
+                            text: `✅ **Completed Task:** ${task.title}`
+                        });
+                        await msg.save();
+                        await msg.populate("sender", "username profilePicture");
+                        if (req.io) {
+                            req.io.to(`channel_${task.channel}`).emit("new-message", msg);
+                        }
+                    } catch (msgErr) {
+                        console.error("Failed to send completion message:", msgErr);
                     }
-                } catch (msgErr) {
-                    console.error("Failed to send completion message:", msgErr);
                 }
             }
         }
 
-        // Track original assignees before update for notification
-        const originalAssignees = task.assignedTo.map(id => id.toString());
-
-        await task.save();
-
-        // Detect assignee changes and notify affected users
+        // ============ ASSIGNEE MANAGEMENT ============
         if (updates.assignedTo !== undefined) {
+            if (!canManageAssignees(task, userId, isManager)) {
+                return res.status(403).json({
+                    message: "Only task creator or workspace managers can manage assignees"
+                });
+            }
+
+            const oldAssignees = task.assignedTo.map(id => id.toString());
             const newAssignees = Array.isArray(updates.assignedTo)
                 ? updates.assignedTo.map(id => id.toString())
                 : [updates.assignedTo.toString()];
 
-            // Find removed assignees (old - new)
-            const removedAssignees = originalAssignees.filter(id => !newAssignees.includes(id));
+            // Find additions and removals
+            const added = newAssignees.filter(id => !oldAssignees.includes(id));
+            const removed = oldAssignees.filter(id => !newAssignees.includes(id));
 
-            // Find added assignees (new - old)
-            const addedAssignees = newAssignees.filter(id => !originalAssignees.includes(id));
+            // Log each change
+            added.forEach(assigneeId => {
+                changes.push({
+                    action: 'assignee_added',
+                    field: 'assignedTo',
+                    to: assigneeId
+                });
+            });
 
-            // Notify removed assignees via WebSocket
-            if (req.io && removedAssignees.length > 0) {
-                removedAssignees.forEach(assigneeId => {
+            removed.forEach(assigneeId => {
+                changes.push({
+                    action: 'assignee_removed',
+                    field: 'assignedTo',
+                    from: assigneeId
+                });
+            });
+
+            task.assignedTo = newAssignees;
+
+            // Notify removed assignees
+            if (req.io && removed.length > 0) {
+                removed.forEach(assigneeId => {
                     req.io.to(`user_${assigneeId}`).emit("task-removed", {
                         taskId: task._id,
                         reason: "reassigned"
@@ -413,32 +490,61 @@ exports.updateTask = async (req, res) => {
                 });
             }
 
-            // Notify new assignees via WebSocket
-            if (req.io && addedAssignees.length > 0) {
+            // Notify added assignees
+            if (req.io && added.length > 0) {
                 const populatedTask = await Task.findById(task._id)
                     .populate("createdBy", "username profilePicture")
                     .populate("assignedTo", "username profilePicture")
                     .populate("channel", "name");
 
-                addedAssignees.forEach(assigneeId => {
+                added.forEach(assigneeId => {
                     req.io.to(`user_${assigneeId}`).emit("task-assigned", populatedTask);
                 });
             }
         }
 
-        // Broadcast task update to all current assignees (for shared tasks)
-        if (req.io) {
-            const updatedTask = await Task.findById(task._id)
-                .populate("createdBy", "username profilePicture")
-                .populate("assignedTo", "username profilePicture")
-                .populate("channel", "name");
+        // ============ OTHER METADATA (REQUIRES EDIT PERMISSION) ============
+        const editableFields = ['title', 'description', 'priority', 'dueDate', 'tags',
+            'storyPoints', 'estimatedHours', 'actualHours', 'resolution'];
 
-            // Notify all assignees (including the updater - they'll see it too)
-            task.assignedTo.forEach(assigneeId => {
-                req.io.to(`user_${assigneeId.toString()}`).emit("task-updated", updatedTask);
+        for (const field of editableFields) {
+            if (updates[field] !== undefined && JSON.stringify(updates[field]) !== JSON.stringify(task[field])) {
+                if (!canEditTask(task, userId, isManager)) {
+                    return res.status(403).json({
+                        message: "Only task creator or workspace managers can edit task details"
+                    });
+                }
+
+                changes.push({
+                    action: 'updated',
+                    field,
+                    from: task[field],
+                    to: updates[field]
+                });
+
+                task[field] = updates[field];
+            }
+        }
+
+        // Save task
+        await task.save();
+
+        // Create activity records
+        for (const change of changes) {
+            await TaskActivity.create({
+                task: task._id,
+                user: userId,
+                action: change.action,
+                field: change.field,
+                from: change.from,
+                to: change.to,
+                metadata: change.metadata || {},
+                ipAddress: req.ip,
+                userAgent: req.get('user-agent')
             });
         }
 
+        // Log action (existing history logger)
         await logAction({
             userId,
             action: "task_updated",
@@ -450,26 +556,22 @@ exports.updateTask = async (req, res) => {
             req
         });
 
+        // Populate and return
         const populatedTask = await Task.findById(task._id)
             .populate("createdBy", "username profilePicture")
             .populate("assignedTo", "username profilePicture")
             .populate("channel", "name");
 
-        // ✅ REAL-TIME SOCKET EMISSION (General Update)
+        // Broadcast update via socket
         if (req.io) {
+            task.assignedTo.forEach(assigneeId => {
+                req.io.to(`user_${assigneeId.toString()}`).emit("task-updated", populatedTask);
+            });
+
             if (task.visibility === "workspace") {
                 req.io.to(`workspace_${task.workspace}`).emit("task-updated", populatedTask);
             } else if (task.visibility === "channel" && task.channel) {
                 req.io.to(`channel_${task.channel}`).emit("task-updated", populatedTask);
-            } else {
-                // Private - emit to participants
-                const recipients = new Set([
-                    task.createdBy.toString(),
-                    ...task.assignedTo.map(id => id.toString())
-                ]);
-                recipients.forEach(recipientId => {
-                    req.io.to(`user_${recipientId}`).emit("task-updated", populatedTask);
-                });
             }
         }
 
@@ -1033,4 +1135,183 @@ exports.handleTransferRequest = async (req, res) => {
     }
 };
 
+/**
+ * Create Subtask
+ * POST /api/tasks/:parentId/subtask
+ */
+exports.createSubtask = async (req, res) => {
+    try {
+        const userId = req.user.sub;
+        const { parentId } = req.params;
+        const { title, description, assignedTo = [], priority, dueDate, tags } = req.body;
+
+        if (!title) {
+            return res.status(400).json({ message: "Subtask title is required" });
+        }
+
+        // Get parent task
+        const parentTask = await Task.findById(parentId);
+        if (!parentTask || parentTask.deleted) {
+            return res.status(404).json({ message: "Parent task not found" });
+        }
+
+        // Validate parent type - cannot create subtask under another subtask
+        if (parentTask.type === 'subtask') {
+            return res.status(400).json({
+                message: "Cannot create subtask under another subtask. Please create it under the parent task."
+            });
+        }
+
+        // Check permissions
+        const isManager = await isWorkspaceManager(userId, parentTask.workspace);
+        if (!canAddSubtask(parentTask, userId, isManager)) {
+            return res.status(403).json({
+                message: "Only task creator, assignees, or workspace managers can add subtasks"
+            });
+        }
+
+        // Create subtask
+        const subtask = new Task({
+            type: 'subtask',
+            parentTask: parentId,
+            workspace: parentTask.workspace,
+            company: parentTask.company,
+            project: parentTask.project,
+            title,
+            description: description || '',
+            createdBy: userId,
+            assignedTo: Array.isArray(assignedTo) ? assignedTo : [],
+            status: 'todo',
+            priority: priority || parentTask.priority,
+            dueDate: dueDate ? new Date(dueDate) : null,
+            tags: tags || [],
+            visibility: parentTask.visibility,
+            channel: parentTask.channel,
+            epic: parentTask.type === 'epic' ? parentId : parentTask.epic,
+            source: 'manual'
+        });
+
+        await subtask.save();
+
+        // Update parent task's subtasks array
+        if (!parentTask.subtasks) parentTask.subtasks = [];
+        parentTask.subtasks.push(subtask._id);
+        await parentTask.save();
+
+        // Log activity on parent task
+        await TaskActivity.create({
+            task: parentId,
+            user: userId,
+            action: 'subtask_added',
+            metadata: {
+                subtaskId: subtask._id,
+                subtaskTitle: title
+            },
+            ipAddress: req.ip,
+            userAgent: req.get('user-agent')
+        });
+
+        // Log creation of subtask
+        await TaskActivity.create({
+            task: subtask._id,
+            user: userId,
+            action: 'created',
+            metadata: { parentTaskId: parentId },
+            ipAddress: req.ip,
+            userAgent: req.get('user-agent')
+        });
+
+        // Populate and return
+        const populatedSubtask = await Task.findById(subtask._id)
+            .populate('createdBy', 'username profilePicture')
+            .populate('assignedTo', 'username profilePicture')
+            .populate('parentTask', 'title');
+
+        // Socket notification
+        if (req.io) {
+            const stakeholders = new Set([
+                parentTask.createdBy.toString(),
+                ...parentTask.assignedTo.map(id => id.toString()),
+                ...subtask.assignedTo.map(id => id.toString())
+            ]);
+            stakeholders.forEach(stakeholderId => {
+                req.io.to(`user_${stakeholderId}`).emit('subtask-created', {
+                    subtask: populatedSubtask,
+                    parentTaskId: parentId
+                });
+            });
+        }
+
+        return res.status(201).json({
+            message: "Subtask created successfully",
+            subtask: populatedSubtask
+        });
+
+    } catch (err) {
+        console.error("CREATE SUBTASK ERROR:", err);
+        return res.status(500).json({ message: "Server error" });
+    }
+};
+
+/**
+ * Get Task Activity (Audit History)
+ * GET /api/tasks/:id/activity
+ */
+exports.getTaskActivity = async (req, res) => {
+    try {
+        const userId = req.user.sub;
+        const { id } = req.params;
+        const { limit = 50, offset = 0 } = req.query;
+
+        // Check if task exists and user has access
+        const task = await Task.findById(id);
+        if (!task) {
+            return res.status(404).json({ message: "Task not found" });
+        }
+
+        // Verify access
+        const workspace = await Workspace.findById(task.workspace);
+        if (!workspace || !workspace.isMember(userId)) {
+            return res.status(403).json({ message: "Access denied" });
+        }
+
+        // Check if user can view this task
+        const Channel = require("../models/Channel");
+        const userChannels = await Channel.find({
+            workspace: task.workspace,
+            "members.user": userId
+        }).distinct('_id');
+
+        if (!task.canView(userId, userChannels.map(id => id.toString()))) {
+            return res.status(403).json({ message: "You don't have permission to view this task" });
+        }
+
+        // Get activity history
+        const activities = await TaskActivity.find({ task: id })
+            .populate('user', 'username profilePicture')
+            .sort({ createdAt: -1 })
+            .limit(parseInt(limit))
+            .skip(parseInt(offset))
+            .lean();
+
+        // Get total count
+        const total = await TaskActivity.countDocuments({ task: id });
+
+        return res.json({
+            activities,
+            pagination: {
+                total,
+                limit: parseInt(limit),
+                offset: parseInt(offset),
+                hasMore: (parseInt(offset) + parseInt(limit)) < total
+            }
+        });
+
+    } catch (err) {
+        console.error("GET TASK ACTIVITY ERROR:", err);
+        return res.status(500).json({ message: "Server error" });
+    }
+};
+
 module.exports = exports;
+

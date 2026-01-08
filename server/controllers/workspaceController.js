@@ -771,28 +771,23 @@ exports.createWorkspaceChannel = async (req, res) => {
       }
     }
 
-    // ✨ NEW LOGIC: Determine channel type based on member selection
-    const isPublicChannel = !channelMembers || channelMembers.length === 0;
+    // Determine if channel is private based on explicit isPrivate flag
+    const isPrivateChannel = isPrivate === true;
 
-    let finalMembers;
-    if (isPublicChannel) {
-      // 🌐 PUBLIC CHANNEL: Include ALL workspace members (current + future)
+    // For BOTH public and private channels: only add selected members + creator
+    // The difference is in discoverability (controlled by isPrivate flag)
+    // Public channels: discoverable + self-joinable by workspace members
+    // Private channels: invite-only, not visible to non-members
 
-      finalMembers = workspace.members.map(m => ({
-        user: m.user,
-        joinedAt: new Date()
-      }));
-    } else {
-      // 🔒 PRIVATE CHANNEL: Only selected members + creator
+    // Ensure creator is always included
+    const finalMemberIds = channelMembers && channelMembers.length > 0
+      ? [...new Set([userId, ...channelMembers])]
+      : [userId]; // If no members specified, just the creator
 
-      // Ensure creator is always included
-      const finalMemberIds = [...new Set([userId, ...channelMembers])];
-
-      finalMembers = finalMemberIds.map(memberId => ({
-        user: memberId,
-        joinedAt: new Date()
-      }));
-    }
+    const finalMembers = finalMemberIds.map(memberId => ({
+      user: memberId,
+      joinedAt: new Date()
+    }));
 
     // Create channel
     const channel = await Channel.create({
@@ -800,7 +795,7 @@ exports.createWorkspaceChannel = async (req, res) => {
       company: workspace.company || null,
       name: name.toLowerCase().trim(),
       description: description || "",
-      isPrivate: !isPublicChannel, // ✨ Determined by member selection
+      isPrivate: isPrivateChannel, // Use explicit flag from request
       isDefault: false, // User-created channels are not default
       createdBy: userId,
       members: finalMembers,

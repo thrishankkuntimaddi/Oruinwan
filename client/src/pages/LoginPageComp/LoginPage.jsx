@@ -28,10 +28,16 @@ const LoginPage = () => {
     }
   }, [mode]);
 
-  // Redirect to home if already logged in
+  // Redirect to appropriate dashboard if already logged in
   useEffect(() => {
     if (!loading && user) {
-      navigate("/workspaces", { replace: true });
+      // Check if user is Chttrix platform admin
+      const isChttrixAdmin = user.roles && user.roles.includes('chttrix_admin');
+      if (isChttrixAdmin) {
+        navigate("/chttrix-admin", { replace: true });
+      } else {
+        navigate("/workspaces", { replace: true });
+      }
     }
   }, [user, loading, navigate]);
 

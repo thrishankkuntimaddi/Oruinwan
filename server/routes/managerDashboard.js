@@ -1,65 +1,163 @@
-// server/routes/managerDashboard.js
-// Routes for manager dashboard and department management
-
 const express = require('express');
 const router = express.Router();
+const User = require('../models/User');
+const Workspace = require('../models/Workspace');
+const Message = require('../models/Message');
+const Task = require('../models/Task');
 const requireAuth = require('../middleware/auth');
-const managerDashboardController = require('../controllers/managerDashboardController');
+const { requireManager } = require('../middleware/permissionMiddleware');
 
 /**
- * @route   GET /api/manager/dashboard/metrics/:departmentId
- * @desc    Get department metrics for manager dashboard
- * @access  Private (manager or admin)
+ * GET /api/manager-dashboard/my-workspaces
+ * Workspaces managed by the current user
  */
-router.get('/dashboard/metrics/:departmentId', requireAuth, managerDashboardController.getDepartmentMetrics);
+router.get('/my-workspaces', requireAuth, requireManager, async (req, res) => {
+    try {
+        const userId = req.user.sub || req.user._id;
+
+        // Find workspaces where user is manager or owner
+        const workspaces = await Workspace.find({
+            $or: [
+                { 'members': { $elemMatch: { user: userId, role: 'owner' } } },
+                { 'members': { $elemMatch: { user: userId, role: 'admin' } } }
+            ]
+        })
+            .populate('members.user', 'username email profilePicture')
+            .lean();
+
+        // Enhance with activity metrics
+        const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+        for (const workspace of workspaces) {
+            const [messageCount, taskCount, activeTaskCount] = await Promise.all([
+                Message.countDocuments({
+                    workspace: workspace._id,
+                    createdAt: { $gte: sevenDaysAgo }
+                }),
+                Task.countDocuments({ workspace: workspace._id }),
+                Task.countDocuments({
+                    workspace: workspace._id,
+                    status: { $in: ['todo', 'in_progress', 'review'] }
+                })
+            ]);
+
+            workspace.memberCount = workspace.members.length;
+            workspace.projectCount = 0; // Placeholder for future project model
+            workspace.status = 'active';
+            workspace.activity = {
+                messages: messageCount,
+                tasksTotal: taskCount,
+                tasksActive: activeTaskCount,
+                tasksCompleted: taskCount - activeTaskCount
+            };
+        }
+
+        res.json({ workspaces });
+    } catch (error) {
+        console.error('Manager Dashboard My Workspaces Error:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
 
 /**
- * @route   GET /api/manager/team/:departmentId
- * @desc    Get team members for a department
- * @access  Private (manager or admin)
+ * GET /api/manager-dashboard/team-load
+ * Team member workload distribution
  */
-router.get('/team/:departmentId', requireAuth, managerDashboardController.getTeamMembers);
+router.get('/team-load', requireAuth, requireManager, async (req, res) => {
+    try {
+        const userId = req.user.sub || req.user._id;
+
+        // Get manager's workspaces
+        const managerWorkspaces = await Workspace.find({
+            $or: [
+                { 'members': { $elemMatch: { user: userId, role: 'owner' } } },
+                { 'members': { $elemMatch: { user: userId, role: 'admin' } } }
+            ]
+        });
+
+        // Collect all team member IDs
+        const teamMemberIds = new Set();
+        managerWorkspaces.forEach(ws => {
+            ws.members.forEach(m => teamMemberIds.add(m.user.toString()));
+        });
+
+        const teamMembers = await User.find({
+            _id: { $in: Array.from(teamMemberIds) }
+        })
+            .select('username email profilePicture')
+            .lean();
+
+        // Get task load for each member
+        for (const member of teamMembers) {
+            const [workspaces, activeTasks] = await Promise.all([
+                Workspace.find({
+                    'members.user': member._id
+                }).select('name'),
+                Task.countDocuments({
+                    assignedTo: member._id,
+                    status: { $in: ['todo', 'in_progress', 'review'] }
+                })
+            ]);
+
+            member.workspaces = workspaces.map(ws => ws.name);
+            member.activeTasks = activeTasks;
+            member.workload = activeTasks > 10 ? 'high' : activeTasks > 5 ? 'medium' : 'low';
+        }
+
+        // Categorize
+        const overloaded = teamMembers.filter(m => m.workload === 'high');
+        const idle = teamMembers.filter(m => m.activeTasks === 0);
+
+        res.json({
+            teamMembers,
+            overloaded,
+            idle
+        });
+    } catch (error) {
+        console.error('Manager Dashboard Team Load Error:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
 
 /**
- * @route   GET /api/manager/tasks/:departmentId
- * @desc    Get department tasks
- * @access  Private (manager or admin)
+ * GET /api/manager-dashboard/unassigned-employees
+ * Department members not in manager's workspaces
  */
-router.get('/tasks/:departmentId', requireAuth, managerDashboardController.getDepartmentTasks);
+router.get('/unassigned-employees', requireAuth, requireManager, async (req, res) => {
+    try {
+        const userId = req.user.sub || req.user._id;
+        const user = await User.findById(userId);
 
-/**
- * @route   GET /api/manager/reports/:departmentId
- * @desc    Get department reports
- * @access  Private (manager or admin)
- */
-router.get('/reports/:departmentId', requireAuth, managerDashboardController.getDepartmentReports);
+        // Get manager's departments
+        const managedDepts = user.managedDepartments || [];
 
-/**
- * @route   GET /api/manager/my-departments
- * @desc    Get all departments managed by current user
- * @access  Private (authenticated users)
- */
-router.get('/my-departments', requireAuth, managerDashboardController.getMyDepartments);
+        // Get manager's workspaces
+        const managerWorkspaces = await Workspace.find({
+            $or: [
+                { 'members': { $elemMatch: { user: userId, role: 'owner' } } },
+                { 'members': { $elemMatch: { user: userId, role: 'admin' } } }
+            ]
+        });
 
-/**
- * @route   POST /api/manager/tasks/:departmentId
- * @desc    Create a new task in department workspace
- * @access  Private (manager or admin)
- */
-router.post('/tasks/:departmentId', requireAuth, managerDashboardController.createDepartmentTask);
+        const workspaceMemberIds = new Set();
+        managerWorkspaces.forEach(ws => {
+            ws.members.forEach(m => workspaceMemberIds.add(m.user.toString()));
+        });
 
-/**
- * @route   PATCH /api/manager/tasks/:taskId/status
- * @desc    Update task status
- * @access  Private (manager or admin)
- */
-router.patch('/tasks/:taskId/status', requireAuth, managerDashboardController.updateTaskStatus);
+        // Find users in manager's departments but NOT in any of their workspaces
+        const unassigned = await User.find({
+            departments: { $in: managedDepts },
+            _id: { $nin: Array.from(workspaceMemberIds) },
+            accountStatus: 'active'
+        })
+            .populate('departments', 'name')
+            .select('username email profilePicture departments createdAt')
+            .lean();
 
-/**
- * @route   DELETE /api/manager/tasks/:taskId
- * @desc    Delete a task
- * @access  Private (manager or admin)
- */
-router.delete('/tasks/:taskId', requireAuth, managerDashboardController.deleteTask);
+        res.json({ unassigned });
+    } catch (error) {
+        console.error('Manager Dashboard Unassigned Employees Error:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
 
 module.exports = router;
