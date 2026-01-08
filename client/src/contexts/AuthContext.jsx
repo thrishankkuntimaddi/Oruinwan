@@ -24,6 +24,17 @@ export const AuthProvider = ({ children }) => {
         setAccessToken(storedToken);
         console.log("✅ Access token loaded from localStorage");
       } else {
+        // Check if we should even attempt a refresh
+        // Don't spam refresh requests if we've never logged in
+        const lastLoginAttempt = sessionStorage.getItem("lastLoginAttempt");
+        const hasRecentSession = lastLoginAttempt && (Date.now() - parseInt(lastLoginAttempt)) < 3600000; // 1 hour
+
+        if (!hasRecentSession) {
+          console.log("ℹ️ No access token and no recent session - skipping refresh attempt");
+          setLoading(false);
+          return;
+        }
+
         console.log("ℹ️ No access token in localStorage, trying refresh token");
 
         // Try to get a new access token using refresh token
@@ -38,13 +49,17 @@ export const AuthProvider = ({ children }) => {
             if (refreshData.accessToken) {
               setAccessToken(refreshData.accessToken);
               localStorage.setItem("accessToken", refreshData.accessToken);
+              sessionStorage.setItem("lastLoginAttempt", Date.now().toString());
               console.log("✅ New access token obtained from refresh");
             }
           } else {
-            console.log("❌ Refresh token failed");
+            console.log("ℹ️ No valid refresh token - user needs to log in");
+            // Clear the session marker
+            sessionStorage.removeItem("lastLoginAttempt");
           }
         } catch (refreshErr) {
           console.error("❌ Refresh error:", refreshErr);
+          sessionStorage.removeItem("lastLoginAttempt");
         }
       }
 
@@ -117,6 +132,7 @@ export const AuthProvider = ({ children }) => {
 
     // CRITICAL FIX: Save to localStorage FIRST to ensure immediate availability
     localStorage.setItem("accessToken", data.accessToken);
+    sessionStorage.setItem("lastLoginAttempt", Date.now().toString());
     console.log("✅ Token saved to localStorage:", data.accessToken.substring(0, 20) + "...");
 
     // Then update state (this triggers re-renders)
@@ -146,6 +162,7 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
     setAccessToken(null);
     localStorage.removeItem("accessToken");
+    sessionStorage.removeItem("lastLoginAttempt");
     console.log("✅ Token cleared from localStorage");
   };
 

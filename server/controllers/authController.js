@@ -526,16 +526,6 @@ exports.login = async (req, res) => {
 // REFRESH TOKEN
 // ----------------------------------------------------
 exports.refresh = async (req, res) => {
-  // 🔍 DEBUG: Log refresh request details
-  console.log('🔄 [REFRESH] Token refresh requested');
-  console.log('   Environment:', process.env.NODE_ENV);
-  console.log('   Protocol:', req.protocol);
-  console.log('   Secure:', req.secure);
-  console.log('   X-Forwarded-Proto:', req.headers['x-forwarded-proto']);
-  console.log('   Cookies present:', Object.keys(req.cookies || {}));
-  console.log('   JWT cookie exists:', !!req.cookies?.jwt);
-  console.log('   Origin:', req.headers.origin);
-
   const MAX_RETRIES = 3;
   let attempts = 0;
 
@@ -544,13 +534,9 @@ exports.refresh = async (req, res) => {
       const refreshToken = req.cookies?.jwt;
 
       if (!refreshToken) {
-        console.error('❌ [REFRESH] No refresh token found in cookies!');
-        console.error('   This usually means the cookie was not sent by the browser');
-        console.error('   Check: 1) Cookie secure/sameSite flags, 2) CORS credentials, 3) Browser console');
+        // This is normal for unauthenticated users - don't spam logs
         return res.status(401).json({ message: "No refresh token" });
       }
-
-      console.log('✅ [REFRESH] Refresh token found, proceeding with refresh...');
 
       const refreshHash = sha256(refreshToken);
 
