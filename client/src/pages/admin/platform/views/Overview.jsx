@@ -127,6 +127,27 @@ const Overview = () => {
                 </p>
             </div>
 
+            {/* Platform Status Banner */}
+            <div className="bg-gradient-to-r from-emerald-500 to-green-600 rounded-2xl p-6 text-white shadow-lg shadow-emerald-500/10">
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
+                            <CheckCircle size={28} />
+                        </div>
+                        <div>
+                            <h2 className="text-xl font-bold mb-1">All Systems Operational</h2>
+                            <p className="text-green-50">All services are running smoothly • Last checked: {new Date().toLocaleTimeString()}</p>
+                        </div>
+                    </div>
+                    <button
+                        onClick={() => navigate('/chttrix-admin/health')}
+                        className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-sm font-bold backdrop-blur-sm transition-colors"
+                    >
+                        View Details →
+                    </button>
+                </div>
+            </div>
+
             {/* Stats Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <StatCard
@@ -192,89 +213,81 @@ const Overview = () => {
                 </div>
             )}
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Recent Activity Feed */}
-                <div className="lg:col-span-2">
-                    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 overflow-hidden">
-                        <div className="p-6 border-b border-gray-100 dark:border-gray-700">
-                            <div className="flex items-center justify-between">
-                                <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                                    <Activity size={20} />
-                                    Recent Activity
-                                </h2>
-                                <span className="text-xs text-gray-400 bg-gray-100 dark:bg-gray-700 px-3 py-1 rounded-full font-bold">
-                                    Live
-                                </span>
-                            </div>
-                        </div>
-                        <div className="p-4 space-y-2 max-h-96 overflow-y-auto">
-                            {activities.length > 0 ? (
-                                activities.map((activity, index) => (
-                                    <ActivityItem key={index} activity={activity} />
-                                ))
-                            ) : (
-                                <div className="text-center py-8 text-gray-400">
-                                    No recent activity
-                                </div>
-                            )}
-                        </div>
+            {/* Recent Activity Feed - Full Width */}
+            <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 overflow-hidden">
+                <div className="p-6 border-b border-gray-100 dark:border-gray-700">
+                    <div className="flex items-center justify-between">
+                        <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                            <Activity size={20} />
+                            Recent Activity
+                        </h2>
+                        <span className="text-xs text-gray-400 bg-gray-100 dark:bg-gray-700 px-3 py-1 rounded-full font-bold">
+                            Live
+                        </span>
                     </div>
                 </div>
-
-                {/* Quick Actions */}
-                <div className="space-y-4">
-                    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-6">
-                        <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
-                            Quick Actions
-                        </h2>
-                        <div className="space-y-3">
-                            <button
-                                onClick={() => navigate('/chttrix-admin/pending')}
-                                className="w-full px-4 py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-all flex items-center justify-between group"
-                            >
-                                <span>Review Requests</span>
-                                <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
-                            </button>
-                            <button
-                                onClick={() => navigate('/chttrix-admin/broadcast')}
-                                className="w-full px-4 py-3 bg-purple-600 text-white rounded-xl font-bold hover:bg-purple-700 transition-all flex items-center justify-between group"
-                            >
-                                <span>Send Broadcast</span>
-                                <Megaphone size={18} className="group-hover:scale-110 transition-transform" />
-                            </button>
-                            <button
-                                onClick={() => navigate('/chttrix-admin/tickets')}
-                                className="w-full px-4 py-3 bg-orange-600 text-white rounded-xl font-bold hover:bg-orange-700 transition-all flex items-center justify-between group"
-                            >
-                                <span>View Tickets</span>
-                                <Ticket size={18} className="group-hover:scale-110 transition-transform" />
-                            </button>
-                            <button
-                                onClick={() => navigate('/chttrix-admin/health')}
-                                className="w-full px-4 py-3 bg-green-600 text-white rounded-xl font-bold hover:bg-green-700 transition-all flex items-center justify-between group"
-                            >
-                                <span>System Health</span>
-                                <Activity size={18} className="group-hover:pulse transition-transform" />
-                            </button>
+                <div className="p-4 space-y-2 max-h-96 overflow-y-auto">
+                    {activities.length > 0 ? (
+                        activities.map((activity, index) => (
+                            <ActivityItem key={index} activity={activity} />
+                        ))
+                    ) : (
+                        <div className="text-center py-8 text-gray-400">
+                            No recent activity
                         </div>
-                    </div>
+                    )}
+                </div>
+            </div>
 
-                    {/* Platform Status */}
-                    <div className="bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl p-6 text-white">
-                        <div className="flex items-center gap-3 mb-4">
-                            <div className="w-3 h-3 bg-white rounded-full animate-pulse"></div>
-                            <h3 className="font-bold text-lg">All Systems Operational</h3>
+            {/* Quick Actions - Bottom Horizontal Row */}
+            <div>
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
+                    Quick Actions
+                </h2>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <button
+                        onClick={() => navigate('/chttrix-admin/pending')}
+                        className="p-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl hover:border-gray-300 dark:hover:border-gray-600 hover:shadow-md transition-all group text-left"
+                    >
+                        <div className="w-10 h-10 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center mb-3 group-hover:bg-gray-200 dark:group-hover:bg-gray-600 transition-colors">
+                            <CheckCircle size={20} className="text-gray-900 dark:text-white" />
                         </div>
-                        <p className="text-sm text-green-50 mb-4">
-                            All services are running smoothly
-                        </p>
-                        <button
-                            onClick={() => navigate('/chttrix-admin/health')}
-                            className="text-sm font-bold text-white underline hover:no-underline"
-                        >
-                            View Details →
-                        </button>
-                    </div>
+                        <span className="font-bold text-gray-900 dark:text-white block mb-1">Review Requests</span>
+                        <span className="text-xs text-gray-500 dark:text-gray-400 block">Manage company verifications</span>
+                    </button>
+
+                    <button
+                        onClick={() => navigate('/chttrix-admin/broadcast')}
+                        className="p-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl hover:border-gray-300 dark:hover:border-gray-600 hover:shadow-md transition-all group text-left"
+                    >
+                        <div className="w-10 h-10 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center mb-3 group-hover:bg-gray-200 dark:group-hover:bg-gray-600 transition-colors">
+                            <Megaphone size={20} className="text-gray-900 dark:text-white" />
+                        </div>
+                        <span className="font-bold text-gray-900 dark:text-white block mb-1">Send Broadcast</span>
+                        <span className="text-xs text-gray-500 dark:text-gray-400 block">Notify all companies</span>
+                    </button>
+
+                    <button
+                        onClick={() => navigate('/chttrix-admin/tickets')}
+                        className="p-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl hover:border-gray-300 dark:hover:border-gray-600 hover:shadow-md transition-all group text-left"
+                    >
+                        <div className="w-10 h-10 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center mb-3 group-hover:bg-gray-200 dark:group-hover:bg-gray-600 transition-colors">
+                            <Ticket size={20} className="text-gray-900 dark:text-white" />
+                        </div>
+                        <span className="font-bold text-gray-900 dark:text-white block mb-1">View Tickets</span>
+                        <span className="text-xs text-gray-500 dark:text-gray-400 block">Resolve support issues</span>
+                    </button>
+
+                    <button
+                        onClick={() => navigate('/chttrix-admin/health')}
+                        className="p-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl hover:border-gray-300 dark:hover:border-gray-600 hover:shadow-md transition-all group text-left"
+                    >
+                        <div className="w-10 h-10 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center mb-3 group-hover:bg-gray-200 dark:group-hover:bg-gray-600 transition-colors">
+                            <Activity size={20} className="text-gray-900 dark:text-white" />
+                        </div>
+                        <span className="font-bold text-gray-900 dark:text-white block mb-1">System Health</span>
+                        <span className="text-xs text-gray-500 dark:text-gray-400 block">Monitor platform status</span>
+                    </button>
                 </div>
             </div>
         </div>

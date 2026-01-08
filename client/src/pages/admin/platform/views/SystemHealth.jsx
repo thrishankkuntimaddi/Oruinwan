@@ -276,6 +276,92 @@ const SystemHealth = () => {
                 </div>
             </div>
 
+            {/* Database Entities */}
+            <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 overflow-hidden">
+                <div className="p-6 border-b border-gray-100 dark:border-gray-700">
+                    <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                        <Database size={20} />
+                        Database Entities
+                    </h3>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                        Real-time entity counts from database
+                    </p>
+                </div>
+                <div className="p-6">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        {/* Users */}
+                        <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 rounded-xl p-4 border border-blue-200 dark:border-blue-700">
+                            <p className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase mb-2">Total Users</p>
+                            <p className="text-3xl font-black text-blue-900 dark:text-blue-100">
+                                {metrics.entities?.users?.total || 0}
+                            </p>
+                            <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                                {metrics.entities?.users?.active || 0} active
+                            </p>
+                        </div>
+
+                        {/* Companies */}
+                        <div className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 rounded-xl p-4 border border-purple-200 dark:border-purple-700">
+                            <p className="text-xs font-bold text-purple-600 dark:text-purple-400 uppercase mb-2">Companies</p>
+                            <p className="text-3xl font-black text-purple-900 dark:text-purple-100">
+                                {metrics.entities?.companies?.total || 0}
+                            </p>
+                            <p className="text-xs text-purple-600 dark:text-purple-400 mt-1">
+                                {metrics.entities?.companies?.verified || 0} verified, {metrics.entities?.companies?.pending || 0} pending
+                            </p>
+                        </div>
+
+                        {/* Departments */}
+                        <div className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 rounded-xl p-4 border border-green-200 dark:border-green-700">
+                            <p className="text-xs font-bold text-green-600 dark:text-green-400 uppercase mb-2">Departments</p>
+                            <p className="text-3xl font-black text-green-900 dark:text-green-100">
+                                {metrics.entities?.departments || 0}
+                            </p>
+                        </div>
+
+                        {/* Workspaces */}
+                        <div className="bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/20 rounded-xl p-4 border border-orange-200 dark:border-orange-700">
+                            <p className="text-xs font-bold text-orange-600 dark:text-orange-400 uppercase mb-2">Workspaces</p>
+                            <p className="text-3xl font-black text-orange-900 dark:text-orange-100">
+                                {metrics.entities?.workspaces || 0}
+                            </p>
+                        </div>
+
+                        {/* Channels */}
+                        <div className="bg-gradient-to-br from-pink-50 to-pink-100 dark:from-pink-900/20 dark:to-pink-800/20 rounded-xl p-4 border border-pink-200 dark:border-pink-700">
+                            <p className="text-xs font-bold text-pink-600 dark:text-pink-400 uppercase mb-2">Channels</p>
+                            <p className="text-3xl font-black text-pink-900 dark:text-pink-100">
+                                {metrics.entities?.channels || 0}
+                            </p>
+                        </div>
+
+                        {/* Messages */}
+                        <div className="bg-gradient-to-br from-indigo-50 to-indigo-100 dark:from-indigo-900/20 dark:to-indigo-800/20 rounded-xl p-4 border border-indigo-200 dark:border-indigo-700">
+                            <p className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase mb-2">Messages</p>
+                            <p className="text-3xl font-black text-indigo-900 dark:text-indigo-100">
+                                {metrics.entities?.messages || 0}
+                            </p>
+                        </div>
+
+                        {/* Tasks */}
+                        <div className="bg-gradient-to-br from-cyan-50 to-cyan-100 dark:from-cyan-900/20 dark:to-cyan-800/20 rounded-xl p-4 border border-cyan-200 dark:border-cyan-700">
+                            <p className="text-xs font-bold text-cyan-600 dark:text-cyan-400 uppercase mb-2">Tasks</p>
+                            <p className="text-3xl font-black text-cyan-900 dark:text-cyan-100">
+                                {metrics.entities?.tasks || 0}
+                            </p>
+                        </div>
+
+                        {/* Notes */}
+                        <div className="bg-gradient-to-br from-amber-50 to-amber-100 dark:from-amber-900/20 dark:to-amber-800/20 rounded-xl p-4 border border-amber-200 dark:border-amber-700">
+                            <p className="text-xs font-bold text-amber-600 dark:text-amber-400 uppercase mb-2">Notes</p>
+                            <p className="text-3xl font-black text-amber-900 dark:text-amber-100">
+                                {metrics.entities?.notes || 0}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             {/* Recent Errors */}
             {metrics.errors.length > 0 && (
                 <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 overflow-hidden">

@@ -566,30 +566,74 @@ router.get('/health/metrics', requireSuperAdmin, async (req, res) => {
       return acc + ((total - idle) / total) * 100;
     }, 0) / cpus.length;
 
-    // Database stats (simplified)
+    // Database stats
     const dbStats = await mongoose.connection.db.stats();
+
+    // Get real database entity counts
+    const [
+      totalUsers,
+      activeUsers,
+      totalCompanies,
+      verifiedCompanies,
+      pendingCompanies,
+      totalDepartments,
+      totalWorkspaces,
+      totalChannels,
+      totalMessages,
+      totalTasks,
+      totalNotes
+    ] = await Promise.all([
+      User.countDocuments(),
+      User.countDocuments({ accountStatus: 'active' }),
+      Company.countDocuments(),
+      Company.countDocuments({ verificationStatus: 'verified' }),
+      Company.countDocuments({ verificationStatus: 'pending' }),
+      Department.countDocuments(),
+      Workspace.countDocuments(),
+      Channel.countDocuments(),
+      Message.countDocuments(),
+      Task.countDocuments(),
+      Note.countDocuments()
+    ]);
 
     res.json({
       server: {
-        cpuUsage: cpuUsage.toFixed(2),
-        memoryUsage: memoryUsage.toFixed(2),
-        diskUsage: 45.5, // Mock data - would need additional library for real disk usage
+        cpuUsage: parseFloat(cpuUsage.toFixed(2)),
+        memoryUsage: parseFloat(memoryUsage.toFixed(2)),
+        diskUsage: 0, // Placeholder - requires additional library for real disk usage
         uptime: Math.floor(process.uptime() / 60) // in minutes
       },
       database: {
         connections: mongoose.connection.readyState === 1 ? 1 : 0,
-        size: (dbStats.dataSize / 1024 / 1024).toFixed(2), // MB
+        size: parseFloat((dbStats.dataSize / 1024 / 1024).toFixed(2)), // MB
         collections: dbStats.collections || 0,
-        queryPerformance: 15 // Mock - would need query profiling
+        queryPerformance: 0 // Placeholder - would need query profiling setup
       },
       api: {
         responseTime: {
-          p50: 45,
-          p95: 120,
-          p99: 250
+          p50: 0,
+          p95: 0,
+          p99: 0
         },
-        errorRate: 0.5,
-        requestsPerMinute: 150
+        errorRate: 0,
+        requestsPerMinute: 0
+      },
+      entities: {
+        users: {
+          total: totalUsers,
+          active: activeUsers
+        },
+        companies: {
+          total: totalCompanies,
+          verified: verifiedCompanies,
+          pending: pendingCompanies
+        },
+        departments: totalDepartments,
+        workspaces: totalWorkspaces,
+        channels: totalChannels,
+        messages: totalMessages,
+        tasks: totalTasks,
+        notes: totalNotes
       },
       errors: [] // Would pull from error logging system
     });
