@@ -566,7 +566,21 @@ module.exports = async function registerChatHandlers(io, socket) {
   /* ----------------------------------------------------
      DISCONNECT
   ---------------------------------------------------- */
-  socket.on("disconnect", () => {
-    // User disconnected
+  socket.on("disconnect", async () => {
+    // ✅ Set user offline status
+    try {
+      await User.findByIdAndUpdate(userId, {
+        isOnline: false,
+        lastActivityAt: new Date()
+      });
+
+      // Broadcast status change to all connected clients
+      io.emit("user-status-changed", {
+        userId: userId,
+        status: "offline"
+      });
+    } catch (err) {
+      logger.error("Error setting user offline:", err);
+    }
   });
 };

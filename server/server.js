@@ -38,6 +38,7 @@ const { Server } = require("socket.io");
 const registerChatHandlers = require("./socket/index");
 const logger = require("./utils/logger");
 const passport = require("./config/passport");
+const User = require("./models/User"); // ✅ Add User model import
 
 // Initialize app
 const app = express();
@@ -213,8 +214,25 @@ io.use(async (socket, next) => {
   }
 });
 
-io.on("connection", (socket) => {
+io.on("connection", async (socket) => {
   logger.debug("Socket connected:", socket.user.id);
+
+  // ✅ Set user online status
+  try {
+    await User.findByIdAndUpdate(socket.user.id, {
+      isOnline: true,
+      lastLoginAt: new Date()
+    });
+
+    // Broadcast status change to all connected clients
+    io.emit("user-status-changed", {
+      userId: socket.user.id,
+      status: "active"
+    });
+  } catch (err) {
+    logger.error("Error setting user online:", err);
+  }
+
   registerChatHandlers(io, socket);
 });
 
