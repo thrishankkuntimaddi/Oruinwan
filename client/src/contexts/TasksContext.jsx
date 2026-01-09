@@ -172,7 +172,7 @@ export const TasksProvider = ({ children }) => {
         };
 
         const handleTaskCreated = (task) => {
-            console.log("🆕 Task created:", task);
+
             setTasks(prev => {
                 if (prev.some(t => t.id === task._id)) return prev; // Prevent duplicates
                 return [mapTaskToFrontend(task), ...prev];
@@ -180,12 +180,12 @@ export const TasksProvider = ({ children }) => {
         };
 
         const handleTaskDeleted = (data) => {
-            console.log("🗑️ Task deleted:", data);
+
             setTasks(prev => prev.filter(t => t.id !== data.taskId));
         };
 
         const handleTaskAssigned = (task) => {
-            console.log("📋 Task assigned to me (websocket):", task);
+
             showToast(`New task assigned: ${task.title}`, "info");
             setTasks(prev => {
                 if (prev.some(t => t.id === task._id)) return prev;
@@ -194,13 +194,13 @@ export const TasksProvider = ({ children }) => {
         };
 
         const handleTaskRemoved = (data) => {
-            console.log("🗑️ Task removed from my view (websocket):", data);
+
             showToast("A task has been reassigned", "info");
             setTasks(prev => prev.filter(t => t.id !== data.taskId));
         };
 
         const handleTaskUpdated = (task) => {
-            console.log("🔄 Task updated (websocket):", task);
+
             setTasks(prev => {
                 const existingIndex = prev.findIndex(t => t.id === task._id);
                 if (existingIndex === -1) return prev; // Task not in list? Maybe we should add it if it's now relevant?
@@ -260,7 +260,7 @@ export const TasksProvider = ({ children }) => {
                 backendPayload.channelName = taskData.project;
             }
 
-            console.log('📤 Sending task to backend:', backendPayload);
+
             const response = await api.post('/api/tasks', backendPayload);
 
             // Handle both single task and array of tasks (for split individual assignments)

@@ -40,12 +40,12 @@ const LoginForm = ({ onSwitch, initialEmail = "" }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("🔵 LOGIN SUBMIT:", formData);
+
     if (!isFormValid) return;
 
     try {
       const response = await login(formData);
-      console.log("✅ Login response:", response);
+
 
       showToast("Login successful!", "success");
 
@@ -61,15 +61,15 @@ const LoginForm = ({ onSwitch, initialEmail = "" }) => {
 
       // 0. Priority Backend Instruction
       if (response.redirectTo) {
-        console.log("🔀 Redirecting based on backend instruction:", response.redirectTo);
+
         navigate(response.redirectTo);
         return;
       }
 
       // 1. Check for Pending Verification
-      console.log("🔍 Checking companyStatus:", response?.user?.companyStatus);
+
       if (response?.user?.companyStatus === 'pending' || response?.user?.companyStatus === 'pending_verification') {
-        console.log("✅ Redirecting to pending verification page");
+
         navigate("/pending-verification");
         return;
       }
@@ -77,7 +77,7 @@ const LoginForm = ({ onSwitch, initialEmail = "" }) => {
       // 2. PRIORITY: Check for Platform Admin (chttrix_admin role)
       const isPlatformAdmin = response?.user?.roles?.includes('chttrix_admin');
       if (isPlatformAdmin) {
-        console.log("🛡️ Platform admin detected, redirecting to /chttrix-admin");
+
         navigate("/chttrix-admin");
         return;
       }
@@ -89,24 +89,24 @@ const LoginForm = ({ onSwitch, initialEmail = "" }) => {
       if (hasCompany && companyRole) {
         // Company users - route to their dashboard based on role
         if (companyRole === 'owner') {
-          console.log("👑 Company owner detected, redirecting to /owner/dashboard");
+
           navigate("/owner/dashboard");
           return;
         }
         if (companyRole === 'admin') {
-          console.log("🛡️ Company admin detected, redirecting to /admin/dashboard");
+
           navigate("/admin/dashboard");
           return;
         }
         if (companyRole === 'manager') {
-          console.log("👔 Manager detected, redirecting to /manager/dashboard");
+
           navigate("/manager/dashboard");
           return;
         }
       }
 
       // 4. Fallback - Regular members and guests go to workspaces
-      console.log("📁 Regular user, redirecting to /workspaces");
+
       navigate("/workspaces");
 
     } catch (err) {
@@ -126,7 +126,7 @@ const LoginForm = ({ onSwitch, initialEmail = "" }) => {
 
         // Save to localStorage first
         localStorage.setItem("accessToken", res.data.accessToken);
-        console.log("✅ Google token saved to localStorage");
+
 
         // Then update context
         setUser(res.data.user);
@@ -136,10 +136,10 @@ const LoginForm = ({ onSwitch, initialEmail = "" }) => {
         // Check if user is platform admin
         const isPlatformAdmin = res.data.user?.roles?.includes('chttrix_admin');
         if (isPlatformAdmin) {
-          console.log("🛡️ Platform admin detected (Google), redirecting to /chttrix-admin");
+
           navigate("/chttrix-admin");
         } else if (res.data.user?.companyRole === 'owner') {
-          console.log("👑 Owner detected (Google), redirecting to /owner/dashboard");
+
           navigate("/owner/dashboard");
         } else {
           navigate("/workspaces");

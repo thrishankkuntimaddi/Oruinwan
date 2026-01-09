@@ -90,7 +90,7 @@ api.interceptors.response.use(
         isRefreshing = true;
 
         try {
-            console.log('🔄 Access token expired - refreshing...');
+
 
             // Use POST for refresh (mutations should not use GET)
             const response = await axios.post(`${API_BASE}/api/auth/refresh`, {}, {
@@ -99,7 +99,7 @@ api.interceptors.response.use(
 
             const { accessToken } = response.data;
             localStorage.setItem('accessToken', accessToken);
-            console.log('✅ Token refreshed successfully');
+
 
             // Update original request with new token
             originalRequest.headers.Authorization = `Bearer ${accessToken}`;

@@ -27,21 +27,21 @@ export const useUniversalSearch = (workspaceId, debounceMs = 300) => {
     // Perform search when debounced query changes
     useEffect(() => {
         const performSearch = async () => {
-            console.log('🔍 SEARCH HOOK - Query:', debouncedQuery, 'WorkspaceId:', workspaceId);
+
 
             if (!debouncedQuery.trim() || !workspaceId) {
-                console.log('🔍 SEARCH HOOK - Empty query or no workspace, skipping search');
+
                 setResults({ channels: [], contacts: [], messages: [], tasks: [], notes: [] });
                 setLoading(false);
                 return;
             }
 
-            console.log('🔍 SEARCH HOOK - Starting search...');
+
             setLoading(true);
             setError(null);
 
             try {
-                console.log('🔍 SEARCH HOOK - Calling API with params:', { workspaceId, query: debouncedQuery });
+
 
                 // Using the configured api instance which automatically adds auth headers
                 const response = await api.get('/api/search/universal', {
@@ -51,11 +51,10 @@ export const useUniversalSearch = (workspaceId, debounceMs = 300) => {
                     }
                 });
 
-                console.log('🔍 SEARCH HOOK - API Response:', response.data);
+
                 setResults(response.data);
             } catch (err) {
-                console.error('🔍 SEARCH HOOK - Error:', err);
-                console.error('🔍 SEARCH HOOK - Error details:', err.response?.data);
+
                 setError(err.response?.data?.message || 'Search failed');
                 setResults({ channels: [], contacts: [], messages: [], tasks: [], notes: [] });
             } finally {

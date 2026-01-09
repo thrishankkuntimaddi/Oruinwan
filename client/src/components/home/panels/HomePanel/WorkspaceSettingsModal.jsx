@@ -83,21 +83,17 @@ const InvitationsTab = ({ activeWorkspace, isAdmin }) => {
     };
 
     const handleBulkDelete = async () => {
-        console.log('🗑️ handleBulkDelete called, selectedInvites:', selectedInvites);
         if (selectedInvites.size === 0) return;
 
         if (!window.confirm(`Are you sure you want to delete ${selectedInvites.size} invitation(s)? This action cannot be undone.`)) {
-            console.log('❌ User cancelled deletion');
             return;
         }
 
         setBulkActionLoading(true);
         try {
-            console.log('📤 Sending delete request for:', Array.from(selectedInvites));
-            const response = await api.delete(`/api/workspaces/${activeWorkspace.id}/invites/bulk-delete`, {
+            await api.delete(`/api/workspaces/${activeWorkspace.id}/invites/bulk-delete`, {
                 data: { inviteIds: Array.from(selectedInvites) }
             });
-            console.log('✅ Delete response:', response.data);
             showToast(`✅ Successfully deleted ${selectedInvites.size} invitation(s)`, 'success');
             setSelectedInvites(new Set());
             fetchInvitations();

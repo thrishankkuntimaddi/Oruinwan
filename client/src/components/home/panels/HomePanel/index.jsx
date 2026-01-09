@@ -39,7 +39,6 @@ const HomePanel = ({ title }) => {
     React.useEffect(() => {
         const handleVisibilityChange = () => {
             if (document.visibilityState === 'visible' && activeWorkspace?.id) {
-                console.log('📱 Tab visible - refreshing contacts...');
                 refreshContacts(activeWorkspace.id);
             }
         };
@@ -53,7 +52,6 @@ const HomePanel = ({ title }) => {
         if (!activeWorkspace?.id) return;
 
         const interval = setInterval(() => {
-            console.log('🔄 Auto-refreshing contacts...');
             refreshContacts(activeWorkspace.id);
         }, 30000); // Every 30 seconds
 
@@ -132,7 +130,6 @@ const HomePanel = ({ title }) => {
             try {
                 const response = await api.get(`/api/workspaces/${activeWorkspace.id}/members`);
                 setWorkspaceMembers(response.data.members || []);
-                console.log('👥 Fetched workspace members:', response.data.members);
             } catch (err) {
                 console.error('Error fetching workspace members:', err);
             }
@@ -208,7 +205,6 @@ const HomePanel = ({ title }) => {
     const handleGenerateLink = useCallback(async () => {
         try {
             setIsGeneratingLink(true);
-            console.log('🔗 Generating invite link for workspace:', activeWorkspace.id);
 
             const response = await api.post(`/api/workspaces/${activeWorkspace.id}/invite`, {
                 inviteType: "link",
@@ -216,7 +212,6 @@ const HomePanel = ({ title }) => {
                 daysValid: 7
             });
 
-            console.log('✅ Link generation response:', response.data);
             setInviteLink(response.data.inviteLink);
             showToast("✅ Invitation link generated!", "success");
         } catch (error) {
@@ -273,14 +268,12 @@ const HomePanel = ({ title }) => {
     React.useEffect(() => {
         if (!activeWorkspace?.id || !showInviteModal || !accessToken) return;
 
-        console.log('🔌 [HomePanel] Connecting to workspace socket for real-time joins...');
         const socket = io(API_BASE, {
             auth: { token: accessToken },
             transports: ["websocket"],
         });
 
         socket.on("connect", () => {
-            console.log('✅ [HomePanel] Connected to socket, joining workspace room...');
             socket.emit("join-workspace", { workspaceId: activeWorkspace.id });
         });
 
@@ -289,17 +282,14 @@ const HomePanel = ({ title }) => {
         });
 
         socket.on("workspace-joined", (data) => {
-            console.log('🎉 [HomePanel] Someone joined the workspace!', data);
             // If the invite modal is open AND a link was generated, refresh it automatically
             if (inviteLink) {
-                console.log('🔄 [HomePanel] Refreshing invitation link automatically...');
                 handleGenerateLink();
                 showToast(`🔔 ${data.username} joined! Link refreshed.`, "success");
             }
         });
 
         return () => {
-            console.log('🔌 [HomePanel] Disconnecting workspace socket...');
             socket.disconnect();
         };
     }, [activeWorkspace?.id, showInviteModal, inviteLink, handleGenerateLink, showToast, accessToken]);

@@ -32,11 +32,11 @@ export const CompanyProvider = ({ children }) => {
             setLoading(true);
 
             // Extract ID - handle both object and string formats  
-            console.log('[DEBUG] user.companyId:', user.companyId);
+
             const companyId = typeof user.companyId === 'object' && user.companyId !== null
                 ? (user.companyId._id || user.companyId.id || user.companyId)
                 : user.companyId;
-            console.log('[DEBUG] Extracted companyId:', companyId);
+
 
             const response = await api.get(`${API_BASE}/api/companies/${companyId}`);
             setCompany(response.data.company);
@@ -64,11 +64,11 @@ export const CompanyProvider = ({ children }) => {
         try {
 
             // Extract ID - handle both object and string formats  
-            console.log('[DEBUG] user.companyId:', user.companyId);
+
             const companyId = typeof user.companyId === 'object' && user.companyId !== null
                 ? (user.companyId._id || user.companyId.id || user.companyId)
                 : user.companyId;
-            console.log('[DEBUG] Extracted companyId:', companyId);
+
 
             const response = await api.put(
                 `${API_BASE}/api/companies/${companyId}`,

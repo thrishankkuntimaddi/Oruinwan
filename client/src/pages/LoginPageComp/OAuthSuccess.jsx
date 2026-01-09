@@ -21,16 +21,16 @@ export default function OAuthSuccess() {
       try {
         // Store access token to localStorage
         saveAccessToken(access);
-        console.log("✅ OAuth token saved to localStorage:", access.substring(0, 20) + "...");
+
 
         // Load user data - this updates the AuthContext
         await loadUser();
-        console.log("✅ loadUser() completed");
+
 
         // Wait a bit for context to update
         await new Promise(resolve => setTimeout(resolve, 500));
 
-        console.log("✅ User loaded after OAuth");
+
 
         // Redirect to workspaces page
         navigate("/workspaces");
@@ -39,7 +39,7 @@ export default function OAuthSuccess() {
 
         // Retry once if first attempt fails
         if (loadAttempts < 1) {
-          console.log("⚠️ Retrying OAuth flow...");
+
           setLoadAttempts(prev => prev + 1);
           setIsProcessing(false);
           return;

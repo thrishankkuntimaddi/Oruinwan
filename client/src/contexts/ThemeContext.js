@@ -25,7 +25,7 @@ export const ThemeProvider = ({ children }) => {
         if (user?.preferences?.theme) {
             const backendTheme = user.preferences.theme;
             if (backendTheme !== theme) {
-                console.log(`🎨 Syncing theme from backend: ${backendTheme}`);
+
                 setTheme(backendTheme);
             }
         }
@@ -48,12 +48,12 @@ export const ThemeProvider = ({ children }) => {
             };
             setUser(updatedUser);
 
-            console.log(`💾 Saving theme preference: ${newTheme}`);
+
             try {
                 await api.put('/api/auth/me', {
                     preferences: { theme: newTheme }
                 });
-                console.log(`✅ Theme saved successfully`);
+
             } catch (err) {
                 console.error("Failed to save theme preference:", err);
                 // Optional: Revert on failure if strict consistency is needed

@@ -113,7 +113,6 @@ router.get('/overview/activities', requireSuperAdmin, async (req, res) => {
 // GET /api/admin/pending-companies
 router.get('/pending-companies', requireSuperAdmin, async (req, res) => {
   try {
-    console.log("🔍 Looking for pending companies...");
     const companies = await Company.find({ verificationStatus: 'pending' })
       .populate({
         path: 'admins.user',
@@ -121,10 +120,6 @@ router.get('/pending-companies', requireSuperAdmin, async (req, res) => {
       })
       .sort({ createdAt: -1 });
 
-    console.log(`✅ Found ${companies.length} pending companies`);
-    if (companies.length > 0) {
-      console.log("📋 Companies:", companies.map(c => ({ name: c.name, status: c.verificationStatus })));
-    }
     res.json(companies);
   } catch (err) {
     console.error("❌ Error fetching pending companies:", err);
@@ -219,7 +214,6 @@ router.post('/reject-company/:id', requireSuperAdmin, async (req, res) => {
           html: template.html,
           text: template.text
         });
-        console.log(`📧 Rejection email sent to personal email: ${personalEmail}`);
       } catch (emailError) {
         console.error('Failed to send rejection email:', emailError.message);
         // Don't fail the request if email fails

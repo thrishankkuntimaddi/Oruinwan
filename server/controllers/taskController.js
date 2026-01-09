@@ -15,7 +15,6 @@ const { isWorkspaceManager, canEditTask, canChangeStatus, canManageAssignees, ca
  */
 exports.getTasks = async (req, res) => {
     try {
-        console.log("🔍 GET TASKS REQUEST:", req.query); // Debug log
         const userId = req.user.sub;
         const { workspaceId, status, assignedTo, priority, includeDeleted } = req.query;
 
@@ -145,9 +144,7 @@ exports.createTask = async (req, res) => {
                 }
             }
 
-            // Get taskMode from request (default to 'split' for backward compatibility)
             const { taskMode = 'split' } = req.body;
-            console.log('🔍 TASK MODE:', taskMode, '| Request body:', req.body);
 
             // SPLIT MODE: Create separate task for each assignee
             if (taskMode === 'split' && assignedToIds.length > 1) {

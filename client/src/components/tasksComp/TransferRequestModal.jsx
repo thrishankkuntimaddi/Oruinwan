@@ -6,7 +6,7 @@ export default function TransferRequestModal({ task, members = [], onClose, onCo
     const [note, setNote] = useState("");
 
     const handleSubmit = () => {
-        console.log('📤 Transfer Request:', { selectedMember, note, members });
+
         if (!selectedMember) {
             return alert("Please select a team member to transfer to");
         }

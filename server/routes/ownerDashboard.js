@@ -17,18 +17,13 @@ const { requireOwner } = require('../middleware/permissionMiddleware');
  */
 router.get('/overview', requireAuth, requireOwner, async (req, res) => {
     try {
-        console.log('[OWNER DASHBOARD] Overview endpoint hit');
-        console.log('[OWNER DASHBOARD] User:', req.user);
-
         const userId = req.user.sub || req.user._id;
         const user = await User.findById(userId);
 
         if (!user) {
-            console.error('[OWNER DASHBOARD] User not found:', userId);
             return res.status(404).json({ message: 'User not found' });
         }
 
-        console.log('[OWNER DASHBOARD] User found:', user.email, 'Company:', user.companyId);
         const companyId = user.companyId;
 
         const [
@@ -49,8 +44,6 @@ router.get('/overview', requireAuth, requireOwner, async (req, res) => {
             User.countDocuments({ companyId, createdAt: { $gte: thirtyDaysAgo } }),
             Workspace.countDocuments({ company: companyId, createdAt: { $gte: thirtyDaysAgo } })
         ]);
-
-        console.log('[OWNER DASHBOARD] Overview data:', { totalUsers, activeUsers, workspaceCount, departmentCount });
 
         res.json({
             totalUsers,

@@ -21,7 +21,7 @@ const Notes = () => {
     useEffect(() => {
         const noteIdParam = searchParams.get('noteId');
         if (noteIdParam && noteIdParam !== id) {
-            console.log('📝 [Notes] Navigating to note from query param:', noteIdParam);
+
             navigate(`/workspace/${workspaceId}/notes/${noteIdParam}`, { replace: true });
         }
     }, [searchParams, id, workspaceId, navigate]);

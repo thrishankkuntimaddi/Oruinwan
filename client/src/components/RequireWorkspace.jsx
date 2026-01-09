@@ -69,10 +69,7 @@ const RequireWorkspace = ({ children }) => {
     // 🔒 CRITICAL VALIDATION #3: activeWorkspace must exist and match URL
     // If we have a valid member but activeWorkspace confuses us, we might be mid-switch
     if (!activeWorkspace || error || (activeWorkspace.id !== workspaceId && activeWorkspace.id.toString() !== workspaceId.toString())) {
-        console.log('🔄 [RequireWorkspace] Workspace switch in progress - waiting for context update...', {
-            urlId: workspaceId,
-            activeId: activeWorkspace?.id
-        });
+
 
         // INSTEAD of redirecting, we show loading shell which allows WorkspaceContext to catch up
         // This fixes the "flash redirect" issue when clicking sidebar icons

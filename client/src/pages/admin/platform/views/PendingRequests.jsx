@@ -15,10 +15,9 @@ const PendingRequests = () => {
 
     const fetchPending = async () => {
         try {
-            console.log("📡 Fetching pending companies...");
+
             const res = await axios.get(`${process.env.REACT_APP_BACKEND_URL}/api/admin/pending-companies`, { withCredentials: true });
-            console.log("✅ Pending companies response:", res.data);
-            console.log("📊 Count:", res.data.length);
+
             setCompanies(res.data);
         } catch (err) {
             console.error("❌ Error fetching pending companies:", err);

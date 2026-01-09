@@ -166,23 +166,23 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
 
       // Get current user's role in workspace
       const currentUserId = currentUserIdRef.current;
-      console.log('🔍 Checking user role:', { currentUserId, membersCount: res.data.members?.length });
+
 
       // Debug: Log first member structure
       if (res.data.members && res.data.members.length > 0) {
-        console.log('📋 First member structure:', res.data.members[0]);
+
       }
 
       if (currentUserId && res.data.members) {
         const currentMember = res.data.members.find(m => {
           const memberId = m.user?._id || m.user?.id || m.user || m._id || m.id;
           const matches = String(memberId) === String(currentUserId);
-          if (matches) console.log('✅ Found match:', m);
+
           return matches;
         });
 
         const role = currentMember?.role || 'member';
-        console.log('👤 User role found:', { role, currentMember });
+
         setUserRole(role);
       }
     } catch (err) {
@@ -291,13 +291,13 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
       return;
     }
 
-    console.log(`📖 [ChatWindow] Marking chat as read: type=${chat.type}, id=${chat.id}`);
+
 
     // Small delay to ensure socket is fully ready
     const timer = setTimeout(() => {
       const socket = socketRef.current;
       if (socket && connected) {
-        console.log(`✅ [ChatWindow] Emitting mark-chat-read event`);
+
         socket.emit("mark-chat-read", {
           type: chat.type,
           id: chat.id,
@@ -336,11 +336,11 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
     // Use shared socket from context instead of creating new one
     const setupSocket = async () => {
       if (!sharedSocket) {
-        console.log('⚠️ [ChatWindow] Shared socket not available yet');
+
         return;
       }
 
-      console.log('✅ [ChatWindow] Using shared socket:', sharedSocket.id);
+
       const socket = sharedSocket;
       socketRef.current = socket;
       setConnected(sharedSocketConnected);
@@ -353,12 +353,12 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
 
       /* --- NEW MESSAGE --- */
       socket.on("new-message", ({ message, clientTempId }) => {
-        console.log('📨 [ChatWindow] Received new-message:', { messageId: message._id, clientTempId });
+
         const realMsg = mapBackendMsgToUI(message);
 
         // Replace optimistic message
         if (clientTempId && pendingMessagesRef.current[clientTempId]) {
-          console.log('🔄 [ChatWindow] Replacing optimistic message');
+
           setMessages((prev) =>
             prev.map((m) =>
               m.id === clientTempId
@@ -372,7 +372,7 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
         }
 
         // Normal incoming message
-        console.log('➕ [ChatWindow] Adding new message to list');
+
         setMessages((prev) => {
           if (prev.some((x) => x.id === realMsg.id)) {
             // Message already exists (likely due to optimistic update) - this is normal
@@ -384,7 +384,7 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
 
       /* --- MESSAGE SENT ACK --- */
       socket.on("message-sent", ({ message, clientTempId }) => {
-        console.log('✅ [ChatWindow] Received message-sent ACK:', { messageId: message._id, clientTempId });
+
         const realMsg = mapBackendMsgToUI(message);
 
         // Replace optimistic message with real message
@@ -496,13 +496,13 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
 
       /* --- MESSAGE DELETION --- */
       socket.on("message-deleted", ({ messageId, deletedBy, deletedByName, isUniversal, isLocal }) => {
-        console.log('🗑️ Received message-deleted event:', { messageId, deletedBy, deletedByName, isUniversal, isLocal });
+
 
         if (isLocal) {
           // Local deletion - remove message from UI for this user only
           setMessages((prev) => {
             const filtered = prev.filter((m) => m.id !== messageId && m.backend?._id !== messageId);
-            console.log(`Filtered ${prev.length - filtered.length} messages (local delete)`);
+
             return filtered;
           });
         } else if (isUniversal) {
@@ -512,7 +512,7 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
             const updated = prev.map((m) => {
               // Check both id and backend._id
               if (m.id !== messageId && m.backend?._id !== messageId) return m;
-              console.log('✅ Marking message as deleted:', m.id, 'by:', deletedByName);
+
               // Create a completely new object to force React re-render
               return {
                 ...m,
@@ -522,7 +522,7 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
                 deletedAt: new Date().toISOString(),
               };
             });
-            console.log('📊 Updated messages count:', updated.length);
+
             return [...updated]; // Return new array reference
           });
         }
@@ -555,15 +555,15 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
 
       /* --- TABS --- */
       socket.on("tab-added", ({ tab }) => {
-        console.log('📡 Socket: tab-added event', tab._id);
+
         // Don't add if we already have this tab (prevents duplicates from optimistic updates)
         setTabs(prev => {
           const exists = prev.find(t => t._id === tab._id);
           if (exists) {
-            console.log('⚠️ Tab already exists, skipping:', tab._id);
+
             return prev;
           }
-          console.log('➕ Adding new tab:', tab._id);
+
           return [...prev, tab];
         });
       });
@@ -581,11 +581,11 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
 
       /* --- MEMBER LEFT CHANNEL --- */
       socket.on("member-left", ({ channelId, userId, systemMessage }) => {
-        console.log("👋 [ChatWindow] Member left channel:", { channelId, userId });
+
 
         // If it's the current user who left, close the chat window
         if (String(userId) === String(currentUserIdRef.current)) {
-          console.log("✅ Current user left channel - closing chat window");
+
           showToast("You have left this channel", "info");
           onClose(); // Close the chat window
           if (onDeleteChat) {
@@ -602,7 +602,7 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
 
       /* --- CHANNEL DELETED --- */
       socket.on("channel-deleted", ({ channelId, channelName }) => {
-        console.log("🗑️ [ChatWindow] Channel deleted:", { channelId, channelName });
+
 
         showToast(`#${channelName} has been deleted`, "warning");
         onClose(); // Close the chat window
@@ -613,14 +613,14 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
 
       /* --- SOCKET DISCONNECT --- */
       socket.on("disconnect", (reason) => {
-        console.log("🔌 [ChatWindow] Socket disconnected:", reason);
+
         setConnected(false);
 
         // Don't show toast for intentional disconnects (navigation, refresh, etc.)
         // Socket will auto-reconnect if it was a network issue
         if (reason === "transport close" || reason === "transport error") {
           // Network issue - socket.io will auto-reconnect
-          console.log("⚠️ Network disconnect - will auto-reconnect");
+
         }
         // Removed annoying toast - disconnects during navigation are normal
       });
@@ -628,20 +628,20 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
       /* --- Connection --- */
       socket.on("connect", () => {
         setConnected(true);
-        console.log('✅ [ChatWindow] Socket connected');
+
 
         if (!chat) return;
 
         // Join appropriate room AFTER socket is connected
         if (chat.type === "dm") {
           if (chat.isNew) {
-            console.log('📝 [ChatWindow] New DM - not joining room yet');
+
           } else {
-            console.log(`🚪 [ChatWindow] Joining DM room: ${chat.id}`);
+
             socket.emit("join-dm", { dmSessionId: chat.id });
           }
         } else {
-          console.log(`🚪 [ChatWindow] Joining channel room: ${chat.id}`);
+
           socket.emit("join-channel", { channelId: chat.id });
         }
       });
@@ -652,7 +652,7 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
 
         // If authentication failed, try to refresh the token
         if (err.message.includes('Authentication') || err.message.includes('jwt') || err.message.includes('token')) {
-          console.log('🔄 [ChatWindow] Attempting token refresh due to auth failure...');
+
 
           try {
             // Try to refresh the token
@@ -666,7 +666,7 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
 
             if (newAccessToken) {
               localStorage.setItem('accessToken', newAccessToken);
-              console.log('✅ [ChatWindow] Token refreshed successfully');
+
 
               // Show success message and reload to reconnect
               showToast("Reconnecting with fresh session...", "success");
@@ -704,7 +704,7 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
       // ✅ CRITICAL: Join room immediately if socket is already connected
       // This ensures we receive real-time messages even if socket connected before this component mounted
       if (socket.connected) {
-        console.log('✅ [ChatWindow] Socket already connected, joining room immediately');
+
         if (chat.type === "dm" && !chat.isNew) {
           console.log(`� [ChatWindow] Joining DM room (immediate): ${chat.id}`);
           socket.emit("join-dm", { dmSessionId: chat.id });
@@ -811,11 +811,7 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
     setMessages((prev) => [...prev, uiMsg]);
     pendingMessagesRef.current[clientTempId] = uiMsg;
 
-    console.log('📤 [ChatWindow] Sending message:', {
-      channelId: chat.type === "channel" ? chat.id : null,
-      dmSessionId: (chat.type === "dm" && !chat.isNew) ? chat.id : null,
-      clientTempId
-    });
+
 
     try {
       socket.emit("send-message", {
@@ -832,7 +828,7 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
       // Set a timeout to mark message as failed if no response
       setTimeout(() => {
         if (pendingMessagesRef.current[clientTempId]) {
-          console.warn('⏱️ [ChatWindow] Message send timeout, marking as failed');
+
           setMessages((prev) =>
             prev.map((m) =>
               m.id === clientTempId ? { ...m, sending: false, failed: true } : m
@@ -1024,9 +1020,9 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
   const fetchTabs = useCallback(async () => {
     if (chat?.type !== 'channel') return;
     try {
-      console.log('🔵 Fetching tabs for channel:', chat.id);
+
       const res = await api.get(`/api/channels/${chat.id}/tabs`);
-      console.log('✅ Tabs fetched:', res.data.tabs);
+
       setTabs(res.data.tabs || []);
     } catch (err) {
       console.error("❌ Fetch tabs error:", err);
@@ -1050,7 +1046,7 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
     }
 
     try {
-      console.log('🔵 Creating tab:', { name, channelId: chat.id });
+
 
       // Optimistic update
       const tempId = "temp-" + Date.now();
@@ -1060,7 +1056,7 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
 
       const res = await api.post(`/api/channels/${chat.id}/tabs`, { name, type: "canvas" });
 
-      console.log('✅ Tab created successfully:', res.data);
+
 
       // Remove temp tab and DON'T add the real one (socket will do it)
       // This prevents race condition where both temp and real tab exist
@@ -1332,11 +1328,11 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
   const confirmExitChannel = async () => {
 
     try {
-      console.log('📤 Exiting channel:', chat.id);
+
 
       const response = await api.post(`/api/channels/${chat.id}/exit`);
 
-      console.log('✅ Exited channel:', response.data);
+
 
       showToast(`You left #${chat.name}`, 'success');
 
@@ -1370,11 +1366,11 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
   const confirmDeleteChannel = async () => {
 
     try {
-      console.log('🗑️ Deleting channel:', chat.id);
+
 
       const response = await api.delete(`/api/channels/${chat.id}`);
 
-      console.log('✅ Channel deleted:', response.data);
+
 
       showToast(`#${chat.name} has been permanently deleted`, 'success');
 

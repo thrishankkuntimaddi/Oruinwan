@@ -28,11 +28,11 @@ export const WorkspaceProvider = ({ children }) => {
                 setLoading(true);
                 setError(null);
 
-                console.log('🔍 [WorkspaceContext] Fetching workspaces...');
+
 
                 const response = await api.get('/api/workspaces/my');
 
-                console.log('📋 [WorkspaceContext] Workspaces received:', response.data);
+
 
                 if (response.data.workspaces && response.data.workspaces.length > 0) {
                     // Map to consistent format
@@ -55,8 +55,8 @@ export const WorkspaceProvider = ({ children }) => {
                         );
 
                         if (active) {
-                            console.log('✅ [WorkspaceContext] Active workspace set:', active.name);
-                            console.log('🆔 [WorkspaceContext] Workspace ID:', active.id);
+
+
                             setActiveWorkspace(active);
                         } else {
                             console.warn('⚠️ [WorkspaceContext] WorkspaceId not found in user workspaces:', workspaceId);
@@ -64,7 +64,7 @@ export const WorkspaceProvider = ({ children }) => {
                         }
                     }
                 } else {
-                    console.log('📭 [WorkspaceContext] No workspaces found');
+
                 }
             } catch (err) {
                 console.error('❌ [WorkspaceContext] Error fetching workspaces:', err);
@@ -83,7 +83,7 @@ export const WorkspaceProvider = ({ children }) => {
         if (!socket) return;
 
         const handleWorkspaceUpdated = (data) => {
-            console.log("🏢 Workspace updated (socket):", data);
+
             setWorkspaces(prev => prev.map(ws =>
                 ws.id === data.workspaceId
                     ? { ...ws, ...data, id: ws.id } // ensuring ID stability and merging updates
@@ -96,7 +96,7 @@ export const WorkspaceProvider = ({ children }) => {
         };
 
         const handleWorkspaceDeleted = (data) => {
-            console.log("🗑️ Workspace deleted (socket):", data);
+
             setWorkspaces(prev => prev.filter(ws => ws.id !== data.workspaceId));
 
             if (activeWorkspace && activeWorkspace.id === data.workspaceId) {
@@ -135,7 +135,7 @@ export const WorkspaceProvider = ({ children }) => {
     // Helper: Refresh workspace data (useful after role changes)
     const refreshWorkspace = async () => {
         try {
-            console.log('🔄 [WorkspaceContext] Refreshing workspace data...');
+
             const response = await api.get('/api/workspaces/my');
 
             if (response.data.workspaces && response.data.workspaces.length > 0) {
@@ -157,7 +157,7 @@ export const WorkspaceProvider = ({ children }) => {
                         ws.id === workspaceId || ws.id.toString() === workspaceId
                     );
                     if (active) {
-                        console.log('✅ [WorkspaceContext] Active workspace refreshed with role:', active.role);
+
                         setActiveWorkspace(active);
                     }
                 }

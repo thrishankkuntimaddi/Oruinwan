@@ -53,9 +53,6 @@ const UserManagement = () => {
             ]);
             setAllMembers(membersRes.members || []);
             setDepartments(deptsRes.departments || []);
-            // Axios wraps response in { data: { workspaces: [...] } }
-            console.log('[UserManagement] Workspaces API Response:', workspacesRes);
-            console.log('[UserManagement] Extracted workspaces:', workspacesRes.data?.workspaces);
             setWorkspaces(Array.isArray(workspacesRes.data?.workspaces) ? workspacesRes.data.workspaces : []);
         } catch (err) {
             console.error("Failed to fetch data", err);
@@ -220,8 +217,8 @@ const UserManagement = () => {
                     <button
                         onClick={() => setShowStats(!showStats)}
                         className={`p-2 rounded-lg transition-colors ${showStats
-                                ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400'
-                                : 'text-slate-400 dark:text-gray-500 hover:bg-slate-50 dark:hover:bg-gray-700'
+                            ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400'
+                            : 'text-slate-400 dark:text-gray-500 hover:bg-slate-50 dark:hover:bg-gray-700'
                             }`}
                         title={showStats ? 'Hide Statistics' : 'Show Statistics'}
                     >

@@ -48,7 +48,7 @@ export default function ChannelManagementModal({ channel, onClose, currentUserId
             const token = localStorage.getItem("accessToken");
             const headers = token ? { Authorization: `Bearer ${token}` } : {};
             const res = await axios.get(`${API_BASE}/api/channels/${channel.id}/members`, { headers });
-            console.log('📋 Loaded members:', res.data.members);
+
             setMembers(res.data.members || []);
         } catch (err) {
             console.error("Load members failed:", err);
@@ -62,7 +62,7 @@ export default function ChannelManagementModal({ channel, onClose, currentUserId
             const headers = token ? { Authorization: `Bearer ${token}` } : {};
             // Fetch ALL workspace members (including current user) for invite filtering
             const res = await axios.get(`${API_BASE}/api/workspaces/${channel.workspaceId}/all-members`, { headers });
-            console.log('📊 All workspace users loaded:', res.data.members?.length, res.data.members);
+
             setAllUsers(res.data.members || []);
         } catch (err) {
             console.error("❌ Load workspace members failed:", err);
@@ -77,7 +77,7 @@ export default function ChannelManagementModal({ channel, onClose, currentUserId
     // Reload all users when Invite People tab is clicked
     useEffect(() => {
         if (activeTab === 'invite') {
-            console.log('🔄 Invite tab selected, reloading all users...');
+
             loadAllUsers();
         }
     }, [activeTab, loadAllUsers]);
@@ -350,9 +350,7 @@ export default function ChannelManagementModal({ channel, onClose, currentUserId
         (u) => !members.some((m) => String(m._id) === String(u._id))
     );
 
-    console.log('👥 Member count:', members.length, members.map(m => m.username));
-    console.log('👤 All users count:', allUsers.length, allUsers.map(u => u.username));
-    console.log('✨ Non-members count:', nonMembers.length, nonMembers.map(u => u.username));
+
 
     // Filter non-members by search query
     const filteredNonMembers = searchQuery

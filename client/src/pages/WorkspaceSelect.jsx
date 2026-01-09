@@ -18,7 +18,7 @@ const WorkspaceSelect = () => {
     // ⚡ PLATFORM ADMIN REDIRECT - Platform admins should NEVER be here
     React.useEffect(() => {
         if (user?.roles?.includes('chttrix_admin')) {
-            console.log('🛡️ Platform admin detected in WorkspaceSelect, redirecting to /chttrix-admin');
+
             navigate('/chttrix-admin', { replace: true });
         }
         // REMOVED: Owner redirect. Owners land on dashboard on login, but can visit here via "Go to App".

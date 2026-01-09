@@ -82,11 +82,11 @@ const ProfileMenu = ({ onClose }) => {
   // Load emails from user object
   useEffect(() => {
     if (user?.emails && user.emails.length > 0) {
-      console.log('📧 Loading emails from user object:', user.emails);
+
       setEmails(user.emails);
     } else if (user?.email) {
       // Fallback: If no emails array, create from primary email
-      console.log('📧 No emails array, using fallback for:', user.email);
+
       setEmails([{
         id: 'primary',
         email: user.email,

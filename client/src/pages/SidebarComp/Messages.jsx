@@ -27,7 +27,7 @@ export default function Messages() {
     const dmParam = searchParams.get('dm');
     const newDMParam = searchParams.get('newDM');
 
-    console.log('🔍 [Messages] Query params - channel:', channelParam, 'dm:', dmParam, 'newDM:', newDMParam);
+
 
     // Extract workspaceId from path for query param handling
     const workspaceMatch = path.match(/\/workspace\/([^/]+)/);
@@ -35,12 +35,12 @@ export default function Messages() {
 
     // Handle channel query parameter
     if (channelParam && workspaceId) {
-      console.log('📢 [Messages] Opening channel from query param:', channelParam);
+
       const fetchChannelDetails = async () => {
         try {
           const response = await api.get(`/api/channels/${channelParam}`);
           const channel = response.data;
-          console.log('✅ [Messages] Channel fetched:', channel);
+
 
           setSelectedChat({
             id: channel._id || channel.id,
@@ -68,7 +68,7 @@ export default function Messages() {
 
     // Handle DM query parameter
     if (dmParam && workspaceId) {
-      console.log('💬 [Messages] Opening DM from query param:', dmParam);
+
       const fetchDMDetails = async () => {
         try {
           const response = await api.get(`/api/messages/workspace/${workspaceId}/dms`);
@@ -92,7 +92,7 @@ export default function Messages() {
             });
             setCurrentBroadcast(null);
           } else {
-            console.warn('⚠️ [Messages] DM session not found:', dmParam);
+
           }
         } catch (error) {
           console.error('❌ [Messages] Failed to fetch DM:', error);
@@ -104,7 +104,7 @@ export default function Messages() {
 
     // Handle new DM query parameter
     if (newDMParam && workspaceId) {
-      console.log('✨ [Messages] Creating new DM from query param:', newDMParam);
+
       const fetchUserDetails = async () => {
         try {
           const userRes = await api.get(`/api/workspaces/${workspaceId}/members`);
@@ -165,12 +165,12 @@ export default function Messages() {
       setCurrentBroadcast(null);
     } else if (path.includes("/dm/")) {
       const dmId = path.split("/dm/").pop();  // Could be session ID or user ID
-      console.log('🚀 DM ROUTE DETECTED! dmId:', dmId);
+
 
       // Extract workspaceId from path
       const workspaceMatch = path.match(/\/workspace\/([^/]+)/);
       const workspaceId = workspaceMatch ? workspaceMatch[1] : null;
-      console.log('🌍 Extracted workspaceId:', workspaceId);
+
 
       if (!workspaceId) {
         console.error('❌ No workspaceId found!');
@@ -181,22 +181,21 @@ export default function Messages() {
       // Fetch DM sessions to find participant details
       const fetchDMDetails = async () => {
         try {
-          console.log('🔍 [DM Fetch] Starting fetch for dmId:', dmId);
+
           const response = await api.get(`/api/messages/workspace/${workspaceId}/dms`);
           const sessions = response.data.sessions || [];
-          console.log('📋 [DM Fetch] Found', sessions.length, 'DM sessions');
+
 
           // Debug: Log session structure to understand data format
           if (sessions.length > 0) {
-            console.log('🔬 [DM Fetch] Sample session structure:', JSON.stringify(sessions[0], null, 2));
+
           }
 
           // Try to find by session ID first
           let dmSession = sessions.find(s => s.id === dmId);
 
           if (dmSession) {
-            console.log('✅ [DM Fetch] Found by session ID:', dmId);
-            console.log('👤 [DM Fetch] Other user data:', dmSession.otherUser);
+
           }
 
           // If not found, try to find by participant user ID (otherUserId)
@@ -207,8 +206,7 @@ export default function Messages() {
             });
 
             if (dmSession) {
-              console.log('✅ [DM Fetch] Found by otherUserId:', dmId);
-              console.log('👤 [DM Fetch] Other user data:', dmSession.otherUser);
+
             }
           }
 
@@ -219,16 +217,7 @@ export default function Messages() {
               || dmSession.otherUser.email?.split('@')[0]
               || "Unknown User";
 
-            console.log('✅ [DM Fetch] Setting chat with username:', username);
-            console.log('📦 [DM Fetch] Full chat object being set:', {
-              id: dmSession.id,
-              name: username,
-              type: "dm",
-              avatar: dmSession.otherUser.profilePicture || dmSession.otherUser.avatar,
-              status: dmSession.otherUser.isOnline ? "online" : "offline",
-              isNew: false,
-              workspaceId: workspaceId
-            });
+
 
             setSelectedChat({
               id: dmSession.id,  // Use the actual session ID
@@ -241,10 +230,10 @@ export default function Messages() {
             });
           } else {
             // If still not found, might be a new DM - fetch user details from workspace members
-            console.log('⚠️ [DM Fetch] No existing DM session found, fetching workspace members for user ID:', dmId);
+
             const userRes = await api.get(`/api/workspaces/${workspaceId}/members`);
             const members = userRes.data.members || [];
-            console.log('👥 [DM Fetch] Found', members.length, 'workspace members');
+
 
             // Try to find user by ID with multiple match strategies
             const user = members.find(m => {
@@ -260,16 +249,8 @@ export default function Messages() {
                 || userData.email?.split('@')[0]
                 || "Unknown User";
 
-              console.log('✅ [DM Fetch] Found user in members:', username);
-              console.log('📦 [DM Fetch] Full chat object being set (new DM):', {
-                id: dmId,
-                name: username,
-                type: "dm",
-                avatar: userData.profilePicture || userData.avatar,
-                status: userData.isOnline ? "online" : "offline",
-                isNew: true,
-                workspaceId: workspaceId
-              });
+
+
 
               setSelectedChat({
                 id: dmId,  // Use user ID for new DMs
@@ -282,8 +263,7 @@ export default function Messages() {
               });
             } else {
               // Ultimate fallback - but log warning
-              console.warn('⚠️ [DM Fetch] Could not find user data for ID:', dmId);
-              console.warn('Available member IDs:', members.map(m => m._id || m.id || m.user?._id));
+
 
               setSelectedChat({
                 id: dmId,

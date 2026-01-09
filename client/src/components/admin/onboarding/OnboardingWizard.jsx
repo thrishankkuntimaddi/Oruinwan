@@ -62,16 +62,16 @@ const OnboardingWizard = ({ onComplete }) => {
     useEffect(() => {
         const fetchWorkspaces = async () => {
             if (step === 2 && formData.assignedDepartments.length > 0) {
-                console.log('📦 Fetching workspaces for departments:', formData.assignedDepartments);
+
 
                 // Fetch workspaces for all selected departments
                 const fetchPromises = formData.assignedDepartments.map(async (deptId) => {
                     // Only fetch if we haven't already
                     if (!workspacesByDept[deptId]) {
                         try {
-                            console.log(`🔍 Fetching workspaces for department: ${deptId}`);
+
                             const res = await api.get(`/api/admin/departments/${deptId}/workspaces`);
-                            console.log(`✅ Workspaces received for ${deptId}:`, res.data);
+
                             return { deptId, workspaces: res.data || [] };
                         } catch (err) {
                             console.error(`❌ Error fetching workspaces for ${deptId}:`, err);
@@ -95,7 +95,7 @@ const OnboardingWizard = ({ onComplete }) => {
                 if (Object.keys(updates).length > 0) {
                     setWorkspacesByDept(prev => {
                         const updated = { ...prev, ...updates };
-                        console.log('📊 Updated workspacesByDept:', updated);
+
                         return updated;
                     });
                 }

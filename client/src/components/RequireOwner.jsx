@@ -31,11 +31,11 @@ export default function RequireOwner({ children }) {
 
     // Not an owner - redirect to workspaces
     if (!isOwner) {
-        console.warn("🚫 Access denied: User is not a company owner");
+
         return <Navigate to="/workspaces" replace />;
     }
 
     // User is owner - allow access
-    console.log("✅ Owner access granted");
+
     return children;
 }

@@ -35,7 +35,7 @@ const AdminAnalyticsDashboard = () => {
       try {
         setLoading(true);
         const data = await getCompanyAnalytics(company._id, timeRange);
-        console.log('Analytics Data:', data);
+
         setAnalyticsData(data);
         setLoading(false);
       } catch (error) {

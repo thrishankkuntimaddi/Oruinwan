@@ -22,7 +22,7 @@ export const AuthProvider = ({ children }) => {
       const storedToken = localStorage.getItem("accessToken");
       if (storedToken) {
         setAccessToken(storedToken);
-        console.log("✅ Access token loaded from localStorage");
+
       } else {
         // Check if we should even attempt a refresh
         // Don't spam refresh requests if we've never logged in
@@ -30,12 +30,12 @@ export const AuthProvider = ({ children }) => {
         const hasRecentSession = lastLoginAttempt && (Date.now() - parseInt(lastLoginAttempt)) < 3600000; // 1 hour
 
         if (!hasRecentSession) {
-          console.log("ℹ️ No access token and no recent session - skipping refresh attempt");
+
           setLoading(false);
           return;
         }
 
-        console.log("ℹ️ No access token in localStorage, trying refresh token");
+
 
         // Try to get a new access token using refresh token
         try {
@@ -50,10 +50,10 @@ export const AuthProvider = ({ children }) => {
               setAccessToken(refreshData.accessToken);
               localStorage.setItem("accessToken", refreshData.accessToken);
               sessionStorage.setItem("lastLoginAttempt", Date.now().toString());
-              console.log("✅ New access token obtained from refresh");
+
             }
           } else {
-            console.log("ℹ️ No valid refresh token - user needs to log in");
+
             // Clear the session marker
             sessionStorage.removeItem("lastLoginAttempt");
           }
@@ -66,7 +66,7 @@ export const AuthProvider = ({ children }) => {
       // Now try to fetch user data
       const token = localStorage.getItem("accessToken");
       if (!token) {
-        console.log("❌ Still no access token after refresh attempt");
+
         setUser(null);
         setAccessToken(null);
         return;
@@ -80,17 +80,17 @@ export const AuthProvider = ({ children }) => {
         },
       });
 
-      console.log('🔍 /me Response status:', res.status);
+
 
       if (res.ok) {
         const data = await res.json();
-        console.log('📦 User data:', data);
+
 
         setUser(data);
-        console.log("✅ User loaded:", data.username);
+
       } else {
         // Clear invalid tokens
-        console.log("❌ Failed to load user, clearing tokens");
+
         setUser(null);
         setAccessToken(null);
         localStorage.removeItem("accessToken");
@@ -109,7 +109,7 @@ export const AuthProvider = ({ children }) => {
     // Set up token refresh callback
     setOnTokenRefreshed((newToken) => {
       setAccessToken(newToken);
-      console.log("🔄 AuthContext synced with refreshed token");
+
     });
 
     loadUser();
@@ -133,7 +133,7 @@ export const AuthProvider = ({ children }) => {
     // CRITICAL FIX: Save to localStorage FIRST to ensure immediate availability
     localStorage.setItem("accessToken", data.accessToken);
     sessionStorage.setItem("lastLoginAttempt", Date.now().toString());
-    console.log("✅ Token saved to localStorage:", data.accessToken.substring(0, 20) + "...");
+
 
     // Then update state (this triggers re-renders)
     setAccessToken(data.accessToken);
@@ -145,7 +145,7 @@ export const AuthProvider = ({ children }) => {
     }
     setUser(userWithCompany);
 
-    console.log("✅ Token and user set in context");
+
 
     return data;
   };
@@ -163,7 +163,7 @@ export const AuthProvider = ({ children }) => {
     setAccessToken(null);
     localStorage.removeItem("accessToken");
     sessionStorage.removeItem("lastLoginAttempt");
-    console.log("✅ Token cleared from localStorage");
+
   };
 
   // ------------------------------------------------------------

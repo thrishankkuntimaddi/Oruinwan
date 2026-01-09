@@ -229,7 +229,7 @@ const ChannelsPanel = ({ title }) => {
         if (!newChannelData.name) return;
 
         try {
-            console.log('📡 Creating channel:', newChannelData.name);
+
 
             // ✨ NEW LOGIC: Backend determines public/private based on members array
             // - undefined/empty array → PUBLIC (all workspace members)
@@ -242,16 +242,13 @@ const ChannelsPanel = ({ title }) => {
                     : undefined // Backend will make it public
             };
 
-            console.log('📦 Payload:', {
-                ...payload,
-                visibility: selectedChannelMembers.length > 0 ? 'PRIVATE' : 'PUBLIC'
-            });
+
 
             // ✅ CORRECT: Call backend API
             const response = await api.post(`/api/workspaces/${workspaceId}/channels`, payload);
+            const createdChannel = response.data;
 
-            const createdChannel = response.data.channel;
-            console.log('✅ Channel created:', createdChannel);
+
 
             // Append real channel to list
             const newChannel = {

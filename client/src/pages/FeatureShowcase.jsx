@@ -79,7 +79,7 @@ const FeatureShowcase = () => {
             // Muted allows autoplay in most policies
             video.muted = true;
             video.play().catch(error => {
-                console.log("Autoplay prevented:", error);
+
             });
         }
     }, []);

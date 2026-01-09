@@ -30,11 +30,7 @@ function ChannelMessageItem({
     isAdmin = false, // Admin check for pin permissions
 }) {
     // DEBUG LOG
-    // if (threadCounts && threadCounts[msg.id]) {
-    //    console.log(`CMI Render: ${msg.id} count=${threadCounts[msg.id]}`);
-    // } else if (msg.replyCount > 0) {
-    //    console.log(`CMI Render: ${msg.id} has replyCount=${msg.replyCount} but no threadCount prop match? Keys:`, Object.keys(threadCounts || {}));
-    // }
+
 
     // TEMPORARY FIX: Fallback to msg.replyCount if threadCounts missing?
     // But threadCounts is the source of truth for updates.

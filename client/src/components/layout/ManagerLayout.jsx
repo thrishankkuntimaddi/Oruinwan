@@ -19,11 +19,7 @@ const ManagerLayout = () => {
         d.head?._id === user?._id || d.head === user?._id
     ) || company?.departments?.[0];
 
-    console.log('[ManagerLayout Debug]', {
-        user: { id: user?._id, name: user?.username },
-        companyDepts: company?.departments,
-        selectedDept
-    });
+
 
     return (
         <div className="flex h-screen bg-gray-50 dark:bg-gray-900 font-sans text-gray-900 dark:text-gray-100 overflow-hidden transition-colors duration-200">

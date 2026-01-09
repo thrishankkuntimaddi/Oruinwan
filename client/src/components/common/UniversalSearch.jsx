@@ -25,8 +25,8 @@ export default function UniversalSearch({ workspaceId, onClose, results, loading
     // Handle channel navigation
     const handleChannelClick = (channel) => {
         const navPath = `/workspace/${workspaceId}/messages?channel=${channel.id}`;
-        console.log('🔍 [UniversalSearch] Navigating to channel:', navPath);
-        console.log('🔍 [UniversalSearch] Channel:', channel);
+
+
         navigate(navPath);
         onClose();
     };
@@ -66,14 +66,14 @@ export default function UniversalSearch({ workspaceId, onClose, results, loading
 
     // Handle message navigation
     const handleMessageClick = (message) => {
-        console.log('🔍 [UniversalSearch] Navigating to message:', message);
+
         if (message.parent.type === 'channel') {
             const navPath = `/workspace/${workspaceId}/messages?channel=${message.parent.id}&highlight=${message.id}`;
-            console.log('🔍 [UniversalSearch] Channel message path:', navPath);
+
             navigate(navPath);
         } else {
             const navPath = `/workspace/${workspaceId}/messages?dm=${message.parent.id}&highlight=${message.id}`;
-            console.log('🔍 [UniversalSearch] DM message path:', navPath);
+
             navigate(navPath);
         }
         onClose();
@@ -81,7 +81,7 @@ export default function UniversalSearch({ workspaceId, onClose, results, loading
 
     // Handle task navigation
     const handleTaskClick = (task) => {
-        console.log('✅ [UniversalSearch] Navigating to task:', task);
+
 
         // Determine the appropriate filter based on task properties
         let filter = 'incoming'; // default
@@ -102,14 +102,14 @@ export default function UniversalSearch({ workspaceId, onClose, results, loading
             filter = 'personal';
         }
 
-        console.log('✅ [UniversalSearch] Task filter:', filter);
+
         navigate(`/workspace/${workspaceId}/tasks?filter=${filter}&taskId=${task.id}`);
         onClose();
     };
 
     // Handle note navigation
     const handleNoteClick = (note) => {
-        console.log('📝 [UniversalSearch] Navigating to note:', note);
+
         navigate(`/workspace/${workspaceId}/notes?noteId=${note.id}`);
         onClose();
     };

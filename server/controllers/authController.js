@@ -301,17 +301,11 @@ exports.verifyEmail = async (req, res) => {
   try {
     const { token, email } = req.query;
 
-    console.log("🔐 [VERIFY EMAIL] Request received:");
-    console.log(`   Email: ${email}`);
-    console.log(`   Token: ${token ? token.substring(0, 10) + '...' : 'MISSING'}`);
-
     if (!token || !email) {
-      console.log("❌ [VERIFY EMAIL] Missing token or email");
       return res.status(400).json({ message: "Missing token or email" });
     }
 
     const tokenHash = sha256(token);
-    console.log(`   Token Hash: ${tokenHash.substring(0, 10)}...`);
 
     const user = await User.findOne({
       email,
@@ -320,20 +314,14 @@ exports.verifyEmail = async (req, res) => {
     });
 
     if (!user) {
-      console.log("❌ [VERIFY EMAIL] No matching user found");
-      console.log("   Possible reasons: Invalid token, expired token, or email already verified");
       return res.status(400).json({ message: "Invalid or expired token" });
     }
-
-    console.log(`✅ [VERIFY EMAIL] User found: ${user.email}`);
 
     user.verified = true;
     user.verificationTokenHash = undefined;
     user.verificationTokenExpires = undefined;
 
     await saveWithRetry(user);
-
-    console.log(`✅ [VERIFY EMAIL] Email verified successfully for ${user.email}`);
 
     return res.json({ message: "Email verified" });
   } catch (err) {

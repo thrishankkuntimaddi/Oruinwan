@@ -6,10 +6,7 @@ export default function MessageInfoModal({ msg, onClose, currentUserId, workspac
   if (!msg) return null;
 
   // Debug logging
-  console.log('📊 MessageInfoModal - msg:', msg);
-  console.log('📊 MessageInfoModal - backend.readBy:', msg.backend?.readBy);
-  console.log('📊 MessageInfoModal - workspaceMembers:', workspaceMembers);
-  console.log('📊 MessageInfoModal - currentUserId:', currentUserId);
+
 
   // Get readBy array - handle both array of IDs and array of objects
   const rawReadBy = msg.backend?.readBy || [];
@@ -22,7 +19,7 @@ export default function MessageInfoModal({ msg, onClose, currentUserId, workspac
     return String(item);
   });
 
-  console.log('📊 Processed readBy:', readBy);
+
 
   // Resolve "Seen by" names
   const seenByList = workspaceMembers
@@ -30,7 +27,7 @@ export default function MessageInfoModal({ msg, onClose, currentUserId, workspac
       const memberId = String(m.id || m._id);
       const isReader = readBy.includes(memberId);
       const isNotCurrentUser = memberId !== String(currentUserId);
-      console.log(`Checking member ${m.username}: memberId=${memberId}, isReader=${isReader}, isNotCurrentUser=${isNotCurrentUser}`);
+
       return isReader && isNotCurrentUser;
     })
     .sort((a, b) => {
@@ -39,7 +36,7 @@ export default function MessageInfoModal({ msg, onClose, currentUserId, workspac
       return nameA.localeCompare(nameB);
     });
 
-  console.log('📊 seenByList:', seenByList);
+
 
   // Resolve "Delivered to" names (everyone else in the workspace who hasn't seen it)
   const deliveredToList = workspaceMembers

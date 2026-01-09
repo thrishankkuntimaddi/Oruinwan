@@ -24,16 +24,11 @@ const VerifiedOnlyRoute = ({ children }) => {
     // Check if user has a company with pending verification
     const companyStatus = user?.company?.verificationStatus || user?.companyStatus;
 
-    console.log("🔒 VerifiedOnlyRoute check:", {
-        hasUser: !!user,
-        companyStatus,
-        userType: user?.userType,
-        accountStatus: user?.accountStatus
-    });
+
 
     // Block pending users
     if (companyStatus === 'pending' || user?.accountStatus === 'pending_company') {
-        console.log("🚫 Blocking pending user from accessing protected route");
+
         return <Navigate to="/pending-verification" replace />;
     }
 

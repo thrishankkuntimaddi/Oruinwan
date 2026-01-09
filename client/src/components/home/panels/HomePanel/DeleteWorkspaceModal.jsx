@@ -25,14 +25,11 @@ const DeleteWorkspaceModal = ({
         setDeleting(true);
 
         try {
-            console.log('=== DELETE WORKSPACE DEBUG ===');
-            console.log('workspaceId from params:', workspaceId);
-            console.log('workspaceName:', workspaceName);
-            console.log('Full URL will be:', `/api/workspaces/${workspaceId}`);
+
 
             const response = await api.delete(`/api/workspaces/${workspaceId}`);
 
-            console.log('Delete successful:', response.data);
+
 
             // Success!
             showToast(`Workspace "${workspaceName}" has been deleted.`, 'success');

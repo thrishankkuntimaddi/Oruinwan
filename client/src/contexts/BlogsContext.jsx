@@ -141,20 +141,20 @@ export const BlogsProvider = ({ children }) => {
         });
 
         socket.on("update-created", (update) => {
-            console.log("📢 Update created (socket):", update);
+
             // ✅ REMOVED WORKSPACE FILTER to allow company-wide updates
             setPosts(prev => [mapUpdateToFrontend(update), ...prev]);
         });
 
         socket.on("update-updated", (update) => {
-            console.log("🔄 Update updated (socket):", update);
+
             setPosts(prev => prev.map(p =>
                 p.id === update._id ? mapUpdateToFrontend(update) : p
             ));
         });
 
         socket.on("update-deleted", ({ updateId }) => {
-            console.log("🗑️ Update deleted (socket):", updateId);
+
             setPosts(prev => prev.filter(p => p.id !== updateId));
         });
 

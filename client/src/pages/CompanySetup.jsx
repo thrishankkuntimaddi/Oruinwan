@@ -30,8 +30,7 @@ const CompanySetup = () => {
 
     const handleNext = async () => {
         setIsLoading(true);
-        console.log("[SETUP] User object:", user);
-        console.log("[SETUP] Company:", user?.company);
+
 
         // Extract company ID properly - API returns 'id' not '_id'
         let companyId;
@@ -40,7 +39,7 @@ const CompanySetup = () => {
         } else {
             companyId = user?.companyId;
         }
-        console.log("[SETUP] Extracted ID:", companyId);
+
         if (!companyId) {
             console.error("[SETUP] No company ID found!");
             setIsLoading(false);
@@ -65,7 +64,7 @@ const CompanySetup = () => {
                 await refreshUser();
                 // Use backend provided redirect or default to admin dashboard
                 const redirectPath = response.data.redirectTo || '/admin/analytics';
-                console.log("Redirecting to:", redirectPath);
+
                 navigate(redirectPath);
             }
         } catch (error) {
@@ -273,7 +272,7 @@ const CompanySetup = () => {
                                                 accept=".xlsx,.xls,.csv"
                                                 className="hidden"
                                                 onChange={(e) => {
-                                                    console.log("File selected:", e.target.files[0]);
+
                                                 }}
                                             />
                                             <div className="cursor-pointer py-3 px-4 bg-white border-2 border-purple-300 rounded-xl text-center hover:bg-purple-50 transition-all flex items-center justify-center gap-2 font-bold text-purple-700">

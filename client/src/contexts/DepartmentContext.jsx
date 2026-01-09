@@ -33,11 +33,11 @@ export const DepartmentProvider = ({ children }) => {
             setLoading(true);
 
             // Extract ID - handle both object and string formats
-            console.log('[DEBUG] user.companyId:', user.companyId);
+
             const companyId = typeof user.companyId === 'object' && user.companyId !== null
                 ? (user.companyId._id || user.companyId.id || user.companyId)
                 : user.companyId;
-            console.log('[DEBUG] Extracted companyId:', companyId);
+
 
             const response = await api.get(`${API_BASE}/api/departments/${companyId}`);
             setDepartments(response.data.departments || []);
@@ -72,11 +72,11 @@ export const DepartmentProvider = ({ children }) => {
         try {
 
             // Extract ID - handle both object and string formats
-            console.log('[DEBUG] user.companyId:', user.companyId);
+
             const companyId = typeof user.companyId === 'object' && user.companyId !== null
                 ? (user.companyId._id || user.companyId.id || user.companyId)
                 : user.companyId;
-            console.log('[DEBUG] Extracted companyId:', companyId);
+
 
             const response = await api.post(
                 `${API_BASE}/api/departments`,

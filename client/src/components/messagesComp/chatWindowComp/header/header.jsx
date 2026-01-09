@@ -101,7 +101,7 @@ export default function Header({
 
           <div className="min-w-0">
             {/* Debug: Log chat object for DMs */}
-            {chat.type === 'dm' && console.log('🔍 [Header] DM chat object:', { name: chat.name, username: chat.username, email: chat.email, fullChat: chat })}
+
 
             <div className="text-sm font-semibold truncate text-gray-800 dark:text-gray-100">
               {chat.type === 'channel'

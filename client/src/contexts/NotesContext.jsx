@@ -91,7 +91,7 @@ export const NotesProvider = ({ children }) => {
         });
 
         const handleNoteCreated = (note) => {
-            console.log("📝 Note created (websocket):", note);
+
             setNotes(prev => {
                 if (prev.some(n => n.id === note._id)) return prev;
                 // Only add if belongs to current workspace view (or no workspace view)
@@ -108,19 +108,19 @@ export const NotesProvider = ({ children }) => {
         };
 
         const handleNoteUpdated = (note) => {
-            console.log("🔄 Note updated (websocket):", note);
+
             setNotes(prev => prev.map(n =>
                 n.id === note._id ? mapNoteToFrontend(note) : n
             ));
         };
 
         const handleNoteDeleted = (data) => {
-            console.log("🗑️ Note deleted (websocket):", data);
+
             setNotes(prev => prev.filter(n => n.id !== data.noteId));
         };
 
         const handleNoteShared = (note) => {
-            console.log("🤝 Note shared with me (websocket):", note);
+
             showToast(`Note shared with you: ${note.title}`, "info");
             setNotes(prev => {
                 if (prev.some(n => n.id === note._id)) {

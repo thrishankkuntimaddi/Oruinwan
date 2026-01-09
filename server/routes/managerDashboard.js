@@ -175,8 +175,6 @@ router.get('/dashboard/metrics/:departmentId', requireAuth, requireManager, asyn
         const userId = req.user.sub || req.user._id;
         const { departmentId } = req.params;
 
-        console.log('[MANAGER METRICS] Fetching metrics for department:', departmentId);
-
         // Verify manager has access to this department
         const manager = await User.findById(userId);
         if (!manager.managedDepartments || !manager.managedDepartments.map(d => d.toString()).includes(departmentId)) {
@@ -236,7 +234,6 @@ router.get('/dashboard/metrics/:departmentId', requireAuth, requireManager, asyn
             }
         };
 
-        console.log('[MANAGER METRICS] Returning metrics:', response);
         res.json(response);
     } catch (error) {
         console.error('Manager Dashboard Metrics Error:', error);

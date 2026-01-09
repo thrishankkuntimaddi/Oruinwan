@@ -158,7 +158,7 @@ export default function ContactsProvider({ children }) {
       const currentWsId = getCurrentWorkspaceId();
       if (channel.workspace !== currentWsId) return;
 
-      console.log("🆕 Channel created (socket):", channel);
+
       const newChannel = {
         id: channel._id,
         type: 'channel',
@@ -199,7 +199,7 @@ export default function ContactsProvider({ children }) {
     };
 
     const handleNewDMSession = (data) => {
-      console.log("🆕 New DM Session (socket):", data);
+
       // Refreshing all data is safest for now to get the full session object
       const currentWsId = getCurrentWorkspaceId();
       if (currentWsId) loadAllData(currentWsId);

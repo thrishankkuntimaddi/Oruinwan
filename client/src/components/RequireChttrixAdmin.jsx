@@ -39,6 +39,6 @@ export default function RequireChttrixAdmin({ children }) {
     }
 
     // User is Chttrix admin - allow access
-    console.log("✅ Chttrix admin access granted");
+
     return children;
 }
