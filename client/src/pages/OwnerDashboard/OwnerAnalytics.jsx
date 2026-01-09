@@ -1,10 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useToast } from '../../contexts/ToastContext';
 import { useCompany } from '../../contexts/CompanyContext';
-import { RefreshCw, BarChart3 } from 'lucide-react';
-import ActivityHealth from './ActivityHealth';
-import SecurityRisk from './SecurityRisk';
-import BillingSummary from './BillingSummary';
+import { RefreshCw, BarChart3, TrendingUp, TrendingDown, Users, MessageSquare, Activity, Calendar } from 'lucide-react';
+import { LineChart, Line, BarChart, Bar, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 
 import {
     getActivityHealth,
@@ -12,12 +10,15 @@ import {
     getBillingSummary
 } from '../../services/ownerDashboardService';
 
+const COLORS = ['#6366f1', '#8b5cf6', '#ec4899', '#f43f5e', '#10b981', '#f59e0b'];
+
 const OwnerAnalytics = () => {
     const { isCompanyOwner } = useCompany();
     const { showToast } = useToast();
 
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
+    const [timeRange, setTimeRange] = useState('30d'); // 7d, 30d, 90d
 
     // Data states
     const [activityData, setActivityData] = useState(null);
@@ -61,6 +62,40 @@ const OwnerAnalytics = () => {
         showToast("Analytics refreshed", "success");
     };
 
+    // Mock trend data for charts (replace with real backend data)
+    const userGrowthData = [
+        { date: 'Week 1', users: 18, active: 15 },
+        { date: 'Week 2', users: 22, active: 19 },
+        { date: 'Week 3', users: 28, active: 24 },
+        { date: 'Week 4', users: 32, active: 32 }
+    ];
+
+    const messageVolumeData = [
+        { day: 'Mon', messages: 245 },
+        { day: 'Tue', messages: 312 },
+        { day: 'Wed', messages: 289 },
+        { day: 'Thu', messages: 356 },
+        { day: 'Fri', messages: 401 },
+        { day: 'Sat', messages: 198 },
+        { day: 'Sun', messages: 156 }
+    ];
+
+    const workspaceActivityData = [
+        { name: 'Fireworks App', activity: 89 },
+        { name: 'UPI Integration', activity: 76 },
+        { name: 'Payments Backend', activity: 65 },
+        { name: 'Design System', activity: 58 },
+        { name: 'Mobile App Redesign', activity: 42 }
+    ];
+
+    const departmentDistribution = [
+        { name: 'Engineering', value: 12 },
+        { name: 'Design', value: 6 },
+        { name: 'Product', value: 5 },
+        { name: 'QA & Testing', value: 5 },
+        { name: 'DevOps', value: 4 }
+    ];
+
     if (loading) {
         return (
             <div className="flex items-center justify-center h-screen bg-gray-50 dark:bg-gray-900">
@@ -72,17 +107,32 @@ const OwnerAnalytics = () => {
     return (
         <div className="flex flex-col h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
             {/* Header */}
-            <header className="h-16 px-8 flex items-center justify-between z-10 bg-white dark:bg-gray-800 border-b border-slate-200 dark:border-gray-700 shadow-sm">
+            <header className="h-16 px-8 flex items-center justify-between z-10 bg-white dark:bg-gray-800 border-b border-slate-200 dark:border-gray-700 shadow-sm shrink-0">
                 <div>
                     <h2 className="text-xl font-black text-slate-800 dark:text-white flex items-center gap-2">
                         <BarChart3 className="text-indigo-500" size={24} />
-                        Analytics
+                        Analytics & Insights
                     </h2>
                     <p className="text-xs text-slate-500 dark:text-gray-400 font-medium ml-8">
-                        Deep dive into health, risk, and billing metrics
+                        Historical trends, growth metrics & detailed performance analysis
                     </p>
                 </div>
                 <div className="flex items-center gap-4">
+                    {/* Time Range Selector */}
+                    <div className="flex items-center gap-2 bg-white dark:bg-gray-700 border border-slate-200 dark:border-gray-600 rounded-lg p-1">
+                        {['7d', '30d', '90d'].map((range) => (
+                            <button
+                                key={range}
+                                onClick={() => setTimeRange(range)}
+                                className={`px-3 py-1 text-xs font-bold rounded transition-all ${timeRange === range
+                                        ? 'bg-indigo-600 text-white'
+                                        : 'text-slate-600 dark:text-gray-300 hover:bg-slate-100 dark:hover:bg-gray-600'
+                                    }`}
+                            >
+                                {range === '7d' ? '7 Days' : range === '30d' ? '30 Days' : '90 Days'}
+                            </button>
+                        ))}
+                    </div>
                     <button
                         onClick={handleRefresh}
                         disabled={refreshing}
@@ -97,11 +147,200 @@ const OwnerAnalytics = () => {
             {/* Content */}
             <div className="flex-1 overflow-y-auto w-full px-8 py-8 z-10 custom-scrollbar">
                 <div className="space-y-8 max-w-7xl mx-auto">
-                    <ActivityHealth data={activityData} />
-                    <SecurityRisk data={securityData} />
-                    <BillingSummary data={billingData} />
+
+                    {/* Growth Metrics Summary */}
+                    <section>
+                        <div className="mb-4">
+                            <h3 className="text-sm font-bold text-slate-700 dark:text-gray-300 uppercase tracking-wide">Growth Metrics</h3>
+                            <p className="text-xs text-slate-500 dark:text-gray-500">30-day performance overview</p>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                            <MetricCard
+                                icon={Users}
+                                label="User Growth"
+                                value="+14"
+                                subtitle="New users this month"
+                                trend={+44}
+                                color="indigo"
+                            />
+                            <MetricCard
+                                icon={MessageSquare}
+                                label="Message Volume"
+                                value="2,156"
+                                subtitle="Messages sent (30d)"
+                                trend={+23}
+                                color="blue"
+                            />
+                            <MetricCard
+                                icon={Activity}
+                                label="Engagement Rate"
+                                value="87%"
+                                subtitle="Active participation"
+                                trend={+12}
+                                color="green"
+                            />
+                            <MetricCard
+                                icon={Calendar}
+                                label="Workspace Activity"
+                                value="8/10"
+                                subtitle="Active workspaces"
+                                trend={0}
+                                color="purple"
+                            />
+                        </div>
+                    </section>
+
+                    {/* User Growth Trend */}
+                    <section className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-slate-200 dark:border-gray-700 p-6">
+                        <div className="mb-6">
+                            <h3 className="text-sm font-bold text-slate-700 dark:text-gray-300 uppercase tracking-wide">User Growth Trend</h3>
+                            <p className="text-xs text-slate-500 dark:text-gray-500">Total users vs active users over time</p>
+                        </div>
+                        <ResponsiveContainer width="100%" height={300}>
+                            <AreaChart data={userGrowthData}>
+                                <defs>
+                                    <linearGradient id="colorUsers" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
+                                        <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                                    </linearGradient>
+                                    <linearGradient id="colorActive" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
+                                        <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                                    </linearGradient>
+                                </defs>
+                                <CartesianGrid strokeDasharray="3 3" stroke="#374151" strokeOpacity={0.1} />
+                                <XAxis dataKey="date" stroke="#9ca3af" style={{ fontSize: '12px' }} />
+                                <YAxis stroke="#9ca3af" style={{ fontSize: '12px' }} />
+                                <Tooltip
+                                    contentStyle={{ backgroundColor: '#1f2937', border: 'none', borderRadius: '8px', color: '#f3f4f6' }}
+                                    itemStyle={{ color: '#f3f4f6' }}
+                                />
+                                <Area type="monotone" dataKey="users" stroke="#6366f1" fillOpacity={1} fill="url(#colorUsers)" strokeWidth={2} />
+                                <Area type="monotone" dataKey="active" stroke="#10b981" fillOpacity={1} fill="url(#colorActive)" strokeWidth={2} />
+                            </AreaChart>
+                        </ResponsiveContainer>
+                        <div className="flex items-center justify-center gap-6 mt-4">
+                            <div className="flex items-center gap-2">
+                                <div className="w-3 h-3 rounded-full bg-indigo-600"></div>
+                                <span className="text-xs font-medium text-slate-600 dark:text-gray-400">Total Users</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <div className="w-3 h-3 rounded-full bg-green-600"></div>
+                                <span className="text-xs font-medium text-slate-600 dark:text-gray-400">Active Users</span>
+                            </div>
+                        </div>
+                    </section>
+
+                    {/* Message Volume & Workspace Activity */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        {/* Message Volume */}
+                        <section className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-slate-200 dark:border-gray-700 p-6">
+                            <div className="mb-6">
+                                <h3 className="text-sm font-bold text-slate-700 dark:text-gray-300 uppercase tracking-wide">Weekly Message Volume</h3>
+                                <p className="text-xs text-slate-500 dark:text-gray-500">Messages sent per day (last 7 days)</p>
+                            </div>
+                            <ResponsiveContainer width="100%" height={250}>
+                                <BarChart data={messageVolumeData}>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#374151" strokeOpacity={0.1} />
+                                    <XAxis dataKey="day" stroke="#9ca3af" style={{ fontSize: '12px' }} />
+                                    <YAxis stroke="#9ca3af" style={{ fontSize: '12px' }} />
+                                    <Tooltip
+                                        contentStyle={{ backgroundColor: '#1f2937', border: 'none', borderRadius: '8px', color: '#f3f4f6' }}
+                                        itemStyle={{ color: '#f3f4f6' }}
+                                    />
+                                    <Bar dataKey="messages" fill="#6366f1" radius={[8, 8, 0, 0]} />
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </section>
+
+                        {/* Workspace Activity */}
+                        <section className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-slate-200 dark:border-gray-700 p-6">
+                            <div className="mb-6">
+                                <h3 className="text-sm font-bold text-slate-700 dark:text-gray-300 uppercase tracking-wide">Top Active Workspaces</h3>
+                                <p className="text-xs text-slate-500 dark:text-gray-500">Activity score by workspace</p>
+                            </div>
+                            <ResponsiveContainer width="100%" height={250}>
+                                <BarChart data={workspaceActivityData} layout="vertical">
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#374151" strokeOpacity={0.1} horizontal={false} />
+                                    <XAxis type="number" stroke="#9ca3af" style={{ fontSize: '12px' }} />
+                                    <YAxis dataKey="name" type="category" width={120} stroke="#9ca3af" style={{ fontSize: '11px' }} />
+                                    <Tooltip
+                                        contentStyle={{ backgroundColor: '#1f2937', border: 'none', borderRadius: '8px', color: '#f3f4f6' }}
+                                        itemStyle={{ color: '#f3f4f6' }}
+                                    />
+                                    <Bar dataKey="activity" fill="#10b981" radius={[0, 8, 8, 0]}>
+                                        {workspaceActivityData.map((entry, index) => (
+                                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                        ))}
+                                    </Bar>
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </section>
+                    </div>
+
+                    {/* Department Distribution */}
+                    <section className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-slate-200 dark:border-gray-700 p-6">
+                        <div className="mb-6">
+                            <h3 className="text-sm font-bold text-slate-700 dark:text-gray-300 uppercase tracking-wide">Team Distribution</h3>
+                            <p className="text-xs text-slate-500 dark:text-gray-500">Employees by department</p>
+                        </div>
+                        <div className="flex items-center justify-center">
+                            <ResponsiveContainer width="100%" height={300}>
+                                <PieChart>
+                                    <Pie
+                                        data={departmentDistribution}
+                                        cx="50%"
+                                        cy="50%"
+                                        labelLine={false}
+                                        label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                                        outerRadius={100}
+                                        fill="#8884d8"
+                                        dataKey="value"
+                                    >
+                                        {departmentDistribution.map((entry, index) => (
+                                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                        ))}
+                                    </Pie>
+                                    <Tooltip
+                                        contentStyle={{ backgroundColor: '#1f2937', border: 'none', borderRadius: '8px', color: '#f3f4f6' }}
+                                        itemStyle={{ color: '#f3f4f6' }}
+                                    />
+                                </PieChart>
+                            </ResponsiveContainer>
+                        </div>
+                    </section>
                 </div>
             </div>
+        </div>
+    );
+};
+
+// Metric Card Component
+const MetricCard = ({ icon: Icon, label, value, subtitle, trend, color }) => {
+    const colorClasses = {
+        indigo: 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20',
+        blue: 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20',
+        green: 'text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20',
+        purple: 'text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/20'
+    };
+
+    return (
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-slate-200 dark:border-gray-700 p-6 transition-all hover:shadow-md">
+            <div className="flex items-center justify-between mb-3">
+                <div className={`p-2 rounded-lg ${colorClasses[color]}`}>
+                    <Icon className={`w-5 h-5`} />
+                </div>
+                {trend !== 0 && (
+                    <div className={`flex items-center gap-1 text-xs font-bold ${trend > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
+                        }`}>
+                        {trend > 0 ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
+                        {Math.abs(trend)}%
+                    </div>
+                )}
+            </div>
+            <div className="text-2xl font-black text-slate-900 dark:text-white">{value}</div>
+            <div className="text-xs font-bold text-slate-500 dark:text-gray-400 uppercase tracking-wider mt-1">{label}</div>
+            <div className="text-xs text-slate-400 dark:text-gray-500 mt-2">{subtitle}</div>
         </div>
     );
 };

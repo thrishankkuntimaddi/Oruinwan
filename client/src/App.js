@@ -81,6 +81,7 @@ import AdminDashboard from "./pages/AdminDashboard";
 import ManagerLayout from "./components/layout/ManagerLayout.jsx";
 import OwnerDashboard from './pages/OwnerDashboard';
 import OwnerAnalytics from './pages/OwnerDashboard/OwnerAnalytics'; // NEW
+import AdminsManagement from './pages/OwnerDashboard/AdminsManagement'; // NEW - Owner's admin management
 import OwnerBilling from './pages/OwnerDashboard/OwnerBilling'; // NEW - Dedicated billing page
 import OwnerSecurity from './pages/OwnerDashboard/OwnerSecurity'; // NEW - Dedicated security page
 // import ManagerDashboard from "./pages/ManagerDashboard"; // Unused
@@ -459,7 +460,7 @@ function App() {
                             <Route path="/owner/billing" element={<OwnerBilling />} />
                             <Route path="/owner/security" element={<OwnerSecurity />} />
 
-                            <Route path="/owner/admins" element={<UserManagement />} />
+                            <Route path="/owner/admins" element={<AdminsManagement />} />
                             <Route path="/owner/workspaces" element={<WorkspacesManagement />} />
                             <Route path="/owner/departments" element={<DepartmentManagement />} />
                             <Route path="/owner/users" element={<UserManagement />} />

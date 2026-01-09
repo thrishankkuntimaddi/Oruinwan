@@ -1,7 +1,7 @@
 
 
 import React, { useState, useEffect } from 'react';
-import { Search, Mail, BarChart2, Briefcase } from 'lucide-react';
+import { Search, Mail, BarChart2, Briefcase, Eye, EyeOff } from 'lucide-react';
 import { useCompany } from '../../contexts/CompanyContext';
 import { getCompanyMembers } from '../../services/companyService';
 import { getDepartments, assignUserToDepartment } from '../../services/departmentService';
@@ -21,7 +21,7 @@ const UserManagement = () => {
     const [departments, setDepartments] = useState([]);
     const [workspaces, setWorkspaces] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [showStats, setShowStats] = useState(true);
+    const [showStats, setShowStats] = useState(false); // Hidden by default
 
     // Filters
     const [tab, setTab] = useState('all'); // all, admins, managers, members, guests
@@ -219,8 +219,11 @@ const UserManagement = () => {
                 <div className="flex items-center gap-4">
                     <button
                         onClick={() => setShowStats(!showStats)}
-                        className={`p-2 rounded-lg transition-colors ${showStats ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400' : 'text-slate-400 dark:text-gray-500 hover:bg-slate-50 dark:hover:bg-gray-700'}`}
-                        title="Toggle Statistics"
+                        className={`p-2 rounded-lg transition-colors ${showStats
+                                ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400'
+                                : 'text-slate-400 dark:text-gray-500 hover:bg-slate-50 dark:hover:bg-gray-700'
+                            }`}
+                        title={showStats ? 'Hide Statistics' : 'Show Statistics'}
                     >
                         <BarChart2 size={20} />
                     </button>

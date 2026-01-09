@@ -42,7 +42,7 @@ const WorkspacesManagement = () => {
             <header className="h-16 px-8 flex items-center justify-between z-10 bg-white dark:bg-gray-800 border-b border-slate-200 dark:border-gray-700 shadow-sm">
                 <div>
                     <h2 className="text-xl font-black text-slate-800 dark:text-white flex items-center gap-2">
-                        <Globe className="text-indigo-600 dark:text-indigo-400" size={24} />
+                    
                         Workspaces Management
                     </h2>
                     <p className="text-xs text-slate-500 dark:text-gray-400 font-medium ml-8">
