@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
-    Globe, LogOut, Building, BarChart3, ChevronUp, User, HelpCircle, UserPlus, Shield, LayoutDashboard, Users
+    Globe, LogOut, Building, BarChart3, ChevronUp, User, HelpCircle, UserPlus, Shield, LayoutDashboard, Users, Settings
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -36,7 +36,8 @@ const AdminSidebar = () => {
             group: 'SYSTEM',
             items: [
                 { path: '/admin/security', label: 'Audit & Security', icon: Shield },
-                { path: '/manager/dashboard', label: 'Cross Visibility', icon: LayoutDashboard }, // Link to manager console
+                { path: '/admin/settings', label: 'Settings', icon: Settings },
+                { path: '/manager/dashboard/overview', label: 'Cross Visibility', icon: LayoutDashboard }, // Link to manager console
                 { path: '/contact-admin', label: 'Contact Admin', icon: HelpCircle },
                 { path: '/workspaces', label: 'Go to App', icon: Globe },
             ]

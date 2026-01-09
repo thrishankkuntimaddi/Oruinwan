@@ -74,7 +74,7 @@ const ManagerLayout = () => {
                 </header>
 
                 {/* Main Content Area */}
-                <main className="flex-1 overflow-y-auto bg-gray-50 dark:bg-gray-900 transition-colors duration-200 relative p-8">
+                <main className="flex-1 overflow-hidden bg-gray-50 dark:bg-gray-900 transition-colors duration-200 relative">
                     <Outlet context={{
                         selectedDepartment: selectedDept || { _id: 'dummy', name: 'Loading...' }
                     }} />

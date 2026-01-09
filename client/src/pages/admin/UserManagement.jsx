@@ -5,6 +5,7 @@ import { Search, Mail, BarChart2, Briefcase } from 'lucide-react';
 import { useCompany } from '../../contexts/CompanyContext';
 import { getCompanyMembers } from '../../services/companyService';
 import { getDepartments, assignUserToDepartment } from '../../services/departmentService';
+import { workspaceService } from '../../services/workspaceService';
 import { InviteUserModal } from '../../components/company';
 import EmployeeActionsMenu from '../../components/company/EmployeeActionsMenu';
 import { useToast } from '../../contexts/ToastContext';
@@ -18,6 +19,7 @@ const UserManagement = () => {
     const [allMembers, setAllMembers] = useState([]);
     const [filteredMembers, setFilteredMembers] = useState([]);
     const [departments, setDepartments] = useState([]);
+    const [workspaces, setWorkspaces] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showStats, setShowStats] = useState(true);
 
@@ -26,6 +28,7 @@ const UserManagement = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [deptFilter, setDeptFilter] = useState('all');
     const [roleFilter, setRoleFilter] = useState('all');
+    const [workspaceFilter, setWorkspaceFilter] = useState('all');
 
     // Selection
     const [selectedUsers, setSelectedUsers] = useState([]);
@@ -43,12 +46,17 @@ const UserManagement = () => {
         }
         try {
             setLoading(true);
-            const [membersRes, deptsRes] = await Promise.all([
+            const [membersRes, deptsRes, workspacesRes] = await Promise.all([
                 getCompanyMembers(company._id),
-                getDepartments(company._id)
+                getDepartments(company._id),
+                workspaceService.getWorkspaces(company._id)
             ]);
             setAllMembers(membersRes.members || []);
             setDepartments(deptsRes.departments || []);
+            // Axios wraps response in { data: { workspaces: [...] } }
+            console.log('[UserManagement] Workspaces API Response:', workspacesRes);
+            console.log('[UserManagement] Extracted workspaces:', workspacesRes.data?.workspaces);
+            setWorkspaces(Array.isArray(workspacesRes.data?.workspaces) ? workspacesRes.data.workspaces : []);
         } catch (err) {
             console.error("Failed to fetch data", err);
             showToast("Failed to load users", "error");
@@ -92,13 +100,22 @@ const UserManagement = () => {
             );
         }
 
-        // 4. Role Filter (Specific)
+        // 4. Workspace Filter
+        if (workspaceFilter !== 'all') {
+            result = result.filter(m =>
+                m.workspaces && m.workspaces.some(ws =>
+                    ws.workspace?._id === workspaceFilter || ws.workspace === workspaceFilter
+                )
+            );
+        }
+
+        // 5. Role Filter (Specific)
         if (roleFilter !== 'all') {
             result = result.filter(m => m.companyRole === roleFilter);
         }
 
         setFilteredMembers(result);
-    }, [allMembers, tab, searchQuery, deptFilter, roleFilter]);
+    }, [allMembers, tab, searchQuery, deptFilter, roleFilter, workspaceFilter]);
 
 
     const handleSelectAll = (e) => {
@@ -370,16 +387,14 @@ const UserManagement = () => {
                                 ))}
                             </select>
                             <select
-                                value={roleFilter}
-                                onChange={(e) => setRoleFilter(e.target.value)}
+                                value={workspaceFilter}
+                                onChange={(e) => setWorkspaceFilter(e.target.value)}
                                 className="px-3 py-2 bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-lg text-sm font-medium text-slate-600 dark:text-gray-300 focus:outline-none transition-colors"
                             >
-                                <option value="all">All Roles</option>
-                                <option value="owner">Owner</option>
-                                <option value="admin">Admin</option>
-                                <option value="manager">Manager</option>
-                                <option value="member">Member</option>
-                                <option value="guest">Guest</option>
+                                <option value="all">All Workspaces</option>
+                                {workspaces.map(ws => (
+                                    <option key={ws._id} value={ws._id}>{ws.name}</option>
+                                ))}
                             </select>
                         </div>
                     </div>

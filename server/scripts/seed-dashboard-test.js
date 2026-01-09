@@ -265,6 +265,27 @@ const seedDatabase = async () => {
             ]
         });
 
+        // Sync workspace membership to users
+        await User.findByIdAndUpdate(owner._id, {
+            $push: {
+                workspaces: {
+                    workspace: workspace._id,
+                    role: 'owner',
+                    joinedAt: new Date()
+                }
+            }
+        });
+
+        await User.findByIdAndUpdate(manager._id, {
+            $push: {
+                workspaces: {
+                    workspace: workspace._id,
+                    role: 'admin',
+                    joinedAt: new Date()
+                }
+            }
+        });
+
         await Channel.create({
             workspace: workspace._id,
             company: company._id,

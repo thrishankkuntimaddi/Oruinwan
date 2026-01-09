@@ -72,14 +72,21 @@ import CompanySettings from "./pages/admin/settings/CompanySettings"; // NEW - 8
 import AdminProfile from "./pages/admin/AdminProfile"; // Personal profile
 import Analytics from "./pages/admin/Analytics"; // NEW - Analytics dashboard
 import ContactAdmin from "./pages/admin/ContactAdmin"; // NEW - Contact platform admin
+import WorkspacesManagement from "./pages/admin/WorkspacesManagement"; // NEW - Admin workspaces management
+import AuditSecurityPage from "./pages/admin/AuditSecurityPage"; // NEW - Audit & Security
+import AdminSettingsLimited from "./pages/admin/AdminSettingsLimited"; // NEW - Limited settings for admins
 
 // Dashboard Pages
 import AdminDashboard from "./pages/AdminDashboard";
 import ManagerLayout from "./components/layout/ManagerLayout.jsx";
 import OwnerDashboard from './pages/OwnerDashboard';
 import OwnerAnalytics from './pages/OwnerDashboard/OwnerAnalytics'; // NEW
+import OwnerBilling from './pages/OwnerDashboard/OwnerBilling'; // NEW - Dedicated billing page
+import OwnerSecurity from './pages/OwnerDashboard/OwnerSecurity'; // NEW - Dedicated security page
 // import ManagerDashboard from "./pages/ManagerDashboard"; // Unused
 import ManagerOverview from "./components/manager/ManagerOverview";
+import ManagerWorkspaces from "./components/manager/ManagerWorkspaces";
+import ManagerProjects from "./components/manager/ManagerProjects"; // NEW
 // import ManagerLocation from "./components/manager/ManagerLocation"; // NEW - Unused
 import ManagerTasks from "./components/manager/ManagerTasks";
 import ManagerReports from "./components/manager/ManagerReports";
@@ -448,13 +455,12 @@ function App() {
                             }
                           >
                             <Route path="/owner/dashboard" element={<OwnerDashboard />} />
-                            <Route path="/owner/dashboard/activity" element={<OwnerAnalytics />} />
-                            <Route path="/owner/dashboard/billing" element={<OwnerDashboard />} /> {/* Fallback to dashboard for now */}
-                            <Route path="/owner/dashboard/security" element={<OwnerDashboard />} />
-
                             <Route path="/owner/analytics" element={<OwnerAnalytics />} />
+                            <Route path="/owner/billing" element={<OwnerBilling />} />
+                            <Route path="/owner/security" element={<OwnerSecurity />} />
 
                             <Route path="/owner/admins" element={<UserManagement />} />
+                            <Route path="/owner/workspaces" element={<WorkspacesManagement />} />
                             <Route path="/owner/departments" element={<DepartmentManagement />} />
                             <Route path="/owner/users" element={<UserManagement />} />
                             <Route path="/owner/onboard" element={<OnboardingPage />} />
@@ -474,9 +480,11 @@ function App() {
                             <Route path="/admin/dashboard" element={<AdminDashboard />} />
                             <Route path="/admin/analytics" element={<Analytics />} />
                             <Route path="/admin/departments" element={<DepartmentManagement />} />
+                            <Route path="/admin/workspaces" element={<WorkspacesManagement />} />
                             <Route path="/admin/users" element={<UserManagement />} />
                             <Route path="/admin/onboard" element={<OnboardingPage />} />
-                            <Route path="/admin/settings" element={<CompanySettings />} />
+                            <Route path="/admin/security" element={<AuditSecurityPage />} />
+                            <Route path="/admin/settings" element={<AdminSettingsLimited />} />
                             <Route path="/admin/profile" element={<AdminProfile />} />
                             <Route path="/contact-admin" element={<ContactAdmin />} />
                           </Route>
@@ -494,13 +502,14 @@ function App() {
                           >
                             <Route index element={<Navigate to="overview" replace />} />
                             <Route path="overview" element={<ManagerOverview />} />
+                            <Route path="workspace" element={<ManagerWorkspaces />} />
                             <Route path="allocation" element={<TeamAllocation />} />
                             <Route path="tasks" element={<ManagerTasks />} />
                             <Route path="reports" element={<ManagerReports />} />
                             <Route path="settings" element={<ManagerSettings />} />
 
-                            {/* New Manager Routes - Placeholders pointing to relevant components */}
-                            <Route path="projects" element={<ManagerTasks />} /> {/* Reuse Tasks for Projects for now */}
+                            {/* New Manager Routes */}
+                            <Route path="projects" element={<ManagerProjects />} /> {/* NEW - Actual project management */}
                             <Route path="unassigned" element={<TeamAllocation />} /> {/* Reuse Team Allocation */}
                           </Route>
 

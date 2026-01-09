@@ -152,10 +152,10 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 // Routes
 app.use("/api/auth", require("./routes/auth"));
 app.use("/api/admin", require("./middleware/auth"), require("./routes/admin"));
-app.use("/api/admin", require("./middleware/auth"), require("./routes/onboardRoutes"));
-app.use("/api/owner-dashboard", require("./routes/ownerDashboard"));
 app.use("/api/admin-dashboard", require("./routes/adminDashboard"));
-app.use("/api/manager-dashboard", require("./routes/managerDashboard"));
+app.use("/api/owner-dashboard", require("./routes/ownerDashboard"));
+app.use("/api/manager-dashboard", require("./routes/managerDashboard")); // Old pattern
+app.use("/api/manager", require("./routes/managerDashboard")); // New pattern - supports /api/manager/dashboard/*
 app.use("/api/messages", require("./routes/messages"));
 app.use("/api/chat", require("./routes/chatList"));
 app.use("/api/channels", require("./routes/channels"));
@@ -164,7 +164,6 @@ app.use("/api/departments", require("./routes/departments"));
 app.use("/api/workspaces", require("./routes/workspaces"));
 app.use("/api/platform/support", require("./routes/platformSupport"));
 app.use("/api/internal", require("./routes/internalMessaging"));
-app.use("/api/manager", require("./routes/managerDashboard"));
 app.use("/api/tasks", require("./routes/tasks"));
 app.use("/api/notes", require("./routes/notes"));
 app.use("/api/updates", require("./routes/updates"));

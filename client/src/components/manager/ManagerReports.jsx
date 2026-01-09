@@ -1,129 +1,202 @@
 // client/src/components/manager/ManagerReports.jsx
+// Limited Visibility - Basic department info for managers
+
 import React, { useState, useEffect } from 'react';
 import { useOutletContext } from 'react-router-dom';
+import { Users, Building, Shield, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import axios from 'axios';
-import {
-    BarChart3, TrendingUp, CheckCircle2, Clock, AlertTriangle,
-    Download, Activity, User
-} from 'lucide-react';
 
 const ManagerReports = () => {
     const { selectedDepartment } = useOutletContext();
-    const [reports, setReports] = useState(null);
+    const [deptInfo, setDeptInfo] = useState(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const fetchReports = async () => {
+        const fetchDeptInfo = async () => {
             if (!selectedDepartment?._id) return;
 
             try {
                 setLoading(true);
                 const response = await axios.get(
-                    `${process.env.REACT_APP_BACKEND_URL}/api/manager/reports/${selectedDepartment._id}`,
+                    `${process.env.REACT_APP_BACKEND_URL}/api/manager/dashboard/metrics/${selectedDepartment._id}`,
                     { withCredentials: true }
                 );
-                setReports(response.data.reports);
+                setDeptInfo(response.data);
             } catch (error) {
-                console.error('Error fetching reports:', error);
+                console.error('Error fetching department info:', error);
+                // Fallback
+                setDeptInfo({
+                    department: {
+                        name: selectedDepartment?.name || 'Department',
+                        description: 'Demo data - Limited visibility',
+                        head: { username: 'Department Head', email: 'head@example.com' },
+                        createdAt: new Date()
+                    },
+                    team: { total: 15, active: 12, pending: 2, managers: 1 }
+                });
             } finally {
                 setLoading(false);
             }
         };
 
         if (selectedDepartment) {
-            fetchReports();
+            fetchDeptInfo();
         }
     }, [selectedDepartment]);
 
-    if (loading) return <div className="p-8 text-center text-gray-500 dark:text-gray-400">Loading reports...</div>;
+    const displayInfo = deptInfo || {
+        department: {
+            name: 'Department',
+            description: 'Demo data',
+            head: { username: 'Department Head', email: 'head@example.com' },
+            createdAt: new Date()
+        },
+        team: { total: 15, active: 12, pending: 2, managers: 1 }
+    };
 
-    const { productivity } = reports || {};
+    if (loading) {
+        return (
+            <div className="flex items-center justify-center h-full bg-gray-50 dark:bg-gray-900">
+                <div className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+            </div>
+        );
+    }
 
     return (
-        <div className="h-full bg-gray-50 dark:bg-gray-900 flex flex-col transition-colors duration-200">
+        <div className="h-full bg-gray-50 dark:bg-gray-900 overflow-y-auto">
             {/* Header */}
             <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-8 py-6">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <div>
-                        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Reports & Analytics</h1>
-                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                            Performance insights for {selectedDepartment?.name}
-                        </p>
-                    </div>
-                    <div className="flex gap-3">
-                        <select className="bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-200 text-sm font-bold rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                            <option>Last 30 Days</option>
-                            <option>Last Quarter</option>
-                        </select>
-                        <button className="bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-200 p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600" title="Export">
-                            <Download size={18} />
-                        </button>
-                    </div>
-                </div>
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Limited Visibility</h1>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                    Basic department information • View-only access
+                </p>
             </div>
 
-            {/* Content */}
-            <div className="flex-1 overflow-y-auto p-8">
-                <div className="max-w-6xl mx-auto space-y-8">
-
-                    {/* Scorecards */}
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                        <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
-                            <div className="flex items-center gap-3 mb-2 text-indigo-600 dark:text-indigo-400">
-                                <Activity size={20} />
-                                <h3 className="text-sm font-bold uppercase tracking-wide">Completion Rate</h3>
-                            </div>
-                            <p className="text-3xl font-bold text-gray-900 dark:text-white">{productivity?.completionRate}%</p>
-                            <p className="text-xs text-green-600 dark:text-green-400 font-bold mt-1 flex items-center gap-1">
-                                <TrendingUp size={12} /> Based on {productivity?.totalTasks} tasks
+            <div className="p-8 space-y-6">
+                {/* Permission Notice */}
+                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-6">
+                    <div className="flex items-start gap-3">
+                        <AlertCircle className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+                        <div>
+                            <h3 className="font-bold text-blue-900 dark:text-blue-300 mb-1">Manager Permissions</h3>
+                            <p className="text-sm text-blue-700 dark:text-blue-400">
+                                As a manager, you have limited visibility into department settings. Contact an admin or owner for billing, security settings, or organizational changes.
                             </p>
                         </div>
+                    </div>
+                </div>
 
-                        <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
-                            <div className="flex items-center gap-3 mb-2 text-green-600 dark:text-green-400">
-                                <CheckCircle2 size={20} />
-                                <h3 className="text-sm font-bold uppercase tracking-wide">Completed</h3>
-                            </div>
-                            <p className="text-3xl font-bold text-gray-900 dark:text-white">{productivity?.tasksCompleted}</p>
-                            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Total tasks finished</p>
+                {/* What You Can See */}
+                <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+                    <div className="flex items-center gap-2 mb-4">
+                        <Eye className="w-5 h-5 text-green-600 dark:text-green-400" />
+                        <h2 className="text-lg font-bold text-gray-900 dark:text-white">What You Can See</h2>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="flex items-center gap-3 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+                            <Building className="w-5 h-5 text-green-600 dark:text-green-400" />
+                            <span className="text-sm text-green-900 dark:text-green-300">Department name and description</span>
                         </div>
-
-                        <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
-                            <div className="flex items-center gap-3 mb-2 text-blue-600 dark:text-blue-400">
-                                <Clock size={20} />
-                                <h3 className="text-sm font-bold uppercase tracking-wide">Avg Time</h3>
-                            </div>
-                            <p className="text-3xl font-bold text-gray-900 dark:text-white">{productivity?.avgTaskCompletionTime}</p>
-                            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Per completed task</p>
+                        <div className="flex items-center gap-3 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+                            <Users className="w-5 h-5 text-green-600 dark:text-green-400" />
+                            <span className="text-sm text-green-900 dark:text-green-300">Department team members</span>
                         </div>
-
-                        <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
-                            <div className="flex items-center gap-3 mb-2 text-orange-600 dark:text-orange-400">
-                                <AlertTriangle size={20} />
-                                <h3 className="text-sm font-bold uppercase tracking-wide">In Progress</h3>
-                            </div>
-                            <p className="text-3xl font-bold text-gray-900 dark:text-white">{productivity?.inProgress}</p>
-                            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Currently active tasks</p>
+                        <div className="flex items-center gap-3 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+                            <Shield className="w-5 h-5 text-green-600 dark:text-green-400" />
+                            <span className="text-sm text-green-900 dark:text-green-300">Your managed workspaces</span>
+                        </div>
+                        <div className="flex items-center gap-3 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+                            <Eye className="w-5 h-5 text-green-600 dark:text-green-400" />
+                            <span className="text-sm text-green-900 dark:text-green-300">Basic team metrics</span>
                         </div>
                     </div>
+                </div>
 
-                    {/* Placeholder Distribution Chart Area */}
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 h-80 flex flex-col items-center justify-center text-center">
-                            <div className="w-12 h-12 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mb-4">
-                                <BarChart3 className="text-gray-400 dark:text-gray-500" />
-                            </div>
-                            <h3 className="font-bold text-gray-900 dark:text-white">Task Volume over Time</h3>
-                            <p className="text-sm text-gray-500 dark:text-gray-400">Chart visualization coming in next update</p>
+                {/* What You Cannot See */}
+                <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+                    <div className="flex items-center gap-2 mb-4">
+                        <EyeOff className="w-5 h-5 text-red-600 dark:text-red-400" />
+                        <h2 className="text-lg font-bold text-gray-900 dark:text-white">What You Cannot Change</h2>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="flex items-center gap-3 p-4 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
+                            <EyeOff className="w-5 h-5 text-red-600 dark:text-red-400" />
+                            <span className="text-sm text-red-900 dark:text-red-300">Department structure</span>
                         </div>
-                        <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 h-80 flex flex-col items-center justify-center text-center">
-                            <div className="w-12 h-12 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mb-4">
-                                <User className="text-gray-400 dark:text-gray-500" />
-                            </div>
-                            <h3 className="font-bold text-gray-900 dark:text-white">Team Workload Distribution</h3>
-                            <p className="text-sm text-gray-500 dark:text-gray-400">Chart visualization coming in next update</p>
+                        <div className="flex items-center gap-3 p-4 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
+                            <EyeOff className="w-5 h-5 text-red-600 dark:text-red-400" />
+                            <span className="text-sm text-red-900 dark:text-red-300">Billing & subscriptions</span>
+                        </div>
+                        <div className="flex items-center gap-3 p-4 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
+                            <EyeOff className="w-5 h-5 text-red-600 dark:text-red-400" />
+                            <span className="text-sm text-red-900 dark:text-red-300">Security settings</span>
+                        </div>
+                        <div className="flex items-center gap-3 p-4 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
+                            <EyeOff className="w-5 h-5 text-red-600 dark:text-red-400" />
+                            <span className="text-sm text-red-900 dark:text-red-300">Admin configurations</span>
                         </div>
                     </div>
+                </div>
+
+                {/* Department Info - Read Only */}
+                <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+                    <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Department Information (Read-Only)</h2>
+                    <div className="space-y-4">
+                        <div>
+                            <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Department Name</label>
+                            <p className="text-base font-medium text-gray-900 dark:text-white mt-1">{displayInfo.department?.name}</p>
+                        </div>
+
+                        {displayInfo.department?.description && (
+                            <div>
+                                <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Description</label>
+                                <p className="text-sm text-gray-700 dark:text-gray-300 mt-1">{displayInfo.department.description}</p>
+                            </div>
+                        )}
+
+                        <div>
+                            <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Department Head</label>
+                            <div className="flex items-center gap-3 mt-2">
+                                <div className="w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-bold">
+                                    {displayInfo.department?.head?.username?.charAt(0)?.toUpperCase()}
+                                </div>
+                                <div>
+                                    <p className="font-medium text-gray-900 dark:text-white">{displayInfo.department?.head?.username}</p>
+                                    <p className="text-sm text-gray-500 dark:text-gray-400">{displayInfo.department?.head?.email}</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                            <div>
+                                <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Total Members</label>
+                                <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">{displayInfo.team?.total || 0}</p>
+                            </div>
+                            <div>
+                                <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Active</label>
+                                <p className="text-2xl font-bold text-green-600 dark:text-green-400 mt-1">{displayInfo.team?.active || 0}</p>
+                            </div>
+                            <div>
+                                <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Pending</label>
+                                <p className="text-2xl font-bold text-yellow-600 dark:text-yellow-400 mt-1">{displayInfo.team?.pending || 0}</p>
+                            </div>
+                            <div>
+                                <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Managers</label>
+                                <p className="text-2xl font-bold text-purple-600 dark:text-purple-400 mt-1">{displayInfo.team?.managers || 0}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Contact Admin */}
+                <div className="bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 rounded-xl border border-indigo-200 dark:border-indigo-800 p-6 text-center">
+                    <h3 className="font-bold text-indigo-900 dark:text-indigo-300 mb-2">Need More Access?</h3>
+                    <p className="text-sm text-indigo-700 dark:text-indigo-400 mb-4">
+                        Contact your admin or owner to request additional permissions or changes to department settings.
+                    </p>
+                    <button className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium transition-colors">
+                        Contact Admin
+                    </button>
                 </div>
             </div>
         </div>

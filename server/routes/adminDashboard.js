@@ -185,4 +185,69 @@ router.get('/audit-security', requireAuth, requireAdmin, async (req, res) => {
     }
 });
 
+/**
+ * GET /api/admin-dashboard/workspaces
+ * Get all company workspaces with detailed information
+ */
+router.get('/workspaces', requireAuth, requireAdmin, async (req, res) => {
+    try {
+        const userId = req.user.sub || req.user._id;
+        const user = await User.findById(userId);
+        const companyId = user.companyId;
+
+        // Find all workspaces for the company
+        const workspaces = await Workspace.find({ company: companyId })
+            .populate('createdBy', 'username email')
+            .populate('department', 'name')
+            .lean();
+
+        // Get Channel model for counting
+        const Channel = require('../models/Channel');
+
+        // Enhance each workspace with additional data
+        const enhancedWorkspaces = await Promise.all(workspaces.map(async (workspace) => {
+            // Count channels in this workspace
+            const channelCount = await Channel.countDocuments({ workspace: workspace._id });
+
+            // Get member count (only active members)
+            const memberCount = workspace.members.filter(m => m.status === 'active').length;
+
+            // Find admin/owner of workspace
+            const adminMember = workspace.members.find(m =>
+                m.role === 'owner' || m.role === 'admin'
+            );
+
+            let admin = null;
+            if (adminMember) {
+                const adminUser = await User.findById(adminMember.user).select('username email').lean();
+                admin = adminUser;
+            }
+
+            // Determine status
+            const status = workspace.isArchived ? 'archived' : (workspace.isActive ? 'active' : 'inactive');
+
+            return {
+                _id: workspace._id,
+                name: workspace.name,
+                description: workspace.description || '',
+                icon: workspace.icon || '📁',
+                color: workspace.color || '#2563eb',
+                memberCount,
+                channelCount,
+                status,
+                admin: admin || workspace.createdBy, // Fallback to creator if no admin found
+                department: workspace.department,
+                createdAt: workspace.createdAt,
+                updatedAt: workspace.updatedAt,
+                lastActivityAt: workspace.lastActivityAt
+            };
+        }));
+
+        res.json({ workspaces: enhancedWorkspaces });
+    } catch (error) {
+        console.error('Admin Dashboard Workspaces Error:', error);
+        res.status(500).json({ message: 'Server error', error: error.message });
+    }
+});
+
 module.exports = router;

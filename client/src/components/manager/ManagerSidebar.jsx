@@ -13,10 +13,17 @@ const ManagerSidebar = () => {
     // const { company } = useCompany(); // Unused
     const location = useLocation();
 
-    // Check if path is active (ends with the id or is the exact path)
+    // Check if path is active
     const isActive = (path) => {
-        if (path === 'overview' && location.pathname === '/manager/dashboard') return true;
-        return location.pathname.includes(path);
+        // Exact match for root dashboard
+        if (path === '/manager/dashboard' && location.pathname === '/manager/dashboard/overview') {
+            return true;
+        }
+        if (path === '/manager/dashboard' && location.pathname === '/manager/dashboard') {
+            return true;
+        }
+        // Match full path for other routes
+        return location.pathname === path;
     };
 
     const menuItems = [
@@ -24,7 +31,7 @@ const ManagerSidebar = () => {
         {
             group: 'OVERVIEW', items: [
                 { path: '/manager/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-                { path: '/workspaces', label: 'My Workspace', icon: Globe }
+                { path: '/manager/dashboard/workspace', label: 'My Workspace', icon: Globe }
             ]
         },
         // ORGANIZATION
@@ -38,8 +45,8 @@ const ManagerSidebar = () => {
         // SYSTEM
         {
             group: 'SYSTEM', items: [
-                { path: '/manager/dashboard/reports', label: 'Limited Visibility', icon: FileText }, // Reports
-                { path: '/manager/dashboard/settings', label: 'Settings', icon: Users }, // Assuming settings icon
+                { path: '/manager/dashboard/reports', label: 'Limited Visibility', icon: FileText },
+                { path: '/manager/dashboard/settings', label: 'Settings', icon: Users },
                 { path: '/manager/dashboard/tasks', label: 'TaskMaster', icon: CheckSquare },
                 { path: '/workspaces', label: 'Go to App', icon: Globe }
             ]
@@ -80,7 +87,7 @@ const ManagerSidebar = () => {
                                         <button
                                             key={item.label}
                                             onClick={() => navigate(item.path)}
-                                            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all duration-200 ${active
+                                            className={`w-full flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-bold transition-all duration-200 ${active
                                                 ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 shadow-sm translate-x-1'
                                                 : 'text-slate-500 dark:text-gray-400 hover:bg-slate-50 dark:hover:bg-gray-700/50 hover:text-slate-900 dark:hover:text-gray-200'
                                                 }`}

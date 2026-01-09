@@ -29,10 +29,35 @@ const checkRole = (allowedRoles) => {
  * Check if user is Company Owner (or Co-Owner)
  */
 const requireOwner = async (req, res, next) => {
-    if (req.user.companyRole === 'owner' || req.user.isCoOwner) {
-        next();
-    } else {
-        res.status(403).json({ message: "Access denied: Owner privileges required" });
+    try {
+        // Fetch full user if not already fully populated
+        if (!req.user.companyRole || !req.user.companyId) {
+            const userId = req.user.sub || req.user._id;
+            const fullUser = await User.findById(userId);
+
+            if (!fullUser) {
+                console.error('[REQUIRE_OWNER] User not found:', userId);
+                return res.status(401).json({ message: "User not found" });
+            }
+            // Update req.user with full DB object
+            req.user = fullUser;
+        }
+
+        console.log('[REQUIRE_OWNER] Checking owner role for user:', req.user.email, 'Role:', req.user.companyRole);
+
+        if (req.user.companyRole === 'owner' || req.user.isCoOwner) {
+            console.log('[REQUIRE_OWNER] Access granted');
+            next();
+        } else {
+            console.error('[REQUIRE_OWNER] Access denied. Current role:', req.user.companyRole);
+            res.status(403).json({
+                message: "Access denied: Owner privileges required",
+                currentRole: req.user.companyRole
+            });
+        }
+    } catch (error) {
+        console.error("RequireOwner Middleware Error:", error);
+        res.status(500).json({ message: "Server error during permission check" });
     }
 };
 
