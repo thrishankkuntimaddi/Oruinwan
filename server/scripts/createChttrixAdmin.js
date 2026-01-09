@@ -6,8 +6,8 @@ const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
 const User = require("../models/User");
 
-const CHTTRIX_ADMIN_EMAIL = "chttrix-admin@chttrix.com";
-const CHTTRIX_ADMIN_PASSWORD = "xm4kcjwf89";
+const CHTTRIX_ADMIN_EMAIL = process.env.CHTTRIX_ADMIN_EMAIL || "chttrix-admin@chttrix.com";
+const CHTTRIX_ADMIN_PASSWORD = process.env.CHTTRIX_ADMIN_PASS || "xm4kcjwf89";
 const CHTTRIX_ADMIN_USERNAME = "Chttrix Admin";
 
 async function createChttrixAdmin() {
