@@ -37,6 +37,7 @@ const http = require("http");
 const { Server } = require("socket.io");
 const registerChatHandlers = require("./socket/index");
 const logger = require("./utils/logger");
+const passport = require("./config/passport");
 
 // Initialize app
 const app = express();
@@ -62,6 +63,7 @@ app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(cookieParser());
 app.use(helmet());
+app.use(passport.initialize());
 
 // CORS - Simple and reliable
 const isProduction = process.env.NODE_ENV === 'production';

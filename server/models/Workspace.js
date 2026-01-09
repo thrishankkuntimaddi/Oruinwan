@@ -18,6 +18,7 @@ const WorkspaceSchema = new mongoose.Schema({
   description: { type: String, default: "" },
   icon: { type: String, default: "📁" }, // emoji or icon identifier
   color: { type: String, default: "#2563eb" }, // workspace brand color
+  rules: { type: String, default: "" }, // workspace rules and guidelines
 
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
 

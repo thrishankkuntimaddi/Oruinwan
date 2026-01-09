@@ -36,6 +36,7 @@ import FeatureShowcase from "./pages/FeatureShowcase";
 import LoginPage from "./pages/LoginPageComp/LoginPage";
 import ForgotPassword from "./pages/LoginPageComp/ForgotPassword";
 import ResetPassword from "./pages/LoginPageComp/ResetPassword";
+import VerifyEmail from "./pages/VerifyEmail";
 import OAuthSuccess from "./pages/LoginPageComp/OAuthSuccess";
 import AcceptInvite from "./pages/AcceptInvite";
 import JoinWorkspace from "./pages/JoinWorkspace";
@@ -385,8 +386,7 @@ function App() {
                           <Route path="/" element={<FeatureShowcase />} />
                           <Route path="/features" element={<FeatureShowcase />} />
                           <Route path="/chttrix-docs" element={<ChttrixDocs />} />
-                          <Route path="/login" element={<LoginPage />} />
-                          <Route path="/register" element={<Navigate to="/login?mode=signup" replace />} />
+
 
                           {/* Footer Routes */}
                           <Route path="/about" element={<About />} />
@@ -424,15 +424,17 @@ function App() {
                           />
 
                           {/* PUBLIC ROUTES */}
+                          {/* Authentication */}
                           <Route path="/login" element={<LoginPage />} />
                           <Route path="/register-company" element={<RegisterCompany />} />
                           <Route path="/pending-verification" element={<PendingVerification />} />
                           <Route path="/join-workspace" element={<JoinWorkspace />} />
                           <Route path="/forgot-password" element={<ForgotPassword />} />
                           <Route path="/reset-password" element={<ResetPassword />} />
+                          <Route path="/verify-email" element={<VerifyEmail />} />
                           <Route path="/oauth-success" element={<OAuthSuccess />} />
                           <Route path="/accept-invite" element={<AcceptInvite />} />
-                          <Route path="/join-workspace" element={<JoinWorkspace />} />
+                          {/* Route join-workspace duplicate removed */}
                           <Route
                             path="/join-channel"
                             element={

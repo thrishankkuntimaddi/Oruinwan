@@ -21,7 +21,7 @@ const { emitToWorkspace } = require("../utils/socketHelpers");
  */
 exports.createWorkspace = async (req, res) => {
   try {
-    const { companyId, name, description, icon, color } = req.body;
+    const { companyId, name, description, icon, color, rules } = req.body;
     const userId = req.user?.sub;
 
     if (!name) return res.status(400).json({ message: "Workspace name is required" });
@@ -45,6 +45,18 @@ exports.createWorkspace = async (req, res) => {
       }
     }
 
+    // LIMIT CHECK: Personal users can only CREATE up to 3 workspaces
+    // We check userType from the user object we just fetched
+    if (user.userType === 'personal') {
+      const ownedWorkspacesCount = await Workspace.countDocuments({ createdBy: userId });
+      if (ownedWorkspacesCount >= 3) {
+        return res.status(403).json({
+          message: "Free plan limit reached. You can only create up to 3 workspaces.",
+          isLimitReached: true
+        });
+      }
+    }
+
     // ✅ Check if user already OWNS a workspace with this name (not just member of)
     const existingWorkspace = await Workspace.findOne({
       name: name.trim(),
@@ -65,6 +77,7 @@ exports.createWorkspace = async (req, res) => {
       description: description || "",
       icon: icon || "🚀", // Default icon
       color: color || "#2563eb", // Workspace brand color
+      rules: rules || "", // Workspace rules and guidelines
       createdBy: userId,
       members: [{ user: userId, role: "owner" }],
       settings: {
@@ -191,6 +204,7 @@ exports.listMyWorkspaces = async (req, res) => {
             description: ws.workspace.description,
             icon: ws.workspace.icon,
             color: ws.workspace.color || "#2563eb",
+            rules: ws.workspace.rules || "",
             type: ws.workspace.type,
             role: ws.role,
             memberCount: ws.workspace.members?.length || 0,

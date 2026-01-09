@@ -518,6 +518,9 @@ const WorkspaceSettingsModal = ({
     const [savingIcon, setSavingIcon] = useState(false);
     const [memberActionLoading, setMemberActionLoading] = useState({});
     const [openMemberDropdown, setOpenMemberDropdown] = useState(null);
+    const [workspaceRules, setWorkspaceRules] = useState(activeWorkspace?.rules || "");
+    const [editingRules, setEditingRules] = useState(false);
+    const [savingRules, setSavingRules] = useState(false);
 
 
     // Check if current user is admin/owner (case-insensitive)
@@ -578,6 +581,13 @@ const WorkspaceSettingsModal = ({
             setLoadingStats(false);
         }
     }, [activeWorkspace?.id]);
+
+    // Update rules when workspace changes
+    useEffect(() => {
+        if (activeWorkspace?.rules !== undefined) {
+            setWorkspaceRules(activeWorkspace.rules);
+        }
+    }, [activeWorkspace?.rules]);
 
     // Fetch members when Members tab is active
     useEffect(() => {
@@ -696,7 +706,10 @@ const WorkspaceSettingsModal = ({
                 <div className="w-56 bg-gray-50/80 dark:bg-gray-800/80 backdrop-blur-sm border-r border-gray-200 dark:border-gray-700 p-6">
                     <h3 className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-6 px-2">Settings</h3>
                     <nav className="space-y-1">
-                        {["General", "Permissions", "Members", "Invitations", "Billing", "Advanced"].map((tab) => (
+                        {(isAdmin
+                            ? ["General", "Permissions", "Members", "Invitations", "Billing", "Advanced"]
+                            : ["General", "Members"]
+                        ).map((tab) => (
                             <button
                                 key={tab}
                                 onClick={() => setActiveSettingsTab(tab)}
@@ -968,6 +981,84 @@ const WorkspaceSettingsModal = ({
                                             </div>
                                         </div>
                                     )}
+
+                                    {/* Workspace Rules & Guidelines */}
+                                    <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
+                                        <div className="flex items-center justify-between mb-4">
+                                            <h4 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                                                <Shield size={16} className="text-blue-600 dark:text-blue-400" />
+                                                Rules & Guidelines
+                                            </h4>
+                                            {isAdmin && !editingRules && (
+                                                <button
+                                                    onClick={() => setEditingRules(true)}
+                                                    className="px-3 py-1.5 text-xs font-semibold text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
+                                                >
+                                                    Edit Rules
+                                                </button>
+                                            )}
+                                        </div>
+
+                                        {editingRules ? (
+                                            <div className="space-y-4">
+                                                <textarea
+                                                    value={workspaceRules}
+                                                    onChange={(e) => setWorkspaceRules(e.target.value)}
+                                                    placeholder="Set the tone for your workspace. E.g., 'Be respectful', 'No spam', 'Updates every Friday'..."
+                                                    className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 dark:text-white placeholder-gray-400 text-sm h-32 resize-none"
+                                                />
+                                                <div className="flex justify-end gap-2">
+                                                    <button
+                                                        onClick={() => {
+                                                            setWorkspaceRules(activeWorkspace?.rules || "");
+                                                            setEditingRules(false);
+                                                        }}
+                                                        className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-sm font-semibold rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                                                    >
+                                                        Cancel
+                                                    </button>
+                                                    <button
+                                                        onClick={async () => {
+                                                            try {
+                                                                setSavingRules(true);
+                                                                await api.put(`/api/workspaces/${activeWorkspace.id}`, {
+                                                                    rules: workspaceRules
+                                                                });
+                                                                showToast('✅ Workspace rules updated successfully', 'success');
+                                                                setEditingRules(false);
+                                                                await refreshWorkspace();
+                                                            } catch (error) {
+                                                                console.error('Error updating rules:', error);
+                                                                showToast(error.response?.data?.message || 'Failed to update rules', 'error');
+                                                            } finally {
+                                                                setSavingRules(false);
+                                                            }
+                                                        }}
+                                                        disabled={savingRules}
+                                                        className="px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                                                    >
+                                                        {savingRules ? 'Saving...' : 'Save Rules'}
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div>
+                                                {workspaceRules && workspaceRules.trim() ? (
+                                                    <div className="prose prose-sm dark:prose-invert max-w-none">
+                                                        <pre className="whitespace-pre-wrap text-sm text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-900 p-4 rounded-lg border border-gray-200 dark:border-gray-700 font-sans">{workspaceRules}</pre>
+                                                    </div>
+                                                ) : (
+                                                    <div className="text-center py-8">
+                                                        <Shield className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
+                                                        <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">No rules set for this workspace</p>
+                                                        {isAdmin && (
+                                                            <p className="text-xs text-gray-400 dark:text-gray-500">Click "Edit Rules" to add guidelines for your team</p>
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
                                 </>
                             )}
                         </div>

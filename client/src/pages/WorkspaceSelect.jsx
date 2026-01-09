@@ -46,6 +46,7 @@ const WorkspaceSelect = () => {
         adminName: "",
         icon: "rocket",
         color: "#4f46e5",
+        rules: "",
         invites: ""
     });
     // const [isCopied, setIsCopied] = useState(false); // Unused
@@ -98,7 +99,7 @@ const WorkspaceSelect = () => {
         setIsCreateModalOpen(false);
         setCreateStep(1);
         setAddMembersLater(false);
-        setCreateData({ name: "", description: "", adminName: "", icon: "rocket", color: "#4f46e5", invites: "" });
+        setCreateData({ name: "", adminName: "", icon: "rocket", color: "#4f46e5", rules: "", invites: "" });
     };
 
     const handleCreateSubmit = async (e) => {
@@ -110,9 +111,9 @@ const WorkspaceSelect = () => {
             // 1. Create Workspace
             const res = await api.post('/api/workspaces', {
                 name: createData.name,
-                description: createData.description,
                 icon: createData.icon,
-                color: createData.color
+                color: createData.color,
+                rules: createData.rules
             });
 
             const newWorkspaceId = res.data.workspace.id;
@@ -366,16 +367,45 @@ const WorkspaceSelect = () => {
                         })}
 
                         {/* New Workspace Card */}
-                        <button
-                            onClick={() => setIsCreateModalOpen(true)}
-                            className="group relative flex flex-col items-center justify-center h-64 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-2xl hover:border-indigo-400 dark:hover:border-indigo-600 hover:bg-indigo-50/50 dark:hover:bg-indigo-900/20 transition-all duration-300"
-                        >
-                            <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 group-hover:bg-indigo-100 group-hover:text-indigo-600 transition-colors mb-4">
-                                <Plus size={32} />
-                            </div>
-                            <span className="font-bold text-slate-600 dark:text-slate-300 group-hover:text-indigo-700 dark:group-hover:text-indigo-400 text-lg">Create New Workspace</span>
-                            <span className="text-sm text-slate-400 dark:text-slate-500 group-hover:text-indigo-500 dark:group-hover:text-indigo-400 mt-1">Start a new project or team</span>
-                        </button>
+                        {(() => {
+                            // Check limits: Personal users can only create 3 workspaces
+                            const ownedWorkspacesCount = workspaces.filter(ws => ws.isOwner).length;
+                            const isLimitReached = user?.userType === 'personal' && ownedWorkspacesCount >= 3;
+
+                            return (
+                                <button
+                                    onClick={() => {
+                                        if (!isLimitReached) setIsCreateModalOpen(true);
+                                    }}
+                                    disabled={isLimitReached}
+                                    className={`group relative flex flex-col items-center justify-center h-64 border-2 border-dashed rounded-2xl transition-all duration-300 ${isLimitReached
+                                        ? 'border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 cursor-not-allowed opacity-70'
+                                        : 'border-slate-300 dark:border-slate-600 hover:border-indigo-400 dark:hover:border-indigo-600 hover:bg-indigo-50/50 dark:hover:bg-indigo-900/20'
+                                        }`}
+                                >
+                                    <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-4 transition-colors ${isLimitReached
+                                        ? 'bg-slate-100 dark:bg-slate-800 text-slate-400'
+                                        : 'bg-slate-100 text-slate-400 group-hover:bg-indigo-100 group-hover:text-indigo-600'
+                                        }`}>
+                                        {isLimitReached ? <Shield size={32} /> : <Plus size={32} />}
+                                    </div>
+                                    <span className={`font-bold text-lg ${isLimitReached
+                                        ? 'text-slate-400 dark:text-slate-500'
+                                        : 'text-slate-600 dark:text-slate-300 group-hover:text-indigo-700 dark:group-hover:text-indigo-400'
+                                        }`}>
+                                        {isLimitReached ? 'Plan Limit Reached' : 'Create New Workspace'}
+                                    </span>
+                                    <span className={`text-sm mt-1 px-4 text-center ${isLimitReached
+                                        ? 'text-slate-400 dark:text-slate-600'
+                                        : 'text-slate-400 dark:text-slate-500 group-hover:text-indigo-500 dark:group-hover:text-indigo-400'
+                                        }`}>
+                                        {isLimitReached
+                                            ? 'You have reached the limit of 3 workspaces on the personal plan.'
+                                            : 'Start a new project or team'}
+                                    </span>
+                                </button>
+                            );
+                        })()}
                     </div>
                 )}
             </main>
@@ -449,8 +479,8 @@ const WorkspaceSelect = () => {
                                             <div className="relative">
                                                 <textarea
                                                     placeholder="Set the tone for your workspace. E.g., 'Be respectful', 'No spam', 'Updates every Friday'..."
-                                                    value={createData.description || ""} // Using description field for rules
-                                                    onChange={(e) => setCreateData({ ...createData, description: e.target.value })}
+                                                    value={createData.rules || ""}
+                                                    onChange={(e) => setCreateData({ ...createData, rules: e.target.value })}
                                                     className="w-full px-4 py-3 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl focus:outline-none focus:ring-4 focus:ring-indigo-200 dark:focus:ring-indigo-900 focus:border-indigo-500 transition-all text-slate-800 dark:text-white font-medium h-32 resize-none"
                                                 ></textarea>
                                                 <Shield className="absolute right-4 top-4 text-slate-300" size={18} />

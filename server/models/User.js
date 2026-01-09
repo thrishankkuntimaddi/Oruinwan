@@ -150,6 +150,15 @@ const UserSchema = new mongoose.Schema(
     profilePicture: { type: String },
     googleAccount: { type: Boolean, default: false },
 
+    // GitHub OAuth fields
+    githubId: { type: String, unique: true, sparse: true },
+
+    // LinkedIn OAuth fields
+    linkedinId: { type: String, unique: true, sparse: true },
+
+    // Auth Provider
+    authProvider: { type: String, enum: ['local', 'google', 'github', 'linkedin'], default: 'local' },
+
     // Activity Tracking
     lastLoginAt: { type: Date, default: null },
     lastActivityAt: { type: Date, default: Date.now },

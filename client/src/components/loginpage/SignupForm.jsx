@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useToast } from "../../contexts/ToastContext";
-import { Eye, EyeOff, ChevronDown, Check, AlertCircle, Info, CheckCircle2 } from "lucide-react";
+import { Eye, EyeOff, ChevronDown, AlertCircle, Info, CheckCircle2 } from "lucide-react";
 
 const SignupForm = ({ onSwitch }) => {
   const [formData, setFormData] = useState({
@@ -189,7 +189,7 @@ const SignupForm = ({ onSwitch }) => {
 
       if (!res.ok) throw new Error(data.message || "Signup failed");
 
-      showToast("Account created successfully!", "success");
+      showToast("Verification link has been sent to your email. Please check your inbox.", "success");
       onSwitch();
     } catch (err) {
       console.error("Signup Error:", err);
@@ -417,8 +417,8 @@ const SignupForm = ({ onSwitch }) => {
         >
           Sign In
         </button>
-      </form>
-    </div>
+      </form >
+    </div >
   );
 };
 
