@@ -94,6 +94,7 @@ import ManagerReports from "./components/manager/ManagerReports";
 // import ManagerContactAdmin from "./components/manager/ManagerContactAdmin"; // Unused
 import ManagerSettings from "./components/manager/ManagerSettings"; // NEW
 import TeamAllocation from "./components/manager/TeamAllocation";
+import UnassignedMembers from "./components/manager/UnassignedMembers"; // New component
 import EmployeeDashboard from "./pages/dashboards/EmployeeDashboard";
 import ChttrixAdminDashboard from "./pages/dashboards/ChttrixAdminDashboard";
 
@@ -511,7 +512,7 @@ function App() {
 
                             {/* New Manager Routes */}
                             <Route path="projects" element={<ManagerProjects />} /> {/* NEW - Actual project management */}
-                            <Route path="unassigned" element={<TeamAllocation />} /> {/* Reuse Team Allocation */}
+                            <Route path="unassigned" element={<UnassignedMembers />} /> {/* Distinct Component */}
                           </Route>
 
                           <Route
