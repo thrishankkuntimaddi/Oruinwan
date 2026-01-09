@@ -244,8 +244,11 @@ exports.getChannelMessages = async (req, res) => {
 
     // Populate reply counts and avatars
     const messagesWithCounts = await Promise.all(messages.map(async (msg) => {
-      // 1. Count replies
-      const count = await Message.countDocuments({ threadParent: msg._id });
+      // 1. Count replies (exclude system messages from thread count)
+      const count = await Message.countDocuments({
+        threadParent: msg._id,
+        type: { $ne: 'system' } // Don't count system messages in threads
+      });
 
       // 2. Get recent replier avatars (distinct)
       let replyAvatars = [];
@@ -253,10 +256,13 @@ exports.getChannelMessages = async (req, res) => {
 
       if (count > 0) {
         try {
-          const lastReplies = await Message.find({ threadParent: msg._id })
+          const lastReplies = await Message.find({
+            threadParent: msg._id,
+            type: { $ne: 'system' } // Don't include system messages
+          })
             .sort({ createdAt: -1 })
             .limit(5)
-            .populate("sender", "avatarUrl");
+            .populate("sender", "profilePicture"); // Changed from avatarUrl to profilePicture
 
           if (lastReplies.length > 0) {
             lastReplyAt = lastReplies[0].createdAt;
@@ -264,9 +270,9 @@ exports.getChannelMessages = async (req, res) => {
 
           const seen = new Set();
           for (const r of lastReplies) {
-            if (r.sender && r.sender.avatarUrl && !seen.has(r.sender._id.toString())) {
+            if (r.sender && r.sender.profilePicture && !seen.has(r.sender._id.toString())) {
               seen.add(r.sender._id.toString());
-              replyAvatars.push(r.sender.avatarUrl);
+              replyAvatars.push(r.sender.profilePicture); // Changed from avatarUrl to profilePicture
               // Limit to 3 avatars
               if (replyAvatars.length >= 3) break;
             }

@@ -46,6 +46,7 @@ export default function Messages() {
             id: channel._id || channel.id,
             name: channel.name,
             type: "channel",
+            workspaceId,
             isPrivate: channel.isPrivate,
             members: channel.members || []
           });
@@ -57,6 +58,7 @@ export default function Messages() {
             id: channelParam,
             name: "Channel",
             type: "channel",
+            workspaceId,
             members: []
           });
           setCurrentBroadcast(null);
@@ -160,6 +162,7 @@ export default function Messages() {
         id: channelId,
         name: channelId.charAt(0).toUpperCase() + channelId.slice(1),
         type: "channel",
+        workspaceId: workspaceId,
         members: []
       });
       setCurrentBroadcast(null);

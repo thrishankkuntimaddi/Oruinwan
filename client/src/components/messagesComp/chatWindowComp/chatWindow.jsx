@@ -283,21 +283,23 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
   }, [chat, connected, accessToken]); // Note: We keep accessToken in deps to re-run when context updates
 
   /* ---------------------------------------------------------
-      MARK MESSAGES AS READ (consolidated single effect)
+      SYNC CONNECTED STATE WITH SHARED SOCKET
   --------------------------------------------------------- */
   useEffect(() => {
-    // Only mark as read if we have messages, socket is connected, and chat is active
-    if (!chat || !connected || !socketRef.current || messages.length === 0) {
-      return;
-    }
+    setConnected(sharedSocketConnected);
+  }, [sharedSocketConnected]);
 
+  /* ---------------------------------------------------------
+      MARK CHAT AS READ (when chat becomes active and messages load)
+  --------------------------------------------------------- */
+  useEffect(() => {
+    if (!chat || !connected) return;
 
+    const socket = socketRef.current;
+    if (!socket) return;
 
-    // Small delay to ensure socket is fully ready
     const timer = setTimeout(() => {
-      const socket = socketRef.current;
-      if (socket && connected) {
-
+      if (chat.type === "dm" || chat.type === "channel") {
         socket.emit("mark-chat-read", {
           type: chat.type,
           id: chat.id,
@@ -1330,7 +1332,7 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
     try {
 
 
-      const response = await api.post(`/api/channels/${chat.id}/exit`);
+      await api.post(`/api/channels/${chat.id}/exit`);
 
 
 
@@ -1368,7 +1370,7 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
     try {
 
 
-      const response = await api.delete(`/api/channels/${chat.id}`);
+      await api.delete(`/api/channels/${chat.id}`);
 
 
 
