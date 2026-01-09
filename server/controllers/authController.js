@@ -566,6 +566,9 @@ exports.refresh = async (req, res) => {
         t => t.expiresAt > new Date()
       );
 
+      // ✅ CRITICAL: Save user to persist new refresh token!
+      await user.save();
+
       // Set new refresh token cookie
       setRefreshTokenCookie(res, newRefresh);
 
