@@ -18,4 +18,7 @@ router.delete("/dm/:dmId/delete", requireAuth, userController.deleteDM);
 // User Status
 router.patch("/status", requireAuth, userController.updateStatus);
 
+// Delete Account (Personal Users Only)
+router.delete("/me", requireAuth, userController.deleteAccount);
+
 module.exports = router;

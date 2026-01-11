@@ -246,3 +246,92 @@ exports.checkPhone = async (req, res) => {
         return res.status(500).json({ message: "Server error" });
     }
 };
+
+/**
+ * Delete user account (Personal users only)
+ * DELETE /api/users/me
+ * Body: { password }
+ */
+exports.deleteAccount = async (req, res) => {
+    try {
+        const userId = req.user.sub;
+
+        // Get user
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        // 1. Verify user is personal (not company)
+        if (user.userType === "company" || user.companyId) {
+            return res.status(403).json({
+                message: "Company users cannot delete their accounts. Please contact your administrator."
+            });
+        }
+
+        // 2. No password check needed - frontend requires typing "DELETE" for confirmation
+        // This works for both local users and OAuth users (Google, GitHub, LinkedIn)
+
+        // 3. CASCADE DELETION - Clean up all user data
+        const Message = require('../models/Message');
+        const Channel = require('../models/Channel');
+        const Workspace = require('../models/Workspace');
+        const Task = require('../models/Task');
+        const Note = require('../models/Note');
+
+        console.log(`🗑️ Deleting account for user: ${user.username} (${userId})`);
+
+        // Delete user's messages
+        const deletedMessages = await Message.deleteMany({ sender: userId });
+        console.log(`  Deleted ${deletedMessages.deletedCount} messages`);
+
+        // Remove user from channels (members and admins)
+        const updatedChannels = await Channel.updateMany(
+            { 'members.user': userId },
+            {
+                $pull: {
+                    members: { user: userId },
+                    admins: userId
+                }
+            }
+        );
+        console.log(`  Removed from ${updatedChannels.modifiedCount} channels`);
+
+        // Delete personal workspace if exists
+        if (user.personalWorkspace) {
+            await Workspace.findByIdAndDelete(user.personalWorkspace);
+            console.log(`  Deleted personal workspace`);
+        }
+
+        // Delete DM sessions where user is participant
+        const DMSession = require('../models/DMSession');
+        const deletedDMs = await DMSession.deleteMany({ participants: userId });
+        console.log(`  Deleted ${deletedDMs.deletedCount} DM sessions`);
+
+        // Delete tasks assigned to or created by user
+        const deletedTasks = await Task.deleteMany({
+            $or: [
+                { assignedTo: userId },
+                { createdBy: userId }
+            ]
+        });
+        console.log(`  Deleted ${deletedTasks.deletedCount} tasks`);
+
+        // Delete user's notes
+        const deletedNotes = await Note.deleteMany({ createdBy: userId });
+        console.log(`  Deleted ${deletedNotes.deletedCount} notes`);
+
+        // 4. Delete user account
+        await user.deleteOne();
+        console.log(`✅ Account deleted successfully`);
+
+        return res.json({
+            message: "Account deleted successfully",
+            deleted: true
+        });
+    } catch (err) {
+        console.error("DELETE ACCOUNT ERROR:", err);
+        return res.status(500).json({ message: "Server error" });
+    }
+};
+

@@ -189,14 +189,25 @@ exports.getChannelMessages = async (req, res) => {
     if (!isUserMember)
       return res.status(403).json({ message: "Not a channel member" });
 
-    // Build query
-    let query = { channel: channelId, threadParent: null };
+    // Get user's join date to filter messages (privacy: only show messages after join)
+    const userJoinedAt = channel.getUserJoinDate(userId);
 
-    // If 'before' is specified, only get messages before that message's timestamp
+    // Build query - ONLY show messages after user joined the channel
+    let query = { 
+      channel: channelId, 
+      threadParent: null,
+      createdAt: { $gte: userJoinedAt } // ✅ Filter by join date
+    };
+
+    // If 'before' is specified for pagination, get messages before that timestamp
     if (before) {
       const beforeMsg = await Message.findById(before);
       if (beforeMsg) {
-        query.createdAt = { $lt: beforeMsg.createdAt };
+        // Combine both constraints: after join AND before pagination point
+        query.createdAt = { 
+          $gte: userJoinedAt,
+          $lt: beforeMsg.createdAt 
+        };
       }
     }
 
@@ -214,12 +225,12 @@ exports.getChannelMessages = async (req, res) => {
     // Reverse to get chronological order (oldest to newest)
     messages.reverse();
 
-    // Check if there are more messages
-    const totalCount = await Message.countDocuments({ channel: channelId });
+    // Count only accessible messages (after user joined)
+    const totalCount = await Message.countDocuments({ 
+      channel: channelId,
+      createdAt: { $gte: userJoinedAt }
+    });
     const hasMore = messages.length === limit;
-
-    // Get user's join date for timeline marker
-    const userJoinedAt = channel.getUserJoinDate(userId);
 
     // Get all members with their join dates for personalized join markers
     const channelMembers = channel.members.map(m => {

@@ -140,13 +140,24 @@ exports.inviteToChannel = async (req, res) => {
     const channel = await Channel.findById(channelId);
     if (!channel) return res.status(404).json({ message: "Channel not found" });
 
-    // permission: only members can invite
-    const isUserMember = isMember(channel.members, userId);
-
-    if (!isUserMember) {
-      return forbidden(res, "Not a channel member");
+    // ✅ PERMISSION CHECK: Enforce privacy rules
+    if (channel.isPrivate) {
+      // For private channels, only creator can invite
+      const isCreator = String(channel.createdBy) === String(userId);
+      if (!isCreator) {
+        return res.status(403).json({
+          message: "Only the channel creator can invite members to private channels"
+        });
+      }
+    } else {
+      // For public channels, any member can invite
+      const isUserMember = isMember(channel.members, userId);
+      if (!isUserMember) {
+        return forbidden(res, "Not a channel member");
+      }
     }
 
+    // Check if invitee is already a member
     const isAlreadyMember = isMember(channel.members, inviteeId);
 
     if (isAlreadyMember) {
