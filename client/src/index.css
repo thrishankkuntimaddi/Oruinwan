@@ -12,29 +12,57 @@
   --accent-blue: #007bff;
   --accent-blue-hover: #0056b3;
 
-  /* Density & Spacing */
-  --p-tight: 0.25rem;
-  --p-med: 0.5rem;
-  --p-wide: 1rem;
-
-  /* Subtle Design tokens */
-  --shadow-minimal: 0 1px 3px rgba(0, 0, 0, 0.05);
-  --radius-standard: 6px;
+  /* Input Theme Variables */
+  --input-bg: #ffffff;
+  --input-text: #1a1d21;
+  --input-border: #e9ecef;
+  --input-placeholder: #9ca3af;
+  --input-ring: rgba(0, 123, 255, 0.25);
+  --bg-card: #ffffff;
 }
 
 /* Dark Mode Overrides */
 .dark {
-  --bg-primary: #111827;
-  /* gray-900 */
-  --bg-secondary: #1f2937;
-  /* gray-800 */
-  --border-color: #374151;
-  /* gray-700 */
-  --text-primary: #f3f4f6;
-  /* gray-100 */
-  --text-secondary: #9ca3af;
-  /* gray-400 */
-  --shadow-minimal: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --bg-primary: #0f172a; /* Slate-900 */
+  --bg-secondary: #1e293b; /* Slate-800 */
+  --bg-card: #1e293b; /* Slate-800 */
+  
+  --border-color: #334155; /* Slate-700 */
+  --text-primary: #f8fafc; /* Slate-50 */
+  --text-secondary: #94a3b8; /* Slate-400 */
+  
+  --shadow-minimal: 0 1px 3px rgba(0, 0, 0, 0.5);
+
+  /* Input Dark Mode */
+  --input-bg: #1e293b; /* Slate-800 */
+  --input-text: #f8fafc; /* Slate-50 */
+  --input-border: #334155; /* Slate-700 */
+  --input-placeholder: #64748b; /* Slate-500 */
+  --input-ring: rgba(56, 189, 248, 0.25);
+}
+
+/* Standard Theme Utilities */
+.theme-input {
+  background-color: var(--input-bg);
+  color: var(--input-text);
+  border-color: var(--input-border);
+  transition: all 0.2s ease-in-out;
+}
+
+.theme-input::placeholder {
+  color: var(--input-placeholder);
+}
+
+.theme-input:focus {
+  outline: none;
+  border-color: var(--accent-blue);
+  box-shadow: 0 0 0 4px var(--input-ring);
+}
+
+.theme-card {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
 }
 
 html,

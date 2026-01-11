@@ -582,7 +582,7 @@ const RegisterCompany = () => {
                                                 value={formData.companyName}
                                                 onChange={handleChange}
                                                 placeholder="e.g. Acme Innovations Inc."
-                                                className={`w-full pl-12 pr-12 py-3.5 bg-white dark:bg-slate-800 border ${errors.companyName ? "border-red-300 ring-2 ring-red-50" : "border-gray-200 dark:border-gray-700 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 dark:focus:ring-indigo-900"} rounded-2xl outline-none transition-all shadow-sm text-gray-900 dark:text-white placeholder:text-gray-400`}
+                                                className={`w-full pl-12 pr-12 py-3.5 theme-input border ${errors.companyName ? "border-red-500 ring-2 ring-red-50" : "border-gray-200 dark:border-gray-700"} rounded-2xl outline-none shadow-sm`}
                                             />
                                             {validationStatus.companyName === 'checking' && (
                                                 <div className="absolute right-4 top-3.5">
@@ -608,7 +608,7 @@ const RegisterCompany = () => {
                                                 value={formData.companyDomain}
                                                 onChange={handleChange}
                                                 placeholder="e.g. acme.com (Must match email domain)"
-                                                className={`w-full pl-12 pr-12 py-3.5 bg-white dark:bg-slate-800 border ${errors.companyDomain ? "border-red-300 ring-2 ring-red-50" : "border-gray-200 dark:border-gray-700 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 dark:focus:ring-indigo-900"} rounded-2xl outline-none transition-all shadow-sm text-gray-900 dark:text-white placeholder:text-gray-400`}
+                                                className={`w-full pl-12 pr-12 py-3.5 theme-input border ${errors.companyDomain ? "border-red-500 ring-2 ring-red-50" : "border-gray-200 dark:border-gray-700"} rounded-2xl outline-none shadow-sm`}
                                             />
                                             {validationStatus.companyDomain === 'checking' && (
                                                 <div className="absolute right-4 top-3.5">
@@ -645,7 +645,7 @@ const RegisterCompany = () => {
                                                 value={formData.adminName}
                                                 onChange={handleChange}
                                                 placeholder="John Doe"
-                                                className={`w-full pl-12 pr-4 py-3.5 bg-white dark:bg-slate-800 border ${errors.adminName ? "border-red-300" : "border-gray-200 dark:border-gray-700"} focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 dark:focus:ring-indigo-900 rounded-2xl outline-none transition-all shadow-sm text-gray-900 dark:text-white placeholder:text-gray-400`}
+                                                className={`w-full pl-12 pr-4 py-3.5 theme-input border ${errors.adminName ? "border-red-500" : "border-gray-200 dark:border-gray-700"} rounded-2xl outline-none shadow-sm`}
                                             />
                                         </div>
                                         {errors.adminName && <p className="text-red-500 text-xs font-bold ml-2">{errors.adminName}</p>}
@@ -670,7 +670,7 @@ const RegisterCompany = () => {
                                                 value={formData.roleOther}
                                                 onChange={handleChange}
                                                 placeholder="e.g. CTO"
-                                                className={`w-full px-4 py-3.5 bg-white border ${errors.roleOther ? "border-red-300" : "border-gray-200"} focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 rounded-2xl outline-none transition-all shadow-sm text-gray-900`}
+                                                className={`w-full px-4 py-3.5 theme-input border ${errors.roleOther ? "border-red-500" : "border-gray-200"} rounded-2xl outline-none shadow-sm`}
                                             />
                                             {errors.roleOther && <p className="text-red-500 text-xs font-bold ml-2">{errors.roleOther}</p>}
                                         </div>
@@ -691,12 +691,12 @@ const RegisterCompany = () => {
                                                     value={formData.personalEmail}
                                                     onChange={handleChange}
                                                     placeholder="john.doe@gmail.com"
-                                                    className={`w-full pl-12 pr-4 py-3.5 bg-white dark:bg-slate-800 border ${errors.personalEmail || validationStatus.personalEmail === 'taken'
-                                                        ? "border-red-500 bg-red-50 dark:bg-red-900/20"
+                                                    className={`w-full pl-12 pr-4 py-3.5 theme-input border ${errors.personalEmail || validationStatus.personalEmail === 'taken'
+                                                        ? "border-red-500"
                                                         : validationStatus.personalEmail === 'available' && verificationStatus.personalEmail === 'verified'
-                                                            ? "border-green-500 bg-green-50 dark:bg-green-900/20"
+                                                            ? "border-green-500"
                                                             : "border-gray-200 dark:border-gray-700"
-                                                        } focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 dark:focus:ring-indigo-900 rounded-2xl outline-none transition-all shadow-sm text-gray-900 dark:text-white placeholder:text-gray-400`}
+                                                        } rounded-2xl outline-none shadow-sm`}
                                                 />
                                             </div>
                                             <button
@@ -725,7 +725,7 @@ const RegisterCompany = () => {
                                                     name="phoneCode"
                                                     value={formData.phoneCode}
                                                     onChange={handleChange}
-                                                    className="w-full h-full px-3 py-3.5 bg-white dark:bg-slate-800 border border-gray-200 dark:border-gray-700 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 dark:focus:ring-indigo-900 rounded-2xl outline-none transition-all shadow-sm text-gray-900 dark:text-white appearance-none font-medium text-sm"
+                                                    className="w-full h-full px-3 py-3.5 theme-input border border-gray-200 dark:border-gray-700 rounded-2xl outline-none shadow-sm appearance-none font-medium text-sm"
                                                 >
                                                     {PHONE_CODES.map(c => (
                                                         <option key={c.code} value={c.code}>{c.label}</option>
@@ -740,12 +740,12 @@ const RegisterCompany = () => {
                                                     value={formData.phone}
                                                     onChange={handleChange}
                                                     placeholder="000-000-0000"
-                                                    className={`w-full pl-12 pr-4 py-3.5 bg-white dark:bg-slate-800 border ${errors.phone || validationStatus.phone === 'taken'
-                                                        ? "border-red-500 bg-red-50 dark:bg-red-900/20"
+                                                    className={`w-full pl-12 pr-4 py-3.5 theme-input border ${errors.phone || validationStatus.phone === 'taken'
+                                                        ? "border-red-500"
                                                         : validationStatus.phone === 'available' && verificationStatus.phone === 'verified'
-                                                            ? "border-green-500 bg-green-50 dark:bg-green-900/20"
+                                                            ? "border-green-500"
                                                             : "border-gray-200 dark:border-gray-700"
-                                                        } focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 dark:focus:ring-indigo-900 rounded-2xl outline-none transition-all shadow-sm text-gray-900 dark:text-white placeholder:text-gray-400`}
+                                                        } rounded-2xl outline-none shadow-sm`}
                                                 />
                                             </div>
                                             <button
@@ -783,7 +783,7 @@ const RegisterCompany = () => {
                                                 value={formData.companyEmail}
                                                 onChange={handleChange}
                                                 placeholder={`name@${formData.companyDomain || "company.com"}`}
-                                                className={`w-full pl-12 pr-4 py-3.5 bg-white dark:bg-slate-800 border ${errors.companyEmail ? "border-red-300" : "border-gray-200 dark:border-gray-700"} focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 dark:focus:ring-indigo-900 rounded-2xl outline-none transition-all shadow-sm text-gray-900 dark:text-white placeholder:text-gray-400`}
+                                                className={`w-full pl-12 pr-4 py-3.5 theme-input border ${errors.companyEmail ? "border-red-500" : "border-gray-200 dark:border-gray-700"} rounded-2xl outline-none shadow-sm`}
                                             />
                                         </div>
                                         {errors.companyEmail && <p className="text-red-500 text-xs font-bold ml-2">{errors.companyEmail}</p>}

@@ -407,12 +407,28 @@ exports.login = async (req, res) => {
       // Strict Role Redirection
       const role = user.companyRole; // owner, admin, manager, member, guest
 
-      if (role === 'owner') {
-        redirectTo = "/owner/dashboard";
+      // 🔧 Check setup completion for owners and admins
+      const company = user.companyId; // Already populated from line 372
+      const needsSetup = company && !company.isSetupComplete;
+
+      if (role === 'owner' || role === 'admin') {
         isAdmin = true;
-      } else if (role === 'admin') {
-        redirectTo = "/admin/dashboard";
-        isAdmin = true;
+
+        if (needsSetup) {
+          // Redirect to confirmation/setup flow
+          if (!company.setupStep || company.setupStep === 0) {
+            redirectTo = "/company/confirm";  // Start with confirmation
+          } else {
+            redirectTo = "/company/setup";    // Resume setup
+          }
+        } else {
+          // Setup complete, go to appropriate dashboard
+          if (role === 'owner') {
+            redirectTo = "/owner/dashboard";
+          } else {
+            redirectTo = "/admin/dashboard";
+          }
+        }
       } else if (role === 'manager') {
         redirectTo = "/manager/dashboard";
       } else {

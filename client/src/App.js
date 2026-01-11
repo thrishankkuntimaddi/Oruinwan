@@ -87,8 +87,8 @@ import OwnerBilling from './pages/OwnerDashboard/OwnerBilling'; // NEW - Dedicat
 import OwnerSecurity from './pages/OwnerDashboard/OwnerSecurity'; // NEW - Dedicated security page
 // import ManagerDashboard from "./pages/ManagerDashboard"; // Unused
 import ManagerOverview from "./components/manager/ManagerOverview";
-import ManagerWorkspaces from "./components/manager/ManagerWorkspaces";
-import ManagerProjects from "./components/manager/ManagerProjects"; // NEW
+// import ManagerWorkspaces from "./components/manager/ManagerWorkspaces";
+// import ManagerProjects from "./components/manager/ManagerProjects"; // NEW
 // import ManagerLocation from "./components/manager/ManagerLocation"; // NEW - Unused
 import ManagerTasks from "./components/manager/ManagerTasks";
 import ManagerReports from "./components/manager/ManagerReports";
@@ -506,14 +506,14 @@ function App() {
                           >
                             <Route index element={<Navigate to="overview" replace />} />
                             <Route path="overview" element={<ManagerOverview />} />
-                            <Route path="workspace" element={<ManagerWorkspaces />} />
+                            {/* <Route path="workspace" element={<ManagerWorkspaces />} /> */}
                             <Route path="allocation" element={<TeamAllocation />} />
                             <Route path="tasks" element={<ManagerTasks />} />
                             <Route path="reports" element={<ManagerReports />} />
                             <Route path="settings" element={<ManagerSettings />} />
 
                             {/* New Manager Routes */}
-                            <Route path="projects" element={<ManagerProjects />} /> {/* NEW - Actual project management */}
+                            {/* <Route path="projects" element={<ManagerProjects />} /> */}
                             <Route path="unassigned" element={<UnassignedMembers />} /> {/* Distinct Component */}
                           </Route>
 

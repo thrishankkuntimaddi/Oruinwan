@@ -293,7 +293,7 @@ const Notes = () => {
                                                             <input
                                                                 type="text"
                                                                 placeholder="Or paste image URL..."
-                                                                className="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                                                                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm theme-input outline-none"
                                                                 onKeyPress={(e) => {
                                                                     if (e.key === 'Enter' && e.target.value.trim()) {
                                                                         handleBlockChange(block.id, e.target.value.trim());

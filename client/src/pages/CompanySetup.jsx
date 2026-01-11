@@ -174,7 +174,7 @@ const CompanySetup = () => {
                                             type="text"
                                             value={profile.displayName}
                                             onChange={(e) => setProfile({ ...profile, displayName: e.target.value })}
-                                            className="w-full px-5 py-4 bg-white border border-gray-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50/50 rounded-2xl outline-none transition-all shadow-sm text-gray-900 text-lg"
+                                            className="w-full px-5 py-4 theme-input border border-gray-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50/50 rounded-2xl outline-none transition-all shadow-sm text-lg"
                                             placeholder="e.g. Acme Corp"
                                         />
                                     </div>
@@ -186,7 +186,7 @@ const CompanySetup = () => {
                                             <select
                                                 value={profile.timezone}
                                                 onChange={(e) => setProfile({ ...profile, timezone: e.target.value })}
-                                                className="w-full pl-12 pr-5 py-4 bg-white border border-gray-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50/50 rounded-2xl outline-none appearance-none transition-all shadow-sm text-gray-900 font-medium cursor-pointer"
+                                                className="w-full pl-12 pr-5 py-4 theme-input border border-gray-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50/50 rounded-2xl outline-none appearance-none transition-all shadow-sm font-medium cursor-pointer"
                                             >
                                                 <option value="UTC">UTC (Universal Time)</option>
                                                 <option value="America/New_York">Eastern Time (US & Canada)</option>
@@ -216,8 +216,8 @@ const CompanySetup = () => {
                                     <div className="space-y-3">
                                         {departments.map((dept, idx) => (
                                             <div key={idx} className="flex items-center gap-3 group animate-slideIn" style={{ animationDelay: `${idx * 0.1}s` }}>
-                                                <div className="flex-1 px-6 py-4 bg-white border border-gray-200 rounded-2xl shadow-sm flex items-center justify-between group-hover:border-indigo-300 group-hover:shadow-md transition-all">
-                                                    <span className="font-bold text-gray-700">{dept}</span>
+                                                <div className="flex-1 px-6 py-4 bg-white dark:bg-slate-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm flex items-center justify-between group-hover:border-indigo-300 group-hover:shadow-md transition-all">
+                                                    <span className="font-bold text-gray-700 dark:text-gray-200">{dept}</span>
                                                     <button
                                                         onClick={() => {
                                                             if (departments.length > 1) {
@@ -244,7 +244,7 @@ const CompanySetup = () => {
                                             <input
                                                 type="text"
                                                 placeholder="Add new department..."
-                                                className="w-full pl-12 pr-6 py-4 bg-white/50 border-2 border-dashed border-gray-300 focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-50/50 rounded-2xl outline-none placeholder:text-gray-400 font-medium transition-all"
+                                                className="w-full pl-12 pr-6 py-4 theme-input border-2 border-dashed border-gray-300 dark:border-gray-600 focus:border-indigo-500 focus:bg-white dark:focus:bg-slate-800 focus:ring-4 focus:ring-indigo-50/50 rounded-2xl outline-none placeholder:text-gray-400 font-medium transition-all"
                                                 onKeyDown={(e) => {
                                                     if (e.key === 'Enter' && e.target.value.trim()) {
                                                         setDepartments([...departments, e.target.value.trim()]);

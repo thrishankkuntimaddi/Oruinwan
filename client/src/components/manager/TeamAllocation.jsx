@@ -167,7 +167,7 @@ const TeamAllocation = () => {
                                             <div className="flex justify-between text-xs mb-0.5">
                                                 <span className="font-medium text-slate-600 dark:text-gray-400">{member.utilization}%</span>
                                                 <span className={`${member.utilization > 90 ? 'text-red-500' :
-                                                        member.utilization < 50 ? 'text-green-500' : 'text-slate-400'
+                                                    member.utilization < 50 ? 'text-green-500' : 'text-slate-400'
                                                     } font-bold text-[10px]`}>
                                                     {member.utilization > 90 ? 'OVERLOAD' : member.utilization < 50 ? 'AVAILABLE' : 'OPTIMAL'}
                                                 </span>

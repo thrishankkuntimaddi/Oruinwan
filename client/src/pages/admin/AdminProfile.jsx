@@ -5,8 +5,8 @@ import React, { useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCompany } from '../../contexts/CompanyContext';
 import {
-    User, Mail, Phone, MapPin, Calendar, Building, Shield,
-    Camera, Save, X, Check
+    User, Mail, Calendar, Building, Shield,
+    Camera, X, Check
 } from 'lucide-react';
 
 const AdminProfile = () => {
@@ -165,7 +165,7 @@ const AdminProfile = () => {
                                         type="text"
                                         value={profileData.username}
                                         onChange={(e) => setProfileData({ ...profileData, username: e.target.value })}
-                                        className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none"
+                                        className="w-full px-4 py-2 border border-slate-200 theme-input rounded-lg outline-none"
                                         placeholder="Enter your name"
                                     />
                                 ) : (
@@ -182,7 +182,7 @@ const AdminProfile = () => {
                                         type="email"
                                         value={profileData.email}
                                         onChange={(e) => setProfileData({ ...profileData, email: e.target.value })}
-                                        className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none"
+                                        className="w-full px-4 py-2 border border-slate-200 theme-input rounded-lg outline-none"
                                         placeholder="email@example.com"
                                     />
                                 ) : (
@@ -199,7 +199,7 @@ const AdminProfile = () => {
                                         type="tel"
                                         value={profileData.phone}
                                         onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
-                                        className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none"
+                                        className="w-full px-4 py-2 border border-slate-200 theme-input rounded-lg outline-none"
                                         placeholder="+1 (555) 123-4567"
                                     />
                                 ) : (
@@ -230,7 +230,7 @@ const AdminProfile = () => {
                                         value={profileData.address}
                                         onChange={(e) => setProfileData({ ...profileData, address: e.target.value })}
                                         rows={3}
-                                        className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none"
+                                        className="w-full px-4 py-2 border border-slate-200 theme-input rounded-lg outline-none"
                                         placeholder="123 Main St, City, State, ZIP"
                                     />
                                 ) : (
