@@ -48,4 +48,26 @@ router.delete("/:id", requireAuth, noteController.deleteNote);
  */
 router.post("/:id/share", requireAuth, noteController.shareNote);
 
+/**
+ * @route   POST /api/notes/:id/attachments
+ * @desc    Add attachment to note
+ * @body    attachment data
+ * @access  Private (note owner or editor)
+ */
+router.post("/:id/attachments", requireAuth, noteController.addAttachment);
+
+/**
+ * @route   DELETE /api/notes/:id/attachments/:attachmentId
+ * @desc    Remove attachment from note
+ * @access  Private (note owner or editor)
+ */
+router.delete("/:id/attachments/:attachmentId", requireAuth, noteController.removeAttachment);
+
+/**
+ * @route   GET /api/notes/:id/attachments/:attachmentId/download
+ * @desc    Download attachment
+ * @access  Private (note viewers)
+ */
+router.get("/:id/attachments/:attachmentId/download", requireAuth, noteController.downloadAttachment);
+
 module.exports = router;

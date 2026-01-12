@@ -7,6 +7,7 @@ import {
 import { useNotes } from "../../contexts/NotesContext";
 import { useToast } from "../../contexts/ToastContext";
 import ConfirmationModal from "../../components/ui/ConfirmationModal";
+import { uploadNoteAttachment, downloadNoteAttachment } from "../../utils/uploadHelpers";
 
 const Notes = () => {
     // ✅ CORRECT: Extract both workspaceId and note id from params
@@ -35,6 +36,7 @@ const Notes = () => {
     const [showShareTooltip, setShowShareTooltip] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [showInfoModal, setShowInfoModal] = useState(false);
+    const [uploadProgress, setUploadProgress] = useState({}); // Track upload progress per block
     const menuRef = useRef(null);
 
     // Sync local state with note data when ID changes
@@ -270,14 +272,43 @@ const Notes = () => {
                                                         <input
                                                             type="file"
                                                             accept="image/*"
-                                                            onChange={(e) => {
+                                                            onChange={async (e) => {
                                                                 const file = e.target.files[0];
                                                                 if (file) {
-                                                                    const reader = new FileReader();
-                                                                    reader.onload = (event) => {
-                                                                        handleBlockChange(block.id, event.target.result);
-                                                                    };
-                                                                    reader.readAsDataURL(file);
+                                                                    try {
+                                                                        // Show upload progress
+                                                                        setUploadProgress(prev => ({ ...prev, [block.id]: 0 }));
+
+                                                                        // Upload file
+                                                                        const result = await uploadNoteAttachment(
+                                                                            file,
+                                                                            workspaceId,
+                                                                            id,
+                                                                            (progress) => {
+                                                                                setUploadProgress(prev => ({ ...prev, [block.id]: progress }));
+                                                                            }
+                                                                        );
+
+                                                                        // Update block with file URL
+                                                                        handleBlockChange(block.id, result.url);
+
+                                                                        // Clear upload progress
+                                                                        setUploadProgress(prev => {
+                                                                            const newProgress = { ...prev };
+                                                                            delete newProgress[block.id];
+                                                                            return newProgress;
+                                                                        });
+
+                                                                        showToast('Image uploaded successfully', 'success');
+                                                                    } catch (error) {
+                                                                        console.error('Upload error:', error);
+                                                                        showToast('Failed to upload image', 'error');
+                                                                        setUploadProgress(prev => {
+                                                                            const newProgress = { ...prev };
+                                                                            delete newProgress[block.id];
+                                                                            return newProgress;
+                                                                        });
+                                                                    }
                                                                 }
                                                             }}
                                                             className="hidden"
@@ -312,6 +343,31 @@ const Notes = () => {
                                             >
                                                 <Trash2 size={16} />
                                             </button>
+                                            {block.content && !block.content.startsWith('data:') && (
+                                                <button
+                                                    onClick={async () => {
+                                                        try {
+                                                            // Extract filename from URL
+                                                            const filename = block.content.split('/').pop();
+                                                            const link = document.createElement('a');
+                                                            link.href = block.content;
+                                                            link.download = filename;
+                                                            link.target = '_blank';
+                                                            document.body.appendChild(link);
+                                                            link.click();
+                                                            document.body.removeChild(link);
+                                                            showToast('Download started', 'success');
+                                                        } catch (error) {
+                                                            console.error('Download error:', error);
+                                                            showToast('Failed to download image', 'error');
+                                                        }
+                                                    }}
+                                                    className="absolute top-2 right-12 p-1.5 bg-white/80 hover:bg-green-50 text-gray-500 hover:text-green-600 rounded-full shadow-sm opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-sm"
+                                                    title="Download image"
+                                                >
+                                                    <Download size={16} />
+                                                </button>
+                                            )}
                                             {block.content && (
                                                 <button
                                                     onClick={() => handleBlockChange(block.id, '')}
@@ -320,6 +376,20 @@ const Notes = () => {
                                                 >
                                                     <ImageIcon size={16} />
                                                 </button>
+                                            )}
+                                            {uploadProgress[block.id] !== undefined && (
+                                                <div className="absolute inset-0 bg-black/50 flex items-center justify-center backdrop-blur-sm">
+                                                    <div className="text-white text-center">
+                                                        <div className="mb-2">Uploading...</div>
+                                                        <div className="w-48 h-2 bg-gray-700 rounded-full overflow-hidden">
+                                                            <div
+                                                                className="h-full bg-blue-500 transition-all duration-300"
+                                                                style={{ width: `${uploadProgress[block.id]}%` }}
+                                                            />
+                                                        </div>
+                                                        <div className="mt-2 text-sm">{uploadProgress[block.id]}%</div>
+                                                    </div>
+                                                </div>
                                             )}
                                         </div>
                                     </div>
@@ -373,14 +443,39 @@ const Notes = () => {
                                                         <input
                                                             type="file"
                                                             accept="video/*"
-                                                            onChange={(e) => {
+                                                            onChange={async (e) => {
                                                                 const file = e.target.files[0];
                                                                 if (file) {
-                                                                    const reader = new FileReader();
-                                                                    reader.onload = (event) => {
-                                                                        handleBlockChange(block.id, event.target.result);
-                                                                    };
-                                                                    reader.readAsDataURL(file);
+                                                                    try {
+                                                                        setUploadProgress(prev => ({ ...prev, [block.id]: 0 }));
+
+                                                                        const result = await uploadNoteAttachment(
+                                                                            file,
+                                                                            workspaceId,
+                                                                            id,
+                                                                            (progress) => {
+                                                                                setUploadProgress(prev => ({ ...prev, [block.id]: progress }));
+                                                                            }
+                                                                        );
+
+                                                                        handleBlockChange(block.id, result.url);
+
+                                                                        setUploadProgress(prev => {
+                                                                            const newProgress = { ...prev };
+                                                                            delete newProgress[block.id];
+                                                                            return newProgress;
+                                                                        });
+
+                                                                        showToast('Video uploaded successfully', 'success');
+                                                                    } catch (error) {
+                                                                        console.error('Upload error:', error);
+                                                                        showToast('Failed to upload video', 'error');
+                                                                        setUploadProgress(prev => {
+                                                                            const newProgress = { ...prev };
+                                                                            delete newProgress[block.id];
+                                                                            return newProgress;
+                                                                        });
+                                                                    }
                                                                 }
                                                             }}
                                                             className="hidden"
@@ -402,6 +497,30 @@ const Notes = () => {
                                             >
                                                 <Trash2 size={16} />
                                             </button>
+                                            {block.content && !block.content.includes('youtube.com') && !block.content.includes('youtu.be') && !block.content.includes('vimeo.com') && (
+                                                <button
+                                                    onClick={async () => {
+                                                        try {
+                                                            const filename = block.content.split('/').pop();
+                                                            const link = document.createElement('a');
+                                                            link.href = block.content;
+                                                            link.download = filename;
+                                                            link.target = '_blank';
+                                                            document.body.appendChild(link);
+                                                            link.click();
+                                                            document.body.removeChild(link);
+                                                            showToast('Download started', 'success');
+                                                        } catch (error) {
+                                                            console.error('Download error:', error);
+                                                            showToast('Failed to download video', 'error');
+                                                        }
+                                                    }}
+                                                    className="absolute top-2 right-12 p-1.5 bg-white/10 hover:bg-green-500/20 text-white/70 hover:text-green-400 rounded-full shadow-sm opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-sm"
+                                                    title="Download video"
+                                                >
+                                                    <Download size={16} />
+                                                </button>
+                                            )}
                                             {block.content && (
                                                 <button
                                                     onClick={() => handleBlockChange(block.id, '')}
@@ -428,15 +547,37 @@ const Notes = () => {
                                                     style={{ height: '40px' }}
                                                 />
                                                 <button
+                                                    onClick={async () => {
+                                                        try {
+                                                            const filename = block.content.split('/').pop();
+                                                            const link = document.createElement('a');
+                                                            link.href = block.content;
+                                                            link.download = filename;
+                                                            link.target = '_blank';
+                                                            document.body.appendChild(link);
+                                                            link.click();
+                                                            document.body.removeChild(link);
+                                                            showToast('Download started', 'success');
+                                                        } catch (error) {
+                                                            console.error('Download error:', error);
+                                                            showToast('Failed to download audio', 'error');
+                                                        }
+                                                    }}
+                                                    className="p-2 text-gray-400 hover:text-green-500 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg transition-colors"
+                                                    title="Download audio"
+                                                >
+                                                    <Download size={18} />
+                                                </button>
+                                                <button
                                                     onClick={() => removeBlock(block.id)}
-                                                    className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                                    className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                                                     title="Delete audio"
                                                 >
                                                     <Trash2 size={18} />
                                                 </button>
                                                 <button
                                                     onClick={() => handleBlockChange(block.id, '')}
-                                                    className="p-2 text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"
+                                                    className="p-2 text-gray-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
                                                     title="Change audio"
                                                 >
                                                     <Mic size={18} />
@@ -494,14 +635,39 @@ const Notes = () => {
                                                     <input
                                                         type="file"
                                                         accept="audio/*"
-                                                        onChange={(e) => {
+                                                        onChange={async (e) => {
                                                             const file = e.target.files[0];
                                                             if (file) {
-                                                                const reader = new FileReader();
-                                                                reader.onload = (event) => {
-                                                                    handleBlockChange(block.id, event.target.result);
-                                                                };
-                                                                reader.readAsDataURL(file);
+                                                                try {
+                                                                    setUploadProgress(prev => ({ ...prev, [block.id]: 0 }));
+
+                                                                    const result = await uploadNoteAttachment(
+                                                                        file,
+                                                                        workspaceId,
+                                                                        id,
+                                                                        (progress) => {
+                                                                            setUploadProgress(prev => ({ ...prev, [block.id]: progress }));
+                                                                        }
+                                                                    );
+
+                                                                    handleBlockChange(block.id, result.url);
+
+                                                                    setUploadProgress(prev => {
+                                                                        const newProgress = { ...prev };
+                                                                        delete newProgress[block.id];
+                                                                        return newProgress;
+                                                                    });
+
+                                                                    showToast('Audio uploaded successfully', 'success');
+                                                                } catch (error) {
+                                                                    console.error('Upload error:', error);
+                                                                    showToast('Failed to upload audio', 'error');
+                                                                    setUploadProgress(prev => {
+                                                                        const newProgress = { ...prev };
+                                                                        delete newProgress[block.id];
+                                                                        return newProgress;
+                                                                    });
+                                                                }
                                                             }
                                                         }}
                                                         className="hidden"

@@ -148,9 +148,12 @@ app.get('/api/health', async (req, res) => {
   }
 });
 
-// Serve uploaded files as static files
+// Serve uploaded files as static files (with authentication for uploads)
 app.use(express.static(path.join(__dirname, "../client/build")));
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+// Serve uploaded files with authentication check
+const requireAuth = require("./middleware/auth");
+app.use('/uploads', requireAuth, express.static(path.join(__dirname, 'uploads')));
 
 // Routes
 app.use("/api/auth", require("./routes/auth"));
@@ -169,6 +172,7 @@ app.use("/api/platform/support", require("./routes/platformSupport"));
 app.use("/api/internal", require("./routes/internalMessaging"));
 app.use("/api/tasks", require("./routes/tasks"));
 app.use("/api/notes", require("./routes/notes"));
+app.use("/api/upload", require("./routes/upload")); // File upload routes
 app.use("/api/updates", require("./routes/updates"));
 app.use("/api/dashboard", require("./routes/dashboard"));
 app.use("/api/favorites", require("./routes/favorites"));

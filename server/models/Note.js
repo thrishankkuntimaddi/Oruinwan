@@ -45,10 +45,18 @@ const NoteSchema = new mongoose.Schema({
 
     // Attachments
     attachments: [{
-        name: String,
-        url: String,
-        type: String,
-        size: Number
+        name: String,           // Original filename
+        url: String,            // Full URL: /uploads/notes/images/abc123.jpg
+        type: String,           // MIME type: image/jpeg, video/mp4, audio/mpeg
+        size: Number,           // File size in bytes
+        uploadedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+        uploadedAt: { type: Date, default: Date.now },
+        // For better querying:
+        category: {
+            type: String,
+            enum: ['image', 'video', 'audio', 'document'],
+            required: true
+        }
     }],
 
     // Tags for organization
@@ -98,5 +106,25 @@ NoteSchema.methods.canEdit = function (userId) {
 
     return false;
 };
+
+// Virtual: Get image attachments
+NoteSchema.virtual('images').get(function () {
+    return this.attachments.filter(a => a.category === 'image');
+});
+
+// Virtual: Get video attachments
+NoteSchema.virtual('videos').get(function () {
+    return this.attachments.filter(a => a.category === 'video');
+});
+
+// Virtual: Get audio attachments
+NoteSchema.virtual('audios').get(function () {
+    return this.attachments.filter(a => a.category === 'audio');
+});
+
+// Virtual: Get document attachments
+NoteSchema.virtual('documents').get(function () {
+    return this.attachments.filter(a => a.category === 'document');
+});
 
 module.exports = mongoose.model("Note", NoteSchema);

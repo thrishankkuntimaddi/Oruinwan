@@ -32,7 +32,7 @@ import { useSocket } from "../../../contexts/SocketContext";
 export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat }) {
   const [userRole, setUserRole] = useState(null); // 'owner', 'admin', 'member', etc.
   const { accessToken } = useAuth();
-  const { socket: sharedSocket, isConnected: sharedSocketConnected } = useSocket();
+  const { socket: sharedSocket, isConnected: sharedSocketConnected, addMessageListener } = useSocket();
   /* ---------------------------------------------------------
       STATE
   --------------------------------------------------------- */
@@ -749,6 +749,60 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chat, sharedSocket, sharedSocketConnected]);
+
+  /* ---------------------------------------------------------
+      SUBSCRIBE TO SOCKETCONTEXT MESSAGE BROADCASTS
+      This ensures we receive messages even if socket reconnects
+  --------------------------------------------------------- */
+  useEffect(() => {
+    if (!chat || !addMessageListener) return;
+
+    // Subscribe to global message broadcasts from SocketContext
+    const unsubscribe = addMessageListener((eventName, data) => {
+      console.log(`🔔 [ChatWindow] SocketContext broadcast: ${eventName}`, data);
+
+      // Handle new messages from SocketContext broadcast
+      if (eventName === 'new-message') {
+        const { message, clientTempId } = data;
+
+        // Only process if message belongs to current chat
+        const isRelevant = chat.type === 'channel'
+          ? message.channel === chat.id
+          : message.dm === chat.id;
+
+        if (!isRelevant) return;
+
+        const realMsg = mapBackendMsgToUI(message);
+
+        // Replace optimistic message or add new message
+        setMessages((prev) => {
+          if (prev.some((x) => x.id === realMsg.id)) {
+            return prev; // Already exists
+          }
+          return [...prev, realMsg];
+        });
+      }
+
+      // Handle other message events from SocketContext
+      if (eventName === 'message-deleted') {
+        const { messageId, deletedBy, deletedByName, isUniversal, isLocal } = data;
+
+        if (isLocal) {
+          setMessages((prev) => prev.filter((m) => m.id !== messageId && m.backend?._id !== messageId));
+        } else if (isUniversal) {
+          setMessages((prev) => prev.map((m) =>
+            (m.id === messageId || m.backend?._id === messageId)
+              ? { ...m, isDeletedUniversally: true, deletedBy, deletedByName, deletedAt: new Date().toISOString() }
+              : m
+          ));
+        }
+      }
+    });
+
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, [chat]);
 
   /* ---------------------------------------------------------
       SEND MESSAGE

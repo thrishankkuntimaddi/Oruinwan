@@ -193,8 +193,8 @@ exports.getChannelMessages = async (req, res) => {
     const userJoinedAt = channel.getUserJoinDate(userId);
 
     // Build query - ONLY show messages after user joined the channel
-    let query = { 
-      channel: channelId, 
+    let query = {
+      channel: channelId,
       threadParent: null,
       createdAt: { $gte: userJoinedAt } // ✅ Filter by join date
     };
@@ -204,9 +204,9 @@ exports.getChannelMessages = async (req, res) => {
       const beforeMsg = await Message.findById(before);
       if (beforeMsg) {
         // Combine both constraints: after join AND before pagination point
-        query.createdAt = { 
+        query.createdAt = {
           $gte: userJoinedAt,
-          $lt: beforeMsg.createdAt 
+          $lt: beforeMsg.createdAt
         };
       }
     }
@@ -226,7 +226,7 @@ exports.getChannelMessages = async (req, res) => {
     messages.reverse();
 
     // Count only accessible messages (after user joined)
-    const totalCount = await Message.countDocuments({ 
+    const totalCount = await Message.countDocuments({
       channel: channelId,
       createdAt: { $gte: userJoinedAt }
     });

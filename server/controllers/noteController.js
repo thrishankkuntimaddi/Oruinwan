@@ -340,4 +340,137 @@ exports.shareNote = async (req, res) => {
     }
 };
 
+/**
+ * Add attachment to note
+ * POST /api/notes/:id/attachments
+ */
+exports.addAttachment = async (req, res) => {
+    try {
+        const userId = req.user.sub;
+        const noteId = req.params.id;
+        const attachmentData = req.body;
+
+        const note = await Note.findById(noteId);
+        if (!note) {
+            return res.status(404).json({ message: 'Note not found' });
+        }
+
+        if (!note.canEdit(userId)) {
+            return res.status(403).json({ message: 'Not authorized to edit this note' });
+        }
+
+        note.attachments.push(attachmentData);
+        await note.save();
+
+        // Real-time update
+        if (req.io) {
+            if (note.isPublic && note.workspace) {
+                req.io.to(`workspace_${note.workspace}`).emit('note-attachment-added', {
+                    noteId: note._id,
+                    attachment: attachmentData
+                });
+            } else {
+                const recipients = new Set([
+                    note.owner.toString(),
+                    ...note.sharedWith.map(id => id.toString())
+                ]);
+                recipients.forEach(readerId => {
+                    req.io.to(`user_${readerId}`).emit('note-attachment-added', {
+                        noteId: note._id,
+                        attachment: attachmentData
+                    });
+                });
+            }
+        }
+
+        return res.json({
+            message: 'Attachment added successfully',
+            attachment: attachmentData
+        });
+
+    } catch (err) {
+        console.error('ADD ATTACHMENT ERROR:', err);
+        return res.status(500).json({ message: 'Server error' });
+    }
+};
+
+/**
+ * Remove attachment from note
+ * DELETE /api/notes/:id/attachments/:attachmentId
+ */
+exports.removeAttachment = async (req, res) => {
+    try {
+        const userId = req.user.sub;
+        const { id: noteId, attachmentId } = req.params;
+
+        const note = await Note.findById(noteId);
+        if (!note) {
+            return res.status(404).json({ message: 'Note not found' });
+        }
+
+        if (!note.canEdit(userId)) {
+            return res.status(403).json({ message: 'Not authorized to edit this note' });
+        }
+
+        const attachment = note.attachments.id(attachmentId);
+        if (!attachment) {
+            return res.status(404).json({ message: 'Attachment not found' });
+        }
+
+        // Delete file from storage
+        const path = require('path');
+        const fs = require('fs');
+        const filePath = path.join(__dirname, '../', attachment.url);
+
+        if (fs.existsSync(filePath)) {
+            fs.unlinkSync(filePath);
+        }
+
+        // Remove from database
+        attachment.remove();
+        await note.save();
+
+        return res.json({ message: 'Attachment deleted successfully' });
+
+    } catch (err) {
+        console.error('REMOVE ATTACHMENT ERROR:', err);
+        return res.status(500).json({ message: 'Server error' });
+    }
+};
+
+/**
+ * Download attachment
+ * GET /api/notes/:id/attachments/:attachmentId/download
+ */
+exports.downloadAttachment = async (req, res) => {
+    try {
+        const userId = req.user.sub;
+        const { id: noteId, attachmentId } = req.params;
+
+        const note = await Note.findById(noteId);
+        if (!note) {
+            return res.status(404).json({ message: 'Note not found' });
+        }
+
+        if (!note.canView(userId)) {
+            return res.status(403).json({ message: 'Not authorized to view this note' });
+        }
+
+        const attachment = note.attachments.id(attachmentId);
+        if (!attachment) {
+            return res.status(404).json({ message: 'Attachment not found' });
+        }
+
+        const path = require('path');
+        const filePath = path.join(__dirname, '../', attachment.url);
+
+        // Send file download
+        res.download(filePath, attachment.name);
+
+    } catch (err) {
+        console.error('DOWNLOAD ATTACHMENT ERROR:', err);
+        return res.status(500).json({ message: 'Server error' });
+    }
+};
+
 module.exports = exports;
