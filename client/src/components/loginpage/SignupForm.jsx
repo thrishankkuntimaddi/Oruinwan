@@ -404,19 +404,18 @@ const SignupForm = ({ onSwitch }) => {
         </button>
 
         {/* Already have account */}
-        <div className="my-4 flex items-center gap-4">
-          <div className="flex-1 h-px bg-slate-200 dark:bg-slate-700"></div>
-          <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">Already have an account?</span>
-          <div className="flex-1 h-px bg-slate-200 dark:bg-slate-700"></div>
+        <div className="mt-6 text-center">
+          <p className="text-sm text-slate-600 dark:text-slate-400">
+            Already have an account?{" "}
+            <button
+              type="button"
+              onClick={onSwitch}
+              className="font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 hover:underline transition-colors"
+            >
+              Sign in
+            </button>
+          </p>
         </div>
-
-        <button
-          type="button"
-          onClick={onSwitch}
-          className="w-full py-3 border-2 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/50 text-slate-700 dark:text-slate-300 font-bold rounded-lg transition-all"
-        >
-          Sign In
-        </button>
       </form >
     </div >
   );
