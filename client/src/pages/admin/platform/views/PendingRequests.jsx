@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import { Check, X, Globe, ExternalLink, Shield } from "lucide-react";
+import { Check, X, Globe, ExternalLink } from "lucide-react";
 import { useToast } from "../../../../contexts/ToastContext";
 
 const PendingRequests = () => {

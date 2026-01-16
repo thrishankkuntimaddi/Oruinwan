@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Megaphone, Send, Calendar, Users, Check, X, History } from 'lucide-react';
+import { Megaphone, Send, Calendar, Users, Check } from 'lucide-react';
 import { useToast } from '../../../../contexts/ToastContext';
 
 const Broadcast = () => {
@@ -120,8 +120,8 @@ const Broadcast = () => {
                 <button
                     onClick={() => setActiveTab('compose')}
                     className={`px-6 py-3 font-bold text-sm transition-all border-b-2 ${activeTab === 'compose'
-                            ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400'
-                            : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+                        ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400'
+                        : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
                         }`}
                 >
                     Compose
@@ -129,8 +129,8 @@ const Broadcast = () => {
                 <button
                     onClick={() => setActiveTab('history')}
                     className={`px-6 py-3 font-bold text-sm transition-all border-b-2 ${activeTab === 'history'
-                            ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400'
-                            : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+                        ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400'
+                        : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
                         }`}
                 >
                     History
@@ -187,8 +187,8 @@ const Broadcast = () => {
                                             key={option.value}
                                             onClick={() => setFormData(prev => ({ ...prev, targetType: option.value }))}
                                             className={`p-4 rounded-xl border-2 transition-all text-left ${formData.targetType === option.value
-                                                    ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-900/20'
-                                                    : 'border-gray-200 dark:border-gray-600 hover:border-gray-300'
+                                                ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-900/20'
+                                                : 'border-gray-200 dark:border-gray-600 hover:border-gray-300'
                                                 }`}
                                         >
                                             <option.icon size={20} className={formData.targetType === option.value ? 'text-indigo-600' : 'text-gray-400'} />

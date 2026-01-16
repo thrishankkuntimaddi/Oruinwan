@@ -3,8 +3,7 @@ import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import {
     Building2, Users, Ticket, DollarSign, TrendingUp, TrendingDown,
-    Activity, CheckCircle, Clock, AlertCircle, Megaphone, ArrowRight,
-    BarChart3, Calendar
+    Activity, CheckCircle, AlertCircle, Megaphone, ArrowRight
 } from 'lucide-react';
 
 const Overview = () => {

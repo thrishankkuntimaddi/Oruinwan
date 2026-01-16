@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import axios from 'axios';
 import { useParams } from 'react-router-dom';
 import { Send, Search, Circle, MessageSquare, ArrowLeft } from 'lucide-react';
@@ -26,7 +26,7 @@ const PlatformChat = () => {
                 fetchMessages(companyId);
             }
         }
-    }, [companyId, companies]);
+    }, [companyId, companies, fetchMessages]);
 
     useEffect(() => {
         scrollToBottom();
@@ -43,7 +43,7 @@ const PlatformChat = () => {
         }
     };
 
-    const fetchMessages = async (compId) => {
+    const fetchMessages = useCallback(async (compId) => {
         try {
             const res = await axios.get(`${process.env.REACT_APP_BACKEND_URL}/api/admin/dm/${compId}`, {
                 withCredentials: true
@@ -53,7 +53,7 @@ const PlatformChat = () => {
             console.error('Failed to fetch messages:', err);
             showToast('Failed to load messages', 'error');
         }
-    };
+    }, [showToast]);
 
     const sendMessage = async (e) => {
         e.preventDefault();
@@ -112,8 +112,8 @@ const PlatformChat = () => {
                                 fetchMessages(company._id);
                             }}
                             className={`w-full p-4 border-b border-gray-50 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-all text-left ${selectedCompany?._id === company._id
-                                    ? 'bg-indigo-50 dark:bg-indigo-900/20 border-l-4 border-l-indigo-600'
-                                    : 'border-l-4 border-l-transparent'
+                                ? 'bg-indigo-50 dark:bg-indigo-900/20 border-l-4 border-l-indigo-600'
+                                : 'border-l-4 border-l-transparent'
                                 }`}
                         >
                             <div className="flex items-center gap-3">
@@ -182,14 +182,14 @@ const PlatformChat = () => {
                                 return (
                                     <div key={index} className={`flex gap-3 ${isAdmin ? 'flex-row-reverse' : ''}`}>
                                         <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${isAdmin
-                                                ? 'bg-indigo-600 text-white'
-                                                : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
+                                            ? 'bg-indigo-600 text-white'
+                                            : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
                                             }`}>
                                             {msg.sender?.username?.charAt(0) || 'U'}
                                         </div>
                                         <div className={`max-w-[70%] p-4 rounded-2xl ${isAdmin
-                                                ? 'bg-indigo-600 text-white rounded-tr-none'
-                                                : 'bg-white dark:bg-gray-700 border border-gray-100 dark:border-gray-600 text-gray-800 dark:text-gray-200 rounded-tl-none'
+                                            ? 'bg-indigo-600 text-white rounded-tr-none'
+                                            : 'bg-white dark:bg-gray-700 border border-gray-100 dark:border-gray-600 text-gray-800 dark:text-gray-200 rounded-tl-none'
                                             }`}>
                                             <p className="text-sm">{msg.message || msg.text}</p>
                                             <p className={`text-[10px] mt-2 ${isAdmin ? 'text-indigo-200' : 'text-gray-400'
