@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { MessageCircle, CheckCircle, Clock, AlertTriangle, X } from 'lucide-react';
+import { MessageCircle, X } from 'lucide-react';
 import { useToast } from '../../../../contexts/ToastContext';
 
 const SupportTickets = ({ navigateToChat }) => {

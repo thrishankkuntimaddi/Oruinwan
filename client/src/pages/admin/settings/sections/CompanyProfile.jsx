@@ -7,7 +7,6 @@ import axios from 'axios';
 const CompanyProfile = () => {
     const { company, refreshCompany } = useCompany();
     const { showToast } = useToast();
-    const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
 
     const [formData, setFormData] = useState({

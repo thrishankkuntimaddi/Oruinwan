@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Shield, Lock, Key, AlertTriangle, Save } from 'lucide-react';
+import { Shield, Lock, AlertTriangle, Save } from 'lucide-react';
 import { useToast } from '../../../../contexts/ToastContext';
 
 const Security = () => {

@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Globe, CheckCircle, XCircle, Copy, Save, AlertCircle } from 'lucide-react';
+import React, { useState } from 'react';
+import { CheckCircle, Copy, Save, AlertCircle } from 'lucide-react';
 import { useCompany } from '../../../../contexts/CompanyContext';
 import { useToast } from '../../../../contexts/ToastContext';
 
