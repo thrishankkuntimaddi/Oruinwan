@@ -68,8 +68,9 @@ ChannelSchema.methods.getUserJoinDate = function (userId) {
     return memberId === userId.toString();
   });
 
-  // Return joinedAt if new format, otherwise return channel creation date
-  return member?.joinedAt || this.createdAt;
+  // Return joinedAt if available, otherwise use current time (privacy-first approach)
+  // This ensures members without a timestamp can only see future messages
+  return member?.joinedAt || new Date();
 };
 
 // Helper to check if user is admin

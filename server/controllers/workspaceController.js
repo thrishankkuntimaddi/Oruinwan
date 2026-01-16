@@ -397,17 +397,26 @@ exports.inviteToWorkspace = async (req, res) => {
 
         const inviteLink = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/join-workspace?token=${raw}`;
 
-        // Send email
+        // Get inviter's name for the email
+        const inviter = await User.findById(req.user.sub).select('username');
+        const inviterName = inviter ? inviter.username : 'A team member';
+
+        // Send email using professional template
         try {
+          const { workspaceInvitationTemplate } = require('../utils/emailTemplates');
+          const template = workspaceInvitationTemplate(
+            workspace.name,
+            inviterName,
+            inviteLink,
+            'Member',
+            daysValid
+          );
+
           await sendEmail({
             to: email,
-            subject: `You're invited to join ${workspace.name} on Chttrix`,
-            html: `
-              <h2>You've been invited to join ${workspace.name}!</h2>
-              <p>Click the link below to accept the invitation:</p>
-              <a href="${inviteLink}" style="display: inline-block; padding: 12px 24px; background-color: #2563eb; color: white; text-decoration: none; border-radius: 8px;">Join Workspace</a>
-              <p style="margin-top: 20px; color: #666;">This link will expire in ${daysValid} days and can only be used once.</p>
-            `
+            subject: template.subject,
+            html: template.html,
+            text: template.text
           });
 
         } catch (e) {

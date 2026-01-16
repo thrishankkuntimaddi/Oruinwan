@@ -5,6 +5,7 @@ const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
 const User = require("../models/User");
 const sendEmail = require("../utils/sendEmail");
+const { passwordResetTemplate } = require("../utils/emailTemplates");
 const { OAuth2Client } = require("google-auth-library");
 const axios = require("axios");
 
@@ -266,8 +267,58 @@ exports.signup = async (req, res) => {
     try {
       await sendEmail({
         to: email,
-        subject: "Verify your email",
-        html: `Click here to verify: <a href="${verifyUrl}">${verifyUrl}</a>`
+        subject: "Verify Your Chttrix Email",
+        html: `
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <style>
+              body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f4f4f5; }
+              .container { max-width: 600px; margin: 40px auto; background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
+              .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 40px; text-align: center; }
+              .logo { font-size: 24px; font-weight: 900; letter-spacing: -1px; margin-bottom: 10px; }
+              .icon { font-size: 48px; margin-bottom: 10px; }
+              .content { padding: 40px; }
+              .button { display: inline-block; padding: 16px 32px; background: #667eea; color: white; text-decoration: none; border-radius: 12px; font-weight: bold; margin: 20px 0; }
+              .button:hover { background: #5568d3; }
+              .footer { background: #fafafa; padding: 30px; text-align: center; font-size: 13px; color: #6b7280; border-top: 1px solid #e5e7eb; }
+              h1 { margin: 0; font-size: 28px; font-weight: 800; }
+              h2 { color: #1f2937; margin-top: 0; font-size: 20px; }
+              p { color: #4b5563; margin-bottom: 15px; }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <div class="header">
+                <div class="logo">Chttrix</div>
+                <div class="icon">✉️</div>
+                <h1>Verify Your Email</h1>
+              </div>
+              <div class="content">
+                <h2>Hello ${username},</h2>
+                <p>Welcome to Chttrix! Please verify your email address to complete your registration and start collaborating.</p>
+                
+                <center>
+                  <a href="${verifyUrl}" class="button">Verify Email →</a>
+                </center>
+                
+                <p style="text-align: center; margin-top: 20px; font-size: 14px; color: #6b7280;">
+                  Or copy and paste this link: <br/>
+                  <a href="${verifyUrl}" style="color: #667eea; word-break: break-all;">${verifyUrl}</a>
+                </p>
+
+                <p style="margin-top: 30px; font-size: 13px; color: #9ca3af;">
+                  This verification link expires in 24 hours. If you didn't create this account, you can safely ignore this email.
+                </p>
+              </div>
+              <div class="footer">
+                <p>This is an automated message. Please do not reply to this email.</p>
+                © ${new Date().getFullYear()} Chttrix Inc. All rights reserved.
+              </div>
+            </div>
+          </body>
+          </html>
+        `
       });
       console.log(`✅ Verification email sent successfully to ${email}`);
     } catch (emailError) {
@@ -683,10 +734,12 @@ exports.forgotPassword = async (req, res) => {
 
     // Send reset email (or log to console in development)
     try {
+      const template = passwordResetTemplate(user.username, url);
       await sendEmail({
         to: email,
-        subject: "Password Reset",
-        html: `Reset your password: <a href="${url}">${url}</a>`
+        subject: template.subject,
+        html: template.html,
+        text: template.text
       });
       console.log(`✅ Password reset email sent to ${email}`);
     } catch (emailError) {
