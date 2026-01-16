@@ -132,122 +132,131 @@ export default function MessageList({ onSelectChat }) {
   }, [loadAllChats]);
 
   /* -------------------------------------------------
-     SOCKET: LISTEN FOR NEW MESSAGES
+     SOCKET: LISTEN FOR NEW MESSAGES (Using shared socket from context)
   ------------------------------------------------- */
+  const { socket: sharedSocket, isConnected, addMessageListener, addChannelListener } = useContext(SocketContext);
+
   useEffect(() => {
-    const token = localStorage.getItem("accessToken");
-    const socket = io(API_BASE, { auth: { token }, transports: ["websocket"] });
+    if (!sharedSocket || !isConnected) return;
 
-    socketRef.current = socket;
+    // Use the shared socket from context
+    socketRef.current = sharedSocket;
 
-    socket.on("new-message", ({ message }) => {
-      if (!message) return;
+    // Subscribe to message events via SocketContext
+    const unsubscribeMessages = addMessageListener((eventName, data) => {
+      if (eventName === 'new-message') {
+        const { message } = data;
+        if (!message) return;
 
-      const isChannel = !!message.channelId;
-      const chatId = isChannel
-        ? message.channelId
-        : message.senderId === myId
-          ? message.receiverId
-          : message.senderId;
+        const isChannel = !!message.channel;
+        const chatId = isChannel
+          ? message.channel
+          : message.sender?._id === myId || message.sender === myId
+            ? message.receiver
+            : message.sender?._id || message.sender;
 
-      const type = isChannel ? "channel" : "dm";
+        const type = isChannel ? "channel" : "dm";
 
-      const senderId =
-        typeof message.senderId === "object"
-          ? message.senderId._id
-          : message.senderId;
+        const senderId =
+          typeof message.sender === "object"
+            ? message.sender._id
+            : message.sender;
 
-      const previewText =
-        message.text ||
-        (message.attachments?.length
-          ? `[${message.attachments[0].type}]`
-          : "");
+        const previewText =
+          message.text ||
+          (message.attachments?.length
+            ? `[${message.attachments[0].type}]`
+            : "");
 
-      const now = message.createdAt || new Date().toISOString();
+        const now = message.createdAt || new Date().toISOString();
 
-      setItems((prev) => {
-        const arr = [...prev];
-        const idx = arr.findIndex(
-          (it) => it.type === type && String(it.id) === String(chatId)
-        );
+        setItems((prev) => {
+          const arr = [...prev];
+          const idx = arr.findIndex(
+            (it) => it.type === type && String(it.id) === String(chatId)
+          );
 
-        if (idx >= 0) {
-          // update
-          arr[idx].lastMessage = previewText;
-          arr[idx].lastMessageAt = now;
+          if (idx >= 0) {
+            // update
+            arr[idx].lastMessage = previewText;
+            arr[idx].lastMessageAt = now;
 
-          // unread
-          if (senderId !== myId) {
-            arr[idx].unreadCount = (arr[idx].unreadCount || 0) + 1;
+            // unread
+            if (senderId !== myId) {
+              arr[idx].unreadCount = (arr[idx].unreadCount || 0) + 1;
+            }
+
+            // move to top
+            const updated = arr.splice(idx, 1)[0];
+            return [updated, ...arr];
           }
 
-          // move to top
-          const updated = arr.splice(idx, 1)[0];
-          return [updated, ...arr];
-        }
+          // new chat
+          const newItem = {
+            type,
+            id: chatId,
+            name: message.channelName || message.senderName || "User",
+            lastMessage: previewText,
+            lastMessageAt: now,
+            unreadCount: senderId !== myId ? 1 : 0,
+          };
 
-        // new chat
-        const newItem = {
-          type,
-          id: chatId,
-          name: message.channelName || message.senderName || "User",
-          lastMessage: previewText,
-          lastMessageAt: now,
-          unreadCount: senderId !== myId ? 1 : 0,
-        };
-
-        return [newItem, ...arr];
-      });
+          return [newItem, ...arr];
+        });
+      }
     });
 
-    socket.on("channel-created", (channel) => {
-      setItems((prev) => {
-        // avoid duplicates
-        if (prev.some((it) => String(it.id) === String(channel._id))) return prev;
-        return [
-          {
-            type: "channel",
-            id: channel._id,
-            name: channel.name,
-            lastMessage: "",
-            lastMessageAt: channel.createdAt,
-            unreadCount: 0,
-            isChannelEntry: true
-          },
-          ...prev,
-        ];
-      });
-    });
-
-    socket.on("invited-to-channel", ({ channelId, channelName }) => {
-      // User was invited to a channel, add it to their list
-      setItems((prev) => {
-        if (prev.some((it) => String(it.id) === String(channelId))) return prev;
-        return [
-          {
-            type: "channel",
-            id: channelId,
-            name: channelName,
-            lastMessage: "",
-            lastMessageAt: new Date().toISOString(),
-            unreadCount: 0,
-            isChannelEntry: true
-          },
-          ...prev,
-        ];
-      });
-    });
-
-    socket.on("removed-from-channel", ({ channelId }) => {
-      // User was removed from a channel, remove it from their list
-      setItems((prev) => prev.filter((it) => !(it.type === "channel" && String(it.id) === String(channelId))));
+    // Subscribe to channel events via SocketContext
+    const unsubscribeChannels = addChannelListener((eventName, data) => {
+      if (eventName === 'channel-created') {
+        const channel = data.channel || data;
+        setItems((prev) => {
+          // avoid duplicates
+          if (prev.some((it) => String(it.id) === String(channel._id))) return prev;
+          return [
+            {
+              type: "channel",
+              id: channel._id,
+              name: channel.name,
+              lastMessage: "",
+              lastMessageAt: channel.createdAt,
+              unreadCount: 0,
+              isChannelEntry: true
+            },
+            ...prev,
+          ];
+        });
+      } else if (eventName === 'invited-to-channel') {
+        const { channelId, channelName } = data;
+        // User was invited to a channel, add it to their list
+        setItems((prev) => {
+          if (prev.some((it) => String(it.id) === String(channelId))) return prev;
+          return [
+            {
+              type: "channel",
+              id: channelId,
+              name: channelName,
+              lastMessage: "",
+              lastMessageAt: new Date().toISOString(),
+              unreadCount: 0,
+              isChannelEntry: true
+            },
+            ...prev,
+          ];
+        });
+      } else if (eventName === 'removed-from-channel') {
+        const { channelId } = data;
+        // User was removed from a channel, remove it from their list
+        setItems((prev) => prev.filter((it) => !(it.type === "channel" && String(it.id) === String(channelId))));
+      }
     });
 
     return () => {
-      socket.disconnect();
-      socketRef.current = null;
+      // Clean up listeners
+      if (unsubscribeMessages) unsubscribeMessages();
+      if (unsubscribeChannels) unsubscribeChannels();
     };
-  }, [myId]);
+  }, [sharedSocket, isConnected, myId, addMessageListener, addChannelListener]);
 
   /* -------------------------------------------------
      FILTER RESULTS
