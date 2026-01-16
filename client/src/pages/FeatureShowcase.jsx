@@ -21,7 +21,9 @@ import {
     GitBranch,
     Monitor,
     Smartphone,
-    Apple
+    Apple,
+    Volume2,
+    VolumeX
 } from "lucide-react";
 
 // Video Assets
@@ -62,6 +64,24 @@ const FeatureShowcase = () => {
 
     // Refs for video control
     const heroVideoRef = useRef(null);
+    const aiVideoRef = useRef(null);
+
+    const [isHeroMuted, setIsHeroMuted] = useState(false);
+    const [isAiMuted, setIsAiMuted] = useState(false);
+
+    const toggleHeroMute = () => {
+        if (heroVideoRef.current) {
+            heroVideoRef.current.muted = !heroVideoRef.current.muted;
+            setIsHeroMuted(heroVideoRef.current.muted);
+        }
+    };
+
+    const toggleAiMute = () => {
+        if (aiVideoRef.current) {
+            aiVideoRef.current.muted = !aiVideoRef.current.muted;
+            setIsAiMuted(aiVideoRef.current.muted);
+        }
+    };
 
     useEffect(() => {
         if (user) {
@@ -72,16 +92,43 @@ const FeatureShowcase = () => {
         return () => window.removeEventListener("scroll", handleScroll);
     }, [user, navigate]);
 
-    // Force autoplay on mount for reliability
+    // Intersection Observer for Auto-Play/Pause with Sound
     useEffect(() => {
-        const video = heroVideoRef.current;
-        if (video) {
-            // Muted allows autoplay in most policies
-            video.muted = true;
-            video.play().catch(error => {
+        const observer = new IntersectionObserver(
+            (entries) => {
+                entries.forEach((entry) => {
+                    const video = entry.target;
+                    const isHero = video === heroVideoRef.current;
+                    const setMutedState = isHero ? setIsHeroMuted : setIsAiMuted;
 
-            });
-        }
+                    if (entry.isIntersecting) {
+                        // User request: "sound has to play automatically... I need it in unmute"
+                        // Attempt unmuted play
+                        video.muted = false;
+                        setMutedState(false);
+
+                        video.play().catch((err) => {
+                            // Fallback if browser blocks unmuted autoplay
+                            console.warn("Autoplay with sound blocked. Fallback to muted.", err);
+                            video.muted = true;
+                            setMutedState(true);
+                            video.play().catch((e) => console.error("Autoplay failed", e));
+                        });
+                    } else {
+                        video.pause();
+                    }
+                });
+            },
+            { threshold: 0.5 } // Play when 50% of the video is visible
+        );
+
+        const heroVideo = heroVideoRef.current;
+        const aiVideo = aiVideoRef.current;
+
+        if (heroVideo) observer.observe(heroVideo);
+        if (aiVideo) observer.observe(aiVideo);
+
+        return () => observer.disconnect();
     }, []);
 
     if (user) return null;
@@ -95,7 +142,15 @@ const FeatureShowcase = () => {
                     50% { transform: translateY(-20px); }
                 }
                 .animate-float-slow {
-                    animation: float-slow 8s ease-in-out infinite;
+                    animation: float-slow 6s ease-in-out infinite;
+                }
+                @keyframes text-shimmer {
+                    0% { background-position: 0% 50%; }
+                    100% { background-position: 100% 50%; }
+                }
+                .animate-text-shimmer {
+                    background-size: 200% auto;
+                    animation: text-shimmer 3s linear infinite;
                 }
                 .glass-card {
                     background: rgba(255, 255, 255, 0.7);
@@ -189,7 +244,7 @@ const FeatureShowcase = () => {
                         {/* Interactive Video (Right) */}
                         <div className="flex-1 w-full max-w-lg lg:max-w-xl">
                             <div
-                                className="relative aspect-square rounded-[3rem] overflow-hidden shadow-2xl shadow-indigo-500/10 dark:shadow-indigo-500/20 border border-slate-200 dark:border-white/10 group cursor-default bg-slate-100 dark:bg-white/5"
+                                className="relative aspect-square rounded-[3rem] overflow-hidden shadow-2xl shadow-indigo-500/10 dark:shadow-indigo-500/20 border border-slate-200 dark:border-white/10 group cursor-default bg-slate-100 dark:bg-white/5 animate-float-slow"
                             >
                                 {/* Static / Placeholder State */}
                                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-0 transition-opacity duration-300 z-10">
@@ -207,6 +262,15 @@ const FeatureShowcase = () => {
                                     loop
                                     className="w-full h-full object-cover transition-transform duration-700 hover:scale-105"
                                 />
+
+                                {/* Audio Control - Hero */}
+                                <button
+                                    onClick={toggleHeroMute}
+                                    className="absolute bottom-6 right-6 p-3 rounded-full bg-black/50 text-white hover:bg-black/70 backdrop-blur-md transition-all z-20 hover:scale-110"
+                                    aria-label={isHeroMuted ? "Unmute" : "Mute"}
+                                >
+                                    {isHeroMuted ? <VolumeX size={20} /> : <Volume2 size={20} />}
+                                </button>
                             </div>
                         </div>
 
@@ -289,6 +353,7 @@ const FeatureShowcase = () => {
                                 <div className="absolute inset-0 bg-purple-500/10 blur-[50px] group-hover:bg-purple-500/20 transition-colors"></div>
 
                                 <video
+                                    ref={aiVideoRef}
                                     src={VIDEO_AI}
                                     autoPlay
                                     loop
@@ -296,6 +361,15 @@ const FeatureShowcase = () => {
                                     playsInline
                                     className="relative w-full h-auto rounded-3xl transform group-hover:scale-[1.02] transition-transform duration-700"
                                 />
+
+                                {/* Audio Control - AI */}
+                                <button
+                                    onClick={toggleAiMute}
+                                    className="absolute bottom-6 right-6 p-3 rounded-full bg-black/50 text-white hover:bg-black/70 backdrop-blur-md transition-all z-20 hover:scale-110 opacity-0 group-hover:opacity-100"
+                                    aria-label={isAiMuted ? "Unmute" : "Mute"}
+                                >
+                                    {isAiMuted ? <VolumeX size={20} /> : <Volume2 size={20} />}
+                                </button>
 
 
                             </div>
