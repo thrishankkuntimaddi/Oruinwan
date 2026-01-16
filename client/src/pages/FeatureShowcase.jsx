@@ -139,10 +139,10 @@ const FeatureShowcase = () => {
             <style>{`
                 @keyframes float-slow {
                     0%, 100% { transform: translateY(0px); }
-                    50% { transform: translateY(-20px); }
+                    50% { transform: translateY(-12px); }
                 }
                 .animate-float-slow {
-                    animation: float-slow 6s ease-in-out infinite;
+                    animation: float-slow 8s ease-in-out infinite;
                 }
                 @keyframes text-shimmer {
                     0% { background-position: 0% 50%; }
@@ -216,7 +216,7 @@ const FeatureShowcase = () => {
                         <div className="flex-1 text-center lg:text-left">
                             <h1 className="text-6xl md:text-8xl font-black tracking-tighter text-slate-900 dark:text-white mb-6 leading-[0.9] dark:text-glow">
                                 One Platform.<br />
-                                <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-400 dark:via-purple-400 dark:to-indigo-400 animate-text-shimmer">Limitless Possibilities.</span>
+                                <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-400 dark:via-purple-400 dark:to-indigo-400 animate-text-shimmer">Limitless  Possibilities.</span>
                             </h1>
 
                             <p className="text-xl md:text-2xl text-slate-600 dark:text-slate-400 mb-10 leading-relaxed font-medium">
@@ -279,7 +279,7 @@ const FeatureShowcase = () => {
             </header>
 
             {/* Powerful Features Grid */}
-            <section id="platform" className="scroll-mt-24 py-32 bg-slate-50 dark:bg-[#030712] relative border-y border-slate-200 dark:border-white/5">
+            <section id="platform" className="scroll-mt-24 py-12 bg-slate-50 dark:bg-[#030712] relative border-y border-slate-200 dark:border-white/5">
                 <div className="container mx-auto px-6">
                     <div className="text-center mb-24">
                         <h2 className="text-4xl md:text-5xl font-black text-slate-900 dark:text-white mb-6">Simplicity meets <span className="text-indigo-600 dark:text-indigo-500">Power</span>.</h2>
@@ -343,7 +343,7 @@ const FeatureShowcase = () => {
 
             {/* AI Integration - Video Showcase */}
             {/* AI Integration - Video Showcase */}
-            <section id="ai" className="scroll-mt-24 py-32 bg-white dark:bg-[#0B0F19] relative overflow-hidden">
+            <section id="ai" className="scroll-mt-24 py-12 bg-white dark:bg-[#0B0F19] relative overflow-hidden">
                 <div className="container mx-auto px-6 relative z-10">
                     <div className="flex flex-col lg:flex-row items-center gap-20">
                         {/* Video Left */}
@@ -401,7 +401,7 @@ const FeatureShowcase = () => {
             </section>
 
             {/* Account Types / Solutions */}
-            <section id="accounts" className="scroll-mt-24 py-32 bg-slate-50 dark:bg-[#030712] border-t border-slate-200 dark:border-white/5">
+            <section id="accounts" className="scroll-mt-24 py-12 bg-slate-50 dark:bg-[#030712] border-t border-slate-200 dark:border-white/5">
                 <div className="container mx-auto px-6">
                     <div className="text-center mb-16">
                         <h2 className="text-4xl font-black text-slate-900 dark:text-white mb-4">Choose your HQ.</h2>
@@ -469,7 +469,7 @@ const FeatureShowcase = () => {
             </section>
 
             {/* Downloads Section */}
-            <section id="downloads" className="scroll-mt-24 py-32 bg-white dark:bg-[#0B0F19] relative border-t border-slate-200 dark:border-white/5">
+            <section id="downloads" className="scroll-mt-24 py-12 bg-white dark:bg-[#0B0F19] relative border-t border-slate-200 dark:border-white/5">
                 <div className="container mx-auto px-6">
                     <div className="text-center mb-16">
                         <h2 className="text-4xl font-black text-slate-900 dark:text-white mb-4">Available Everywhere.</h2>
