@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
     Users, MessageSquare, CheckCircle2, TrendingUp,
-    Activity, Calendar, Briefcase, Clock, RefreshCw, BarChart3
+    Activity, Calendar, Briefcase, RefreshCw, BarChart3
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
@@ -27,7 +27,7 @@ const Analytics = () => {
         topUsers: []
     });
 
-    const fetchAnalytics = async () => {
+    const fetchAnalytics = useCallback(async () => {
         try {
             const companyId = typeof user.companyId === 'object'
                 ? user.companyId?._id || user.companyId?.id
@@ -46,13 +46,13 @@ const Analytics = () => {
             setLoading(false);
             setRefreshing(false);
         }
-    };
+    }, [user.companyId, showToast]);
 
     useEffect(() => {
         if (user?.companyId) {
             fetchAnalytics();
         }
-    }, [user?.companyId]);
+    }, [user?.companyId, fetchAnalytics]);
 
     // Auto-refresh every 30 seconds
     useEffect(() => {
@@ -64,7 +64,7 @@ const Analytics = () => {
         }, 30000);
 
         return () => clearInterval(interval);
-    }, [loading, refreshing]);
+    }, [loading, refreshing, fetchAnalytics]);
 
     const handleRefresh = () => {
         setRefreshing(true);

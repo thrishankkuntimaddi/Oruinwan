@@ -7,7 +7,7 @@ import {
 import { useNotes } from "../../contexts/NotesContext";
 import { useToast } from "../../contexts/ToastContext";
 import ConfirmationModal from "../../components/ui/ConfirmationModal";
-import { uploadNoteAttachment, downloadNoteAttachment } from "../../utils/uploadHelpers";
+import { uploadNoteAttachment } from "../../utils/uploadHelpers";
 
 const Notes = () => {
     // ✅ CORRECT: Extract both workspaceId and note id from params

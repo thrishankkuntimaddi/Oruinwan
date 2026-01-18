@@ -1,5 +1,5 @@
 // client/src/pages/admin/AuditSecurityPage.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Shield, AlertTriangle, CheckCircle, XCircle, Clock, Download, Filter, Search, Calendar } from 'lucide-react';
 import { useToast } from '../../contexts/ToastContext';
 
@@ -11,11 +11,7 @@ const AuditSecurityPage = () => {
     const [filterType, setFilterType] = useState('all'); // all, login, access, changes, security
     const [dateRange, setDateRange] = useState('7days'); // 24h, 7days, 30days, all
 
-    useEffect(() => {
-        fetchAuditLogs();
-    }, []);
-
-    const fetchAuditLogs = async () => {
+    const fetchAuditLogs = useCallback(async () => {
         try {
             setLoading(true);
             // TODO: Replace with actual API call
@@ -83,7 +79,11 @@ const AuditSecurityPage = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [showToast]);
+
+    useEffect(() => {
+        fetchAuditLogs();
+    }, [fetchAuditLogs]);
 
     const getStatusIcon = (status) => {
         switch (status) {

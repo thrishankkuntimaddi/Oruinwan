@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-    ArrowLeft, ArrowRight, Building, Users, Home, CheckCircle, Globe, Mail, Lock, User, X, Sparkles,
+    ArrowLeft, ArrowRight, Building, CheckCircle, Globe, Mail, Lock, User, Sparkles,
     Briefcase, FileText, Phone, UploadCloud, ShieldCheck, Eye, EyeOff, Info, ChevronDown, Moon, Sun,
     AlertCircle, CheckCircle2
 } from "lucide-react";
@@ -167,7 +167,7 @@ const RegisterCompany = () => {
         }, 500);
 
         return () => clearTimeout(timer);
-    }, [formData.personalEmail]);
+    }, [formData.personalEmail, errors.personalEmail]);
 
     // Debounced validation for phone (check if already exists)
     useEffect(() => {
@@ -199,7 +199,7 @@ const RegisterCompany = () => {
         }, 500);
 
         return () => clearTimeout(timer);
-    }, [formData.phone, formData.phoneCode]);
+    }, [formData.phone, formData.phoneCode, currentPhoneCode.len, errors.phone]);
 
     const handleChange = (e) => {
         const { name, value } = e.target;
