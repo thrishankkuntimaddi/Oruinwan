@@ -24,6 +24,51 @@ export const TasksProvider = ({ children }) => {
         return match ? match[1] : null;
     }, [location.pathname]);
 
+    // Map backend status to frontend format
+    const mapBackendStatus = useCallback((status) => {
+        const statusMap = {
+            'todo': 'To Do',
+            'in-progress': 'In Progress',
+            'review': 'In Progress',
+            'done': 'Completed',
+            'cancelled': 'Cancelled'
+        };
+        return statusMap[status] || 'To Do';
+    }, []);
+
+    // Map frontend status to backend format
+    const mapFrontendStatus = useCallback((status) => {
+        const statusMap = {
+            'To Do': 'todo',
+            'In Progress': 'in-progress',
+            'Completed': 'done',
+            'Cancelled': 'cancelled'
+        };
+        return statusMap[status] || 'todo';
+    }, []);
+
+    // Map backend priority to frontend format
+    const mapBackendPriority = useCallback((priority) => {
+        const priorityMap = {
+            'low': 'Low',
+            'medium': 'Medium',
+            'high': 'High',
+            'urgent': 'Emergency'
+        };
+        return priorityMap[priority] || 'Medium';
+    }, []);
+
+    // Map frontend priority to backend format
+    const mapFrontendPriority = useCallback((priority) => {
+        const priorityMap = {
+            'Low': 'low',
+            'Medium': 'medium',
+            'High': 'high',
+            'Emergency': 'urgent'
+        };
+        return priorityMap[priority] || 'medium';
+    }, []);
+
     // Load tasks from backend
     const loadTasks = useCallback(async () => {
         try {
@@ -86,50 +131,6 @@ export const TasksProvider = ({ children }) => {
         }
     }, [getWorkspaceId, showToast, user, mapBackendStatus, mapBackendPriority]);
 
-    // Map backend status to frontend format
-    const mapBackendStatus = useCallback((status) => {
-        const statusMap = {
-            'todo': 'To Do',
-            'in-progress': 'In Progress',
-            'review': 'In Progress',
-            'done': 'Completed',
-            'cancelled': 'Cancelled'
-        };
-        return statusMap[status] || 'To Do';
-    }, []);
-
-    // Map frontend status to backend format
-    const mapFrontendStatus = useCallback((status) => {
-        const statusMap = {
-            'To Do': 'todo',
-            'In Progress': 'in-progress',
-            'Completed': 'done',
-            'Cancelled': 'cancelled'
-        };
-        return statusMap[status] || 'todo';
-    }, []);
-
-    // Map backend priority to frontend format
-    const mapBackendPriority = useCallback((priority) => {
-        const priorityMap = {
-            'low': 'Low',
-            'medium': 'Medium',
-            'high': 'High',
-            'urgent': 'Emergency'
-        };
-        return priorityMap[priority] || 'Medium';
-    }, []);
-
-    // Map frontend priority to backend format
-    const mapFrontendPriority = useCallback((priority) => {
-        const priorityMap = {
-            'Low': 'low',
-            'Medium': 'medium',
-            'High': 'high',
-            'Emergency': 'urgent'
-        };
-        return priorityMap[priority] || 'medium';
-    }, []);
 
     // Load tasks when workspace changes
     useEffect(() => {
