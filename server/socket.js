@@ -121,6 +121,37 @@ function registerChatHandlers(io, socket) {
             isTyping
         });
     });
+
+    // ==================== POLL HANDLERS (ISOLATED) ====================
+    // Polls are a separate feature and do NOT interfere with messaging
+
+    // Poll created - broadcast to channel
+    socket.on('poll:created', (data) => {
+        const { channelId, poll } = data;
+        console.log(`📊 New poll created in channel:${channelId} by user:${socket.user.id}`);
+        io.to(`channel:${channelId}`).emit('poll:new', poll);
+    });
+
+    // Poll voted - broadcast updated poll to channel
+    socket.on('poll:voted', (data) => {
+        const { channelId, poll } = data;
+        console.log(`✅ Poll ${poll._id} voted by user:${socket.user.id}`);
+        io.to(`channel:${channelId}`).emit('poll:update', poll);
+    });
+
+    // Poll deleted - broadcast removal to channel
+    socket.on('poll:deleted', (data) => {
+        const { channelId, pollId } = data;
+        console.log(`🗑️ Poll ${pollId} deleted from channel:${channelId}`);
+        io.to(`channel:${channelId}`).emit('poll:removed', { pollId });
+    });
+
+    // Poll closed - broadcast update to channel
+    socket.on('poll:closed', (data) => {
+        const { channelId, poll } = data;
+        console.log(`🔒 Poll ${poll._id} closed in channel:${channelId}`);
+        io.to(`channel:${channelId}`).emit('poll:update', poll);
+    });
 }
 
 module.exports = registerChatHandlers;
