@@ -163,6 +163,7 @@ app.use("/api/owner-dashboard", require("./routes/ownerDashboard"));
 app.use("/api/manager-dashboard", require("./routes/managerDashboard")); // Old pattern
 app.use("/api/manager", require("./routes/managerDashboard")); // New pattern - supports /api/manager/dashboard/*
 app.use("/api/messages", require("./routes/messages"));
+app.use("/api/polls", require("./routes/polls")); // Poll routes
 app.use("/api/chat", require("./routes/chatList"));
 app.use("/api/channels", require("./routes/channels"));
 app.use("/api/companies", require("./routes/companies"));
