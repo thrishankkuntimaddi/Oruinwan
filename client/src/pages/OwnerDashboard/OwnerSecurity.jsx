@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
     Shield, AlertTriangle, CheckCircle, XCircle, Lock,
     Key, Users, Activity, RefreshCw, Crown, Eye, Settings,
-    Globe, Smartphone, Monitor, Clock, Download, TrendingUp,
+    Globe, Monitor, Clock, Download, TrendingUp,
     AlertCircle, UserCheck, FileText
 } from 'lucide-react';
 import { useCompany } from '../../contexts/CompanyContext';

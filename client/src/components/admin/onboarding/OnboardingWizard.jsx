@@ -103,7 +103,7 @@ const OnboardingWizard = ({ onComplete }) => {
         };
 
         fetchWorkspaces();
-    }, [step, formData.assignedDepartments]);
+    }, [step, formData.assignedDepartments, workspacesByDept]);
 
     const updateForm = (field, value) => setFormData(prev => ({ ...prev, [field]: value }));
     const toggleSelection = (field, id) => {

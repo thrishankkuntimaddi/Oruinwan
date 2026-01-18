@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { X, Briefcase, Users, User, Shield, ArrowRight, Trash2, Plus, Calendar, Clock, Edit2, Save, MoreHorizontal, UserPlus, LogOut, Check, Search, AlertTriangle, Monitor } from 'lucide-react';
+import { X, Briefcase, Users, Shield, Trash2, Plus, Clock, Edit2, Save, MoreHorizontal, UserPlus, LogOut, Check, Search, AlertTriangle, Monitor } from 'lucide-react';
 import { updateDepartment, addWorkspaceToDepartment, removeWorkspaceFromDepartment, assignUserToDepartment, removeUserFromDepartment, deleteDepartment } from '../../services/departmentService';
 import { getCompanyMembers } from '../../services/companyService';
 import { workspaceService } from '../../services/workspaceService';
