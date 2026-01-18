@@ -139,7 +139,6 @@ export default function MessagesContainer({
           <div className="space-y-3">
             {grp.items
               .map((msg, idx) => {
-                const prevMsg = grp.items[idx - 1];
 
                 // Determine if we should show a join marker before this message
                 // Show marker at the position of a member's FIRST message

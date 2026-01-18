@@ -763,7 +763,7 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
 
       // Handle new messages from SocketContext broadcast
       if (eventName === 'new-message') {
-        const { message, clientTempId } = data;
+        const { message } = data;
 
         // Only process if message belongs to current chat
         const isRelevant = chat.type === 'channel'
@@ -802,7 +802,7 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
     return () => {
       if (unsubscribe) unsubscribe();
     };
-  }, [chat]);
+  }, [chat, addMessageListener]);
 
   /* ---------------------------------------------------------
       SEND MESSAGE

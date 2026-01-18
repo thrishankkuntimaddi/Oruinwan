@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-    CreditCard, Download, Calendar, TrendingUp, AlertCircle,
+    CreditCard, Download, TrendingUp, AlertCircle,
     Users, DollarSign, RefreshCw, Crown, CheckCircle, XCircle,
     Clock, ArrowUpRight, ArrowDownRight, FileText
 } from 'lucide-react';

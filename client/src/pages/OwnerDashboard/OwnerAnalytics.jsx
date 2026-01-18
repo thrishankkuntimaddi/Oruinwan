@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useToast } from '../../contexts/ToastContext';
 import { useCompany } from '../../contexts/CompanyContext';
 import { RefreshCw, BarChart3, TrendingUp, TrendingDown, Users, MessageSquare, Activity, Calendar } from 'lucide-react';
-import { LineChart, Line, BarChart, Bar, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { BarChart, Bar, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 
 import {
     getActivityHealth,
@@ -125,8 +125,8 @@ const OwnerAnalytics = () => {
                                 key={range}
                                 onClick={() => setTimeRange(range)}
                                 className={`px-3 py-1 text-xs font-bold rounded transition-all ${timeRange === range
-                                        ? 'bg-indigo-600 text-white'
-                                        : 'text-slate-600 dark:text-gray-300 hover:bg-slate-100 dark:hover:bg-gray-600'
+                                    ? 'bg-indigo-600 text-white'
+                                    : 'text-slate-600 dark:text-gray-300 hover:bg-slate-100 dark:hover:bg-gray-600'
                                     }`}
                             >
                                 {range === '7d' ? '7 Days' : range === '30d' ? '30 Days' : '90 Days'}

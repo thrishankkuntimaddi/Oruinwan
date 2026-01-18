@@ -2,11 +2,11 @@ import React, { useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { CheckCircle, Shield, FileText, ArrowRight, Building, Sparkles, Mail, Phone, Sun, Moon, Globe } from 'lucide-react';
+import { CheckCircle, FileText, ArrowRight, Building, Sparkles, Mail, Phone, Sun, Moon } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 
 const CompanyConfirmation = () => {
-    const { user, refreshUser } = useAuth();
+    const { user } = useAuth();
     const navigate = useNavigate();
     const [isLoading, setIsLoading] = useState(false);
     const [accepted, setAccepted] = useState(false);

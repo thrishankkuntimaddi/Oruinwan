@@ -84,7 +84,7 @@ export const TasksProvider = ({ children }) => {
         } finally {
             setLoading(false);
         }
-    }, [getWorkspaceId, showToast, user]);
+    }, [getWorkspaceId, showToast, user, mapBackendStatus, mapBackendPriority]);
 
     // Map backend status to frontend format
     const mapBackendStatus = useCallback((status) => {
@@ -313,7 +313,7 @@ export const TasksProvider = ({ children }) => {
             showToast(error.response?.data?.message || "Failed to create task", "error");
             return null;
         }
-    }, [getWorkspaceId, showToast, user]);
+    }, [getWorkspaceId, showToast, user, mapBackendStatus, mapBackendPriority, mapFrontendStatus, mapFrontendPriority]);
 
     // Update task
     const updateTask = useCallback(async (id, updates) => {
