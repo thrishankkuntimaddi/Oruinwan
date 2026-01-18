@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import {
-    Shield, Calendar, MoreVertical,
-    Search, Filter, UserPlus, Briefcase, BarChart2,
-    CheckCircle2, AlertCircle, Clock, ArrowRightLeft
+    MoreVertical,
+    Search, Briefcase, BarChart2,
+    CheckCircle2, Clock, ArrowRightLeft
 } from 'lucide-react';
 import axios from 'axios';
 

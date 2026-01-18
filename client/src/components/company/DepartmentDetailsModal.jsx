@@ -1,6 +1,6 @@
 
-import React, { useState, useEffect } from 'react';
-import { X, Briefcase, Users, Shield, Trash2, Plus, Clock, Edit2, Save, MoreHorizontal, UserPlus, LogOut, Check, Search, AlertTriangle, Monitor } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { X, Briefcase, Users, Shield, Trash2, Plus, Edit2, Save, Search, AlertTriangle, Monitor } from 'lucide-react';
 import { updateDepartment, addWorkspaceToDepartment, removeWorkspaceFromDepartment, assignUserToDepartment, removeUserFromDepartment, deleteDepartment } from '../../services/departmentService';
 import { getCompanyMembers } from '../../services/companyService';
 import { workspaceService } from '../../services/workspaceService';
@@ -23,14 +23,7 @@ const DepartmentDetailsModal = ({ isOpen, onClose, department, companyId, onUpda
     const [selectedWorkspace, setSelectedWorkspace] = useState('');
     const [userSearch, setUserSearch] = useState('');
 
-    useEffect(() => {
-        if (isOpen && department) {
-            setFormData({ name: department.name, description: department.description || '' });
-            fetchData();
-        }
-    }, [isOpen, department?._id]);
-
-    const fetchData = async () => {
+    const fetchData = useCallback(async () => {
         try {
             const [wsRes, usrRes] = await Promise.all([
                 workspaceService.getWorkspaces(companyId),
@@ -42,7 +35,14 @@ const DepartmentDetailsModal = ({ isOpen, onClose, department, companyId, onUpda
         } catch (error) {
             console.error("Failed to fetch data", error);
         }
-    };
+    }, [companyId]);
+
+    useEffect(() => {
+        if (isOpen && department) {
+            setFormData({ name: department.name, description: department.description || '' });
+            fetchData();
+        }
+    }, [isOpen, department, fetchData]);
 
     // --- Actions ---
 

@@ -26,9 +26,7 @@ const DeleteWorkspaceModal = ({
 
         try {
 
-
-            const response = await api.delete(`/api/workspaces/${workspaceId}`);
-
+            await api.delete(`/api/workspaces/${workspaceId}`);
 
 
             // Success!

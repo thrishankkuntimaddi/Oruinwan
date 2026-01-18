@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
-import { ArrowLeft, CheckCircle, Sparkles, Command, Shield, Moon, Sun } from "lucide-react";
+import { ArrowLeft, CheckCircle, Sparkles, Shield, Moon, Sun } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
 import LoginForm from "../../components/loginpage/LoginForm";
 import SignupForm from "../../components/loginpage/SignupForm";

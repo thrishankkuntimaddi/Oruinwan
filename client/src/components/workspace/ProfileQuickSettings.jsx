@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect } from 'react';
 import {
-    User, X, Mail, Phone, Calendar, MapPin, Camera, Save,
+    User, X, Mail, Phone, Calendar, Camera, Save,
     Settings, Shield, LogOut, Sun, Moon, Monitor, Edit3,
     Check, ChevronRight, Building
 } from 'lucide-react';
@@ -19,8 +19,8 @@ const ProfileQuickSettings = ({ onClose }) => {
     const { company } = useCompany();
 
     const [view, setView] = useState('main'); // main, edit, theme, security
-    const [isEditing, setIsEditing] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
+    const [isEditing, setIsEditing] = useState(false);
 
     const [formData, setFormData] = useState({
         username: user?.username || '',

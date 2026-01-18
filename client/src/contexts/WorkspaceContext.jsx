@@ -43,7 +43,6 @@ export const WorkspaceProvider = ({ children }) => {
                         color: ws.color || "#2563eb",
                         type: ws.type,
                         role: ws.role, // User's role in this workspace (owner, admin, member)
-                        role: ws.role, // User's role in this workspace (owner, admin, member)
                         members: ws.members,
                         rules: ws.rules // Include rules
                     }));
@@ -147,7 +146,6 @@ export const WorkspaceProvider = ({ children }) => {
                     icon: ws.icon || "🚀",
                     color: ws.color || "#2563eb",
                     type: ws.type,
-                    role: ws.role,
                     role: ws.role,
                     members: ws.members,
                     rules: ws.rules

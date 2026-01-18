@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useCompany } from '../../contexts/CompanyContext';
 import { useToast } from '../../contexts/ToastContext';
-import { UserPlus, Shield, BarChart3, Crown, Eye, EyeOff, MoreVertical, Lock, FileText, Settings, UserMinus, MessageSquare, Trash2 } from 'lucide-react';
+import { UserPlus, Shield, BarChart3, Crown, MoreVertical, Lock, FileText, Settings, UserMinus, MessageSquare } from 'lucide-react';
 import { getCompanyMembers } from '../../services/companyService';
-import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
+
 
 const ROLE_COLORS = {
     owner: '#8b5cf6',

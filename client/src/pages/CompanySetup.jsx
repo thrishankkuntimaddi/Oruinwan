@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import axios from 'axios';
 import {
-    Building, Users, Mail, CheckCircle,
+    Users, Mail, CheckCircle,
     ArrowRight, ArrowLeft, Upload, Clock, Plus, X, Sparkles, Target, Zap
 } from 'lucide-react';
 

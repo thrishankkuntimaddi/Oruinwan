@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import {
-    UserPlus, Search, Filter, AlertTriangle, CheckCircle2, MoreVertical, Shield, Briefcase
+    UserPlus, Search, AlertTriangle, CheckCircle2, Briefcase
 } from 'lucide-react';
 import { getUnassignedEmployees } from '../../services/managerDashboardService';
 

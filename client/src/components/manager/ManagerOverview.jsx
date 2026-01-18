@@ -1,7 +1,7 @@
 // client/src/components/manager/ManagerOverview.jsx
 // Overview tab for Manager Dashboard - Key metrics and department health
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useOutletContext, useNavigate } from 'react-router-dom';
 import {
     Users, Activity, CheckCircle2, Clock, TrendingUp,
@@ -19,7 +19,7 @@ const ManagerOverview = () => {
     const { showToast } = useToast();
     const navigate = useNavigate();
 
-    const fetchMetrics = async () => {
+    const fetchMetrics = useCallback(async () => {
         if (!selectedDepartment?._id) return;
 
         try {
@@ -34,13 +34,13 @@ const ManagerOverview = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [selectedDepartment]);
 
     useEffect(() => {
         if (selectedDepartment) {
             fetchMetrics();
         }
-    }, [selectedDepartment]);
+    }, [selectedDepartment, fetchMetrics]);
 
     const handleRefresh = async () => {
         if (refreshing) return;

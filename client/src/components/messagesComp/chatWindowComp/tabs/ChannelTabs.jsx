@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, X, FileText, MessageSquare, ChevronDown, ChevronUp } from 'lucide-react';
+import { Plus, X, FileText, MessageSquare } from 'lucide-react';
 
 export default function ChannelTabs({
     tabs = [],
@@ -13,7 +13,6 @@ export default function ChannelTabs({
 }) {
     const [editingTabId, setEditingTabId] = useState(null);
     const [editingName, setEditingName] = useState("");
-    const [isCollapsed, setIsCollapsed] = useState(false);
 
     const handleAddClick = () => {
         // Check tab limit
