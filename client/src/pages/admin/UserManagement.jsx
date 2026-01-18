@@ -1,7 +1,7 @@
 
 
 import React, { useState, useEffect } from 'react';
-import { Search, Mail, BarChart2, Briefcase, Eye, EyeOff } from 'lucide-react';
+import { Search, Mail, BarChart2, Briefcase } from 'lucide-react';
 import { useCompany } from '../../contexts/CompanyContext';
 import { getCompanyMembers } from '../../services/companyService';
 import { getDepartments, assignUserToDepartment } from '../../services/departmentService';
@@ -27,7 +27,7 @@ const UserManagement = () => {
     const [tab, setTab] = useState('all'); // all, admins, managers, members, guests
     const [searchQuery, setSearchQuery] = useState('');
     const [deptFilter, setDeptFilter] = useState('all');
-    const [roleFilter, setRoleFilter] = useState('all');
+    const [roleFilter] = useState('all');
     const [workspaceFilter, setWorkspaceFilter] = useState('all');
 
     // Selection

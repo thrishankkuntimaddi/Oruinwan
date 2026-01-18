@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
-import { Search, Filter, Download, Calendar, User, Activity, AlertCircle, RefreshCw } from 'lucide-react';
+import { Search, Download, User, Activity, AlertCircle, RefreshCw } from 'lucide-react';
 
 const AuditLogs = () => {
     const [logs, setLogs] = useState([]);
@@ -15,31 +15,7 @@ const AuditLogs = () => {
         resource: 'all'
     });
 
-    useEffect(() => {
-        fetchLogs();
-        // Set up auto-refresh every 10 seconds for real-time feel
-        const interval = setInterval(fetchLogs, 10000);
-        return () => clearInterval(interval);
-    }, []);
-
-    useEffect(() => {
-        applyFilters();
-    }, [logs, filters]);
-
-    const fetchLogs = async () => {
-        try {
-            const res = await axios.get(`${process.env.REACT_APP_BACKEND_URL}/api/admin/audit-logs`, {
-                withCredentials: true
-            });
-            setLogs(res.data);
-            setLoading(false);
-        } catch (err) {
-            console.error('Failed to fetch audit logs:', err);
-            setLoading(false);
-        }
-    };
-
-    const applyFilters = () => {
+    const applyFilters = useCallback(() => {
         let filtered = [...logs];
 
         // Search filter
@@ -80,7 +56,33 @@ const AuditLogs = () => {
         }
 
         setFilteredLogs(filtered);
-    };
+    }, [logs, filters]);
+
+    useEffect(() => {
+        fetchLogs();
+        // Set up auto-refresh every 10 seconds for real-time feel
+        const interval = setInterval(fetchLogs, 10000);
+        return () => clearInterval(interval);
+    }, []);
+
+    useEffect(() => {
+        applyFilters();
+    }, [applyFilters]);
+
+    const fetchLogs = async () => {
+        try {
+            const res = await axios.get(`${process.env.REACT_APP_BACKEND_URL}/api/admin/audit-logs`, {
+                withCredentials: true
+            });
+            setLogs(res.data);
+            setLoading(false);
+        } catch (err) {
+            console.error('Failed to fetch audit logs:', err);
+            setLoading(false);
+        }
+    }
+
+        ;
 
     const exportToCSV = () => {
         const headers = ['Timestamp', 'User', 'Action', 'Resource', 'Description'];

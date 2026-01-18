@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Globe, MessageSquare, Shield, ExternalLink, MoreHorizontal, Search } from 'lucide-react';
+import { Globe, MessageSquare, Search } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const ActiveCompanies = () => {
