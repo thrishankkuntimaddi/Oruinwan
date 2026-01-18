@@ -153,3 +153,39 @@ export const apiFetch = async (url, options = {}) => {
         throw error;
     }
 };
+
+// ============================================
+// POLL API FUNCTIONS
+// ============================================
+
+export const pollApi = {
+    // Create a new poll
+    create: async (channelId, pollData) => {
+        return api.post('/api/polls', {
+            channelId,
+            ...pollData
+        });
+    },
+
+    // Get polls for a channel
+    getByChannel: async (channelId) => {
+        return api.get(`/api/polls/channel/${channelId}`);
+    },
+
+    // Vote on a poll
+    vote: async (pollId, optionIds) => {
+        return api.post(`/api/polls/${pollId}/vote`, {
+            optionIds
+        });
+    },
+
+    // Delete a poll
+    delete: async (pollId) => {
+        return api.delete(`/api/polls/${pollId}`);
+    },
+
+    // Close a poll
+    close: async (pollId) => {
+        return api.patch(`/api/polls/${pollId}/close`);
+    }
+};
