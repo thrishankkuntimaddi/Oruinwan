@@ -12,7 +12,7 @@ const { logAction } = require("../utils/historyLogger");
 exports.getUpdates = async (req, res) => {
     try {
         const userId = req.user.sub;
-        const { workspaceId, message, type, priority, mentions = [], attachments = [], title } = req.body;
+        const { workspaceId, type, priority, limit = 50 } = req.query;
 
         const workspace = await Workspace.findById(workspaceId);
         if (!workspace) {
@@ -60,7 +60,8 @@ exports.postUpdate = async (req, res) => {
             type = "general",
             priority = "normal",
             mentions = [],
-            attachments = []
+            attachments = [],
+            title
         } = req.body;
 
         if (!message || !workspaceId) {

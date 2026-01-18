@@ -170,9 +170,6 @@ exports.signup = async (req, res) => {
     }
 
     // If no company match, user remains personal
-    if (!companyId) {
-
-    }
 
     // ==================== CREATE USER ====================
 
@@ -258,10 +255,6 @@ exports.signup = async (req, res) => {
     // ==================== EMAIL VERIFICATION (OPTIONAL) ====================
 
     const verifyUrl = `${process.env.FRONTEND_URL}/verify-email?token=${rawToken}&email=${encodeURIComponent(email)}`;
-
-    if (companyId) {
-
-    }
 
     // Send verification email (or log to console in development)
     try {

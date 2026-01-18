@@ -1,6 +1,5 @@
 // server/middleware/permissionMiddleware.js
 const Company = require('../models/Company');
-const Department = require('../models/Department');
 const User = require('../models/User');
 
 /**

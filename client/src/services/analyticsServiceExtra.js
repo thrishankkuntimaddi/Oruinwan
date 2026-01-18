@@ -1,3 +1,5 @@
+import api from './api';
+
 /**
  * Get comprehensive analytics for company  
  * @param {string} companyId 
@@ -5,9 +7,8 @@
  * @returns {Promise}
  */
 export const getCompanyAnalytics = async (companyId, timeRange = '30d') => {
-    const response = await axios.get(
-        `${API_BASE}/api/analytics/company/${companyId}?timeRange=${timeRange}`,
-        getAuthHeader()
+    const response = await api.get(
+        `/api/analytics/company/${companyId}?timeRange=${timeRange}`
     );
     return response.data;
 };

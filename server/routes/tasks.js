@@ -4,7 +4,6 @@ const express = require("express");
 const router = express.Router();
 const taskController = require("../controllers/taskController");
 const requireAuth = require("../middleware/auth");
-const { requireWorkspaceAccess } = require("../middleware/permissions");
 
 // All routes require authentication
 

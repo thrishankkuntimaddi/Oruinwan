@@ -14,24 +14,7 @@ const PlatformChat = () => {
     const messagesEndRef = useRef(null);
     const { showToast } = useToast();
 
-    useEffect(() => {
-        fetchCompanies();
-    }, []);
-
-    useEffect(() => {
-        if (companyId && companies.length > 0) {
-            const company = companies.find(c => c._id === companyId);
-            if (company) {
-                setSelectedCompany(company);
-                fetchMessages(companyId);
-            }
-        }
-    }, [companyId, companies, fetchMessages]);
-
-    useEffect(() => {
-        scrollToBottom();
-    }, [messages]);
-
+    // Define functions before useEffects that use them
     const fetchCompanies = async () => {
         try {
             const res = await axios.get(`${process.env.REACT_APP_BACKEND_URL}/api/admin/active-companies`, {
@@ -54,6 +37,25 @@ const PlatformChat = () => {
             showToast('Failed to load messages', 'error');
         }
     }, [showToast]);
+
+    useEffect(() => {
+        fetchCompanies();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    useEffect(() => {
+        if (companyId && companies.length > 0) {
+            const company = companies.find(c => c._id === companyId);
+            if (company) {
+                setSelectedCompany(company);
+                fetchMessages(companyId);
+            }
+        }
+    }, [companyId, companies, fetchMessages]);
+
+    useEffect(() => {
+        scrollToBottom();
+    }, [messages]);
 
     const sendMessage = async (e) => {
         e.preventDefault();

@@ -1,8 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const mongoose = require('mongoose');
 const SupportTicket = require('../models/SupportTicket');
-const Company = require('../models/Company');
 const logger = require('../utils/logger');
 
 // Middleware to ensure user is logged in

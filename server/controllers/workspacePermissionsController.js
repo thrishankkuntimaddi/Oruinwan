@@ -1,3 +1,5 @@
+const Workspace = require('../models/Workspace');
+
 // Update workspace permissions (admin/owner only)
 // PUT /api/workspaces/:id/permissions
 exports.updateWorkspacePermissions = async (req, res) => {

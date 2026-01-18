@@ -363,7 +363,7 @@ exports.exitChannel = async (req, res) => {
     }
 
     // Check if user is a member
-    const isMember = channel.members.some(m => {
+    const isUserMember = channel.members.some(m => {
       const memberId = m.user?._id ? m.user._id.toString() : m.user.toString();
       return memberId === userId.toString();
     });
@@ -624,7 +624,7 @@ exports.getChannelDetails = async (req, res) => {
     }
 
     // Check if user is a member
-    const isMember = channel.members.some(m => {
+    const isUserMember = channel.members.some(m => {
       const memberId = m.user?._id ? m.user._id.toString() : m.user.toString();
       return memberId === userId.toString();
     });
