@@ -19,7 +19,7 @@ const ProfileQuickSettings = ({ onClose }) => {
     const { company } = useCompany();
 
     const [view, setView] = useState('main'); // main, edit, theme, security
-    const [isEditing, setIsEditing] = useState(false);
+    const [, setIsEditing] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
 
     const [formData, setFormData] = useState({

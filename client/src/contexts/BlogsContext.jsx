@@ -14,7 +14,7 @@ export const BlogsProvider = ({ children }) => {
     const location = useLocation();
 
     const [posts, setPosts] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const [, setLoading] = useState(true);
     const [activeFilter, setActiveFilter] = useState("all");
 
     // Extract workspaceId from URL (still useful for creation context)

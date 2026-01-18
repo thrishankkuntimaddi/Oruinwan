@@ -39,7 +39,7 @@ const WorkspaceSelect = () => {
     // Create Modal State
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [createStep, setCreateStep] = useState(1);
-    const [addMembersLater, setAddMembersLater] = useState(false);
+    const [, setAddMembersLater] = useState(false);
     const [nameError, setNameError] = useState("");
     const [createData, setCreateData] = useState({
         name: "",

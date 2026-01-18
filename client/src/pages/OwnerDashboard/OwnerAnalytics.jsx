@@ -21,9 +21,9 @@ const OwnerAnalytics = () => {
     const [timeRange, setTimeRange] = useState('30d'); // 7d, 30d, 90d
 
     // Data states
-    const [activityData, setActivityData] = useState(null);
-    const [securityData, setSecurityData] = useState(null);
-    const [billingData, setBillingData] = useState(null);
+    const [, setActivityData] = useState(null);
+    const [, setSecurityData] = useState(null);
+    const [, setBillingData] = useState(null);
 
     const fetchData = useCallback(async () => {
         try {
