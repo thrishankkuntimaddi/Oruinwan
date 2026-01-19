@@ -67,6 +67,145 @@ First-class E2EE implementation:
 
 ---
 
+## Socket Layer
+
+### The 3 Primitives Model
+
+All real-time features are built on **3 core primitives**:
+
+```
+1. CONVERSATION - A context for communication (channel, DM, thread)
+2. MESSAGE - Content sent within a conversation
+3. REALTIME EVENT - Live updates and state changes
+```
+
+This simplification eliminates confusion about "where does X go?"—everything maps to one of these primitives.
+
+### Architecture
+
+```
+Client                    Server
+  |                         |
+  | conversation:event      |
+  |------------------------>|
+  |                         | Process
+  |                         | Validate
+  |                         | Broadcast
+  | <-----------------------|
+  | new-message (legacy)    |
+  | conversation:event      |
+```
+
+### Modular Socket Structure
+
+**Path**: `server/src/socket/`
+
+Socket handlers are organized by domain:
+
+```
+server/src/socket/
+├── index.js                       # Main entry point
+├── handlers/
+│   ├── messages.socket.js         # Message events
+│   ├── meetings.socket.js         # Meeting events
+│   ├── huddles.socket.js          # Huddle/voice events
+│   ├── presence.socket.js         # Online/offline status
+│   ├── polls.socket.js            # Poll events
+│   └── admin.socket.js            # Admin notifications
+└── services/
+    └── socketEmitter.js           # Centralized event emitter
+```
+
+### Socket Domains
+
+#### Messages Domain
+**Handler**: `handlers/messages.socket.js`  
+**Responsibility**: Chat messages, typing indicators, conversation rooms
+
+**Events**:
+- `conversation:join` / `conversation:leave` - Room management
+- `conversation:event` - Unified event (NEW)
+- `chat:typing` - Typing indicators
+- `new-message` - Legacy message broadcast
+
+#### Meetings Domain
+**Handler**: `handlers/meetings.socket.js`  
+**Responsibility**: Video call signaling and state
+
+**Events**:
+- `meeting:join` / `meeting:leave`
+- `meeting:ended`
+
+#### Huddles Domain
+**Handler**: `handlers/huddles.socket.js`  
+**Responsibility**: Voice channel state
+
+**Events**:
+- `huddle:start` / `huddle:join` / `huddle:leave`
+- `huddle:audio_toggle`
+- `huddle:ended`
+
+#### Presence Domain
+**Handler**: `handlers/presence.socket.js`  
+**Responsibility**: User online/offline/away status
+
+**Events**:
+- `user:online` / `user:offline`
+- `user:status_change`
+- `workspace:join` / `workspace:leave`
+
+#### Polls Domain
+**Handler**: `handlers/polls.socket.js`  
+**Responsibility**: Poll lifecycle
+
+**Events**:
+- `poll:created` / `poll:voted`
+- `poll:closed` / `poll:deleted`
+
+#### Admin Domain
+**Handler**: `handlers/admin.socket.js`  
+**Responsibility**: Admin notifications and system events
+
+**Events**:
+- `admin:join` - Join admin room
+- `admin:dm:send` - Admin DM to company
+- `audit:new` - Audit log updates
+- `ticket:created` / `ticket:updated`
+
+### Socket Emitter Service
+
+**Path**: `server/src/socket/services/socketEmitter.js`
+
+Centralized service for emitting socket events from backend code:
+
+```javascript
+const { getSocketEmitter } = require('./src/socket/services/socketEmitter');
+
+// In a service
+const emitter = getSocketEmitter();
+emitter.emitNewMessage(channelId, 'channel', message);
+```
+
+**Benefits**:
+- Type-safe emission
+- Consistent event structure
+- No need to pass `io` everywhere
+- Documented methods
+
+### Contract Documentation
+
+**See**: [`SOCKET_CONTRACT.md`](file:///Users/thrishankkuntimaddi/Documents/Chttrix/ChttrixCollab/SOCKET_CONTRACT.md)
+
+Every socket event is documented with:
+- Purpose
+- Payload structure
+- Example usage
+- Room naming
+
+---
+
+---
+
 ## Legacy Code
 
 ### ⚠️ FROZEN - Do Not Modify

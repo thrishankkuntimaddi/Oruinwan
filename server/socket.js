@@ -1,8 +1,17 @@
 // server/socket.js
-// Socket.io handlers for real-time features
+/**
+ * Socket.io Main Handler
+ * 
+ * This file delegates to the modular socket architecture in src/socket/
+ * Legacy events are kept here for backward compatibility during migration.
+ * 
+ * @status migrating
+ * @target server/src/socket/
+ */
 
 const AuditLog = require('./models/AuditLog');
 const User = require('./models/User');
+const registerSocketHandlers = require('./src/socket');
 
 /**
  * Register all socket handlers
@@ -12,10 +21,15 @@ const User = require('./models/User');
 function registerChatHandlers(io, socket) {
     console.log(`✅ Socket connected: ${socket.user.id}`);
 
-    // Join user-specific room for private notifications
-    socket.join(`user:${socket.user.id}`);
+    // ==================== NEW MODULAR ARCHITECTURE ====================
+    // Delegate to modular handlers in src/socket/
+    registerSocketHandlers(io, socket);
 
-    // Admin-specific rooms
+    // ==================== LEGACY HANDLERS (Backward Compatibility) ====================
+    // These are kept for backward compatibility
+    // They will be removed once all clients migrate to new events
+
+    // Admin-specific rooms (legacy)
     socket.on('admin:join', async () => {
         try {
             const user = await User.findById(socket.user.id);
@@ -28,7 +42,7 @@ function registerChatHandlers(io, socket) {
         }
     });
 
-    // Real-time Direct Messages (Admin ↔ Company)
+    // Real-time Direct Messages (Admin ↔ Company) - legacy
     socket.on('admin:dm:send', async (data) => {
         try {
             const { companyId, message } = data;
@@ -55,23 +69,23 @@ function registerChatHandlers(io, socket) {
         }
     });
 
-    // Join company room (for receiving admin messages)
+    // Join company room (for receiving admin messages) - legacy
     socket.on('company:join', async (companyId) => {
         socket.join(`company:${companyId}`);
         console.log(`🏢 User ${socket.user.id} joined company:${companyId}`);
     });
 
-    // Broadcast new audit log to all admins
+    // Broadcast new audit log to all admins - legacy
     socket.on('audit:new', async (logData) => {
         io.to('chttrix_admins').emit('audit:update', logData);
     });
 
-    // System health update
+    // System health update - legacy
     socket.on('health:update', (metrics) => {
         io.to('chttrix_admins').emit('health:metrics', metrics);
     });
 
-    // Ticket notifications
+    // Ticket notifications - legacy
     socket.on('ticket:created', (ticketData) => {
         io.to('chttrix_admins').emit('ticket:new', ticketData);
     });
@@ -80,22 +94,17 @@ function registerChatHandlers(io, socket) {
         io.to('chttrix_admins').emit('ticket:update', ticketData);
     });
 
-    // Broadcast notifications
+    // Broadcast notifications - legacy
     socket.on('broadcast:sent', (broadcastData) => {
         io.to('chttrix_admins').emit('broadcast:complete', broadcastData);
     });
 
-    // Company registration notification
+    // Company registration notification - legacy
     socket.on('company:registered', (companyData) => {
         io.to('chttrix_admins').emit('company:pending', companyData);
     });
 
-    // Handle disconnection
-    socket.on('disconnect', () => {
-        console.log(`❌ Socket disconnected: ${socket.user.id}`);
-    });
-
-    // Generic chat handlers (existing functionality)
+    // Generic chat handlers (existing functionality) - legacy
     socket.on('chat:join', (channelId) => {
         socket.join(`channel:${channelId}`);
         console.log(`💬 User ${socket.user.id} joined channel:${channelId}`);
@@ -192,6 +201,12 @@ function registerChatHandlers(io, socket) {
             socket.emit('error', { message: 'Failed to process event' });
         }
     });
+
+    // Handle disconnection
+    socket.on('disconnect', () => {
+        console.log(`❌ Socket disconnected: ${socket.user.id}`);
+    });
 }
 
 module.exports = registerChatHandlers;
+

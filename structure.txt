@@ -2,6 +2,7 @@
 ├── ARCHITECTURE.md
 ├── MIGRATION.md
 ├── README.md
+├── SOCKET_CONTRACT.md
 ├── client
 │   ├── build
 │   │   ├── ChttrixAI-animation.mp4
@@ -250,8 +251,13 @@
 │   │   │       ├── encryption
 │   │   │       │   └── chatEncryption.js
 │   │   │       ├── hooks
+│   │   │       │   ├── useConversation.js
+│   │   │       │   ├── useMessages.js
+│   │   │       │   └── useRealtimeEvents.js
 │   │   │       ├── index.js
-│   │   │       └── services
+│   │   │       ├── services
+│   │   │       └── types
+│   │   │           └── primitives.js
 │   │   ├── pages
 │   │   │   ├── AcceptInvite.jsx
 │   │   │   ├── AdminDashboard
@@ -588,6 +594,16 @@
 │   │   │   │   └── responseHelper.js
 │   │   │   └── validators
 │   │   └── socket
+│   │       ├── handlers
+│   │       │   ├── admin.socket.js
+│   │       │   ├── huddles.socket.js
+│   │       │   ├── meetings.socket.js
+│   │       │   ├── messages.socket.js
+│   │       │   ├── polls.socket.js
+│   │       │   └── presence.socket.js
+│   │       ├── index.js
+│   │       └── services
+│   │           └── socketEmitter.js
 │   ├── uploads
 │   │   └── verification_docs
 │   │       ├── 1768128404302_Screenshot_2026-01-11_at_3.54.20_PM.png
@@ -623,4 +639,4 @@
 ├── structure.txt
 └── verify-security.sh
 
-130 directories, 494 files
+133 directories, 507 files
