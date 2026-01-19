@@ -6,7 +6,7 @@ import {
 } from "lucide-react";
 import { useNotes } from "../../contexts/NotesContext";
 import { useToast } from "../../contexts/ToastContext";
-import ConfirmationModal from "../../components/ui/ConfirmationModal";
+import ConfirmationModal from "../../shared/components/ui/ConfirmationModal";
 import { uploadNoteAttachment } from "../../utils/uploadHelpers";
 
 const Notes = () => {

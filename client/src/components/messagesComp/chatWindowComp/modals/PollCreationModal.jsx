@@ -51,18 +51,18 @@ export default function PollCreationModal({ onClose, onCreate }) {
         return Object.keys(newErrors).length === 0;
     };
 
-    const handleSubmit = () => {
+    const handleSubmit = async () => {
         if (!validate()) return;
 
         const validOptions = options.filter(opt => opt.trim());
 
-        onCreate({
+        await onCreate({
             question: question.trim(),
             options: validOptions.map(opt => opt.trim()),
             type
         });
 
-        onClose();
+        // Don't close modal here - let the parent component close it on success
     };
 
     return (

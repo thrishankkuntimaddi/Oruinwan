@@ -2,7 +2,7 @@ import React from 'react';
 import { ChevronRight } from 'lucide-react';
 
 const SectionHeader = ({ label, isOpen, onClick, onAdd }) => (
-    <div className="flex items-center justify-between px-4 py-2 group cursor-pointer hover:text-gray-900 dark:hover:text-gray-200 text-gray-500 dark:text-gray-400 mt-2">
+    <div className="flex items-center justify-between px-4 py-2 group cursor-pointer hover:text-gray-900 dark:hover:text-gray-200 text-gray-500 dark:text-gray-400">
         <div className="flex items-center" onClick={onClick}>
             <span className={`mr-1 transition-transform duration-200 ${isOpen ? "rotate-90" : ""}`}>
                 <ChevronRight size={12} />

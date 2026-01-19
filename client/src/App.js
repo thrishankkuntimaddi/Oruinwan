@@ -22,6 +22,7 @@ import MessagesPanel from "./components/layout/panels/MessagesPanel";
 import TasksPanel from "./components/layout/panels/TasksPanel";
 import NotesPanel from "./components/layout/panels/NotesPanel";
 import UpdatesPanel from "./components/layout/panels/UpdatesPanel";
+import MeetingsPanel from "./components/layout/panels/MeetingsPanel";
 
 // Pages (Protected)
 import Home from "./pages/SidebarComp/Home";
@@ -29,6 +30,7 @@ import Messages from "./pages/SidebarComp/Messages";
 import MyTasks from "./pages/SidebarComp/MyTasks";
 import Notes from "./pages/SidebarComp/Notes";
 import Updates from "./pages/SidebarComp/Updates";
+import Meetings from "./pages/SidebarComp/Meetings";
 import WorkspaceSelect from "./pages/WorkspaceSelect";
 import FeatureShowcase from "./pages/FeatureShowcase";
 
@@ -365,6 +367,22 @@ function App() {
                                   <RequireWorkspace>
                                     <MainLayout sidePanel={<UpdatesPanel />}>
                                       <Updates />
+                                    </MainLayout>
+                                  </RequireWorkspace>
+                                </WorkspaceProvider>
+                              </RequireAuth>
+                            }
+                          />
+
+                          {/* Huddles / Meetings */}
+                          <Route
+                            path="/workspace/:workspaceId/huddles"
+                            element={
+                              <RequireAuth>
+                                <WorkspaceProvider>
+                                  <RequireWorkspace>
+                                    <MainLayout sidePanel={<MeetingsPanel />}>
+                                      <Meetings />
                                     </MainLayout>
                                   </RequireWorkspace>
                                 </WorkspaceProvider>

@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
-import { MessageCircle, Plus, Search, Trash2, X, Settings2, CheckSquare, Megaphone } from 'lucide-react';
+import { Plus, Search, Trash2, CheckSquare, Megaphone, Settings2, X } from "lucide-react";
 import { useWorkspace } from "../../../contexts/WorkspaceContext";
 import { useSocket } from "../../../contexts/SocketContext";
 import { useToast } from "../../../contexts/ToastContext";
 import { messageService } from "../../../services/messageService";
 import NewDMModal from "../../messagesComp/NewDMModal";
 import BroadcastModal from "../../messagesComp/BroadcastModal";
-import ConfirmationModal from "../../ui/ConfirmationModal";
+import ConfirmationModal from "../../../shared/components/ui/ConfirmationModal";
 import api from "../../../services/api";
 
 const MessagesPanel = ({ title }) => {
@@ -269,9 +269,8 @@ const MessagesPanel = ({ title }) => {
     return (
         <div className="flex flex-col h-full bg-gray-50/50 dark:bg-gray-900">
             {/* Header */}
-            <div className="h-16 flex items-center justify-between px-5 bg-white dark:bg-gray-900 shrink-0">
-                <h2 className="font-bold text-xl text-gray-800 dark:text-gray-100 tracking-tight flex items-center gap-2">
-                    <MessageCircle className="text-blue-600" size={20} />
+            <div className="h-16 flex items-center justify-between px-5 bg-white dark:bg-gray-900 shrink-0 border-b border-gray-200 dark:border-gray-800">
+                <h2 className="font-bold text-lg text-gray-800 dark:text-gray-100 tracking-tight">
                     Messages
                 </h2>
                 <div className="flex items-center gap-1">
@@ -294,7 +293,7 @@ const MessagesPanel = ({ title }) => {
             </div>
 
             {/* Search */}
-            <div className="px-4 pt-4">
+            <div className="px-4 pt-6">
                 <div className="relative">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
                     <input

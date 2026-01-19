@@ -184,7 +184,10 @@ const UserSchema = new mongoose.Schema(
     suspensionReason: { type: String },
 
     // Favorites (channels and DMs)
-    favorites: [{ type: String }], // Array of channel/conversation IDs
+favorites: [{
+  chatId: mongoose.Schema.Types.ObjectId,
+  chatType: { type: String, enum: ["dm", "channel"] }
+}], 
 
     // Blocked Users
     blockedUsers: [{
@@ -193,11 +196,12 @@ const UserSchema = new mongoose.Schema(
     }],
 
     // Muted Chats (DMs and Channels)
-    mutedChats: [{
-      chatId: { type: String, required: true }, // DM session ID or channel ID
-      chatType: { type: String, enum: ["dm", "channel"], required: true },
-      mutedAt: { type: Date, default: Date.now }
-    }],
+mutedChats: [{
+  chatId: mongoose.Schema.Types.ObjectId,
+  chatType: { type: String, enum: ["dm", "channel"] },
+  mutedUntil: Date
+}], 
+
 
     // Status
     isActive: { type: Boolean, default: true },

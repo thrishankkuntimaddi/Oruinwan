@@ -1,5 +1,5 @@
 import React from "react";
-import ConfirmationModal from "../../../ui/ConfirmationModal";
+import ConfirmationModal from "../../../../shared/components/ui/ConfirmationModal";
 
 export default function DeleteChatDialog({ isOpen, onConfirm, onCancel }) {
     return (

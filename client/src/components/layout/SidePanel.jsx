@@ -5,9 +5,9 @@ import CreateChannelModal from "../messagesComp/CreateChannelModal";
 
 const SidePanel = ({ title = "Workspace", children }) => {
     return (
-        <div className="w-64 bg-gray-50 flex flex-col text-gray-700">
+        <div className="w-full h-full bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 flex flex-col text-gray-700 dark:text-gray-300">
             {/* Header */}
-            <div className="h-12 flex items-center justify-between px-4 font-semibold text-gray-900 hover:bg-gray-100 cursor-pointer transition-colors group">
+            <div className="h-12 flex items-center justify-between px-4 font-semibold text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer transition-colors group">
                 <div className="flex items-center">
                     {title} <span className="ml-2 text-xs text-gray-500">▼</span>
                 </div>
@@ -23,7 +23,7 @@ const SidePanel = ({ title = "Workspace", children }) => {
             </div>
 
             {/* Content Area (Scrollable) */}
-            <div className="flex-1 overflow-y-auto py-4 custom-scrollbar">
+            <div className="flex-1 overflow-y-auto py-2 custom-scrollbar">
                 {children}
             </div>
         </div>
@@ -31,7 +31,7 @@ const SidePanel = ({ title = "Workspace", children }) => {
 };
 
 export const ChannelList = () => {
-    const { showToast } = useToast();
+    const { } = useToast();
     const navigate = useNavigate();
     const { workspaceId } = useParams(); // Get workspaceId from URL
     const [showCreateChannelModal, setShowCreateChannelModal] = useState(false);
@@ -112,7 +112,7 @@ export const ChannelList = () => {
                     label="Direct Messages"
                     isOpen={expanded.dms}
                     onClick={() => toggle("dms")}
-                    onAdd={(e) => { e.stopPropagation(); showToast("New DM feature coming soon!", "info"); }}
+                    onAdd={(e) => { e.stopPropagation(); /* DM feature coming soon */ }}
                 />
                 {expanded.dms && (
                     <div className="mt-1 space-y-0.5">

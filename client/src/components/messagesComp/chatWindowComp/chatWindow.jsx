@@ -6,11 +6,11 @@ import "./chatWindow.css";
 import Header from "./header/header.jsx";
 import ContactInfoModal from "./modals/contactInfoModal.jsx";
 import ContactShareModal from "./modals/contactShareModal.jsx";
-import Toast from "../../ui/Toast.jsx";
+import Toast from "../../../shared/components/ui/Toast";
 import ForwardMessageModal from "./modals/ForwardMessageModal.jsx";
 import ChannelManagementModal from "../ChannelManagementModal.jsx";
 import MessageInfoModal from "./modals/MessageInfoModal.jsx";
-import ConfirmationModal from "../../common/ConfirmationModal.jsx";
+import ConfirmationModal from "../../../shared/components/ui/ConfirmationModal";
 
 
 import ChannelTabs from "./tabs/ChannelTabs.jsx";
@@ -22,7 +22,7 @@ import FooterInput from "./footer/footerInput.jsx";
 
 import { pickFile } from "./helpers/helpers.js";
 
-import api from "../../../services/api";
+import api, { pollApi } from "../../../services/api";
 import { jwtDecode } from "jwt-decode";
 import { useAuth } from "../../../contexts/AuthContext";
 import { useSocket } from "../../../contexts/SocketContext";
@@ -118,7 +118,7 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
       senderId,
       senderName: senderObj.username || (me ? "You" : "Unknown"),
       senderAvatar: senderObj.profilePicture || null,
-      text: m.text || "",
+      text: m.payload?.text || m.text || "",
       ts: m.createdAt,
       repliedToId: m.threadParent?._id || m.threadParent || null,
       repliedTo: m.threadParent && typeof m.threadParent === 'object' ? {
@@ -509,7 +509,6 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
           });
         } else if (isUniversal) {
           // Universal deletion - mark as deleted but keep in list
-          console.log('� Updating messages for universal delete');
           setMessages((prev) => {
             const updated = prev.map((m) => {
               // Check both id and backend._id
@@ -708,10 +707,8 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
       if (socket.connected) {
 
         if (chat.type === "dm" && !chat.isNew) {
-          console.log(`� [ChatWindow] Joining DM room (immediate): ${chat.id}`);
           socket.emit("join-dm", { dmSessionId: chat.id });
         } else if (chat.type === "channel") {
-          console.log(`� [ChatWindow] Joining channel room (immediate): ${chat.id}`);
           socket.emit("join-channel", { channelId: chat.id });
         }
       }
@@ -759,8 +756,6 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
 
     // Subscribe to global message broadcasts from SocketContext
     const unsubscribe = addMessageListener((eventName, data) => {
-      console.log(`🔔 [ChatWindow] SocketContext broadcast: ${eventName}`, data);
-
       // Handle new messages from SocketContext broadcast
       if (eventName === 'new-message') {
         const { message } = data;

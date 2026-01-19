@@ -1,6 +1,7 @@
 const Poll = require("../models/Poll");
 const Channel = require("../models/Channel");
 const User = require("../models/User");
+const { sendSuccess, sendError, sendNotFound, sendForbidden, sendValidationError } = require('../src/shared/utils/responseHelper');
 
 /**
  * Create a new poll in a channel
@@ -13,17 +14,17 @@ exports.createPoll = async (req, res) => {
 
         // Validation
         if (!question || !options || !Array.isArray(options)) {
-            return res.status(400).json({ error: "Question and options are required" });
+            return sendValidationError(res, ["Question and options are required"]);
         }
 
         if (options.length < 2 || options.length > 10) {
-            return res.status(400).json({ error: "Poll must have between 2 and 10 options" });
+            return sendValidationError(res, ["Poll must have between 2 and 10 options"]);
         }
 
         // Check for duplicate options
         const uniqueOptions = new Set(options.map(opt => opt.trim().toLowerCase()));
         if (uniqueOptions.size !== options.length) {
-            return res.status(400).json({ error: "Poll options must be unique" });
+            return sendValidationError(res, ["Poll options must be unique"]);
         }
 
         // Verify channel exists and user is a member
@@ -33,7 +34,7 @@ exports.createPoll = async (req, res) => {
         }
 
         if (!channel.isMember(userId)) {
-            return res.status(403).json({ error: "You must be a channel member to create polls" });
+            return sendForbidden(res, "You must be a channel member to create polls");
         }
 
         // Create poll
@@ -49,13 +50,39 @@ exports.createPoll = async (req, res) => {
 
         await poll.save();
 
+        // Create a message that references this poll (WhatsApp-style)
+        const Message = require('../models/Message');
+        const message = new Message({
+            type: 'poll',
+            sender: userId,
+            channel: channelId,
+            workspace: channel.workspace,
+            company: channel.company,
+            payload: {
+                text: `📊 Poll: ${question.trim()}`,
+                poll: poll._id
+            }
+        });
+
+        await message.save();
+
         // Populate creator info for response
         await poll.populate('createdBy', 'username email profilePicture');
+        await message.populate('sender', 'username email profilePicture');
 
-        res.status(201).json({ poll });
+        // ✅ REAL-TIME BROADCAST: Notify all channel members
+        const io = req.app?.get('io');
+        if (io) {
+            io.to(`channel_${channelId}`).emit('new-message', {
+                message,
+                clientTempId: null
+            });
+        }
+
+        sendSuccess(res, { poll, message }, 201);
     } catch (err) {
         console.error("Error creating poll:", err);
-        res.status(500).json({ error: "Failed to create poll" });
+        sendError(res, "Failed to create poll");
     }
 };
 
@@ -71,21 +98,21 @@ exports.getPollsByChannel = async (req, res) => {
         // Verify channel exists and user is a member
         const channel = await Channel.findById(channelId);
         if (!channel) {
-            return res.status(404).json({ error: "Channel not found" });
+            return sendNotFound(res, 'Channel');
         }
 
         if (!channel.isMember(userId)) {
-            return res.status(403).json({ error: "You must be a channel member to view polls" });
+            return sendForbidden(res, "You must be a channel member to view polls");
         }
 
         const polls = await Poll.find({ channel: channelId, isActive: true })
             .populate('createdBy', 'username email profilePicture')
             .sort({ createdAt: -1 });
 
-        res.json({ polls });
+        sendSuccess(res, { polls });
     } catch (err) {
         console.error("Error fetching polls:", err);
-        res.status(500).json({ error: "Failed to fetch polls" });
+        sendError(res, "Failed to fetch polls");
     }
 };
 
@@ -100,7 +127,7 @@ exports.vote = async (req, res) => {
         const userId = req.user.sub;
 
         if (!optionIds || !Array.isArray(optionIds) || optionIds.length === 0) {
-            return res.status(400).json({ error: "At least one option must be selected" });
+            return sendValidationError(res, ["At least one option must be selected"]);
         }
 
         const poll = await Poll.findById(pollId);
@@ -109,25 +136,25 @@ exports.vote = async (req, res) => {
         }
 
         if (!poll.isActive) {
-            return res.status(400).json({ error: "This poll is closed" });
+            return sendValidationError(res, ["This poll is closed"]);
         }
 
         // Verify user is channel member
         const channel = await Channel.findById(poll.channel);
         if (!channel || !channel.isMember(userId)) {
-            return res.status(403).json({ error: "You must be a channel member to vote" });
+            return sendForbidden(res, "You must be a channel member to vote");
         }
 
         // Validate option IDs exist
         const validOptionIds = poll.options.map(opt => opt._id.toString());
         const invalidOptions = optionIds.filter(id => !validOptionIds.includes(id));
         if (invalidOptions.length > 0) {
-            return res.status(400).json({ error: "Invalid option IDs" });
+            return sendValidationError(res, ["Invalid option IDs"]);
         }
 
         // Single-choice validation
         if (poll.type === 'single' && optionIds.length > 1) {
-            return res.status(400).json({ error: "Only one option allowed for single-choice polls" });
+            return sendValidationError(res, ["Only one option allowed for single-choice polls"]);
         }
 
         // Remove user's previous votes
@@ -150,10 +177,10 @@ exports.vote = async (req, res) => {
         // Populate for response
         await poll.populate('createdBy', 'username email profilePicture');
 
-        res.json({ poll });
+        sendSuccess(res, { poll });
     } catch (err) {
         console.error("Error voting on poll:", err);
-        res.status(500).json({ error: "Failed to vote" });
+        sendError(res, "Failed to vote");
     }
 };
 
@@ -177,15 +204,15 @@ exports.deletePoll = async (req, res) => {
         const isChannelAdmin = channel && channel.isAdmin(userId);
 
         if (!isCreator && !isChannelAdmin) {
-            return res.status(403).json({ error: "Only poll creator or channel admin can delete polls" });
+            return sendForbidden(res, "Only poll creator or channel admin can delete polls");
         }
 
         await Poll.findByIdAndDelete(pollId);
 
-        res.json({ message: "Poll deleted successfully", pollId });
+        sendSuccess(res, { message: "Poll deleted successfully", pollId });
     } catch (err) {
         console.error("Error deleting poll:", err);
-        res.status(500).json({ error: "Failed to delete poll" });
+        sendError(res, "Failed to delete poll");
     }
 };
 
@@ -209,16 +236,16 @@ exports.closePoll = async (req, res) => {
         const isChannelAdmin = channel && channel.isAdmin(userId);
 
         if (!isCreator && !isChannelAdmin) {
-            return res.status(403).json({ error: "Only poll creator or channel admin can close polls" });
+            return sendForbidden(res, "Only poll creator or channel admin can close polls");
         }
 
         poll.isActive = false;
         await poll.save();
         await poll.populate('createdBy', 'username email profilePicture');
 
-        res.json({ poll });
+        sendSuccess(res, { poll });
     } catch (err) {
         console.error("Error closing poll:", err);
-        res.status(500).json({ error: "Failed to close poll" });
+        sendError(res, "Failed to close poll");
     }
 };

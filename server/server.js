@@ -155,6 +155,27 @@ app.use(express.static(path.join(__dirname, "../client/build")));
 const requireAuth = require("./middleware/auth");
 app.use('/uploads', requireAuth, express.static(path.join(__dirname, 'uploads')));
 
+// ---------------------------------------------------------
+// SOCKET.IO SETUP (MUST BE BEFORE ROUTES)
+// ---------------------------------------------------------
+const httpServer = http.createServer(app);
+
+const io = new Server(httpServer, {
+  cors: {
+    origin: allowedOrigins,
+    methods: ["GET", "POST"],
+    credentials: true,
+  },
+});
+
+app.set("io", io);
+
+// ✅ CRITICAL: Middleware to attach Socket.io to request object for controllers
+app.use((req, res, next) => {
+  req.io = io;
+  next();
+});
+
 // Routes
 app.use("/api/auth", require("./routes/auth"));
 app.use("/api/admin", require("./middleware/auth"), require("./routes/admin"));
@@ -184,21 +205,26 @@ app.use("/api/audit", require("./routes/audit"));
 app.use("/api/managers", require("./routes/managers"));
 app.use("/api/analytics", require("./routes/analytics"));
 app.use("/api/ai", require("./routes/aiRoutes"));
+app.use("/api/keys", require("./routes/keys")); // E2EE key management (legacy)
 
-// ---------------------------------------------------------
-// SOCKET.IO SETUP
-// ---------------------------------------------------------
-const httpServer = http.createServer(app);
+// =============================================================
+// 🔥 NEW MODULAR ROUTES (Active as of Week 2)
+// =============================================================
+// These routes use the new domain-driven module architecture
+// located in src/modules/*
+// Legacy routes above still work for backward compatibility
 
-const io = new Server(httpServer, {
-  cors: {
-    origin: allowedOrigins,
-    methods: ["GET", "POST"],
-    credentials: true,
-  },
-});
+// Messages Module - Clean architecture with E2EE support
+app.use("/api/v2/messages", require("./src/modules/messages/messages.routes"));
 
-app.set("io", io);
+// Encryption Module - First-class E2EE key management
+app.use("/api/v2/encryption", require("./src/modules/encryption/encryption.routes"));
+
+// ✅ Module routes are now ACTIVE
+// - New code should use /api/v2/* endpoints
+// - Legacy /api/messages and /api/keys still work
+// - Gradual migration in progress
+// =============================================================
 
 // SOCKET AUTH (using Access Token)
 const jwt = require("jsonwebtoken");
@@ -206,14 +232,20 @@ const jwt = require("jsonwebtoken");
 io.use(async (socket, next) => {
   try {
     const token = socket.handshake.auth?.token;
-    if (!token) return next(new Error("No token"));
+    if (!token) {
+      console.log('❌ Socket auth: No token provided');
+      return next(new Error("No token"));
+    }
 
+    console.log('🔐 Socket auth: Verifying token...');
     const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
+    console.log('✅ Socket auth: Token valid for user:', decoded.sub);
     socket.user = { id: decoded.sub };
     next();
   } catch (err) {
-    if (err.name !== 'TokenExpiredError') {
-      logger.error("Socket auth error:", err.message);
+    console.error('❌ Socket auth error:', err.name, '-', err.message);
+    if (err.name === 'TokenExpiredError') {
+      console.log('⏰ Token expired at:', err.expiredAt);
     }
     next(new Error("Authentication failed"));
   }

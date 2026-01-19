@@ -29,7 +29,10 @@ export default function ThreadPanel({ parentMessage, onClose, socket, currentUse
             const token = localStorage.getItem("accessToken");
             const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
-            const res = await axios.get(`${API_BASE}/api/messages/thread/${parentMessage.id}`, { headers });
+            // Use _id as primary, id as fallback
+            const messageId = parentMessage._id || parentMessage.id;
+
+            const res = await axios.get(`${API_BASE}/api/messages/thread/${messageId}`, { headers });
 
             // If backend returns a parent, update it, otherwise keep the prop version
             if (res.data.parent) setParentMessageState(res.data.parent);
@@ -39,7 +42,7 @@ export default function ThreadPanel({ parentMessage, onClose, socket, currentUse
         } finally {
             setLoading(false);
         }
-    }, [parentMessage.id]);
+    }, [parentMessage._id, parentMessage.id]);
 
     // Load thread on mount
     useEffect(() => {
@@ -53,8 +56,9 @@ export default function ThreadPanel({ parentMessage, onClose, socket, currentUse
         const handleNewReply = (data) => {
             // Backend emits 'thread-reply' with { parentId, reply }
             const reply = data.reply || data; // Handle both structures if needed
+            const messageId = parentMessage._id || parentMessage.id;
 
-            if ((data.parentId === parentMessage.id) || (reply.replyTo === parentMessage.id) || (reply.threadParent === parentMessage.id)) {
+            if ((data.parentId === messageId) || (reply.replyTo === messageId) || (reply.threadParent === messageId)) {
                 setReplies((prev) => {
                     // 1. Check strict duplicate by ID
                     if (prev.find((r) => r._id === reply._id)) return prev;
@@ -86,7 +90,7 @@ export default function ThreadPanel({ parentMessage, onClose, socket, currentUse
             socket.off("thread-reply", handleNewReply);
             socket.off("receive-message", handleNewReply);
         };
-    }, [socket, parentMessage.id]);
+    }, [socket, parentMessage._id, parentMessage.id]);
 
     // Scroll to bottom on new reply
     useEffect(() => {
@@ -100,6 +104,7 @@ export default function ThreadPanel({ parentMessage, onClose, socket, currentUse
         try {
             const token = localStorage.getItem("accessToken");
             const headers = token ? { Authorization: `Bearer ${token}` } : {};
+            const messageId = parentMessage._id || parentMessage.id;
 
             // Optimistic update
             const tempId = "temp-" + Date.now();
@@ -109,13 +114,13 @@ export default function ThreadPanel({ parentMessage, onClose, socket, currentUse
                 sender: { _id: currentUserId, username: "You", profilePicture: null }, // Mock sender structure
                 senderId: currentUserId, // Fallback
                 createdAt: new Date().toISOString(),
-                threadParent: parentMessage.id,
+                threadParent: messageId,
             };
             setReplies((prev) => [...prev, optimisticReply]);
             setNewReply("");
 
             const res = await axios.post(
-                `${API_BASE}/api/messages/thread/${parentMessage.id}`,
+                `${API_BASE}/api/messages/thread/${messageId}`,
                 {
                     text: optimisticReply.text,
                 },
@@ -182,9 +187,19 @@ export default function ThreadPanel({ parentMessage, onClose, socket, currentUse
                                     <div
                                         className="h-7 w-7 bg-gray-200 rounded-md flex-shrink-0 bg-cover bg-center shadow-sm"
                                         style={{
-                                            backgroundImage: `url(${parentMessageState.sender?.profilePicture || parentMessageState.senderAvatar || parentMessageState.senderId?.profilePicture || "/default-avatar.png"})`,
+                                            backgroundImage: parentMessageState.sender?.profilePicture || parentMessageState.senderAvatar || parentMessageState.senderId?.profilePicture
+                                                ? `url(${parentMessageState.sender?.profilePicture || parentMessageState.senderAvatar || parentMessageState.senderId?.profilePicture})`
+                                                : 'none',
+                                            backgroundColor: !(parentMessageState.sender?.profilePicture || parentMessageState.senderAvatar || parentMessageState.senderId?.profilePicture)
+                                                ? '#6366f1' : undefined
                                         }}
-                                    />
+                                    >
+                                        {!(parentMessageState.sender?.profilePicture || parentMessageState.senderAvatar || parentMessageState.senderId?.profilePicture) && (
+                                            <div className="w-full h-full flex items-center justify-center text-white text-xs font-bold">
+                                                {(parentMessageState.senderName || 'U').charAt(0).toUpperCase()}
+                                            </div>
+                                        )}
+                                    </div>
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-baseline gap-2">
                                             <span className="font-bold text-xs text-gray-900 dark:text-gray-100">
@@ -216,7 +231,7 @@ export default function ThreadPanel({ parentMessage, onClose, socket, currentUse
                                 replies.map((reply) => {
                                     // Handle different sender structures (backend vs flattened)
                                     const senderName = reply.sender?.username || reply.senderName || reply.senderId?.username || "Unknown";
-                                    const senderPic = reply.sender?.profilePicture || reply.senderAvatar || reply.senderId?.profilePicture || "/default-avatar.png";
+                                    const senderPic = reply.sender?.profilePicture || reply.senderAvatar || reply.senderId?.profilePicture || "/default-avatar.svg";
 
                                     return (
                                         <div key={reply._id} className="flex items-start gap-3 group">

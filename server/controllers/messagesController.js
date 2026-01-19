@@ -1,3 +1,13 @@
+/**
+ * @owner messages-module
+ * @status legacy
+ * @remove-after 2026-03
+ * @deprecated Use src/modules/messages/ instead
+ * 
+ * FROZEN: This file is in legacy mode. Do NOT add new features here.
+ * All new message functionality should go to src/modules/messages/
+ */
+
 // server/controllers/messagesController.js
 const Message = require("../models/Message");
 const Channel = require("../models/Channel");
@@ -14,7 +24,7 @@ const { isMember } = require("../utils/memberHelpers");
 exports.sendDirectMessage = async (req, res) => {
   try {
     const senderId = req.user.sub;
-    const { receiverId, workspaceId, text, attachments, replyTo } = req.body;
+    const { receiverId, workspaceId, text, attachments, replyTo, ciphertext, messageIv, isEncrypted } = req.body;
 
     if (!receiverId)
       return res.status(400).json({ message: "receiverId required" });
@@ -46,17 +56,52 @@ exports.sendDirectMessage = async (req, res) => {
       await dmSession.save();
     }
 
-    const message = await Message.create({
+    // ============ E2EE: HANDLE ENCRYPTED CONTENT ============
+    const messageData = {
+      type: 'message',
       company: dmSession.company,
       workspace: workspaceId,
       dm: dmSession._id,
       sender: senderId,
-      text: text || "",
-      attachments: attachments || [],
-      threadParent: replyTo || null,
-    });
+      parentId: replyTo || null,
+    };
 
-    // Process AI Commands
+    // Check if this is an encrypted message
+    if (isEncrypted && ciphertext && messageIv) {
+      // Store encrypted message
+      messageData.ciphertext = ciphertext;
+      messageData.messageIv = messageIv;
+      messageData.isEncrypted = true;
+      messageData.encryptionVersion = 'aes-256-gcm-v1';
+      // For encrypted messages, don't store plaintext
+      messageData.payload = {
+        text: '', // Empty for encrypted messages
+        attachments: attachments || []
+      };
+      console.log('🔐 Storing encrypted DM message');
+    } else {
+      // Store unencrypted message (backward compatibility)
+      messageData.isEncrypted = false;
+      messageData.payload = {
+        text: text || '',
+        attachments: attachments || []
+      };
+      console.log('📝 Storing unencrypted DM message:', text);
+    }
+    // =======================================================
+
+    const message = await Message.create(messageData);
+
+    // Populate sender for real-time display
+    await message.populate('sender', 'username email profilePicture');
+
+    // 📡 Emit socket event to all participants in the DM for real-time updates
+    if (req.io) {
+      req.io.to(`dm:${dmSession._id}`).emit('new-message', message);
+      console.log(`📡 Emitted new message to dm:${dmSession._id}`);
+    }
+
+    // Process AI Commands (only if unencrypted or we have plaintext)
     if (text && text.includes("@chttrixAI")) {
       processAICommand(message, req.user, "dm", req);
     }
@@ -73,7 +118,7 @@ exports.sendDirectMessage = async (req, res) => {
 exports.sendChannelMessage = async (req, res) => {
   try {
     const senderId = req.user.sub;
-    const { channelId, text, attachments, replyTo } = req.body;
+    const { channelId, text, attachments, replyTo, ciphertext, messageIv, isEncrypted } = req.body;
 
     if (!channelId)
       return res.status(400).json({ message: "channelId required" });
@@ -86,17 +131,51 @@ exports.sendChannelMessage = async (req, res) => {
     if (!channel.isMember(senderId))
       return res.status(403).json({ message: "Not a channel member" });
 
-    const message = await Message.create({
+    // ============ E2EE: HANDLE ENCRYPTED CONTENT ============
+    const messageData = {
+      type: 'message',
       company: channel.company,
       workspace: channel.workspace,
       channel: channelId,
       sender: senderId,
-      text: text || "",
-      attachments: attachments || [],
-      threadParent: replyTo || null,
-    });
+      parentId: replyTo || null,
+    };
 
-    // Process AI Commands
+    // Check if this is an encrypted message
+    if (isEncrypted && ciphertext && messageIv) {
+      // Store encrypted message
+      messageData.ciphertext = ciphertext;
+      messageData.messageIv = messageIv;
+      messageData.isEncrypted = true;
+      messageData.encryptionVersion = 'aes-256-gcm-v1';
+      messageData.payload = {
+        text: '', // Empty for encrypted messages
+        attachments: attachments || []
+      };
+      console.log('🔐 Storing encrypted channel message');
+    } else {
+      // Store unencrypted message (backward compatibility)
+      messageData.isEncrypted = false;
+      messageData.payload = {
+        text: text || '',
+        attachments: attachments || []
+      };
+      console.log('📝 Storing unencrypted channel message:', text);
+    }
+    // =======================================================
+
+    const message = await Message.create(messageData);
+
+    // Populate sender for real-time display
+    await message.populate('sender', 'username email profilePicture');
+
+    // 📡 Emit socket event to all users in the channel for real-time updates
+    if (req.io) {
+      req.io.to(`channel:${channelId}`).emit('new-message', message);
+      console.log(`📡 Emitted new message to channel:${channelId}`);
+    }
+
+    // Process AI Commands (only if unencrypted)
     if (text && text.includes("@chttrixAI")) {
       processAICommand(message, req.user, "channel", req);
     }
@@ -130,7 +209,7 @@ exports.getDMs = async (req, res) => {
     }
 
     // Build query
-    let query = { dm: dmSessionId };
+    let query = { dm: dmSessionId, parentId: null }; // Only top-level messages
 
     // If 'before' is specified, only get messages before that message's timestamp
     if (before) {
@@ -144,9 +223,9 @@ exports.getDMs = async (req, res) => {
       .sort({ createdAt: -1 }) // Get newest first
       .limit(limit)
       .populate("sender", "username email profilePicture")
-      .populate("readBy", "username") // Populate read receipts
+      .populate("readBy.user", "username") // Populate read receipts
       .populate({
-        path: "threadParent",
+        path: "parentId",
         populate: { path: "sender", select: "username profilePicture" }
       });
 
@@ -195,7 +274,7 @@ exports.getChannelMessages = async (req, res) => {
     // Build query - ONLY show messages after user joined the channel
     let query = {
       channel: channelId,
-      threadParent: null,
+      parentId: null, // Only top-level messages
       createdAt: { $gte: userJoinedAt } // ✅ Filter by join date
     };
 
@@ -215,10 +294,10 @@ exports.getChannelMessages = async (req, res) => {
       .sort({ createdAt: -1 }) // Get newest first
       .limit(limit)
       .populate("sender", "username email profilePicture")
-      .populate("readBy", "username") // Populate read receipts
+      .populate("readBy.user", "username") // Populate read receipts
       .populate("pinnedBy", "username") // Populate pin attribution
       .populate({
-        path: "threadParent",
+        path: "parentId",
         populate: { path: "sender", select: "username profilePicture" }
       });
 
@@ -257,7 +336,7 @@ exports.getChannelMessages = async (req, res) => {
     const messagesWithCounts = await Promise.all(messages.map(async (msg) => {
       // 1. Count replies (exclude system messages from thread count)
       const count = await Message.countDocuments({
-        threadParent: msg._id,
+        parentId: msg._id,
         type: { $ne: 'system' } // Don't count system messages in threads
       });
 
@@ -268,7 +347,7 @@ exports.getChannelMessages = async (req, res) => {
       if (count > 0) {
         try {
           const lastReplies = await Message.find({
-            threadParent: msg._id,
+            parentId: msg._id,
             type: { $ne: 'system' } // Don't include system messages
           })
             .sort({ createdAt: -1 })
@@ -300,6 +379,13 @@ exports.getChannelMessages = async (req, res) => {
       return msgObj;
     }));
 
+    // DEBUG: Log first message structure to verify payload.text
+    if (messagesWithCounts.length > 0) {
+      console.log('🔍 DEBUG - Sample message structure:', JSON.stringify(messagesWithCounts[0], null, 2));
+      console.log('🔍 DEBUG - Message payload:', messagesWithCounts[0].payload);
+      console.log('🔍 DEBUG - Message text:', messagesWithCounts[0].payload?.text);
+    }
+
     return res.json({
       messages: messagesWithCounts,
       userJoinedAt,
@@ -323,7 +409,7 @@ exports.getWorkspaceDMList = async (req, res) => {
 
     const sessions = await DMSession.find({
       workspace: workspaceId,
-      participants: userId
+      participants: { $in: [userId] }
     }).populate("participants", "username email profilePicture isOnline userStatus");
 
     // Return sessions with recent message preview and unread counts
@@ -366,7 +452,7 @@ exports.getWorkspaceDMList = async (req, res) => {
  */
 async function processAICommand(message, sender, contextType, req) {
   try {
-    const text = message.text;
+    const text = message.payload.text;
     const io = req.io;
 
     // 1. Parse Assignees (@User)
@@ -448,6 +534,7 @@ async function processAICommand(message, sender, contextType, req) {
 async function sendAIReply(originalMsg, text, io) {
   try {
     const reply = await Message.create({
+      type: 'message',
       company: originalMsg.company,
       workspace: originalMsg.workspace,
       channel: originalMsg.channel,
@@ -455,8 +542,10 @@ async function sendAIReply(originalMsg, text, io) {
       sender: originalMsg.sender, // Reply as the user (self-echo) or system? 
       // Better to reply as System but we lack ID. 
       // Using sender is safe fallback, but adding START "🤖" makes it clear.
-      text: text,
-      threadParent: originalMsg._id // Thread it!
+      payload: {
+        text: text
+      },
+      parentId: originalMsg._id // Thread it!
     });
 
     await reply.populate("sender", "username profilePicture");

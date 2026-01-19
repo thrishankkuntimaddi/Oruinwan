@@ -489,7 +489,7 @@ export default function MessageList({ onSelectChat }) {
           <div
             className="h-12 w-12 bg-gray-300 rounded-full"
             style={{
-              backgroundImage: `url(${item.profilePicture || "/default-avatar.png"})`,
+              backgroundImage: `url(${item.profilePicture || "/default-avatar.svg"})`,
               backgroundSize: "cover",
             }}
           />

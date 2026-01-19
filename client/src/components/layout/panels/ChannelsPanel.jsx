@@ -4,7 +4,7 @@ import { Plus, Hash, Search, Trash2, X, CheckSquare, Settings2, Lock } from 'luc
 import { useWorkspace } from "../../../contexts/WorkspaceContext";
 import { useToast } from "../../../contexts/ToastContext";
 import api from "../../../services/api";
-import ConfirmationModal from "../../common/ConfirmationModal";
+import ConfirmationModal from "../../../shared/components/ui/ConfirmationModal";
 import { useSocket } from "../../../contexts/SocketContext"; // ✅ Use global socket
 
 const ChannelsPanel = ({ title }) => {
@@ -381,7 +381,7 @@ const ChannelsPanel = ({ title }) => {
         return (
             <div
                 onClick={handleClick}
-                className={`px-4 py-2 mx-2 rounded-md cursor-pointer flex items-center justify-between group transition-colors ${isSelectionMode && isSelected
+                className={`px-4 py-2 rounded-md cursor-pointer flex items-center justify-between group transition-colors ${isSelectionMode && isSelected
                     ? "bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800"
                     : isActive
                         ? "bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 font-semibold"
@@ -410,9 +410,8 @@ const ChannelsPanel = ({ title }) => {
     return (
         <div className="flex flex-col h-full bg-gray-50/50 dark:bg-gray-900">
             {/* Header */}
-            <div className="h-16 flex items-center justify-between px-5 bg-white dark:bg-gray-900 shrink-0">
-                <h2 className="font-bold text-xl text-gray-800 dark:text-gray-100 tracking-tight flex items-center gap-2">
-                    <Hash className="text-blue-600" size={20} />
+            <div className="h-16 flex items-center justify-between px-5 bg-white dark:bg-gray-900 shrink-0 border-b border-gray-200 dark:border-gray-800">
+                <h2 className="font-bold text-lg text-gray-800 dark:text-gray-100 tracking-tight">
                     Channels
                 </h2>
                 <div className="flex items-center gap-1">
@@ -456,7 +455,7 @@ const ChannelsPanel = ({ title }) => {
             </div>
 
             {/* Search */}
-            <div className="px-4 pt-4">
+            <div className="px-4 pt-6">
                 <div className="relative">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
                     <input

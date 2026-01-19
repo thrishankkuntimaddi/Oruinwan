@@ -23,6 +23,21 @@
                 "argsIgnorePattern": "^_",
                 "varsIgnorePattern": "^_"
             }
+        ],
+        "no-restricted-imports": [
+            "error",
+            {
+                "patterns": [
+                    {
+                        "group": [
+                            "../controllers/*",
+                            "../../controllers/*",
+                            "**/controllers/*"
+                        ],
+                        "message": "🚫 LEGACY IMPORT: Use modules/ instead of controllers/. Import from src/modules/{domain}/"
+                    }
+                ]
+            }
         ]
     }
 }

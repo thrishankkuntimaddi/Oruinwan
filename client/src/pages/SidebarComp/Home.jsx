@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
-import ChatWindow from "../../components/messagesComp/chatWindowComp/chatWindow";
+import ChatWindowV2 from "../../components/messagesComp/chatWindowComp/ChatWindowV2";
 import { useWorkspace } from "../../contexts/WorkspaceContext";
 import api from "../../services/api";
 import { useSocket } from "../../contexts/SocketContext";
@@ -145,7 +145,7 @@ const Home = () => {
           <p className="text-sm text-gray-500 dark:text-gray-400">Loading chat...</p>
         </div>
       ) : activeChat ? (
-        <ChatWindow
+        <ChatWindowV2
           chat={activeChat}
           onClose={() => {
             setActiveChat(null);
@@ -156,6 +156,7 @@ const Home = () => {
             setActiveChat(null);
             sessionStorage.removeItem('activeChat');
           }}
+          workspaceId={workspaceId}
         />
       ) : (
         <div className="flex flex-col items-center justify-center h-full bg-slate-50 dark:bg-gray-900 relative overflow-hidden">

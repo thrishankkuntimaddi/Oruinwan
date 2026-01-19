@@ -1,0 +1,48 @@
+{
+    "compilerOptions": {
+        "baseUrl": "src",
+        "paths": {
+            "@shared/*": [
+                "shared/*"
+            ],
+            "@features/*": [
+                "features/*"
+            ],
+            "@api/*": [
+                "api/*"
+            ],
+            "@contexts/*": [
+                "contexts/*"
+            ],
+            "@hooks/*": [
+                "hooks/*"
+            ],
+            "@utils/*": [
+                "utils/*"
+            ],
+            "@components/*": [
+                "components/*"
+            ],
+            "@pages/*": [
+                "pages/*"
+            ],
+            "@services/*": [
+                "services/*"
+            ]
+        },
+        "target": "es6",
+        "module": "commonjs",
+        "jsx": "react",
+        "checkJs": false,
+        "moduleResolution": "node",
+        "allowSyntheticDefaultImports": true,
+        "esModuleInterop": true
+    },
+    "include": [
+        "src/**/*"
+    ],
+    "exclude": [
+        "node_modules",
+        "build"
+    ]
+}

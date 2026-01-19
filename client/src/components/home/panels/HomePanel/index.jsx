@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Trash2, X } from 'lucide-react';
-import ConfirmationModal from "../../../ui/ConfirmationModal";
+import ConfirmationModal from "../../../../shared/components/ui/ConfirmationModal";
 import { useContacts } from "../../../../contexts/ContactsContext";
 import { useAuth } from "../../../../contexts/AuthContext";
 import { useToast } from "../../../../contexts/ToastContext";
@@ -84,6 +84,7 @@ const HomePanel = ({ title }) => {
         favorites: true,
         channels: true,
         dms: true,
+        schedules: true,
     });
 
     const [workspaceName, setWorkspaceName] = useState(title || localStorage.getItem("currentWorkspace") || "Chttrix");
@@ -323,8 +324,8 @@ const HomePanel = ({ title }) => {
             />
 
 
-            {/* Scrollable Content */}
-            <div className="flex-1 overflow-y-auto custom-scrollbar pb-4">
+            {/* Content */}
+            <div className="flex-1 overflow-y-auto custom-scrollbar px-0 pb-2 pt-2 space-y-0.5">
 
                 {/* Selection Mode Header */}
                 {isSelectionMode && (
@@ -424,6 +425,31 @@ const HomePanel = ({ title }) => {
                         ))}
                     </div>
                 )}
+                {/* Upcoming Schedules */}
+                <SectionHeader
+                    label="Upcoming Schedules"
+                    isOpen={expanded.schedules}
+                    onClick={() => toggle("schedules")}
+                    onAdd={() => showToast("Schedule feature coming soon!", "info")}
+                />
+                {expanded.schedules && (
+                    <div className="space-y-0.5">
+                        <ListItem
+                            item={{ id: 's1', label: 'Daily Standup', type: 'schedule', icon: '📅' }}
+                            isSelectionMode={isSelectionMode}
+                            selectedItems={selectedItems}
+                            setSelectedItems={setSelectedItems}
+                            toggleFavorite={() => { }}
+                        />
+                        <ListItem
+                            item={{ id: 's2', label: 'Design Review', type: 'schedule', icon: '📅' }}
+                            isSelectionMode={isSelectionMode}
+                            selectedItems={selectedItems}
+                            setSelectedItems={setSelectedItems}
+                            toggleFavorite={() => { }}
+                        />
+                    </div>
+                )}
             </div>
 
             {/* Confirmation Modal for Selection Delete */}
@@ -500,7 +526,7 @@ const HomePanel = ({ title }) => {
                 workspaceMembers={workspaceMembers}
                 handleStartDM={handleStartDM}
             />
-        </div>
+        </div >
     );
 };
 

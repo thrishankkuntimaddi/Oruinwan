@@ -35,7 +35,7 @@ const ListItem = ({ item, isSelectionMode, selectedItems, setSelectedItems, togg
     return (
         <div
             onClick={handleClick}
-            className={`px-4 py-1.5 mx-2 rounded-md cursor-pointer flex items-center justify-between group transition-colors ${isSelectionMode && isSelected ? "bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800" :
+            className={`px-4 py-1.5 rounded-md cursor-pointer flex items-center justify-between group transition-colors ${isSelectionMode && isSelected ? "bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800" :
                 isActive ? "bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 font-medium" : "hover:bg-gray-200 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
                 }`}
         >
@@ -51,14 +51,14 @@ const ListItem = ({ item, isSelectionMode, selectedItems, setSelectedItems, togg
                     <div className="relative">
                         {/* Dynamic avatar color based on user status */}
                         <div className={`w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs shadow-inner ${isActive
-                                ? "bg-blue-200 text-blue-700"
-                                : item.avatarColor === 'green'
-                                    ? "bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300"
-                                    : item.avatarColor === 'yellow'
-                                        ? "bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-300"
-                                        : item.avatarColor === 'red'
-                                            ? "bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300"
-                                            : "bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
+                            ? "bg-blue-200 text-blue-700"
+                            : item.avatarColor === 'green'
+                                ? "bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300"
+                                : item.avatarColor === 'yellow'
+                                    ? "bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-300"
+                                    : item.avatarColor === 'red'
+                                        ? "bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300"
+                                        : "bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
                             }`}>
                             {item.label.charAt(0).toUpperCase()}
                         </div>

@@ -11,7 +11,10 @@ const mongoose = require("mongoose");
 const DMSessionSchema = new mongoose.Schema({
   workspace: { type: mongoose.Schema.Types.ObjectId, ref: "Workspace", required: true },
   company: { type: mongoose.Schema.Types.ObjectId, ref: "Company", default: null }, // Optional: for company-level filtering
-  participants: [{ type: mongoose.Schema.Types.ObjectId, ref: "User", required: true }],
+participants: {
+  type: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+  validate: v => v.length === 2
+},
   lastMessageAt: { type: Date },
 
   // Soft delete: Users who have hidden/deleted this DM

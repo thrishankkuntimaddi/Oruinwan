@@ -37,35 +37,33 @@ export const SocketProvider = ({ children }) => {
 
         const socketInstance = io(API_BASE, {
             auth: { token },
-            transports: ['websocket'],
+            // ✅ Allow both websocket and polling - Socket.io will use best available
+            transports: ['websocket', 'polling'],
             reconnection: true,
             reconnectionAttempts: 5,
             reconnectionDelay: 1000,
+            timeout: 10000,
         });
 
         socketInstance.on('connect', () => {
-
+            console.log('✅ Socket connected successfully');
             setIsConnected(true);
 
             // ✅ Join workspace room to receive workspace-wide events
             const workspaceId = localStorage.getItem('activeWorkspaceId');
             if (workspaceId) {
-
+                console.log(`📍 Joining workspace: ${workspaceId}`);
                 socketInstance.emit('join-workspace', { workspaceId });
             }
         });
 
         socketInstance.on('disconnect', (reason) => {
-
+            console.log(`⚠️ Socket disconnected: ${reason}`);
             setIsConnected(false);
         });
 
         socketInstance.on('connect_error', (error) => {
-            // Only log if it's not a typical initialization error
-            // (Socket.io often tries multiple transports before connecting successfully)
-            if (!error.message.includes('xhr poll error') && !error.message.includes('websocket error')) {
-                console.error('❌ Socket connection error:', error.message);
-            }
+            console.error('❌ Socket connection error:', error.message, error);
             setIsConnected(false);
         });
 

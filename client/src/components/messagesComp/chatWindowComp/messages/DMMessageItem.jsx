@@ -31,7 +31,7 @@ function DMMessageItem({
 }) {
     const isMe = msg.sender === "you" || msg.sender === "me";
     const isSystem = msg.sender === "system";
-    const isSelected = selectedIds.has(msg.id);
+    const isSelected = selectedIds?.has(msg.id) || false;
     const [showToolbar, setShowToolbar] = useState(false);
     const [showReactionPicker, setShowReactionPicker] = useState(false);
     const reactionPickerRef = useRef(null);

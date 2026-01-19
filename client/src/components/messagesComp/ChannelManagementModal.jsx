@@ -4,7 +4,7 @@ import axios from "axios";
 import { Trash2, UserPlus, Users, Lock, Unlock, X, AlertTriangle, Eraser, Info } from "lucide-react";
 import { useToast } from "../../contexts/ToastContext";
 import { API_BASE } from "../../services/api";
-import ConfirmationModal from "../common/ConfirmationModal";
+import ConfirmationModal from "../../shared/components/ui/ConfirmationModal";
 
 export default function ChannelManagementModal({ channel, onClose, currentUserId, initialTab = "members" }) {
     const { workspaceId } = useParams();

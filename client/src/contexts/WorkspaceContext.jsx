@@ -42,9 +42,9 @@ export const WorkspaceProvider = ({ children }) => {
                         icon: ws.icon || "🚀",
                         color: ws.color || "#2563eb",
                         type: ws.type,
-                        role: ws.role, // User's role in this workspace (owner, admin, member)
                         members: ws.members,
-                        rules: ws.rules // Include rules
+                        rules: ws.rules,
+                        role: ws.role // User's role in this workspace (owner, admin, member)
                     }));
 
                     setWorkspaces(mapped);
@@ -75,7 +75,6 @@ export const WorkspaceProvider = ({ children }) => {
             }
         };
 
-        fetchWorkspaces();
         fetchWorkspaces();
     }, [workspaceId]);
 
@@ -146,9 +145,9 @@ export const WorkspaceProvider = ({ children }) => {
                     icon: ws.icon || "🚀",
                     color: ws.color || "#2563eb",
                     type: ws.type,
-                    role: ws.role,
                     members: ws.members,
-                    rules: ws.rules
+                    rules: ws.rules,
+                    role: ws.role
                 }));
 
                 setWorkspaces(mapped);

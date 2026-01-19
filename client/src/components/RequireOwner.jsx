@@ -2,7 +2,7 @@
 import { useContext } from "react";
 import { Navigate } from "react-router-dom";
 import { AuthContext } from "../contexts/AuthContext";
-import LoadingScreen from "./ui/LoadingScreen";
+import LoadingScreen from "../shared/components/ui/LoadingScreen";
 
 /**
  * RequireOwner Component

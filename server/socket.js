@@ -152,6 +152,46 @@ function registerChatHandlers(io, socket) {
         console.log(`🔒 Poll ${poll._id} closed in channel:${channelId}`);
         io.to(`channel:${channelId}`).emit('poll:update', poll);
     });
+
+    // ==================== UNIFIED EVENT HANDLER (NEW ARCHITECTURE) ====================
+    // This is the future - unified event handling for all conversation events
+    socket.on('conversation:event', async (data) => {
+        try {
+            const { conversationId, conversationType, event } = data;
+
+            console.log(`📤 Conversation event: ${event.type} in ${conversationType}:${conversationId}`);
+
+            // Determine room name
+            const room = conversationType === 'channel'
+                ? `channel:${conversationId}`
+                : `dm:${conversationId}`;
+
+            // Broadcast event to room
+            io.to(room).emit('conversation:event', {
+                ...event,
+                timestamp: new Date()
+            });
+
+            // Also emit specific event types for backward compatibility
+            switch (event.type) {
+                case 'message':
+                    io.to(room).emit('new-message', event.payload);
+                    break;
+                case 'poll':
+                    io.to(room).emit('poll:new', event.payload);
+                    break;
+                case 'meeting':
+                    io.to(room).emit('meeting:new', event.payload);
+                    break;
+                case 'system':
+                    io.to(room).emit('system:event', event.payload);
+                    break;
+            }
+        } catch (err) {
+            console.error('Error handling conversation event:', err);
+            socket.emit('error', { message: 'Failed to process event' });
+        }
+    });
 }
 
 module.exports = registerChatHandlers;

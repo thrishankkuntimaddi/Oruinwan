@@ -1,45 +1,78 @@
 const mongoose = require("mongoose");
 
+/* ---------- Sub Schemas ---------- */
+
 const ReactionSchema = new mongoose.Schema({
-  emoji: String,
-  userId: { type: mongoose.Schema.Types.ObjectId, ref: "User" }
+  emoji: { type: String, required: true },
+  users: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }]
 }, { _id: false });
 
 const AttachmentSchema = new mongoose.Schema({
-  type: { type: String, enum: ["image", "video", "file"], required: true },
-  url: String, name: String, size: Number
+  kind: {
+    type: String,
+    enum: ["image", "video", "audio", "document", "contact"],
+    required: true
+  },
+  url: String,
+  name: String,
+  size: Number,
+  mimeType: String,
+  duration: Number, // audio / video
+  metadata: mongoose.Schema.Types.Mixed
 }, { _id: false });
 
+/* ---------- Message Schema ---------- */
+
 const MessageSchema = new mongoose.Schema({
-  company: { type: mongoose.Schema.Types.ObjectId, ref: "Company", default: null },
-  workspace: { type: mongoose.Schema.Types.ObjectId, ref: "Workspace", default: null },
+  company: { type: mongoose.Schema.Types.ObjectId, ref: "Company" },
+  workspace: { type: mongoose.Schema.Types.ObjectId, ref: "Workspace" },
+
   channel: { type: mongoose.Schema.Types.ObjectId, ref: "Channel", default: null },
   dm: { type: mongoose.Schema.Types.ObjectId, ref: "DMSession", default: null },
-  platformSession: { type: mongoose.Schema.Types.ObjectId, ref: "PlatformSession", default: null }, // Link to platform chat session
+
   sender: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
-  text: { type: String, default: "" },
-  attachments: [AttachmentSchema],
-  threadParent: { type: mongoose.Schema.Types.ObjectId, ref: "Message", default: null },
+
+  /** 🔑 Unified Event System */
+  type: {
+    type: String,
+    enum: ["message", "poll", "meeting", "system"],
+    default: "message"
+  },
+
+  payload: {
+    text: { type: String, default: "" },
+    attachments: [AttachmentSchema],
+    poll: { type: mongoose.Schema.Types.ObjectId, ref: "Poll", default: null },
+    meeting: mongoose.Schema.Types.Mixed
+  },
+
+  /** Threads */
+  parentId: { type: mongoose.Schema.Types.ObjectId, ref: "Message", default: null },
+
+  /** Reactions */
   reactions: [ReactionSchema],
-  readBy: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
 
-  // Pinning
+  /** Read Receipts */
+  readBy: [{
+    user: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+    readAt: { type: Date, default: Date.now }
+  }],
+
+  /** Pinning */
   isPinned: { type: Boolean, default: false },
-  pinnedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
-  pinnedAt: { type: Date, default: null },
+  pinnedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+  pinnedAt: Date,
 
-  // Deletion tracking
-  deletedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
-  deletedByName: { type: String, default: null },  // Store the deleter's name
-  deletedAt: { type: Date, default: null },
-  isDeletedUniversally: { type: Boolean, default: false },
-  hiddenFor: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }], // Local deletions only
+  /** Deletion */
+  deletedForEveryone: { type: Boolean, default: false },
+  deletedAt: Date,
+  hiddenFor: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }]
+
 }, { timestamps: true });
 
-MessageSchema.index({ company: 1, channel: 1, createdAt: -1 });
-MessageSchema.index({ company: 1, dm: 1, createdAt: -1 });
-MessageSchema.index({ workspace: 1, createdAt: -1 }); // For dashboard activity queries
-MessageSchema.index({ platformSession: 1, createdAt: -1 });
-MessageSchema.index({ createdAt: -1 });
+/* ---------- Indexes ---------- */
+MessageSchema.index({ channel: 1, createdAt: -1 });
+MessageSchema.index({ dm: 1, createdAt: -1 });
+MessageSchema.index({ parentId: 1 });
 
 module.exports = mongoose.model("Message", MessageSchema);

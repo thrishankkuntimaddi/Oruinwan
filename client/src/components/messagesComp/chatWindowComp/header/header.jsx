@@ -17,7 +17,7 @@ import {
   Link2,
   Lock
 } from "lucide-react";
-import ConfirmationModal from "../../../ui/ConfirmationModal";
+import ConfirmationModal from "../../../../shared/components/ui/ConfirmationModal";
 
 
 
@@ -46,6 +46,7 @@ export default function Header({
   currentUserId,
   showToast,
   typingUsers = [], // NEW: Array of {id, name} objects
+  onCreatePoll, // Poll creation handler
 }) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
@@ -140,22 +141,30 @@ export default function Header({
                 <button title="Meeting" className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded transition-colors">
                   <Video size={16} />
                 </button>
-                <button title="Poll" className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded transition-colors">
-                  <BarChart2 size={16} />
-                </button>
               </>
             )}
 
             {/* DM Specific Actions */}
             {chat.type === "dm" && (
               <>
-                <button title="Voice" onClick={() => showToast && showToast("Voice Call coming soon!", "info")} className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded transition-colors">
+                <button title="Voice (Coming Soon)" disabled className="p-1.5 text-gray-300 dark:text-gray-600 cursor-not-allowed rounded transition-colors opacity-50">
                   <Phone size={16} />
                 </button>
-                <button title="Video" onClick={() => showToast && showToast("Video Call coming soon!", "info")} className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded transition-colors">
+                <button title="Video (Coming Soon)" disabled className="p-1.5 text-gray-300 dark:text-gray-600 cursor-not-allowed rounded transition-colors opacity-50">
                   <Video size={16} />
                 </button>
               </>
+            )}
+
+            {/* Poll Button (Channels only) */}
+            {chat.type === "channel" && onCreatePoll && (
+              <button
+                title="Create Poll"
+                onClick={onCreatePoll}
+                className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded transition-colors"
+              >
+                <BarChart2 size={16} />
+              </button>
             )}
 
             {/* Common Actions: Search */}
@@ -213,7 +222,7 @@ export default function Header({
                           <Settings size={16} /> Channel Settings
                         </button>
                       )}
-                      <button className="w-full text-left px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 flex items-center gap-3" onClick={() => { setShowChannelManagement("members"); setShowMenu(false); }}>
+                      <button className="w-full text-left px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 flex items-center gap-3" onClick={() => { setShowChannelManagement?.("members"); setShowMenu(false); }}>
                         <Info size={16} /> View Members & Info
                       </button>
                       <button className="w-full text-left px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 flex items-center gap-3"
@@ -240,7 +249,7 @@ export default function Header({
                     </>
                   )}
 
-                  <button className="w-full text-left px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 flex items-center gap-3" onClick={() => setMuted((m) => !m)}>
+                  <button className="w-full text-left px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 flex items-center gap-3" onClick={() => setMuted?.((m) => !m)}>
                     {muted ? <Bell size={16} /> : <BellOff size={16} />} {muted ? "Unmute Notifications" : "Mute Notifications"}
                   </button>
                   {chat.type !== "channel" && (

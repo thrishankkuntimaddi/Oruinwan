@@ -38,12 +38,12 @@ const WorkspaceHeader = ({
 
 
     return (
-        <div className="h-12 flex items-center justify-between px-4 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors group relative select-none">
+        <div className="h-16 flex items-center justify-between px-4 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors group relative select-none border-b border-gray-200 dark:border-gray-800">
             <div
-                className="flex items-center font-bold text-gray-900 dark:text-white cursor-pointer flex-1"
+                className="flex items-center font-bold text-lg text-gray-900 dark:text-white cursor-pointer flex-1"
                 onClick={() => setShowWorkspaceMenu(!showWorkspaceMenu)}
             >
-                <span className="truncate max-w-[120px]">{workspaceName}</span>
+                <span className="truncate max-w-[150px]">{workspaceName}</span>
                 <span className={`ml-2 text-gray-500 dark:text-gray-400 transition-transform duration-200 ${showWorkspaceMenu ? "rotate-180" : ""}`}>
                     <ChevronDown size={14} />
                 </span>

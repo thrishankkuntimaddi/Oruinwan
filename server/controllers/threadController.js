@@ -43,7 +43,7 @@ exports.getThread = async (req, res) => {
         }
 
         // Get all replies to this message
-        const replies = await Message.find({ threadParent: messageId })
+        const replies = await Message.find({ parentId: messageId })
             .populate("sender", "_id username profilePicture")
             .sort({ createdAt: 1 }) // Oldest first for threads
             .lean();
@@ -83,11 +83,14 @@ exports.postThreadReply = async (req, res) => {
 
         // Create the reply message
         const replyData = {
+            type: 'message',
             sender: userId,
-            text: text.trim(),
-            attachments,
-            threadParent: messageId,
-            readBy: [userId], // Sender has read it
+            payload: {
+                text: text.trim(),
+                attachments
+            },
+            parentId: messageId,
+            readBy: [{ user: userId, readAt: new Date() }], // Sender has read it
             workspace: parentMessage.workspace,
             company: parentMessage.company,
         };
@@ -137,7 +140,7 @@ exports.getThreadCount = async (req, res) => {
     try {
         const { messageId } = req.params;
 
-        const count = await Message.countDocuments({ threadParent: messageId });
+        const count = await Message.countDocuments({ parentId: messageId });
 
         return res.json({ count });
     } catch (err) {

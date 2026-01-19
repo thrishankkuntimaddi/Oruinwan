@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import api from "../../services/api";
 import { useToast } from "../../contexts/ToastContext";
-import { X, Hash, Lock, Search, Check, UserPlus, Info } from "lucide-react";
+import { X, Search, Check, AlertCircle, Info, Lock, Hash } from 'lucide-react';
 
 export default function CreateChannelModal({ onClose, onCreated, workspaceId }) {
     const { showToast } = useToast();

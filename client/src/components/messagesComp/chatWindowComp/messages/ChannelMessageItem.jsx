@@ -37,8 +37,10 @@ function ChannelMessageItem({
 
     const count = (threadCounts && threadCounts[msg.id]) || msg.replyCount || 0;
 
-    const isMe = msg.sender === "you" || msg.sender === "me";
-    const isSelected = selectedIds.has(msg.id);
+    // ✅ Fix: Properly check if message is from current user by comparing IDs
+    const senderId = typeof msg.sender === 'object' ? msg.sender?._id : msg.sender;
+    const isMe = senderId === currentUserId || msg.sender === "you" || msg.sender === "me";
+    const isSelected = selectedIds?.has(msg.id) || false;
     const [showToolbar, setShowToolbar] = useState(false);
     const [showReactionPicker, setShowReactionPicker] = useState(false);
     const reactionPickerRef = useRef(null);
@@ -122,10 +124,14 @@ function ChannelMessageItem({
                 </div>
             )}
 
-            {/* Avatar (Shrunk) */}
+            {/* Avatar (Shrunk) - ✅ Added blue ring for user's messages */}
             <div className="flex-shrink-0 pt-0.5">
                 {avatarUrl ? (
-                    <img src={avatarUrl} alt={msg.senderName} className="w-7 h-7 rounded object-cover" />
+                    <img
+                        src={avatarUrl}
+                        alt={msg.senderName}
+                        className={`w-7 h-7 rounded object-cover ${isMe ? "ring-2 ring-blue-500" : ""}`}
+                    />
                 ) : (
                     <div className={`w-7 h-7 rounded flex items-center justify-center text-[10px] font-medium text-white ${isMe ? "bg-blue-500/80" : "bg-gray-400/80 dark:bg-gray-600"}`}>
                         {initial}

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
-import ChatWindow from "../../components/messagesComp/chatWindowComp/chatWindow";
+import ChatWindowV2 from "../../components/messagesComp/chatWindowComp/ChatWindowV2";
 import BroadcastChatWindow from "../../components/messagesComp/BroadcastChatWindow";
 import { useContacts } from "../../contexts/ContactsContext";
 import api from "../../services/api";
@@ -73,7 +73,7 @@ export default function Messages() {
 
       const fetchDMDetails = async () => {
         try {
-          const response = await api.get(`/api/messages/workspace/${workspaceId}/dms`);
+          const response = await api.get(`/api/v2/messages/workspace/${workspaceId}/dms`);
           const sessions = response.data.sessions || [];
           const dmSession = sessions.find(s => s.id === dmParam);
 
@@ -185,7 +185,7 @@ export default function Messages() {
       const fetchDMDetails = async () => {
         try {
 
-          const response = await api.get(`/api/messages/workspace/${workspaceId}/dms`);
+          const response = await api.get(`/api/v2/messages/workspace/${workspaceId}/dms`);
           const sessions = response.data.sessions || [];
 
 
@@ -326,11 +326,12 @@ export default function Messages() {
           {currentBroadcast ? (
             <BroadcastChatWindow broadcast={currentBroadcast} />
           ) : selectedChat ? (
-            <ChatWindow
+            <ChatWindowV2
               chat={selectedChat}
               contacts={contacts}
               onClose={() => setSelectedChat(null)}
               onDeleteChat={() => handleDeleteChat(selectedChat)}
+              workspaceId={workspaceId || selectedChat.workspaceId}
             />
           ) : (
             <div className="flex flex-col items-center justify-center h-full bg-slate-50 dark:bg-gray-900 relative overflow-hidden">
