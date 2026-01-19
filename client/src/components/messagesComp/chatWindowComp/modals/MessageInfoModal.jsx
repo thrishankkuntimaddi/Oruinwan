@@ -1,5 +1,5 @@
 import React from "react";
-import { X, CheckCircle2, Clock } from "lucide-react";
+import { X, CheckCircle2, Clock, Lock, Smile } from "lucide-react";
 
 export default function MessageInfoModal({ msg, onClose, currentUserId, workspaceMembers = [] }) {
   // Early return if no message
@@ -75,7 +75,53 @@ export default function MessageInfoModal({ msg, onClose, currentUserId, workspac
         </div>
 
         {/* Status Body */}
-        <div className="max-h-[300px] overflow-y-auto custom-scrollbar">
+        <div className="max-h-[400px] overflow-y-auto custom-scrollbar">
+          {/* Encryption Status */}
+          <div className="p-4 py-3 bg-blue-50/30 dark:bg-blue-900/10 border-b border-gray-100 dark:border-gray-700">
+            <div className="flex items-center gap-2 text-xs">
+              <Lock size={14} className="text-blue-600 dark:text-blue-400" />
+              <span className="font-semibold text-blue-900 dark:text-blue-200">
+                {msg.backend?.isEncrypted ? 'End-to-end encrypted' : 'Message encrypted in transit'}
+              </span>
+            </div>
+            <p className="text-[10px] text-gray-600 dark:text-gray-400 ml-6 mt-1">
+              {msg.backend?.isEncrypted
+                ? 'Only members of this conversation can read this message'
+                : 'Message is protected during transmission'}
+            </p>
+          </div>
+
+          {/* Reactions Section */}
+          {msg.reactions && msg.reactions.length > 0 && (
+            <>
+              <div className="p-4 py-3">
+                <div className="flex items-center gap-2 text-xs font-bold text-gray-800 dark:text-white mb-3">
+                  <Smile size={14} className="text-yellow-500" />
+                  Reactions ({msg.reactions.reduce((acc, r) => acc + (r.users?.length || 0), 0)})
+                </div>
+                <div className="space-y-2 pl-1">
+                  {msg.reactions.map((reaction, idx) => {
+                    const reactedUsers = workspaceMembers.filter(m =>
+                      reaction.users?.some(userId => String(userId) === String(m.id || m._id))
+                    );
+
+                    return (
+                      <div key={idx} className="flex items-start gap-2">
+                        <span className="text-lg flex-shrink-0">{reaction.emoji}</span>
+                        <div className="flex-1">
+                          <div className="text-xs text-gray-700 dark:text-gray-300">
+                            {reactedUsers.map(u => u.name || u.username).join(', ') || `${reaction.users?.length || 0} members`}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+              <div className="h-px bg-gray-50 dark:bg-slate-700 mx-4 my-1"></div>
+            </>
+          )}
+
           {/* Seen By Section */}
           <div className="p-4 py-3">
             <div className="flex items-center gap-2 text-xs font-bold text-gray-800 dark:text-white mb-3">

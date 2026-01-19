@@ -11,10 +11,15 @@ import ForwardMessageModal from "./modals/ForwardMessageModal.jsx";
 import ChannelManagementModal from "../ChannelManagementModal.jsx";
 import MessageInfoModal from "./modals/MessageInfoModal.jsx";
 import ConfirmationModal from "../../../shared/components/ui/ConfirmationModal";
+import ThreadsViewModal from "./modals/ThreadsViewModal.jsx";
+import MemberListModal from "./modals/MemberListModal.jsx";
+import CreatePollModal from "./modals/CreatePollModal.jsx";
 
 
 import ChannelTabs from "./tabs/ChannelTabs.jsx";
+import TasksTab from "./tabs/TasksTab.jsx";
 import CanvasTab from "./tabs/CanvasTab.jsx";
+import PollMessage from "./messages/PollMessage.jsx";
 import ThreadPanel from "./ThreadPanel.jsx";
 import MessagesContainer from "./messages/messagesContainer.jsx";
 import ReplyPreview from "./messages/replyPreview.jsx";
@@ -74,6 +79,9 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
   const [toast, setToast] = useState({ message: "", type: "success", visible: false });
   const [showExitChannelConfirm, setShowExitChannelConfirm] = useState(false);
   const [showDeleteChannelConfirm, setShowDeleteChannelConfirm] = useState(false);
+  const [showThreadsView, setShowThreadsView] = useState(false);
+  const [showCreatePoll, setShowCreatePoll] = useState(false);
+  const [showMemberList, setShowMemberList] = useState(false);
 
   const showToast = (message, type = "success") => {
     setToast({ message, type, visible: true });
@@ -1469,6 +1477,9 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
         currentUserId={currentUserIdRef.current}
         showToast={showToast}
         typingUsers={typingUsers}
+        onShowThreadsView={() => setShowThreadsView(true)}
+        onShowMemberList={() => setShowMemberList(true)}
+        onCreatePoll={() => setShowCreatePoll(true)}
       />
 
       {/* 2. Tabs Bar (Only for channels) */}
@@ -1532,6 +1543,7 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
 
                     if (deleteType === 'me') {
                       socket.emit("delete-message", {
+                onVotePoll={handleVotePoll}
                         messageId: id,
                         channelId,
                         dmSessionId,
@@ -1593,6 +1605,20 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
                 setNewMessage={setNewMessage}
               />
             </>
+          ) : activeTab === 'tasks' ? (
+            /* TASKS TAB CONTENT */
+            <TasksTab
+              channelId={chat.id}
+              channelName={chat.name?.replace(/^#/, '')}
+              currentUserId={currentUserIdRef.current}
+              socket={socketRef.current}
+            />
+          ) : activeTab === 'canvas' ? (
+            /* CANVAS TAB CONTENT */
+            <CanvasTab
+              channelId={chat.id}
+              channelName={chat.name?.replace(/^#/, '')}
+            />
           ) : (
             /* CANVAS TAB CONTENT */
             (() => {
@@ -1725,6 +1751,40 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
         confirmType="danger"
       />
 
+      {/* Threads View Modal */}
+      <ThreadsViewModal
+        isOpen={showThreadsView}
+        onClose={() => setShowThreadsView(false)}
+        messages={messages}
+        threadCounts={threadCounts}
+        onOpenThread={openThread}
+        formatTime={(ts) => new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+      />
+
+      {/* Member List Modal */}
+      <MemberListModal
+        isOpen={showMemberList}
+        onClose={() => setShowMemberList(false)}
+        members={channelMembersWithJoinDates}
+        channelName={chat.name?.replace(/^#/, '')}
+        currentUserId={currentUserIdRef.current}
+        onStartDM={(userId) => {
+          // Handle start DM - this would need to be implemented
+          showToast("DM feature coming soon!", "info");
+        }}
+        onViewProfile={(userId) => {
+          // Handle view profile - this would need to be implemented
+          showToast("Profile view coming soon!", "info");
+        }}
+      />
+
+      <CreatePollModal
+        isOpen={showCreatePoll}
+        onClose={() => setShowCreatePoll(false)}
+        onCreatePoll={handleCreatePoll}
+        channelName={chat.name?.replace(/^#/, "")}
+      />
+
       {/* Toast Notification */}
       {toast.visible && (
         <div className="fixed top-4 right-4 z-[9999]">
@@ -1739,3 +1799,68 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
     </div>
   );
 }
+
+  // Poll handler
+  // Poll handler - USE BACKEND API
+  const handleCreatePoll = async (pollData) => {
+    try {
+      const token = localStorage.getItem('token');
+      
+      const response = await fetch(`${process.env.REACT_APP_API_BASE || 'http://localhost:5000'}/api/polls`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          channelId: chat.id,
+          question: pollData.question,
+          options: pollData.options.map(opt => opt.text),
+          type: pollData.allowMultiple ? 'multiple' : 'single'
+        })
+      });
+
+      if (!response.ok) throw new Error('Failed to create poll');
+      
+      const data = await response.json();
+      showToast("Poll created successfully!", "success");
+      setShowCreatePoll(false);
+      
+      // Poll message will arrive via socket 'new-message' event
+    } catch (error) {
+      console.error('Error creating poll:', error);
+      showToast("Failed to create poll", "error");
+    }
+  };
+
+  const handleVotePoll = async (pollId, optionIds) => {
+    try {
+      const token = localStorage.getItem('token');
+      
+      const response = await fetch(`${process.env.REACT_APP_API_BASE || 'http://localhost:5000'}/api/polls/${pollId}/vote`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ optionIds })
+      });
+
+      if (!response.ok) throw new Error('Failed to vote');
+      
+      const data = await response.json();
+      
+      // Update local poll data
+      setMessages(prev => prev.map(msg => {
+        if (msg.payload?.poll === pollId) {
+          return { ...msg, pollData: data.data.poll };
+        }
+        return msg;
+      }));
+      
+      showToast("Vote recorded!", "success");
+    } catch (error) {
+      console.error('Error voting:', error);
+      showToast("Failed to vote", "error");
+    }
+  };

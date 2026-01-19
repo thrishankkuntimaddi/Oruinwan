@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, X, FileText, MessageSquare } from 'lucide-react';
+import { Plus, X, FileText, MessageSquare, CheckSquare, Palette } from 'lucide-react';
 
 export default function ChannelTabs({
     tabs = [],
@@ -69,6 +69,30 @@ export default function ChannelTabs({
                 >
                     <MessageSquare size={16} />
                     <span>Chat</span>
+                </button>
+
+                {/* Tasks Tab */}
+                <button
+                    onClick={() => onTabChange("tasks")}
+                    className={`flex items-center gap-2 py-3 text-sm font-medium transition-all whitespace-nowrap border-b-2 ${activeTab === "tasks"
+                        ? "text-blue-600 dark:text-blue-400 border-blue-600 dark:border-blue-400"
+                        : "text-gray-500 dark:text-gray-400 border-transparent hover:text-gray-700 dark:hover:text-gray-200"
+                        }`}
+                >
+                    <CheckSquare size={16} />
+                    <span>Tasks</span>
+                </button>
+
+                {/* Canvas Tab */}
+                <button
+                    onClick={() => onTabChange("canvas")}
+                    className={`flex items-center gap-2 py-3 text-sm font-medium transition-all whitespace-nowrap border-b-2 ${activeTab === "canvas"
+                        ? "text-blue-600 dark:text-blue-400 border-blue-600 dark:border-blue-400"
+                        : "text-gray-500 dark:text-gray-400 border-transparent hover:text-gray-700 dark:hover:text-gray-200"
+                        }`}
+                >
+                    <Palette size={16} />
+                    <span>Canvas</span>
                 </button>
 
                 {/* Dynamic Canvas Tabs */}

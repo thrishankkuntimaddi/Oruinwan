@@ -5,7 +5,6 @@ import {
   Search,
   MoreVertical,
   Settings,
-  Info,
   User,
   Bell,
   BellOff,
@@ -15,7 +14,9 @@ import {
   X,
   Trash2,
   Link2,
-  Lock
+  Lock,
+  MessageSquare,
+  Users
 } from "lucide-react";
 import ConfirmationModal from "../../../../shared/components/ui/ConfirmationModal";
 
@@ -47,6 +48,8 @@ export default function Header({
   showToast,
   typingUsers = [], // NEW: Array of {id, name} objects
   onCreatePoll, // Poll creation handler
+  onShowThreadsView, // Show threads-only view
+  onShowMemberList, // Show member list modal
 }) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
@@ -92,11 +95,40 @@ export default function Header({
     <>
       <div className="flex items-center justify-between px-3 py-1.5 bg-white dark:bg-gray-900">
         <div className="flex items-center gap-2 min-w-0">
-          {chat.image ? (
-            <img src={chat.image} alt={chat.name} className="w-8 h-8 rounded object-cover shadow-sm bg-gray-50" />
+          {/* Channel/DM Avatar with Type Indicators */}
+          {chat.type === 'channel' ? (
+            // Channel Icon Logic
+            chat.image ? (
+              <img src={chat.image} alt={chat.name} className="w-8 h-8 rounded object-cover shadow-sm bg-gray-50" />
+            ) : (
+              <div
+                className={`w-8 h-8 rounded flex items-center justify-center font-medium text-sm ${chat.name?.toLowerCase().replace(/^#/, '') === 'announcements'
+                  ? 'bg-orange-50 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400'
+                  : chat.isPrivate
+                    ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'
+                    : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400'
+                  }`}
+                title={chat.description || (chat.isPrivate ? 'Private Channel' : 'Public Channel')}
+              >
+                {chat.name?.toLowerCase().replace(/^#/, '') === 'announcements' ? '📢' : (chat.isPrivate ? <Lock size={14} /> : '#')}
+              </div>
+            )
           ) : (
-            <div className={`w-8 h-8 rounded flex items-center justify-center font-medium text-xs ${chat.type === 'channel' && chat.isPrivate ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400'}`}>
-              {chat.type === 'channel' && chat.isPrivate ? <Lock size={14} /> : (chat.name?.charAt(0)?.toUpperCase() ?? "?")}
+            // DM Avatar with Online Indicator
+            <div className="relative">
+              {chat.image ? (
+                <img src={chat.image} alt={chat.name} className="w-8 h-8 rounded object-cover shadow-sm bg-gray-50" />
+              ) : (
+                <div className="w-8 h-8 rounded bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold text-sm">
+                  {(chat.name || chat.username || '?').charAt(0).toUpperCase()}
+                </div>
+              )}
+              {/* Online/Offline Indicator */}
+              <div
+                className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white dark:border-gray-900 ${chat.isOnline || chat.status === 'online' ? 'bg-green-500' : 'bg-gray-400'
+                  }`}
+                title={chat.isOnline || chat.status === 'online' ? 'Online' : 'Offline'}
+              ></div>
             </div>
           )}
 
@@ -111,7 +143,12 @@ export default function Header({
               }
             </div>
             <div className="text-[10px] text-gray-400 dark:text-gray-500 truncate flex items-center gap-1">
-              {chat.status}
+              {/* Show custom status for DMs, member count for channels */}
+              {chat.type === 'dm' ? (
+                chat.customStatus || (chat.isOnline || chat.status === 'online' ? 'Active now' : 'Offline')
+              ) : (
+                chat.memberCount ? `${chat.memberCount} members` : chat.status
+              )}
             </div>
           </div>
         </div>
@@ -138,8 +175,19 @@ export default function Header({
             {/* Channel Specific Actions */}
             {chat.type === "channel" && (
               <>
-                <button title="Meeting" className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded transition-colors">
+                <button
+                  title="Start Meeting"
+                  onClick={() => showToast?.("Meeting feature coming soon!", "info")}
+                  className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded transition-colors"
+                >
                   <Video size={16} />
+                </button>
+                <button
+                  title="Threads View - Show only threaded messages"
+                  onClick={() => onShowThreadsView?.()}
+                  className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded transition-colors"
+                >
+                  <MessageSquare size={16} />
                 </button>
               </>
             )}
@@ -222,8 +270,8 @@ export default function Header({
                           <Settings size={16} /> Channel Settings
                         </button>
                       )}
-                      <button className="w-full text-left px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 flex items-center gap-3" onClick={() => { setShowChannelManagement?.("members"); setShowMenu(false); }}>
-                        <Info size={16} /> View Members & Info
+                      <button className="w-full text-left px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 flex items-center gap-3" onClick={() => { onShowMemberList?.(); setShowMenu(false); }}>
+                        <Users size={16} /> View Members
                       </button>
                       <button className="w-full text-left px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 flex items-center gap-3"
                         onClick={() => {

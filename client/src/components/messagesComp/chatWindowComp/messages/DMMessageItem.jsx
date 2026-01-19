@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import { MoreHorizontal, Copy, Pin, Trash2, Smile, Share } from "lucide-react";
+import { MoreHorizontal, Copy, Pin, Trash2, Smile, Share, Info } from "lucide-react";
 import ReactionBadges from "./reactionBadges";
 import ReactionPicker from "./reactionPicker";
 import ReactMarkdown from "react-markdown";
@@ -211,6 +211,16 @@ function DMMessageItem({
                                             className="w-full text-left px-4 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-3 text-gray-700 dark:text-gray-300 transition-colors"
                                         >
                                             <Copy size={14} className="text-gray-400 dark:text-gray-500" /> Copy text
+                                        </button>
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                if (infoMessage) infoMessage(msg.id);
+                                                toggleMsgMenu({ stopPropagation: () => { } }, null);
+                                            }}
+                                            className="w-full text-left px-4 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-3 text-gray-700 dark:text-gray-300 transition-colors"
+                                        >
+                                            <Info size={14} className="text-gray-400 dark:text-gray-500" /> Message info
                                         </button>
 
                                         <div className="border-t border-gray-100 dark:border-gray-700 my-1"></div>
