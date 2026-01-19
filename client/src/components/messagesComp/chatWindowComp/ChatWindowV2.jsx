@@ -73,23 +73,54 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
     const conversation = useConversation(conversationId, conversationType, workspaceId);
     const actions = useMessageActions(conversationId, conversationType, workspaceId);
 
-    // Socket event handler
+    // Use ref to avoid stale closures in socket event handler
+    const conversationRef = React.useRef(conversation);
+
+    // Keep ref up to date
+    React.useEffect(() => {
+        conversationRef.current = conversation;
+    }, [conversation]);
+
+    // Socket event handler - use conversationRef.current to avoid stale closures
     const handleSocketEvent = useCallback((event) => {
         switch (event.type) {
             case 'message':
             case 'new-message':
                 // Handle incoming message
-                console.log('📨 [ChatWindowV2] New message event:', event.payload);
+                console.log('📨 [ChatWindowV2] Received message event:', {
+                    type: event.type,
+                    hasPayload: !!event.payload,
+                    messageId: event.payload?._id || event.payload?.id
+                });
+
                 const message = event.payload.message || event.payload;
+
                 if (message) {
-                    conversation.addRealtimeEvent({
+                    // Normalize the message to ensure consistent structure
+                    const normalizedMessage = {
                         id: message._id || message.id,
                         type: message.pollId ? 'poll' : 'message',
-                        payload: message,
+                        payload: {
+                            ...message,
+                            text: message.payload?.text || message.text || '',
+                            attachments: message.payload?.attachments || message.attachments || [],
+                            replyCount: message.replyCount || 0,
+                            reactions: message.reactions || [],
+                            isPinned: message.isPinned || false,
+                            isDeleted: message.isDeleted || false
+                        },
                         sender: message.sender,
                         createdAt: message.createdAt,
-                        parentId: message.threadParent
+                        parentId: message.threadParent || message.parentId
+                    };
+
+                    console.log('➕ [ChatWindowV2] Adding message to conversation:', {
+                        messageId: normalizedMessage.id,
+                        sender: normalizedMessage.sender?.username,
+                        text: normalizedMessage.payload.text?.substring(0, 50)
                     });
+
+                    conversationRef.current.addRealtimeEvent(normalizedMessage, currentUserId);
                 }
                 break;
 
@@ -98,7 +129,7 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
                 console.log('✅ [ChatWindowV2] Message sent confirmation:', event.payload);
                 const { clientTempId, message: sentMsg } = event.payload;
                 if (clientTempId) {
-                    conversation.updateEvent(clientTempId, {
+                    conversationRef.current.updateEvent(clientTempId, {
                         id: sentMsg._id,
                         type: 'message',
                         payload: sentMsg,
@@ -111,9 +142,9 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
                 // Handle message deletion
                 if (event.payload) {
                     if (event.payload.isLocal) {
-                        conversation.removeEvent(event.payload.messageId);
+                        conversationRef.current.removeEvent(event.payload.messageId);
                     } else {
-                        conversation.updateEvent(event.payload.messageId, {
+                        conversationRef.current.updateEvent(event.payload.messageId, {
                             payload: event.payload
                         });
                     }
@@ -124,7 +155,7 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
             case 'message-unpinned':
                 // Handle pin updates
                 if (event.payload) {
-                    conversation.updateEvent(event.payload.messageId || event.payload._id, {
+                    conversationRef.current.updateEvent(event.payload.messageId || event.payload._id, {
                         payload: event.payload
                     });
                 }
@@ -133,7 +164,7 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
             case 'poll-created':
                 // Handle new poll
                 if (event.payload) {
-                    conversation.addRealtimeEvent({
+                    conversationRef.current.addRealtimeEvent({
                         id: event.payload._id,
                         type: 'poll',
                         payload: event.payload,
@@ -145,14 +176,14 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
             case 'poll-updated':
                 // Handle poll vote updates
                 if (event.payload) {
-                    conversation.updateEvent(event.payload._id, {
+                    conversationRef.current.updateEvent(event.payload._id, {
                         payload: event.payload
                     });
                 }
                 break;
 
             case 'poll-removed':
-                conversation.removeEvent(event.payload.pollId);
+                conversationRef.current.removeEvent(event.payload.pollId);
                 break;
 
             case 'user-typing':
@@ -171,7 +202,7 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
             case 'member-joined':
             case 'member-left':
                 // Add system event
-                conversation.addRealtimeEvent({
+                conversationRef.current.addRealtimeEvent({
                     id: `system_${Date.now()}`,
                     type: 'system',
                     payload: event.payload,
@@ -182,7 +213,7 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
             default:
                 console.log('Unhandled socket event:', event.type);
         }
-    }, [conversation]);
+    }, []); // Empty deps since we use refs
 
     // Initialize socket with event handler
     const socket = useChatSocket(conversationId, conversationType, handleSocketEvent);
@@ -234,6 +265,32 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
         console.log('handleSend called with markdown:', markdown);
         console.log('Current conversation state:', { conversationType, conversationId, workspaceId });
 
+        // Create optimistic message FIRST (before API call)
+        const tempId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        const optimisticMessage = {
+            _id: tempId,
+            id: tempId,
+            type: 'message',
+            payload: {
+                text: markdown,
+                attachments: []
+            },
+            sender: {
+                _id: currentUserId,
+                username: user?.username
+            },
+            parentId: replyingTo?._id || null,
+            createdAt: new Date().toISOString(),
+            reactions: [],
+            isPinned: false,
+            status: 'sending', // CRITICAL: Mark as sending so it can be found for replacement
+            isEncrypted: false
+        };
+
+        // Add optimistic message BEFORE sending API request
+        conversation.addOptimisticEvent(optimisticMessage);
+
+        // Now send the message
         const result = await actions.sendMessage({
             text: markdown,
             attachments: [],
@@ -242,17 +299,17 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
 
         console.log('Send result:', result);
 
-        if (result.success && result.optimisticMessage) {
-            // Add optimistic message to stream
-            conversation.addOptimisticEvent(result.optimisticMessage);
+        if (result.success) {
             setReplyingTo(null);
             setNewMessage('');
-        } else if (!result.success) {
+        } else {
             console.error('Failed to send message:', result.error);
+            // Remove optimistic message if send failed
+            conversation.removeEvent(tempId);
         }
 
         return result;
-    }, [actions, conversation, replyingTo, conversationType, conversationId, workspaceId]);
+    }, [actions, conversation, replyingTo, conversationType, conversationId, workspaceId, currentUserId, user]);
 
     // Handle emoji pick
     const handleEmojiPick = useCallback((emoji) => {

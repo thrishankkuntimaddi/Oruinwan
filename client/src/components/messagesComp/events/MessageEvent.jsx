@@ -24,13 +24,6 @@ function MessageEvent({
     onCancelReply,
     currentUserId
 }) {
-    // DEBUG: Log event structure
-    console.log('🔍 DEBUG MessageEvent - Full event object:', JSON.stringify(event, null, 2));
-    console.log('🔍 DEBUG MessageEvent - Event payload:', event.payload);
-    console.log('🔍 DEBUG MessageEvent - Event payload.text:', event.payload?.text);
-    console.log('🔍 DEBUG MessageEvent - Event.text:', event.text);
-    console.log('🔍 DEBUG MessageEvent - Event keys:', Object.keys(event));
-
     // NEW SCHEMA: event IS the message, event.payload contains text/attachments
     // FALLBACK: Support both new (payload.text) and old (direct text) structures
     // FIX: Handle double-nested payload (event.payload.payload.text)
@@ -56,8 +49,6 @@ function MessageEvent({
         isRead: (event.readBy || event.payload?.readBy)?.some(r => (r.user?._id || r.user || r._id || r) === currentUserId),
         status: event.status || 'sent'
     };
-
-    console.log('🔍 DEBUG MessageEvent - Enriched message text:', enrichedMessage.text);
 
     // Common handlers
     const handleAddReaction = (emoji) => {

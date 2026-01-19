@@ -240,7 +240,11 @@ function ConversationStream({
                         </div>
 
                         {/* Events for this date */}
-                        {groupedEvents[dateKey].map(event => renderEvent(event))}
+                        {groupedEvents[dateKey].map((event, idx) => (
+                            <div key={event.id || `event-${dateKey}-${idx}`}>
+                                {renderEvent(event)}
+                            </div>
+                        ))}
 
                         {/* Member Join Markers (for channels) */}
                         {conversationType === 'channel' && channelMembers.map(member => {

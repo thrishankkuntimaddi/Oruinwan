@@ -173,16 +173,68 @@ export function useConversation(conversationId, conversationType, workspaceId = 
     }, []);
 
     // Add real-time event (from socket)
-    const addRealtimeEvent = useCallback((event) => {
-        // Deduplicate
+    const addRealtimeEvent = useCallback((event, currentUserId = null) => {
+        console.log(`🔄 [useConversation] Processing realtime event:`, {
+            eventId: event.id,
+            eventType: event.type,
+            sender: event.sender?._id,
+            currentUser: currentUserId,
+            hasExisting: eventsMapRef.current.has(event.id),
+            currentEventCount: eventsMapRef.current.size
+        });
+
+        // Deduplicate by ID
         if (eventsMapRef.current.has(event.id)) {
+            console.log(`⚠️ [useConversation] Event ${event.id} already exists, updating instead`);
             // Update instead of add (might have new data like reactions)
             updateEvent(event.id, event);
             return;
         }
 
+        // Check if this is the sender's own message (replace optimistic message)
+        if (currentUserId && event.sender?._id === currentUserId) {
+            console.log(`🔍 [useConversation] Message is from current user, looking for optimistic message...`);
+
+            // Get all events and log them
+            const allEvents = [...eventsMapRef.current.values()];
+            console.log(`📋 [useConversation] Current events:`, allEvents.map(e => ({
+                id: e.id,
+                status: e.status,
+                sender: e.sender?._id,
+                text: e.payload?.text?.substring(0, 20)
+            })));
+
+            // Find any optimistic message with status 'sending' from this user
+            const optimisticMessage = allEvents.find(
+                e => e.status === 'sending' && e.sender?._id === currentUserId
+            );
+
+            if (optimisticMessage) {
+                console.log(`✅ [useConversation] Found optimistic message to replace:`, {
+                    optimisticId: optimisticMessage.id,
+                    realId: event.id,
+                    optimisticText: optimisticMessage.payload?.text,
+                    realText: event.payload?.text || event.payload?.payload?.text
+                });
+                // Remove optimistic from map
+                eventsMapRef.current.delete(optimisticMessage.id);
+                // Add real message
+                eventsMapRef.current.set(event.id, event);
+                // Replace in state
+                setEvents(prev => prev.map(e => e.id === optimisticMessage.id ? event : e));
+                return;
+            } else {
+                console.warn(`⚠️ [useConversation] No optimistic message found for sender ${currentUserId}`);
+            }
+        }
+
+        console.log(`✅ [useConversation] Adding new realtime event ${event.id} to conversation`);
         eventsMapRef.current.set(event.id, event);
-        setEvents(prev => [...prev, event]);
+        setEvents(prev => {
+            const newEvents = [...prev, event];
+            console.log(`📊 [useConversation] Events count: ${prev.length} -> ${newEvents.length}`);
+            return newEvents;
+        });
     }, [updateEvent]);
 
     // Reset conversation (for switching conversations)

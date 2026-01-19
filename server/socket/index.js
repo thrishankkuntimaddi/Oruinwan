@@ -58,6 +58,25 @@ module.exports = async function registerChatHandlers(io, socket) {
   });
 
   /* ----------------------------------------------------
+     JOIN CHANNEL ROOM (NEW - chat:join compatibility)
+  ---------------------------------------------------- */
+  socket.on("chat:join", (channelId) => {
+    try {
+      if (!channelId) {
+        logger.error("chat:join: missing channelId");
+        return;
+      }
+      console.log(`📥 [chat:join] Received for channel: ${channelId}`);
+      // CRITICAL: Use colon format (channel:id) to match new message service broadcasts
+      const room = `channel:${channelId}`;
+      socket.join(room);
+      console.log(`✅ [chat:join] User ${userId} joined ${room}`);
+    } catch (err) {
+      logger.error("Error joining channel room (chat:join):", err);
+    }
+  });
+
+  /* ----------------------------------------------------
      JOIN WORKSPACE ROOM (For real-time updates like invites)
   ---------------------------------------------------- */
   socket.on("join-workspace", ({ workspaceId }) => {

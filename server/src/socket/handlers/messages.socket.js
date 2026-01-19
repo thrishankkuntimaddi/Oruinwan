@@ -87,6 +87,11 @@ function registerMessageHandlers(io, socket) {
      * @deprecated Use conversation:join instead
      */
     socket.on('chat:join', (channelId) => {
+        console.log(`🎯🎯🎯 [chat:join] EVENT RECEIVED!`);
+        console.log(`📥 [chat:join] Channel ID: ${channelId}`);
+        console.log(`📥 [chat:join] Socket ID: ${socket.id}`);
+        console.log(`📥 [chat:join] User ID: ${socket.user.id}`);
+
         socket.join(`channel:${channelId}`);
         console.log(`💬 User ${socket.user.id} joined channel:${channelId} (legacy)`);
     });

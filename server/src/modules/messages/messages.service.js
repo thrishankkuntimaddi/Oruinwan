@@ -72,14 +72,25 @@ async function createMessage(messageData, io = null) {
     // Create message
     const message = await Message.create(messageDoc);
 
-    // Populate sender for response
+    // Populate sender for response and real-time broadcast
     await message.populate('sender', 'username email profilePicture');
 
-    // Emit real-time event
+    // Convert to plain object to ensure all virtuals and getters are included
+    const messageObject = message.toObject();
+
+    // Add default values for fields that may be missing
+    messageObject.replyCount = 0;
+    messageObject.reactions = messageObject.reactions || [];
+    messageObject.isPinned = messageObject.isPinned || false;
+    messageObject.isDeleted = messageObject.isDeleted || false;
+
+    // Emit real-time event with fully populated message
     if (io) {
         const room = channel ? `channel:${channel}` : `dm:${dm}`;
-        io.to(room).emit('new-message', message);
-        console.log(`📡 Emitted new-message to ${room}`);
+        console.log(`📡 Broadcasting new-message to room: ${room}`);
+        console.log(`📨 Message ID: ${messageObject._id}, Sender: ${messageObject.sender?.username}`);
+        io.to(room).emit('new-message', messageObject);
+        console.log(`✅ Successfully emitted new-message to ${room}`);
     }
 
     return message;

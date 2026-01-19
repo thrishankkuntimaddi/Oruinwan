@@ -23,19 +23,22 @@ export function useChatSocket(conversationId, conversationType, onEvent) {
 
     // Join conversation room
     const joinConversation = useCallback(() => {
-        if (!socket || !conversationId || joinedRef.current) return;
-
-        // CRITICAL: Wait for socket to be connected before emitting
-        if (!socket.connected) {
-            console.log(`⏳ Socket not connected yet, waiting to join ${conversationType}: ${conversationId}`);
+        if (!socket || !conversationId) {
+            console.log('⏸️ [useChatSocket] Cannot join - missing socket or conversationId');
             return;
         }
 
-        console.log(`📤 Emitting chat:join for ${conversationType}: ${conversationId}`);
+        if (joinedRef.current) return;
+
+        // CRITICAL: Wait for socket to be connected before emitting
+        if (!socket.connected) {
+            console.log(`⏳ Socket not connected, waiting to join ${conversationType}:`, conversationId);
+            return;
+        }
+
         socket.emit('chat:join', conversationId);
         joinedRef.current = true;
-
-        console.log(`✅ Joined ${conversationType}: ${conversationId}`);
+        console.log(`✅ Joined ${conversationType}:`, conversationId);
     }, [socket, conversationId, conversationType]);
 
     // Leave conversation room
@@ -44,8 +47,6 @@ export function useChatSocket(conversationId, conversationType, onEvent) {
 
         socket.emit('chat:leave', conversationId);
         joinedRef.current = false;
-
-        console.log(`👋 Left ${conversationType}: ${conversationId}`);
     }, [socket, conversationId, conversationType]);
 
     // Emit typing indicator
@@ -156,17 +157,17 @@ export function useChatSocket(conversationId, conversationType, onEvent) {
 
         // ==================== POLL EVENTS ====================
 
-        const handlePollNew = (poll) => {
+        const handlePollCreated = (data) => {
             onEventRef.current?.({
-                type: 'poll-new',
-                payload: poll
+                type: 'poll-created',
+                payload: data
             });
         };
 
-        const handlePollUpdate = (poll) => {
+        const handlePollUpdated = (data) => {
             onEventRef.current?.({
-                type: 'poll-update',
-                payload: poll
+                type: 'poll-updated',
+                payload: data
             });
         };
 
@@ -202,6 +203,7 @@ export function useChatSocket(conversationId, conversationType, onEvent) {
 
         // ==================== READ RECEIPTS ====================
 
+
         const handleMessageRead = (data) => {
             onEventRef.current?.({
                 type: 'message-read',
@@ -209,7 +211,7 @@ export function useChatSocket(conversationId, conversationType, onEvent) {
             });
         };
 
-        // Register all listeners
+        // Register all event listeners
         socket.on('new-message', handleNewMessage);
         socket.on('message-sent', handleMessageSent);
         socket.on('send-error', handleSendError);
@@ -222,8 +224,8 @@ export function useChatSocket(conversationId, conversationType, onEvent) {
 
         socket.on('chat:user_typing', handleUserTyping);
 
-        socket.on('poll:new', handlePollNew);
-        socket.on('poll:update', handlePollUpdate);
+        socket.on('poll:new', handlePollCreated);
+        socket.on('poll:updated', handlePollUpdated);
         socket.on('poll:removed', handlePollRemoved);
 
         socket.on('channel-updated', handleChannelUpdated);
@@ -246,8 +248,8 @@ export function useChatSocket(conversationId, conversationType, onEvent) {
 
             socket.off('chat:user_typing', handleUserTyping);
 
-            socket.off('poll:new', handlePollNew);
-            socket.off('poll:update', handlePollUpdate);
+            socket.off('poll:new', handlePollCreated);
+            socket.off('poll:updated', handlePollUpdated);
             socket.off('poll:removed', handlePollRemoved);
 
             socket.off('channel-updated', handleChannelUpdated);
@@ -262,7 +264,7 @@ export function useChatSocket(conversationId, conversationType, onEvent) {
             // Leave room on unmount
             leaveConversation();
         };
-    }, [socket, conversationId, joinConversation, leaveConversation]);
+    }, [socket, conversationId, conversationType, joinConversation, leaveConversation]);
 
     return {
         connected: socket?.connected || false,

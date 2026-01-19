@@ -20,17 +20,24 @@ const registerPollHandlers = require('./handlers/polls.socket');
  */
 function registerSocketHandlers(io, socket) {
     console.log(`✅ Socket connected: ${socket.user.id}`);
+    console.log(`🔍 [Socket] Socket ID: ${socket.id}`);
+    console.log(`🔍 [Socket] Registering handlers for user: ${socket.user.id}`);
 
     // User joins their personal room for notifications
     socket.join(`user:${socket.user.id}`);
 
     // Register domain-specific handlers
+    console.log(`📝 [Socket] Registering message handlers...`);
     registerMessageHandlers(io, socket);
+    console.log(`✅ [Socket] Message handlers registered`);
+
     registerMeetingHandlers(io, socket);
     registerHuddleHandlers(io, socket);
     registerPresenceHandlers(io, socket);
     registerAdminHandlers(io, socket);
     registerPollHandlers(io, socket);
+
+    console.log(`🎯 [Socket] All handlers registered for ${socket.user.id}`);
 
     // Handle disconnection
     socket.on('disconnect', () => {
