@@ -116,6 +116,14 @@ export function useChatSocket(conversationId, conversationType, onEvent) {
             });
         };
 
+        const handleMessageUpdated = (data) => {
+            onEventRef.current?.({
+                type: 'message-updated',
+                payload: data
+            });
+        };
+
+
         const handleMessagePinned = (data) => {
             onEventRef.current?.({
                 type: 'message-pinned',
@@ -216,6 +224,7 @@ export function useChatSocket(conversationId, conversationType, onEvent) {
         socket.on('message-sent', handleMessageSent);
         socket.on('send-error', handleSendError);
         socket.on('message-deleted', handleMessageDeleted);
+        socket.on('message-updated', handleMessageUpdated);
         socket.on('message-pinned', handleMessagePinned);
         socket.on('message-unpinned', handleMessageUnpinned);
 
@@ -240,6 +249,7 @@ export function useChatSocket(conversationId, conversationType, onEvent) {
             socket.off('message-sent', handleMessageSent);
             socket.off('send-error', handleSendError);
             socket.off('message-deleted', handleMessageDeleted);
+            socket.off('message-updated', handleMessageUpdated);
             socket.off('message-pinned', handleMessagePinned);
             socket.off('message-unpinned', handleMessageUnpinned);
 

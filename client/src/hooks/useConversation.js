@@ -143,16 +143,26 @@ export function useConversation(conversationId, conversationType, workspaceId = 
 
     // Update existing event
     const updateEvent = useCallback((eventId, updates) => {
-        setEvents(prev => prev.map(event =>
-            event.id === eventId
-                ? { ...event, ...updates }
-                : event
-        ));
+        setEvents(prev => prev.map(event => {
+            if (event.id === eventId) {
+                // Deep merge for payload to preserve nested properties
+                const updated = { ...event, ...updates };
+                if (updates.payload && event.payload) {
+                    updated.payload = { ...event.payload, ...updates.payload };
+                }
+                return updated;
+            }
+            return event;
+        }));
 
         // Update dedup map
         const existing = eventsMapRef.current.get(eventId);
         if (existing) {
-            eventsMapRef.current.set(eventId, { ...existing, ...updates });
+            const updated = { ...existing, ...updates };
+            if (updates.payload && existing.payload) {
+                updated.payload = { ...existing.payload, ...updates.payload };
+            }
+            eventsMapRef.current.set(eventId, updated);
         }
     }, []);
 

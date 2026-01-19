@@ -181,17 +181,47 @@ exports.inviteToChannel = async (req, res) => {
 
     await saveWithRetry(channel);
 
+    // Get invitee username for system message
+    const inviteeUser = await User.findById(inviteeId).select('username');
+    const inviteeName = inviteeUser?.username || 'User';
+    const joinDate = new Date();
+
+    // Create system message for join
+    const systemMessage = await Message.create({
+      channel: channelId,
+      workspace: channel.workspace,
+      type: 'system',
+      systemEvent: 'member_joined',
+      systemData: {
+        userId: inviteeId,
+        username: inviteeName,
+        joinedAt: joinDate
+      },
+      payload: {
+        text: `${inviteeName} joined on ${joinDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`
+      },
+      sender: inviteeId // System messages still need a sender for queries
+    });
+
     // optional: emit socket event to channel room or to invitee
     const io = req.app?.get("io");
     if (io) {
-      io.to(`channel_${channelId}`).emit("channel-member-added", {
+      io.to(`channel:${channelId}`).emit("member-joined", {
         channelId,
         userId: inviteeId,
+        username: inviteeName,
+        joinedAt: joinDate,
+        systemMessage: {
+          _id: systemMessage._id,
+          payload: systemMessage.payload,
+          type: systemMessage.type,
+          createdAt: systemMessage.createdAt
+        }
       });
       io.to(`user_${inviteeId}`).emit("invited-to-channel", { channelId, channelName: channel.name });
     }
 
-    return res.json({ channelId, userId: inviteeId });
+    return res.json({ channelId, userId: inviteeId, systemMessage });
   } catch (err) {
     return handleError(res, err, "INVITE ERROR");
   }
@@ -258,12 +288,45 @@ exports.joinChannel = async (req, res) => {
         joinedAt: new Date()
       });
       await saveWithRetry(channel);
-    }
 
-    // optional socket: join user to room on server side handled by socket connection when client emits join-channel
-    const io = req.app?.get("io");
-    if (io) {
-      io.to(`channel_${channelId}`).emit("channel-member-joined", { channelId, userId });
+      // Get username for system message
+      const joiningUser = await User.findById(userId).select('username');
+      const username = joiningUser?.username || 'User';
+      const joinDate = new Date();
+
+      // Create system message for join
+      const systemMessage = await Message.create({
+        channel: channelId,
+        workspace: channel.workspace,
+        type: 'system',
+        systemEvent: 'member_joined',
+        systemData: {
+          userId,
+          username,
+          joinedAt: joinDate
+        },
+        payload: {
+          text: `${username} joined on ${joinDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`
+        },
+        sender: userId
+      });
+
+      // optional socket: join user to room on server side handled by socket connection when client emits join-channel
+      const io = req.app?.get("io");
+      if (io) {
+        io.to(`channel:${channelId}`).emit("member-joined", {
+          channelId,
+          userId,
+          username,
+          joinedAt: joinDate,
+          systemMessage: {
+            _id: systemMessage._id,
+            payload: systemMessage.payload,
+            type: systemMessage.type,
+            createdAt: systemMessage.createdAt
+          }
+        });
+      }
     }
 
     return res.json({ channelId, joined: true });

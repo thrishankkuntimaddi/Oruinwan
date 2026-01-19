@@ -107,20 +107,48 @@ exports.postThreadReply = async (req, res) => {
         // Populate sender info
         await reply.populate("sender", "_id username profilePicture");
 
+        // Update parent message reply count
+        await Message.findByIdAndUpdate(messageId, {
+            $inc: { replyCount: 1 }
+        });
+
+        // Get updated parent message for broadcasting
+        const updatedParent = await Message.findById(messageId)
+            .populate("sender", "_id username profilePicture")
+            .lean();
+
         // Emit socket event for real-time updates
         const io = req.app?.get("io");
         if (io) {
             if (parentMessage.channel) {
-                // Broadcast to channel
-                io.to(`channel_${parentMessage.channel}`).emit("thread-reply", {
+                // Broadcast thread-reply to channel for thread panel updates
+                io.to(`channel:${parentMessage.channel}`).emit("thread-reply", {
                     parentId: messageId,
                     reply: reply.toObject(),
+                });
+
+                // Broadcast message-updated to update reply count in main chat
+                io.to(`channel:${parentMessage.channel}`).emit("message-updated", {
+                    messageId: messageId,
+                    updates: {
+                        replyCount: updatedParent.replyCount
+                    },
+                    fullMessage: updatedParent
                 });
             } else if (parentMessage.dm) {
                 // Send to DM session room
                 io.to(`dm_${parentMessage.dm}`).emit("thread-reply", {
                     parentId: messageId,
                     reply: reply.toObject(),
+                });
+
+                // Broadcast message-updated to update reply count in main chat
+                io.to(`dm_${parentMessage.dm}`).emit("message-updated", {
+                    messageId: messageId,
+                    updates: {
+                        replyCount: updatedParent.replyCount
+                    },
+                    fullMessage: updatedParent
                 });
             }
         }

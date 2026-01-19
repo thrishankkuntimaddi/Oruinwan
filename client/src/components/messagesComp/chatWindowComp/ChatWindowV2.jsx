@@ -138,6 +138,28 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
                 }
                 break;
 
+            case 'message-updated':
+                // Handle message updates (e.g., reply count changed)
+                console.log('🔄 [ChatWindowV2] Message updated:', event.payload);
+                const { messageId, updates, fullMessage } = event.payload;
+                console.log('🔍 [ChatWindowV2] Update details:', {
+                    messageId,
+                    updates,
+                    hasUpdates: !!updates,
+                    replyCount: updates?.replyCount
+                });
+                if (messageId && updates) {
+                    // Update the message with the new replyCount in the payload
+                    conversationRef.current.updateEvent(messageId, {
+                        payload: {
+                            replyCount: updates.replyCount
+                        }
+                    });
+                    console.log('✅ [ChatWindowV2] Updated message', messageId, 'with replyCount:', updates.replyCount);
+                }
+                break;
+
+
             case 'message-deleted':
                 // Handle message deletion
                 if (event.payload) {

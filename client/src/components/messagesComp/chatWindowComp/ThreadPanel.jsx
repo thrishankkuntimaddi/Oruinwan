@@ -65,11 +65,13 @@ export default function ThreadPanel({ parentMessage, onClose, socket, currentUse
 
                     // 2. Check for matching optimistic message (same text, same sender, temp ID)
                     // This handles the race condition where socket arrives before API response
-                    const optimisticMatchIndex = prev.findIndex(r =>
-                        typeof r._id === 'string' && r._id.startsWith("temp-") &&
-                        r.text === reply.text &&
-                        (r.sender?._id === reply.sender?._id || r.senderId === reply.sender?._id)
-                    );
+                    const optimisticMatchIndex = prev.findIndex(r => {
+                        const rText = r.payload?.text || r.text;
+                        const replyText = reply.payload?.text || reply.text;
+                        return typeof r._id === 'string' && r._id.startsWith("temp-") &&
+                            rText === replyText &&
+                            (r.sender?._id === reply.sender?._id || r.senderId === reply.sender?._id);
+                    });
 
                     if (optimisticMatchIndex !== -1) {
                         const newReplies = [...prev];
@@ -110,7 +112,8 @@ export default function ThreadPanel({ parentMessage, onClose, socket, currentUse
             const tempId = "temp-" + Date.now();
             const optimisticReply = {
                 _id: tempId,
-                text: newReply,
+                payload: { text: newReply }, // Match server structure
+                text: newReply, // Fallback for compatibility
                 sender: { _id: currentUserId, username: "You", profilePicture: null }, // Mock sender structure
                 senderId: currentUserId, // Fallback
                 createdAt: new Date().toISOString(),
@@ -210,7 +213,7 @@ export default function ThreadPanel({ parentMessage, onClose, socket, currentUse
                                             </span>
                                         </div>
                                         <p className="text-xs text-gray-800 dark:text-gray-200 mt-0.5 leading-relaxed whitespace-pre-wrap break-words">
-                                            {parentMessageState.text}
+                                            {parentMessageState.payload?.text || parentMessageState.text}
                                         </p>
                                     </div>
                                 </div>
@@ -251,7 +254,7 @@ export default function ThreadPanel({ parentMessage, onClose, socket, currentUse
                                                     </span>
                                                 </div>
                                                 <p className="text-sm text-gray-700 dark:text-gray-300 mt-0.5 leading-relaxed whitespace-pre-wrap break-words">
-                                                    {reply.text}
+                                                    {reply.payload?.text || reply.text}
                                                 </p>
                                             </div>
                                         </div>
