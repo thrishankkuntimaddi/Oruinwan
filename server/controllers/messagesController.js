@@ -3,12 +3,12 @@
  * @status legacy
  * @remove-after 2026-03
  * @deprecated Use src/modules/messages/ instead
- * 
- * FROZEN: This file is in legacy mode. Do NOT add new features here.
- * All new message functionality should go to src/modules/messages/
+ *
+ * FROZEN: This file is in legacy mode.
+ * NO plaintext messages allowed.
+ * E2EE is mandatory.
  */
 
-// server/controllers/messagesController.js
 const Message = require("../models/Message");
 const Channel = require("../models/Channel");
 const User = require("../models/User");
@@ -18,24 +18,37 @@ const Task = require("../models/Task");
 const { handleError } = require("../utils/responseHelpers");
 const { isMember } = require("../utils/memberHelpers");
 
-// -----------------------------------------------------
-// SEND DIRECT MESSAGE (user → user)
-// -----------------------------------------------------
+/* =====================================================
+   SEND DIRECT MESSAGE (E2EE ONLY)
+===================================================== */
 exports.sendDirectMessage = async (req, res) => {
   try {
     const senderId = req.user.sub;
-    const { receiverId, workspaceId, text, attachments, replyTo, ciphertext, messageIv, isEncrypted } = req.body;
+    const {
+      receiverId,
+      workspaceId,
+      attachments,
+      replyTo,
+      ciphertext,
+      messageIv,
+      isEncrypted
+    } = req.body;
 
-    if (!receiverId)
-      return res.status(400).json({ message: "receiverId required" });
-    if (!workspaceId)
-      return res.status(400).json({ message: "workspaceId required for scoped DMs" });
+    /* ---------- HARD ENFORCEMENT ---------- */
+    if (!isEncrypted || !ciphertext || !messageIv) {
+      return res.status(400).json({ message: "E2EE required" });
+    }
+
+    if (!receiverId || !workspaceId) {
+      return res.status(400).json({ message: "receiverId and workspaceId required" });
+    }
 
     const receiver = await User.findById(receiverId);
-    if (!receiver)
+    if (!receiver) {
       return res.status(404).json({ message: "Receiver not found" });
+    }
 
-    // Find or create DMSession for this workspace
+    /* ---------- DM SESSION ---------- */
     let dmSession = await DMSession.findOne({
       workspace: workspaceId,
       participants: { $all: [senderId, receiverId], $size: 2 }
@@ -43,67 +56,41 @@ exports.sendDirectMessage = async (req, res) => {
 
     if (!dmSession) {
       const workspace = await Workspace.findById(workspaceId);
-      if (!workspace) return res.status(404).json({ message: "Workspace not found" });
+      if (!workspace) {
+        return res.status(404).json({ message: "Workspace not found" });
+      }
 
       dmSession = await DMSession.create({
         workspace: workspaceId,
         company: workspace.company || null,
-        participants: [senderId, receiverId],
-        lastMessageAt: new Date()
+        participants: [senderId, receiverId]
       });
-    } else {
-      dmSession.lastMessageAt = new Date();
-      await dmSession.save();
     }
 
-    // ============ E2EE: HANDLE ENCRYPTED CONTENT ============
-    const messageData = {
-      type: 'message',
+    dmSession.lastMessageAt = new Date();
+    await dmSession.save();
+
+    /* ---------- CREATE MESSAGE ---------- */
+    const message = await Message.create({
+      type: "message",
       company: dmSession.company,
       workspace: workspaceId,
       dm: dmSession._id,
       sender: senderId,
       parentId: replyTo || null,
-    };
-
-    // Check if this is an encrypted message
-    if (isEncrypted && ciphertext && messageIv) {
-      // Store encrypted message
-      messageData.ciphertext = ciphertext;
-      messageData.messageIv = messageIv;
-      messageData.isEncrypted = true;
-      messageData.encryptionVersion = 'aes-256-gcm-v1';
-      // For encrypted messages, don't store plaintext
-      messageData.payload = {
-        text: '', // Empty for encrypted messages
+      payload: {
+        ciphertext,
+        messageIv,
+        isEncrypted: true,
         attachments: attachments || []
-      };
-      console.log('🔐 Storing encrypted DM message');
-    } else {
-      // Store unencrypted message (backward compatibility)
-      messageData.isEncrypted = false;
-      messageData.payload = {
-        text: text || '',
-        attachments: attachments || []
-      };
-      console.log('📝 Storing unencrypted DM message:', text);
-    }
-    // =======================================================
+      }
+    });
 
-    const message = await Message.create(messageData);
+    await message.populate("sender", "username email profilePicture");
 
-    // Populate sender for real-time display
-    await message.populate('sender', 'username email profilePicture');
-
-    // 📡 Emit socket event to all participants in the DM for real-time updates
+    /* ---------- SOCKET (AFTER DB WRITE) ---------- */
     if (req.io) {
-      req.io.to(`dm:${dmSession._id}`).emit('new-message', message);
-      console.log(`📡 Emitted new message to dm:${dmSession._id}`);
-    }
-
-    // Process AI Commands (only if unencrypted or we have plaintext)
-    if (text && text.includes("@chttrixAI")) {
-      processAICommand(message, req.user, "dm", req);
+      req.io.to(`dm:${dmSession._id}`).emit("new-message", message);
     }
 
     return res.status(201).json({ message });
@@ -112,72 +99,60 @@ exports.sendDirectMessage = async (req, res) => {
   }
 };
 
-// -----------------------------------------------------
-// SEND CHANNEL MESSAGE
-// -----------------------------------------------------
+/* =====================================================
+   SEND CHANNEL MESSAGE (E2EE ONLY)
+===================================================== */
 exports.sendChannelMessage = async (req, res) => {
   try {
     const senderId = req.user.sub;
-    const { channelId, text, attachments, replyTo, ciphertext, messageIv, isEncrypted } = req.body;
+    const {
+      channelId,
+      attachments,
+      replyTo,
+      ciphertext,
+      messageIv,
+      isEncrypted
+    } = req.body;
 
-    if (!channelId)
+    /* ---------- HARD ENFORCEMENT ---------- */
+    if (!isEncrypted || !ciphertext || !messageIv) {
+      return res.status(400).json({ message: "E2EE required" });
+    }
+
+    if (!channelId) {
       return res.status(400).json({ message: "channelId required" });
+    }
 
     const channel = await Channel.findById(channelId);
-    if (!channel)
+    if (!channel) {
       return res.status(404).json({ message: "Channel not found" });
+    }
 
-    // Ensure user is a member of the channel
-    if (!channel.isMember(senderId))
+    if (!channel.isMember(senderId)) {
       return res.status(403).json({ message: "Not a channel member" });
+    }
 
-    // ============ E2EE: HANDLE ENCRYPTED CONTENT ============
-    const messageData = {
-      type: 'message',
+    /* ---------- CREATE MESSAGE ---------- */
+    const message = await Message.create({
+      type: "message",
       company: channel.company,
       workspace: channel.workspace,
       channel: channelId,
       sender: senderId,
       parentId: replyTo || null,
-    };
-
-    // Check if this is an encrypted message
-    if (isEncrypted && ciphertext && messageIv) {
-      // Store encrypted message
-      messageData.ciphertext = ciphertext;
-      messageData.messageIv = messageIv;
-      messageData.isEncrypted = true;
-      messageData.encryptionVersion = 'aes-256-gcm-v1';
-      messageData.payload = {
-        text: '', // Empty for encrypted messages
+      payload: {
+        ciphertext,
+        messageIv,
+        isEncrypted: true,
         attachments: attachments || []
-      };
-      console.log('🔐 Storing encrypted channel message');
-    } else {
-      // Store unencrypted message (backward compatibility)
-      messageData.isEncrypted = false;
-      messageData.payload = {
-        text: text || '',
-        attachments: attachments || []
-      };
-      console.log('📝 Storing unencrypted channel message:', text);
-    }
-    // =======================================================
+      }
+    });
 
-    const message = await Message.create(messageData);
+    await message.populate("sender", "username email profilePicture");
 
-    // Populate sender for real-time display
-    await message.populate('sender', 'username email profilePicture');
-
-    // 📡 Emit socket event to all users in the channel for real-time updates
+    /* ---------- SOCKET (AFTER DB WRITE) ---------- */
     if (req.io) {
-      req.io.to(`channel:${channelId}`).emit('new-message', message);
-      console.log(`📡 Emitted new message to channel:${channelId}`);
-    }
-
-    // Process AI Commands (only if unencrypted)
-    if (text && text.includes("@chttrixAI")) {
-      processAICommand(message, req.user, "channel", req);
+      req.io.to(`channel:${channelId}`).emit("new-message", message);
     }
 
     return res.status(201).json({ message });
@@ -186,222 +161,103 @@ exports.sendChannelMessage = async (req, res) => {
   }
 };
 
-// -----------------------------------------------------
-// GET DIRECT MESSAGES (conversation between 2 users)
-// WITH PAGINATION
-// -----------------------------------------------------
+/* =====================================================
+   GET DMs (CURSOR PAGINATION - _id)
+===================================================== */
 exports.getDMs = async (req, res) => {
   try {
     const userId = req.user.sub;
-    const { workspaceId, dmSessionId } = req.params;
-
-    // Pagination parameters
+    const { dmSessionId } = req.params;
     const limit = parseInt(req.query.limit) || 50;
-    const before = req.query.before; // Message ID to load messages before
+    const before = req.query.before;
 
-    // Validate DMSession
     const dmSession = await DMSession.findById(dmSessionId);
-    if (!dmSession) return res.status(404).json({ message: "DM Session not found" });
-
-    // Verify participant
-    if (!dmSession.participants.some(p => String(p) === String(userId))) {
-      return res.status(403).json({ message: "Not a participant in this DM" });
+    if (!dmSession) {
+      return res.status(404).json({ message: "DM Session not found" });
     }
 
-    // Build query
-    let query = { dm: dmSessionId, parentId: null }; // Only top-level messages
+    if (!dmSession.participants.some(p => String(p) === String(userId))) {
+      return res.status(403).json({ message: "Not a participant" });
+    }
 
-    // If 'before' is specified, only get messages before that message's timestamp
+    const query = {
+      dm: dmSessionId,
+      parentId: null
+    };
+
     if (before) {
-      const beforeMsg = await Message.findById(before);
-      if (beforeMsg) {
-        query.createdAt = { $lt: beforeMsg.createdAt };
-      }
+      query._id = { $lt: before };
     }
 
     const messages = await Message.find(query)
-      .sort({ createdAt: -1 }) // Get newest first
+      .sort({ _id: -1 })
       .limit(limit)
-      .populate("sender", "username email profilePicture")
-      .populate("readBy.user", "username") // Populate read receipts
-      .populate({
-        path: "parentId",
-        populate: { path: "sender", select: "username profilePicture" }
-      });
+      .populate("sender", "username profilePicture")
+      .populate("readBy.user", "username");
 
-    // Reverse to get chronological order (oldest to newest)
     messages.reverse();
-
-    // Check if there are more messages
-    const totalCount = await Message.countDocuments({ dm: dmSessionId });
-    const hasMore = messages.length === limit;
 
     return res.json({
       messages,
-      hasMore,
-      total: totalCount
+      hasMore: messages.length === limit
     });
   } catch (err) {
     return handleError(res, err, "GET DMs ERROR");
   }
 };
 
-// -----------------------------------------------------
-// GET CHANNEL MESSAGES WITH PAGINATION
-// -----------------------------------------------------
+/* =====================================================
+   GET CHANNEL MESSAGES (CURSOR + JOIN DATE)
+===================================================== */
 exports.getChannelMessages = async (req, res) => {
   try {
     const userId = req.user.sub;
     const channelId = req.params.channelId;
-
-    // Pagination parameters
     const limit = parseInt(req.query.limit) || 50;
-    const before = req.query.before; // Message ID to load messages before
+    const before = req.query.before;
 
     const channel = await Channel.findById(channelId);
-    if (!channel)
+    if (!channel) {
       return res.status(404).json({ message: "Channel not found" });
+    }
 
-    // Ensure user is a member of the channel
-    const isUserMember = isMember(channel.members, userId);
-
-    if (!isUserMember)
+    if (!isMember(channel.members, userId)) {
       return res.status(403).json({ message: "Not a channel member" });
+    }
 
-    // Get user's join date to filter messages (privacy: only show messages after join)
-    const userJoinedAt = channel.getUserJoinDate(userId);
+    const joinedAt = channel.getUserJoinDate(userId);
 
-    // Build query - ONLY show messages after user joined the channel
-    let query = {
+    const query = {
       channel: channelId,
-      parentId: null, // Only top-level messages
-      createdAt: { $gte: userJoinedAt } // ✅ Filter by join date
+      parentId: null,
+      createdAt: { $gte: joinedAt }
     };
 
-    // If 'before' is specified for pagination, get messages before that timestamp
     if (before) {
-      const beforeMsg = await Message.findById(before);
-      if (beforeMsg) {
-        // Combine both constraints: after join AND before pagination point
-        query.createdAt = {
-          $gte: userJoinedAt,
-          $lt: beforeMsg.createdAt
-        };
-      }
+      query._id = { $lt: before };
     }
 
     const messages = await Message.find(query)
-      .sort({ createdAt: -1 }) // Get newest first
+      .sort({ _id: -1 })
       .limit(limit)
-      .populate("sender", "username email profilePicture")
-      .populate("readBy.user", "username") // Populate read receipts
-      .populate("pinnedBy", "username") // Populate pin attribution
-      .populate({
-        path: "parentId",
-        populate: { path: "sender", select: "username profilePicture" }
-      });
+      .populate("sender", "username profilePicture")
+      .populate("readBy.user", "username");
 
-    // Reverse to get chronological order (oldest to newest)
     messages.reverse();
 
-    // Count only accessible messages (after user joined)
-    const totalCount = await Message.countDocuments({
-      channel: channelId,
-      createdAt: { $gte: userJoinedAt }
-    });
-    const hasMore = messages.length === limit;
-
-    // Get all members with their join dates for personalized join markers
-    const channelMembers = channel.members.map(m => {
-      const memberId = m.user ? m.user.toString() : m.toString();
-      const joinedAt = m.joinedAt || channel.createdAt;
-      return {
-        userId: memberId,
-        joinedAt: joinedAt
-      };
-    });
-
-    // Populate member usernames
-    const populatedMembers = await Promise.all(
-      channelMembers.map(async (member) => {
-        const user = await require("../models/User").findById(member.userId).select("username");
-        return {
-          ...member,
-          username: user?.username || "Unknown"
-        };
-      })
-    );
-
-    // Populate reply counts and avatars
-    const messagesWithCounts = await Promise.all(messages.map(async (msg) => {
-      // 1. Count replies (exclude system messages from thread count)
-      const count = await Message.countDocuments({
-        parentId: msg._id,
-        type: { $ne: 'system' } // Don't count system messages in threads
-      });
-
-      // 2. Get recent replier avatars (distinct)
-      let replyAvatars = [];
-      let lastReplyAt = null;
-
-      if (count > 0) {
-        try {
-          const lastReplies = await Message.find({
-            parentId: msg._id,
-            type: { $ne: 'system' } // Don't include system messages
-          })
-            .sort({ createdAt: -1 })
-            .limit(5)
-            .populate("sender", "profilePicture"); // Changed from avatarUrl to profilePicture
-
-          if (lastReplies.length > 0) {
-            lastReplyAt = lastReplies[0].createdAt;
-          }
-
-          const seen = new Set();
-          for (const r of lastReplies) {
-            if (r.sender && r.sender.profilePicture && !seen.has(r.sender._id.toString())) {
-              seen.add(r.sender._id.toString());
-              replyAvatars.push(r.sender.profilePicture); // Changed from avatarUrl to profilePicture
-              // Limit to 3 avatars
-              if (replyAvatars.length >= 3) break;
-            }
-          }
-        } catch (err) {
-          console.error("Error fetching reply avatars:", err);
-        }
-      }
-
-      const msgObj = msg.toObject();
-      msgObj.replyCount = count;
-      msgObj.replyAvatars = replyAvatars;
-      msgObj.lastReplyAt = lastReplyAt;
-      return msgObj;
-    }));
-
-    // DEBUG: Log first message structure to verify payload.text
-    if (messagesWithCounts.length > 0) {
-      console.log('🔍 DEBUG - Sample message structure:', JSON.stringify(messagesWithCounts[0], null, 2));
-      console.log('🔍 DEBUG - Message payload:', messagesWithCounts[0].payload);
-      console.log('🔍 DEBUG - Message text:', messagesWithCounts[0].payload?.text);
-    }
-
     return res.json({
-      messages: messagesWithCounts,
-      userJoinedAt,
-      channelMembers: populatedMembers,
-      hasMore,
-      total: totalCount
+      messages,
+      hasMore: messages.length === limit,
+      userJoinedAt: joinedAt
     });
   } catch (err) {
     return handleError(res, err, "GET CHANNEL ERROR");
   }
 };
 
-/**
- * Get all DM sessions for a user in a specific workspace
- * GET /api/messages/workspace/:workspaceId/dms
- */
+/* =====================================================
+   WORKSPACE DM LIST (NO PLAINTEXT ACCESS)
+===================================================== */
 exports.getWorkspaceDMList = async (req, res) => {
   try {
     const userId = req.user.sub;
@@ -409,152 +265,42 @@ exports.getWorkspaceDMList = async (req, res) => {
 
     const sessions = await DMSession.find({
       workspace: workspaceId,
-      participants: { $in: [userId] }
-    }).populate("participants", "username email profilePicture isOnline userStatus");
+      participants: userId
+    }).populate("participants", "username profilePicture");
 
-    // Return sessions with recent message preview and unread counts
-    const sessionList = await Promise.all(sessions.map(async (s) => {
-      const lastMsg = await Message.findOne({ dm: s._id })
-        .sort({ createdAt: -1 })
-        .select("text createdAt sender")
-        .populate("sender", "username");
+    const list = await Promise.all(
+      sessions.map(async (s) => {
+        const lastMsg = await Message.findOne({ dm: s._id })
+          .sort({ _id: -1 })
+          .select("createdAt sender")
+          .populate("sender", "username");
 
-      // Filter out current user from participants list to get the "other user"
-      const otherUser = s.participants.find(p => String(p._id) !== String(userId));
+        const unreadCount = await Message.countDocuments({
+          dm: s._id,
+          sender: { $ne: userId },
+          "readBy.user": { $ne: userId }
+        });
 
-      // Compute unread count: messages in this DM session not sent by current user and not read by current user
-      const unreadCount = await Message.countDocuments({
-        dm: s._id,
-        sender: { $ne: userId },
-        'readBy.user': { $ne: userId }  // FIX: Use proper path for embedded document
-      });
+        const otherUser = s.participants.find(p => String(p._id) !== String(userId));
 
-      return {
-        id: s._id,
-        otherUser: otherUser || { username: "Self" },
-        otherUserId: otherUser?._id,
-        lastMessage: lastMsg?.text || "No messages yet",
-        lastMessageAt: lastMsg?.createdAt || s.createdAt,
-        unreadCount
-      };
-    }));
+        return {
+          id: s._id,
+          otherUser,
+          lastMessageAt: lastMsg?.createdAt || s.createdAt,
+          unreadCount
+        };
+      })
+    );
 
-    return res.json({ sessions: sessionList });
+    return res.json({ sessions: list });
   } catch (err) {
     return handleError(res, err, "GET WORKSPACE DM LIST ERROR");
   }
 };
 
-
-/**
- * AI Command Processor
- * Parses @chttrixAI commands to create tasks
- */
-async function processAICommand(message, sender, contextType, req) {
-  try {
-    const text = message.payload.text;
-    const io = req.io;
-
-    // 1. Parse Assignees (@User)
-    const mentionRegex = /@(\w+)/g;
-    const mentions = text.match(mentionRegex) || [];
-    const targetUsernames = mentions
-      .filter(m => m.toLowerCase() !== "@chttrixai")
-      .map(m => m.substring(1)); // remove @
-
-    if (targetUsernames.length === 0) {
-      return sendAIReply(message, "⚠️ Please mention a user to assign the task (e.g. @Muzamil).", io);
-    }
-
-    // Resolve Users
-    const assigneeIds = [];
-    const assigneeNames = [];
-    for (const username of targetUsernames) {
-      const user = await User.findOne({ username: new RegExp(`^${username}$`, "i") });
-      // Verify user is in workspace helper if needed, but for now strict name match
-      if (user) {
-        assigneeIds.push(user._id);
-        assigneeNames.push(user.username);
-      }
-    }
-
-    if (assigneeIds.length === 0) return;
-
-    // 2. Parse Due Date (Simple heuristic)
-    let dueDate = null;
-    const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-    const lowerText = text.toLowerCase();
-
-    // Check for "by X day"
-    for (let i = 0; i < 7; i++) {
-      if (lowerText.includes(days[i])) {
-        const today = new Date();
-        const currentDay = today.getDay();
-        let distance = i - currentDay;
-        if (distance <= 0) distance += 7; // Next occurrence
-        dueDate = new Date(today);
-        dueDate.setDate(today.getDate() + distance);
-        break;
-      }
-    }
-
-    // 3. Extract Title (Remove mentions)
-    let cleanText = text.replace(/@\w+/g, "").replace(/\s+/g, " ").trim();
-    // Remove "by Friday" etc if complex parsing, but simply using clean text as description/title is fine
-    const title = cleanText.substring(0, 50) + (cleanText.length > 50 ? "..." : "");
-
-    // 4. Create Task(s) - Split Logic
-    for (const assigneeId of assigneeIds) {
-      const task = new Task({
-        company: message.company,
-        workspace: message.workspace,
-        title: title || "New AI Task",
-        description: text,
-        createdBy: sender.sub || sender._id,
-        assignedTo: [assigneeId], // Independent task
-        visibility: contextType === 'dm' ? 'private' : 'channel',
-        channel: contextType === 'channel' ? message.channel : null,
-        status: 'todo',
-        priority: 'medium',
-        dueDate: dueDate,
-        linkedMessage: message._id
-      });
-      await task.save();
-    }
-
-    // 5. Reply
-    const assigneeStr = assigneeNames.map(n => `@${n}`).join(", ");
-    sendAIReply(message, `🤖 **Task Created:** ${title}\n👤 Assigned to: ${assigneeStr}\n📅 Due: ${dueDate ? dueDate.toDateString() : "No Date"}`, io);
-
-  } catch (err) {
-    console.error("AI PROCESS ERROR:", err);
-  }
-}
-
-async function sendAIReply(originalMsg, text, io) {
-  try {
-    const reply = await Message.create({
-      type: 'message',
-      company: originalMsg.company,
-      workspace: originalMsg.workspace,
-      channel: originalMsg.channel,
-      dm: originalMsg.dm,
-      sender: originalMsg.sender, // Reply as the user (self-echo) or system? 
-      // Better to reply as System but we lack ID. 
-      // Using sender is safe fallback, but adding START "🤖" makes it clear.
-      payload: {
-        text: text
-      },
-      parentId: originalMsg._id // Thread it!
-    });
-
-    await reply.populate("sender", "username profilePicture");
-
-    // Emit
-    const room = originalMsg.channel ? `channel_${originalMsg.channel}` : `dm_${originalMsg.dm}`;
-    if (io) io.to(room).emit("new-message", reply);
-
-  } catch (e) {
-    console.error("Bot Reply Error", e);
-  }
-}
+/* =====================================================
+   AI COMMANDS — DISABLED FOR E2EE (BY DESIGN)
+===================================================== */
+// ❌ processAICommand REMOVED
+// ❌ sendAIReply REMOVED
+// Reason: plaintext access is forbidden under E2EE

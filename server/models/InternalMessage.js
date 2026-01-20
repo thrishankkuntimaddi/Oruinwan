@@ -1,158 +1,219 @@
-// server/models/InternalMessage.js
-// Internal messaging between Managers and Company Admins
+/**
+ * ⚠️ SYSTEM-ONLY COMMUNICATION (NOT E2EE)
+ *
+ * Used ONLY for:
+ * - Chttrix platform admins
+ * - Company owners / admins
+ *
+ * ❌ Never appears in workspace chat
+ * ❌ Never encrypted end-to-end
+ * ❌ Never mixed with Message / DMSession
+ */
 
 const mongoose = require('mongoose');
 
-const internalMessageSchema = new mongoose.Schema({
+const internalMessageSchema = new mongoose.Schema(
+  {
+    /* ---------- Scope ---------- */
+
     companyId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Company',
-        required: true,
-        index: true
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Company',
+      required: true,
+      index: true
     },
+
+    /* ---------- Participants ---------- */
+
     sender: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
-        required: true
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true
     },
+
     recipient: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
-        required: true
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true
     },
+
+    /* ---------- Content ---------- */
+
     content: {
-        type: String,
-        required: true,
-        trim: true
+      type: String,
+      required: true,
+      trim: true
     },
+
     messageType: {
-        type: String,
-        enum: ['manager-to-admin', 'admin-to-manager'],
-        required: true
+      type: String,
+      enum: ['manager-to-admin', 'admin-to-manager'],
+      required: true
     },
+
+    /* ---------- Read State ---------- */
+
     read: {
-        type: Boolean,
-        default: false
+      type: Boolean,
+      default: false,
+      index: true
     },
+
     readAt: {
-        type: Date
+      type: Date,
+      default: null
     },
-    attachments: [{
+
+    /* ---------- Attachments ---------- */
+
+    attachments: [
+      {
         filename: String,
         url: String,
         size: Number,
         mimeType: String
-    }],
-    // Helpful for quick filtering
+      }
+    ],
+
+    /* ---------- Metadata ---------- */
+
     isFromAdmin: {
-        type: Boolean,
-        default: false
+      type: Boolean,
+      default: false
     },
-    // Department context (optional, helps with filtering)
+
     departmentId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Department'
-    }
-}, {
-    timestamps: true
-});
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Department',
+      default: null
+    },
 
-// Indexes for efficient queries
+    /* ---------- Safety / Retention ---------- */
+
+    isSystemLocked: {
+      type: Boolean,
+      default: true // cannot be deleted or edited
+    }
+  },
+  { timestamps: true }
+);
+
+/* ======================
+   Indexes
+====================== */
+
 internalMessageSchema.index({ sender: 1, recipient: 1, createdAt: -1 });
-internalMessageSchema.index({ companyId: 1, read: 1 });
 internalMessageSchema.index({ recipient: 1, read: 1, createdAt: -1 });
+internalMessageSchema.index({ companyId: 1, read: 1 });
 
-// Virtual for conversation partner (from sender's perspective)
+/* ======================
+   Virtuals
+====================== */
+
+/**
+ * Always returns "the other user"
+ * regardless of populate state
+ */
 internalMessageSchema.virtual('conversationPartner').get(function () {
-    return this.populated('sender') ? this.recipient : this.sender;
+  return this.sender.equals(this._viewerId)
+    ? this.recipient
+    : this.sender;
 });
 
-// Method to mark as read
+/* ======================
+   Methods
+====================== */
+
 internalMessageSchema.methods.markAsRead = async function () {
-    if (!this.read) {
-        this.read = true;
-        this.readAt = new Date();
-        await this.save();
-    }
-    return this;
+  if (!this.read) {
+    this.read = true;
+    this.readAt = new Date();
+    await this.save();
+  }
+  return this;
 };
 
-// Static method to get conversation between two users
-internalMessageSchema.statics.getConversation = async function (userId1, userId2, limit = 50) {
-    return this.find({
-        $or: [
-            { sender: userId1, recipient: userId2 },
-            { sender: userId2, recipient: userId1 }
-        ]
-    })
-        .populate('sender', 'username email profilePicture companyRole')
-        .populate('recipient', 'username email profilePicture companyRole')
-        .sort({ createdAt: 1 })
-        .limit(limit);
+/* ======================
+   Statics
+====================== */
+
+internalMessageSchema.statics.getConversation = async function (
+  userId1,
+  userId2,
+  limit = 50
+) {
+  return this.find({
+    $or: [
+      { sender: userId1, recipient: userId2 },
+      { sender: userId2, recipient: userId1 }
+    ]
+  })
+    .sort({ createdAt: 1 })
+    .limit(limit)
+    .populate('sender', 'username email profilePicture companyRole')
+    .populate('recipient', 'username email profilePicture companyRole');
 };
 
-// Static method to get unread count for a user
 internalMessageSchema.statics.getUnreadCount = async function (userId) {
-    return this.countDocuments({
-        recipient: userId,
-        read: false
-    });
+  return this.countDocuments({
+    recipient: userId,
+    read: false
+  });
 };
 
-// Static method to get admin inbox (all conversations with managers)
-internalMessageSchema.statics.getAdminInbox = async function (adminId, companyId) {
-    // Get latest message from each unique conversation
-    const conversations = await this.aggregate([
-        {
-            $match: {
-                companyId: mongoose.Types.ObjectId(companyId),
-                $or: [
-                    { sender: mongoose.Types.ObjectId(adminId) },
-                    { recipient: mongoose.Types.ObjectId(adminId) }
+/**
+ * Admin inbox: one row per conversation
+ */
+internalMessageSchema.statics.getAdminInbox = async function (
+  adminId,
+  companyId
+) {
+  const conversations = await this.aggregate([
+    {
+      $match: {
+        companyId: mongoose.Types.ObjectId(companyId),
+        $or: [
+          { sender: mongoose.Types.ObjectId(adminId) },
+          { recipient: mongoose.Types.ObjectId(adminId) }
+        ]
+      }
+    },
+    { $sort: { createdAt: -1 } },
+    {
+      $group: {
+        _id: {
+          $cond: [
+            { $eq: ['$sender', mongoose.Types.ObjectId(adminId)] },
+            '$recipient',
+            '$sender'
+          ]
+        },
+        lastMessage: { $first: '$$ROOT' },
+        unreadCount: {
+          $sum: {
+            $cond: [
+              {
+                $and: [
+                  { $eq: ['$recipient', mongoose.Types.ObjectId(adminId)] },
+                  { $eq: ['$read', false] }
                 ]
-            }
-        },
-        {
-            $sort: { createdAt: -1 }
-        },
-        {
-            $group: {
-                _id: {
-                    $cond: [
-                        { $eq: ['$sender', mongoose.Types.ObjectId(adminId)] },
-                        '$recipient',
-                        '$sender'
-                    ]
-                },
-                lastMessage: { $first: '$$ROOT' },
-                unreadCount: {
-                    $sum: {
-                        $cond: [
-                            {
-                                $and: [
-                                    { $eq: ['$recipient', mongoose.Types.ObjectId(adminId)] },
-                                    { $eq: ['$read', false] }
-                                ]
-                            },
-                            1,
-                            0
-                        ]
-                    }
-                }
-            }
-        },
-        {
-            $sort: { 'lastMessage.createdAt': -1 }
+              },
+              1,
+              0
+            ]
+          }
         }
-    ]);
+      }
+    },
+    { $sort: { 'lastMessage.createdAt': -1 } }
+  ]);
 
-    // Populate user details
-    await this.populate(conversations, {
-        path: 'lastMessage.sender lastMessage.recipient',
-        select: 'username email profilePicture companyRole'
-    });
+  await this.populate(conversations, {
+    path: 'lastMessage.sender lastMessage.recipient',
+    select: 'username email profilePicture companyRole'
+  });
 
-    return conversations;
+  return conversations;
 };
 
 module.exports = mongoose.model('InternalMessage', internalMessageSchema);

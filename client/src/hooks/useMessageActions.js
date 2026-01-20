@@ -59,31 +59,21 @@ export function useMessageActions(conversationId, conversationType, workspaceId 
 
         try {
             // ============ E2EE: ENCRYPT MESSAGE ============
-            let encryptedText = null;
-            let messageIv = null;
-            let isEncrypted = false;
+let encryptedText;
+let messageIv;
+let isEncrypted = true;
 
-            // Try to encrypt if workspace key available
-            if (workspaceId && text) {
-                try {
-                    const workspaceKey = await getWorkspaceKeyForEncryption(workspaceId);
+const workspaceKey = await getWorkspaceKeyForEncryption(workspaceId);
+if (!workspaceKey) {
+  throw new Error("E2EE not initialized");
+}
 
-                    if (workspaceKey) {
-                        console.log('🔐 [sendMessage] Encrypting message...');
-                        const encrypted = await encryptMessage(text, workspaceKey);
-                        encryptedText = encrypted.ciphertext;
-                        messageIv = encrypted.iv;
-                        isEncrypted = true;
-                        optimisticMessage.isEncrypted = true; // Update flag
-                        console.log('✅ [sendMessage] Message encrypted');
-                    } else {
-                        console.warn('⚠️ [sendMessage] No workspace key - sending unencrypted');
-                    }
-                } catch (encryptError) {
-                    console.error('❌ [sendMessage] Encryption failed:', encryptError);
-                    // Fall back to unencrypted (for backward compatibility)
-                }
-            }
+const { ciphertext, iv } = await encryptMessage(text, workspaceKey);
+
+encryptedText = ciphertext;
+messageIv = iv;
+
+
             // ==============================================
 
             console.log('📤 [sendMessage] Optimistic message created:', optimisticMessage);
@@ -94,7 +84,6 @@ export function useMessageActions(conversationId, conversationType, workspaceId 
                 console.log('📤 [sendMessage] Sending to channel:', conversationId);
                 response = await api.post('/api/v2/messages/channel', {
                     channelId: conversationId,
-                    text: isEncrypted ? null : text,
                     ciphertext: encryptedText,
                     messageIv: messageIv,
                     isEncrypted: isEncrypted,
@@ -106,7 +95,6 @@ export function useMessageActions(conversationId, conversationType, workspaceId 
                 response = await api.post('/api/v2/messages/direct', {
                     receiverId: conversationId,
                     workspaceId,
-                    text: isEncrypted ? null : text,
                     ciphertext: encryptedText,
                     messageIv: messageIv,
                     isEncrypted: isEncrypted,
@@ -323,3 +311,5 @@ export function useMessageActions(conversationId, conversationType, workspaceId 
         generateTempId
     };
 }
+
+

@@ -56,14 +56,21 @@ export default function DMChatWindow({ chat, onClose, onDeleteChat }) {
 
             // Add real message
             const formattedMsg = {
-                id: message._id,
-                sender: message.sender._id === currentUserId ? "you" : "them",
-                senderName: message.sender.username,
-                senderAvatar: message.sender.profilePicture,
-                text: message.text,
-                ts: message.createdAt,
-                backend: message,
-            };
+    id: message._id,
+
+    // keep sender object, don't flatten too early
+    sender: message.sender,
+
+    senderName: message.sender.username,
+    senderAvatar: message.sender.profilePicture,
+
+    // ✅ KEEP PAYLOAD (THIS IS THE FIX)
+    payload: message.payload,
+
+    ts: message.createdAt,
+    backend: message,
+};
+
 
             setMessages(prev => {
                 // Avoid duplicates
@@ -84,7 +91,7 @@ export default function DMChatWindow({ chat, onClose, onDeleteChat }) {
                     sender: "you",
                     senderName: message.sender.username,
                     senderAvatar: message.sender.profilePicture,
-                    text: message.text,
+                    payload: message.payload,
                     ts: message.createdAt,
                     backend: message,
                 };
@@ -175,14 +182,20 @@ export default function DMChatWindow({ chat, onClose, onDeleteChat }) {
                 const msgs = response.data.messages || [];
 
                 const formatted = msgs.map(msg => ({
-                    id: msg._id,
-                    sender: msg.sender._id === currentUserId ? "you" : "them",
-                    senderName: msg.sender.username,
-                    senderAvatar: msg.sender.profilePicture,
-                    text: msg.text,
-                    ts: msg.createdAt,
-                    backend: msg,
-                }));
+    id: msg._id,
+
+    sender: msg.sender,
+
+    senderName: msg.sender.username,
+    senderAvatar: msg.sender.profilePicture,
+
+    // ✅ KEEP PAYLOAD
+    payload: msg.payload,
+
+    ts: msg.createdAt,
+    backend: msg,
+}));
+
 
                 setMessages(formatted);
             } catch (error) {
@@ -204,12 +217,16 @@ export default function DMChatWindow({ chat, onClose, onDeleteChat }) {
 
         // Optimistic UI
         const optimisticMsg = {
-            id: clientTempId,
-            sender: "you",
-            text: newMessage.trim(),
-            ts: new Date().toISOString(),
-            sending: true,
-        };
+    id: clientTempId,
+    sender: { _id: currentUserId },
+    payload: {
+        text: newMessage.trim(),
+        isEncrypted: false, // local only
+    },
+    ts: new Date().toISOString(),
+    sending: true,
+};
+
 
         setMessages(prev => [...prev, optimisticMsg]);
         pendingMessagesRef.current[clientTempId] = optimisticMsg;

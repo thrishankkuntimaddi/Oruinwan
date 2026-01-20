@@ -1,86 +1,206 @@
 const mongoose = require("mongoose");
 
-const ChannelSchema = new mongoose.Schema({
-  workspace: { type: mongoose.Schema.Types.ObjectId, ref: "Workspace", required: true },
-  company: { type: mongoose.Schema.Types.ObjectId, ref: "Company", default: null }, // null for personal workspaces
+/**
+ * Channel Model
+ *
+ * Guarantees:
+ * - Workspace-scoped
+ * - Strong membership rules
+ * - Explicit channel type invariants
+ * - Safe for E2EE message flow
+ */
+const ChannelSchema = new mongoose.Schema(
+  {
+    /* ---------- Scope ---------- */
 
-  name: { type: String, required: true },
-  description: { type: String, default: "" },
-  topic: { type: String, default: "" }, // channel topic/purpose
+    workspace: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Workspace",
+      required: true,
+      index: true
+    },
 
-  // Channel type
-  isPrivate: { type: Boolean, default: false },
-  isDefault: { type: Boolean, default: false }, // auto-join for all workspace members
-  isArchived: { type: Boolean, default: false },
+    company: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Company",
+      default: null
+    },
 
-  createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+    /* ---------- Identity ---------- */
 
-  // Members with join tracking
-  members: [{
-    user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
-    joinedAt: { type: Date, default: Date.now }
-  }],
+    name: {
+      type: String,
+      required: true,
+      trim: true
+    },
 
-  // Channel admins (can manage members, settings, and delete channel)
-  admins: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+    description: {
+      type: String,
+      default: ""
+    },
 
-  // Activity tracking
-  lastMessageAt: { type: Date, default: null },
-  messageCount: { type: Number, default: 0 },
+    topic: {
+      type: String,
+      default: ""
+    },
 
-  // Pinned messages
-  pinnedMessages: [{ type: mongoose.Schema.Types.ObjectId, ref: "Message" }],
+    /* ---------- Channel Type ---------- */
 
-  // Generic Tabs (Canvas, etc.)
-  tabs: [{
-    name: { type: String, required: true },
-    type: { type: String, enum: ['canvas'], default: 'canvas' },
-    content: { type: String, default: "" }, // HTML content
-    createdAt: { type: Date, default: Date.now },
-    createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" }
-  }],
+    isPrivate: {
+      type: Boolean,
+      default: false
+    },
 
-  // Additional metadata
-  metadata: { type: mongoose.Schema.Types.Mixed }
+    /**
+     * Default channels:
+     * - auto-joined by all workspace members
+     * - always public
+     */
+    isDefault: {
+      type: Boolean,
+      default: false
+    },
 
-}, { timestamps: true });
+    isArchived: {
+      type: Boolean,
+      default: false
+    },
 
-// Indexes
-ChannelSchema.index({ workspace: 1, name: 1 });
+    /* ---------- Ownership ---------- */
+
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true
+    },
+
+    /* ---------- Members ---------- */
+
+    members: [
+      {
+        user: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "User",
+          required: true
+        },
+        joinedAt: {
+          type: Date,
+          default: Date.now
+        }
+      }
+    ],
+
+    /* ---------- Admins ---------- */
+
+    admins: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+        required: true
+      }
+    ],
+
+    /* ---------- Activity ---------- */
+
+    lastMessageAt: {
+      type: Date,
+      default: null,
+      index: true
+    },
+
+    messageCount: {
+      type: Number,
+      default: 0
+    },
+
+    /* ---------- Pinned ---------- */
+
+    pinnedMessages: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Message"
+      }
+    ],
+
+    /* ---------- Tabs ---------- */
+
+    tabs: [
+      {
+        name: { type: String, required: true },
+        type: { type: String, enum: ["canvas"], default: "canvas" },
+        content: { type: String, default: "" },
+        createdAt: { type: Date, default: Date.now },
+        createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" }
+      }
+    ],
+
+    metadata: mongoose.Schema.Types.Mixed
+  },
+  { timestamps: true }
+);
+
+/* ======================
+   Indexes
+====================== */
+
+ChannelSchema.index({ workspace: 1, name: 1 }, { unique: true });
+ChannelSchema.index({ "members.user": 1 });
 ChannelSchema.index({ company: 1, isPrivate: 1 });
-ChannelSchema.index({ "members.user": 1 }); // Correct nested path for member queries
 
-// Helper to check if user is member
+/* ======================
+   Invariants (CRITICAL)
+====================== */
+
+ChannelSchema.pre("save", function (next) {
+  // ❌ Default channels cannot be private
+  if (this.isDefault && this.isPrivate) {
+    return next(
+      new Error("Default channels cannot be private")
+    );
+  }
+
+  // ❌ Private channels must have admins
+  if (this.isPrivate && (!this.admins || this.admins.length === 0)) {
+    return next(
+      new Error("Private channels must have at least one admin")
+    );
+  }
+
+  next();
+});
+
+/* ======================
+   Helpers
+====================== */
+
 ChannelSchema.methods.isMember = function (userId) {
-  if (!this.isPrivate || this.isDefault) return true; // public channels
+  if (!this.isPrivate || this.isDefault) return true;
 
-  // Handle both old format (ObjectId) and new format ({ user, joinedAt })
-  return this.members.some(m => {
-    const memberId = m.user ? m.user.toString() : m.toString();
-    return memberId === userId.toString();
-  });
+  return this.members.some(m =>
+    m.user.toString() === userId.toString()
+  );
 };
 
-// Helper to get user's join date
 ChannelSchema.methods.getUserJoinDate = function (userId) {
-  const member = this.members.find(m => {
-    const memberId = m.user ? m.user.toString() : m.toString();
-    return memberId === userId.toString();
-  });
+  const member = this.members.find(
+    m => m.user.toString() === userId.toString()
+  );
 
-  // Return joinedAt if available, otherwise use current time (privacy-first approach)
-  // This ensures members without a timestamp can only see future messages
+  // Privacy-first: if unknown, restrict history
   return member?.joinedAt || new Date();
 };
 
-// Helper to check if user is admin
 ChannelSchema.methods.isAdmin = function (userId) {
-  return this.admins.some(adminId => adminId.toString() === userId.toString());
+  return this.admins.some(
+    adminId => adminId.toString() === userId.toString()
+  );
 };
 
-// Helper to check if user is the only admin
 ChannelSchema.methods.isOnlyAdmin = function (userId) {
-  return this.admins.length === 1 && this.isAdmin(userId);
+  return (
+    this.admins.length === 1 &&
+    this.isAdmin(userId)
+  );
 };
 
 module.exports = mongoose.model("Channel", ChannelSchema);

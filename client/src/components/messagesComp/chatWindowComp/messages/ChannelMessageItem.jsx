@@ -4,6 +4,7 @@ import ReactionBadges from "./reactionBadges";
 import ReactionPicker from "./reactionPicker";
 import ReactMarkdown from "react-markdown";
 import remarkBreaks from "remark-breaks";
+import EncryptedMessage from "../../EncryptedMessage";
 
 /* ---------------------------------------------------------
    CHANNEL MessageItem Component (Slack Style)
@@ -64,13 +65,12 @@ function ChannelMessageItem({
         };
     }, [showReactionPicker]);
 
-    // ✨ System Message Rendering (e.g., "muza exited from #maker on Dec 24, 2025")
     // Must be AFTER all hooks to avoid React Hooks rules violation
     if (msg.type === 'system' || msg.backend?.type === 'system') {
         return (
             <div className="flex justify-center my-3">
                 <div className="bg-gray-100/80 dark:bg-gray-800/80 px-4 py-1.5 rounded-full text-xs text-gray-600 dark:text-gray-300 font-medium shadow-sm">
-                    {msg.text}
+                    {msg.payload?.text}
                 </div>
             </div>
         );
@@ -181,7 +181,7 @@ function ChannelMessageItem({
                                 </span>
                             </div>
                             <div className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2 leading-relaxed">
-                                {msg.repliedTo.text}
+                                {msg.repliedTo.payload?.text || "🔒 Encrypted message"}
                             </div>
                         </div>
                     </div>
@@ -189,16 +189,35 @@ function ChannelMessageItem({
 
                 {/* Message Text (More compact line height) */}
                 <div className="text-gray-800 dark:text-gray-200 text-[14px] leading-snug whitespace-pre-wrap break-words message-content">
-                    <ReactMarkdown
-                        remarkPlugins={[remarkBreaks]}
-                        components={{
-                            a: ({ node, children, ...props }) => <a {...props} className="text-blue-600 dark:text-blue-400 hover:underline" target="_blank" rel="noopener noreferrer">{children}</a>,
-                            ul: ({ node, ...props }) => <ul {...props} className="list-disc list-inside ml-1" />,
-                            ol: ({ node, ...props }) => <ol {...props} className="list-decimal list-inside ml-1" />,
-                        }}
-                    >
-                        {msg.text}
-                    </ReactMarkdown>
+                    {msg.payload?.isEncrypted ? (
+    <EncryptedMessage
+        ciphertext={msg.payload.ciphertext}
+        messageIv={msg.payload.messageIv}
+        senderId={msg.sender?._id}
+        currentUserId={currentUserId}
+    />
+) : (
+    <ReactMarkdown
+        remarkPlugins={[remarkBreaks]}
+        components={{
+            a: ({ node, children, ...props }) => (
+                <a
+                    {...props}
+                    className="text-blue-600 dark:text-blue-400 hover:underline"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                >
+                    {children}
+                </a>
+            ),
+            ul: ({ node, ...props }) => <ul {...props} className="list-disc list-inside ml-1" />,
+            ol: ({ node, ...props }) => <ol {...props} className="list-decimal list-inside ml-1" />,
+        }}
+    >
+        {msg.payload?.text}
+    </ReactMarkdown>
+)}
+
                 </div>
 
                 {/* Sending/Failed States */}
@@ -311,7 +330,7 @@ export default React.memo(ChannelMessageItem, (prevProps, nextProps) => {
     // Re-render only if these specific props change
     return (
         prevProps.msg.id === nextProps.msg.id &&
-        prevProps.msg.text === nextProps.msg.text &&
+        prevProps.msg.payload?.text === nextProps.msg.payload?.text &&
         prevProps.msg.isPinned === nextProps.msg.isPinned &&
         prevProps.msg.sending === nextProps.msg.sending &&
         prevProps.msg.failed === nextProps.msg.failed &&

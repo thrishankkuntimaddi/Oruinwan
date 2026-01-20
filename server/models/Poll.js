@@ -1,27 +1,83 @@
 const mongoose = require("mongoose");
 
-const PollOptionSchema = new mongoose.Schema({
-  text: { type: String, required: true },
-  votes: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }]
-}, { _id: false });
+const PollOptionSchema = new mongoose.Schema(
+  {
+    text: { type: String, required: true },
 
-const PollSchema = new mongoose.Schema({
-  message: { type: mongoose.Schema.Types.ObjectId, ref: "Message", required: true },
+    votes: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User"
+    }]
+  },
+  { _id: false }
+);
 
-  workspace: { type: mongoose.Schema.Types.ObjectId, ref: "Workspace", required: true },
-  channel: { type: mongoose.Schema.Types.ObjectId, ref: "Channel", default: null },
-  dm: { type: mongoose.Schema.Types.ObjectId, ref: "DMSession", default: null },
+const PollSchema = new mongoose.Schema(
+  {
+    message: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Message",
+      required: true,
+      unique: true // 🔒 one poll per message
+    },
 
-  createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+    workspace: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Workspace",
+      required: true
+    },
 
-  question: { type: String, required: true },
-  options: [PollOptionSchema],
+    channel: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Channel",
+      default: null
+    },
 
-  allowMultiple: { type: Boolean, default: false },
+    dm: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "DMSession",
+      default: null
+    },
 
-  expiresAt: Date,
-  isActive: { type: Boolean, default: true }
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true
+    },
 
-}, { timestamps: true });
+    question: {
+      type: String,
+      required: true
+    },
+
+    options: {
+      type: [PollOptionSchema],
+      validate: v => v.length >= 2
+    },
+
+    allowMultiple: {
+      type: Boolean,
+      default: false
+    },
+
+    expiresAt: {
+      type: Date,
+      default: null
+    },
+
+    isActive: {
+      type: Boolean,
+      default: true
+    }
+  },
+  { timestamps: true }
+);
+
+/* Auto-expire */
+PollSchema.pre('save', function () {
+  if (this.expiresAt && this.expiresAt < new Date()) {
+    this.isActive = false;
+  }
+});
 
 module.exports = mongoose.model("Poll", PollSchema);

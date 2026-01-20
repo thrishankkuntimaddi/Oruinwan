@@ -19,8 +19,6 @@ import {
 // ==================== CONSTANTS ====================
 
 const STORAGE_KEY_PREFIX = 'e2ee_workspace_key_';
-const STORAGE_KEK = 'e2ee_kek';
-const STORAGE_SALT = 'e2ee_salt';
 
 // ==================== KEY STORAGE ====================
 
@@ -95,46 +93,6 @@ function clearAllWorkspaceKeys() {
             sessionStorage.removeItem(key);
         }
     });
-
-    // Also clear KEK and salt
-    sessionStorage.removeItem(STORAGE_KEK);
-    sessionStorage.removeItem(STORAGE_SALT);
-}
-
-// ==================== KEK MANAGEMENT ====================
-
-/**
- * Store Key Encryption Key (KEK) in sessionStorage
- * Used to decrypt workspace keys
- * 
- * @param {CryptoKey} kek - Key Encryption Key
- */
-async function storeKEK(kek) {
-    try {
-        const kekBytes = await crypto.subtle.exportKey('raw', kek);
-        const kekBase64 = btoa(String.fromCharCode(...new Uint8Array(kekBytes)));
-        sessionStorage.setItem(STORAGE_KEK, kekBase64);
-    } catch (error) {
-        console.error('Failed to store KEK:', error);
-    }
-}
-
-/**
- * Retrieve KEK from sessionStorage
- * 
- * @returns {Promise<CryptoKey|null>} KEK or null
- */
-async function getKEK() {
-    try {
-        const kekBase64 = sessionStorage.getItem(STORAGE_KEK);
-        if (!kekBase64) return null;
-
-        const kekBytes = Uint8Array.from(atob(kekBase64), c => c.charCodeAt(0));
-        return await importKey(kekBytes.buffer);
-    } catch (error) {
-        console.error('Failed to retrieve KEK:', error);
-        return null;
-    }
 }
 
 // ==================== KEY ENROLLMENT ====================
@@ -169,12 +127,6 @@ export async function enrollUserKeys(password, encryptedKeys) {
             // Store workspace key
             await storeWorkspaceKey(workspaceId, workspaceKey);
 
-            // Store KEK (first one only, same for all workspaces per user)
-            if (enrolledWorkspaces.length === 0) {
-                await storeKEK(kek);
-                sessionStorage.setItem(STORAGE_SALT, salt);
-            }
-
             enrolledWorkspaces.push(workspaceId);
         }
 
@@ -201,7 +153,11 @@ export async function enrollUserKeys(password, encryptedKeys) {
  * @returns {Promise<CryptoKey|null>} Workspace key or null
  */
 export async function getWorkspaceKeyForEncryption(workspaceId) {
-    return await getWorkspaceKey(workspaceId);
+  const key = await getWorkspaceKey(workspaceId);
+  if (!key) {
+    throw new Error("E2EE key missing for workspace");
+  }
+  return key;
 }
 
 /**
