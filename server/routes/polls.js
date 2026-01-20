@@ -9,6 +9,9 @@ router.use(authMiddleware);
 // Create a new poll
 router.post('/', pollController.createPoll);
 
+// Get a single poll by ID
+router.get('/:pollId', pollController.getPollById);
+
 // Get all polls for a channel
 router.get('/channel/:channelId', pollController.getPollsByChannel);
 

@@ -244,7 +244,7 @@ async function getUserDMSessions(userId, workspaceId) {
             const unreadCount = await Message.countDocuments({
                 dm: session._id,
                 sender: { $ne: userId },
-                readBy: { $ne: userId }
+                'readBy.user': { $ne: userId }
             });
 
             return {

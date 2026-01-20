@@ -144,7 +144,7 @@ exports.resetUnread = async (req, res) => {
         {
           senderId: id,
           receiverId: userId,
-          readBy: { $ne: userId }
+          'readBy.user': { $ne: userId }
         },
         { $addToSet: { readBy: userId } }
       );
@@ -152,7 +152,7 @@ exports.resetUnread = async (req, res) => {
       await Message.updateMany(
         {
           channelId: id,
-          readBy: { $ne: userId }
+          'readBy.user': { $ne: userId }
         },
         { $addToSet: { readBy: userId } }
       );

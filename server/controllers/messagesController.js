@@ -426,7 +426,7 @@ exports.getWorkspaceDMList = async (req, res) => {
       const unreadCount = await Message.countDocuments({
         dm: s._id,
         sender: { $ne: userId },
-        readBy: { $ne: userId }
+        'readBy.user': { $ne: userId }  // FIX: Use proper path for embedded document
       });
 
       return {

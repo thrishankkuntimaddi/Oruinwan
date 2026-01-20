@@ -1447,6 +1447,27 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
   };
 
   /* ---------------------------------------------------------
+      CLEAR CHAT (DM ONLY)
+  --------------------------------------------------------- */
+  const handleClearChat = async () => {
+    if (chat.type !== 'dm') return;
+
+    try {
+      // Clear all messages from the UI
+      setMessages([]);
+
+      // Optionally, make API call to clear chat history on server
+      // This would mark all messages as hidden for this user
+      // await api.post(`/api/messages/dm/${chat.workspaceId}/${chat.id}/clear`);
+
+      showToast('Chat cleared successfully', 'success');
+    } catch (err) {
+      console.error('❌ Clear chat error:', err);
+      showToast('Failed to clear chat', 'error');
+    }
+  };
+
+  /* ---------------------------------------------------------
       RENDER
   --------------------------------------------------------- */
   return (
@@ -1472,6 +1493,7 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
         blocked={blocked}
         setBlocked={setBlocked}
         onDeleteChat={onDeleteChat}
+        onClearChat={handleClearChat}
         onExitChannel={handleExitChannel}
         onDeleteChannel={handleDeleteChannel}
         currentUserId={currentUserIdRef.current}
@@ -1543,7 +1565,6 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
 
                     if (deleteType === 'me') {
                       socket.emit("delete-message", {
-                onVotePoll={handleVotePoll}
                         messageId: id,
                         channelId,
                         dmSessionId,
@@ -1800,67 +1821,67 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
   );
 }
 
-  // Poll handler
-  // Poll handler - USE BACKEND API
-  const handleCreatePoll = async (pollData) => {
-    try {
-      const token = localStorage.getItem('token');
-      
-      const response = await fetch(`${process.env.REACT_APP_API_BASE || 'http://localhost:5000'}/api/polls`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          channelId: chat.id,
-          question: pollData.question,
-          options: pollData.options.map(opt => opt.text),
-          type: pollData.allowMultiple ? 'multiple' : 'single'
-        })
-      });
+// Poll handler
+// Poll handler - USE BACKEND API
+const handleCreatePoll = async (pollData) => {
+  try {
+    const token = localStorage.getItem('token');
 
-      if (!response.ok) throw new Error('Failed to create poll');
-      
-      const data = await response.json();
-      showToast("Poll created successfully!", "success");
-      setShowCreatePoll(false);
-      
-      // Poll message will arrive via socket 'new-message' event
-    } catch (error) {
-      console.error('Error creating poll:', error);
-      showToast("Failed to create poll", "error");
-    }
-  };
+    const response = await fetch(`${process.env.REACT_APP_API_BASE || 'http://localhost:5000'}/api/polls`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        channelId: chat.id,
+        question: pollData.question,
+        options: pollData.options.map(opt => opt.text),
+        type: pollData.allowMultiple ? 'multiple' : 'single'
+      })
+    });
 
-  const handleVotePoll = async (pollId, optionIds) => {
-    try {
-      const token = localStorage.getItem('token');
-      
-      const response = await fetch(`${process.env.REACT_APP_API_BASE || 'http://localhost:5000'}/api/polls/${pollId}/vote`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ optionIds })
-      });
+    if (!response.ok) throw new Error('Failed to create poll');
 
-      if (!response.ok) throw new Error('Failed to vote');
-      
-      const data = await response.json();
-      
-      // Update local poll data
-      setMessages(prev => prev.map(msg => {
-        if (msg.payload?.poll === pollId) {
-          return { ...msg, pollData: data.data.poll };
-        }
-        return msg;
-      }));
-      
-      showToast("Vote recorded!", "success");
-    } catch (error) {
-      console.error('Error voting:', error);
-      showToast("Failed to vote", "error");
-    }
-  };
+    const data = await response.json();
+    showToast("Poll created successfully!", "success");
+    setShowCreatePoll(false);
+
+    // Poll message will arrive via socket 'new-message' event
+  } catch (error) {
+    console.error('Error creating poll:', error);
+    showToast("Failed to create poll", "error");
+  }
+};
+
+const handleVotePoll = async (pollId, optionIds) => {
+  try {
+    const token = localStorage.getItem('token');
+
+    const response = await fetch(`${process.env.REACT_APP_API_BASE || 'http://localhost:5000'}/api/polls/${pollId}/vote`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ optionIds })
+    });
+
+    if (!response.ok) throw new Error('Failed to vote');
+
+    const data = await response.json();
+
+    // Update local poll data
+    setMessages(prev => prev.map(msg => {
+      if (msg.payload?.poll === pollId) {
+        return { ...msg, pollData: data.data.poll };
+      }
+      return msg;
+    }));
+
+    showToast("Vote recorded!", "success");
+  } catch (error) {
+    console.error('Error voting:', error);
+    showToast("Failed to vote", "error");
+  }
+};

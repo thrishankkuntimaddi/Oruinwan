@@ -1,9 +1,72 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { CheckCircle, Circle, Users, Clock, Lock, BarChart2 } from 'lucide-react';
 
-export default function PollMessage({ poll, onVote, currentUserId, formatTime }) {
+export default function PollMessage({ poll: pollProp, msg, onVote, currentUserId, formatTime }) {
+    const [pollData, setPollData] = useState(null);
+    const [loading, setLoading] = useState(true);
     const [selectedOptions, setSelectedOptions] = useState([]);
     const [showVoters, setShowVoters] = useState(null);
+
+    // Fetch poll data if we only have an ID
+    useEffect(() => {
+        const fetchPoll = async () => {
+            try {
+                // If we have full poll data already, use it
+                if (pollProp && pollProp.question) {
+                    setPollData(pollProp);
+                    setLoading(false);
+                    return;
+                }
+
+                // Otherwise fetch from API using poll ID
+                const pollId = pollProp || msg?.payload?.poll || msg?.poll;
+                if (!pollId) {
+                    console.error('No poll ID found');
+                    setLoading(false);
+                    return;
+                }
+
+                const token = localStorage.getItem('token');
+                const response = await fetch(`http://localhost:5000/api/polls/${pollId}`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (!response.ok) throw new Error('Failed to fetch poll');
+
+                const data = await response.json();
+                setPollData(data.data?.poll || data.poll);
+                setLoading(false);
+            } catch (error) {
+                console.error('Error fetching poll:', error);
+                setLoading(false);
+            }
+        };
+
+        fetchPoll();
+    }, [pollProp, msg]);
+
+    if (loading) {
+        return (
+            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 my-2">
+                <div className="flex items-center gap-2 text-gray-500">
+                    <BarChart2 size={20} className="animate-pulse" />
+                    <span>Loading poll...</span>
+                </div>
+            </div>
+        );
+    }
+
+    if (!pollData) {
+        return (
+            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 my-2">
+                <div className="text-red-500">Failed to load poll</div>
+            </div>
+        );
+    }
+
+    const poll = pollData;
 
     const hasVoted = useMemo(() => {
         return poll.votes && poll.votes[currentUserId];
@@ -97,10 +160,10 @@ export default function PollMessage({ poll, onVote, currentUserId, formatTime })
                                 onClick={() => handleOptionClick(index)}
                                 disabled={!canVote}
                                 className={`w-full text-left rounded-lg border transition-all ${canVote
-                                        ? isSelected
-                                            ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                                            : 'border-gray-300 dark:border-gray-600 hover:border-blue-400 hover:bg-gray-50 dark:hover:bg-gray-700'
-                                        : 'border-gray-200 dark:border-gray-700'
+                                    ? isSelected
+                                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                                        : 'border-gray-300 dark:border-gray-600 hover:border-blue-400 hover:bg-gray-50 dark:hover:bg-gray-700'
+                                    : 'border-gray-200 dark:border-gray-700'
                                     } ${!canVote && 'cursor-default'}`}
                             >
                                 {/* Option content */}
@@ -109,8 +172,8 @@ export default function PollMessage({ poll, onVote, currentUserId, formatTime })
                                     {hasVoted && (
                                         <div
                                             className={`absolute inset-0 rounded-lg transition-all ${isWinning
-                                                    ? 'bg-green-100 dark:bg-green-900/20'
-                                                    : 'bg-gray-100 dark:bg-gray-700/50'
+                                                ? 'bg-green-100 dark:bg-green-900/20'
+                                                : 'bg-gray-100 dark:bg-gray-700/50'
                                                 }`}
                                             style={{ width: `${option.percentage}%` }}
                                         />

@@ -73,16 +73,43 @@ exports.createPoll = async (req, res) => {
         // ✅ REAL-TIME BROADCAST: Notify all channel members
         const io = req.app?.get('io');
         if (io) {
-            io.to(`channel_${channelId}`).emit('new-message', {
-                message,
-                clientTempId: null
-            });
+            io.to(`channel:${channelId}`).emit('new-message', message);
+            console.log(`📡 Broadcasting poll message to channel:${channelId}`);
         }
 
         sendSuccess(res, { poll, message }, 201);
     } catch (err) {
         console.error("Error creating poll:", err);
         sendError(res, "Failed to create poll");
+    }
+};
+
+/**
+ * Get a single poll by ID
+ * GET /api/polls/:pollId
+ */
+exports.getPollById = async (req, res) => {
+    try {
+        const { pollId } = req.params;
+        const userId = req.user.sub;
+
+        const poll = await Poll.findById(pollId)
+            .populate('createdBy', 'username email profilePicture');
+
+        if (!poll) {
+            return sendNotFound(res, 'Poll');
+        }
+
+        // Verify user is a member of the channel
+        const channel = await Channel.findById(poll.channel);
+        if (!channel || !channel.isMember(userId)) {
+            return sendForbidden(res, "You must be a channel member to view this poll");
+        }
+
+        sendSuccess(res, { poll });
+    } catch (err) {
+        console.error("Error fetching poll:", err);
+        sendError(res, "Failed to fetch poll");
     }
 };
 
