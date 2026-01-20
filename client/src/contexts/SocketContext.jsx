@@ -28,21 +28,23 @@ export const SocketProvider = ({ children }) => {
     useEffect(() => {
         const token = localStorage.getItem('accessToken');
         if (!token) {
-
+            console.log('⏸️ No auth token, skipping socket initialization');
             return;
         }
 
         const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000';
 
-
+        // Create socket instance without auto-connecting
         const socketInstance = io(API_BASE, {
             auth: { token },
-            // ✅ Allow both websocket and polling - Socket.io will use best available
+            // ✅ Specify transports - try websocket first, then polling
             transports: ['websocket', 'polling'],
+            withCredentials: true,
             reconnection: true,
             reconnectionAttempts: 5,
             reconnectionDelay: 1000,
             timeout: 10000,
+            autoConnect: false // ← Prevent auto-connect
         });
 
         socketInstance.on('connect', () => {
@@ -67,11 +69,18 @@ export const SocketProvider = ({ children }) => {
             setIsConnected(false);
         });
 
+        // Store socket instance
         setSocket(socketInstance);
 
-        return () => {
+        // Connect manually after token is verified
+        console.log('🔌 Connecting socket with auth token...');
+        socketInstance.connect();
 
-            socketInstance.disconnect();
+        return () => {
+            if (socketInstance.connected) {
+                console.log('🔌 Disconnecting socket on cleanup');
+                socketInstance.disconnect();
+            }
         };
     }, []);
 

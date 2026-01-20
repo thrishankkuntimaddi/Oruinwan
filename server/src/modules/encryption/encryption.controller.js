@@ -124,3 +124,108 @@ exports.checkAccess = async (req, res) => {
         return handleError(res, err, 'CHECK ACCESS ERROR');
     }
 };
+
+// ==================== PERSONAL E2EE CONTROLLERS ====================
+
+/**
+ * Store user's personal encryption keys (for DM E2EE)
+ * POST /api/encryption/personal/keys
+ * 
+ * Body: {
+ *   publicKey: string (base64),
+ *   encryptedPrivateKey: string (JSON string of encrypted data)
+ * }
+ */
+exports.storePersonalKeys = async (req, res) => {
+    try {
+        const userId = req.user.sub;
+        const { publicKey, encryptedPrivateKey } = req.body;
+
+        if (!publicKey || !encryptedPrivateKey) {
+            return res.status(400).json({
+                message: 'Missing required fields: publicKey, encryptedPrivateKey'
+            });
+        }
+
+        const User = require('../../../models/User');
+        const user = await User.findById(userId);
+
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        // Store encryption keys
+        user.encryption = {
+            publicKey,
+            encryptedPrivateKey,
+            keyVersion: 1,
+            createdAt: new Date()
+        };
+
+        await user.save();
+
+        return res.status(201).json({
+            message: 'Personal encryption keys stored successfully',
+            keyVersion: 1
+        });
+    } catch (err) {
+        return handleError(res, err, 'STORE PERSONAL KEYS ERROR');
+    }
+};
+
+/**
+ * Get user's own personal encryption keys
+ * GET /api/encryption/personal/keys
+ */
+exports.getMyPersonalKeys = async (req, res) => {
+    try {
+        const userId = req.user.sub;
+        const User = require('../../../models/User');
+
+        const user = await User.findById(userId).select('encryption');
+
+        if (!user || !user.encryption) {
+            return res.status(404).json({
+                message: 'Personal encryption keys not found',
+                hasKeys: false
+            });
+        }
+
+        return res.json({
+            hasKeys: true,
+            publicKey: user.encryption.publicKey,
+            encryptedPrivateKey: user.encryption.encryptedPrivateKey,
+            keyVersion: user.encryption.keyVersion
+        });
+    } catch (err) {
+        return handleError(res, err, 'GET PERSONAL KEYS ERROR');
+    }
+};
+
+/**
+ * Get another user's public key (for DM encryption)
+ * GET /api/encryption/personal/users/:userId/public-key
+ */
+exports.getUserPublicKey = async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const User = require('../../../models/User');
+
+        const user = await User.findById(userId).select('encryption.publicKey username');
+
+        if (!user || !user.encryption?.publicKey) {
+            return res.status(404).json({
+                message: 'User has not enabled E2EE',
+                hasPublicKey: false
+            });
+        }
+
+        return res.json({
+            hasPublicKey: true,
+            publicKey: user.encryption.publicKey,
+            username: user.username
+        });
+    } catch (err) {
+        return handleError(res, err, 'GET USER PUBLIC KEY ERROR');
+    }
+};

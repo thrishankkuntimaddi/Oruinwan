@@ -28,7 +28,11 @@ export function useChatSocket(conversationId, conversationType, onEvent) {
             return;
         }
 
-        if (joinedRef.current) return;
+        // Prevent duplicate joins
+        if (joinedRef.current) {
+            console.log(`⏭️ Already joined ${conversationType}:`, conversationId);
+            return;
+        }
 
         // CRITICAL: Wait for socket to be connected before emitting
         if (!socket.connected) {
@@ -43,10 +47,13 @@ export function useChatSocket(conversationId, conversationType, onEvent) {
 
     // Leave conversation room
     const leaveConversation = useCallback(() => {
-        if (!socket || !conversationId || !joinedRef.current) return;
+        if (!socket || !conversationId) return;
 
-        socket.emit('chat:leave', conversationId);
-        joinedRef.current = false;
+        if (joinedRef.current) {
+            socket.emit('chat:leave', conversationId);
+            joinedRef.current = false;
+            console.log(`👋 Left ${conversationType}:`, conversationId);
+        }
     }, [socket, conversationId, conversationType]);
 
     // Emit typing indicator

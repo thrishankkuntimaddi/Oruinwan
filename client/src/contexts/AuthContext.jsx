@@ -145,7 +145,10 @@ export const AuthProvider = ({ children }) => {
     }
     setUser(userWithCompany);
 
-
+    // E2EE: Try to unlock encryption keys with password (non-blocking)
+    // This will be handled by useEncryption hook in components
+    // Store password temporarily for E2EE unlock
+    sessionStorage.setItem('e2ee_unlock_password', password);
 
     return data;
   };
@@ -163,7 +166,12 @@ export const AuthProvider = ({ children }) => {
     setAccessToken(null);
     localStorage.removeItem("accessToken");
     sessionStorage.removeItem("lastLoginAttempt");
+    sessionStorage.removeItem('e2ee_unlock_password');
 
+    // E2EE: Clear encryption keys from IndexedDB
+    // This will be handled by useEncryption hook cleanup
+    // Trigger event for encryption cleanup
+    window.dispatchEvent(new Event('auth:logout'));
   };
 
   // ------------------------------------------------------------

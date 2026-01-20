@@ -21,7 +21,7 @@ router.post('/direct', messagesController.sendDirectMessage);
 
 // Get DM conversation
 router.get(
-    '/workspace/:workspaceId/dm/:dmSessionId',
+    '/workspace/:workspaceId/dm/:dmId',
     messagesController.getDMs
 );
 

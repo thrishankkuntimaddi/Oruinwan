@@ -150,6 +150,14 @@ const UserSchema = new mongoose.Schema(
     profilePicture: { type: String },
     googleAccount: { type: Boolean, default: false },
 
+    // End-to-End Encryption Keys
+    encryption: {
+      publicKey: { type: String }, // Base64-encoded ECDH public key
+      encryptedPrivateKey: { type: String }, // Private key encrypted with user password
+      keyVersion: { type: Number, default: 1 }, // For future key rotation
+      createdAt: { type: Date }
+    },
+
     // GitHub OAuth fields
     githubId: { type: String, unique: true, sparse: true },
 
@@ -184,10 +192,10 @@ const UserSchema = new mongoose.Schema(
     suspensionReason: { type: String },
 
     // Favorites (channels and DMs)
-favorites: [{
-  chatId: mongoose.Schema.Types.ObjectId,
-  chatType: { type: String, enum: ["dm", "channel"] }
-}], 
+    favorites: [{
+      chatId: mongoose.Schema.Types.ObjectId,
+      chatType: { type: String, enum: ["dm", "channel"] }
+    }],
 
     // Blocked Users
     blockedUsers: [{
@@ -196,11 +204,11 @@ favorites: [{
     }],
 
     // Muted Chats (DMs and Channels)
-mutedChats: [{
-  chatId: mongoose.Schema.Types.ObjectId,
-  chatType: { type: String, enum: ["dm", "channel"] },
-  mutedUntil: Date
-}], 
+    mutedChats: [{
+      chatId: mongoose.Schema.Types.ObjectId,
+      chatType: { type: String, enum: ["dm", "channel"] },
+      mutedUntil: Date
+    }],
 
 
     // Status

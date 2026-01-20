@@ -99,11 +99,12 @@ async function createMessage(messageData, io = null) {
 // ==================== MESSAGE RETRIEVAL ====================
 
 /**
- * Fetch messages with pagination and filtering
+ * Fetch messages with cursor-based pagination
+ * Uses _id for stable pagination (no race conditions)
  * 
  * @param {Object} query - Base query filter
  * @param {Object} options - Pagination and population options
- * @returns {Promise<Object>} Messages with metadata
+ * @returns {Promise<Object>} Messages with hasMore flag
  */
 async function fetchMessages(query, options = {}) {
     const {
@@ -121,20 +122,26 @@ async function fetchMessages(query, options = {}) {
         finalQuery.createdAt = { $gte: userJoinedAt };
     }
 
-    // Pagination: get messages before a specific timestamp
+    // Cursor-based pagination: get messages with _id less than 'before'
     if (before) {
-        const beforeMsg = await Message.findById(before);
-        if (beforeMsg) {
-            finalQuery.createdAt = userJoinedAt
-                ? { $gte: userJoinedAt, $lt: beforeMsg.createdAt }
-                : { $lt: beforeMsg.createdAt };
+        if (finalQuery.createdAt) {
+            // If join date filter exists, we need to check if the 'before' message is after join
+            const beforeMsg = await Message.findById(before);
+            if (beforeMsg && beforeMsg.createdAt >= userJoinedAt) {
+                finalQuery._id = { $lt: before };
+            }
+        } else {
+            finalQuery._id = { $lt: before };
         }
     }
 
-    // Fetch messages
+    // Fetch limit + 1 to check if there are more messages
+    const fetchLimit = parseInt(limit) + 1;
+
+    // Fetch messages (sorted by _id descending for cursor pagination)
     const messages = await Message.find(finalQuery)
-        .sort({ createdAt: -1 })
-        .limit(limit)
+        .sort({ _id: -1 }) // Use _id for stable ordering
+        .limit(fetchLimit)
         .populate('sender', 'username email profilePicture')
         .populate('readBy.user', 'username')
         .populate({
@@ -142,7 +149,13 @@ async function fetchMessages(query, options = {}) {
             populate: { path: 'sender', select: 'username profilePicture' }
         });
 
-    // Reverse for chronological order
+    // Check if there are more messages
+    const hasMore = messages.length > parseInt(limit);
+    if (hasMore) {
+        messages.pop(); // Remove the extra message
+    }
+
+    // Reverse for chronological order (oldest to newest)
     messages.reverse();
 
     // Populate reply counts if requested
@@ -162,14 +175,9 @@ async function fetchMessages(query, options = {}) {
         );
     }
 
-    // Check if there are more messages
-    const totalCount = await Message.countDocuments(query);
-    const hasMore = messages.length === limit;
-
     return {
         messages: messagesWithCounts,
-        hasMore,
-        total: totalCount
+        hasMore
     };
 }
 

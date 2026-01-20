@@ -14,6 +14,7 @@
 
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { useChatSocket, useConversation, useMessageActions } from '../../../hooks';
+import { useEncryption } from '../../../hooks/useEncryption';
 import { ConversationStream } from '../events';
 import Header from './header/header.jsx';
 import FooterInput from './footer/footerInput.jsx';
@@ -72,6 +73,17 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
     // Initialize hooks FIRST (before using them in callbacks)
     const conversation = useConversation(conversationId, conversationType, workspaceId);
     const actions = useMessageActions(conversationId, conversationType, workspaceId);
+
+    // Initialize encryption (only for DMs)
+    const encryption = useEncryption(currentUserId);
+    const [encryptionEnabled, setEncryptionEnabled] = useState(false);
+
+    // Auto-enable encryption for DMs if user has keys
+    useEffect(() => {
+        if (conversationType === 'dm' && encryption.hasKeys) {
+            setEncryptionEnabled(true);
+        }
+    }, [conversationType, encryption.hasKeys]);
 
     // Use ref to avoid stale closures in socket event handler
     const conversationRef = React.useRef(conversation);
@@ -141,7 +153,7 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
             case 'message-updated':
                 // Handle message updates (e.g., reply count changed)
                 console.log('🔄 [ChatWindowV2] Message updated:', event.payload);
-                const { messageId, updates, fullMessage } = event.payload;
+                const { messageId, updates } = event.payload;
                 console.log('🔍 [ChatWindowV2] Update details:', {
                     messageId,
                     updates,
@@ -235,7 +247,7 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
             default:
                 console.log('Unhandled socket event:', event.type);
         }
-    }, []); // Empty deps since we use refs
+    }, [currentUserId]); // Include currentUserId in dependencies
 
     // Initialize socket with event handler
     const socket = useChatSocket(conversationId, conversationType, handleSocketEvent);
@@ -287,6 +299,41 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
         console.log('handleSend called with markdown:', markdown);
         console.log('Current conversation state:', { conversationType, conversationId, workspaceId });
 
+        // Prepare message data
+        let messageData = {
+            text: markdown,
+            attachments: [],
+            replyTo: replyingTo?._id,
+            isEncrypted: false
+        };
+
+        // Encrypt message if enabled for DMs
+        if (conversationType === 'dm' && encryptionEnabled && encryption.hasKeys) {
+            try {
+                // Get recipient's ID (other participant in DM)
+                const otherUserId = chat?.otherUserId || chat?.participants?.find(p => p._id !== currentUserId)?._id;
+
+                if (otherUserId) {
+                    console.log('🔐 Encrypting message for user:', otherUserId);
+                    const { ciphertext, messageIv } = await encryption.encryptMessage(markdown, otherUserId);
+
+                    messageData = {
+                        ...messageData,
+                        ciphertext,
+                        messageIv,
+                        isEncrypted: true,
+                        text: '' // Clear plaintext
+                    };
+                    console.log('✅ Message encrypted successfully');
+                } else {
+                    console.warn('⚠️ Could not find recipient ID, sending as plaintext');
+                }
+            } catch (err) {
+                console.error('❌ Encryption failed, sending as plaintext:', err);
+                showToast('Encryption failed, sending as plaintext', 'warning');
+            }
+        }
+
         // Create optimistic message FIRST (before API call)
         const tempId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
         const optimisticMessage = {
@@ -294,7 +341,10 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
             id: tempId,
             type: 'message',
             payload: {
-                text: markdown,
+                text: messageData.isEncrypted ? '🔒 Encrypted message' : markdown,
+                ciphertext: messageData.ciphertext,
+                messageIv: messageData.messageIv,
+                isEncrypted: messageData.isEncrypted,
                 attachments: []
             },
             sender: {
@@ -305,19 +355,14 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
             createdAt: new Date().toISOString(),
             reactions: [],
             isPinned: false,
-            status: 'sending', // CRITICAL: Mark as sending so it can be found for replacement
-            isEncrypted: false
+            status: 'sending' // CRITICAL: Mark as sending so it can be found for replacement
         };
 
         // Add optimistic message BEFORE sending API request
         conversation.addOptimisticEvent(optimisticMessage);
 
         // Now send the message
-        const result = await actions.sendMessage({
-            text: markdown,
-            attachments: [],
-            replyTo: replyingTo?._id
-        });
+        const result = await actions.sendMessage(messageData);
 
         console.log('Send result:', result);
 
@@ -331,7 +376,7 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
         }
 
         return result;
-    }, [actions, conversation, replyingTo, conversationType, conversationId, workspaceId, currentUserId, user]);
+    }, [actions, conversation, replyingTo, conversationType, conversationId, workspaceId, currentUserId, user, encryptionEnabled, encryption, chat, showToast]);
 
     // Handle emoji pick
     const handleEmojiPick = useCallback((emoji) => {

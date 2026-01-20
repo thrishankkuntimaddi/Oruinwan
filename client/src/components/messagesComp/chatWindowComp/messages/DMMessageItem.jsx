@@ -4,6 +4,7 @@ import ReactionBadges from "./reactionBadges";
 import ReactionPicker from "./reactionPicker";
 import ReactMarkdown from "react-markdown";
 import remarkBreaks from "remark-breaks";
+import EncryptedMessage from "../../EncryptedMessage";
 
 
 
@@ -68,7 +69,7 @@ function DMMessageItem({
 
     return (
         <div
-            className={`group flex items-start gap-1.5 px-4 py-1 hover:bg-gray-50/50 dark:hover:bg-gray-800/50 relative transition-colors ${isSelected ? "bg-blue-50/50 dark:bg-blue-900/20" : ""} w-full ${msg.isPinned ? "bg-blue-50/30 dark:bg-blue-900/10 border-l-4 border-blue-400 dark:border-blue-500" : "border-l-4 border-transparent"}`}
+            className={`group flex items - start gap - 1.5 px - 4 py - 1 hover: bg - gray - 50 / 50 dark: hover: bg - gray - 800 / 50 relative transition - colors ${isSelected ? "bg-blue-50/50 dark:bg-blue-900/20" : ""} w - full ${msg.isPinned ? "bg-blue-50/30 dark:bg-blue-900/10 border-l-4 border-blue-400 dark:border-blue-500" : "border-l-4 border-transparent"} `}
             onMouseEnter={() => setShowToolbar(true)}
             onMouseLeave={() => setShowToolbar(false)}
         >
@@ -89,7 +90,7 @@ function DMMessageItem({
                 {avatarUrl ? (
                     <img src={avatarUrl} alt={msg.senderName} className="w-7 h-7 rounded object-cover" />
                 ) : (
-                    <div className={`w-7 h-7 rounded flex items-center justify-center text-[10px] font-medium text-white ${isMe ? "bg-blue-500/80" : "bg-gray-400/80 dark:bg-gray-600"}`}>
+                    <div className={`w - 7 h - 7 rounded flex items - center justify - center text - [10px] font - medium text - white ${isMe ? "bg-blue-500/80" : "bg-gray-400/80 dark:bg-gray-600"} `}>
                         {initial}
                     </div>
                 )}
@@ -101,41 +102,51 @@ function DMMessageItem({
                 {/* Message Row: Bubble ... Spacer ... Toolbar + Time */}
                 <div className="flex items-start w-full relative">
                     {/* Message Bubble (Tightened) */}
-                    <div className={`relative px-3 py-1.5 text-[14px] shadow-sm break-words whitespace-pre-wrap rounded-lg rounded-tl-none max-w-[85%] ${isMe
-                        ? "bg-blue-600 text-white"
-                        : "bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 text-gray-800 dark:text-gray-100"
-                        }`}>
+                    <div className={`relative px - 3 py - 1.5 text - [14px] shadow - sm break-words whitespace - pre - wrap rounded - lg rounded - tl - none max - w - [85 %] ${isMe
+                            ? "bg-blue-600 text-white"
+                            : "bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 text-gray-800 dark:text-gray-100"
+                        } `}>
 
                         {/* Reply Preview - Shows which message this is replying to */}
                         {msg.repliedTo && (
-                            <div className={`mb-2 pb-2 border-b flex items-start gap-2 ${isMe ? "border-blue-400/30" : "border-gray-200 dark:border-gray-600"
-                                }`}>
-                                <div className={`w-0.5 rounded-full flex-shrink-0 self-stretch ${isMe ? "bg-blue-300" : "bg-gray-400 dark:bg-gray-500"
-                                    }`}></div>
+                            <div className={`mb - 2 pb - 2 border - b flex items - start gap - 2 ${isMe ? "border-blue-400/30" : "border-gray-200 dark:border-gray-600"
+                                } `}>
+                                <div className={`w - 0.5 rounded - full flex - shrink - 0 self - stretch ${isMe ? "bg-blue-300" : "bg-gray-400 dark:bg-gray-500"
+                                    } `}></div>
                                 <div className="flex-1 min-w-0">
-                                    <div className={`text-[10px] font-semibold mb-0.5 ${isMe ? "text-blue-100" : "text-gray-600 dark:text-gray-300"
-                                        }`}>
+                                    <div className={`text - [10px] font - semibold mb - 0.5 ${isMe ? "text-blue-100" : "text-gray-600 dark:text-gray-300"
+                                        } `}>
                                         {msg.repliedTo.senderName}
                                     </div>
-                                    <div className={`text-[11px] line-clamp-2 leading-relaxed ${isMe ? "text-blue-50/90" : "text-gray-500 dark:text-gray-400"
-                                        }`}>
+                                    <div className={`text - [11px] line - clamp - 2 leading - relaxed ${isMe ? "text-blue-50/90" : "text-gray-500 dark:text-gray-400"
+                                        } `}>
                                         {msg.repliedTo.text}
                                     </div>
                                 </div>
                             </div>
                         )}
 
-                        <ReactMarkdown
-                            remarkPlugins={[remarkBreaks]}
-                            components={{
-                                a: ({ node, children, ...props }) => <a {...props} className={`hover:underline ${isMe ? "text-white underline" : "text-blue-600 dark:text-blue-400"}`} target="_blank" rel="noopener noreferrer">{children}</a>,
-                                ul: ({ node, ...props }) => <ul {...props} className="list-disc list-inside ml-1" />,
-                                ol: ({ node, ...props }) => <ol {...props} className="list-decimal list-inside ml-1" />,
-                                p: ({ node, ...props }) => <p {...props} className="mb-0" />, // Remove default margin
-                            }}
-                        >
-                            {msg.text}
-                        </ReactMarkdown>
+                        {/* Message Content - Encrypted or Plaintext */}
+                        {msg.isEncrypted && msg.ciphertext && msg.messageIv ? (
+                            <EncryptedMessage
+                                ciphertext={msg.ciphertext}
+                                messageIv={msg.messageIv}
+                                senderId={msg.sender?._id || msg.sender}
+                                currentUserId={currentUserId}
+                            />
+                        ) : (
+                            <ReactMarkdown
+                                remarkPlugins={[remarkBreaks]}
+                                components={{
+                                    a: ({ node, children, ...props }) => <a {...props} className={`hover:underline ${isMe ? "text-white underline" : "text-blue-600 dark:text-blue-400"} `} target="_blank" rel="noopener noreferrer">{children}</a>,
+                                    ul: ({ node, ...props }) => <ul {...props} className="list-disc list-inside ml-1" />,
+                                    ol: ({ node, ...props }) => <ol {...props} className="list-decimal list-inside ml-1" />,
+                                    p: ({ node, ...props }) => <p {...props} className="mb-0" />, // Remove default margin
+                                }}
+                            >
+                                {msg.text}
+                            </ReactMarkdown>
+                        )}
                     </div>
 
                     {/* Timestamp - Far right edge */}
@@ -150,13 +161,13 @@ function DMMessageItem({
                     <div className="flex items-center gap-3 ml-2 mt-0 pl-2">
 
                         {/* Minimalist Toolbar - Aligned in the row, left of timestamp */}
-                        <div className={`absolute top-0.5 right-20 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-sm rounded p-0.5 flex items-center z-10 transition-opacity ${showToolbar || openMsgMenuId === msg.id || showReactionPicker ? "opacity-100 visible" : "opacity-0 invisible"}`}>
+                        <div className={`absolute top - 0.5 right - 20 bg - white dark: bg - gray - 800 border border - gray - 100 dark: border - gray - 700 shadow - sm rounded p - 0.5 flex items - center z - 10 transition - opacity ${showToolbar || openMsgMenuId === msg.id || showReactionPicker ? "opacity-100 visible" : "opacity-0 invisible"} `}>
 
                             {/* Reaction Picker Trigger */}
                             <div className="relative" ref={reactionPickerRef}>
                                 <button
                                     onClick={() => setShowReactionPicker(!showReactionPicker)}
-                                    className={`p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 ${showReactionPicker ? "text-blue-600 dark:text-blue-400" : "text-gray-400 dark:text-gray-500"}`}
+                                    className={`p - 1 rounded hover: bg - gray - 100 dark: hover: bg - gray - 700 ${showReactionPicker ? "text-blue-600 dark:text-blue-400" : "text-gray-400 dark:text-gray-500"} `}
                                     title="React"
                                 >
                                     <Smile size={14} />
@@ -183,7 +194,7 @@ function DMMessageItem({
                                         e.stopPropagation();
                                         toggleMsgMenu(e, msg.id);
                                     }}
-                                    className={`p-1 rounded ${openMsgMenuId === msg.id ? "bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100" : "text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700"}`}
+                                    className={`p - 1 rounded ${openMsgMenuId === msg.id ? "bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100" : "text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700"} `}
                                     title="More"
                                 >
                                     <MoreHorizontal size={14} />

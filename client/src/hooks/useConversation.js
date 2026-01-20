@@ -16,10 +16,10 @@ export function useConversation(conversationId, conversationType, workspaceId = 
     const [loading, setLoading] = useState(false);
     const [hasMore, setHasMore] = useState(false);
     const [error, setError] = useState(null);
-    const [totalCount, setTotalCount] = useState(0);
+    const [historyLoaded, setHistoryLoaded] = useState(false); // Flag for deterministic socket join
 
     const loadedRef = useRef(false);
-    const eventsMapRef = useRef(new Map()); // For deduplication
+    const eventsMapRef = useRef(new Map()); // For deduplication with stable Map
 
     // Load initial messages
     const loadMessages = useCallback(async () => {
@@ -34,15 +34,16 @@ export function useConversation(conversationId, conversationType, workspaceId = 
 
             if (conversationType === 'channel') {
                 response = await api.get(`/api/v2/messages/channel/${conversationId}`, {
-                    params: { limit: 50, offset: 0 }
+                    params: { limit: 50 } // Cursor-based, no offset
                 });
             } else if (conversationType === 'dm') {
                 response = await api.get(`/api/v2/messages/workspace/${workspaceId}/dm/${conversationId}`, {
-                    params: { limit: 50, offset: 0 }
+                    params: { limit: 50 } // Cursor-based, no offset
                 });
             }
 
             const messages = response?.data?.messages || [];
+            const hasMore = response?.data?.hasMore || false; // Get hasMore from backend
 
             // Normalize messages into events with safe defaults
             const normalized = messages.map(msg => ({
@@ -63,20 +64,21 @@ export function useConversation(conversationId, conversationType, workspaceId = 
                 parentId: msg.threadParent
             }));
 
-            // Populate dedup map (re-adding this as it was removed in the snippet but is crucial for eventsMapRef)
+            // Populate Map for deduplication
             normalized.forEach(event => {
                 eventsMapRef.current.set(event.id, event);
             });
 
-            setEvents(normalized);
-            setHasMore(messages.length >= 50);
-            // setTotalCount(response?.data?.total || 0); // Re-add totalCount update if needed, or remove state if not used
+            // Set state from Map to ensure no duplicates
+            setEvents(Array.from(eventsMapRef.current.values()));
+            setHasMore(hasMore);
+            setHistoryLoaded(true); // Mark history as loaded for socket join
         } catch (err) {
             console.error('Error loading messages:', err);
             setError(err.response?.data?.message || 'Failed to load messages');
+            setHistoryLoaded(true); // Mark as loaded even on error to prevent blocking
         } finally {
             setLoading(false);
-            // loadedRef.current = false; // Do not reset loadedRef here, it indicates initial load is done
         }
     }, [conversationId, conversationType, workspaceId]);
 
@@ -241,8 +243,17 @@ export function useConversation(conversationId, conversationType, workspaceId = 
         console.log(`✅ [useConversation] Adding new realtime event ${event.id} to conversation`);
         eventsMapRef.current.set(event.id, event);
         setEvents(prev => {
+            // Ensure the new event isn't already in the array (extra safety)
+            const exists = prev.some(e => e.id === event.id);
+            if (exists) {
+                console.warn(`⚠️ [useConversation] Event ${event.id} already in state array, skipping add`);
+                return prev;
+            }
             const newEvents = [...prev, event];
-            console.log(`📊 [useConversation] Events count: ${prev.length} -> ${newEvents.length}`);
+            console.log(`📊 [useConversation] Events count: ${prev.length} -> ${newEvents.length}`, {
+                newEventId: event.id,
+                newEventText: event.payload?.text?.substring(0, 30)
+            });
             return newEvents;
         });
     }, [updateEvent]);
@@ -250,10 +261,8 @@ export function useConversation(conversationId, conversationType, workspaceId = 
     // Reset conversation (for switching conversations)
     const reset = useCallback(() => {
         setEvents([]);
-        setLoading(false);
-        setHasMore(false);
         setError(null);
-        setTotalCount(0);
+        setHistoryLoaded(false); // Reset history loaded flag
         loadedRef.current = false;
         eventsMapRef.current.clear();
     }, []);
@@ -271,7 +280,7 @@ export function useConversation(conversationId, conversationType, workspaceId = 
         loading,
         hasMore,
         error,
-        totalCount,
+        historyLoaded, // Export for socket join guard
         loadMore,
         addOptimisticEvent,
         updateEvent,

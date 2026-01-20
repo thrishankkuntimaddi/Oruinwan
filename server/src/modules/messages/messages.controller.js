@@ -84,11 +84,14 @@ exports.sendDirectMessage = async (req, res) => {
 exports.getDMs = async (req, res) => {
     try {
         const userId = req.user.sub;
-        const { workspaceId, dmSessionId } = req.params;
+        const { workspaceId, dmSessionId, dmId } = req.params;
         const { limit, before } = req.query;
 
+        // Support both parameter names for backward compatibility
+        const sessionId = dmSessionId || dmId;
+
         // Validate DM session
-        const dmSession = await DMSession.findById(dmSessionId);
+        const dmSession = await DMSession.findById(sessionId);
         if (!dmSession) {
             return res.status(404).json({ message: 'DM Session not found' });
         }
@@ -103,7 +106,7 @@ exports.getDMs = async (req, res) => {
 
         // Fetch messages
         const result = await messagesService.fetchMessages(
-            { dm: dmSessionId },
+            { dm: sessionId },
             {
                 limit: parseInt(limit) || 50,
                 before,

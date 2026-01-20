@@ -24,6 +24,7 @@ function registerMessageHandlers(io, socket) {
     /**
      * Join a conversation room
      * Client emits this when opening a chat
+     * IDEMPOTENT: Safe to call multiple times
      */
     socket.on('conversation:join', (data) => {
         const { conversationId, type, workspaceId } = data;
@@ -40,6 +41,12 @@ function registerMessageHandlers(io, socket) {
             : type === 'dm'
                 ? `dm:${conversationId}`
                 : `thread:${conversationId}`;
+
+        // Idempotent check: prevent duplicate joins
+        if (socket.rooms.has(room)) {
+            console.log(`⏭️ User ${socket.user.id} already in ${room}`);
+            return;
+        }
 
         // Join room
         socket.join(room);
@@ -66,6 +73,11 @@ function registerMessageHandlers(io, socket) {
             : type === 'dm'
                 ? `dm:${conversationId}`
                 : `thread:${conversationId}`;
+
+        // Check if actually in room before leaving
+        if (!socket.rooms.has(room)) {
+            return; // Already not in room
+        }
 
         socket.leave(room);
         console.log(`👋 User ${socket.user.id} left ${room}`);

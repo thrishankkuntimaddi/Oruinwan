@@ -104,15 +104,27 @@ function registerChatHandlers(io, socket) {
         io.to('chttrix_admins').emit('company:pending', companyData);
     });
 
-    // Generic chat handlers (existing functionality) - legacy
+    // Generic chat handlers (idempotent with guards) - legacy
     socket.on('chat:join', (channelId) => {
-        socket.join(`channel:${channelId}`);
-        console.log(`💬 User ${socket.user.id} joined channel:${channelId}`);
+        // Idempotent check: prevent duplicate joins
+        const roomName = `channel:${channelId}`;
+        if (socket.rooms.has(roomName)) {
+            console.log(`⏭️ User ${socket.user.id} already in ${roomName}`);
+            return;
+        }
+
+        socket.join(roomName);
+        console.log(`💬 User ${socket.user.id} joined ${roomName}`);
     });
 
     socket.on('chat:leave', (channelId) => {
-        socket.leave(`channel:${channelId}`);
-        console.log(`👋 User ${socket.user.id} left channel:${channelId}`);
+        const roomName = `channel:${channelId}`;
+        if (!socket.rooms.has(roomName)) {
+            return; // Already not in room
+        }
+
+        socket.leave(roomName);
+        console.log(`👋 User ${socket.user.id} left ${roomName}`);
     });
 
     socket.on('chat:message', (data) => {

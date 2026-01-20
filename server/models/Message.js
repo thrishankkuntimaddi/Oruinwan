@@ -40,10 +40,15 @@ const MessageSchema = new mongoose.Schema({
   },
 
   payload: {
-    text: { type: String, default: "" },
+    text: { type: String, default: "" }, // Plaintext (for non-encrypted messages)
     attachments: [AttachmentSchema],
     poll: { type: mongoose.Schema.Types.ObjectId, ref: "Poll", default: null },
-    meeting: mongoose.Schema.Types.Mixed
+    meeting: mongoose.Schema.Types.Mixed,
+
+    // End-to-End Encryption Fields
+    ciphertext: { type: String }, // Encrypted message content (Base64)
+    messageIv: { type: String }, // Initialization vector for AES (Base64)
+    isEncrypted: { type: Boolean, default: false } // Backward compatibility flag
   },
 
   /** Threads */
@@ -74,5 +79,9 @@ const MessageSchema = new mongoose.Schema({
 MessageSchema.index({ channel: 1, createdAt: -1 });
 MessageSchema.index({ dm: 1, createdAt: -1 });
 MessageSchema.index({ parentId: 1 });
+
+// Cursor-based pagination indexes (for efficient _id queries)
+MessageSchema.index({ dm: 1, _id: -1 });
+MessageSchema.index({ channel: 1, _id: -1 });
 
 module.exports = mongoose.model("Message", MessageSchema);

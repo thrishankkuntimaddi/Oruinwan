@@ -27,6 +27,12 @@ function MessageEvent({
     // NEW SCHEMA: event IS the message, event.payload contains text/attachments
     // FALLBACK: Support both new (payload.text) and old (direct text) structures
     // FIX: Handle double-nested payload (event.payload.payload.text)
+
+    // Check if message is encrypted
+    const isEncrypted = event.payload?.isEncrypted || event.isEncrypted || false;
+    const ciphertext = event.payload?.ciphertext || event.ciphertext;
+    const messageIv = event.payload?.messageIv || event.messageIv;
+
     const enrichedMessage = {
         _id: event._id || event.id,
         id: event._id || event.id,
@@ -47,7 +53,11 @@ function MessageEvent({
         timestamp: event.createdAt || event.payload?.createdAt,
         ts: event.createdAt || event.payload?.createdAt,
         isRead: (event.readBy || event.payload?.readBy)?.some(r => (r.user?._id || r.user || r._id || r) === currentUserId),
-        status: event.status || 'sent'
+        status: event.status || 'sent',
+        // Encryption fields
+        isEncrypted,
+        ciphertext,
+        messageIv
     };
 
     // Common handlers
