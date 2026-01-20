@@ -108,15 +108,78 @@ const WorkspaceSelect = () => {
         if (!createData.name.trim()) return setNameError("Workspace name is required");
 
         try {
-            // 1. Create Workspace
+            // ============ E2EE: INITIALIZE WORKSPACE KEYS ============
+            console.log('🔐 [CreateWorkspace] Initializing E2EE workspace keys...');
+
+            let workspaceKeyData = null;
+
+            try {
+                // Dynamically import the workspace key initialization service
+                const { initializeWorkspaceKeys, getUserPasswordForKeyInit } =
+                    await import('../services/workspaceKeyInit');
+
+                // Get user's password from session
+                const password = await getUserPasswordForKeyInit();
+
+                if (!password) {
+                    console.warn('⚠️ [CreateWorkspace] Password not available, prompting user...');
+                    // If password not in session, prompt user
+                    const promptedPassword = prompt(
+                        'Enter your password to initialize workspace encryption:'
+                    );
+
+                    if (!promptedPassword) {
+                        alert('Password required for workspace encryption. Workspace creation canceled.');
+                        return;
+                    }
+
+                    // Initialize keys with prompted password
+                    workspaceKeyData = await initializeWorkspaceKeys(promptedPassword);
+                    workspaceKeyData.password = promptedPassword; // Store for later enrollment
+                } else {
+                    // Initialize keys with session password
+                    workspaceKeyData = await initializeWorkspaceKeys(password);
+                    workspaceKeyData.password = password; // Store for later enrollment
+                }
+
+                console.log('✅ [CreateWorkspace] Workspace keys initialized');
+            } catch (keyInitError) {
+                console.error('❌ [CreateWorkspace] Failed to initialize workspace keys:', keyInitError);
+                alert(`Failed to initialize workspace encryption: ${keyInitError.message}\n\nWorkspace creation canceled.`);
+                return;
+            }
+            // =========================================================
+
+            // 1. Create Workspace (with E2EE keys)
             const res = await api.post('/api/workspaces', {
                 name: createData.name,
                 icon: createData.icon,
                 color: createData.color,
-                rules: createData.rules
+                rules: createData.rules,
+                // E2EE: Include encrypted workspace key
+                e2eeEnabled: true,
+                encryptedWorkspaceKey: workspaceKeyData.encryptedKey,
+                workspaceKeyIv: workspaceKeyData.keyIv,
+                workspaceKeySalt: workspaceKeyData.pbkdf2Salt
             });
 
             const newWorkspaceId = res.data.workspace.id;
+            console.log('✅ [CreateWorkspace] Workspace created:', newWorkspaceId);
+
+            // ============ E2EE: AUTO-ENROLL CREATOR ============
+            try {
+                const { enrollCreatorInWorkspace } = await import('../services/workspaceKeyInit');
+                await enrollCreatorInWorkspace(newWorkspaceId, workspaceKeyData.password, {
+                    encryptedKey: workspaceKeyData.encryptedKey,
+                    keyIv: workspaceKeyData.keyIv,
+                    pbkdf2Salt: workspaceKeyData.pbkdf2Salt
+                });
+                console.log('✅ [CreateWorkspace] Creator auto-enrolled in workspace');
+            } catch (enrollError) {
+                console.error('❌ [CreateWorkspace] Failed to auto-enroll creator:', enrollError);
+                // Non-blocking: Creator can still log out and back in to get keys
+            }
+            // ===================================================
 
             // 2. Send Invites (if any)
             if (createData.invites && createData.invites.trim()) {
@@ -137,6 +200,8 @@ const WorkspaceSelect = () => {
             console.error("Failed to create workspace", error);
             if (error.response?.data?.message) {
                 setNameError(error.response.data.message);
+            } else {
+                setNameError('Failed to create workspace. Please try again.');
             }
         }
     };

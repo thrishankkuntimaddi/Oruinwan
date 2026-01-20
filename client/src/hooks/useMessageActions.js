@@ -64,7 +64,8 @@ export function useMessageActions(conversationId, conversationType, workspaceId 
 
             // Check workspace context
             if (!workspaceId) {
-                console.error('❌ workspaceId is required for E2EE');
+                console.error('❌ [sendMessage] workspaceId is required for E2EE');
+                console.error('❌ [sendMessage] Current context:', { conversationId, conversationType });
                 return {
                     success: false,
                     error: 'Workspace context required for secure messaging'
@@ -73,21 +74,29 @@ export function useMessageActions(conversationId, conversationType, workspaceId 
 
             // Encrypt the message
             try {
+                console.log('🔐 [sendMessage] Getting workspace key for:', workspaceId);
                 const workspaceKey = await getWorkspaceKeyForEncryption(workspaceId);
                 if (!workspaceKey) {
-                    throw new Error('E2EE keys not initialized. Please log in again.');
+                    throw new Error('E2EE keys not initialized. Please log out and log back in.');
                 }
 
+                console.log('🔐 [sendMessage] Encrypting message...');
                 const encrypted = await encryptMessage(text, workspaceKey);
                 ciphertext = encrypted.ciphertext;
                 messageIv = encrypted.iv;
 
-                console.log('🔐 Message encrypted successfully');
+                console.log('✅ [sendMessage] Message encrypted successfully');
             } catch (encError) {
-                console.error('❌ Encryption failed:', encError);
+                console.error('❌ [sendMessage] Encryption failed:', encError);
+                console.error('❌ [sendMessage] Workspace ID:', workspaceId);
+                console.error('❌ [sendMessage] Error details:', {
+                    name: encError.name,
+                    message: encError.message,
+                    stack: encError.stack
+                });
                 return {
                     success: false,
-                    error: `Encryption failed: ${encError.message}. Try logging in again.`
+                    error: `Encryption failed: ${encError.message}`
                 };
             }
             // ==============================================

@@ -149,9 +149,34 @@ export const AuthProvider = ({ children }) => {
     // 🔐 E2EE KEY INITIALIZATION
     // ============================================================
     try {
-      console.log('🔐 Initializing E2EE keys...');
+      console.log('🔐 [E2EE] Starting workspace key enrollment...');
+      console.log('🔐 [E2EE] User ID:', data.user._id || data.user.id);
 
-      // Fetch encrypted workspace keys from backend
+      // STEP 1: Auto-enroll in workspaces user is member of but doesn't have keys for
+      console.log('🔐 [E2EE] Step 1: Auto-enrolling in missing workspaces...');
+      try {
+        const autoEnrollRes = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/keys/auto-enroll`, {
+          method: 'POST',
+          credentials: "include",
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${data.accessToken}`
+          },
+          body: JSON.stringify({ password })
+        });
+
+        if (autoEnrollRes.ok) {
+          const autoEnrollData = await autoEnrollRes.json();
+          console.log(`✅ [E2EE] Auto-enrolled in ${autoEnrollData.enrolledCount} workspaces`);
+        } else {
+          console.warn('⚠️ [E2EE] Auto-enrollment failed (non-blocking):', await autoEnrollRes.text());
+        }
+      } catch (autoEnrollError) {
+        console.warn('⚠️ [E2EE] Auto-enrollment error (non-blocking):', autoEnrollError);
+      }
+
+      // STEP 2: Fetch encrypted workspace keys from backend
+      console.log('🔐 [E2EE] Step 2: Fetching workspace keys from /api/keys/all...');
       const keysRes = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/keys/all`, {
         credentials: "include",
         headers: {
@@ -159,30 +184,56 @@ export const AuthProvider = ({ children }) => {
         }
       });
 
+      console.log('🔐 [E2EE] API Response status:', keysRes.status);
+
       if (keysRes.ok) {
-        const { encryptedKeys } = await keysRes.json();
+        const keysData = await keysRes.json();
+        console.log('🔐 [E2EE] API Response data:', keysData);
+
+        const { encryptedKeys } = keysData;
 
         if (encryptedKeys && encryptedKeys.length > 0) {
-          console.log(`🔑 Found ${encryptedKeys.length} workspace keys to decrypt`);
+          console.log(`🔑 [E2EE] Found ${encryptedKeys.length} workspace keys to decrypt`);
+          console.log('🔑 [E2EE] Workspace IDs:', encryptedKeys.map(k => k.workspaceId));
 
           // Dynamically import to avoid circular dependencies
           const { enrollUserKeys } = await import('../services/keyManagement');
+
+          console.log('🔓 [E2EE] Step 3: Starting decryption with user password...');
           const result = await enrollUserKeys(password, encryptedKeys);
 
           if (result.success) {
-            console.log(`✅ E2EE initialized for ${result.workspaceIds.length} workspaces`);
+            console.log(`✅ [E2EE] Successfully enrolled in ${result.workspaceIds.length} workspaces`);
+            console.log('✅ [E2EE] Enrolled workspace IDs:', result.workspaceIds);
+
+            // Verify keys are in sessionStorage
+            const storedKeys = result.workspaceIds.map(id => ({
+              workspaceId: id,
+              hasKey: sessionStorage.getItem(`e2ee_workspace_key_${id}`) !== null
+            }));
+            console.log('🔍 [E2EE] sessionStorage verification:', storedKeys);
           } else {
-            console.warn('⚠️ E2EE key enrollment failed:', result.error);
+            console.error('❌ [E2EE] Key enrollment failed:', result.error);
+            console.error('❌ [E2EE] This will prevent sending encrypted messages');
+            // Show user-friendly error
+            alert(`E2EE Setup Warning: Failed to initialize encryption keys. ${result.error}\n\nYou may not be able to send messages. Try logging out and back in.`);
           }
         } else {
-          console.log('ℹ️ No workspace keys found (user not in any workspaces yet)');
+          console.log('ℹ️ [E2EE] No workspace keys found (user not in any workspaces yet)');
+          console.log('ℹ️ [E2EE] User will not be able to send messages until added to a workspace');
         }
       } else {
-        console.warn('⚠️ Failed to fetch workspace keys:', keysRes.status);
+        const errorText = await keysRes.text();
+        console.error('❌ [E2EE] Failed to fetch workspace keys');
+        console.error('❌ [E2EE] Status:', keysRes.status);
+        console.error('❌ [E2EE] Response:', errorText);
+        alert('E2EE Setup Error: Failed to fetch encryption keys from server.\n\nYou may not be able to send messages.');
       }
     } catch (e2eeError) {
       // Non-blocking: User can still use the app, just can't send encrypted messages yet
-      console.error('❌ E2EE initialization failed (non-blocking):', e2eeError);
+      console.error('❌ [E2EE] Initialization failed (non-blocking):', e2eeError);
+      console.error('❌ [E2EE] Stack trace:', e2eeError.stack);
+      alert(`E2EE Setup Error: ${e2eeError.message}\n\nYou may not be able to send encrypted messages. Try logging out and back in.`);
     }
     // ============================================================
 

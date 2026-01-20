@@ -72,9 +72,11 @@ async function getWorkspaceKey(workspaceId) {
 
 /**
  * Remove workspace key from storage
+ * Called when user leaves a workspace
  * 
  * @param {string} workspaceId - Workspace ID
  */
+// eslint-disable-next-line no-unused-vars
 function removeWorkspaceKey(workspaceId) {
     sessionStorage.removeItem(STORAGE_KEY_PREFIX + workspaceId);
 }
@@ -107,37 +109,68 @@ function clearAllWorkspaceKeys() {
  */
 export async function enrollUserKeys(password, encryptedKeys) {
     try {
+        console.log('🔐 [enrollUserKeys] Starting enrollment process...');
+        console.log('🔐 [enrollUserKeys] Number of keys to process:', encryptedKeys.length);
+
         validateCryptoSetup();
+        console.log('✅ [enrollUserKeys] Crypto setup validated');
 
         const enrolledWorkspaces = [];
 
         // Process each workspace key
-        for (const item of encryptedKeys) {
+        for (let i = 0; i < encryptedKeys.length; i++) {
+            const item = encryptedKeys[i];
             const { workspaceId, encryptedKey, iv, salt } = item;
 
-            // Convert salt from Base64
-            const saltBytes = base64ToArrayBuffer(salt);
+            console.log(`🔑 [enrollUserKeys] Processing workspace ${i + 1}/${encryptedKeys.length}: ${workspaceId}`);
+            console.log(`🔑 [enrollUserKeys] Key data present:`, {
+                hasEncryptedKey: !!encryptedKey,
+                hasIv: !!iv,
+                hasSalt: !!salt
+            });
 
-            // Derive KEK from password
-            const kek = await deriveKeyFromPassword(password, new Uint8Array(saltBytes));
+            try {
+                // Convert salt from Base64
+                const saltBytes = base64ToArrayBuffer(salt);
+                console.log(`🔓 [enrollUserKeys] Deriving KEK from password for ${workspaceId}...`);
 
-            // Decrypt workspace key
-            const workspaceKey = await decryptWorkspaceKey(encryptedKey, iv, kek);
+                // Derive KEK from password
+                const kek = await deriveKeyFromPassword(password, new Uint8Array(saltBytes));
+                console.log(`✅ [enrollUserKeys] KEK derived for ${workspaceId}`);
 
-            // Store workspace key
-            await storeWorkspaceKey(workspaceId, workspaceKey);
+                // Decrypt workspace key
+                console.log(`🔓 [enrollUserKeys] Decrypting workspace key for ${workspaceId}...`);
+                const workspaceKey = await decryptWorkspaceKey(encryptedKey, iv, kek);
+                console.log(`✅ [enrollUserKeys] Workspace key decrypted for ${workspaceId}`);
 
-            enrolledWorkspaces.push(workspaceId);
+                // Store workspace key
+                console.log(`💾 [enrollUserKeys] Storing key in sessionStorage for ${workspaceId}...`);
+                await storeWorkspaceKey(workspaceId, workspaceKey);
+
+                // Verify storage
+                const stored = sessionStorage.getItem(STORAGE_KEY_PREFIX + workspaceId);
+                console.log(`✅ [enrollUserKeys] Key stored for ${workspaceId}:`, stored ? 'YES' : 'NO');
+
+                enrolledWorkspaces.push(workspaceId);
+            } catch (keyError) {
+                console.error(`❌ [enrollUserKeys] Failed to process workspace ${workspaceId}:`, keyError);
+                // Continue processing other keys even if one fails
+            }
         }
 
-        console.log(`✅ Enrolled in ${enrolledWorkspaces.length} workspaces`);
+        console.log(`✅ [enrollUserKeys] Enrolled in ${enrolledWorkspaces.length}/${encryptedKeys.length} workspaces`);
+        console.log(`✅ [enrollUserKeys] Successfully enrolled workspaces:`, enrolledWorkspaces);
 
         return {
             success: true,
             workspaceIds: enrolledWorkspaces
         };
     } catch (error) {
-        console.error('Key enrollment failed:', error);
+        console.error('❌ [enrollUserKeys] Enrollment failed:', error);
+        console.error('❌ [enrollUserKeys] Error details:', {
+            message: error.message,
+            stack: error.stack
+        });
         return {
             success: false,
             error: error.message
@@ -153,11 +186,20 @@ export async function enrollUserKeys(password, encryptedKeys) {
  * @returns {Promise<CryptoKey|null>} Workspace key or null
  */
 export async function getWorkspaceKeyForEncryption(workspaceId) {
-  const key = await getWorkspaceKey(workspaceId);
-  if (!key) {
-    throw new Error("E2EE key missing for workspace");
-  }
-  return key;
+    console.log(`🔍 [getWorkspaceKeyForEncryption] Looking up key for workspace: ${workspaceId}`);
+
+    const key = await getWorkspaceKey(workspaceId);
+
+    if (!key) {
+        console.error(`❌ [getWorkspaceKeyForEncryption] No key found for workspace: ${workspaceId}`);
+        console.error(`❌ [getWorkspaceKeyForEncryption] Available keys in sessionStorage:`,
+            Object.keys(sessionStorage).filter(k => k.startsWith(STORAGE_KEY_PREFIX))
+        );
+        throw new Error("E2EE key missing for workspace. Please log out and log back in to re-initialize encryption keys.");
+    }
+
+    console.log(`✅ [getWorkspaceKeyForEncryption] Key found for workspace: ${workspaceId}`);
+    return key;
 }
 
 /**

@@ -21,7 +21,19 @@ const { emitToWorkspace } = require("../utils/socketHelpers");
  */
 exports.createWorkspace = async (req, res) => {
   try {
-    const { companyId, name, description, icon, color, rules } = req.body;
+    const {
+      companyId,
+      name,
+      description,
+      icon,
+      color,
+      rules,
+      // E2EE parameters (optional, for client-side key generation)
+      e2eeEnabled,
+      encryptedWorkspaceKey,
+      workspaceKeyIv,
+      workspaceKeySalt
+    } = req.body;
     const userId = req.user?.sub;
 
     if (!name) return res.status(400).json({ message: "Workspace name is required" });
@@ -85,6 +97,46 @@ exports.createWorkspace = async (req, res) => {
         allowMemberInvite: true
       }
     });
+
+    // 🔐 E2EE: Store encrypted workspace key if provided
+    if (e2eeEnabled && encryptedWorkspaceKey && workspaceKeyIv && workspaceKeySalt) {
+      try {
+        console.log('🔐 [createWorkspace] Storing E2EE workspace keys...');
+
+        const { UserWorkspaceKey, WorkspaceKey } = require('../models/encryption');
+
+        // Store the master workspace key (for distribution to new members)
+        await WorkspaceKey.create({
+          workspaceId: workspace._id,
+          encryptedMasterKey: encryptedWorkspaceKey,
+          masterKeyIv: workspaceKeyIv,
+          creatorSalt: workspaceKeySalt,
+          createdBy: userId,
+          keyVersion: 1,
+          isActive: true
+        });
+
+        console.log('✅ [createWorkspace] Workspace master key stored');
+
+        // Store creator's encrypted copy (for immediate use)
+        await UserWorkspaceKey.create({
+          userId,
+          workspaceId: workspace._id,
+          encryptedKey: encryptedWorkspaceKey,
+          keyIv: workspaceKeyIv,
+          pbkdf2Salt: workspaceKeySalt,
+          pbkdf2Iterations: 100000
+        });
+
+        console.log('✅ [createWorkspace] Creator UserWorkspaceKey stored');
+      } catch (keyError) {
+        console.error('❌ [createWorkspace] Failed to store workspace key:', keyError);
+        // Non-blocking: Workspace is created but encryption won't work
+        // User can re-initialize keys later
+      }
+    } else {
+      console.warn('⚠️ [createWorkspace] No E2EE keys provided - workspace created without encryption');
+    }
 
     // Create default channels (#general and #announcements)
     const generalChannel = await Channel.create({
@@ -163,7 +215,8 @@ exports.createWorkspace = async (req, res) => {
         type: workspace.type,
         icon: workspace.icon,
         color: workspace.color || "#2563eb",
-        defaultChannels: workspace.defaultChannels
+        defaultChannels: workspace.defaultChannels,
+        e2eeEnabled: !!e2eeEnabled
       }
     });
   } catch (err) {

@@ -62,6 +62,8 @@ async function nukeDbPreserveAdmin() {
             console.log(`✅ Users: Deleted ${deletedUsers.deletedCount}`);
         }
 
+        const { UserWorkspaceKey, WorkspaceKey } = require("../models/encryption");
+
         // Delete all other collections (no preservation needed)
         const results = await Promise.all([
             Company.deleteMany({}),
@@ -76,7 +78,9 @@ async function nukeDbPreserveAdmin() {
             Invite.deleteMany({}),
             AuditLog.deleteMany({}),
             Ticket.deleteMany({}),
-            Broadcast.deleteMany({})
+            Broadcast.deleteMany({}),
+            UserWorkspaceKey.deleteMany({}),
+            WorkspaceKey.deleteMany({})
         ]);
 
         console.log(`✅ Companies: Deleted ${results[0].deletedCount}`);
@@ -92,6 +96,8 @@ async function nukeDbPreserveAdmin() {
         console.log(`✅ Audit Logs: Deleted ${results[10].deletedCount}`);
         console.log(`✅ Tickets: Deleted ${results[11].deletedCount}`);
         console.log(`✅ Broadcasts: Deleted ${results[12].deletedCount}`);
+        console.log(`✅ User Workspace Keys: Deleted ${results[13].deletedCount}`);
+        console.log(`✅ Workspace Master Keys: Deleted ${results[14].deletedCount}`);
 
         console.log("\n" + "=".repeat(70));
         console.log("✅ DATABASE NUKE COMPLETE");
