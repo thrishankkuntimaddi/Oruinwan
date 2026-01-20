@@ -37,11 +37,12 @@ export function useMessageActions(conversationId, conversationType, workspaceId 
         const tempId = generateTempId();
 
         // Create optimistic message structure early so it's available in catch block
+        // ✅ ALLOWED: Plaintext in optimistic message for LOCAL display only
         let optimisticMessage = {
             _id: tempId,
             type: 'message',
             payload: {
-                text, // Plaintext for local display
+                text,  // OK - never leaves browser
                 attachments
             },
             sender: {
@@ -53,27 +54,42 @@ export function useMessageActions(conversationId, conversationType, workspaceId 
             createdAt: new Date().toISOString(),
             reactions: [],
             isPinned: false,
-            status: 'sending',
-            isEncrypted: false // Will be updated if encryption succeeds
+            status: 'sending'
         };
 
         try {
             // ============ E2EE: ENCRYPT MESSAGE ============
-let encryptedText;
-let messageIv;
-let isEncrypted = true;
+            let ciphertext;
+            let messageIv;
 
-const workspaceKey = await getWorkspaceKeyForEncryption(workspaceId);
-if (!workspaceKey) {
-  throw new Error("E2EE not initialized");
-}
+            // Check workspace context
+            if (!workspaceId) {
+                console.error('❌ workspaceId is required for E2EE');
+                return {
+                    success: false,
+                    error: 'Workspace context required for secure messaging'
+                };
+            }
 
-const { ciphertext, iv } = await encryptMessage(text, workspaceKey);
+            // Encrypt the message
+            try {
+                const workspaceKey = await getWorkspaceKeyForEncryption(workspaceId);
+                if (!workspaceKey) {
+                    throw new Error('E2EE keys not initialized. Please log in again.');
+                }
 
-encryptedText = ciphertext;
-messageIv = iv;
+                const encrypted = await encryptMessage(text, workspaceKey);
+                ciphertext = encrypted.ciphertext;
+                messageIv = encrypted.iv;
 
-
+                console.log('🔐 Message encrypted successfully');
+            } catch (encError) {
+                console.error('❌ Encryption failed:', encError);
+                return {
+                    success: false,
+                    error: `Encryption failed: ${encError.message}. Try logging in again.`
+                };
+            }
             // ==============================================
 
             console.log('📤 [sendMessage] Optimistic message created:', optimisticMessage);
@@ -84,9 +100,9 @@ messageIv = iv;
                 console.log('📤 [sendMessage] Sending to channel:', conversationId);
                 response = await api.post('/api/v2/messages/channel', {
                     channelId: conversationId,
-                    ciphertext: encryptedText,
-                    messageIv: messageIv,
-                    isEncrypted: isEncrypted,
+                    ciphertext,
+                    messageIv,
+                    isEncrypted: true,
                     attachments,
                     replyTo
                 });
@@ -95,9 +111,9 @@ messageIv = iv;
                 response = await api.post('/api/v2/messages/direct', {
                     receiverId: conversationId,
                     workspaceId,
-                    ciphertext: encryptedText,
-                    messageIv: messageIv,
-                    isEncrypted: isEncrypted,
+                    ciphertext,
+                    messageIv,
+                    isEncrypted: true,
                     attachments,
                     replyTo
                 });

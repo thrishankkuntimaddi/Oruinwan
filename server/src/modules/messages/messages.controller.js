@@ -24,13 +24,21 @@ exports.sendDirectMessage = async (req, res) => {
         const {
             receiverId,
             workspaceId,
-            text,
             attachments,
             replyTo,
             ciphertext,
             messageIv,
             isEncrypted
         } = req.body;
+
+        // ============================================================
+        // E2EE HARD ENFORCEMENT
+        // ============================================================
+        if (!ciphertext || !messageIv || !isEncrypted) {
+            return res.status(400).json({
+                message: 'E2EE required: ciphertext and messageIv must be provided'
+            });
+        }
 
         // Validation
         if (!receiverId) {
@@ -53,7 +61,7 @@ exports.sendDirectMessage = async (req, res) => {
             workspaceId
         );
 
-        // Create message
+        // Create message (E2EE enforced in service layer)
         const message = await messagesService.createMessage(
             {
                 type: 'message',
@@ -61,7 +69,6 @@ exports.sendDirectMessage = async (req, res) => {
                 workspace: workspaceId,
                 dm: dmSession._id,
                 sender: senderId,
-                text,
                 attachments,
                 parentId: replyTo || null,
                 ciphertext,
@@ -148,13 +155,21 @@ exports.sendChannelMessage = async (req, res) => {
         const senderId = req.user.sub;
         const {
             channelId,
-            text,
             attachments,
             replyTo,
             ciphertext,
             messageIv,
             isEncrypted
         } = req.body;
+
+        // ============================================================
+        // E2EE HARD ENFORCEMENT
+        // ============================================================
+        if (!ciphertext || !messageIv || !isEncrypted) {
+            return res.status(400).json({
+                message: 'E2EE required: ciphertext and messageIv must be provided'
+            });
+        }
 
         // Validation
         if (!channelId) {
@@ -172,7 +187,7 @@ exports.sendChannelMessage = async (req, res) => {
             return res.status(403).json({ message: 'Not a channel member' });
         }
 
-        // Create message
+        // Create message (E2EE enforced in service layer)
         const message = await messagesService.createMessage(
             {
                 type: 'message',
@@ -180,7 +195,6 @@ exports.sendChannelMessage = async (req, res) => {
                 workspace: channel.workspace,
                 channel: channelId,
                 sender: senderId,
-                text,
                 attachments,
                 parentId: replyTo || null,
                 ciphertext,

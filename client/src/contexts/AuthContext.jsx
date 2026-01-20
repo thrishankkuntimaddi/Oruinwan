@@ -145,6 +145,47 @@ export const AuthProvider = ({ children }) => {
     }
     setUser(userWithCompany);
 
+    // ============================================================
+    // 🔐 E2EE KEY INITIALIZATION
+    // ============================================================
+    try {
+      console.log('🔐 Initializing E2EE keys...');
+
+      // Fetch encrypted workspace keys from backend
+      const keysRes = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/keys/all`, {
+        credentials: "include",
+        headers: {
+          Authorization: `Bearer ${data.accessToken}`
+        }
+      });
+
+      if (keysRes.ok) {
+        const { encryptedKeys } = await keysRes.json();
+
+        if (encryptedKeys && encryptedKeys.length > 0) {
+          console.log(`🔑 Found ${encryptedKeys.length} workspace keys to decrypt`);
+
+          // Dynamically import to avoid circular dependencies
+          const { enrollUserKeys } = await import('../services/keyManagement');
+          const result = await enrollUserKeys(password, encryptedKeys);
+
+          if (result.success) {
+            console.log(`✅ E2EE initialized for ${result.workspaceIds.length} workspaces`);
+          } else {
+            console.warn('⚠️ E2EE key enrollment failed:', result.error);
+          }
+        } else {
+          console.log('ℹ️ No workspace keys found (user not in any workspaces yet)');
+        }
+      } else {
+        console.warn('⚠️ Failed to fetch workspace keys:', keysRes.status);
+      }
+    } catch (e2eeError) {
+      // Non-blocking: User can still use the app, just can't send encrypted messages yet
+      console.error('❌ E2EE initialization failed (non-blocking):', e2eeError);
+    }
+    // ============================================================
+
     // E2EE: Try to unlock encryption keys with password (non-blocking)
     // This will be handled by useEncryption hook in components
     // Store password temporarily for E2EE unlock

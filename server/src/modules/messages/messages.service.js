@@ -16,7 +16,7 @@ const { isMember } = require('../../../utils/memberHelpers');
 
 /**
  * Create a new message (channel or DM)
- * Handles both encrypted and unencrypted messages
+ * E2EE ONLY - plaintext messages are NOT allowed
  * 
  * @param {Object} messageData - Message data
  * @param {Object} io - Socket.io instance for real-time events
@@ -30,15 +30,23 @@ async function createMessage(messageData, io = null) {
         channel,
         dm,
         sender,
-        text,
         attachments = [],
         parentId = null,
         ciphertext,
         messageIv,
-        isEncrypted = false
+        isEncrypted
     } = messageData;
 
-    // Build message document
+    // ============================================================
+    // E2EE HARD ENFORCEMENT
+    // ============================================================
+    // All workspace messages MUST be encrypted
+    // Server must be cryptographically blind
+    if (!ciphertext || !messageIv) {
+        throw new Error('E2EE required: missing ciphertext or messageIv');
+    }
+
+    // Build message document with CORRECT payload structure
     const messageDoc = {
         type,
         company,
@@ -46,50 +54,45 @@ async function createMessage(messageData, io = null) {
         channel,
         dm,
         sender,
-        parentId
+        parentId,
+        // Payload matches Message schema exactly
+        payload: {
+            ciphertext,      // Base64-encoded AES-GCM ciphertext
+            messageIv,       // Base64-encoded IV
+            isEncrypted: true,
+            attachments: attachments || []
+        }
     };
 
-    // Handle E2EE content
-    if (isEncrypted && ciphertext && messageIv) {
-        messageDoc.ciphertext = ciphertext;
-        messageDoc.messageIv = messageIv;
-        messageDoc.isEncrypted = true;
-        messageDoc.encryptionVersion = 'aes-256-gcm-v1';
-        messageDoc.payload = {
-            text: '', // Empty for encrypted messages
-            attachments: attachments || []
-        };
-        console.log('🔐 Storing encrypted message');
-    } else {
-        // Unencrypted message
-        messageDoc.isEncrypted = false;
-        messageDoc.payload = {
-            text: text || '',
-            attachments: attachments || []
-        };
-    }
+    console.log('🔐 Creating encrypted message');
 
-    // Create message
+    // ============================================================
+    // DB WRITE FIRST (CRITICAL: Prevent race conditions)
+    // ============================================================
     const message = await Message.create(messageDoc);
 
     // Populate sender for response and real-time broadcast
     await message.populate('sender', 'username email profilePicture');
 
-    // Convert to plain object to ensure all virtuals and getters are included
-    const messageObject = message.toObject();
-
-    // Add default values for fields that may be missing
-    messageObject.replyCount = 0;
-    messageObject.reactions = messageObject.reactions || [];
-    messageObject.isPinned = messageObject.isPinned || false;
-    messageObject.isDeleted = messageObject.isDeleted || false;
-
-    // Emit real-time event with fully populated message
+    // ============================================================
+    // SOCKET EMIT AFTER DB SAVE (Race condition prevention)
+    // ============================================================
+    // Socket emit MUST come after DB write
+    // Otherwise clients receive message before it's stored
     if (io) {
         const room = channel ? `channel:${channel}` : `dm:${dm}`;
+        const messageObject = message.toObject();
+
+        // Add default values for client-side rendering
+        messageObject.replyCount = 0;
+        messageObject.reactions = messageObject.reactions || [];
+        messageObject.isPinned = messageObject.isPinned || false;
+
         console.log(`📡 Broadcasting new-message to room: ${room}`);
         console.log(`📨 Message ID: ${messageObject._id}, Sender: ${messageObject.sender?.username}`);
+
         io.to(room).emit('new-message', messageObject);
+
         console.log(`✅ Successfully emitted new-message to ${room}`);
     }
 
