@@ -21,6 +21,9 @@ import ThreadPanel from './ThreadPanel.jsx';
 import ChannelTabs from './tabs/ChannelTabs.jsx';
 import CanvasTab from './tabs/CanvasTab.jsx';
 import PollCreationModal from './modals/PollCreationModal.jsx';
+import MemberListModal from './modals/MemberListModal.jsx';
+import ContactInfoModal from './modals/contactInfoModal.jsx';
+import ChannelManagementModal from '../ChannelManagementModal.jsx';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useSocket } from '../../../contexts/SocketContext';
 import api from '../../../services/api';
@@ -628,6 +631,41 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
                     onClose={() => setShowPollModal(false)}
                     onCreate={handleCreatePoll}
                     channelId={chat?.id}
+                />
+            )}
+
+            {/* Member List Modal */}
+            {showMemberList && (
+                <MemberListModal
+                    isOpen={showMemberList}
+                    onClose={() => setShowMemberList(false)}
+                    members={chat?.members || []}
+                    channelName={chat?.name}
+                    currentUserId={currentUserId}
+                />
+            )}
+
+            {/* Contact Info Modal (DMs) */}
+            {showContactInfo && chat?.type === 'dm' && (
+                <ContactInfoModal
+                    isOpen={showContactInfo}
+                    onClose={() => setShowContactInfo(false)}
+                    contact={chat}
+                    currentUserId={currentUserId}
+                />
+            )}
+
+            {/* Channel Management Modal */}
+            {showChannelManagement && chat?.type === 'channel' && (
+                <ChannelManagementModal
+                    channel={{
+                        ...chat,
+                        id: chat.id || chat._id, // Ensure id field exists
+                        workspaceId: workspaceId || chat.workspaceId
+                    }}
+                    onClose={() => setShowChannelManagement(null)}
+                    currentUserId={currentUserId}
+                    initialTab={showChannelManagement}
                 />
             )}
         </div>
