@@ -50,6 +50,7 @@ const WorkspaceSelect = () => {
         rules: "",
         invites: ""
     });
+    const [termsAccepted, setTermsAccepted] = useState(false);
     // const [isCopied, setIsCopied] = useState(false); // Unused
 
     // Load Workspaces
@@ -99,6 +100,7 @@ const WorkspaceSelect = () => {
     const resetCreateModal = () => {
         setIsCreateModalOpen(false);
         setCreateStep(1);
+        setTermsAccepted(false);
         setAddMembersLater(false);
         setCreateData({ name: "", adminName: "", icon: "rocket", color: "#4f46e5", rules: "", invites: "" });
     };
@@ -672,8 +674,14 @@ const WorkspaceSelect = () => {
                                                                 />
                                                             </div>
                                                             <div className="flex-1">
-                                                                <div className="text-sm font-bold text-slate-900 dark:text-white">Pick a custom hex</div>
-                                                                <div className="text-xs font-mono text-slate-500 uppercase">{createData.color}</div>
+                                                                <div className="text-sm font-bold text-slate-900 dark:text-white mb-1.5">Pick a custom hex</div>
+                                                                <input
+                                                                    type="text"
+                                                                    value={createData.color}
+                                                                    onChange={(e) => setCreateData({ ...createData, color: e.target.value })}
+                                                                    placeholder="#000000"
+                                                                    className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-mono text-slate-600 dark:text-slate-300 uppercase focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all"
+                                                                />
                                                             </div>
                                                         </div>
                                                     </div>
@@ -708,46 +716,75 @@ const WorkspaceSelect = () => {
 
                                     {/* Step 3: Admin */}
                                     {createStep === 3 && (
-                                        <div className="space-y-8 animate-fadeIn max-w-xl mx-auto text-center">
-                                            <div className="mb-6">
+                                        <div className="space-y-6 animate-fadeIn max-w-4xl mx-auto">
+                                            <div className="mb-6 text-center">
                                                 <h2 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">You're in charge</h2>
                                                 <p className="text-slate-500 dark:text-slate-400 text-lg">Confirming you as the Workspace Owner.</p>
                                             </div>
 
-                                            <div className="relative group">
-                                                <div className="absolute inset-0 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-3xl blur-xl opacity-20 group-hover:opacity-30 transition-opacity"></div>
-                                                <div className="relative bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-8 shadow-xl">
-                                                    <div className="w-24 h-24 rounded-full mx-auto mb-4 p-1 bg-gradient-to-br from-indigo-500 to-purple-600">
-                                                        <div className="w-full h-full rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center overflow-hidden">
-                                                            {user?.profilePicture ? (
-                                                                <img src={user.profilePicture} alt="User" className="w-full h-full object-cover" />
-                                                            ) : (
-                                                                <span className="text-3xl font-black text-slate-700 dark:text-slate-300">
-                                                                    {user?.username?.charAt(0).toUpperCase()}
-                                                                </span>
-                                                            )}
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
+                                                {/* Left Column: Profile Card */}
+                                                <div className="relative group h-full">
+                                                    <div className="absolute inset-0 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-3xl blur-xl opacity-20 group-hover:opacity-30 transition-opacity"></div>
+                                                    <div className="relative bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-8 shadow-xl h-full flex flex-col justify-center items-center text-center">
+                                                        <div className="w-24 h-24 rounded-full mx-auto mb-4 p-1 bg-gradient-to-br from-indigo-500 to-purple-600">
+                                                            <div className="w-full h-full rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center overflow-hidden">
+                                                                {user?.profilePicture ? (
+                                                                    <img src={user.profilePicture} alt="User" className="w-full h-full object-cover" />
+                                                                ) : (
+                                                                    <span className="text-3xl font-black text-slate-700 dark:text-slate-300">
+                                                                        {user?.username?.charAt(0).toUpperCase()}
+                                                                    </span>
+                                                                )}
+                                                            </div>
                                                         </div>
-                                                    </div>
 
-                                                    <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-1">{user?.username}</h3>
-                                                    <p className="text-slate-500 dark:text-slate-400 mb-6">{user?.email}</p>
+                                                        <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-1">{user?.username}</h3>
+                                                        <p className="text-slate-500 dark:text-slate-400 mb-6">{user?.email}</p>
 
-                                                    <div className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded-full font-bold text-sm border border-indigo-100 dark:border-indigo-800">
-                                                        <Shield size={16} /> Workspace Owner
+                                                        <div className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded-full font-bold text-sm border border-indigo-100 dark:border-indigo-800">
+                                                            <Shield size={16} /> Workspace Owner
+                                                        </div>
                                                     </div>
                                                 </div>
-                                            </div>
 
-                                            <div className="p-6 bg-slate-50 dark:bg-slate-950/50 rounded-2xl border border-slate-200 dark:border-slate-800 text-left">
-                                                <h4 className="font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
-                                                    <Zap size={18} className="text-amber-500" /> Owner Superpowers
-                                                </h4>
-                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                                    {['Manage Billings', 'Delete Workspace', 'Invite/Remove Members', 'Configure Integrations'].map((p, i) => (
-                                                        <div key={i} className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
-                                                            <CheckCircle2 size={14} className="text-green-500" /> {p}
+                                                {/* Right Column: Superpowers & Terms */}
+                                                <div className="flex flex-col gap-6 h-full">
+                                                    <div className="p-6 bg-slate-50 dark:bg-slate-950/50 rounded-2xl border border-slate-200 dark:border-slate-800 text-left flex-1">
+                                                        <h4 className="font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+                                                            <Zap size={18} className="text-amber-500" /> Owner Superpowers
+                                                        </h4>
+                                                        <div className="grid grid-cols-1 gap-3 mb-6">
+                                                            {['Manage Billings & Plans', 'Delete or Archive Workspace', 'Invite/Remove Team Members', 'Configure Integrations & API'].map((p, i) => (
+                                                                <div key={i} className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
+                                                                    <CheckCircle2 size={14} className="text-green-500 shrink-0" /> {p}
+                                                                </div>
+                                                            ))}
                                                         </div>
-                                                    ))}
+
+                                                        <div className="pt-6 border-t border-slate-200 dark:border-slate-800 mt-auto">
+                                                            <label className="flex items-start gap-3 cursor-pointer group">
+                                                                <div className={`mt-0.5 w-5 h-5 rounded border flex items-center justify-center transition-all shrink-0 ${termsAccepted
+                                                                    ? 'bg-indigo-600 border-indigo-600 text-white'
+                                                                    : 'bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-600 group-hover:border-indigo-400'
+                                                                    }`}>
+                                                                    {termsAccepted && <Check size={14} strokeWidth={3} />}
+                                                                </div>
+                                                                <input
+                                                                    type="checkbox"
+                                                                    className="hidden"
+                                                                    checked={termsAccepted}
+                                                                    onChange={(e) => setTermsAccepted(e.target.checked)}
+                                                                />
+                                                                <div className="text-sm">
+                                                                    <span className="font-bold text-slate-700 dark:text-slate-300">I accept the responsibilities of a Workspace Owner.</span>
+                                                                    <p className="text-slate-500 dark:text-slate-400 text-xs mt-1 leading-relaxed">
+                                                                        By continuing, you acknowledge that you are the primary administrator for this workspace.
+                                                                    </p>
+                                                                </div>
+                                                            </label>
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
@@ -761,22 +798,24 @@ const WorkspaceSelect = () => {
                                                 <p className="text-slate-500 dark:text-slate-400 text-lg">Work is better together. Invite them now.</p>
                                             </div>
 
-                                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 h-full">
-                                                <div className="lg:col-span-2 space-y-6">
-                                                    <div>
+                                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                                                {/* Left Column: Email Input */}
+                                                <div className="lg:col-span-2 flex flex-col h-full">
+                                                    <div className="flex-1 flex flex-col h-full">
                                                         <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Email Addresses</label>
                                                         <textarea
                                                             placeholder="sarah@example.com, alex@design.co..."
                                                             value={createData.invites || ""}
                                                             onChange={(e) => setCreateData({ ...createData, invites: e.target.value })}
-                                                            className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 rounded-2xl focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all font-medium h-48 resize-none text-slate-700 dark:text-slate-200 font-mono text-sm"
+                                                            className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 rounded-2xl focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all font-medium flex-1 resize-none text-slate-700 dark:text-slate-200 font-mono text-sm min-h-[220px]"
                                                         ></textarea>
                                                         <p className="text-xs text-slate-400 mt-2">Separate multiple emails with commas.</p>
                                                     </div>
                                                 </div>
 
-                                                <div className="space-y-4">
-                                                    <div className="p-6 bg-blue-50 dark:bg-blue-900/10 rounded-3xl border border-blue-100 dark:border-blue-900/30">
+                                                {/* Right Column: Skip Card */}
+                                                <div className="h-full">
+                                                    <div className="p-6 bg-blue-50 dark:bg-blue-900/10 rounded-3xl border border-blue-100 dark:border-blue-900/30 h-full flex flex-col justify-center">
                                                         <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center text-blue-600 dark:text-blue-400 mb-4">
                                                             <Rocket size={24} />
                                                         </div>
@@ -785,7 +824,7 @@ const WorkspaceSelect = () => {
                                                         <button
                                                             type="button"
                                                             onClick={handleCreateSubmit}
-                                                            className="w-full py-3 bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 font-bold rounded-xl shadow-sm border border-blue-100 dark:border-blue-900/50 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+                                                            className="w-full py-3 bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 font-bold rounded-xl shadow-sm border border-blue-100 dark:border-blue-900/50 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors mt-auto"
                                                         >
                                                             Skip & Launch
                                                         </button>
@@ -820,7 +859,11 @@ const WorkspaceSelect = () => {
                                             }
                                             setCreateStep(s => s + 1);
                                         }}
-                                        className="px-8 py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-500/20 hover:shadow-indigo-500/30 hover:-translate-y-0.5 flex items-center gap-2"
+                                        disabled={createStep === 3 && !termsAccepted}
+                                        className={`px-8 py-3 bg-indigo-600 text-white font-bold rounded-xl transition-all shadow-lg shadow-indigo-500/20 flex items-center gap-2 ${createStep === 3 && !termsAccepted
+                                            ? 'opacity-50 cursor-not-allowed bg-slate-400 shadow-none'
+                                            : 'hover:bg-indigo-700 hover:shadow-indigo-500/30 hover:-translate-y-0.5'
+                                            }`}
                                     >
                                         Next Step <ArrowRight size={18} />
                                     </button>
