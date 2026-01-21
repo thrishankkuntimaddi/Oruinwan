@@ -4,8 +4,9 @@ import { useNavigate } from "react-router-dom";
 import {
     Rocket, Briefcase, Zap, Palette, Microscope, Globe,
     Shield, TrendingUp, Lightbulb, Flame, Target, Trophy,
-    Plus, LogOut, ArrowRight, User, Users as UsersIcon, CircleHelp, X,
-    BookOpen, Command, Bug, Sparkles, Search, MessageCircle
+    Plus, LogOut, ArrowRight, User, CircleHelp, X,
+    BookOpen, Command, Bug, Sparkles, Search, MessageCircle, Settings,
+    CheckCircle2, AlertCircle, Check
 } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import api from "../services/api";
@@ -369,6 +370,13 @@ const WorkspaceSelect = () => {
                             <div className="text-xs text-slate-500">{user?.email}</div>
                         </button>
                         <button
+                            onClick={() => navigate('/settings')}
+                            className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
+                            title="Settings"
+                        >
+                            <Settings size={18} />
+                        </button>
+                        <button
                             onClick={handleLogout}
                             className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
                             title="Sign out"
@@ -488,275 +496,345 @@ const WorkspaceSelect = () => {
                 )}
             </main>
 
-            {/* Create Modal - Multi-Step Wizard */}
+            {/* Create Modal - Multi-Step Wizard (Redesigned) */}
             {isCreateModalOpen && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
-                    <div className="bg-white dark:bg-slate-900 w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden animate-slideUp flex flex-col max-h-[90vh] border dark:border-slate-800">
-                        {/* Header with Progress Steps */}
-                        <div className="px-8 py-6 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900">
-                            <div className="flex justify-between items-center mb-6">
-                                <h3 className="font-bold text-2xl text-slate-800 dark:text-white">Create Workspace</h3>
-                                <button
-                                    onClick={resetCreateModal}
-                                    className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
-                                >
-                                    <X size={24} />
-                                </button>
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-fadeIn">
+                    <div className="bg-white dark:bg-slate-900 w-full max-w-5xl h-[80vh] min-h-[600px] rounded-3xl shadow-2xl overflow-hidden animate-scaleIn flex flex-col md:flex-row border border-slate-200 dark:border-slate-800">
+
+                        {/* Sidebar Steps (Left) */}
+                        <div className="w-full md:w-64 bg-slate-50/80 dark:bg-slate-950/50 border-b md:border-b-0 md:border-r border-slate-200 dark:border-slate-800 p-6 flex flex-col justify-between backdrop-blur-sm">
+                            <div>
+                                <h3 className="font-bold text-xl text-slate-800 dark:text-white mb-8 px-2 flex items-center gap-2">
+                                    <Rocket className="text-indigo-600" />
+                                    <span>New Workspace</span>
+                                </h3>
+
+                                <div className="space-y-2">
+                                    {[
+                                        { step: 1, label: "Basics", desc: "Name & Icon" },
+                                        { step: 2, label: "Branding", desc: "Colors & Theme" },
+                                        { step: 3, label: "Admin", desc: "Review Owner" },
+                                        { step: 4, label: "Members", desc: "Invite Team" }
+                                    ].map((s) => (
+                                        <button
+                                            key={s.step}
+                                            onClick={() => createStep > s.step && setCreateStep(s.step)}
+                                            disabled={createStep < s.step}
+                                            className={`w-full flex items-center gap-3 p-3 rounded-xl text-left transition-all ${createStep === s.step
+                                                ? 'bg-white dark:bg-slate-800 shadow-lg shadow-indigo-500/5 border border-indigo-100 dark:border-indigo-900'
+                                                : createStep > s.step
+                                                    ? 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                                                    : 'opacity-50 cursor-not-allowed text-slate-400'
+                                                }`}
+                                        >
+                                            <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm transition-all ${createStep === s.step
+                                                ? 'bg-indigo-600 text-white'
+                                                : createStep > s.step
+                                                    ? 'bg-green-500 text-white'
+                                                    : 'bg-slate-200 dark:bg-slate-800 text-slate-500'
+                                                }`}>
+                                                {createStep > s.step ? <CheckCircle2 size={16} /> : s.step}
+                                            </div>
+                                            <div>
+                                                <div className={`text-sm font-bold ${createStep === s.step ? 'text-indigo-900 dark:text-white' : 'text-slate-700 dark:text-slate-300'}`}>
+                                                    {s.label}
+                                                </div>
+                                                <div className="text-xs text-slate-500 dark:text-slate-500">
+                                                    {s.desc}
+                                                </div>
+                                            </div>
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
 
-                            {/* Progress Indicators */}
-                            <div className="flex items-center justify-between px-2 relative">
-                                {/* Connector Line */}
-                                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-full h-0.5 bg-slate-200 dark:bg-slate-700 -z-10"></div>
-                                <div className={`absolute left-0 top-1/2 -translate-y-1/2 h-0.5 bg-indigo-500 transition-all duration-300 -z-10`} style={{ width: `${((createStep - 1) / 3) * 100}%` }}></div>
-
-                                {[
-                                    { step: 1, label: "Basics" },
-                                    { step: 2, label: "Branding" },
-                                    { step: 3, label: "Admin" },
-                                    { step: 4, label: "Members" }
-                                ].map((s) => (
-                                    <div key={s.step} className="flex flex-col items-center gap-2 bg-white dark:bg-slate-900 px-2">
-                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm transition-all duration-300 ${createStep >= s.step ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200' : 'bg-slate-200 dark:bg-slate-800 text-slate-500'}`}>
-                                            {createStep > s.step ? "✓" : s.step}
-                                        </div>
-                                        <span className={`text-xs font-bold transition-colors ${createStep >= s.step ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400'}`}>{s.label}</span>
-                                    </div>
-                                ))}
+                            <div className="pt-6 border-t border-slate-200 dark:border-slate-800 hidden md:block">
+                                <button
+                                    onClick={resetCreateModal}
+                                    className="flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white transition-colors px-2"
+                                >
+                                    <X size={16} /> Cancel Creation
+                                </button>
                             </div>
                         </div>
 
-                        <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
-                            <form onSubmit={handleCreateSubmit}>
-                                {/* Step 1: Basics */}
-                                {createStep === 1 && (
-                                    <div className="space-y-6 animate-fadeIn">
-                                        <div className="text-center mb-8">
-                                            <h2 className="text-xl font-bold text-slate-900 dark:text-white">Let's start with the basics</h2>
-                                            <p className="text-slate-500 dark:text-slate-400">Give your workspace a name and set the ground rules.</p>
-                                        </div>
+                        {/* Content Area (Right) */}
+                        <div className="flex-1 flex flex-col bg-white dark:bg-slate-900 relative">
+                            {/* Close button for mobile */}
+                            <button
+                                onClick={resetCreateModal}
+                                className="absolute top-4 right-4 md:hidden p-2 bg-slate-100 dark:bg-slate-800 rounded-lg text-slate-500"
+                            >
+                                <X size={20} />
+                            </button>
 
-                                        <div>
-                                            <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Workspace Name</label>
-                                            <input
-                                                type="text"
-                                                autoFocus
-                                                placeholder="e.g. Engineering Team, Chttrix HQ"
-                                                value={createData.name}
-                                                onChange={(e) => {
-                                                    setCreateData({ ...createData, name: e.target.value });
-                                                    setNameError("");
-                                                }}
-                                                className={`w-full px-4 py-3 bg-white dark:bg-slate-950 border ${nameError ? 'border-red-300 focus:border-red-500 focus:ring-red-200' : 'border-slate-200 dark:border-slate-800 focus:border-indigo-500 focus:ring-indigo-200 dark:focus:ring-indigo-900'} rounded-xl focus:outline-none focus:ring-4 transition-all text-slate-800 dark:text-white font-medium`}
-                                            />
-                                            {nameError && <p className="mt-2 text-xs font-bold text-red-500 animate-pulse">{nameError}</p>}
-                                        </div>
+                            <div className="flex-1 overflow-y-auto custom-scrollbar p-6 lg:p-10">
+                                <form id="create-workspace-form" onSubmit={handleCreateSubmit} className="max-w-3xl mx-auto h-full flex flex-col justify-center">
 
-                                        <div>
-                                            <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Rules & Guidelines (Optional)</label>
-                                            <div className="relative">
-                                                <textarea
-                                                    placeholder="Set the tone for your workspace. E.g., 'Be respectful', 'No spam', 'Updates every Friday'..."
-                                                    value={createData.rules || ""}
-                                                    onChange={(e) => setCreateData({ ...createData, rules: e.target.value })}
-                                                    className="w-full px-4 py-3 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl focus:outline-none focus:ring-4 focus:ring-indigo-200 dark:focus:ring-indigo-900 focus:border-indigo-500 transition-all text-slate-800 dark:text-white font-medium h-32 resize-none"
-                                                ></textarea>
-                                                <Shield className="absolute right-4 top-4 text-slate-300" size={18} />
+                                    {/* Step 1: Basics */}
+                                    {createStep === 1 && (
+                                        <div className="space-y-8 animate-fadeIn">
+                                            <div className="mb-6">
+                                                <h2 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">Let's build your HQ</h2>
+                                                <p className="text-slate-500 dark:text-slate-400 text-lg">Give your workspace a distinct identity.</p>
                                             </div>
-                                            <p className="text-xs text-slate-400 mt-2 px-1">These will be visible in workspace details.</p>
-                                        </div>
 
-                                        <div>
-                                            <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Workspace Icon</label>
-                                            <div className="flex flex-wrap gap-3">
-                                                {['rocket', 'briefcase', 'zap', 'palette', 'globe', 'trophy', 'target', 'flame'].map((iconName) => {
-                                                    const IconCmp = getIconComponent(iconName);
-                                                    return (
-                                                        <button
-                                                            key={iconName}
-                                                            type="button"
-                                                            onClick={() => setCreateData({ ...createData, icon: iconName })}
-                                                            className={`p-3 rounded-xl border-2 transition-all flex items-center justify-center ${createData.icon === iconName
-                                                                ? 'border-indigo-500 bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400 scale-105'
-                                                                : 'border-slate-100 dark:border-slate-700 text-slate-400 hover:border-indigo-200 hover:bg-slate-50 dark:hover:bg-slate-800'
-                                                                }`}
-                                                        >
-                                                            <IconCmp size={24} />
-                                                        </button>
-                                                    );
-                                                })}
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
+                                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                                                <div className="space-y-6">
+                                                    <div>
+                                                        <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Workspace Name</label>
+                                                        <input
+                                                            type="text"
+                                                            autoFocus
+                                                            placeholder="e.g. Acme Corp, Engineering Team"
+                                                            value={createData.name}
+                                                            onChange={(e) => {
+                                                                setCreateData({ ...createData, name: e.target.value });
+                                                                setNameError("");
+                                                            }}
+                                                            className={`w-full px-5 py-4 bg-slate-50 dark:bg-slate-950/50 border ${nameError ? 'border-red-300 focus:border-red-500 ring-4 ring-red-500/10' : 'border-slate-200 dark:border-slate-800 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10'} rounded-2xl focus:outline-none transition-all text-lg font-medium text-slate-900 dark:text-white`}
+                                                        />
+                                                        {nameError && <p className="mt-2 text-xs font-bold text-red-500 animate-pulse flex items-center gap-1"><AlertCircle size={12} /> {nameError}</p>}
+                                                    </div>
 
-                                {/* Step 2: Branding */}
-                                {createStep === 2 && (
-                                    <div className="space-y-8 animate-fadeIn">
-                                        <div className="text-center mb-8">
-                                            <h2 className="text-xl font-bold text-slate-900 dark:text-white">Make it yours</h2>
-                                            <p className="text-slate-500 dark:text-slate-400">Choose a theme color that represents your team.</p>
-                                        </div>
-
-                                        <div className="grid grid-cols-4 gap-4">
-                                            {['#4f46e5', '#0ea5e9', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#6366f1'].map((color) => (
-                                                <button
-                                                    key={color}
-                                                    type="button"
-                                                    onClick={() => setCreateData({ ...createData, color })}
-                                                    className={`aspect-square rounded-2xl flex items-center justify-center transition-all duration-300 group relative overflow-hidden ${createData.color === color ? 'ring-4 ring-offset-2 ring-indigo-500 scale-95' : 'hover:scale-105'}`}
-                                                    style={{ backgroundColor: color }}
-                                                >
-                                                    {createData.color === color && (
-                                                        <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm animate-bounce">
-                                                            <span className="text-white font-bold">✓</span>
-                                                        </div>
-                                                    )}
-                                                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors"></div>
-                                                </button>
-                                            ))}
-                                        </div>
-
-                                        {/* Preview */}
-                                        <div className="mt-8 p-6 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700">
-                                            <label className="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-4 text-center">Preview</label>
-                                            <div className="flex items-center gap-4 bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm mx-auto max-w-sm">
-                                                <div
-                                                    className="w-12 h-12 rounded-xl flex items-center justify-center text-white shadow-lg"
-                                                    style={{ backgroundColor: createData.color }}
-                                                >
-                                                    {React.createElement(getIconComponent(createData.icon), { size: 24 })}
+                                                    <div>
+                                                        <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Description (Optional)</label>
+                                                        <textarea
+                                                            placeholder="What's this workspace for? Share your mission or guidelines."
+                                                            value={createData.rules || ""}
+                                                            onChange={(e) => setCreateData({ ...createData, rules: e.target.value })}
+                                                            className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 rounded-2xl focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all font-medium h-32 resize-none text-slate-700 dark:text-slate-200"
+                                                        ></textarea>
+                                                    </div>
                                                 </div>
+
                                                 <div>
-                                                    <div className="font-bold text-slate-900 dark:text-white">{createData.name || "Workspace Name"}</div>
-                                                    <div className="text-xs text-slate-500">1 member • just now</div>
+                                                    <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-4">Choose an Icon</label>
+                                                    <div className="grid grid-cols-4 gap-3">
+                                                        {['rocket', 'briefcase', 'zap', 'palette', 'globe', 'trophy', 'target', 'flame', 'microscope', 'shield', 'lightbulb', 'sparkles'].map((iconName) => {
+                                                            const IconCmp = getIconComponent(iconName);
+                                                            return (
+                                                                <button
+                                                                    key={iconName}
+                                                                    type="button"
+                                                                    onClick={() => setCreateData({ ...createData, icon: iconName })}
+                                                                    className={`aspect-square rounded-2xl border-2 transition-all flex items-center justify-center ${createData.icon === iconName
+                                                                        ? 'border-indigo-600 bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400 shadow-md ring-4 ring-indigo-500/10'
+                                                                        : 'border-slate-100 dark:border-slate-800 text-slate-400 hover:border-indigo-200 hover:bg-slate-50 dark:hover:bg-slate-800'
+                                                                        }`}
+                                                                >
+                                                                    <IconCmp size={24} />
+                                                                </button>
+                                                            );
+                                                        })}
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
-                                    </div>
-                                )}
+                                    )}
 
-                                {/* Step 3: Admin */}
-                                {createStep === 3 && (
-                                    <div className="space-y-6 animate-fadeIn">
-                                        <div className="text-center mb-8">
-                                            <h2 className="text-xl font-bold text-slate-900 dark:text-white">Admin Confirmation</h2>
-                                            <p className="text-slate-500 dark:text-slate-400">Confirm who will manage this workspace.</p>
-                                        </div>
+                                    {/* Step 2: Branding */}
+                                    {createStep === 2 && (
+                                        <div className="space-y-8 animate-fadeIn">
+                                            <div className="mb-6">
+                                                <h2 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">Brand your Space</h2>
+                                                <p className="text-slate-500 dark:text-slate-400 text-lg">Pick a color that matches your team's vibe.</p>
+                                            </div>
 
-                                        <div className="bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800 rounded-2xl p-6 flex flex-col items-center">
-                                            <div className="w-20 h-20 rounded-full bg-indigo-100 dark:bg-indigo-800 flex items-center justify-center text-3xl mb-4 border-4 border-white dark:border-slate-800 shadow-xl relative">
-                                                {user?.profilePicture ? (
-                                                    <img src={user.profilePicture} alt="User" className="w-full h-full rounded-full object-cover" />
-                                                ) : (
-                                                    <span className="text-indigo-600 dark:text-indigo-400 font-black">
-                                                        {user?.username?.charAt(0).toUpperCase()}
-                                                    </span>
-                                                )}
-                                                <div className="absolute -bottom-1 -right-1 bg-yellow-400 p-1.5 rounded-full border-2 border-white dark:border-slate-800">
-                                                    <Shield size={14} className="text-yellow-900 fill-current" />
+                                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-start">
+                                                <div className="space-y-6">
+                                                    <div>
+                                                        <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-4">Preset Colors</label>
+                                                        <div className="grid grid-cols-5 gap-3">
+                                                            {['#4f46e5', '#0ea5e9', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#6366f1', '#14b8a6', '#f43f5e'].map((color) => (
+                                                                <button
+                                                                    key={color}
+                                                                    type="button"
+                                                                    onClick={() => setCreateData({ ...createData, color })}
+                                                                    className={`aspect-square rounded-xl flex items-center justify-center transition-all duration-300 group relative overflow-hidden ${createData.color === color ? 'ring-4 ring-offset-2 ring-indigo-500 scale-95 shadow-md' : 'hover:scale-110'}`}
+                                                                    style={{ backgroundColor: color }}
+                                                                >
+                                                                    {createData.color === color && <Check className="text-white drop-shadow-md" size={16} strokeWidth={4} />}
+                                                                </button>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="pt-4 border-t border-slate-200 dark:border-slate-800">
+                                                        <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-4">Custom Color</label>
+                                                        <div className="flex items-center gap-4 p-4 rounded-2xl bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800">
+                                                            <div className="relative w-12 h-12 rounded-full overflow-hidden shadow-sm border border-slate-200 dark:border-slate-700">
+                                                                <input
+                                                                    type="color"
+                                                                    value={createData.color}
+                                                                    onChange={(e) => setCreateData({ ...createData, color: e.target.value })}
+                                                                    className="absolute -top-1/2 -left-1/2 w-[200%] h-[200%] p-0 m-0 cursor-pointer"
+                                                                />
+                                                            </div>
+                                                            <div className="flex-1">
+                                                                <div className="text-sm font-bold text-slate-900 dark:text-white">Pick a custom hex</div>
+                                                                <div className="text-xs font-mono text-slate-500 uppercase">{createData.color}</div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <div className="bg-slate-100 dark:bg-slate-950/50 p-8 rounded-3xl border border-slate-200 dark:border-slate-800 flex flex-col items-center justify-center text-center">
+                                                    <span className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-6">Live Preview</span>
+
+                                                    {/* Workspace Card Preview */}
+                                                    <div className="w-full max-w-sm bg-white dark:bg-slate-900 rounded-2xl p-6 shadow-xl border border-slate-100 dark:border-slate-800 transform transition-all duration-500 hover:scale-105">
+                                                        <div
+                                                            className="w-16 h-16 rounded-2xl flex items-center justify-center text-white shadow-lg mb-4 mx-auto transition-colors duration-300"
+                                                            style={{ backgroundColor: createData.color }}
+                                                        >
+                                                            {React.createElement(getIconComponent(createData.icon), { size: 32 })}
+                                                        </div>
+                                                        <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-1">{createData.name || "Workspace Name"}</h3>
+                                                        <p className="text-sm text-slate-500 mb-4">Your awesome new workspace</p>
+                                                        <div className="flex items-center justify-center gap-2">
+                                                            <div className="flex -space-x-2">
+                                                                {[1, 2, 3].map(i => (
+                                                                    <div key={i} className="w-8 h-8 rounded-full border-2 border-white dark:border-slate-900 bg-slate-200 dark:bg-slate-800"></div>
+                                                                ))}
+                                                            </div>
+                                                            <span className="text-xs font-bold text-slate-400">+5 members</span>
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             </div>
-                                            <h3 className="text-lg font-bold text-slate-900 dark:text-white">{user?.username}</h3>
-                                            <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">{user?.email}</p>
+                                        </div>
+                                    )}
 
-                                            <div className="flex items-center gap-2 px-3 py-1.5 bg-indigo-100 dark:bg-indigo-800 rounded-lg">
-                                                <Shield size={14} className="text-indigo-600 dark:text-indigo-400" />
-                                                <span className="text-xs font-bold text-indigo-700 dark:text-indigo-300 uppercase tracking-wide">Workspace Owner</span>
+                                    {/* Step 3: Admin */}
+                                    {createStep === 3 && (
+                                        <div className="space-y-8 animate-fadeIn max-w-xl mx-auto text-center">
+                                            <div className="mb-6">
+                                                <h2 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">You're in charge</h2>
+                                                <p className="text-slate-500 dark:text-slate-400 text-lg">Confirming you as the Workspace Owner.</p>
+                                            </div>
+
+                                            <div className="relative group">
+                                                <div className="absolute inset-0 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-3xl blur-xl opacity-20 group-hover:opacity-30 transition-opacity"></div>
+                                                <div className="relative bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-8 shadow-xl">
+                                                    <div className="w-24 h-24 rounded-full mx-auto mb-4 p-1 bg-gradient-to-br from-indigo-500 to-purple-600">
+                                                        <div className="w-full h-full rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center overflow-hidden">
+                                                            {user?.profilePicture ? (
+                                                                <img src={user.profilePicture} alt="User" className="w-full h-full object-cover" />
+                                                            ) : (
+                                                                <span className="text-3xl font-black text-slate-700 dark:text-slate-300">
+                                                                    {user?.username?.charAt(0).toUpperCase()}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+
+                                                    <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-1">{user?.username}</h3>
+                                                    <p className="text-slate-500 dark:text-slate-400 mb-6">{user?.email}</p>
+
+                                                    <div className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded-full font-bold text-sm border border-indigo-100 dark:border-indigo-800">
+                                                        <Shield size={16} /> Workspace Owner
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div className="p-6 bg-slate-50 dark:bg-slate-950/50 rounded-2xl border border-slate-200 dark:border-slate-800 text-left">
+                                                <h4 className="font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+                                                    <Zap size={18} className="text-amber-500" /> Owner Superpowers
+                                                </h4>
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                    {['Manage Billings', 'Delete Workspace', 'Invite/Remove Members', 'Configure Integrations'].map((p, i) => (
+                                                        <div key={i} className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
+                                                            <CheckCircle2 size={14} className="text-green-500" /> {p}
+                                                        </div>
+                                                    ))}
+                                                </div>
                                             </div>
                                         </div>
+                                    )}
 
-                                        <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">
-                                            <h4 className="font-bold text-sm text-slate-800 dark:text-white mb-2 flex items-center gap-2">
-                                                <CircleHelp size={16} className="text-slate-400" />
-                                                Permissions
-                                            </h4>
-                                            <ul className="text-sm text-slate-500 dark:text-slate-400 space-y-2 pl-6 list-disc">
-                                                <li>You will have full control over workspace settings.</li>
-                                                <li>You can manage members, roles, and channels.</li>
-                                                <li>You can delete the workspace at any time.</li>
-                                            </ul>
+                                    {/* Step 4: Members */}
+                                    {createStep === 4 && (
+                                        <div className="space-y-8 animate-fadeIn">
+                                            <div className="mb-6">
+                                                <h2 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">Gather your team</h2>
+                                                <p className="text-slate-500 dark:text-slate-400 text-lg">Work is better together. Invite them now.</p>
+                                            </div>
+
+                                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 h-full">
+                                                <div className="lg:col-span-2 space-y-6">
+                                                    <div>
+                                                        <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Email Addresses</label>
+                                                        <textarea
+                                                            placeholder="sarah@example.com, alex@design.co..."
+                                                            value={createData.invites || ""}
+                                                            onChange={(e) => setCreateData({ ...createData, invites: e.target.value })}
+                                                            className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 rounded-2xl focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all font-medium h-48 resize-none text-slate-700 dark:text-slate-200 font-mono text-sm"
+                                                        ></textarea>
+                                                        <p className="text-xs text-slate-400 mt-2">Separate multiple emails with commas.</p>
+                                                    </div>
+                                                </div>
+
+                                                <div className="space-y-4">
+                                                    <div className="p-6 bg-blue-50 dark:bg-blue-900/10 rounded-3xl border border-blue-100 dark:border-blue-900/30">
+                                                        <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center text-blue-600 dark:text-blue-400 mb-4">
+                                                            <Rocket size={24} />
+                                                        </div>
+                                                        <h4 className="font-bold text-blue-900 dark:text-blue-200 mb-2">Skip for now?</h4>
+                                                        <p className="text-sm text-blue-700 dark:text-blue-300/80 mb-6">You can always invite members later from workspace settings.</p>
+                                                        <button
+                                                            type="button"
+                                                            onClick={handleCreateSubmit}
+                                                            className="w-full py-3 bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 font-bold rounded-xl shadow-sm border border-blue-100 dark:border-blue-900/50 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+                                                        >
+                                                            Skip & Launch
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </div>
-                                    </div>
+                                    )}
+
+                                </form>
+                            </div>
+
+                            {/* Footer Actions */}
+                            <div className="p-6 border-t border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md flex justify-between items-center shrink-0">
+                                {createStep > 1 ? (
+                                    <button
+                                        onClick={() => setCreateStep(s => s - 1)}
+                                        className="px-6 py-3 text-slate-600 dark:text-slate-400 font-bold hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors"
+                                    >
+                                        Back
+                                    </button>
+                                ) : (
+                                    <div className="w-20"></div> // Spacer
                                 )}
 
-                                {/* Step 4: Members */}
-                                {createStep === 4 && (
-                                    <div className="space-y-6 animate-fadeIn">
-                                        <div className="text-center mb-8">
-                                            <h2 className="text-xl font-bold text-slate-900 dark:text-white">Invite your team</h2>
-                                            <p className="text-slate-500 dark:text-slate-400">Collaboration is better together.</p>
-                                        </div>
-
-                                        <div>
-                                            <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Email Addresses</label>
-                                            <textarea
-                                                placeholder="Enter emails separated by commas (e.g., alex@team.com, sarah@design.co)"
-                                                value={createData.invites || ""}
-                                                onChange={(e) => setCreateData({ ...createData, invites: e.target.value })}
-                                                className="w-full px-4 py-3 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl focus:outline-none focus:ring-4 focus:ring-indigo-200 dark:focus:ring-indigo-900 focus:border-indigo-500 transition-all text-slate-800 dark:text-white font-medium h-32 resize-none"
-                                            ></textarea>
-                                            <p className="text-xs text-slate-400 mt-2 flex items-center gap-1">
-                                                <UsersIcon size={12} />
-                                                We'll send them an invite link instantly.
-                                            </p>
-                                        </div>
-
-                                        <div className="flex items-center gap-2 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-100 dark:border-blue-800">
-                                            <div className="p-2 bg-blue-100 dark:bg-blue-800 rounded-lg text-blue-600 dark:text-blue-300">
-                                                <Rocket size={20} />
-                                            </div>
-                                            <div className="flex-1">
-                                                <h4 className="text-sm font-bold text-blue-900 dark:text-blue-300">Skip for now?</h4>
-                                                <p className="text-xs text-blue-700 dark:text-blue-400">You can always add members later from workspace settings.</p>
-                                            </div>
-                                        </div>
-                                    </div>
+                                {createStep < 4 ? (
+                                    <button
+                                        onClick={() => {
+                                            if (createStep === 1 && !createData.name.trim()) {
+                                                setNameError("Workspace name is required");
+                                                return;
+                                            }
+                                            setCreateStep(s => s + 1);
+                                        }}
+                                        className="px-8 py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-500/20 hover:shadow-indigo-500/30 hover:-translate-y-0.5 flex items-center gap-2"
+                                    >
+                                        Next Step <ArrowRight size={18} />
+                                    </button>
+                                ) : (
+                                    <button
+                                        onClick={handleCreateSubmit}
+                                        className="px-10 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold rounded-xl hover:shadow-lg hover:shadow-green-500/30 hover:-translate-y-0.5 transition-all flex items-center gap-2"
+                                    >
+                                        <Rocket size={18} /> Launch Workspace
+                                    </button>
                                 )}
-                            </form>
+                            </div>
                         </div>
 
-                        {/* Footer / Actions */}
-                        <div className="px-8 py-6 border-t border-slate-100 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/80 backdrop-blur flex justify-between items-center">
-                            {createStep > 1 ? (
-                                <button
-                                    onClick={() => setCreateStep(s => s - 1)}
-                                    className="px-6 py-2.5 text-slate-600 dark:text-slate-400 font-bold hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl transition-colors"
-                                >
-                                    Back
-                                </button>
-                            ) : (
-                                <button
-                                    onClick={resetCreateModal}
-                                    className="px-6 py-2.5 text-slate-600 dark:text-slate-400 font-bold hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl transition-colors"
-                                >
-                                    Cancel
-                                </button>
-                            )}
-
-                            {createStep < 4 ? (
-                                <button
-                                    onClick={() => {
-                                        if (createStep === 1 && !createData.name.trim()) {
-                                            setNameError("Workspace name is required");
-                                            return;
-                                        }
-                                        setCreateStep(s => s + 1);
-                                    }}
-                                    className="px-8 py-2.5 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 hover:shadow-indigo-300 transform hover:-translate-y-0.5 flex items-center gap-2"
-                                >
-                                    Next Step <ArrowRight size={16} />
-                                </button>
-                            ) : (
-                                <button
-                                    onClick={handleCreateSubmit}
-                                    className="px-8 py-2.5 bg-green-600 text-white font-bold rounded-xl hover:bg-green-700 transition-all shadow-lg shadow-green-200 hover:shadow-green-300 transform hover:-translate-y-0.5 flex items-center gap-2"
-                                >
-                                    <Rocket size={18} />
-                                    Launch Workspace
-                                </button>
-                            )}
-                        </div>
                     </div>
                 </div>
             )}

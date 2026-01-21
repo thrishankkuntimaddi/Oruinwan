@@ -17,6 +17,7 @@ const {
   updateMe,
   updatePassword,
   setOAuthPassword,
+  skipPassword,
   googleLogin,
   googleAuth,
   getSessions,
@@ -48,6 +49,7 @@ router.put("/me/password", requireAuth, updatePassword);
 
 // OAUTH PASSWORD SETUP (first-time only for OAuth users)
 router.post("/oauth/set-password", requireAuth, setOAuthPassword);
+router.post("/oauth/skip-password", requireAuth, skipPassword);
 
 // EMAIL MANAGEMENT ROUTES
 router.post("/me/emails", requireAuth, addEmail);
@@ -110,8 +112,8 @@ router.get(
     // Successful authentication
     const token = generateToken(req.user);
 
-    // Check if password setup required
-    const requiresPasswordSetup = req.user.authProvider !== 'local' && !req.user.passwordSetAt;
+    // Check if password setup required (skip if already set OR explicitly skipped)
+    const requiresPasswordSetup = req.user.authProvider !== 'local' && !req.user.passwordSetAt && !req.user.passwordSkipped;
     const params = new URLSearchParams({
       access: token,
       requiresPasswordSetup: requiresPasswordSetup.toString()
@@ -208,8 +210,8 @@ router.get("/linkedin/callback", async (req, res) => {
 
     const token = generateToken(user);
 
-    // Check if password setup required
-    const requiresPasswordSetup = user.authProvider !== 'local' && !user.passwordSetAt;
+    // Check if password setup required (skip if already set OR explicitly skipped)
+    const requiresPasswordSetup = user.authProvider !== 'local' && !user.passwordSetAt && !user.passwordSkipped;
     const params = new URLSearchParams({
       access: token,
       requiresPasswordSetup: requiresPasswordSetup.toString()

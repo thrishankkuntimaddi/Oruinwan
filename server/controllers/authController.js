@@ -901,6 +901,11 @@ exports.getMe = async (req, res) => {
       .select("-passwordHash -refreshTokens")
       .populate('companyId');
 
+    // Check if user exists (may have been deleted)
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
     // Migration: Ensure primary email is in emails array
     if (!user.emails || user.emails.length === 0) {
       user.emails = [{
@@ -1309,7 +1314,15 @@ exports.googleLogin = async (req, res) => {
     setRefreshTokenCookie(res, refreshToken);
 
     // Check if password setup is required
-    const requiresPasswordSetup = user.authProvider !== 'local' && !user.passwordSetAt;
+    // Don't prompt if user has already set a password OR explicitly skipped it
+    console.log('🔍 Google Login - Checking password setup requirements:');
+    console.log('   authProvider:', user.authProvider);
+    console.log('   passwordSetAt:', user.passwordSetAt);
+    console.log('   passwordSkipped:', user.passwordSkipped);
+    console.log('   passwordHash exists:', !!user.passwordHash);
+
+    const requiresPasswordSetup = user.authProvider !== 'local' && !user.passwordSetAt && !user.passwordSkipped;
+    console.log('   ➡️ requiresPasswordSetup:', requiresPasswordSetup);
 
     return res.json({
       message: "Google login success",
@@ -1803,5 +1816,45 @@ exports.deleteEmail = async (req, res) => {
   } catch (err) {
     console.error("DELETE EMAIL ERROR:", err);
     res.status(500).json({ message: "Server error" });
+  }
+};
+
+// ----------------------------------------------------
+// SKIP PASSWORD SETUP (OAuth Users)
+// ----------------------------------------------------
+exports.skipPassword = async (req, res) => {
+  try {
+    const userId = req.user.sub;
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Only allow for OAuth users who haven't set a password
+    if (user.authProvider === 'local') {
+      return res.status(400).json({
+        message: "This endpoint is only for OAuth users"
+      });
+    }
+
+    if (user.passwordSetAt) {
+      return res.status(400).json({
+        message: "Password already set. Cannot skip."
+      });
+    }
+
+    // Mark password as skipped
+    user.passwordSkipped = true;
+    await saveWithRetry(user);
+
+    return res.json({
+      message: "Password setup skipped. You can set a password later in settings.",
+      passwordSkipped: true
+    });
+
+  } catch (err) {
+    console.error("SKIP PASSWORD ERROR:", err);
+    return res.status(500).json({ message: "Server error" });
   }
 };

@@ -184,19 +184,25 @@ const LoginForm = ({ onSwitch, initialEmail = "" }) => {
         // Then update context
         setUser(res.data.user);
 
+        console.log('🔍 Google Login Response:', res.data);
+        console.log('   requiresPasswordSetup:', res.data.requiresPasswordSetup);
+        console.log('   isFirstLogin:', res.data.isFirstLogin);
+
         showToast("Google login successful!", "success");
 
         // ================================================================
         // 🔐 CHECK IF OAUTH USER NEEDS TO SET PASSWORD (FIRST-TIME LOGIN)
         // ================================================================
         if (res.data.requiresPasswordSetup || res.data.isFirstLogin) {
-          console.log('🔐 OAuth user needs to set password');
+          console.log('🔐 OAuth user needs to set password - redirecting to /set-password');
           // Store flag in localStorage for the setup-password page
           localStorage.setItem("oauthPasswordSetupRequired", "true");
           localStorage.setItem("oauthProvider", "google");
-          navigate("/setup-password");
+          navigate("/set-password");
           return;
         }
+
+        console.log('✅ Password already set or skipped - redirecting to dashboard');
 
         // ================================================================
         // NORMAL LOGIN FLOW - Password already set

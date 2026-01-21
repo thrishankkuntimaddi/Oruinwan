@@ -178,6 +178,9 @@ const UserSchema = new mongoose.Schema(
     // Password Login Control (for OAuth users)
     passwordLoginEnabled: { type: Boolean, default: true },
 
+    // Password Skip Flag (for OAuth users who chose to skip password setup)
+    passwordSkipped: { type: Boolean, default: false },
+
     // Last Login Method Tracking
     lastLoginMethod: { type: String, enum: ['oauth', 'password', null], default: null },
     lastLoginMethodAt: { type: Date, default: null },

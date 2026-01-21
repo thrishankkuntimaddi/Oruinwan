@@ -31,6 +31,13 @@ const LoginPage = () => {
   // Redirect to appropriate dashboard if already logged in
   useEffect(() => {
     if (!loading && user) {
+      // Don't auto-redirect if user needs to set password (OAuth first-time login)
+      const needsPasswordSetup = localStorage.getItem("oauthPasswordSetupRequired") === "true";
+      if (needsPasswordSetup) {
+        console.log('⏭️ Skipping LoginPage auto-redirect - user needs password setup');
+        return;
+      }
+
       // Check if user is Chttrix platform admin
       const isChttrixAdmin = user.roles && user.roles.includes('chttrix_admin');
       const isOwner = user.companyRole === 'owner';

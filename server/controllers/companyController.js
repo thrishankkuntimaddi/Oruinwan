@@ -263,6 +263,33 @@ exports.registerCompany = async (req, res) => {
       });
     }
 
+    // Check if personal email is already associated with a Company Owner
+    if (personalEmail) {
+      const existingOwner = await User.findOne({
+        $or: [
+          { email: personalEmail.toLowerCase() },
+          { personalEmail: personalEmail.toLowerCase() },
+          { "emails.email": personalEmail.toLowerCase() }
+        ],
+        userType: "company",
+        companyRole: "owner"
+      });
+
+      if (existingOwner) {
+        return res.status(409).json({ message: "Personal email is already linked to a registered company." });
+      }
+    }
+
+    // Check if phone is already associated with a Company Owner or Company
+    if (phone) {
+      const existingPhoneUser = await User.findOne({ phone, companyRole: "owner" });
+      const existingCompanyPhone = await Company.findOne({ ownerPhone: phone });
+
+      if (existingPhoneUser || existingCompanyPhone) {
+        return res.status(409).json({ message: "Phone number is already associated with a registered company." });
+      }
+    }
+
     // Check if email already exists
     const existingUser = await User.findOne({ email: adminEmail });
     if (existingUser) {
@@ -2057,10 +2084,11 @@ exports.checkEmail = async (req, res) => {
       return res.status(400).json({ message: "Email is required" });
     }
 
-    // Check if any user has this email (in emails array or personalEmail)
+    // Check if any user has this email (in primary, emails array, or personalEmail)
     const exists = await User.findOne({
       $or: [
-        { emails: email.toLowerCase().trim() },
+        { email: email.toLowerCase().trim() },
+        { "emails.email": email.toLowerCase().trim() },
         { personalEmail: email.toLowerCase().trim() }
       ]
     }).select('_id');
@@ -2088,9 +2116,16 @@ exports.checkPhone = async (req, res) => {
     }
 
     // Check if any user has this phone number
-    const exists = await User.findOne({
+    const userExists = await User.findOne({
       phone: phone.trim()
     }).select('_id');
+
+    // Also check if any Company has this ownerPhone
+    const companyExists = await Company.findOne({
+      ownerPhone: phone.trim()
+    }).select('_id');
+
+    const exists = userExists || companyExists;
 
     return res.json({
       exists: !!exists,

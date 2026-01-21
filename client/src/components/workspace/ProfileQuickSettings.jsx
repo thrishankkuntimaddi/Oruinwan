@@ -2,6 +2,7 @@
 // Quick profile settings widget for workspaces page
 
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
     User, X, Mail, Phone, Calendar, Camera, Save,
     Settings, Shield, LogOut, Sun, Moon, Monitor, Edit3,
@@ -17,6 +18,7 @@ const ProfileQuickSettings = ({ onClose }) => {
     const { theme, setTheme } = useTheme();
     const { showToast } = useToast();
     const { company } = useCompany();
+    const navigate = useNavigate();
 
     const [view, setView] = useState('main'); // main, edit, theme, security
     const [, setIsEditing] = useState(false);
@@ -171,8 +173,19 @@ const ProfileQuickSettings = ({ onClose }) => {
                     className="w-full flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors group"
                 >
                     <div className="flex items-center gap-3">
-                        <Settings size={18} className="text-gray-400 group-hover:text-indigo-600 transition-colors" />
+                        <Monitor size={18} className="text-gray-400 group-hover:text-indigo-600 transition-colors" />
                         <span className="text-sm font-medium text-gray-700 dark:text-slate-300">Appearance</span>
+                    </div>
+                    <ChevronRight size={16} className="text-gray-400" />
+                </button>
+
+                <button
+                    onClick={() => { onClose(); navigate('/settings'); }}
+                    className="w-full flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors group"
+                >
+                    <div className="flex items-center gap-3">
+                        <Settings size={18} className="text-gray-400 group-hover:text-indigo-600 transition-colors" />
+                        <span className="text-sm font-medium text-gray-700 dark:text-slate-300">All Settings</span>
                     </div>
                     <ChevronRight size={16} className="text-gray-400" />
                 </button>

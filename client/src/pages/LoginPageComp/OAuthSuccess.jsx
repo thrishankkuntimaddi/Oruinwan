@@ -11,6 +11,7 @@ export default function OAuthSuccess() {
   const [loadAttempts, setLoadAttempts] = useState(0);
 
   const access = params.get("access");
+  const requiresPasswordSetup = params.get("requiresPasswordSetup") === 'true';
 
   useEffect(() => {
     if (!access || isProcessing) return;
@@ -32,8 +33,13 @@ export default function OAuthSuccess() {
 
 
 
-        // Redirect to workspaces page
-        navigate("/workspaces");
+        // Check if password setup is required
+        if (requiresPasswordSetup) {
+          navigate("/set-password");
+        } else {
+          // Redirect to workspaces page
+          navigate("/workspaces");
+        }
       } catch (error) {
         console.error("❌ OAuth error:", error);
 
@@ -50,7 +56,7 @@ export default function OAuthSuccess() {
     };
 
     handleOAuth();
-  }, [access, loadUser, navigate, isProcessing, loadAttempts]);
+  }, [access, loadUser, navigate, isProcessing, loadAttempts, requiresPasswordSetup]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">

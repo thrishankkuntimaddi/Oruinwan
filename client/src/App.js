@@ -41,6 +41,8 @@ import ResetPassword from "./pages/LoginPageComp/ResetPassword";
 import OAuthPasswordSetup from "./pages/LoginPageComp/OAuthPasswordSetup";
 import VerifyEmail from "./pages/VerifyEmail";
 import OAuthSuccess from "./pages/LoginPageComp/OAuthSuccess";
+import SetPassword from "./pages/SetPassword";
+import Settings from "./pages/Settings";
 import AcceptInvite from "./pages/AcceptInvite";
 import JoinWorkspace from "./pages/JoinWorkspace";
 import JoinChannel from "./pages/JoinChannel";
@@ -454,6 +456,24 @@ function App() {
                           <Route path="/verify-email" element={<VerifyEmail />} />
                           <Route path="/oauth-success" element={<OAuthSuccess />} />
                           <Route path="/accept-invite" element={<AcceptInvite />} />
+                          <Route
+                            path="/set-password"
+                            element={
+                              <RequireAuth>
+                                <SetPassword />
+                              </RequireAuth>
+                            }
+                          />
+                          <Route
+                            path="/settings"
+                            element={
+                              <RequireAuth>
+                                <VerifiedOnlyRoute>
+                                  <Settings />
+                                </VerifiedOnlyRoute>
+                              </RequireAuth>
+                            }
+                          />
                           {/* Route join-workspace duplicate removed */}
                           <Route
                             path="/join-channel"
