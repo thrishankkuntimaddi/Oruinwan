@@ -33,6 +33,32 @@ const logger = {
     success: (...args) => {
         console.log(...args);
     },
+
+    // Domain-specific loggers (all debug level)
+    socket: (...args) => {
+        if (isDevelopment) {
+            console.log(...args);
+        }
+    },
+
+    db: (...args) => {
+        if (isDevelopment) {
+            console.log(...args);
+        }
+    },
+
+    auth: (...args) => {
+        if (isDevelopment) {
+            console.log(...args);
+        }
+    },
+
+    encryption: (...args) => {
+        if (isDevelopment) {
+            console.log(...args);
+        }
+    }
 };
 
 module.exports = logger;
+

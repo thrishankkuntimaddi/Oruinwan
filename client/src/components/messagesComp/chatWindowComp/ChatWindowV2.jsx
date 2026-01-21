@@ -91,13 +91,11 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
 
     // Header action handlers
     const handleShowThreadsView = useCallback(() => {
-        console.log('Show threads view');
         showToast('Threads view coming soon!', 'info');
     }, [showToast]);
 
     const handleShowMemberList = useCallback(() => {
         setShowMemberList(true);
-        console.log('Show member list');
     }, []);
 
     const handleExitChannel = useCallback(async () => {
@@ -148,12 +146,6 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
             case 'message':
             case 'new-message':
                 // Handle incoming message
-                console.log('📨 [ChatWindowV2] Received message event:', {
-                    type: event.type,
-                    hasPayload: !!event.payload,
-                    messageId: event.payload?._id || event.payload?.id
-                });
-
                 const message = event.payload.message || event.payload;
 
                 if (message) {
@@ -175,19 +167,12 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
                         parentId: message.threadParent || message.parentId
                     };
 
-                    console.log('➕ [ChatWindowV2] Adding message to conversation:', {
-                        messageId: normalizedMessage.id,
-                        sender: normalizedMessage.sender?.username,
-                        text: normalizedMessage.payload.text?.substring(0, 50)
-                    });
-
                     conversationRef.current.addRealtimeEvent(normalizedMessage, currentUserId);
                 }
                 break;
 
             case 'message-sent':
                 // Handle message sent confirmation (replace optimistic message)
-                console.log('✅ [ChatWindowV2] Message sent confirmation:', event.payload);
                 const { clientTempId, message: sentMsg } = event.payload;
                 if (clientTempId) {
                     conversationRef.current.updateEvent(clientTempId, {
@@ -201,14 +186,7 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
 
             case 'message-updated':
                 // Handle message updates (e.g., reply count changed)
-                console.log('🔄 [ChatWindowV2] Message updated:', event.payload);
                 const { messageId, updates } = event.payload;
-                console.log('🔍 [ChatWindowV2] Update details:', {
-                    messageId,
-                    updates,
-                    hasUpdates: !!updates,
-                    replyCount: updates?.replyCount
-                });
                 if (messageId && updates) {
                     // Update the message with the new replyCount in the payload
                     conversationRef.current.updateEvent(messageId, {
@@ -216,7 +194,6 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
                             replyCount: updates.replyCount
                         }
                     });
-                    console.log('✅ [ChatWindowV2] Updated message', messageId, 'with replyCount:', updates.replyCount);
                 }
                 break;
 
@@ -294,7 +271,8 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
                 break;
 
             default:
-                console.log('Unhandled socket event:', event.type);
+                // Unhandled socket event types are silently ignored
+                break;
         }
     }, [currentUserId]); // Include currentUserId in dependencies
 
@@ -306,7 +284,6 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
         if (!rawSocket || chat?.type !== 'channel') return;
 
         const handleTabAdded = ({ tab }) => {
-            console.log('📌 Tab added:', tab);
             setTabs(prev => {
                 const exists = prev.find(t => t._id === tab._id);
                 if (exists) return prev;
@@ -315,14 +292,12 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
         };
 
         const handleTabUpdated = ({ tabId, name, content }) => {
-            console.log('📝 Tab updated:', tabId, name);
             setTabs(prev => prev.map(t =>
                 t._id === tabId ? { ...t, name, content } : t
             ));
         };
 
         const handleTabDeleted = ({ tabId }) => {
-            console.log('🗑️ Tab deleted:', tabId);
             setTabs(prev => prev.filter(t => t._id !== tabId));
             if (activeTab === tabId) setActiveTab('chat');
         };
@@ -345,9 +320,6 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
 
     // Handle sending message from footer
     const handleSend = useCallback(async (markdown) => {
-        console.log('handleSend called with markdown:', markdown);
-        console.log('Current conversation state:', { conversationType, conversationId, workspaceId });
-
         // Prepare message data (encryption handled in useMessageActions)
         const messageData = {
             text: markdown,
@@ -358,13 +330,10 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
         // Send the message (useMessageActions will encrypt it)
         const result = await actions.sendMessage(messageData);
 
-        console.log('Send result:', result);
-
         if (result.success) {
             setReplyingTo(null);
             setNewMessage('');
         } else {
-            console.error('Failed to send message:', result.error);
             showToast(result.error || 'Failed to send message', 'error');
         }
 
@@ -379,7 +348,6 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
 
     // Handle attachments
     const handleAttach = useCallback((file) => {
-        console.log('Attach file:', file);
         // TODO: Implement file upload
     }, []);
 

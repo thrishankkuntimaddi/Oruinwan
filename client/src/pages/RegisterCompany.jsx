@@ -167,7 +167,7 @@ const RegisterCompany = () => {
         }, 500);
 
         return () => clearTimeout(timer);
-    }, [formData.personalEmail]); // errors.personalEmail excluded intentionally - we update it inside this effect
+    }, [formData.personalEmail, errors.personalEmail]);
 
     // Debounced validation for phone (check if already exists)
     useEffect(() => {
@@ -199,7 +199,7 @@ const RegisterCompany = () => {
         }, 500);
 
         return () => clearTimeout(timer);
-    }, [formData.phone, formData.phoneCode]); // currentPhoneCode.len and errors.phone excluded - we update them inside effect
+    }, [formData.phone, formData.phoneCode, currentPhoneCode.len, errors.phone]);
 
     const handleChange = (e) => {
         const { name, value } = e.target;

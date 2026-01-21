@@ -10,6 +10,8 @@
  * @module socket/handlers/messages
  */
 
+const logger = require('../../../utils/logger');
+
 /**
  * Register message-related socket handlers
  * @param {Server} io - Socket.io server instance
@@ -44,13 +46,13 @@ function registerMessageHandlers(io, socket) {
 
         // Idempotent check: prevent duplicate joins
         if (socket.rooms.has(room)) {
-            console.log(`⏭️ User ${socket.user.id} already in ${room}`);
+            logger.socket(`⏭️ User ${socket.user.id} already in ${room}`);
             return;
         }
 
         // Join room
         socket.join(room);
-        console.log(`💬 User ${socket.user.id} joined ${room}`);
+        logger.socket(`💬 User ${socket.user.id} joined ${room}`);
 
         // Optionally broadcast join event
         socket.to(room).emit('conversation:member_joined', {
@@ -80,7 +82,7 @@ function registerMessageHandlers(io, socket) {
         }
 
         socket.leave(room);
-        console.log(`👋 User ${socket.user.id} left ${room}`);
+        logger.socket(`👋 User ${socket.user.id} left ${room}`);
 
         // Optionally broadcast leave event
         socket.to(room).emit('conversation:member_left', {
@@ -99,13 +101,13 @@ function registerMessageHandlers(io, socket) {
      * @deprecated Use conversation:join instead
      */
     socket.on('chat:join', (channelId) => {
-        console.log(`🎯🎯🎯 [chat:join] EVENT RECEIVED!`);
-        console.log(`📥 [chat:join] Channel ID: ${channelId}`);
-        console.log(`📥 [chat:join] Socket ID: ${socket.id}`);
-        console.log(`📥 [chat:join] User ID: ${socket.user.id}`);
+        logger.socket(`🎯🎯🎯 [chat:join] EVENT RECEIVED!`);
+        logger.socket(`📥 [chat:join] Channel ID: ${channelId}`);
+        logger.socket(`📥 [chat:join] Socket ID: ${socket.id}`);
+        logger.socket(`📥 [chat:join] User ID: ${socket.user.id}`);
 
         socket.join(`channel:${channelId}`);
-        console.log(`💬 User ${socket.user.id} joined channel:${channelId} (legacy)`);
+        logger.socket(`💬 User ${socket.user.id} joined channel:${channelId} (legacy)`);
     });
 
     /**
@@ -114,7 +116,7 @@ function registerMessageHandlers(io, socket) {
      */
     socket.on('chat:leave', (channelId) => {
         socket.leave(`channel:${channelId}`);
-        console.log(`👋 User ${socket.user.id} left channel:${channelId} (legacy)`);
+        logger.socket(`👋 User ${socket.user.id} left channel:${channelId} (legacy)`);
     });
 
     // ============================================================
@@ -135,7 +137,7 @@ function registerMessageHandlers(io, socket) {
                 return;
             }
 
-            console.log(`📤 Conversation event: ${event.type} in ${conversationType}:${conversationId}`);
+            logger.socket(`📤 Conversation event: ${event.type} in ${conversationType}:${conversationId}`);
 
             // Determine room
             const room = conversationType === 'channel'
@@ -219,7 +221,7 @@ function registerMessageHandlers(io, socket) {
      * Messages should be created via HTTP for proper persistence.
      */
     socket.on('chat:message', (data) => {
-        console.warn('⚠️ DEPRECATED: chat:message event used. Use HTTP POST instead.');
+        logger.warn('⚠️ DEPRECATED: chat:message event used. Use HTTP POST instead.');
 
         const { channelId, message } = data;
 

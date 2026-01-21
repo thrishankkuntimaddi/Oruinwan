@@ -6,6 +6,7 @@
  * @module socket
  */
 
+const logger = require('../../utils/logger');
 const registerMessageHandlers = require('./handlers/messages.socket');
 const registerMeetingHandlers = require('./handlers/meetings.socket');
 const registerHuddleHandlers = require('./handlers/huddles.socket');
@@ -19,17 +20,17 @@ const registerPollHandlers = require('./handlers/polls.socket');
  * @param {Socket} socket - Individual socket connection
  */
 function registerSocketHandlers(io, socket) {
-    console.log(`✅ Socket connected: ${socket.user.id}`);
-    console.log(`🔍 [Socket] Socket ID: ${socket.id}`);
-    console.log(`🔍 [Socket] Registering handlers for user: ${socket.user.id}`);
+    logger.socket(`✅ Socket connected: ${socket.user.id}`);
+    logger.socket(`🔍 [Socket] Socket ID: ${socket.id}`);
+    logger.socket(`🔍 [Socket] Registering handlers for user: ${socket.user.id}`);
 
     // User joins their personal room for notifications
     socket.join(`user:${socket.user.id}`);
 
     // Register domain-specific handlers
-    console.log(`📝 [Socket] Registering message handlers...`);
+    logger.socket(`📝 [Socket] Registering message handlers...`);
     registerMessageHandlers(io, socket);
-    console.log(`✅ [Socket] Message handlers registered`);
+    logger.socket(`✅ [Socket] Message handlers registered`);
 
     registerMeetingHandlers(io, socket);
     registerHuddleHandlers(io, socket);
@@ -37,11 +38,11 @@ function registerSocketHandlers(io, socket) {
     registerAdminHandlers(io, socket);
     registerPollHandlers(io, socket);
 
-    console.log(`🎯 [Socket] All handlers registered for ${socket.user.id}`);
+    logger.socket(`🎯 [Socket] All handlers registered for ${socket.user.id}`);
 
     // Handle disconnection
     socket.on('disconnect', () => {
-        console.log(`❌ Socket disconnected: ${socket.user.id}`);
+        logger.socket(`❌ Socket disconnected: ${socket.user.id}`);
 
         // Broadcast offline status
         io.emit('user:offline', {

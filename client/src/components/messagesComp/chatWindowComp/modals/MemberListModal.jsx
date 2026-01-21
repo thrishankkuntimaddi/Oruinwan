@@ -22,8 +22,6 @@ export default function MemberListModal({
             // Extract user data (handle different structures)
             const aUser = a.user || a;
             const bUser = b.user || b;
-            const aId = aUser._id || aUser.id;
-            const bId = bUser._id || bUser.id;
 
             // Online status first
             const aOnline = aUser.isOnline || aUser.status === 'online' ? 1 : 0;
