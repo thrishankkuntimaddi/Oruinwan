@@ -1,94 +1,97 @@
 // client/src/components/messagesComp/EncryptedMessage.jsx
 /**
- * EncryptedMessage Component
- * Handles decryption and display of encrypted messages
+ * EncryptedMessage Component (E2EE with Conversation Keys)
+ * Handles decryption and display of encrypted messages using conversation/thread keys
  */
 
 import React, { useState, useEffect } from 'react';
-import { useEncryption } from '../../hooks/useEncryption';
-import { Lock, AlertCircle } from 'lucide-react';
+import { decryptReceivedMessage } from '../../services/messageEncryptionService';
+import { Lock } from 'lucide-react';
 
 /**
  * Component for displaying encrypted messages with automatic decryption
  * @param {Object} props
  * @param {string} props.ciphertext - Base64-encoded ciphertext
  * @param {string} props.messageIv - Base64-encoded IV
- * @param {string} props.senderId - Sender's user ID
- * @param {string} props.currentUserId - Current user's ID
+ * @param {string} props.conversationId - Channel ID or DM session ID
+ * @param {string} props.conversationType - "channel" or "dm"
+ * @param {string} props.parentMessageId - Parent message ID for thread key derivation (optional)
  */
-function EncryptedMessage({ ciphertext, messageIv, senderId, currentUserId }) {
+function EncryptedMessage({ ciphertext, messageIv, conversationId, conversationType, parentMessageId = null }) {
     const [decrypted, setDecrypted] = useState(null);
-    const [error, setError] = useState(null);
     const [loading, setLoading] = useState(true);
-    const { decryptMessage, hasKeys } = useEncryption(currentUserId);
 
     useEffect(() => {
+        // ✅ Correction #3: NON-BLOCKING decryption
+        // Never throw, never block render, always show something
         const decrypt = async () => {
-            if (!ciphertext || !messageIv || !senderId) {
-                setError('Missing encryption data');
+            if (!ciphertext || !messageIv) {
+                setDecrypted('🔒 Encrypted message');
                 setLoading(false);
                 return;
             }
 
-            if (!hasKeys) {
-                setError('Encryption keys not loaded');
+            if (!conversationId || !conversationType) {
+                setDecrypted('🔒 Encrypted message');
                 setLoading(false);
                 return;
             }
 
             try {
                 setLoading(true);
-                const plaintext = await decryptMessage(ciphertext, messageIv, senderId);
+
+                // Use conversation key service with thread derivation support
+                const plaintext = await decryptReceivedMessage(
+                    ciphertext,
+                    messageIv,
+                    conversationId,
+                    conversationType,
+                    parentMessageId  // Derives thread key if present
+                );
+
                 setDecrypted(plaintext);
-                setError(null);
             } catch (err) {
-                console.error('Failed to decrypt message:', err);
-                setError('Decryption failed');
+                // ✅ CRITICAL: Non-blocking error handling
+                // Show user-friendly message, log details for debugging
+                console.error('[E2EE] Decryption failed (non-blocking):', err);
+
+                // UI only knows: "Show plaintext" or "Show 🔒"
+                if (err.message?.includes('not found')) {
+                    setDecrypted('🔒 Encrypted message (key not available)');
+                } else {
+                    setDecrypted('🔒 Unable to decrypt message');
+                }
             } finally {
                 setLoading(false);
             }
         };
 
         decrypt();
-    }, [ciphertext, messageIv, senderId, currentUserId, decryptMessage, hasKeys]);
+    }, [ciphertext, messageIv, conversationId, conversationType, parentMessageId]);
 
     if (loading) {
         return (
             <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400 text-sm">
                 <Lock size={14} className="animate-pulse" />
-                <span className="italic">Decrypting message...</span>
+                <span className="italic">Decrypting...</span>
             </div>
         );
     }
 
-    if (error) {
-        return (
-            <div className="flex items-center gap-2 text-red-500 dark:text-red-400 text-sm">
-                <AlertCircle size={14} />
-                <span className="italic">{error}</span>
-            </div>
-        );
-    }
-
-    if (!decrypted) {
+    // If decryption failed, show lock emoji (already set in decrypted state)
+    if (decrypted?.startsWith('🔒')) {
         return (
             <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400 text-sm">
                 <Lock size={14} />
-                <span className="italic">Encrypted message - no content</span>
+                <span className="italic">{decrypted}</span>
             </div>
         );
     }
 
-    // Render decrypted message with encryption indicator
+    // Successfully decrypted - show plaintext
     return (
-        <div className="flex flex-col gap-1">
-            <div className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
-                <Lock size={12} />
-                <span>End-to-end encrypted</span>
-            </div>
-            <div className="text-gray-900 dark:text-gray-100">
-                {decrypted}
-            </div>
+        <div className="text-gray-800 dark:text-gray-200">
+            {decrypted}
         </div>
     );
 }

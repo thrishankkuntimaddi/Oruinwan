@@ -103,8 +103,8 @@ function DMMessageItem({
                 <div className="flex items-start w-full relative">
                     {/* Message Bubble (Tightened) */}
                     <div className={`relative px - 3 py - 1.5 text - [14px] shadow - sm break-words whitespace - pre - wrap rounded - lg rounded - tl - none max - w - [85 %] ${isMe
-                            ? "bg-blue-600 text-white"
-                            : "bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 text-gray-800 dark:text-gray-100"
+                        ? "bg-blue-600 text-white"
+                        : "bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 text-gray-800 dark:text-gray-100"
                         } `}>
 
                         {/* Reply Preview - Shows which message this is replying to */}
@@ -131,8 +131,9 @@ function DMMessageItem({
                             <EncryptedMessage
                                 ciphertext={msg.ciphertext}
                                 messageIv={msg.messageIv}
-                                senderId={msg.sender?._id || msg.sender}
-                                currentUserId={currentUserId}
+                                conversationId={msg.dmSessionId || msg.conversationId}
+                                conversationType="dm"
+                                parentMessageId={msg.parentId || null}
                             />
                         ) : (
                             <ReactMarkdown

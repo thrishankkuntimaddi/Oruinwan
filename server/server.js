@@ -220,6 +220,12 @@ app.use("/api/v2/messages", require("./src/modules/messages/messages.routes"));
 // Encryption Module - First-class E2EE key management
 app.use("/api/v2/encryption", require("./src/modules/encryption/encryption.routes"));
 
+// Identity Module - User identity key management for E2EE
+app.use("/api/v2/identity", require("./src/modules/identity/identity.routes"));
+
+// Conversations Module - Conversation key management for E2EE
+app.use("/api/v2/conversations", require("./src/modules/conversations/conversationKeys.routes"));
+
 // ✅ Module routes are now ACTIVE
 // - New code should use /api/v2/* endpoints
 // - Legacy /api/messages and /api/keys still work

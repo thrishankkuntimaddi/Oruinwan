@@ -190,33 +190,34 @@ function ChannelMessageItem({
                 {/* Message Text (More compact line height) */}
                 <div className="text-gray-800 dark:text-gray-200 text-[14px] leading-snug whitespace-pre-wrap break-words message-content">
                     {msg.payload?.isEncrypted ? (
-    <EncryptedMessage
-        ciphertext={msg.payload.ciphertext}
-        messageIv={msg.payload.messageIv}
-        senderId={msg.sender?._id}
-        currentUserId={currentUserId}
-    />
-) : (
-    <ReactMarkdown
-        remarkPlugins={[remarkBreaks]}
-        components={{
-            a: ({ node, children, ...props }) => (
-                <a
-                    {...props}
-                    className="text-blue-600 dark:text-blue-400 hover:underline"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                >
-                    {children}
-                </a>
-            ),
-            ul: ({ node, ...props }) => <ul {...props} className="list-disc list-inside ml-1" />,
-            ol: ({ node, ...props }) => <ol {...props} className="list-decimal list-inside ml-1" />,
-        }}
-    >
-        {msg.payload?.text}
-    </ReactMarkdown>
-)}
+                        <EncryptedMessage
+                            ciphertext={msg.payload.ciphertext}
+                            messageIv={msg.payload.messageIv}
+                            conversationId={msg.channelId || msg.conversationId}
+                            conversationType="channel"
+                            parentMessageId={msg.parentId || null}
+                        />
+                    ) : (
+                        <ReactMarkdown
+                            remarkPlugins={[remarkBreaks]}
+                            components={{
+                                a: ({ node, children, ...props }) => (
+                                    <a
+                                        {...props}
+                                        className="text-blue-600 dark:text-blue-400 hover:underline"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                    >
+                                        {children}
+                                    </a>
+                                ),
+                                ul: ({ node, ...props }) => <ul {...props} className="list-disc list-inside ml-1" />,
+                                ol: ({ node, ...props }) => <ol {...props} className="list-decimal list-inside ml-1" />,
+                            }}
+                        >
+                            {msg.payload?.text}
+                        </ReactMarkdown>
+                    )}
 
                 </div>
 

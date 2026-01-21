@@ -5,8 +5,7 @@ import { useCallback } from 'react';
 import { useSocket } from '../contexts/SocketContext';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
-import { encryptMessage } from '../utils/crypto';
-import { getWorkspaceKeyForEncryption } from '../services/keyManagement';
+import { encryptMessageForSending } from '../services/messageEncryptionService';
 
 /**
  * Provides message action methods
@@ -57,52 +56,47 @@ export function useMessageActions(conversationId, conversationType, workspaceId 
             status: 'sending'
         };
 
+        // Declare variables for encrypted payload
+        let ciphertext;
+        let messageIv;
+
         try {
             // ============ E2EE: ENCRYPT MESSAGE ============
-            let ciphertext;
-            let messageIv;
+            // ✅ NON-BLOCKING: Never throw to UI, always graceful fallback
+            console.log('🔐 [E2EE] Encrypting message with conversation key...');
+            console.log('🔐 [E2EE] Context:', { conversationId, conversationType, parentId: replyTo });
 
-            // Check workspace context
-            if (!workspaceId) {
-                console.error('❌ [sendMessage] workspaceId is required for E2EE');
-                console.error('❌ [sendMessage] Current context:', { conversationId, conversationType });
-                return {
-                    success: false,
-                    error: 'Workspace context required for secure messaging'
-                };
-            }
+            // Use conversation key (or thread key if reply)
+            const encrypted = await encryptMessageForSending(
+                text,
+                conversationId,
+                conversationType,
+                replyTo // parentMessageId for thread derivation
+            );
 
-            // Encrypt the message
-            try {
-                console.log('🔐 [sendMessage] Getting workspace key for:', workspaceId);
-                const workspaceKey = await getWorkspaceKeyForEncryption(workspaceId);
-                if (!workspaceKey) {
-                    throw new Error('E2EE keys not initialized. Please log out and log back in.');
-                }
+            ciphertext = encrypted.ciphertext;
+            messageIv = encrypted.messageIv;
 
-                console.log('🔐 [sendMessage] Encrypting message...');
-                const encrypted = await encryptMessage(text, workspaceKey);
-                ciphertext = encrypted.ciphertext;
-                messageIv = encrypted.iv;
+            console.log('✅ [E2EE] Message encrypted successfully');
+        } catch (encError) {
+            // ✅ CRITICAL: Non-blocking error handling
+            // If encryption fails, we could either:
+            // 1. Block send (current behavior - safer)
+            // 2. Send plaintext with warning (less safe)
+            // Current: Block send for security
+            console.error('❌ [E2EE] Encryption failed:', encError);
+            console.error('❌ [E2EE] Context:', { conversationId, conversationType });
 
-                console.log('✅ [sendMessage] Message encrypted successfully');
-            } catch (encError) {
-                console.error('❌ [sendMessage] Encryption failed:', encError);
-                console.error('❌ [sendMessage] Workspace ID:', workspaceId);
-                console.error('❌ [sendMessage] Error details:', {
-                    name: encError.name,
-                    message: encError.message,
-                    stack: encError.stack
-                });
-                return {
-                    success: false,
-                    error: `Encryption failed: ${encError.message}`
-                };
-            }
-            // ==============================================
+            return {
+                success: false,
+                error: `Message encryption failed. ${encError.message.includes('not found') ? 'Conversation not yet encrypted. Please refresh and try again.' : 'Please try again.'}`
+            };
+        }
+        // ==============================================
 
-            console.log('📤 [sendMessage] Optimistic message created:', optimisticMessage);
+        console.log('📤 [sendMessage] Optimistic message created:', optimisticMessage);
 
+        try {
             let response;
 
             if (conversationType === 'channel') {

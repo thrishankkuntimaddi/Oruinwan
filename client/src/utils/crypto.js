@@ -122,6 +122,65 @@ export async function deriveKeyFromPassword(password, salt, iterations = CRYPTO_
     }
 }
 
+// ==================== THREAD KEY DERIVATION (HKDF) ====================
+
+/**
+ * Derive thread key from conversation key + parent message ID
+ * Uses HKDF (HMAC-based Key Derivation Function) for key isolation
+ * 
+ * This provides message isolation (not forward secrecy):
+ * - Each thread has its own derived key
+ * - Compromise of one thread key doesn't affect others
+ * - No need to store thread keys (computed on-demand)
+ * 
+ * @param {CryptoKey} conversationKey - Parent conversation (channel/DM) key
+ * @param {string} parentMessageId - Parent message ID as context
+ * @returns {Promise<CryptoKey>} Derived thread key
+ */
+export async function deriveThreadKey(conversationKey, parentMessageId) {
+    try {
+        console.log(`🔑 Deriving thread key for message ${parentMessageId}...`);
+
+        // Convert parent message ID to bytes (this is our "info" parameter in HKDF)
+        const info = new TextEncoder().encode(`thread:${parentMessageId}`);
+
+        // Export conversation key to raw bytes
+        const conversationKeyBytes = await crypto.subtle.exportKey('raw', conversationKey);
+
+        // Import as raw key material for HKDF
+        const keyMaterial = await crypto.subtle.importKey(
+            'raw',
+            conversationKeyBytes,
+            'HKDF',
+            false,
+            ['deriveKey']
+        );
+
+        // Derive thread key using HKDF
+        const threadKey = await crypto.subtle.deriveKey(
+            {
+                name: 'HKDF',
+                hash: 'SHA-256',
+                salt: new Uint8Array(32), // Fixed zero salt (conversation key is already random)
+                info: info
+            },
+            keyMaterial,
+            {
+                name: CRYPTO_CONFIG.algorithm,
+                length: CRYPTO_CONFIG.keyLength
+            },
+            true, // extractable (for encryption)
+            ['encrypt', 'decrypt']
+        );
+
+        console.log(`✅ Thread key derived for message ${parentMessageId}`);
+        return threadKey;
+    } catch (error) {
+        console.error('Thread key derivation failed:', error);
+        throw new Error('Thread key derivation failed');
+    }
+}
+
 // ==================== ENCRYPTION ====================
 
 /**
@@ -443,6 +502,7 @@ const cryptoUtils = {
 
     // Key derivation
     deriveKeyFromPassword,
+    deriveThreadKey,
 
     // Encryption/Decryption
     encryptAESGCM,

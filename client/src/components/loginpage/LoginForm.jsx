@@ -7,6 +7,7 @@ import { useToast } from "../../contexts/ToastContext";
 import { useGoogleLogin } from "@react-oauth/google";
 import axios from "axios";
 import { Eye, EyeOff } from "lucide-react";
+import identityKeyService from "../../services/identityKeyService";
 
 
 
@@ -62,6 +63,48 @@ const LoginForm = ({ onSwitch, initialEmail = "" }) => {
 
       // Wait a moment for AuthContext to update
       await new Promise(resolve => setTimeout(resolve, 100));
+
+      // ============================================================
+      // 🔐 TRANSPARENT E2EE IDENTITY KEY INITIALIZATION
+      // ============================================================
+      // This happens automatically in the background
+      // User sees no prompts, no delays
+      try {
+        console.log('🔐 Initializing E2EE identity keys...');
+        console.log('🔍 Login response:', response);
+
+        // Get user ID from response (check multiple possible locations)
+        const userId = response.user?._id || response.user?.id || response._id || response.id;
+
+        if (!userId) {
+          console.error('❌ Cannot initialize E2EE: User ID not found in response');
+          console.log('Response structure:', response);
+          throw new Error('User ID not found');
+        }
+
+        console.log('✅ User ID found:', userId);
+
+        const { existed, algorithm } = await identityKeyService.initializeIdentityKeys(userId);
+
+        if (!existed) {
+          // New keypair generated - upload public key to server
+          console.log(`✅ Generated new ${algorithm} identity keypair`);
+          await identityKeyService.uploadPublicKeyToServer();
+          console.log('✅ Public key uploaded to server');
+        } else {
+          console.log(`✅ Loaded existing ${algorithm} identity keypair from IndexedDB`);
+        }
+
+        // Identity keys are now ready for E2EE
+        // Private key stored in IndexedDB, public key on server
+        // User experienced ZERO friction
+      } catch (e2eeError) {
+        // Don't block login if E2EE initialization fails
+        // Just log it for debugging
+        console.error('⚠️ E2EE initialization failed (non-blocking):', e2eeError);
+        // Could optionally show a non-intrusive toast here
+      }
+      // ============================================================
 
       // Check if there's a pending invite to redirect to
       const pendingInvite = localStorage.getItem('pendingInvite');

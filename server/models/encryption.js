@@ -20,15 +20,13 @@ const userWorkspaceKeySchema = new mongoose.Schema(
     userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
-      required: true,
-      index: true
+      required: true
     },
 
     workspaceId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Workspace',
-      required: true,
-      index: true
+      required: true
     },
 
     encryptedKey: {
@@ -84,8 +82,7 @@ const workspaceKeySchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Workspace',
       required: true,
-      unique: true,
-      index: true
+      unique: true
     },
 
     // Master workspace key encrypted with creator's KEK

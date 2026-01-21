@@ -56,6 +56,11 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
     const [showSearch, setShowSearch] = useState(false);
     const [showMenu, setShowMenu] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
+    const [showContactInfo, setShowContactInfo] = useState(false);
+    const [showChannelManagement, setShowChannelManagement] = useState(null);
+    const [muted, setMuted] = useState(false);
+    const [blocked, setBlocked] = useState(false);
+    const [showMemberList, setShowMemberList] = useState(false);
 
     // Message input state
     const [newMessage, setNewMessage] = useState('');
@@ -80,6 +85,59 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
     React.useEffect(() => {
         conversationRef.current = conversation;
     }, [conversation]);
+
+    // Header action handlers
+    const handleShowThreadsView = useCallback(() => {
+        console.log('Show threads view');
+        showToast('Threads view coming soon!', 'info');
+    }, [showToast]);
+
+    const handleShowMemberList = useCallback(() => {
+        setShowMemberList(true);
+        console.log('Show member list');
+    }, []);
+
+    const handleExitChannel = useCallback(async () => {
+        if (!window.confirm('Are you sure you want to exit this channel?')) return;
+        try {
+            await api.post(`/api/channels/${chat.id}/exit`);
+            showToast('Exited channel successfully', 'success');
+            onClose?.();
+        } catch (err) {
+            console.error('Exit channel error:', err);
+            showToast(err.response?.data?.message || 'Failed to exit channel', 'error');
+        }
+    }, [chat, onClose, showToast]);
+
+    const handleDeleteChannel = useCallback(async () => {
+        if (!window.confirm('Are you sure you want to permanently delete this channel? This action cannot be undone.')) return;
+        try {
+            await api.delete(`/api/channels/${chat.id}`);
+            showToast('Channel deleted successfully', 'success');
+            onClose?.();
+        } catch (err) {
+            console.error('Delete channel error:', err);
+            showToast(err.response?.data?.message || 'Failed to delete channel', 'error');
+        }
+    }, [chat, onClose, showToast]);
+
+    const handleClearChat = useCallback(async () => {
+        try {
+            await api.post(`/api/dm/${chat.id}/clear`);
+            showToast('Chat cleared successfully', 'success');
+        } catch (err) {
+            console.error('Clear chat error:', err);
+            showToast('Failed to clear chat', 'error');
+        }
+    }, [chat, showToast]);
+
+    const handleDeleteChat = useCallback(() => {
+        if (onDeleteChat) {
+            onDeleteChat();
+        } else {
+            onClose?.();
+        }
+    }, [onDeleteChat, onClose]);
 
     // Socket event handler - use conversationRef.current to avoid stale closures
     const handleSocketEvent = useCallback((event) => {
@@ -449,6 +507,20 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
                 setSearchQuery={setSearchQuery}
                 showMenu={showMenu}
                 setShowMenu={setShowMenu}
+                setShowContactInfo={setShowContactInfo}
+                setShowChannelManagement={setShowChannelManagement}
+                muted={muted}
+                setMuted={setMuted}
+                blocked={blocked}
+                setBlocked={setBlocked}
+                onDeleteChat={handleDeleteChat}
+                onClearChat={handleClearChat}
+                onExitChannel={handleExitChannel}
+                onDeleteChannel={handleDeleteChannel}
+                currentUserId={currentUserId}
+                showToast={showToast}
+                onShowThreadsView={handleShowThreadsView}
+                onShowMemberList={handleShowMemberList}
             />
 
             {/* Canvas Tabs (channels only) */}

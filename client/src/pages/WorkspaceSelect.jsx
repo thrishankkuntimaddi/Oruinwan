@@ -143,7 +143,45 @@ const WorkspaceSelect = () => {
             });
 
             const newWorkspaceId = res.data.workspace.id;
+            const defaultChannels = res.data.workspace.defaultChannels; // [generalId, announcementsId]
             console.log('✅ [CreateWorkspace] Workspace created:', newWorkspaceId);
+            console.log('🔐 [CreateWorkspace] Default channels:', defaultChannels);
+
+            // ============ E2EE: GENERATE CONVERSATION KEYS FOR DEFAULT CHANNELS ============
+            // CRITICAL: Without this, users can't send messages in #general or #announcements
+            try {
+                const conversationKeyService = (await import('../services/conversationKeyService')).default;
+
+                if (defaultChannels && defaultChannels.length >= 2) {
+                    // Generate key for #general
+                    console.log('🔐 [CreateWorkspace] Generating conversation key for #general...');
+                    const generalKeyData = await conversationKeyService.createAndDistributeConversationKey([user.id]);
+                    await conversationKeyService.storeConversationKeysOnServer(
+                        defaultChannels[0], // generalChannelId
+                        'channel',
+                        newWorkspaceId,
+                        generalKeyData.encryptedKeys
+                    );
+                    console.log('✅ [CreateWorkspace] Generated conversation key for #general');
+
+                    // Generate key for #announcements
+                    console.log('🔐 [CreateWorkspace] Generating conversation key for #announcements...');
+                    const announcementsKeyData = await conversationKeyService.createAndDistributeConversationKey([user.id]);
+                    await conversationKeyService.storeConversationKeysOnServer(
+                        defaultChannels[1], // announcementsChannelId
+                        'channel',
+                        newWorkspaceId,
+                        announcementsKeyData.encryptedKeys
+                    );
+                    console.log('✅ [CreateWorkspace] Generated conversation key for #announcements');
+                } else {
+                    console.warn('⚠️ [CreateWorkspace] Default channels not found in response!');
+                }
+            } catch (e2eeChannelsError) {
+                console.error('❌ [CreateWorkspace] Failed to generate conversation keys for default channels:', e2eeChannelsError);
+                alert(`Warning: Failed to initialize encryption for default channels.\n\nYou may not be able to send messages until you create a new channel.`);
+            }
+            // ===============================================================================
 
             // ============ E2EE: AUTO-ENROLL CREATOR (PASSWORD-FREE) ============
             try {

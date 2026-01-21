@@ -16,8 +16,7 @@ const DMSessionSchema = new mongoose.Schema(
     workspace: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Workspace",
-      required: true,
-      index: true
+      required: true
     },
 
     company: {
@@ -52,8 +51,7 @@ const DMSessionSchema = new mongoose.Schema(
      */
     lastMessageAt: {
       type: Date,
-      default: Date.now,
-      index: true
+      default: Date.now
     },
 
     /**
