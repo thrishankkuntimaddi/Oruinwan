@@ -139,6 +139,11 @@ const UserSchema = new mongoose.Schema(
     failedLoginAttempts: { type: Number, default: 0 },
     lockedUntil: Date,
 
+    // Unverified Account Login Tracking
+    unverifiedLoginAttempts: { type: Number, default: 0 },
+    lastUnverifiedLoginAttempt: { type: Date },
+    lastVerificationEmailSent: { type: Date },
+
     // Profile
     profile: ProfileSchema,
 

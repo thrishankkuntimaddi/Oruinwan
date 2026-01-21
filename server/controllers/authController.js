@@ -5,7 +5,8 @@ const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
 const User = require("../models/User");
 const sendEmail = require("../utils/sendEmail");
-const { passwordResetTemplate } = require("../utils/emailTemplates");
+const { passwordResetTemplate, loginDetectionTemplate, resendVerificationTemplate } = require("../utils/emailTemplates");
+const { parseDeviceInfo, getClientIP } = require("../utils/deviceParser");
 const { OAuth2Client } = require("google-auth-library");
 const axios = require("axios");
 
@@ -50,8 +51,21 @@ exports.signup = async (req, res) => {
     if (!username || !email || !password)
       return res.status(400).json({ message: "Missing required fields" });
 
-    if (await User.findOne({ email }))
+    // Check if email already exists
+    const existingUser = await User.findOne({ email });
+
+    if (existingUser) {
+      // If email exists but is not verified, inform user to verify first
+      if (!existingUser.verified) {
+        return res.status(409).json({
+          message: "Email already registered but not verified. Please check your inbox for the verification link.",
+          unverified: true,
+          canResend: true
+        });
+      }
+      // Email exists and is verified
       return res.status(409).json({ message: "Email already in use" });
+    }
 
     // Check for duplicate username
     if (await User.findOne({ username }))
@@ -365,6 +379,10 @@ exports.verifyEmail = async (req, res) => {
     user.verificationTokenHash = undefined;
     user.verificationTokenExpires = undefined;
 
+    // Reset unverified login attempt tracking
+    user.unverifiedLoginAttempts = 0;
+    user.lastUnverifiedLoginAttempt = null;
+
     await saveWithRetry(user);
 
     return res.json({ message: "Email verified" });
@@ -425,8 +443,63 @@ exports.login = async (req, res) => {
     if (!match)
       return res.status(400).json({ message: "Invalid credentials" });
 
-    if (!user.verified)
-      return res.status(403).json({ message: "Please verify your email first" });
+    // 4. HANDLE UNVERIFIED ACCOUNTS
+    if (!user.verified) {
+      // Increment unverified login attempts
+      user.unverifiedLoginAttempts = (user.unverifiedLoginAttempts || 0) + 1;
+      user.lastUnverifiedLoginAttempt = new Date();
+
+      // After 3 failed attempts, auto-send verification email on 4th attempt
+      if (user.unverifiedLoginAttempts >= 3) {
+        const rawToken = crypto.randomBytes(32).toString("hex");
+        const tokenHash = sha256(rawToken);
+
+        user.verificationTokenHash = tokenHash;
+        user.verificationTokenExpires = Date.now() + 86400000; // 24 hours
+        user.lastVerificationEmailSent = new Date();
+
+        await saveWithRetry(user);
+
+        const verifyUrl = `${process.env.FRONTEND_URL}/verify-email?token=${rawToken}&email=${encodeURIComponent(email)}`;
+
+        // Send verification email
+        try {
+          const template = resendVerificationTemplate(user.username, verifyUrl);
+          await sendEmail({
+            to: email,
+            subject: template.subject,
+            html: template.html,
+            text: template.text
+          });
+          console.log(`✅ Verification email resent to ${email} after ${user.unverifiedLoginAttempts} login attempts`);
+        } catch (emailError) {
+          console.log("\n" + "=".repeat(80));
+          console.log("📧 EMAIL VERIFICATION LINK (SMTP not configured)");
+          console.log("=".repeat(80));
+          console.log(`User: ${email}`);
+          console.log(`Verification Link: ${verifyUrl}`);
+          console.log("=".repeat(80) + "\n");
+        }
+
+        return res.status(403).json({
+          message: "Account not verified. A new verification link has been sent to your email.",
+          verificationEmailSent: true
+        });
+      }
+
+      await saveWithRetry(user);
+
+      return res.status(403).json({
+        message: "Please verify your email first. Check your inbox for the verification link.",
+        attemptsRemaining: 3 - user.unverifiedLoginAttempts
+      });
+    }
+
+    // Reset unverified login attempts counter upon successful login
+    if (user.unverifiedLoginAttempts > 0) {
+      user.unverifiedLoginAttempts = 0;
+      user.lastUnverifiedLoginAttempt = null;
+    }
 
     if (user.accountStatus === 'suspended') {
       return res.status(403).json({ message: "Account Suspended." });
@@ -562,6 +635,39 @@ exports.login = async (req, res) => {
         response.redirectTo = "/pending-verification";
       }
     }
+
+    // -------------------------------------------------------------------------
+    // LOGIN DETECTION NOTIFICATION
+    // -------------------------------------------------------------------------
+    // Send login detection email (async, don't wait for it)
+    (async () => {
+      try {
+        const ipAddress = getClientIP(req);
+        const deviceInfo = parseDeviceInfo(req.get("User-Agent"));
+        const loginUrl = process.env.FRONTEND_URL;
+        const timestamp = new Date();
+
+        const template = loginDetectionTemplate(
+          user.username,
+          ipAddress,
+          deviceInfo,
+          timestamp,
+          loginUrl
+        );
+
+        await sendEmail({
+          to: user.email,
+          subject: template.subject,
+          html: template.html,
+          text: template.text
+        });
+
+        console.log(`✅ Login detection email sent to ${user.email} from ${ipAddress}`);
+      } catch (emailError) {
+        console.error("❌ Failed to send login detection email:", emailError.message);
+        // Don't block login flow if email fails
+      }
+    })();
 
     return res.json(response);
 
@@ -711,41 +817,44 @@ exports.forgotPassword = async (req, res) => {
 
     const user = await User.findOne({ email });
 
-    if (!user) {
+    // Always return the same response for security (don't reveal if email exists)
+    // but only send email if user actually exists
+    if (user) {
+      const raw = crypto.randomBytes(32).toString("hex");
+      const hash = sha256(raw);
 
-      return res.json({ message: "If that email exists, reset link sent" });
+      user.resetPasswordTokenHash = hash;
+      user.resetPasswordExpires = Date.now() + 3600000;
+      await saveWithRetry(user);
+
+      const url = `${process.env.FRONTEND_URL}/reset-password?token=${raw}&email=${encodeURIComponent(email)}`;
+
+      // Send reset email (or log to console in development)
+      try {
+        const template = passwordResetTemplate(user.username, url);
+        await sendEmail({
+          to: email,
+          subject: template.subject,
+          html: template.html,
+          text: template.text
+        });
+        console.log(`✅ Password reset email sent to ${email}`);
+      } catch (emailError) {
+        // If SMTP not configured, log the link to console (for development)
+        console.log("\n" + "=".repeat(80));
+        console.log("🔐 PASSWORD RESET LINK (SMTP not configured)");
+        console.log("=".repeat(80));
+        console.log(`User: ${email}`);
+        console.log(`Reset Link: ${url}`);
+        console.log("=".repeat(80) + "\n");
+      }
+    } else {
+      // Email doesn't exist - don't send anything, but log for security monitoring
+      console.log(`⚠️ Password reset attempted for non-existent email: ${email}`);
     }
 
-    const raw = crypto.randomBytes(32).toString("hex");
-    const hash = sha256(raw);
-
-    user.resetPasswordTokenHash = hash;
-    user.resetPasswordExpires = Date.now() + 3600000;
-    await saveWithRetry(user);
-
-    const url = `${process.env.FRONTEND_URL}/reset-password?token=${raw}&email=${encodeURIComponent(email)}`;
-
-    // Send reset email (or log to console in development)
-    try {
-      const template = passwordResetTemplate(user.username, url);
-      await sendEmail({
-        to: email,
-        subject: template.subject,
-        html: template.html,
-        text: template.text
-      });
-      console.log(`✅ Password reset email sent to ${email}`);
-    } catch (emailError) {
-      // If SMTP not configured, log the link to console (for development)
-      console.log("\n" + "=".repeat(80));
-      console.log("🔐 PASSWORD RESET LINK (SMTP not configured)");
-      console.log("=".repeat(80));
-      console.log(`User: ${email}`);
-      console.log(`Reset Link: ${url}`);
-      console.log("=".repeat(80) + "\n");
-    }
-
-    return res.json({ message: "Reset link sent if account exists" });
+    // Always return the same message regardless of whether email exists
+    return res.json({ message: "If that email exists, a reset link has been sent" });
   } catch (err) {
     console.error("FORGOT ERROR:", err);
     return res.status(500).json({ message: "Server error" });
@@ -1063,6 +1172,77 @@ exports.updatePassword = async (req, res) => {
 };
 
 // ----------------------------------------------------
+// SET PASSWORD FOR OAUTH USERS (FIRST-TIME ONLY)
+// ----------------------------------------------------
+exports.setOAuthPassword = async (req, res) => {
+  try {
+    const userId = req.user.sub;  // From auth middleware
+    const { password } = req.body;
+
+    // Validate password length
+    if (!password || password.length < 8) {
+      return res.status(400).json({
+        message: "Password must be at least 8 characters"
+      });
+    }
+
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Only OAuth users can use this endpoint
+    if (user.authProvider === 'local') {
+      return res.status(400).json({
+        message: "This endpoint is only for OAuth users. Use the update password endpoint instead."
+      });
+    }
+
+    // Check if password already set
+    if (user.passwordSetAt) {
+      return res.status(400).json({
+        message: "Password already set. Use the update password endpoint to change it."
+      });
+    }
+
+    // Hash and set password
+    user.passwordHash = await bcrypt.hash(password, 12);
+    user.passwordSetAt = new Date();
+    user.passwordLoginEnabled = true;
+
+    await saveWithRetry(user);
+
+    // Send confirmation email
+    try {
+      const { passwordSetTemplate } = require("../utils/emailTemplates");
+      const template = passwordSetTemplate(user.username, user.authProvider);
+
+      await sendEmail({
+        to: user.email,
+        subject: template.subject,
+        html: template.html,
+        text: template.text
+      });
+
+      console.log(`✅ Password set confirmation email sent to ${user.email}`);
+    } catch (emailError) {
+      console.error("❌ Failed to send password set email:", emailError.message);
+      // Don't fail the request if email fails
+    }
+
+    return res.json({
+      message: "Password set successfully. You can now login with email and password.",
+      passwordLoginEnabled: true
+    });
+
+  } catch (err) {
+    console.error("SET OAUTH PASSWORD ERROR:", err);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+
+// ----------------------------------------------------
 // GOOGLE LOGIN (FINAL)
 // ----------------------------------------------------
 exports.googleLogin = async (req, res) => {
@@ -1107,7 +1287,10 @@ exports.googleLogin = async (req, res) => {
         googleId,
         profilePicture: picture,
         googleAccount: true,
+        authProvider: "google",
         passwordHash: randomHash, // <-- SAFE DEFAULT
+        passwordSetAt: null,  // Password not set yet - will prompt user
+        passwordLoginEnabled: false  // Disable password login until set
       });
     }
 
@@ -1125,6 +1308,9 @@ exports.googleLogin = async (req, res) => {
     // Set refresh token cookie
     setRefreshTokenCookie(res, refreshToken);
 
+    // Check if password setup is required
+    const requiresPasswordSetup = user.authProvider !== 'local' && !user.passwordSetAt;
+
     return res.json({
       message: "Google login success",
       accessToken,
@@ -1134,6 +1320,8 @@ exports.googleLogin = async (req, res) => {
         profilePicture: user.profilePicture,
         userStatus: user.userStatus,
       },
+      requiresPasswordSetup,
+      isFirstLogin: requiresPasswordSetup
     });
 
   } catch (err) {

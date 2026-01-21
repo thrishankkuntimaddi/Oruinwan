@@ -181,19 +181,32 @@ const LoginForm = ({ onSwitch, initialEmail = "" }) => {
         // Save to localStorage first
         localStorage.setItem("accessToken", res.data.accessToken);
 
-
         // Then update context
         setUser(res.data.user);
 
         showToast("Google login successful!", "success");
 
+        // ================================================================
+        // 🔐 CHECK IF OAUTH USER NEEDS TO SET PASSWORD (FIRST-TIME LOGIN)
+        // ================================================================
+        if (res.data.requiresPasswordSetup || res.data.isFirstLogin) {
+          console.log('🔐 OAuth user needs to set password');
+          // Store flag in localStorage for the setup-password page
+          localStorage.setItem("oauthPasswordSetupRequired", "true");
+          localStorage.setItem("oauthProvider", "google");
+          navigate("/setup-password");
+          return;
+        }
+
+        // ================================================================
+        // NORMAL LOGIN FLOW - Password already set
+        // ================================================================
+
         // Check if user is platform admin
         const isPlatformAdmin = res.data.user?.roles?.includes('chttrix_admin');
         if (isPlatformAdmin) {
-
           navigate("/chttrix-admin");
         } else if (res.data.user?.companyRole === 'owner') {
-
           navigate("/owner/dashboard");
         } else {
           navigate("/workspaces");

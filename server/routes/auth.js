@@ -16,6 +16,7 @@ const {
   getMe,
   updateMe,
   updatePassword,
+  setOAuthPassword,
   googleLogin,
   googleAuth,
   getSessions,
@@ -44,6 +45,9 @@ router.post("/reset-password", resetPassword);
 router.get("/me", requireAuth, getMe);
 router.put("/me", requireAuth, updateMe);
 router.put("/me/password", requireAuth, updatePassword);
+
+// OAUTH PASSWORD SETUP (first-time only for OAuth users)
+router.post("/oauth/set-password", requireAuth, setOAuthPassword);
 
 // EMAIL MANAGEMENT ROUTES
 router.post("/me/emails", requireAuth, addEmail);
@@ -102,12 +106,18 @@ router.get(
 router.get(
   "/github/callback",
   passport.authenticate("github", { session: false, failureRedirect: "/login?error=github_failed" }),
-  (req, res) => {
+  async (req, res) => {
     // Successful authentication
     const token = generateToken(req.user);
-    // Also generate refresh token? For now just access token to bootstrap
-    // Better to redirect to frontend which then calls /refresh or /me
-    res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/oauth-success?access=${token}`);
+
+    // Check if password setup required
+    const requiresPasswordSetup = req.user.authProvider !== 'local' && !req.user.passwordSetAt;
+    const params = new URLSearchParams({
+      access: token,
+      requiresPasswordSetup: requiresPasswordSetup.toString()
+    });
+
+    res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/oauth-success?${params.toString()}`);
   }
 );
 
@@ -190,12 +200,22 @@ router.get("/linkedin/callback", async (req, res) => {
         profilePicture: linkedinUser.picture,
         authProvider: "linkedin",
         passwordHash: "oauth-linkedin-" + linkedinUser.sub,
-        verified: true
+        verified: true,
+        passwordSetAt: null,  // Password not set yet
+        passwordLoginEnabled: false  // Disable password login until set
       });
     }
 
     const token = generateToken(user);
-    res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/oauth-success?access=${token}`);
+
+    // Check if password setup required
+    const requiresPasswordSetup = user.authProvider !== 'local' && !user.passwordSetAt;
+    const params = new URLSearchParams({
+      access: token,
+      requiresPasswordSetup: requiresPasswordSetup.toString()
+    });
+
+    res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/oauth-success?${params.toString()}`);
   } catch (err) {
     console.error('LinkedIn OAuth callback error:', err.response?.data || err.message);
     res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/login?error=linkedin_failed`);

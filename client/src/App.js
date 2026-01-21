@@ -38,6 +38,7 @@ import FeatureShowcase from "./pages/FeatureShowcase";
 import LoginPage from "./pages/LoginPageComp/LoginPage";
 import ForgotPassword from "./pages/LoginPageComp/ForgotPassword";
 import ResetPassword from "./pages/LoginPageComp/ResetPassword";
+import OAuthPasswordSetup from "./pages/LoginPageComp/OAuthPasswordSetup";
 import VerifyEmail from "./pages/VerifyEmail";
 import OAuthSuccess from "./pages/LoginPageComp/OAuthSuccess";
 import AcceptInvite from "./pages/AcceptInvite";
@@ -449,6 +450,7 @@ function App() {
                           <Route path="/join-workspace" element={<JoinWorkspace />} />
                           <Route path="/forgot-password" element={<ForgotPassword />} />
                           <Route path="/reset-password" element={<ResetPassword />} />
+                          <Route path="/setup-password" element={<OAuthPasswordSetup />} />
                           <Route path="/verify-email" element={<VerifyEmail />} />
                           <Route path="/oauth-success" element={<OAuthSuccess />} />
                           <Route path="/accept-invite" element={<AcceptInvite />} />

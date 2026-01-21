@@ -57,7 +57,9 @@ passport.use(
                     profilePicture: profile.photos?.[0]?.value,
                     authProvider: "github",
                     passwordHash: "oauth-github-" + profile.id, // Dummy password
-                    verified: true
+                    verified: true,
+                    passwordSetAt: null,  // Password not set yet
+                    passwordLoginEnabled: false  // Disable password login until set
                 });
 
                 done(null, user);
