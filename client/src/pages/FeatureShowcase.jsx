@@ -586,9 +586,30 @@ const FeatureShowcase = () => {
                             © 2026 Chttrix Inc. All rights reserved.
                         </div>
                         <div className="flex gap-6 text-sm font-bold text-slate-500 dark:text-slate-400">
-                            <button className="hover:text-indigo-600 dark:hover:text-white transition-colors">Twitter/X</button>
-                            <button className="hover:text-indigo-600 dark:hover:text-white transition-colors">LinkedIn</button>
-                            <button className="hover:text-indigo-600 dark:hover:text-white transition-colors">GitHub</button>
+                            <a
+                                href="https://x.com/chttrix"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="hover:text-indigo-600 dark:hover:text-white transition-colors"
+                            >
+                                Twitter/X
+                            </a>
+                            <a
+                                href="https://www.linkedin.com/company/chttrix/"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="hover:text-indigo-600 dark:hover:text-white transition-colors"
+                            >
+                                LinkedIn
+                            </a>
+                            <a
+                                href="https://youtube.com/@chttrix"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="hover:text-indigo-600 dark:hover:text-white transition-colors"
+                            >
+                                YouTube
+                            </a>
                         </div>
                     </div>
                 </div>

@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Mail, MapPin, Phone } from 'lucide-react';
+import { ArrowLeft, Mail, Phone } from 'lucide-react';
 
 const Contact = () => {
     const navigate = useNavigate();
@@ -38,7 +38,6 @@ const Contact = () => {
                                     <div>
                                         <p className="font-bold">Email</p>
                                         <p className="text-slate-500 dark:text-slate-400">kthrishank.9@gmail.com</p>
-                                        <p className="text-slate-500 dark:text-slate-400">kthrishank10@gmail.com</p>
                                     </div>
                                 </div>
 

@@ -2,22 +2,22 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     ScrollText, Scale, Gavel, AlertTriangle, FileText,
-    Fingerprint, Globe, ChevronRight, CheckCircle, Menu, X, ArrowLeft,
-    Shield, FolderLock, XCircle, Mail, AlertOctagon
+    Fingerprint, Globe, ChevronRight, Menu, X, ArrowLeft,
+    XCircle, Mail, AlertOctagon
 } from 'lucide-react';
+
+const tabs = [
+    { id: 'general', label: 'General Terms', icon: Scale },
+    { id: 'usage', label: 'Acceptable Use', icon: AlertOctagon },
+    { id: 'content', label: 'Content & IP', icon: FileText },
+    { id: 'liability', label: 'Liability & Disclaimer', icon: AlertTriangle },
+    { id: 'contact', label: 'Contact', icon: Mail },
+];
 
 const Terms = () => {
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState('general');
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-
-    const tabs = [
-        { id: 'general', label: 'General Terms', icon: Scale },
-        { id: 'usage', label: 'Acceptable Use', icon: AlertOctagon },
-        { id: 'content', label: 'Content & IP', icon: FileText },
-        { id: 'liability', label: 'Liability & Disclaimer', icon: AlertTriangle },
-        { id: 'contact', label: 'Contact', icon: Mail },
-    ];
 
     // Scroll to section handler
     const scrollToSection = (id) => {
@@ -52,7 +52,7 @@ const Terms = () => {
 
         window.addEventListener('scroll', handleScroll);
         return () => window.removeEventListener('scroll', handleScroll);
-    }, [tabs]);
+    }, []);
 
     return (
         <div className="min-h-screen bg-slate-50 dark:bg-[#0b1121] font-sans text-slate-900 dark:text-white flex flex-col md:flex-row transition-colors duration-300">
@@ -93,8 +93,8 @@ const Terms = () => {
                                     key={tab.id}
                                     onClick={() => scrollToSection(tab.id)}
                                     className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all ${isActive
-                                            ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 shadow-sm ring-1 ring-indigo-200 dark:ring-indigo-800'
-                                            : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
+                                        ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 shadow-sm ring-1 ring-indigo-200 dark:ring-indigo-800'
+                                        : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
                                         }`}
                                 >
                                     <Icon size={18} className={isActive ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400'} />
@@ -341,8 +341,8 @@ const ContactSection = () => (
                     <h3 className="text-2xl font-bold mb-2">Legal Questions?</h3>
                     <p className="opacity-90 mb-6">Contact our Legal Team.</p>
                 </div>
-                <a href="mailto:legal@chttrix.com" className="bg-white text-slate-900 px-6 py-3 rounded-xl font-bold text-center hover:bg-slate-100 transition-colors">
-                    legal@chttrix.com
+                <a href="mailto:kthrishank.9@gmail.com" className="bg-white text-slate-900 px-6 py-3 rounded-xl font-bold text-center hover:bg-slate-100 transition-colors">
+                    kthrishank.9@gmail.com
                 </a>
             </div>
         </div>

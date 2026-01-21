@@ -6,7 +6,7 @@ const AdminSettings = () => {
     const { showToast } = useToast();
     const [profile, setProfile] = useState({
         displayName: "Chttrix Super Admin",
-        email: "support@chttrix.com",
+        email: "kthrishank.9@gmail.com",
         phone: "+1 (555) 123-4567",
         bio: "We are here to help you collaborate better.",
         role: "Platform Owner"

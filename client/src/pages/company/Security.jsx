@@ -3,25 +3,23 @@ import { useNavigate } from 'react-router-dom';
 import {
     Shield, Lock, Key, Server, Eye, Database,
     Fingerprint, Activity, FileText, Globe,
-    ChevronRight, CheckCircle, Search, Mail,
-    Smartphone, Layers, Cpu, Menu, X, ArrowLeft
+    ChevronRight, CheckCircle, Mail,
+    Layers, Cpu, Menu, X, ArrowLeft
 } from 'lucide-react';
-import { useTheme } from '../../contexts/ThemeContext';
+
+const tabs = [
+    { id: 'overview', label: 'Security Overview', icon: Shield },
+    { id: 'encryption', label: 'End-to-End Encryption', icon: Lock },
+    { id: 'privacy', label: 'Data Privacy & Rights', icon: Fingerprint },
+    { id: 'infrastructure', label: 'Infrastructure', icon: Server },
+    { id: 'ai', label: 'AI Safety', icon: Cpu },
+    { id: 'compliance', label: 'Trust & Transparency', icon: FileText },
+];
 
 const Security = () => {
     const navigate = useNavigate();
-    const { theme } = useTheme();
     const [activeTab, setActiveTab] = useState('overview');
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-
-    const tabs = [
-        { id: 'overview', label: 'Security Overview', icon: Shield },
-        { id: 'encryption', label: 'End-to-End Encryption', icon: Lock },
-        { id: 'privacy', label: 'Data Privacy & Rights', icon: Fingerprint },
-        { id: 'infrastructure', label: 'Infrastructure', icon: Server },
-        { id: 'ai', label: 'AI Safety', icon: Cpu },
-        { id: 'compliance', label: 'Trust & Transparency', icon: FileText },
-    ];
 
     // Scroll to section handler
     const scrollToSection = (id) => {
@@ -59,7 +57,7 @@ const Security = () => {
 
         window.addEventListener('scroll', handleScroll);
         return () => window.removeEventListener('scroll', handleScroll);
-    }, [tabs]);
+    }, []);
 
     return (
         <div className="min-h-screen bg-slate-50 dark:bg-[#0b1121] font-sans text-slate-900 dark:text-white flex flex-col md:flex-row">
@@ -100,8 +98,8 @@ const Security = () => {
                                     key={tab.id}
                                     onClick={() => scrollToSection(tab.id)}
                                     className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all ${isActive
-                                            ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 shadow-sm ring-1 ring-indigo-200 dark:ring-indigo-800'
-                                            : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
+                                        ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 shadow-sm ring-1 ring-indigo-200 dark:ring-indigo-800'
+                                        : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
                                         }`}
                                 >
                                     <Icon size={18} className={isActive ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400'} />
@@ -116,7 +114,7 @@ const Security = () => {
                 <div className="p-6 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-[#0f172a]/50">
                     <div className="text-xs text-slate-400 leading-relaxed">
                         Need tailored security advice?<br />
-                        <a href="mailto:security@chttrix.com" className="text-indigo-600 dark:text-indigo-400 hover:underline">Contact our dedicated team</a>
+                        <a href="mailto:kthrishank.9@gmail.com" className="text-indigo-600 dark:text-indigo-400 hover:underline">Contact our dedicated team</a>
                     </div>
                 </div>
             </aside>
@@ -393,7 +391,7 @@ const ComplianceSection = () => (
         </div>
 
         <div className="flex flex-col md:flex-row gap-6">
-            <a href="mailto:security@chttrix.com" className="flex-1 p-6 bg-white dark:bg-[#111827] rounded-3xl border border-slate-200 dark:border-slate-800 hover:border-indigo-500 transition-colors group">
+            <a href="mailto:kthrishank.9@gmail.com" className="flex-1 p-6 bg-white dark:bg-[#111827] rounded-3xl border border-slate-200 dark:border-slate-800 hover:border-indigo-500 transition-colors group">
                 <Mail className="text-indigo-500 mb-4 group-hover:scale-110 transition-transform" size={28} />
                 <h3 className="font-bold text-slate-900 dark:text-white mb-2">Report a Vulnerability</h3>
                 <p className="text-sm text-slate-500">Contact our security team securely.</p>
