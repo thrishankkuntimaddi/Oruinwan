@@ -108,41 +108,20 @@ const WorkspaceSelect = () => {
         if (!createData.name.trim()) return setNameError("Workspace name is required");
 
         try {
-            // ============ E2EE: INITIALIZE WORKSPACE KEYS ============
-            console.log('🔐 [CreateWorkspace] Initializing E2EE workspace keys...');
+            // ============ E2EE: INITIALIZE WORKSPACE KEYS (PASSWORD-FREE) ============
+            console.log('🔐 [CreateWorkspace] Initializing E2EE workspace keys (no password needed)...');
 
             let workspaceKeyData = null;
 
             try {
                 // Dynamically import the workspace key initialization service
-                const { initializeWorkspaceKeys, getUserPasswordForKeyInit } =
+                const { initializeWorkspaceKeys } =
                     await import('../services/workspaceKeyInit');
 
-                // Get user's password from session
-                const password = await getUserPasswordForKeyInit();
+                // Generate workspace keys automatically (NO PASSWORD NEEDED!)
+                workspaceKeyData = await initializeWorkspaceKeys();
 
-                if (!password) {
-                    console.warn('⚠️ [CreateWorkspace] Password not available, prompting user...');
-                    // If password not in session, prompt user
-                    const promptedPassword = prompt(
-                        'Enter your password to initialize workspace encryption:'
-                    );
-
-                    if (!promptedPassword) {
-                        alert('Password required for workspace encryption. Workspace creation canceled.');
-                        return;
-                    }
-
-                    // Initialize keys with prompted password
-                    workspaceKeyData = await initializeWorkspaceKeys(promptedPassword);
-                    workspaceKeyData.password = promptedPassword; // Store for later enrollment
-                } else {
-                    // Initialize keys with session password
-                    workspaceKeyData = await initializeWorkspaceKeys(password);
-                    workspaceKeyData.password = password; // Store for later enrollment
-                }
-
-                console.log('✅ [CreateWorkspace] Workspace keys initialized');
+                console.log('✅ [CreateWorkspace] Workspace keys initialized automatically');
             } catch (keyInitError) {
                 console.error('❌ [CreateWorkspace] Failed to initialize workspace keys:', keyInitError);
                 alert(`Failed to initialize workspace encryption: ${keyInitError.message}\n\nWorkspace creation canceled.`);
@@ -166,18 +145,14 @@ const WorkspaceSelect = () => {
             const newWorkspaceId = res.data.workspace.id;
             console.log('✅ [CreateWorkspace] Workspace created:', newWorkspaceId);
 
-            // ============ E2EE: AUTO-ENROLL CREATOR ============
+            // ============ E2EE: AUTO-ENROLL CREATOR (PASSWORD-FREE) ============
             try {
                 const { enrollCreatorInWorkspace } = await import('../services/workspaceKeyInit');
-                await enrollCreatorInWorkspace(newWorkspaceId, workspaceKeyData.password, {
-                    encryptedKey: workspaceKeyData.encryptedKey,
-                    keyIv: workspaceKeyData.keyIv,
-                    pbkdf2Salt: workspaceKeyData.pbkdf2Salt
-                });
-                console.log('✅ [CreateWorkspace] Creator auto-enrolled in workspace');
+                await enrollCreatorInWorkspace(newWorkspaceId, workspaceKeyData);
+                console.log('✅ [CreateWorkspace] Creator auto-enrolled in workspace (no password needed)');
             } catch (enrollError) {
                 console.error('❌ [CreateWorkspace] Failed to auto-enroll creator:', enrollError);
-                // Non-blocking: Creator can still log out and back in to get keys
+                // Non-blocking: Creator can still use the workspace
             }
             // ===================================================
 

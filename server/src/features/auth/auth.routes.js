@@ -16,6 +16,7 @@ const {
   getMe,
   updateMe,
   updatePassword,
+  setPassword,
   googleLogin,
   googleAuth,
   getSessions,
@@ -44,6 +45,7 @@ router.post("/reset-password", resetPassword);
 router.get("/me", requireAuth, getMe);
 router.put("/me", requireAuth, updateMe);
 router.put("/me/password", requireAuth, updatePassword);
+router.post("/me/set-password", requireAuth, setPassword); // For OAuth users
 
 // EMAIL MANAGEMENT ROUTES
 router.post("/me/emails", requireAuth, addEmail);

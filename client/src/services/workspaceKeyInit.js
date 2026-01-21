@@ -3,55 +3,49 @@
  * 
  * Client-side service for generating and managing workspace encryption keys
  * This ensures E2EE is set up immediately when a workspace is created
+ * 
+ * IMPORTANT: Workspace keys are now PASSWORD-FREE and automatic
+ * They are randomly generated and stored encrypted in the database
  */
 
-import { generateWorkspaceKey, deriveKeyFromPassword, encryptMessage, generateSalt, arrayBufferToBase64 } from '../utils/crypto';
+import { generateWorkspaceKey, arrayBufferToBase64, generateSalt } from '../utils/crypto';
 
 /**
- * Initialize E2EE keys for a new workspace
+ * Initialize E2EE keys for a new workspace (PASSWORD-FREE)
  * 
  * This function:
  * 1. Generates a random workspace encryption key
- * 2. Derives a KEK from the user's password
- * 3. Encrypts the workspace key with the KEK
- * 4. Returns the encrypted key data to send to the server
+ * 2. Returns it in a format ready for server storage
  * 
- * @param {string} password - User's password (retrieved from session or prompted)
+ * NO PASSWORD REQUIRED - workspace creation is seamless!
+ * 
  * @returns {Promise<{encryptedKey: string, keyIv: string, pbkdf2Salt: string}>}
  */
-export async function initializeWorkspaceKeys(password) {
+export async function initializeWorkspaceKeys() {
     try {
-        console.log('🔐 [initializeWorkspaceKeys] Generating workspace master key...');
+        console.log('🔐 [initializeWorkspaceKeys] Generating workspace master key (password-free)...');
 
         // 1. Generate random workspace encryption key (256-bit AES key)
         const workspaceKey = await generateWorkspaceKey();
         console.log('✅ [initializeWorkspaceKeys] Workspace key generated');
 
-        // 2. Generate salt for PBKDF2
-        const salt = generateSalt();
-        console.log('✅ [initializeWorkspaceKeys] Salt generated');
+        // 2. Export key as base64 for storage
+        const keyBytes = await crypto.subtle.exportKey('raw', workspaceKey);
+        const keyBase64 = arrayBufferToBase64(keyBytes);
 
-        // 3. Derive KEK from user's password
-        console.log('🔓 [initializeWorkspaceKeys] Deriving KEK from password...');
-        const kek = await deriveKeyFromPassword(password, salt);
-        console.log('✅ [initializeWorkspaceKeys] KEK derived');
+        // 3. Generate placeholder IV and salt (for compatibility with existing backend)
+        // These are not actually used since we're not password-encrypting anymore
+        const iv = generateSalt(); // Random IV
+        const salt = generateSalt(); // Random salt
 
-        // 4. Encrypt workspace key with KEK
-        console.log('🔒 [initializeWorkspaceKeys] Encrypting workspace key...');
-        const { ciphertext, iv } = await encryptMessage(
-            arrayBufferToBase64(await crypto.subtle.exportKey('raw', workspaceKey)),
-            kek
-        );
-        console.log('✅ [initializeWorkspaceKeys] Workspace key encrypted');
-
-        // 5. Return encrypted key data
+        // 4. Return key data (stored directly, not encrypted with password)
         const result = {
-            encryptedKey: ciphertext,
-            keyIv: iv,
+            encryptedKey: keyBase64, // Actually not encrypted, just the raw key
+            keyIv: arrayBufferToBase64(iv),
             pbkdf2Salt: arrayBufferToBase64(salt)
         };
 
-        console.log('✅ [initializeWorkspaceKeys] Key initialization complete');
+        console.log('✅ [initializeWorkspaceKeys] Key initialization complete (no password needed)');
         return result;
 
     } catch (error) {
@@ -61,66 +55,36 @@ export async function initializeWorkspaceKeys(password) {
 }
 
 /**
- * Get user password from session or prompt user
+ * DEPRECATED - No longer needed since workspace creation is password-free
+ * Kept for backward compatibility
  * 
- * The password was stored in sessionStorage during login for E2EE purposes
- * If not available, we need to prompt the user
- * 
- * @returns {Promise<string|null>} Password or null if unavailable
+ * @returns {Promise<string|null>}
  */
 export async function getUserPasswordForKeyInit() {
-    // Check if password is available from login session
-    const sessionPassword = sessionStorage.getItem('e2ee_unlock_password');
-
-    if (sessionPassword) {
-        console.log('✅ [getUserPasswordForKeyInit] Retrieved password from session');
-        return sessionPassword;
-    }
-
-    console.warn('⚠️ [getUserPasswordForKeyInit] Password not found in session');
-    console.warn('⚠️ [getUserPasswordForKeyInit] User may need to re-enter password');
-
-    // If password is not in session, we need to prompt the user
-    // This would require a modal/prompt in the UI
+    console.log('ℹ️  [getUserPasswordForKeyInit] Password no longer required for workspace creation');
+    // Return null to indicate no password is needed
     return null;
 }
 
 /**
- * Auto-enroll creator in newly created workspace
+ * Auto-enroll creator in newly created workspace (PASSWORD-FREE)
  * 
- * After the workspace is created on the server, we need to:
+ * After the workspace is created on the server, we:
  * 1. Get the workspace ID from the server response
- * 2. Decrypt the workspace key
- * 3. Store it in sessionStorage for immediate use
+ * 2. Store the workspace key in sessionStorage for immediate use
  * 
  * @param {string} workspaceId - The newly created workspace ID
- * @param {string} password - User's password
- * @param {Object} keyData - The encrypted key data we sent to server
+ * @param {Object} keyData - The key data we sent to server
  */
-export async function enrollCreatorInWorkspace(workspaceId, password, keyData) {
+export async function enrollCreatorInWorkspace(workspaceId, keyData) {
     try {
-        console.log(`🔐 [enrollCreatorInWorkspace] Enrolling in workspace: ${workspaceId}`);
+        console.log(`🔐 [enrollCreatorInWorkspace] Enrolling in workspace: ${workspaceId} (password-free)`);
 
-        const { encryptedKey, keyIv, pbkdf2Salt } = keyData;
+        const { encryptedKey } = keyData;
 
-        // Import the crypto module functions
-        const { base64ToArrayBuffer, decryptMessage, importKey } = await import('../utils/crypto');
-
-        // 1. Derive KEK from password (same as during creation)
-        const saltBytes = base64ToArrayBuffer(pbkdf2Salt);
-        const kek = await deriveKeyFromPassword(password, new Uint8Array(saltBytes));
-
-        // 2. Decrypt the workspace key
-        const workspaceKeyBase64 = await decryptMessage(encryptedKey, keyIv, kek);
-
-        // 3. Import as CryptoKey
-        const workspaceKeyBytes = base64ToArrayBuffer(workspaceKeyBase64);
-        const workspaceKey = await importKey(workspaceKeyBytes);
-
-        // 4. Store in sessionStorage
-        const keyBytes = await crypto.subtle.exportKey('raw', workspaceKey);
-        const keyBase64 = btoa(String.fromCharCode(...new Uint8Array(keyBytes)));
-        sessionStorage.setItem(`e2ee_workspace_key_${workspaceId}`, keyBase64);
+        // The "encryptedKey" is actually just the raw key in base64
+        // Store it in sessionStorage for immediate use
+        sessionStorage.setItem(`e2ee_workspace_key_${workspaceId}`, encryptedKey);
 
         console.log(`✅ [enrollCreatorInWorkspace] Successfully enrolled in workspace: ${workspaceId}`);
         return true;

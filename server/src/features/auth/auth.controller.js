@@ -425,6 +425,13 @@ exports.login = async (req, res) => {
     if (!match)
       return res.status(400).json({ message: "Invalid credentials" });
 
+    // 🔒 Check if password login is disabled for OAuth users
+    if (user.authProvider && user.authProvider !== 'local' && !user.passwordLoginEnabled) {
+      return res.status(403).json({
+        message: "Password login has been disabled for this account. Please use OAuth login."
+      });
+    }
+
     if (!user.verified)
       return res.status(403).json({ message: "Please verify your email first" });
 
@@ -513,6 +520,10 @@ exports.login = async (req, res) => {
 
     user.lastLoginAt = new Date();
     user.isOnline = true;
+
+    // 📊 Track login method (password login)
+    user.lastLoginMethod = 'password';
+    user.lastLoginMethodAt = new Date();
 
     await saveWithRetry(user);
     setRefreshTokenCookie(res, refreshToken);
@@ -1063,6 +1074,80 @@ exports.updatePassword = async (req, res) => {
 };
 
 // ----------------------------------------------------
+// SET PASSWORD (For OAuth Users)
+// ----------------------------------------------------
+exports.setPassword = async (req, res) => {
+  try {
+    const { password } = req.body;
+    const userId = req.user.sub;
+
+    if (!password) {
+      return res.status(400).json({ message: "Password is required" });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Check if user is OAuth user (Google/GitHub/LinkedIn)
+    if (!user.authProvider || user.authProvider === 'local') {
+      return res.status(400).json({
+        message: "This endpoint is only for OAuth users. Use password change endpoint instead."
+      });
+    }
+
+    // Validate password strength (same as updatePassword)
+    const strong =
+      password.length >= 8 &&
+      password.length <= 16 &&
+      /[A-Z]/.test(password) &&
+      /\d/.test(password) &&
+      /[^A-Za-z0-9]/.test(password);
+
+    if (!strong) {
+      return res.status(400).json({
+        message: "Password must be 8-16 characters with uppercase, number, and special character"
+      });
+    }
+
+    // Set the password and timestamp
+    user.passwordHash = await bcrypt.hash(password, 12);
+    user.passwordSetAt = new Date(); // Track when password was set
+    await saveWithRetry(user);
+
+    console.log(`✅ Password set for OAuth user: ${user.email} (${user.authProvider})`);
+
+    // Send confirmation email
+    try {
+      const { passwordSetTemplate } = require('../utils/emailTemplates');
+      const template = passwordSetTemplate(user.username, user.authProvider);
+
+      await sendEmail({
+        to: user.email,
+        subject: template.subject,
+        html: template.html,
+        text: template.text
+      });
+
+      console.log(`📧 Password set confirmation email sent to ${user.email}`);
+    } catch (emailErr) {
+      // Email not critical - don't fail the request
+      console.warn('⚠️ Failed to send password set confirmation email:', emailErr.message);
+      console.log(`💡 Password was set successfully for ${user.email}, but email notification failed (SMTP may not be configured)`);
+    }
+
+    return res.json({
+      message: "Password set successfully! You can now login with email + password"
+    });
+
+  } catch (err) {
+    console.error("SET PASSWORD ERROR:", err);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+
+// ----------------------------------------------------
 // GOOGLE LOGIN (FINAL)
 // ----------------------------------------------------
 exports.googleLogin = async (req, res) => {
@@ -1119,6 +1204,10 @@ exports.googleLogin = async (req, res) => {
       tokenHash: sha256(refreshToken),
       expiresAt: new Date(Date.now() + 7 * 86400000),
     });
+
+    // 📊 Track login method (OAuth login)
+    user.lastLoginMethod = 'oauth';
+    user.lastLoginMethodAt = new Date();
 
     await saveWithRetry(user);
 

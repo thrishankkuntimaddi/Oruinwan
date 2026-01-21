@@ -246,7 +246,7 @@ const ChannelsPanel = ({ title }) => {
 
             // ✅ CORRECT: Call backend API
             const response = await api.post(`/api/workspaces/${workspaceId}/channels`, payload);
-            const createdChannel = response.data;
+            const createdChannel = response.data.channel; // Backend returns { message, channel }
 
 
 
@@ -341,7 +341,7 @@ const ChannelsPanel = ({ title }) => {
     };
 
     const filteredChannels = channels.filter(channel =>
-        channel.label.toLowerCase().includes(searchQuery.toLowerCase())
+        (channel.label || '').toLowerCase().includes(searchQuery.toLowerCase())
     );
 
     // ✅ Default channels first, then user-created

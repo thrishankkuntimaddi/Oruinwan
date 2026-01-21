@@ -475,6 +475,104 @@ The Chttrix Team
   };
 };
 
+/**
+ * Password Set Template (for OAuth users setting password)
+ */
+const passwordSetTemplate = (username, authProvider) => {
+  const providerName = authProvider.charAt(0).toUpperCase() + authProvider.slice(1);
+
+  return {
+    subject: '🔐 Password Set Successfully - Chttrix',
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <style>
+          body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f4f4f5; }
+          .container { max-width: 600px; margin: 40px auto; background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
+          .header { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 40px; text-align: center; }
+          .logo { font-size: 24px; font-weight: 900; letter-spacing: -1px; margin-bottom: 10px; }
+          .icon { font-size: 48px; margin-bottom: 10px; }
+          .content { padding: 40px; }
+          .success-box { background: #d1fae5; border-left: 4px solid: #10b981; padding: 20px; margin: 25px 0; border-radius: 8px; color: #065f46; }
+          .info-box { background: #eff6ff; border-left: 4px solid #3b82f6; padding: 15px; margin: 25px 0; border-radius: 8px; color: #1e40af; }
+          .footer { background: #fafafa; padding: 30px; text-align: center; font-size: 13px; color: #6b7280; border-top: 1px solid #e5e7eb; }
+          h1 { margin: 0; font-size: 28px; font-weight: 800; }
+          h2 { color: #1f2937; margin-top: 0; font-size: 20px; }
+          p { color: #4b5563; margin-bottom: 15px; }
+          ul { color: #4b5563; margin: 15px 0; padding-left: 25px; }
+          li { margin-bottom: 8px; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <div class="logo">Chttrix</div>
+            <div class="icon">✅</div>
+            <h1>Password Set Successfully!</h1>
+          </div>
+          <div class="content">
+            <h2>Hello ${username},</h2>
+            <p>Great news! You've successfully set a password for your Chttrix account.</p>
+            
+            <div class="success-box">
+              <strong>✨ You now have two login options:</strong><br/>
+              <ul style="margin: 10px 0;">
+                <li><strong>${providerName} OAuth</strong> - Your original login method</li>
+                <li><strong>Email + Password</strong> - Your new backup option</li>
+              </ul>
+            </div>
+
+            <div class="info-box">
+              <strong>🔒 Security Reminder:</strong><br/>
+              Your ${providerName} account login remains active and unchanged. The password you just set provides an additional way to access your account if needed.
+            </div>
+
+            <p style="margin-top: 30px; font-size: 14px; color: #6b7280;">
+              <strong>Security Best Practices:</strong><br/>
+              • Keep your password secure and don't share it with anyone<br/>
+              • Use a unique password that's different from other services<br/>
+              • Consider enabling two-factor authentication when available<br/>
+              • You can always use ${providerName} to sign in quickly
+            </p>
+
+            <p style="margin-top: 25px;">If you didn't set this password, please contact our support team immediately.</p>
+          </div>
+          <div class="footer">
+            <p><strong>Need help?</strong> Contact our support team</p>
+            <p style="margin-top: 10px;">This is an automated message. Please do not reply to this email.</p>
+            © ${new Date().getFullYear()} Chttrix Inc. All rights reserved.
+          </div>
+        </div>
+      </body>
+      </html>
+    `,
+    text: `
+Hello ${username},
+
+Great news! You've successfully set a password for your Chttrix account.
+
+YOU NOW HAVE TWO LOGIN OPTIONS:
+✓ ${providerName} OAuth - Your original login method
+✓ Email + Password - Your new backup option
+
+SECURITY REMINDER:
+Your ${providerName} account login remains active and unchanged. The password you just set provides an additional way to access your account if needed.
+
+Security Best Practices:
+• Keep your password secure and don't share it with anyone
+• Use a unique password that's different from other services
+• Consider enabling two-factor authentication when available
+• You can always use ${providerName} to sign in quickly
+
+If you didn't set this password, please contact our support team immediately.
+
+Best regards,
+The Chttrix Team
+    `
+  };
+};
+
 module.exports = {
   generateVerificationCode,
   emailVerificationTemplate,
@@ -482,5 +580,6 @@ module.exports = {
   companyRejectedTemplate,
   employeeCredentialsTemplate,
   passwordResetTemplate,
-  workspaceInvitationTemplate
+  workspaceInvitationTemplate,
+  passwordSetTemplate
 };

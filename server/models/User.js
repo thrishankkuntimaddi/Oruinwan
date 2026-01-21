@@ -167,6 +167,16 @@ const UserSchema = new mongoose.Schema(
     // Auth Provider
     authProvider: { type: String, enum: ['local', 'google', 'github', 'linkedin'], default: 'local' },
 
+    // Password Set Timestamp (for OAuth users who set a password)
+    passwordSetAt: { type: Date, default: null },
+
+    // Password Login Control (for OAuth users)
+    passwordLoginEnabled: { type: Boolean, default: true },
+
+    // Last Login Method Tracking
+    lastLoginMethod: { type: String, enum: ['oauth', 'password', null], default: null },
+    lastLoginMethodAt: { type: Date, default: null },
+
     // Activity Tracking
     lastLoginAt: { type: Date, default: null },
     lastActivityAt: { type: Date, default: Date.now },
