@@ -14,7 +14,7 @@ const MainLayout = ({ children, sidePanel }) => {
     const [showAI, setShowAI] = useState(false);
     const [aiWidth, setAiWidth] = useState(350);
     const [sidePanelWidth, setSidePanelWidth] = useState(270);
-    
+
     // Mobile State
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const location = useLocation();
@@ -234,7 +234,7 @@ const MainLayout = ({ children, sidePanel }) => {
             <div className="h-12 flex items-center justify-between px-2 sm:px-4 bg-white dark:bg-gray-900 flex-shrink-0 z-[60] relative shadow-sm dark:shadow-gray-800">
                 {/* Left: Menu Button (Mobile) & Spacer */}
                 <div className="w-10 sm:w-20 flex items-center">
-                    <button 
+                    <button
                         onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
                         className="md:hidden p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
                     >
@@ -316,75 +316,85 @@ const MainLayout = ({ children, sidePanel }) => {
                         <Bot size={20} strokeWidth={2} />
                     </button>
 
-                    {/* Help Popover */}
+                    {/* Help Popover - Minimal & Compact */}
                     {showHelp && (
                         <>
                             <div className="fixed inset-0 z-[90]" onClick={() => setShowHelp(false)}></div>
-                            <div className="absolute top-10 right-0 w-72 bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 z-[100] overflow-hidden animate-fade-in origin-top-right">
-                                {/* Unique Gradient Header */}
-                                <div className="p-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white">
-                                    <h3 className="font-bold text-base">Chttrix Support</h3>
-                                    <p className="text-xs text-indigo-100 mt-0.5 opacity-90">We're here to help you collaborate better.</p>
+                            <div className="absolute top-12 right-0 w-64 bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl rounded-xl shadow-2xl border border-gray-200/60 dark:border-gray-700/60 z-[100] overflow-hidden animate-fade-in origin-top-right ring-1 ring-black/5">
+                                {/* Minimal Header */}
+                                <div className="px-3 py-2 border-b border-gray-100 dark:border-gray-700/50 flex items-center justify-between bg-gray-50/50 dark:bg-gray-900/50">
+                                    <span className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Support</span>
+                                    <div className="flex items-center gap-2">
+                                        <div className="flex items-center gap-1.5 px-1.5 py-0.5 bg-green-100/50 dark:bg-green-900/20 rounded-full">
+                                            <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
+                                            <span className="text-[9px] font-bold text-green-600 dark:text-green-400">Systems Normal</span>
+                                        </div>
+                                    </div>
                                 </div>
 
-                                {/* Search */}
-                                <div className="p-3 border-b border-gray-100 dark:border-gray-700">
-                                    <div className="relative">
-                                        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                                {/* Search - Ultra Compact */}
+                                <div className="p-2">
+                                    <div className="relative group">
+                                        <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-indigo-500 transition-colors" />
                                         <input
                                             type="text"
-                                            placeholder="Find answers..."
-                                            className="w-full pl-9 pr-3 py-1.5 bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                                            placeholder="Search docs..."
+                                            className="w-full pl-8 pr-3 py-1.5 bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-600 rounded-lg text-xs text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-indigo-500/50 focus:border-indigo-500/50 transition-all"
                                         />
                                     </div>
                                 </div>
 
-                                {/* Quick Actions Grid */}
-                                <div className="p-2 grid grid-cols-2 gap-2">
+                                {/* Quick Actions List - Minimal List Style */}
+                                <div className="px-1 pb-1 space-y-0.5">
                                     <button
                                         onClick={() => { setShowHelp(false); setActiveHelpModal("academy"); }}
-                                        className="flex flex-col items-center justify-center p-2 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-colors group"
+                                        className="w-full flex items-center gap-3 px-2 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-md transition-colors text-left group"
                                     >
-                                        <BookOpen size={20} className="mb-1 group-hover:scale-110 transition-transform text-indigo-600 dark:text-indigo-400" />
-                                        <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Academy</span>
+                                        <div className="flex items-center justify-center w-6 h-6 rounded-md bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 group-hover:scale-110 transition-transform">
+                                            <BookOpen size={14} />
+                                        </div>
+                                        <span className="text-xs font-medium text-gray-700 dark:text-gray-200">Academy</span>
                                     </button>
+
                                     <button
                                         onClick={() => { setShowHelp(false); setActiveHelpModal("shortcuts"); }}
-                                        className="flex flex-col items-center justify-center p-2 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-colors group"
+                                        className="w-full flex items-center gap-3 px-2 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-md transition-colors text-left group"
                                     >
-                                        <Command size={20} className="mb-1 group-hover:scale-110 transition-transform text-gray-700 dark:text-gray-300" />
-                                        <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Shortcuts</span>
+                                        <div className="flex items-center justify-center w-6 h-6 rounded-md bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 group-hover:scale-110 transition-transform">
+                                            <Command size={14} />
+                                        </div>
+                                        <span className="text-xs font-medium text-gray-700 dark:text-gray-200">Shortcuts</span>
                                     </button>
-                                    <button
-                                        onClick={() => { setShowHelp(false); setActiveHelpModal("bug"); }}
-                                        className="flex flex-col items-center justify-center p-2 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-colors group"
-                                    >
-                                        <Bug size={20} className="mb-1 group-hover:scale-110 transition-transform text-red-600 dark:text-red-400" />
-                                        <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Report Bug</span>
-                                    </button>
+
                                     <button
                                         onClick={() => { setShowHelp(false); setActiveHelpModal("whatsnew"); }}
-                                        className="flex flex-col items-center justify-center p-2 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-colors group"
+                                        className="w-full flex items-center gap-3 px-2 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-md transition-colors text-left group"
                                     >
-                                        <Sparkles size={20} className="mb-1 group-hover:scale-110 transition-transform text-yellow-500" />
-                                        <span className="text-xs font-medium text-gray-700 dark:text-gray-300">What's New</span>
+                                        <div className="flex items-center justify-center w-6 h-6 rounded-md bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 group-hover:scale-110 transition-transform">
+                                            <Sparkles size={14} />
+                                        </div>
+                                        <span className="text-xs font-medium text-gray-700 dark:text-gray-200">What's New</span>
+                                    </button>
+
+                                    <button
+                                        onClick={() => { setShowHelp(false); setActiveHelpModal("bug"); }}
+                                        className="w-full flex items-center gap-3 px-2 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-md transition-colors text-left group"
+                                    >
+                                        <div className="flex items-center justify-center w-6 h-6 rounded-md bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 group-hover:scale-110 transition-transform">
+                                            <Bug size={14} />
+                                        </div>
+                                        <span className="text-xs font-medium text-gray-700 dark:text-gray-200">Report Bug</span>
                                     </button>
                                 </div>
 
-                                {/* System Status Footer */}
-                                <div className="border-t border-gray-100 dark:border-gray-700 p-2 bg-gray-50 dark:bg-gray-900 flex items-center justify-between">
-                                    <div className="flex items-center gap-2">
-                                        <span className="relative flex h-2 w-2">
-                                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                                            <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-                                        </span>
-                                        <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">All Systems Operational</span>
-                                    </div>
+                                {/* Footer - Minimal */}
+                                <div className="border-t border-gray-100 dark:border-gray-700/50 p-2 bg-gray-50/80 dark:bg-gray-900/80">
                                     <button
                                         onClick={() => { setShowHelp(false); setActiveHelpModal("contact"); }}
-                                        className="text-xs text-indigo-600 dark:text-indigo-400 font-medium hover:underline"
+                                        className="w-full flex items-center justify-center gap-2 py-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-all group"
                                     >
-                                        Contact Us
+                                        <MessageCircle size={12} className="text-indigo-600 dark:text-indigo-400 group-hover:scale-110 transition-transform" />
+                                        <span className="text-[10px] font-bold text-gray-700 dark:text-gray-300">Contact Support</span>
                                     </button>
                                 </div>
                             </div>
@@ -395,10 +405,10 @@ const MainLayout = ({ children, sidePanel }) => {
 
             {/* 2. Main Workspace Area (Below Top Bar) */}
             <div className="flex-1 flex overflow-hidden relative">
-                
+
                 {/* Mobile Menu Backdrop */}
                 {mobileMenuOpen && (
-                    <div 
+                    <div
                         className="fixed inset-0 bg-black/50 z-40 md:hidden backdrop-blur-sm"
                         onClick={() => setMobileMenuOpen(false)}
                     />
@@ -413,7 +423,7 @@ const MainLayout = ({ children, sidePanel }) => {
                 `}>
                     <div className="flex h-full h-full shadow-2xl md:shadow-none">
                         <IconSidebar onProfileClick={() => setShowProfile(true)} />
-                        
+
                         {/* B. Middle Left: Side Panel (Inside drawer on mobile, static on desktop) */}
                         {sidePanel && (
                             <div className="h-full flex">
@@ -460,7 +470,7 @@ const MainLayout = ({ children, sidePanel }) => {
                             >
                                 <div className="md:hidden flex items-center justify-between p-2 border-b">
                                     <span className="font-bold pl-2">Chttrix AI</span>
-                                    <button onClick={() => setShowAI(false)} className="p-2"><X size={20}/></button>
+                                    <button onClick={() => setShowAI(false)} className="p-2"><X size={20} /></button>
                                 </div>
                                 <ChttrixAIChat onClose={() => setShowAI(false)} isSidebar={true} />
                             </div>

@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import { useWorkspace } from "../../contexts/WorkspaceContext";
-import { Home, MessageSquare, CheckSquare, FileText, Newspaper, Hash, Rocket, Briefcase, Zap, Palette, Microscope, Globe, Shield, TrendingUp, Lightbulb, Flame, Target, Trophy, Video } from "lucide-react";
+import { Home, MessageSquare, CheckSquare, FileText, Newspaper, Hash, Rocket, Briefcase, Zap, Palette, Microscope, Globe, Shield, TrendingUp, Lightbulb, Flame, Target, Trophy, Video, Settings } from "lucide-react";
 
 const IconSidebar = ({ onProfileClick }) => {
     const navigate = useNavigate();
@@ -199,8 +199,23 @@ const IconSidebar = ({ onProfileClick }) => {
                 })}
             </div>
 
-            {/* Profile Icon */}
-            <div className="mt-auto">
+            {/* Settings and Profile Icons */}
+            <div className="mt-auto space-y-3">
+                {/* Settings Button */}
+                <div className="relative group">
+                    <button
+                        onClick={() => navigate("/settings", { state: { from: location.pathname } })}
+                        className="w-10 h-10 rounded-xl flex items-center justify-center transition-all text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-200"
+                    >
+                        <Settings size={20} strokeWidth={2} />
+                    </button>
+                    {/* Tooltip */}
+                    <div className="absolute left-14 top-1/2 -translate-y-1/2 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50 shadow-lg">
+                        Settings
+                    </div>
+                </div>
+
+                {/* Profile Icon */}
                 <button onClick={onProfileClick} className="relative group">
                     <div
                         className="w-10 h-10 rounded-full bg-cover bg-center border-2 border-gray-100 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-500 transition-all shadow-sm"

@@ -72,16 +72,16 @@ const JoinWorkspace = () => {
 
     // Helper to render icon
     const renderWorkspaceIcon = (iconName) => {
-        if (!iconName) return '🚀';
+        if (!iconName) return <Icons.Rocket size={48} strokeWidth={1.5} />;
 
         // Check if it's a valid Lucide icon
-        const IconComponent = Icons[iconName];
+        const IconComponent = Icons[iconName.charAt(0).toUpperCase() + iconName.slice(1)];
         if (IconComponent) {
             return <IconComponent size={48} strokeWidth={1.5} />;
         }
 
-        // Fallback to text/emoji
-        return iconName;
+        // Fallback to Rocket if icon name is invalid or text is provided
+        return <Icons.Hash size={48} strokeWidth={1.5} />;
     };
 
 

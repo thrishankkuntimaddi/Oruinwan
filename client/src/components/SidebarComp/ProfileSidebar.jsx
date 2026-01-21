@@ -398,14 +398,6 @@ const ProfileMenu = ({ onClose }) => {
 
       {/* Menu Items */}
       <div className="p-2 space-y-1">
-        <button onClick={() => setView("preferences")} className="w-full text-left px-3 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg flex items-center transition-colors group">
-          <Settings size={18} className="mr-3 text-gray-400 group-hover:text-blue-600 transition-colors" />
-          <span className="font-medium">Preferences</span>
-        </button>
-        <button onClick={() => setView("security")} className="w-full text-left px-3 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg flex items-center transition-colors group">
-          <Shield size={18} className="mr-3 text-gray-400 group-hover:text-blue-600 transition-colors" />
-          <span className="font-medium">Security</span>
-        </button>
         <button onClick={() => setView("help")} className="w-full text-left px-3 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg flex items-center transition-colors group">
           <HelpCircle size={18} className="mr-3 text-gray-400 group-hover:text-blue-600 transition-colors" />
           <span className="font-medium">Help & Support</span>

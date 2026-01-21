@@ -1,13 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
     User, Lock, Palette,
-    ChevronRight, Save, Loader,
+    ChevronRight, Loader,
     Eye, EyeOff, Smartphone, Monitor,
-    Search, Bell, Moon, Sun, Shield, LogOut,
-    CheckCircle2, Laptop, ArrowLeft, Settings as SettingsIcon,
-    Globe, Volume2, Trash2, Mail, Zap, MessageSquare,
-    Radio, Activity, AlertTriangle
+    Search, Bell, Moon, Sun, Shield, CheckCircle2, Laptop, ArrowLeft, Settings as SettingsIcon,
+    Globe, Mail
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
@@ -58,9 +56,26 @@ const RadioSelect = ({ options, selected, onChange }) => (
 
 const Settings = () => {
     const navigate = useNavigate();
+    const location = useLocation();
     const { user, refreshUser } = useAuth();
     const { showToast } = useToast();
     const { theme, toggleTheme } = useTheme();
+
+    // Smart back navigation - return to previous page if from workspace, else /workspaces
+    const handleBackNavigation = () => {
+        const from = location.state?.from;
+        if (from && from.startsWith('/workspace/')) {
+            navigate(from);
+        } else {
+            navigate(-1); // Try browser back first
+            // Fallback to /workspaces after a short delay if back didn't work
+            setTimeout(() => {
+                if (window.location.pathname === '/settings') {
+                    navigate('/workspaces');
+                }
+            }, 100);
+        }
+    };
 
     const [activeSection, setActiveSection] = useState('profile');
     const [searchQuery, setSearchQuery] = useState('');
@@ -106,7 +121,7 @@ const Settings = () => {
         confirmPassword: ''
     });
     const [showCurrentPassword, setShowCurrentPassword] = useState(false);
-    const [showNewPassword, setShowNewPassword] = useState(false);
+    const [showNewPassword] = useState(false);
 
     // Initialize profile data
     useEffect(() => {
@@ -640,7 +655,7 @@ const Settings = () => {
             {/* Sidebar Navigation */}
             <aside className="w-64 bg-white dark:bg-[#0B0F19] border-r border-slate-200 dark:border-white/5 flex flex-col fixed inset-y-0 z-20">
                 <div className="h-20 flex items-center px-6 border-b border-slate-200 dark:border-white/5">
-                    <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate('/workspaces')}>
+                    <div className="flex items-center gap-3 cursor-pointer" onClick={handleBackNavigation}>
                         <img src="/chttrix-logo.jpg" alt="Logo" className="w-8 h-8 rounded-lg shadow-sm" />
                         <span className="font-exul font-black text-xl tracking-tighter text-slate-900 dark:text-white">Chttrix</span>
                     </div>
@@ -712,11 +727,11 @@ const Settings = () => {
 
                     {/* Right: Back Button */}
                     <button
-                        onClick={() => navigate('/workspaces')}
+                        onClick={handleBackNavigation}
                         className="px-4 py-2 bg-white dark:bg-[#111827] border border-slate-200/60 dark:border-white/10 rounded-xl shadow-sm hover:shadow-lg hover:border-indigo-200 dark:hover:border-indigo-500/30 text-slate-600 dark:text-slate-300 font-bold text-sm flex items-center gap-2 transition-all duration-300 group hover:-translate-y-0.5 active:translate-y-0 active:scale-95"
                     >
                         <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform duration-300" />
-                        Back <span className="hidden sm:inline">to Workspaces</span>
+                        Back
                     </button>
                 </header>
 

@@ -291,9 +291,9 @@ const InvitationsTab = ({ activeWorkspace, isAdmin }) => {
             )}
 
             {/* Search and Filters Container */}
-            <div className="px-8 pt-6 pb-2 bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800 space-y-3">
+            <div className="px-8 pt-8 pb-4 bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800 space-y-5">
                 {/* Top Row: Search and Actions */}
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-4">
                     <div className="relative flex-1">
                         <Search className="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
                         <input
@@ -301,7 +301,7 @@ const InvitationsTab = ({ activeWorkspace, isAdmin }) => {
                             placeholder="Search invitations by email, role, or inviter..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full pl-10 pr-4 py-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:bg-white dark:focus:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm text-gray-900 dark:text-white placeholder-gray-400"
+                            className="w-full pl-10 pr-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:bg-white dark:focus:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm text-gray-900 dark:text-white placeholder-gray-400"
                         />
                     </div>
                     {invitations.expired.length > 0 && (

@@ -4,7 +4,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-    User, X, Mail, Phone, Calendar, Camera, Save,
+    X, Mail, Phone, Calendar, Camera, Save,
     Settings, Shield, LogOut, Sun, Moon, Monitor, Edit3,
     Check, ChevronRight, Building
 } from 'lucide-react';
@@ -158,29 +158,7 @@ const ProfileQuickSettings = ({ onClose }) => {
             {/* Action Buttons */}
             <div className="space-y-2 pt-2 border-t border-gray-200 dark:border-gray-700">
                 <button
-                    onClick={() => setView('edit')}
-                    className="w-full flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors group"
-                >
-                    <div className="flex items-center gap-3">
-                        <User size={18} className="text-gray-400 group-hover:text-indigo-600 transition-colors" />
-                        <span className="text-sm font-medium text-gray-700 dark:text-slate-300">Edit Profile</span>
-                    </div>
-                    <ChevronRight size={16} className="text-gray-400" />
-                </button>
-
-                <button
-                    onClick={() => setView('theme')}
-                    className="w-full flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors group"
-                >
-                    <div className="flex items-center gap-3">
-                        <Monitor size={18} className="text-gray-400 group-hover:text-indigo-600 transition-colors" />
-                        <span className="text-sm font-medium text-gray-700 dark:text-slate-300">Appearance</span>
-                    </div>
-                    <ChevronRight size={16} className="text-gray-400" />
-                </button>
-
-                <button
-                    onClick={() => { onClose(); navigate('/settings'); }}
+                    onClick={() => { onClose(); navigate('/settings', { state: { from: '/workspaces' } }); }}
                     className="w-full flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors group"
                 >
                     <div className="flex items-center gap-3">

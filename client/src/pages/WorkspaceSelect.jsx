@@ -372,7 +372,7 @@ const WorkspaceSelect = () => {
                             <div className="text-xs text-slate-500">{user?.email}</div>
                         </button>
                         <button
-                            onClick={() => navigate('/settings')}
+                            onClick={() => navigate('/settings', { state: { from: '/workspaces' } })}
                             className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
                             title="Settings"
                         >
