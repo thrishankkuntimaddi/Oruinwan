@@ -197,10 +197,10 @@ const SetPassword = () => {
                         {/* Password Requirements - Compacted */}
                         {password && (
                             <div className="p-4 rounded-xl bg-gradient-to-br from-slate-50 to-blue-50/50 dark:from-white/5 dark:to-indigo-900/10 border border-slate-200/60 dark:border-white/10 transition-all duration-300 animate-fadeIn">
-                                <p className="text-[10px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                                <div className="text-[10px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
                                     <div className="w-0.5 h-3 bg-gradient-to-b from-indigo-500 to-purple-500 rounded-full"></div>
                                     Password Requirements
-                                </p>
+                                </div>
                                 <div className="grid grid-cols-2 gap-2">
                                     <div className={`flex items-center gap-2 text-xs font-semibold transition-all ${hasMinLength ? 'text-green-600 dark:text-green-400' : 'text-slate-500 dark:text-slate-500'}`}>
                                         {hasMinLength ? <CheckCircle2 size={14} className="shrink-0" /> : <div className="w-[14px] h-[14px] rounded-full border-2 border-slate-300 dark:border-slate-600 shrink-0"></div>}
