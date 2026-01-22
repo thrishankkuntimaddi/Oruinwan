@@ -68,6 +68,18 @@ exports.storeConversationKeys = async (req, res) => {
             participantCount: conversationKey.encryptedKeys.length
         });
     } catch (err) {
+        // 🔒 SAFEGUARD #1: Return 409 for duplicate key attempts
+        if (err.message === 'Conversation keys already exist. Use addParticipant to add new users.') {
+            return res.status(409).json({
+                message: 'Conversation keys already exist',
+                error: 'KEY_EXISTS',
+                conversationId: req.params.id,
+                conversationType: req.body.conversationType
+                // ⚠️ Security: Do NOT return existingKey here
+                // Client must fetch via normal GET endpoint
+            });
+        }
+
         return handleError(res, err, 'STORE CONVERSATION KEYS ERROR');
     }
 };

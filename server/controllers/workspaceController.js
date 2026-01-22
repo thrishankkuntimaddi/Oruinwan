@@ -165,9 +165,9 @@ exports.createWorkspace = async (req, res) => {
     workspace.defaultChannels = [generalChannel._id, announcementsChannel._id];
     await workspace.save();
 
-    // NOTE: E2EE conversation keys for default channels MUST be generated CLIENT-SIDE
-    // The client should generate keys after receiving the workspace creation response
-    // This happens in the workspace creation flow on the frontend
+    // NOTE: E2EE conversation keys are generated LAZILY when first message is sent
+    // Default channels start WITHOUT encryption keys - this is expected and correct
+    // Keys will be automatically generated client-side when needed
 
     // Add workspace to user's workspaces list
     user.workspaces.push({

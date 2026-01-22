@@ -23,6 +23,60 @@ export function useMessageActions(conversationId, conversationType, workspaceId 
         return `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     }, []);
 
+    /**
+     * 🔐 LAZY E2EE: Ensure conversation key exists before sending message
+     * Implements Safeguard #1 (single-writer) and Safeguard #2 (non-blocking)
+     * 
+     * @param {string} conversationId - Channel ID or DM Session ID
+     * @param {string} conversationType - "channel" | "dm"
+     * @param {string} workspaceId - Workspace ID
+     * @param {Array} participantUserIds - Array of user IDs who need access
+     * @returns {Promise<CryptoKey|null>} Conversation key or null if failed
+     */
+    const ensureConversationKey = useCallback(async (conversationId, conversationType, workspaceId, participantUserIds) => {
+        console.log('🔐 [Lazy E2EE] Checking for conversation key...');
+
+        // Dynamically import to avoid circular dependencies
+        const conversationKeyService = (await import('../services/conversationKeyService')).default;
+
+        // Try to get existing key from cache or server
+        let key = await conversationKeyService.getConversationKey(conversationId, conversationType);
+
+        if (!key) {
+            console.log('🔐 [Lazy E2EE] No conversation key found - generating now...');
+
+            try {
+                // Generate key for all participants
+                const keyData = await conversationKeyService.createAndDistributeConversationKey(participantUserIds);
+
+                // 🔒 SAFEGUARD #1: Try to store on server (first write wins)
+                await conversationKeyService.storeConversationKeysOnServer(
+                    conversationId,
+                    conversationType,
+                    workspaceId,
+                    keyData.encryptedKeys
+                );
+
+                console.log('✅ [Lazy E2EE] Conversation key generated and stored');
+                key = keyData.conversationKey;
+
+            } catch (storeError) {
+                // 🔄 SAFEGUARD #1 RETRY: If 409 Conflict, another client won the race
+                if (storeError.response?.status === 409) {
+                    console.log('🔄 [Lazy E2EE] Key already exists (race condition resolved) - fetching...');
+                    key = await conversationKeyService.fetchAndDecryptConversationKey(conversationId, conversationType);
+                } else {
+                    // Re-throw for Safeguard #2 to handle
+                    throw storeError;
+                }
+            }
+        } else {
+            console.log('✅ [Lazy E2EE] Conversation key already exists (using cached)');
+        }
+
+        return key;
+    }, []);
+
     // Send message
     const sendMessage = useCallback(async ({ text, attachments = [], replyTo = null }) => {
         console.log('📤 [sendMessage] Called with:', { text, attachments, replyTo });
@@ -59,8 +113,23 @@ export function useMessageActions(conversationId, conversationType, workspaceId 
         // Declare variables for encrypted payload
         let ciphertext;
         let messageIv;
+        let encryptionReady = true;
 
         try {
+            // ⚡ SAFEGUARD #2: Encryption is NON-BLOCKING
+            // If this fails, message still sends (encryption eventual)
+            try {
+                // Get all channel members for key generation
+                // TODO: Fetch actual member list from channel/DM
+                const participantUserIds = [user?.sub || user?._id];
+
+                await ensureConversationKey(conversationId, conversationType, workspaceId, participantUserIds);
+            } catch (encryptionSetupError) {
+                console.error('🔐 [Non-blocking] Encryption setup failed:', encryptionSetupError);
+                encryptionReady = false;
+                // DO NOT throw - message send continues
+            }
+
             // ============ E2EE: ENCRYPT MESSAGE ============
             // ✅ NON-BLOCKING: Never throw to UI, always graceful fallback
             console.log('🔐 [E2EE] Encrypting message with conversation key...');
