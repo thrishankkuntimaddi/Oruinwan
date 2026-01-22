@@ -210,11 +210,25 @@ export function useConversation(conversationId, conversationType, workspaceId = 
             return;
         }
 
-        // 🔐 Decrypt message if it's encrypted
+        // 🔐 Decrypt message if it's encrypted (ALL messages are encrypted now)
         let processedEvent = event;
-        if (event.type === 'message' && event.payload?.isEncrypted) {
+        if (event.type === 'message') {
+            console.log(`🔐 [useConversation] Decrypting realtime message ${event.id}:`, {
+                hasPayload: !!event.payload,
+                hasCiphertext: !!event.payload?.ciphertext,
+                hasNestedPayload: !!event.payload?.payload,
+                hasNestedCiphertext: !!event.payload?.payload?.ciphertext,
+                isEncrypted: event.payload?.isEncrypted || event.payload?.payload?.isEncrypted
+            });
+
             const decrypted = await batchDecryptMessages([event], conversationId, conversationType);
             processedEvent = decrypted[0] || event;
+
+            console.log(`✅ [useConversation] Decrypted realtime message:`, {
+                id: processedEvent.id,
+                hasDecryptedContent: !!processedEvent.decryptedContent,
+                decryptedText: processedEvent.decryptedContent?.substring(0, 20)
+            });
         }
 
         // Check if this is the sender's own message (replace optimistic message)
