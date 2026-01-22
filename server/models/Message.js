@@ -221,7 +221,18 @@ const MessageSchema = new mongoose.Schema(
         type: mongoose.Schema.Types.ObjectId,
         ref: "User"
       }
-    ]
+    ],
+
+    /* ---------- Client Reconciliation ---------- */
+
+    /**
+     * Temporary ID from client for optimistic UI reconciliation
+     * Allows client to match optimistic messages with real server responses
+     */
+    clientTempId: {
+      type: String,
+      default: null
+    }
   },
   {
     timestamps: true

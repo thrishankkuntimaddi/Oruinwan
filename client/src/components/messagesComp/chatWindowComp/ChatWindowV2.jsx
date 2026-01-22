@@ -79,7 +79,7 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
 
     // Initialize hooks FIRST (before using them in callbacks)
     const conversation = useConversation(conversationId, conversationType, workspaceId);
-    const actions = useMessageActions(conversationId, conversationType, workspaceId);
+    const actions = useMessageActions(conversationId, conversationType, workspaceId, chat?.members || []);
 
     // Use ref to avoid stale closures in socket event handler
     const conversationRef = React.useRef(conversation);

@@ -88,6 +88,42 @@ export const AuthProvider = ({ children }) => {
 
         setUser(data);
 
+        // ============================================================
+        // 🔐 IDENTITY KEY INITIALIZATION (Silent & Non-Blocking)
+        // Runs for ALL users: OAuth, regular login, page refresh
+        // ============================================================
+        (async () => {
+          try {
+            const userId = data._id || data.id || data.sub;
+            if (!userId) {
+              console.warn('⚠️ [Identity Keys] No user ID found, skipping initialization');
+              return;
+            }
+
+            console.log('🔐 [Identity Keys] Initializing for user:', userId);
+
+            // Dynamically import to avoid circular dependencies
+            const identityKeyService = (await import('../services/identityKeyService')).default;
+
+            const result = await identityKeyService.initializeIdentityKeys(userId);
+
+            if (!result.existed) {
+              // New keypair generated - upload public key to server
+              await identityKeyService.uploadPublicKeyToServer();
+              console.log(`✅ [Identity Keys] Created & uploaded (${result.algorithm})`);
+            } else {
+              console.log(`✅ [Identity Keys] Loaded existing key (${result.algorithm})`);
+            }
+          } catch (err) {
+            console.warn('⚠️ [Identity Keys] Init failed (non-blocking):', err);
+            // ❌ NO alert()
+            // ❌ NO throw
+            // Message encryption will retry later
+          }
+        })();
+        // ============================================================
+
+
       } else {
         // Clear invalid tokens
 
@@ -144,6 +180,36 @@ export const AuthProvider = ({ children }) => {
       userWithCompany.company = data.company;
     }
     setUser(userWithCompany);
+
+    // ============================================================
+    // 🔐 IDENTITY KEY INITIALIZATION (Silent & Non-Blocking)
+    // ============================================================
+    (async () => {
+      try {
+        const userId = data.user._id || data.user.id;
+        console.log('🔐 [Identity Keys] Initializing for user:', userId);
+
+        // Dynamically import to avoid circular dependencies
+        const identityKeyService = (await import('../services/identityKeyService')).default;
+
+        const result = await identityKeyService.initializeIdentityKeys(userId);
+
+        if (!result.existed) {
+          // New keypair generated - upload public key to server
+          await identityKeyService.uploadPublicKeyToServer();
+          console.log(`✅ [Identity Keys] Created & uploaded (${result.algorithm})`);
+        } else {
+          console.log(`✅ [Identity Keys] Loaded existing key (${result.algorithm})`);
+        }
+      } catch (err) {
+        console.warn('⚠️ [Identity Keys] Init failed (non-blocking):', err);
+        // ❌ NO alert()
+        // ❌ NO throw
+        // Message encryption will retry later
+      }
+    })();
+    // ============================================================
+
 
     // ============================================================
     // 🔐 E2EE KEY INITIALIZATION

@@ -33,11 +33,21 @@ function MessageEvent({
     const ciphertext = event.payload?.ciphertext || event.ciphertext;
     const messageIv = event.payload?.messageIv || event.messageIv;
 
+    // Extract text with priority: decryptedContent > nested payload > direct payload
+    const messageText = event.decryptedContent || event.payload?.payload?.text || event.payload?.text || event.text || '';
+
+    console.log(`📝 [MessageEvent] Rendering message ${event._id || event.id}:`, {
+        hasDecryptedContent: !!event.decryptedContent,
+        decryptedText: event.decryptedContent?.substring(0, 20),
+        finalText: messageText.substring(0, 20),
+        isEncrypted
+    });
+
     const enrichedMessage = {
         _id: event._id || event.id,
         id: event._id || event.id,
-        // ✅ Access text from multiple possible locations with proper fallback chain
-        text: event.payload?.payload?.text || event.payload?.text || event.text || '',
+        // ✅ Use decrypted content if available, otherwise fallback to encrypted structure
+        text: messageText,
         attachments: event.payload?.payload?.attachments || event.payload?.attachments || event.attachments || [],
         sender: event.sender || event.payload?.sender || {},
         createdAt: event.createdAt || event.payload?.createdAt,

@@ -14,7 +14,7 @@ import { encryptMessageForSending } from '../services/messageEncryptionService';
  * @param {string} workspaceId - Workspace ID (for DMs)
  * @returns {object} Message action methods
  */
-export function useMessageActions(conversationId, conversationType, workspaceId = null) {
+export function useMessageActions(conversationId, conversationType, workspaceId = null, channelMembers = []) {
     const { socket } = useSocket();
     const { user } = useAuth();
 
@@ -119,15 +119,39 @@ export function useMessageActions(conversationId, conversationType, workspaceId 
             // ⚡ SAFEGUARD #2: Encryption is NON-BLOCKING
             // If this fails, message still sends (encryption eventual)
             try {
-                // Get all channel members for key generation
-                // TODO: Fetch actual member list from channel/DM
-                const participantUserIds = [user?.sub || user?._id];
+                // 🔧 FIX #1: Extract real user IDs from channel members
+                let participantUserIds = [];
+
+                if (conversationType === 'channel' && channelMembers && channelMembers.length > 0) {
+                    // Extract user IDs from channel members
+                    participantUserIds = channelMembers
+                        .map(m => m.userId || m.user?._id || m.user)
+                        .filter(id => id); // Remove any undefined/null values
+
+                    console.log(`🔐 [E2EE] Channel members found: ${participantUserIds.length} participants`);
+                } else if (conversationType === 'dm') {
+                    // For DMs, include current user (TODO: add recipient)
+                    participantUserIds = [user?.sub || user?._id];
+                } else {
+                    // Fallback: at minimum include current user
+                    participantUserIds = [user?.sub || user?._id];
+                    console.warn('⚠️ [E2EE] No channel members provided, using current user only');
+                }
 
                 await ensureConversationKey(conversationId, conversationType, workspaceId, participantUserIds);
             } catch (encryptionSetupError) {
                 console.error('🔐 [Non-blocking] Encryption setup failed:', encryptionSetupError);
                 encryptionReady = false;
                 // DO NOT throw - message send continues
+            }
+
+            // 🔧 FIX #2 & #3: Only encrypt if key setup succeeded
+            if (!encryptionReady) {
+                console.error('❌ [E2EE] Skipping encryption - key setup failed');
+                return {
+                    success: false,
+                    error: 'Message encryption failed. Conversation not yet encrypted. Please refresh and try again.'
+                };
             }
 
             // ============ E2EE: ENCRYPT MESSAGE ============
@@ -176,7 +200,8 @@ export function useMessageActions(conversationId, conversationType, workspaceId 
                     messageIv,
                     isEncrypted: true,
                     attachments,
-                    replyTo
+                    replyTo,
+                    clientTempId: tempId
                 });
             } else if (conversationType === 'dm') {
                 console.log('📤 [sendMessage] Sending DM to:', conversationId);
@@ -187,7 +212,8 @@ export function useMessageActions(conversationId, conversationType, workspaceId 
                     messageIv,
                     isEncrypted: true,
                     attachments,
-                    replyTo
+                    replyTo,
+                    clientTempId: tempId
                 });
             }
 

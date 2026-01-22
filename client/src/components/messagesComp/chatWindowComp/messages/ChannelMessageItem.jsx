@@ -189,15 +189,8 @@ function ChannelMessageItem({
 
                 {/* Message Text (More compact line height) */}
                 <div className="text-gray-800 dark:text-gray-200 text-[14px] leading-snug whitespace-pre-wrap break-words message-content">
-                    {msg.payload?.isEncrypted ? (
-                        <EncryptedMessage
-                            ciphertext={msg.payload.ciphertext}
-                            messageIv={msg.payload.messageIv}
-                            conversationId={msg.channelId || msg.conversationId}
-                            conversationType="channel"
-                            parentMessageId={msg.parentId || null}
-                        />
-                    ) : (
+                    {/* Display decrypted text if available, otherwise show encrypted fallback */}
+                    {msg.text ? (
                         <ReactMarkdown
                             remarkPlugins={[remarkBreaks]}
                             components={{
@@ -215,8 +208,18 @@ function ChannelMessageItem({
                                 ol: ({ node, ...props }) => <ol {...props} className="list-decimal list-inside ml-1" />,
                             }}
                         >
-                            {msg.payload?.text}
+                            {msg.text}
                         </ReactMarkdown>
+                    ) : msg.payload?.isEncrypted ? (
+                        <EncryptedMessage
+                            ciphertext={msg.payload.ciphertext}
+                            messageIv={msg.payload.messageIv}
+                            conversationId={msg.channelId || msg.conversationId}
+                            conversationType="channel"
+                            parentMessageId={msg.parentId || null}
+                        />
+                    ) : (
+                        <span className="text-gray-400 italic">No message content</span>
                     )}
 
                 </div>

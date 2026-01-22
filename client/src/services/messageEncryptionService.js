@@ -170,6 +170,8 @@ export async function decryptMessageGracefully(message, conversationId, conversa
  */
 export async function batchDecryptMessages(messages, conversationId, conversationType) {
     try {
+        console.log(`🔐 [Batch Decrypt] Starting for ${messages.length} messages in ${conversationType}:${conversationId}`);
+
         // Pre-fetch conversation key once
         const conversationKey = await conversationKeyService.getConversationKey(conversationId, conversationType);
 
@@ -181,13 +183,27 @@ export async function batchDecryptMessages(messages, conversationId, conversatio
             }));
         }
 
+        console.log(`✅ [Batch Decrypt] Got conversation key, decrypting ${messages.length} messages...`);
+
         // Decrypt each message
         const decrypted = await Promise.all(
             messages.map(async (message) => {
                 try {
-                    const { payload, parentId } = message;
+                    // Handle nested payload structure from Message model
+                    // Server stores encryption data in payload.payload.{ciphertext, messageIv}
+                    const encryptionPayload = message.payload?.payload || message.payload || message;
+                    const { ciphertext, messageIv } = encryptionPayload;
+                    const { parentId } = message;
 
-                    if (!payload || !payload.ciphertext || !payload.messageIv) {
+                    if (!ciphertext || !messageIv) {
+                        console.warn(`⚠️ [Batch Decrypt] Invalid message format for ${message.id}:`, {
+                            hasPayload: !!message.payload,
+                            hasNestedPayload: !!message.payload?.payload,
+                            hasCiphertext: !!ciphertext,
+                            hasIv: !!messageIv,
+                            payloadKeys: Object.keys(message.payload || {}),
+                            nestedKeys: Object.keys(message.payload?.payload || {})
+                        });
                         return {
                             ...message,
                             decryptedContent: '⚠️ Invalid message format'
@@ -201,8 +217,8 @@ export async function batchDecryptMessages(messages, conversationId, conversatio
                     }
 
                     // Decode
-                    const ciphertext = Uint8Array.from(atob(payload.ciphertext), c => c.charCodeAt(0));
-                    const iv = Uint8Array.from(atob(payload.messageIv), c => c.charCodeAt(0));
+                    const ciphertextBytes = Uint8Array.from(atob(ciphertext), c => c.charCodeAt(0));
+                    const iv = Uint8Array.from(atob(messageIv), c => c.charCodeAt(0));
 
                     // Decrypt
                     const plaintextBytes = await crypto.subtle.decrypt(
@@ -212,17 +228,19 @@ export async function batchDecryptMessages(messages, conversationId, conversatio
                             tagLength: 128
                         },
                         decryptionKey,
-                        ciphertext
+                        ciphertextBytes
                     );
 
                     const plaintext = new TextDecoder().decode(plaintextBytes);
+
+                    console.log(`✅ [Batch Decrypt] Decrypted message ${message.id}: "${plaintext.substring(0, 30)}..."`);
 
                     return {
                         ...message,
                         decryptedContent: plaintext
                     };
                 } catch (error) {
-                    console.error(`Failed to decrypt message ${message._id}:`, error);
+                    console.error(`❌ [Batch Decrypt] Failed to decrypt message ${message.id}:`, error);
                     return {
                         ...message,
                         decryptedContent: '🔒 Unable to decrypt message'
@@ -231,9 +249,10 @@ export async function batchDecryptMessages(messages, conversationId, conversatio
             })
         );
 
+        console.log(`✅ [Batch Decrypt] Completed ${decrypted.length} messages`);
         return decrypted;
     } catch (error) {
-        console.error('Batch decryption failed:', error);
+        console.error('❌ [Batch Decrypt] Batch decryption failed:', error);
         // Return messages with encrypted indicator
         return messages.map(msg => ({
             ...msg,

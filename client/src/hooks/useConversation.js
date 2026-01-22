@@ -3,6 +3,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import api from '../services/api';
+import { batchDecryptMessages } from '../services/messageEncryptionService';
 
 /**
  * Manages conversation events (messages, polls, system events)
@@ -64,8 +65,11 @@ export function useConversation(conversationId, conversationType, workspaceId = 
                 parentId: msg.threadParent
             }));
 
+            // 🔐 Decrypt messages before displaying
+            const decrypted = await batchDecryptMessages(normalized, conversationId, conversationType);
+
             // Populate Map for deduplication
-            normalized.forEach(event => {
+            decrypted.forEach(event => {
                 eventsMapRef.current.set(event.id, event);
             });
 
@@ -106,7 +110,7 @@ export function useConversation(conversationId, conversationType, workspaceId = 
 
             const { messages = [], hasMore: more = false } = response.data;
 
-            const newEvents = messages.map(msg => ({
+            const normalized = messages.map(msg => ({
                 id: msg._id,
                 type: msg.pollId ? 'poll' : 'message',
                 payload: msg,
@@ -115,15 +119,18 @@ export function useConversation(conversationId, conversationType, workspaceId = 
                 parentId: msg.threadParent
             }));
 
+            // 🔐 Decrypt messages before displaying
+            const decrypted = await batchDecryptMessages(normalized, conversationId, conversationType);
+
             // Add to dedup map
-            newEvents.forEach(event => {
+            decrypted.forEach(event => {
                 if (!eventsMapRef.current.has(event.id)) {
                     eventsMapRef.current.set(event.id, event);
                 }
             });
 
             // Prepend older messages
-            setEvents(prev => [...newEvents, ...prev]);
+            setEvents(prev => [...decrypted, ...prev]);
             setHasMore(more);
         } catch (err) {
             console.error('Error loading more messages:', err);
@@ -185,7 +192,7 @@ export function useConversation(conversationId, conversationType, workspaceId = 
     }, []);
 
     // Add real-time event (from socket)
-    const addRealtimeEvent = useCallback((event, currentUserId = null) => {
+    const addRealtimeEvent = useCallback(async (event, currentUserId = null) => {
         console.log(`🔄 [useConversation] Processing realtime event:`, {
             eventId: event.id,
             eventType: event.type,
@@ -203,56 +210,73 @@ export function useConversation(conversationId, conversationType, workspaceId = 
             return;
         }
 
+        // 🔐 Decrypt message if it's encrypted
+        let processedEvent = event;
+        if (event.type === 'message' && event.payload?.isEncrypted) {
+            const decrypted = await batchDecryptMessages([event], conversationId, conversationType);
+            processedEvent = decrypted[0] || event;
+        }
+
         // Check if this is the sender's own message (replace optimistic message)
-        if (currentUserId && event.sender?._id === currentUserId) {
-            console.log(`🔍 [useConversation] Message is from current user, looking for optimistic message...`);
+        if (currentUserId && processedEvent.sender?._id === currentUserId) {
+            console.log(`🔍 [useConversation] Message is from current user, checking for optimistic match...`);
 
-            // Get all events and log them
+            // First try to match by clientTempId (most reliable)
+            if (processedEvent.payload?.clientTempId || processedEvent.clientTempId) {
+                const clientTempId = processedEvent.payload?.clientTempId || processedEvent.clientTempId;
+                const optimisticMessage = [...eventsMapRef.current.values()].find(
+                    e => e.id === clientTempId
+                );
+
+                if (optimisticMessage) {
+                    console.log(`✅ [useConversation] Found optimistic message by clientTempId:`, {
+                        optimisticId: optimisticMessage.id,
+                        realId: processedEvent.id,
+                        clientTempId
+                    });
+                    // Remove optimistic from map
+                    eventsMapRef.current.delete(optimisticMessage.id);
+                    // Add real message
+                    eventsMapRef.current.set(processedEvent.id, processedEvent);
+                    // Replace in state
+                    setEvents(prev => prev.map(e => e.id === optimisticMessage.id ? processedEvent : e));
+                    return;
+                }
+            }
+
+            // Fallback: Find by status 'sending' (legacy)
             const allEvents = [...eventsMapRef.current.values()];
-            console.log(`📋 [useConversation] Current events:`, allEvents.map(e => ({
-                id: e.id,
-                status: e.status,
-                sender: e.sender?._id,
-                text: e.payload?.text?.substring(0, 20)
-            })));
-
-            // Find any optimistic message with status 'sending' from this user
             const optimisticMessage = allEvents.find(
                 e => e.status === 'sending' && e.sender?._id === currentUserId
             );
 
             if (optimisticMessage) {
-                console.log(`✅ [useConversation] Found optimistic message to replace:`, {
+                console.log(`✅ [useConversation] Found optimistic message by status:`, {
                     optimisticId: optimisticMessage.id,
-                    realId: event.id,
-                    optimisticText: optimisticMessage.payload?.text,
-                    realText: event.payload?.text || event.payload?.payload?.text
+                    realId: processedEvent.id
                 });
-                // Remove optimistic from map
                 eventsMapRef.current.delete(optimisticMessage.id);
-                // Add real message
-                eventsMapRef.current.set(event.id, event);
-                // Replace in state
-                setEvents(prev => prev.map(e => e.id === optimisticMessage.id ? event : e));
+                eventsMapRef.current.set(processedEvent.id, processedEvent);
+                setEvents(prev => prev.map(e => e.id === optimisticMessage.id ? processedEvent : e));
                 return;
             } else {
-                console.warn(`⚠️ [useConversation] No optimistic message found for sender ${currentUserId}`);
+                console.warn(`⚠️ [useConversation] No optimistic message found for clientTempId or status`);
             }
         }
 
-        console.log(`✅ [useConversation] Adding new realtime event ${event.id} to conversation`);
-        eventsMapRef.current.set(event.id, event);
+        console.log(`✅ [useConversation] Adding new realtime event ${processedEvent.id} to conversation`);
+        eventsMapRef.current.set(processedEvent.id, processedEvent);
         setEvents(prev => {
             // Ensure the new event isn't already in the array (extra safety)
-            const exists = prev.some(e => e.id === event.id);
+            const exists = prev.some(e => e.id === processedEvent.id);
             if (exists) {
-                console.warn(`⚠️ [useConversation] Event ${event.id} already in state array, skipping add`);
+                console.warn(`⚠️ [useConversation] Event ${processedEvent.id} already in state array, skipping add`);
                 return prev;
             }
-            const newEvents = [...prev, event];
+            const newEvents = [...prev, processedEvent];
             console.log(`📊 [useConversation] Events count: ${prev.length} -> ${newEvents.length}`, {
-                newEventId: event.id,
-                newEventText: event.payload?.text?.substring(0, 30)
+                newEventId: processedEvent.id,
+                newEventText: processedEvent.decryptedContent?.substring(0, 30) || processedEvent.payload?.text?.substring(0, 30)
             });
             return newEvents;
         });

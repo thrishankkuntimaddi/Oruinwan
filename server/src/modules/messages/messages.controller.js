@@ -28,7 +28,8 @@ exports.sendDirectMessage = async (req, res) => {
             replyTo,
             ciphertext,
             messageIv,
-            isEncrypted
+            isEncrypted,
+            clientTempId
         } = req.body;
 
         // ============================================================
@@ -73,7 +74,8 @@ exports.sendDirectMessage = async (req, res) => {
                 parentId: replyTo || null,
                 ciphertext,
                 messageIv,
-                isEncrypted
+                isEncrypted,
+                clientTempId
             },
             req.io
         );
@@ -159,7 +161,8 @@ exports.sendChannelMessage = async (req, res) => {
             replyTo,
             ciphertext,
             messageIv,
-            isEncrypted
+            isEncrypted,
+            clientTempId
         } = req.body;
 
         // ============================================================
@@ -199,7 +202,8 @@ exports.sendChannelMessage = async (req, res) => {
                 parentId: replyTo || null,
                 ciphertext,
                 messageIv,
-                isEncrypted
+                isEncrypted,
+                clientTempId
             },
             req.io
         );
