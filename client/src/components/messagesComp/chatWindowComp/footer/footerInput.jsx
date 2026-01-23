@@ -116,7 +116,7 @@ export default function FooterInput({
         execFormat('insertUnorderedList');
         break;
       case 'ai':
-        execFormat('insertText', '@ChttrixAI ');
+        execFormat('insertText', '@CI ');
         break;
       default:
         return;

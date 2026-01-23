@@ -192,13 +192,20 @@ export default function Header({
                 >
                   <Video size={16} />
                 </button>
-                <button
-                  title="Threads View - Show only threaded messages"
-                  onClick={() => onShowThreadsView?.()}
-                  className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded transition-colors"
-                >
-                  <MessageSquare size={16} />
-                </button>
+
+                {/* Poll Button */}
+                {onCreatePoll && (
+                  <button
+                    title="Create Poll"
+                    onClick={() => {
+                      console.log('🎯 POLL BUTTON CLICKED');
+                      onCreatePoll();
+                    }}
+                    className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded transition-colors"
+                  >
+                    <BarChart2 size={16} />
+                  </button>
+                )}
               </>
             )}
 
@@ -212,20 +219,6 @@ export default function Header({
                   <Video size={16} />
                 </button>
               </>
-            )}
-
-            {/* Poll Button (Channels only) */}
-            {chat.type === "channel" && onCreatePoll && (
-              <button
-                title="Create Poll"
-                onClick={() => {
-                  console.log('🎯 POLL BUTTON CLICKED');
-                  onCreatePoll();
-                }}
-                className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded transition-colors"
-              >
-                <BarChart2 size={16} />
-              </button>
             )}
 
             {/* Common Actions: Search */}
@@ -259,6 +252,17 @@ export default function Header({
                 </div>
               )}
             </div>
+
+            {/* Threads Button (Moved to end) */}
+            {chat.type === "channel" && (
+              <button
+                title="Threads View - Show only threaded messages"
+                onClick={() => onShowThreadsView?.()}
+                className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded transition-colors"
+              >
+                <MessageSquare size={16} />
+              </button>
+            )}
 
             {/* Global Menu (Three Dots) */}
             <div className="relative">

@@ -1,7 +1,7 @@
 // client/src/components/messagesComp/events/ConversationStream.jsx
 // Unified event stream renderer - replaces messagesContainer.jsx
 
-import React, { useRef, useEffect, useMemo } from 'react';
+import React, { useRef, useEffect, useMemo, useState } from 'react';
 import MessageEvent from './MessageEvent';
 import PollEvent from './PollEvent';
 import SystemEvent from './SystemEvent';
@@ -38,6 +38,23 @@ function ConversationStream({
     const streamRef = useRef(null);
     const bottomRef = useRef(null);
     const prevScrollHeight = useRef(0);
+    const [openMsgMenuId, setOpenMsgMenuId] = useState(null);
+
+    const toggleMsgMenu = (e, id) => {
+        if (e && e.stopPropagation) e.stopPropagation();
+        setOpenMsgMenuId(prev => prev === id ? null : id);
+    };
+
+    // Close menu when clicking outside
+    useEffect(() => {
+        const handleClickOutside = () => setOpenMsgMenuId(null);
+        if (openMsgMenuId) {
+            document.addEventListener('click', handleClickOutside);
+        }
+        return () => {
+            document.removeEventListener('click', handleClickOutside);
+        };
+    }, [openMsgMenuId]);
 
     // Auto-scroll to bottom on new messages
     useEffect(() => {
@@ -113,6 +130,9 @@ function ConversationStream({
                         replyingTo={replyingTo}
                         onCancelReply={onCancelReply}
                         currentUserId={currentUserId}
+                        openMsgMenuId={openMsgMenuId}
+                        toggleMsgMenu={toggleMsgMenu}
+                        setOpenMsgMenuId={setOpenMsgMenuId}
                     />
                 ) : (
                     <MessageEvent
@@ -121,6 +141,9 @@ function ConversationStream({
                         actions={actions}
                         isDM={true}
                         currentUserId={currentUserId}
+                        openMsgMenuId={openMsgMenuId}
+                        toggleMsgMenu={toggleMsgMenu}
+                        setOpenMsgMenuId={setOpenMsgMenuId}
                     />
                 );
 

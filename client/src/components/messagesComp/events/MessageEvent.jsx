@@ -22,7 +22,10 @@ function MessageEvent({
     onThreadOpen,
     replyingTo,
     onCancelReply,
-    currentUserId
+    currentUserId,
+    openMsgMenuId,
+    toggleMsgMenu,
+    setOpenMsgMenuId
 }) {
     // NEW SCHEMA: event IS the message, event.payload contains text/attachments
     // FALLBACK: Support both new (payload.text) and old (direct text) structures
@@ -103,8 +106,11 @@ function MessageEvent({
                 selectMode={false}
                 selectedIds={new Set()}
                 toggleSelect={() => { }}
-                openMsgMenuId={null}
-                toggleMsgMenu={() => { }}
+                selectMode={false}
+                selectedIds={new Set()}
+                toggleSelect={() => { }}
+                openMsgMenuId={openMsgMenuId}
+                toggleMsgMenu={toggleMsgMenu}
                 formatTime={(ts) => new Date(ts).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
                 addReaction={handleAddReaction}
                 pinMessage={handlePin}
@@ -126,8 +132,11 @@ function MessageEvent({
             selectMode={false}
             selectedIds={new Set()}
             toggleSelect={() => { }}
-            openMsgMenuId={null}
-            toggleMsgMenu={() => { }}
+            selectMode={false}
+            selectedIds={new Set()}
+            toggleSelect={() => { }}
+            openMsgMenuId={openMsgMenuId}
+            toggleMsgMenu={toggleMsgMenu}
             formatTime={(ts) => new Date(ts).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
             addReaction={handleAddReaction}
             pinMessage={handlePin}
