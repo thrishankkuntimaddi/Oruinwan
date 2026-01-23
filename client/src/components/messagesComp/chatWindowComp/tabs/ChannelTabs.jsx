@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, X, FileText, MessageSquare, CheckSquare, Palette, List } from 'lucide-react';
+import { Plus, FileText, MessageSquare, CheckSquare, Palette, List } from 'lucide-react';
 
 export default function ChannelTabs({
     tabs = [],
@@ -49,16 +49,10 @@ export default function ChannelTabs({
         setEditingName("");
     };
 
-    // Check if user can delete a specific tab
-    const canDeleteTab = (tab) => {
-        if (isAdmin) return true;
-        return String(tab.createdBy) === String(currentUserId);
-    };
-
     return (
         <div className="flex flex-col bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800">
             {/* Tabs Bar - Modern Underline Layout */}
-            <div className="flex items-center gap-2 px-4 overflow-x-auto no-scrollbar">
+            <div className="flex items-center gap-3 px-4 overflow-x-auto no-scrollbar">
                 {/* Main Chat Tab */}
                 <button
                     onClick={() => onTabChange("chat")}
