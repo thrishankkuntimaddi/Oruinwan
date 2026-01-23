@@ -40,7 +40,6 @@ export async function initializeWorkspaceKeys() {
 
         // 4. Return key data (stored directly, not encrypted with password)
         const result = {
-            rawKey: workspaceKey, // Return the CryptoKey for immediate use
             encryptedKey: keyBase64, // Actually not encrypted, just the raw key
             keyIv: arrayBufferToBase64(iv),
             pbkdf2Salt: arrayBufferToBase64(salt)
