@@ -1,4 +1,13 @@
 {
+  "name": "chttrix-collab",
+  "version": "1.0.0",
+  "scripts": {
+    "start": "npm run dev",
+    "dev": "npm run server & npm run client",
+    "client": "cd client && npm start",
+    "server": "cd server && npm run dev",
+    "install-all": "npm install && cd client && npm install && cd ../server && npm install"
+  },
   "dependencies": {
     "dotenv": "^17.2.3",
     "mongoose": "^9.1.1"

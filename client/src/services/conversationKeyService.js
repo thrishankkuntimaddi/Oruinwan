@@ -41,9 +41,10 @@ class ConversationKeyService {
      * 
      * @param {string[]} participantUserIds - Array of user IDs who need access
      * @param {string} workspaceId - Workspace ID for workspace key encryption
+     * @param {CryptoKey} [explicitWorkspaceMasterKey] - Optional: Use this key instead of fetching by ID
      * @returns {Promise<{conversationKey: CryptoKey, encryptedKeys: Array, workspaceEncryptedKey?: string, workspaceKeyIv?: string, workspaceKeyAuthTag?: string}>}
      */
-    async createAndDistributeConversationKey(participantUserIds, workspaceId) {
+    async createAndDistributeConversationKey(participantUserIds, workspaceId, explicitWorkspaceMasterKey = null) {
         try {
             console.log(`🔐 Creating conversation key for ${participantUserIds.length} participants...`);
 
@@ -96,9 +97,9 @@ class ConversationKeyService {
             // 5. Encrypt conversation key with workspace master key (for server-side re-encryption)
             let workspaceEncryptedKey, workspaceKeyIv, workspaceKeyAuthTag;
 
-            if (workspaceId) {
+            if (workspaceId || explicitWorkspaceMasterKey) {
                 try {
-                    const workspaceKey = await getWorkspaceKeyForEncryption(workspaceId);
+                    const workspaceKey = explicitWorkspaceMasterKey || await getWorkspaceKeyForEncryption(workspaceId);
 
                     if (workspaceKey) {
                         const iv = crypto.getRandomValues(new Uint8Array(12));
