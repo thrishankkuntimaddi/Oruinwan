@@ -2,7 +2,8 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import axios from "axios";
 import { formatTime as fmtTime } from "./helpers/helpers";
 import { useToast } from "../../../contexts/ToastContext";
-import { Bold, Italic, Link, List, Smile, Send, X, Paperclip } from "lucide-react";
+import { Smile, X } from "lucide-react";
+import FooterInput from "./footer/footerInput";
 import { API_BASE } from "../../../services/api";
 
 export default function ThreadPanel({ parentMessage, onClose, socket, currentUserId }) {
@@ -99,8 +100,10 @@ export default function ThreadPanel({ parentMessage, onClose, socket, currentUse
         repliesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }, [replies]);
 
-    const handleSendReply = async () => {
-        if (!newReply.trim() || sending) return;
+    const handleSendReply = async (text) => {
+        if (!text || !text.trim() || sending) return;
+
+        const replyText = text; // FooterInput passes the text
 
         setSending(true);
         try {
@@ -112,15 +115,15 @@ export default function ThreadPanel({ parentMessage, onClose, socket, currentUse
             const tempId = "temp-" + Date.now();
             const optimisticReply = {
                 _id: tempId,
-                payload: { text: newReply }, // Match server structure
-                text: newReply, // Fallback for compatibility
+                payload: { text: replyText }, // Match server structure
+                text: replyText, // Fallback for compatibility
                 sender: { _id: currentUserId, username: "You", profilePicture: null }, // Mock sender structure
                 senderId: currentUserId, // Fallback
                 createdAt: new Date().toISOString(),
                 threadParent: messageId,
             };
             setReplies((prev) => [...prev, optimisticReply]);
-            setNewReply("");
+            // setNewReply(""); // Handled by FooterInput
 
             const res = await axios.post(
                 `${API_BASE}/api/messages/thread/${messageId}`,
@@ -141,12 +144,7 @@ export default function ThreadPanel({ parentMessage, onClose, socket, currentUse
             setSending(false);
         }
     };
-    const handleKeyDown = (e) => {
-        if (e.key === "Enter" && !e.shiftKey) {
-            e.preventDefault();
-            handleSendReply();
-        }
-    };
+    // Removed manual handleKeyDown as FooterInput handles it
 
     // Close on Escape key
     useEffect(() => {
@@ -265,58 +263,23 @@ export default function ThreadPanel({ parentMessage, onClose, socket, currentUse
                         </div>
                     </div>
 
-                    {/* Input Area (Compact & Feature-rich) */}
-                    <div className="p-4 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800">
-                        <div className="border border-gray-300 dark:border-gray-700 rounded-lg shadow-sm focus-within:ring-1 focus-within:ring-blue-500 focus-within:border-blue-500 transition-all bg-white dark:bg-gray-800">
-
-                            {/* Textarea */}
-                            <textarea
-                                value={newReply}
-                                onChange={(e) => setNewReply(e.target.value)}
-                                onKeyDown={handleKeyDown}
-                                placeholder="Reply..."
-                                rows={1}
-                                className="w-full px-3 py-2.5 text-sm resize-none focus:outline-none bg-transparent dark:text-gray-100 max-h-32 min-h-[44px] placeholder-gray-400 dark:placeholder-gray-500"
-                            />
-
-                            {/* Toolbar */}
-                            <div className="flex items-center justify-between px-2 pb-2 pt-1">
-                                <div className="flex items-center gap-1">
-                                    <button className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors" title="Bold">
-                                        <Bold size={14} />
-                                    </button>
-                                    <button className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors" title="Italic">
-                                        <Italic size={14} />
-                                    </button>
-                                    <button className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors" title="Link">
-                                        <Link size={14} />
-                                    </button>
-                                    <button className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors" title="List">
-                                        <List size={14} />
-                                    </button>
-                                </div>
-
-                                <div className="flex items-center gap-2">
-                                    <button className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors" title="Add emoji">
-                                        <Smile size={16} />
-                                    </button>
-                                    <button className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors" title="Attach file">
-                                        <Paperclip size={16} />
-                                    </button>
-                                    <button
-                                        onClick={handleSendReply}
-                                        disabled={!newReply.trim() || sending}
-                                        className={`p-1.5 rounded-md transition-all flex items-center justify-center ${newReply.trim() && !sending
-                                            ? "bg-blue-600 text-white hover:bg-blue-700 shadow-sm"
-                                            : "bg-gray-100 text-gray-300 cursor-not-allowed"
-                                            }`}
-                                    >
-                                        <Send size={14} />
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                    {/* Input Area (New FooterInput) */}
+                    <FooterInput
+                        newMessage={newReply}
+                        setNewMessage={setNewReply}
+                        onSend={handleSendReply}
+                        onChange={(e) => setNewReply(e.target.value)}
+                        showAI={false} // Disable AI button
+                        showVoice={false} // Disable Voice button
+                        blocked={false}
+                        recording={false} // Simplified for thread for now, or hoist state if needed
+                        setRecording={() => { }}
+                        showAttach={false} // Default state
+                        setShowAttach={() => { }} // Simple handlers or useState if attachment needed
+                        showEmoji={false}
+                        setShowEmoji={() => { }}
+                        onPickEmoji={(emoji) => setNewReply(prev => prev + emoji.native)}
+                    />
                 </>
             )}
         </div>

@@ -27,6 +27,8 @@ export default function FooterInput({
   setRecording,
   blocked,
   setNewMessage,
+  showAI = true,
+  showVoice = true,
 }) {
   const emojiRef = useRef(null);
   const attachRef = useRef(null);
@@ -222,10 +224,14 @@ export default function FooterInput({
 
           {/* Left: Formatting Tools */}
           <div className="flex items-center gap-1">
-            <button onMouseDown={(e) => e.preventDefault()} onClick={() => insertFormat('ai')} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors group" title="AI">
-              <img src="/assets/ChttrixAI-logo.png" alt="AI" className="w-4 h-4 object-contain opacity-70 group-hover:opacity-100 group-hover:scale-110 transition-all" />
-            </button>
-            <div className="h-4 w-px bg-gray-200 dark:bg-gray-700 mx-1"></div>
+            {showAI && (
+              <>
+                <button onMouseDown={(e) => e.preventDefault()} onClick={() => insertFormat('ai')} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors group" title="AI">
+                  <img src="/assets/ChttrixAI-logo.png" alt="AI" className="w-4 h-4 object-contain opacity-70 group-hover:opacity-100 group-hover:scale-110 transition-all" />
+                </button>
+                <div className="h-4 w-px bg-gray-200 dark:bg-gray-700 mx-1"></div>
+              </>
+            )}
             <button onMouseDown={(e) => e.preventDefault()} onClick={() => insertFormat('bold')} className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-all" title="Bold">
               <Bold size={15} />
             </button>
@@ -289,15 +295,17 @@ export default function FooterInput({
             </div>
 
             {/* Voice */}
-            <button
-              onClick={() => {
-                if (!blocked) setRecording(!recording);
-              }}
-              className={`p-1.5 rounded-lg transition-all ${recording ? "text-red-500 bg-red-50 dark:bg-red-900/30 animate-pulse" : "text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"}`}
-              title="Voice"
-            >
-              <Mic size={18} />
-            </button>
+            {showVoice && (
+              <button
+                onClick={() => {
+                  if (!blocked) setRecording(!recording);
+                }}
+                className={`p-1.5 rounded-lg transition-all ${recording ? "text-red-500 bg-red-50 dark:bg-red-900/30 animate-pulse" : "text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"}`}
+                title="Voice"
+              >
+                <Mic size={18} />
+              </button>
+            )}
 
             {/* Send */}
             <button

@@ -106,9 +106,6 @@ function MessageEvent({
                 selectMode={false}
                 selectedIds={new Set()}
                 toggleSelect={() => { }}
-                selectMode={false}
-                selectedIds={new Set()}
-                toggleSelect={() => { }}
                 openMsgMenuId={openMsgMenuId}
                 toggleMsgMenu={toggleMsgMenu}
                 formatTime={(ts) => new Date(ts).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
@@ -129,9 +126,6 @@ function MessageEvent({
     return (
         <ChannelMessageItem
             msg={enrichedMessage}
-            selectMode={false}
-            selectedIds={new Set()}
-            toggleSelect={() => { }}
             selectMode={false}
             selectedIds={new Set()}
             toggleSelect={() => { }}

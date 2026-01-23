@@ -5,7 +5,8 @@ import {
     Heading1, Heading2, Heading3,
     List, ListOrdered, Link, Code, Quote,
     AlignLeft, AlignCenter, AlignRight,
-    Undo, Redo, Type, Palette, Minus
+    Undo, Redo, Type, Palette, Minus,
+    FileText, WifiOff
 } from 'lucide-react';
 
 export default function CanvasTab({ tab, onSave, connected, socket, channelId, currentUserId }) {
@@ -117,7 +118,7 @@ export default function CanvasTab({ tab, onSave, connected, socket, channelId, c
     return (
         <div className="flex-1 flex flex-col bg-gradient-to-br from-gray-50 via-white to-blue-50/30 dark:from-gray-950 dark:via-gray-900 dark:to-blue-950/10 h-full">
             {/* Horizontal Toolbar */}
-            <div className="sticky top-0 z-10 bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border-b border-gray-200 dark:border-gray-800 shadow-sm">
+            <div className="sticky top-0 z-10 bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border-b border-gray-200 dark:border-gray-800 shadow-sm transition-all duration-300">
                 <div className="flex items-center justify-between px-4 py-2.5 overflow-x-auto no-scrollbar">
                     {/* Toolbar Buttons */}
                     <div className="flex items-center gap-0.5">
@@ -134,11 +135,10 @@ export default function CanvasTab({ tab, onSave, connected, socket, channelId, c
                                         text-gray-600 dark:text-gray-400 
                                         hover:text-blue-600 dark:hover:text-blue-400
                                         transition-all duration-200
-                                        disabled:opacity-30 disabled:cursor-not-allowed
                                         active:scale-95
                                     "
                                     title={btn.title}
-                                    disabled={!connected}
+                                // Removed disabled={!connected} to allow offline edits in optimistic UI
                                 >
                                     <btn.icon size={18} strokeWidth={2} />
                                 </button>
@@ -149,15 +149,16 @@ export default function CanvasTab({ tab, onSave, connected, socket, channelId, c
                     {/* Status Indicator */}
                     <div className="flex items-center gap-2 ml-4">
                         {!connected && (
-                            <span className="px-2.5 py-1 text-xs font-medium text-amber-700 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/30 rounded-full whitespace-nowrap">
+                            <span className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-amber-700 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/30 rounded-full whitespace-nowrap animate-pulse">
+                                <WifiOff size={12} />
                                 Offline
                             </span>
                         )}
                         <span className={`px-2.5 py-1 text-xs font-medium rounded-full whitespace-nowrap ${saving
-                                ? 'text-blue-700 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/30'
-                                : 'text-green-700 dark:text-green-400 bg-green-100 dark:bg-green-900/30'
+                            ? 'text-blue-700 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/30'
+                            : 'text-green-700 dark:text-green-400 bg-green-100 dark:bg-green-900/30'
                             }`}>
-                            {saving ? 'Syncing...' : 'Synced'}
+                            {saving ? 'Saving...' : 'Saved'}
                         </span>
                     </div>
                 </div>
@@ -167,57 +168,67 @@ export default function CanvasTab({ tab, onSave, connected, socket, channelId, c
             <div className="flex-1 overflow-y-auto">
                 <div className="px-4 py-6 md:px-8 md:py-10 max-w-4xl mx-auto">
                     {/* Canvas Paper */}
-                    <div className="bg-white dark:bg-gray-900 shadow-2xl rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden min-h-[calc(100vh-200px)]">
+                    <div className="bg-white dark:bg-gray-900 shadow-xl shadow-blue-900/5 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden min-h-[calc(100vh-200px)] relative group">
+
                         {/* Header */}
-                        <div className="px-8 pt-8 pb-6 border-b border-gray-100 dark:border-gray-800">
-                            <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400">
+                        <div className="px-10 pt-10 pb-4">
+                            <h1 className="text-4xl font-extrabold text-gray-900 dark:text-gray-100 tracking-tight leading-tight">
                                 {tab.name}
                             </h1>
+                            <p className="text-gray-400 dark:text-gray-500 text-sm mt-2 font-medium flex items-center gap-2">
+                                <FileText size={14} />
+                                Shared Document Canvas
+                            </p>
                         </div>
 
                         {/* Editor */}
-                        <div className="p-8 md:p-12 relative">
+                        <div className="px-10 pb-12 relative min-h-[500px]">
                             <ContentEditable
                                 innerRef={editorRef}
                                 html={content}
-                                disabled={!connected}
+                                disabled={false} // Always allow editing
                                 onChange={handleChange}
                                 className="
                                     prose prose-lg dark:prose-invert max-w-none 
                                     focus:outline-none 
-                                    prose-headings:font-bold 
-                                    prose-h1:text-4xl prose-h1:mb-4 prose-h1:mt-8 first:prose-h1:mt-0
-                                    prose-h2:text-3xl prose-h2:mb-3 prose-h2:mt-6
-                                    prose-h3:text-2xl prose-h3:mb-2 prose-h3:mt-4
-                                    prose-p:text-gray-700 dark:prose-p:text-gray-300 prose-p:leading-relaxed prose-p:mb-4
+                                    prose-headings:font-bold prose-headings:tracking-tight
+                                    prose-h1:text-4xl prose-h1:mb-6 prose-h1:mt-8 first:prose-h1:mt-0
+                                    prose-h2:text-3xl prose-h2:mb-4 prose-h2:mt-8 prose-h2:text-gray-800 dark:prose-h2:text-gray-100
+                                    prose-h3:text-2xl prose-h3:mb-3 prose-h3:mt-6
+                                    prose-p:text-gray-600 dark:prose-p:text-gray-300 prose-p:leading-relaxed prose-p:mb-4
                                     prose-a:text-blue-600 dark:prose-a:text-blue-400 prose-a:no-underline hover:prose-a:underline
-                                    prose-strong:text-gray-900 dark:prose-strong:text-gray-100
-                                    prose-code:bg-gray-100 dark:prose-code:bg-gray-800 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-sm
-                                    prose-pre:bg-gray-900 dark:prose-pre:bg-gray-950 prose-pre:text-gray-100 prose-pre:p-4 prose-pre:rounded-lg
-                                    prose-blockquote:border-l-4 prose-blockquote:border-blue-500 prose-blockquote:bg-blue-50/50 dark:prose-blockquote:bg-blue-950/20 prose-blockquote:py-4 prose-blockquote:px-6 prose-blockquote:my-4 prose-blockquote:not-italic
-                                    prose-ul:my-4 prose-ol:my-4
-                                    prose-li:text-gray-700 dark:prose-li:text-gray-300 prose-li:my-1
-                                    prose-hr:border-gray-300 dark:prose-hr:border-gray-700 prose-hr:my-8
-                                    min-h-[500px]
+                                    prose-strong:text-gray-900 dark:prose-strong:text-gray-100 prose-strong:font-bold
+                                    prose-code:bg-gray-100 dark:prose-code:bg-gray-800 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-indigo-600 dark:prose-code:text-indigo-400 prose-code:font-mono prose-code:text-sm
+                                    prose-pre:bg-gray-900 dark:prose-pre:bg-gray-950 prose-pre:text-gray-100 prose-pre:p-4 prose-pre:rounded-xl prose-pre:shadow-lg
+                                    prose-blockquote:border-l-4 prose-blockquote:border-blue-500 prose-blockquote:bg-blue-50/50 dark:prose-blockquote:bg-blue-900/10 prose-blockquote:py-3 prose-blockquote:px-5 prose-blockquote:my-6 prose-blockquote:rounded-r-lg prose-blockquote:not-italic
+                                    prose-ul:my-4 prose-ul:list-disc prose-ul:pl-6
+                                    prose-ol:my-4 prose-ol:list-decimal prose-ol:pl-6
+                                    prose-li:text-gray-700 dark:prose-li:text-gray-300 prose-li:my-1.5 prose-li:pl-1
+                                    prose-hr:border-gray-200 dark:prose-hr:border-gray-800 prose-hr:my-8
+                                    selection:bg-blue-100 dark:selection:bg-blue-900/50 selection:text-blue-900 dark:selection:text-blue-100
                                 "
-                                data-placeholder="✨ Start writing your canvas..."
+                                data-placeholder="Type '/' to browse commands..."
                             />
 
-                            {/* Empty State */}
+                            {/* Empty State / Placeholder */}
                             {!content && (
-                                <div className="absolute top-1/3 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none">
-                                    <Palette size={64} className="mx-auto mb-4 text-gray-200 dark:text-gray-800" />
-                                    <p className="text-gray-400 dark:text-gray-600 text-xl font-medium">Start creating...</p>
-                                    <p className="text-gray-300 dark:text-gray-700 text-sm mt-2">Use the toolbar above to format</p>
+                                <div className="absolute top-20 left-10 right-10 pointer-events-none opacity-40">
+                                    <p className="text-2xl font-medium text-gray-300 dark:text-gray-600">Start writing your document...</p>
+                                    <p className="text-sm text-gray-300 dark:text-gray-600 mt-2">Use the toolbar above to format text, add lists, or insert code blocks.</p>
                                 </div>
                             )}
                         </div>
                     </div>
 
-                    {/* Tips */}
-                    <div className="mt-6 text-center">
-                        <p className="text-xs text-gray-400 dark:text-gray-600">
-                            💡 <span className="font-medium">Tip:</span> Use <kbd className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 rounded text-xs">Ctrl+B</kbd> for bold, <kbd className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 rounded text-xs">Ctrl+I</kbd> for italic
+                    {/* Footer Tips */}
+                    <div className="mt-8 text-center pb-8 opacity-60 hover:opacity-100 transition-opacity duration-500">
+                        <p className="text-xs text-gray-400 dark:text-gray-500 font-medium">
+                            <span className="inline-flex items-center gap-1.5">
+                                <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
+                                Real-time collaboration enabled
+                            </span>
+                            <span className="mx-3 text-gray-300 dark:text-gray-700">|</span>
+                            Markdown shortcuts supported
                         </p>
                     </div>
                 </div>

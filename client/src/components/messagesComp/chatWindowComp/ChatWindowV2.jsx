@@ -21,6 +21,7 @@ import ThreadPanel from './ThreadPanel.jsx';
 import ChannelTabs from './tabs/ChannelTabs.jsx';
 import CanvasTab from './tabs/CanvasTab.jsx';
 import TasksTab from './tabs/TasksTab.jsx';
+import ThreadsTab from './tabs/ThreadsTab.jsx';
 import PollCreationModal from './modals/PollCreationModal.jsx';
 import MemberListModal from './modals/MemberListModal.jsx';
 import ContactInfoModal from './modals/contactInfoModal.jsx';
@@ -29,6 +30,7 @@ import { useAuth } from '../../../contexts/AuthContext';
 import { useSocket } from '../../../contexts/SocketContext';
 import api from '../../../services/api';
 import { useToast } from '../../../contexts/ToastContext';
+import { FileText, Layout, Plus, Trash2, MoreVertical, Search, Grid, List as ListIcon, Edit2, Share2 } from 'lucide-react';
 
 import './chatWindow.css';
 
@@ -44,10 +46,13 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
     const { user } = useAuth();
     const { socket: rawSocket } = useSocket(); // Get raw socket for ThreadPanel
     const currentUserId = user?.sub || user?._id;
+    const { showToast } = useToast();
 
     // Conversation state
     const [activeThread, setActiveThread] = useState(null);
     const [replyingTo, setReplyingTo] = useState(null);
+    const [typingUsers, setTypingUsers] = useState([]);
+    const [recording, setRecording] = useState(false);
 
     // Canvas/Tabs state
     const [activeTab, setActiveTab] = useState('chat');
@@ -70,9 +75,10 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
     const [newMessage, setNewMessage] = useState('');
     const [showAttach, setShowAttach] = useState(false);
     const [showEmoji, setShowEmoji] = useState(false);
-    const [recording, setRecording] = useState(false);
-    const [typingUsers, setTypingUsers] = useState([]);
-    const { showToast } = useToast();
+
+    // Dashboard State
+    const [dashboardView, setDashboardView] = useState('grid');
+    const [dashboardSearch, setDashboardSearch] = useState('');
 
     // Extract conversation details
     const conversationId = chat?.id || chat?._id;
@@ -387,16 +393,16 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
             const res = await api.post(`/api/channels/${chat.id}/tabs`, { name, type: 'canvas' });
 
             setTabs(prev => prev.filter(t => t._id !== tempId));
-            
+
             // Add the real tab from response to state if it's not already there (socket might have added it)
             if (res.data.tab) {
                 setTabs(prev => {
-                   if (prev.find(t => t._id === res.data.tab._id)) return prev;
-                   return [...prev, res.data.tab];
+                    if (prev.find(t => t._id === res.data.tab._id)) return prev;
+                    return [...prev, res.data.tab];
                 });
                 setActiveTab(res.data.tab._id);
             }
-            
+
             showToast(`Canvas "${name}" created`, 'success');
         } catch (err) {
             console.error('Add tab error:', err);
@@ -434,6 +440,12 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
             console.error('Save canvas error:', err);
         }
     }, [chat]);
+
+    const handleShareTab = useCallback((tabId) => {
+        const url = `${window.location.origin}/canvas/${tabId}`;
+        navigator.clipboard.writeText(url);
+        showToast('Link copied to clipboard', 'success');
+    }, [showToast]);
 
     // Poll handler
     const handleCreatePoll = useCallback(async (pollData) => {
@@ -560,25 +572,124 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
                     </>
                 ) : activeTab === 'tasks' ? (
                     // Tasks Tab
-                    <TasksTab 
+                    <TasksTab
                         channelId={chat.id}
                         channelName={chat.name}
                         currentUserId={currentUserId}
                         socket={rawSocket}
                     />
+                ) : activeTab === 'threads' ? (
+                    // Threads Tab
+                    <ThreadsTab
+                        channelId={chat.id}
+                        currentUserId={currentUserId}
+                        socket={rawSocket}
+                    />
                 ) : activeTab === 'canvas' ? (
-                    // Default Canvas Tab (Placeholder or Main Canvas Dashboard)
-                    <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', padding: '2rem' }}>
-                        <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-full mb-4">
-                            <svg className="w-12 h-12 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                            </svg>
+                    // Default Canvas Tab (Main Canvas Dashboard)
+                    <div className="flex-1 bg-gray-50 dark:bg-gray-900 overflow-y-auto p-8">
+                        <div className="max-w-5xl mx-auto w-full">
+                            {/* Dashboard Header */}
+                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
+                                <div>
+                                    <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2 tracking-tight">Canvas Dashboard</h1>
+                                    <p className="text-gray-500 dark:text-gray-400 font-medium">
+                                        Manage your team's whiteboards and documents
+                                    </p>
+                                </div>
+
+                                <div className="flex items-center gap-3 bg-white dark:bg-gray-800 p-1.5 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
+                                    <div className="relative group">
+                                        <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+                                            <Search size={16} className="text-gray-400 group-focus-within:text-blue-500 transition-colors" />
+                                        </div>
+                                        <input
+                                            type="text"
+                                            placeholder="Search canvases..."
+                                            value={dashboardSearch}
+                                            onChange={(e) => setDashboardSearch(e.target.value)}
+                                            className="pl-10 pr-4 py-2 w-48 md:w-64 bg-transparent text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none"
+                                        />
+                                    </div>
+                                    <div className="h-6 w-px bg-gray-200 dark:bg-gray-700 mx-1"></div>
+                                    <button
+                                        onClick={() => setDashboardView('grid')}
+                                        className={`p - 2 rounded - lg transition - all ${dashboardView === 'grid' ? 'bg-gray-100 dark:bg-gray-700 text-blue-600 dark:text-blue-400' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'} `}
+                                        title="Grid View"
+                                    >
+                                        <Grid size={18} />
+                                    </button>
+                                    <button
+                                        onClick={() => setDashboardView('list')}
+                                        className={`p - 2 rounded - lg transition - all ${dashboardView === 'list' ? 'bg-gray-100 dark:bg-gray-700 text-blue-600 dark:text-blue-400' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'} `}
+                                        title="List View"
+                                    >
+                                        <ListIcon size={18} />
+                                    </button>
+                                </div>
+                            </div>
+
+                            {tabs.length === 0 ? (
+                                <div className="flex flex-col items-center justify-center p-16 bg-white dark:bg-gray-800 rounded-3xl border border-dashed border-gray-200 dark:border-gray-700 min-h-[500px] shadow-sm">
+                                    <div className="p-8 bg-blue-50 dark:bg-blue-900/10 rounded-full mb-8 animate-pulse">
+                                        <Layout size={64} className="text-blue-500/80" />
+                                    </div>
+                                    <h3 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-3">No canvases yet</h3>
+                                    <p className="text-gray-500 dark:text-gray-400 text-center max-w-md mb-10 text-lg">
+                                        Create a blank canvas to brainstorm, sketch, or plan projects with your team.
+                                    </p>
+                                    <button
+                                        onClick={() => handleAddTab(`Untitled ${tabs.length + 1} `)}
+                                        className="group flex items-center gap-3 px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-semibold transition-all shadow-xl hover:shadow-blue-600/30 hover:-translate-y-1"
+                                    >
+                                        <Plus size={22} className="group-hover:rotate-90 transition-transform duration-300" />
+                                        Create New Canvas
+                                    </button>
+                                </div>
+                            ) : (
+                                <div className={dashboardView === 'grid' ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6" : "flex flex-col gap-3"}>
+
+                                    {/* Create New Row (List Only) */}
+                                    {dashboardView === 'list' && (
+                                        <button
+                                            onClick={() => handleAddTab(`Untitled ${tabs.length + 1} `)}
+                                            className="flex items-center gap-4 p-4 bg-white dark:bg-gray-800 rounded-xl border border-dashed border-gray-300 dark:border-gray-700 hover:border-blue-500 text-gray-500 hover:text-blue-600 transition-colors group"
+                                        >
+                                            <div className="p-1.5 bg-gray-100 dark:bg-gray-700 rounded-lg group-hover:bg-blue-50 dark:group-hover:bg-blue-900/20">
+                                                <Plus size={20} />
+                                            </div>
+                                            <span className="font-semibold">Create New Canvas</span>
+                                        </button>
+                                    )}
+
+                                    {/* Filtered Tabs */}
+                                    {tabs.filter(t => t.name.toLowerCase().includes(dashboardSearch.toLowerCase())).map((tab) => (
+                                        <CanvasCard
+                                            key={tab._id}
+                                            tab={tab}
+                                            view={dashboardView}
+                                            onClick={() => setActiveTab(tab._id)}
+                                            onDelete={(id) => handleDeleteTab(id)}
+                                            onRename={(id, name) => handleRenameTab(id, name)}
+                                            onShare={(id) => handleShareTab(id)}
+                                        />
+                                    ))}
+
+                                    {/* Create New Card (Grid Only) - Moved to End */}
+                                    {dashboardView === 'grid' && (
+                                        <button
+                                            onClick={() => handleAddTab(`Untitled ${tabs.length + 1} `)}
+                                            className="flex flex-col items-center justify-center p-8 bg-gray-100/50 dark:bg-gray-800/50 rounded-2xl border-2 border-dashed border-gray-300 dark:border-gray-700 hover:border-blue-500 dark:hover:border-blue-500 hover:bg-white dark:hover:bg-gray-800 transition-all group min-h-[240px]"
+                                        >
+                                            <div className="p-4 bg-white dark:bg-gray-800 rounded-full mb-4 shadow-sm group-hover:shadow-md group-hover:text-blue-600 dark:group-hover:text-blue-400 group-hover:scale-110 transition-all">
+                                                <Plus size={32} />
+                                            </div>
+                                            <span className="font-bold text-gray-500 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 text-lg">Create New</span>
+                                        </button>
+                                    )}
+                                </div>
+                            )}
                         </div>
-                        <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">Canvas Dashboard</h3>
-                        <p className="text-gray-500 dark:text-gray-400 text-center max-w-md">
-                            Create a new canvas to start collaborating visually with your team.
-                            Click the + button in the tab bar to create one.
-                        </p>
                     </div>
                 ) : (
                     // Canvas Tab View (Dynamic Tabs)
@@ -672,6 +783,214 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
                     initialTab={showChannelManagement}
                 />
             )}
+        </div>
+    );
+}
+
+// Helper Component for Canvas Card (extracted for cleanliness)
+function CanvasCard({ tab, view, onClick, onDelete, onRename, onShare }) {
+    const [showMenu, setShowMenu] = useState(false);
+    const [isRenaming, setIsRenaming] = useState(false);
+    const [renameValue, setRenameValue] = useState(tab.name);
+    const menuRef = React.useRef(null);
+    const inputRef = React.useRef(null);
+
+    useEffect(() => {
+        const handleClickOutside = (e) => {
+            if (menuRef.current && !menuRef.current.contains(e.target)) {
+                setShowMenu(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    useEffect(() => {
+        if (isRenaming && inputRef.current) {
+            inputRef.current.focus();
+        }
+    }, [isRenaming]);
+
+    const handleSaveRename = (e) => {
+        e.stopPropagation();
+        if (renameValue.trim()) {
+            onRename(tab._id, renameValue.trim());
+        } else {
+            setRenameValue(tab.name); // Revert if empty
+        }
+        setIsRenaming(false);
+    };
+
+    const handleKeyDown = (e) => {
+        if (e.key === 'Enter') handleSaveRename(e);
+        if (e.key === 'Escape') {
+            setIsRenaming(false);
+            setRenameValue(tab.name);
+        }
+    };
+
+    if (view === 'list') {
+        return (
+            <div
+                onClick={onClick}
+                className="group flex items-center justify-between p-4 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-700 hover:shadow-md transition-all cursor-pointer"
+            >
+                <div className="flex items-center gap-4">
+                    <div className="p-2 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg text-indigo-600 dark:text-indigo-400">
+                        <FileText size={20} />
+                    </div>
+                    {isRenaming ? (
+                        <input
+                            ref={inputRef}
+                            value={renameValue}
+                            onChange={(e) => setRenameValue(e.target.value)}
+                            onBlur={handleSaveRename}
+                            onKeyDown={handleKeyDown}
+                            onClick={(e) => e.stopPropagation()}
+                            className="bg-transparent border-b border-blue-500 focus:outline-none text-gray-900 dark:text-gray-100 font-medium w-64"
+                        />
+                    ) : (
+                        <div>
+                            <h3 className="text-gray-900 dark:text-gray-100 font-medium">{tab.name}</h3>
+                            <p className="text-xs text-gray-500">Edited recently</p>
+                        </div>
+                    )}
+                </div>
+
+                <div className="flex items-center gap-2" ref={menuRef}>
+                    <div className="relative">
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setShowMenu(!showMenu);
+                            }}
+                            className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                        >
+                            <MoreVertical size={18} />
+                        </button>
+                        {showMenu && (
+                            <div className="absolute right-0 top-full mt-1 w-48 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-100 dark:border-gray-700 z-[60] overflow-hidden py-1">
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        onShare(tab._id);
+                                        setShowMenu(false);
+                                    }}
+                                    className="w-full text-left px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2"
+                                >
+                                    <Share2 size={14} /> Share
+                                </button>
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setIsRenaming(true);
+                                        setShowMenu(false);
+                                    }}
+                                    className="w-full text-left px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2"
+                                >
+                                    <Edit2 size={14} /> Rename
+                                </button>
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        onDelete(tab._id);
+                                    }}
+                                    className="w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2"
+                                >
+                                    <Trash2 size={14} /> Delete
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    // Grid View
+    return (
+        <div
+            onClick={onClick}
+            className="group relative flex flex-col p-6 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all cursor-pointer min-h-[240px]"
+        >
+            {/* Top Bar */}
+            <div className="flex items-start justify-between mb-6 z-10">
+                <div className="p-3 bg-gradient-to-br from-indigo-50 to-blue-50 dark:from-indigo-900/30 dark:to-blue-900/10 rounded-2xl text-indigo-600 dark:text-indigo-400 shadow-sm">
+                    <FileText size={28} />
+                </div>
+
+                <div className="relative" ref={menuRef}>
+                    <button
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            setShowMenu(!showMenu);
+                        }}
+                        className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-xl transition-all opacity-0 group-hover:opacity-100"
+                    >
+                        <MoreVertical size={20} />
+                    </button>
+                    {showMenu && (
+                        <div className="absolute right-0 top-full mt-1 w-48 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-100 dark:border-gray-700 z-[60] overflow-hidden py-1">
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    onShare(tab._id);
+                                    setShowMenu(false);
+                                }}
+                                className="w-full text-left px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2"
+                            >
+                                <Share2 size={14} /> Share
+                            </button>
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setIsRenaming(true);
+                                    setShowMenu(false);
+                                }}
+                                className="w-full text-left px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2"
+                            >
+                                <Edit2 size={14} /> Rename
+                            </button>
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    onDelete(tab._id);
+                                }}
+                                className="w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2"
+                            >
+                                <Trash2 size={14} /> Delete
+                            </button>
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            {/* Visual Preview Placeholder */}
+            <div className="absolute inset-0 bg-gradient-to-b from-transparent to-white/5 dark:to-black/20 pointer-events-none rounded-2xl" />
+
+            {/* Bottom Content */}
+            <div className="mt-auto relative z-10">
+                {isRenaming ? (
+                    <input
+                        ref={inputRef}
+                        value={renameValue}
+                        onChange={(e) => setRenameValue(e.target.value)}
+                        onBlur={handleSaveRename}
+                        onKeyDown={handleKeyDown}
+                        onClick={(e) => e.stopPropagation()}
+                        className="bg-transparent border-b-2 border-blue-500 focus:outline-none text-gray-900 dark:text-gray-100 font-bold text-xl w-full mb-1"
+                    />
+                ) : (
+                    <h3 className="font-bold text-xl text-gray-900 dark:text-gray-100 mb-2 truncate tracking-tight group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                        {tab.name}
+                    </h3>
+                )}
+
+                <div className="flex items-center justify-between text-xs font-medium text-gray-400 dark:text-gray-500">
+                    <span className="uppercase tracking-wider">Canvas</span>
+                    <span>Just now</span>
+                </div>
+            </div>
         </div>
     );
 }
