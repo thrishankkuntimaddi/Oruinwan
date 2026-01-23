@@ -20,6 +20,7 @@ import FooterInput from './footer/footerInput.jsx';
 import ThreadPanel from './ThreadPanel.jsx';
 import ChannelTabs from './tabs/ChannelTabs.jsx';
 import CanvasTab from './tabs/CanvasTab.jsx';
+import TasksTab from './tabs/TasksTab.jsx';
 import PollCreationModal from './modals/PollCreationModal.jsx';
 import MemberListModal from './modals/MemberListModal.jsx';
 import ContactInfoModal from './modals/contactInfoModal.jsx';
@@ -386,7 +387,16 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
             const res = await api.post(`/api/channels/${chat.id}/tabs`, { name, type: 'canvas' });
 
             setTabs(prev => prev.filter(t => t._id !== tempId));
-            setActiveTab(res.data.tab._id);
+            
+            // Add the real tab from response to state if it's not already there (socket might have added it)
+            if (res.data.tab) {
+                setTabs(prev => {
+                   if (prev.find(t => t._id === res.data.tab._id)) return prev;
+                   return [...prev, res.data.tab];
+                });
+                setActiveTab(res.data.tab._id);
+            }
+            
             showToast(`Canvas "${name}" created`, 'success');
         } catch (err) {
             console.error('Add tab error:', err);
@@ -548,12 +558,38 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
                             />
                         </div>
                     </>
+                ) : activeTab === 'tasks' ? (
+                    // Tasks Tab
+                    <TasksTab 
+                        channelId={chat.id}
+                        channelName={chat.name}
+                        currentUserId={currentUserId}
+                        socket={rawSocket}
+                    />
+                ) : activeTab === 'canvas' ? (
+                    // Default Canvas Tab (Placeholder or Main Canvas Dashboard)
+                    <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', padding: '2rem' }}>
+                        <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-full mb-4">
+                            <svg className="w-12 h-12 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                        </div>
+                        <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">Canvas Dashboard</h3>
+                        <p className="text-gray-500 dark:text-gray-400 text-center max-w-md">
+                            Create a new canvas to start collaborating visually with your team.
+                            Click the + button in the tab bar to create one.
+                        </p>
+                    </div>
                 ) : (
-                    // Canvas Tab View
+                    // Canvas Tab View (Dynamic Tabs)
                     tabs.find(t => t._id === activeTab) ? (
                         <CanvasTab
                             tab={tabs.find(t => t._id === activeTab)}
                             onSave={(data) => handleSaveCanvas(activeTab, data)}
+                            connected={socket.connected}
+                            socket={rawSocket}
+                            channelId={chat.id}
+                            currentUserId={currentUserId}
                         />
                     ) : (
                         <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
