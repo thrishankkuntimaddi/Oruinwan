@@ -417,6 +417,7 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
             await api.delete(`/api/channels/${chat.id}/tabs/${tabId}`);
             setTabs(prev => prev.filter(t => t._id !== tabId));
             if (activeTab === tabId) setActiveTab('chat');
+            showToast('Canvas deleted successfully', 'success');
         } catch (err) {
             console.error('Delete tab error:', err);
             showToast('Failed to delete tab', 'error');
@@ -894,6 +895,7 @@ function CanvasCard({ tab, view, onClick, onDelete, onRename, onShare }) {
                                     onClick={(e) => {
                                         e.stopPropagation();
                                         onDelete(tab._id);
+                                        setShowMenu(false);
                                     }}
                                     className="w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2"
                                 >
