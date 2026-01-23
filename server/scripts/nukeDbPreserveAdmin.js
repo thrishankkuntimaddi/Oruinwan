@@ -20,6 +20,7 @@ const Invite = require("../models/Invite");
 const AuditLog = require("../models/AuditLog");
 const Ticket = require("../models/Ticket");
 const Broadcast = require("../models/Broadcast");
+const ConversationKey = require("../models/ConversationKey");
 
 const CHTTRIX_ADMIN_EMAIL = process.env.CHTTRIX_ADMIN_EMAIL || "chttrix-admin@chttrix.com";
 
@@ -80,7 +81,8 @@ async function nukeDbPreserveAdmin() {
             Ticket.deleteMany({}),
             Broadcast.deleteMany({}),
             UserWorkspaceKey.deleteMany({}),
-            WorkspaceKey.deleteMany({})
+            WorkspaceKey.deleteMany({}),
+            ConversationKey.deleteMany({})
         ]);
 
         console.log(`✅ Companies: Deleted ${results[0].deletedCount}`);
@@ -98,6 +100,7 @@ async function nukeDbPreserveAdmin() {
         console.log(`✅ Broadcasts: Deleted ${results[12].deletedCount}`);
         console.log(`✅ User Workspace Keys: Deleted ${results[13].deletedCount}`);
         console.log(`✅ Workspace Master Keys: Deleted ${results[14].deletedCount}`);
+        console.log(`✅ Conversation Keys: Deleted ${results[15].deletedCount}`);
 
         console.log("\n" + "=".repeat(70));
         console.log("✅ DATABASE NUKE COMPLETE");

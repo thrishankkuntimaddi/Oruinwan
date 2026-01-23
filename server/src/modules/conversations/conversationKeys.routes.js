@@ -21,6 +21,9 @@ router.post('/:id/keys', conversationKeysController.storeConversationKeys);
 // Get user's encrypted key for a conversation
 router.get('/:id/keys', conversationKeysController.getConversationKey);
 
+// Add encrypted key for a user (client-mediated distribution)
+router.post('/:conversationId/keys/add-user', conversationKeysController.addUserKey);
+
 // Get all conversation keys in workspace
 router.get('/workspace/:workspaceId/keys', conversationKeysController.getUserWorkspaceKeys);
 

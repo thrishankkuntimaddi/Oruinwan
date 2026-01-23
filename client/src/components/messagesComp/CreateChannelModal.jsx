@@ -102,15 +102,18 @@ export default function CreateChannelModal({ onClose, onCreated, workspaceId }) 
                     console.log('🔐 [E2EE] Generating keys for', allParticipantIds.length, 'participants');
 
                     // Generate and encrypt conversation key for all participants
-                    const { conversationKey, encryptedKeys } =
-                        await conversationKeyService.createAndDistributeConversationKey(allParticipantIds);
+                    const { conversationKey, encryptedKeys, workspaceEncryptedKey, workspaceKeyIv, workspaceKeyAuthTag } =
+                        await conversationKeyService.createAndDistributeConversationKey(allParticipantIds, workspaceId);
 
                     // Store encrypted keys on server
                     await conversationKeyService.storeConversationKeysOnServer(
                         channel._id,
                         'channel',
                         workspaceId,
-                        encryptedKeys
+                        encryptedKeys,
+                        workspaceEncryptedKey,
+                        workspaceKeyIv,
+                        workspaceKeyAuthTag
                     );
 
                     console.log('✅ [E2EE] Channel created with end-to-end encryption');

@@ -22,7 +22,7 @@ const { handleError } = require('../../../utils/responseHelpers');
 exports.storeConversationKeys = async (req, res) => {
     try {
         const { id: conversationId } = req.params;
-        const { conversationType, workspaceId, encryptedKeys } = req.body;
+        const { conversationType, workspaceId, encryptedKeys, workspaceEncryptedKey, workspaceKeyIv, workspaceKeyAuthTag } = req.body;
         const createdBy = req.user.sub;
 
         // Validation
@@ -59,7 +59,10 @@ exports.storeConversationKeys = async (req, res) => {
             conversationType,
             workspaceId,
             createdBy,
-            encryptedKeys
+            encryptedKeys,
+            workspaceEncryptedKey,
+            workspaceKeyIv,
+            workspaceKeyAuthTag
         });
 
         return res.status(201).json({
@@ -117,6 +120,53 @@ exports.getConversationKey = async (req, res) => {
         return res.json(encryptedKeyData);
     } catch (err) {
         return handleError(res, err, 'GET CONVERSATION KEY ERROR');
+    }
+};
+
+/**
+ * Add encrypted key for a specific user (client-mediated distribution)
+ * POST /api/v2/conversations/:conversationId/keys/add-user
+ */
+exports.addUserKey = async (req, res) => {
+    try {
+        const { conversationId } = req.params;
+        const { userId, encryptedKey, ephemeralPublicKey, algorithm, conversationType } = req.body;
+        const requestingUserId = req.user.sub || req.user.userId;
+
+        console.log(`🔐 Adding encrypted key for user ${userId} in ${conversationType}:${conversationId}`);
+
+        // Verify requesting user has access (can only distribute if you have the key)
+        const requestingUserKey = await service.getUserConversationKey(
+            conversationId,
+            conversationType,
+            requestingUserId
+        );
+
+        if (!requestingUserKey) {
+            return res.status(403).json({
+                error: 'Cannot distribute key - you do not have access to this conversation'
+            });
+        }
+
+        // Add encrypted key for the new user
+        const added = await service.addEncryptedKeyForUser(
+            conversationId,
+            conversationType,
+            userId,
+            encryptedKey,
+            ephemeralPublicKey,
+            algorithm
+        );
+
+        if (added) {
+            console.log(`✅ Added encrypted key for user ${userId}`);
+            res.status(200).json({ success: true });
+        } else {
+            res.status(400).json({ error: 'Failed to add encrypted key' });
+        }
+    } catch (error) {
+        console.error('ADD USER KEY ERROR:', error);
+        res.status(500).json({ error: 'Failed to add user key' });
     }
 };
 

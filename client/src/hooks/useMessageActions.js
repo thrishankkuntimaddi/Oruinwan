@@ -1,7 +1,7 @@
 // client/src/hooks/useMessageActions.js
 // Centralize all message actions (send, react, delete, pin, forward)
 
-import { useCallback } from 'react';
+import { useCallback, useRef, useEffect } from 'react';
 import { useSocket } from '../contexts/SocketContext';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
@@ -12,11 +12,20 @@ import { encryptMessageForSending } from '../services/messageEncryptionService';
  * @param {string} conversationId - Channel ID or DM Session ID
  * @param {string} conversationType - "channel" | "dm"
  * @param {string} workspaceId - Workspace ID (for DMs)
+ * @param {Array} channelMembers - Array of channel members (reactive)
  * @returns {object} Message action methods
  */
 export function useMessageActions(conversationId, conversationType, workspaceId = null, channelMembers = []) {
     const { socket } = useSocket();
     const { user } = useAuth();
+
+    // 🔧 FIX: Use ref to store latest channelMembers (avoid stale closure)
+    const channelMembersRef = useRef(channelMembers);
+
+    // Update ref whenever channelMembers changes
+    useEffect(() => {
+        channelMembersRef.current = channelMembers;
+    }, [channelMembers]);
 
     // Generate temporary ID for optimistic UI
     const generateTempId = useCallback(() => {
@@ -27,6 +36,7 @@ export function useMessageActions(conversationId, conversationType, workspaceId 
      * 🔐 LAZY E2EE: Ensure conversation key exists before sending message
      * Implements Safeguard #1 (single-writer) and Safeguard #2 (non-blocking)
      * 
+     *
      * @param {string} conversationId - Channel ID or DM Session ID
      * @param {string} conversationType - "channel" | "dm"
      * @param {string} workspaceId - Workspace ID
@@ -43,37 +53,60 @@ export function useMessageActions(conversationId, conversationType, workspaceId 
         let key = await conversationKeyService.getConversationKey(conversationId, conversationType);
 
         if (!key) {
-            console.log('🔐 [Lazy E2EE] No conversation key found - generating now...');
-
+            // ✅ Key doesn't exist - could be NEW channel or existing channel we don't have access to
+            // Check if keys exist on server for this conversation
             try {
-                // Generate key for all participants
-                const keyData = await conversationKeyService.createAndDistributeConversationKey(participantUserIds);
+                const checkResponse = await api.get(`/api/v2/conversations/${conversationId}/keys/exists?type=${conversationType}`);
+                const keysExistOnServer = checkResponse?.data?.exists;
 
-                // 🔒 SAFEGUARD #1: Try to store on server (first write wins)
+                if (keysExistOnServer) {
+                    // ❌ Keys exist on server but we don't have them
+                    // This means we're a NEW JOINER to EXISTING encrypted channel
+                    // Do NOT generate new key - wait for distribution
+                    console.error('❌ [Lazy E2EE] Channel is encrypted but you don\'t have the key yet');
+                    console.error('❌ Waiting for existing member to distribute key...');
+                    throw new Error('Conversation encryption not ready. Waiting for secure key exchange...');
+                } else {
+                    // ✅ No keys on server - this is a BRAND NEW conversation
+                    // Safe to generate keys
+                    console.log('🔐 [Lazy E2EE] New conversation - generating keys...');
+
+                    const keyData = await conversationKeyService.createAndDistributeConversationKey(participantUserIds, workspaceId);
+
+                    await conversationKeyService.storeConversationKeysOnServer(
+                        conversationId,
+                        conversationType,
+                        workspaceId,
+                        keyData.encryptedKeys,
+                        keyData.workspaceEncryptedKey,
+                        keyData.workspaceKeyIv,
+                        keyData.workspaceKeyAuthTag
+                    );
+
+                    console.log('✅ [Lazy E2EE] Conversation key generated and stored');
+                    key = keyData.conversationKey;
+                }
+            } catch (checkError) {
+                if (checkError.message?.includes('not ready') || checkError.message?.includes('Waiting for')) {
+                    throw checkError;
+                }
+                // If check fails, assume new conversation (fallback)
+                console.warn('⚠️ Could not check key existence, assuming new conversation');
+                const keyData = await conversationKeyService.createAndDistributeConversationKey(participantUserIds, workspaceId);
                 await conversationKeyService.storeConversationKeysOnServer(
                     conversationId,
                     conversationType,
                     workspaceId,
-                    keyData.encryptedKeys
+                    keyData.encryptedKeys,
+                    keyData.workspaceEncryptedKey,
+                    keyData.workspaceKeyIv,
+                    keyData.workspaceKeyAuthTag
                 );
-
-                console.log('✅ [Lazy E2EE] Conversation key generated and stored');
                 key = keyData.conversationKey;
-
-            } catch (storeError) {
-                // 🔄 SAFEGUARD #1 RETRY: If 409 Conflict, another client won the race
-                if (storeError.response?.status === 409) {
-                    console.log('🔄 [Lazy E2EE] Key already exists (race condition resolved) - fetching...');
-                    key = await conversationKeyService.fetchAndDecryptConversationKey(conversationId, conversationType);
-                } else {
-                    // Re-throw for Safeguard #2 to handle
-                    throw storeError;
-                }
             }
-        } else {
-            console.log('✅ [Lazy E2EE] Conversation key already exists (using cached)');
         }
 
+        console.log('✅ [Lazy E2EE] Conversation key ready');
         return key;
     }, []);
 
@@ -122,9 +155,12 @@ export function useMessageActions(conversationId, conversationType, workspaceId 
                 // 🔧 FIX #1: Extract real user IDs from channel members
                 let participantUserIds = [];
 
-                if (conversationType === 'channel' && channelMembers && channelMembers.length > 0) {
+                // 🔧 FIX: Use ref to get latest channel members (avoid stale closure)
+                const latestChannelMembers = channelMembersRef.current;
+
+                if (conversationType === 'channel' && latestChannelMembers && latestChannelMembers.length > 0) {
                     // Extract user IDs from channel members
-                    participantUserIds = channelMembers
+                    participantUserIds = latestChannelMembers
                         .map(m => m.userId || m.user?._id || m.user)
                         .filter(id => id); // Remove any undefined/null values
 
@@ -250,7 +286,7 @@ export function useMessageActions(conversationId, conversationType, workspaceId 
                 }
             };
         }
-    }, [conversationId, conversationType, workspaceId, user, socket, generateTempId]);
+    }, [conversationId, conversationType, workspaceId, user, socket, generateTempId, ensureConversationKey, channelMembersRef]);
 
     // Add reaction
     const addReaction = useCallback(async (messageId, emoji) => {

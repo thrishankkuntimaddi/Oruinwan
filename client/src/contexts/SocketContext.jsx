@@ -1,6 +1,7 @@
 // client/src/contexts/SocketContext.jsx
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import { io } from 'socket.io-client';
+import { useAuth } from './AuthContext';
 
 const SocketContext = createContext(null);
 
@@ -15,6 +16,7 @@ export const useSocket = () => {
 export const SocketProvider = ({ children }) => {
     const [socket, setSocket] = useState(null);
     const [isConnected, setIsConnected] = useState(false);
+    const { user } = useAuth();
 
     // Event listeners registry (using refs to avoid stale closures)
     const channelListenersRef = useRef([]);
@@ -243,6 +245,31 @@ export const SocketProvider = ({ children }) => {
             socket.off('reaction-removed');
         };
     }, [socket]);
+
+    // E2EE: Client-mediated key distribution
+    useEffect(() => {
+        console.log('🔐 [Socket] Setting up key distribution listener, socket:', !!socket, 'user:', !!user);
+
+        if (!socket || !user) {
+            console.warn('🔐 [Socket] Skipping listener registration - missing socket or user');
+            return;
+        }
+
+        const handleKeyNeeded = async (payload) => {
+            console.log('🔐🔐🔐 [EVENT RECEIVED] conversation:key-needed', payload);
+
+            const { handleKeyNeededEvent } = await import('../services/debugKeyDistribution');
+            const currentUserId = user._id || user.id || user.sub;
+            await handleKeyNeededEvent(payload, currentUserId);
+        };
+
+        socket.on('conversation:key-needed', handleKeyNeeded);
+        console.log('✅ [Socket] Registered conversation:key-needed listener');
+
+        return () => {
+            socket.off('conversation:key-needed');
+        };
+    }, [socket, user]);
 
     // Broadcast workspace events
     useEffect(() => {

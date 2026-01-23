@@ -3,6 +3,8 @@
 
 import { useEffect, useRef, useCallback } from 'react';
 import { useSocket } from '../contexts/SocketContext';
+import keyDistributionService from '../services/keyDistributionService';
+import { useAuth } from '../contexts/AuthContext';
 
 /**
  * Manages socket connection lifecycle for a conversation
@@ -13,6 +15,7 @@ import { useSocket } from '../contexts/SocketContext';
  */
 export function useChatSocket(conversationId, conversationType, onEvent) {
     const { socket } = useSocket();
+    const { user } = useAuth();
     const onEventRef = useRef(onEvent);
     const joinedRef = useRef(false);
 
@@ -216,6 +219,34 @@ export function useChatSocket(conversationId, conversationType, onEvent) {
             });
         };
 
+        // ==================== E2EE KEY DISTRIBUTION ====================
+
+        const handleUserJoined = async (data) => {
+            console.log('🔐 [E2EE] New user joined, checking if we should distribute key:', data);
+
+            const { channelId, newUserId, newUserPublicKey } = data;
+
+            // Only handle if this is our channel
+            if (channelId !== conversationId) return;
+
+            // Don't re-encrypt for ourselves
+            if (newUserId === user?.sub) {
+                console.log('⏭️ [E2EE] New user is us, skipping');
+                return;
+            }
+
+            try {
+                // For now, let first member handle it (TODO: add deterministic selection with member list)
+                await keyDistributionService.distributeKeyToNewMember(
+                    channelId,
+                    newUserId,
+                    newUserPublicKey
+                );
+            } catch (error) {
+                console.error('❌ [E2EE] Key distribution failed:', error);
+            }
+        };
+
         // ==================== READ RECEIPTS ====================
 
 
@@ -248,6 +279,8 @@ export function useChatSocket(conversationId, conversationType, onEvent) {
         socket.on('member-joined', handleMemberJoined);
         socket.on('member-left', handleMemberLeft);
 
+        socket.on('channel:user-joined', handleUserJoined); // E2EE key distribution
+
         socket.on('message-read', handleMessageRead);
 
         // Cleanup on unmount
@@ -272,6 +305,8 @@ export function useChatSocket(conversationId, conversationType, onEvent) {
             socket.off('channel-updated', handleChannelUpdated);
             socket.off('member-joined', handleMemberJoined);
             socket.off('member-left', handleMemberLeft);
+
+            socket.off('channel:user-joined', handleUserJoined); // E2EE key distribution
 
             socket.off('message-read', handleMessageRead);
 

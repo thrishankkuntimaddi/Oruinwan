@@ -86,6 +86,32 @@ const ConversationKeySchema = new mongoose.Schema(
         ],
 
         /**
+         * Workspace-encrypted conversation key
+         * Allows server to re-encrypt for new members without seeing plaintext
+         * Encrypted with workspace master key (AES-256-GCM)
+         */
+        workspaceEncryptedKey: {
+            type: String,
+            required: false // Optional for backward compatibility
+        },
+
+        /**
+         * IV for workspace key encryption
+         */
+        workspaceKeyIv: {
+            type: String,
+            required: false
+        },
+
+        /**
+         * Auth tag for workspace key encryption (GCM mode)
+         */
+        workspaceKeyAuthTag: {
+            type: String,
+            required: false
+        },
+
+        /**
          * User who created this conversation key
          */
         createdBy: {

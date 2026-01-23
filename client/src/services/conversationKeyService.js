@@ -5,9 +5,10 @@
  * CRITICAL: Keys are generated CLIENT-SIDE ONLY, never on server
  */
 
-import { generateWorkspaceKey, exportKey, importKey } from '../utils/crypto';
+import { generateWorkspaceKey, exportKey, importKey, encryptAESGCM, arrayBufferToBase64 } from '../utils/crypto';
 import { wrapKeyWithRSA, wrapKeyWithX25519, unwrapKeyWithRSA, unwrapKeyWithX25519 } from '../utils/cryptoIdentity';
 import identityKeyService from './identityKeyService';
+import { getWorkspaceKeyForEncryption } from './keyManagement';
 
 // ==================== CONVERSATION KEY SERVICE ====================
 
@@ -39,9 +40,10 @@ class ConversationKeyService {
      * Generates key, encrypts for all participants, returns encrypted blobs
      * 
      * @param {string[]} participantUserIds - Array of user IDs who need access
-     * @returns {Promise<{conversationKey: CryptoKey, encryptedKeys: Array}>}
+     * @param {string} workspaceId - Workspace ID for workspace key encryption
+     * @returns {Promise<{conversationKey: CryptoKey, encryptedKeys: Array, workspaceEncryptedKey?: string, workspaceKeyIv?: string, workspaceKeyAuthTag?: string}>}
      */
-    async createAndDistributeConversationKey(participantUserIds) {
+    async createAndDistributeConversationKey(participantUserIds, workspaceId) {
         try {
             console.log(`🔐 Creating conversation key for ${participantUserIds.length} participants...`);
 
@@ -91,9 +93,41 @@ class ConversationKeyService {
 
             console.log(`✅ Conversation key encrypted for ${encryptedKeys.length} participants`);
 
+            // 5. Encrypt conversation key with workspace master key (for server-side re-encryption)
+            let workspaceEncryptedKey, workspaceKeyIv, workspaceKeyAuthTag;
+
+            if (workspaceId) {
+                try {
+                    const workspaceKey = await getWorkspaceKeyForEncryption(workspaceId);
+
+                    if (workspaceKey) {
+                        const iv = crypto.getRandomValues(new Uint8Array(12));
+                        const encrypted = await encryptAESGCM(conversationKeyBytes, workspaceKey, iv);
+
+                        // Split ciphertext and auth tag (GCM appends 16-byte auth tag)
+                        const ciphertext = encrypted.ciphertext.slice(0, -16);
+                        const authTag = encrypted.ciphertext.slice(-16);
+
+                        workspaceEncryptedKey = arrayBufferToBase64(ciphertext);
+                        workspaceKeyIv = arrayBufferToBase64(iv);
+                        workspaceKeyAuthTag = arrayBufferToBase64(authTag);
+
+                        console.log('✅ Encrypted conversation key with workspace master key');
+                    } else {
+                        console.warn('⚠️ No workspace key available for encryption');
+                    }
+                } catch (error) {
+                    console.error('Failed to encrypt with workspace key (non-critical):', error);
+                    // Continue without workspace encryption
+                }
+            }
+
             return {
                 conversationKey,
-                encryptedKeys
+                encryptedKeys,
+                workspaceEncryptedKey,
+                workspaceKeyIv,
+                workspaceKeyAuthTag
             };
         } catch (error) {
             console.error('Failed to create and distribute conversation key:', error);
@@ -111,9 +145,12 @@ class ConversationKeyService {
      * @param {string} conversationType - 'channel' or 'dm'
      * @param {string} workspaceId - Workspace ID
      * @param {Array} encryptedKeys - Encrypted keys for participants
+     * @param {string} workspaceEncryptedKey - Optional workspace-encrypted key
+     * @param {string} workspaceKeyIv - Optional workspace key IV
+     * @param {string} workspaceKeyAuthTag - Optional workspace key auth tag
      * @returns {Promise<void>}
      */
-    async storeConversationKeysOnServer(conversationId, conversationType, workspaceId, encryptedKeys) {
+    async storeConversationKeysOnServer(conversationId, conversationType, workspaceId, encryptedKeys, workspaceEncryptedKey, workspaceKeyIv, workspaceKeyAuthTag) {
         try {
             const response = await fetch(`/api/v2/conversations/${conversationId}/keys`, {
                 method: 'POST',
@@ -124,7 +161,10 @@ class ConversationKeyService {
                 body: JSON.stringify({
                     conversationType,
                     workspaceId,
-                    encryptedKeys
+                    encryptedKeys,
+                    workspaceEncryptedKey,
+                    workspaceKeyIv,
+                    workspaceKeyAuthTag
                 })
             });
 
