@@ -35,52 +35,69 @@ const ListItem = ({ item, isSelectionMode, selectedItems, setSelectedItems, togg
     return (
         <div
             onClick={handleClick}
-            className={`px-4 py-1.5 rounded-md cursor-pointer flex items-center justify-between group transition-colors ${isSelectionMode && isSelected ? "bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800" :
-                isActive ? "bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 font-medium" : "hover:bg-gray-200 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
+            className={`px-3 py-2 mx-1.5 rounded-lg cursor-pointer flex items-center justify-between group transition-all duration-200 relative ${isSelectionMode && isSelected
+                ? "bg-blue-50/80 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800"
+                : isActive
+                    ? "bg-gradient-to-r from-blue-50 to-white dark:from-blue-900/30 dark:to-gray-900/50 text-blue-600 dark:text-blue-400"
+                    : "hover:bg-gray-100 dark:hover:bg-gray-800/60 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
                 }`}
         >
-            <div className="flex items-center truncate flex-1 gap-2">
+            {/* Active Accent Bar */}
+            {isActive && !isSelectionMode && (
+                <div className="absolute left-0 top-1.5 bottom-1.5 w-1 bg-blue-600 dark:bg-blue-500 rounded-r-full shadow-[0_0_8px_rgba(37,99,235,0.4)]" />
+            )}
+
+            <div className="flex items-center truncate flex-1 gap-3">
                 {isSelectionMode && (
-                    <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${isSelected ? "bg-blue-600 border-blue-600" : "border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800"}`}>
+                    <div className={`w-4 h-4 rounded border flex items-center justify-center transition-all ${isSelected ? "bg-blue-600 border-blue-600" : "border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800"}`}>
                         {isSelected && <CheckSquare size={10} className="text-white" />}
                     </div>
                 )}
 
-                {item.type === 'dm' ? (
-                    <div className="relative">
-                        {/* Dynamic avatar color based on user status */}
-                        <div className={`w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs shadow-inner ${isActive
-                            ? "bg-blue-200 text-blue-700"
-                            : item.avatarColor === 'green'
-                                ? "bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300"
-                                : item.avatarColor === 'yellow'
-                                    ? "bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-300"
-                                    : item.avatarColor === 'red'
-                                        ? "bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300"
-                                        : "bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
-                            }`}>
-                            {item.label.charAt(0).toUpperCase()}
+                {/* Icon/Avatar Container with Soft Backdrop */}
+                <div className="flex-shrink-0 flex items-center justify-center">
+                    {item.type === 'dm' ? (
+                        <div className="relative">
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shadow-sm border border-white/10 ${isActive
+                                ? "bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300"
+                                : item.avatarColor === 'green'
+                                    ? "bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400"
+                                    : item.avatarColor === 'yellow'
+                                        ? "bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400"
+                                        : item.avatarColor === 'red'
+                                            ? "bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark: ROSE-400"
+                                            : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400"
+                                }`}>
+                                {item.label.charAt(0).toUpperCase()}
+                            </div>
+                            {/* Refined Status Dot */}
+                            <div className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white dark:border-gray-900 shadow-sm ${item.status === "active" || item.status === "online" ? "bg-green-500" :
+                                item.status === "away" ? "bg-yellow-500" :
+                                    item.status === "dnd" || item.status === "busy" ? "bg-red-500" :
+                                        "bg-gray-400"
+                                }`}></div>
                         </div>
-                        {/* Status Indicator */}
-                        <div className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-white dark:border-gray-900 ${item.status === "active" || item.status === "online" ? "bg-green-500" :
-                            item.status === "away" ? "bg-yellow-500" :
-                                item.status === "dnd" || item.status === "busy" ? "bg-red-500" :
-                                    "bg-gray-400"
-                            }`}></div>
-                    </div>
-                ) : (
-                    <span className="opacity-70 text-lg flex items-center">
-                        {item.isPrivate ? (
-                            <Lock size={16} />
-                        ) : item.label.toLowerCase() === 'announcements' ? (
-                            <Megaphone size={16} />
-                        ) : (
-                            "#"
-                        )}
-                    </span>
-                )}
+                    ) : (
+                        <div className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors shadow-sm ${isActive
+                            ? "bg-blue-100/50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400"
+                            : item.label.toLowerCase() === 'announcements'
+                                ? "bg-orange-50 dark:bg-orange-900/20 text-orange-500 dark:text-orange-400"
+                                : "bg-gray-100 dark:bg-gray-800/50 text-gray-400 dark:text-gray-500 group-hover:bg-gray-200 dark:group-hover:bg-gray-700"
+                            }`}>
+                            {item.isPrivate ? (
+                                <Lock size={14} strokeWidth={2.5} />
+                            ) : item.label.toLowerCase() === 'announcements' ? (
+                                <Megaphone size={14} strokeWidth={2.5} />
+                            ) : (
+                                <span className="text-sm font-bold opacity-70">#</span>
+                            )}
+                        </div>
+                    )}
+                </div>
 
-                <span className="truncate text-sm">{item.type === 'channel' ? item.label.replace(/^#/, '') : item.label}</span>
+                <span className={`truncate text-sm tracking-tight transition-all ${isActive ? "font-bold text-gray-900 dark:text-white" : "font-semibold group-hover:text-gray-900 dark:group-hover:text-gray-100"}`}>
+                    {item.type === 'channel' ? item.label.replace(/^#/, '') : item.label}
+                </span>
             </div>
 
             {!isSelectionMode && (
@@ -89,7 +106,10 @@ const ListItem = ({ item, isSelectionMode, selectedItems, setSelectedItems, togg
                         e.stopPropagation();
                         toggleFavorite(item.id);
                     }}
-                    className={`p-1 rounded hover:bg-gray-300 dark:hover:bg-gray-600 transition-all ${item.isFavorite ? "text-yellow-400 opacity-100" : "text-gray-400 dark:text-gray-500 opacity-0 group-hover:opacity-100"}`}
+                    className={`p-1.5 rounded-md hover:bg-white dark:hover:bg-gray-700 shadow-sm transition-all duration-200 border border-transparent hover:border-gray-200 dark:hover:border-gray-600 ${item.isFavorite
+                        ? "text-amber-400 opacity-100"
+                        : "text-gray-400 dark:text-gray-600 opacity-0 group-hover:opacity-100"
+                        }`}
                     title={item.isFavorite ? "Remove from favorites" : "Add to favorites"}
                 >
                     <svg

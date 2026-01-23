@@ -381,29 +381,47 @@ const ChannelsPanel = ({ title }) => {
         return (
             <div
                 onClick={handleClick}
-                className={`px-4 py-2 rounded-md cursor-pointer flex items-center justify-between group transition-colors ${isSelectionMode && isSelected
-                    ? "bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800"
+                className={`px-3 py-2 mx-2 transition-all duration-200 rounded-lg cursor-pointer flex items-center justify-between group relative ${isSelectionMode && isSelected
+                    ? "bg-blue-50/80 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800"
                     : isActive
-                        ? "bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 font-semibold"
-                        : "hover:bg-gray-200 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
+                        ? "bg-gradient-to-r from-blue-50 to-white dark:from-blue-900/30 dark:to-gray-900/50 text-blue-600 dark:text-blue-400"
+                        : "hover:bg-gray-100 dark:hover:bg-gray-800/60 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
                     }`}
             >
-                <div className="flex items-center truncate flex-1 gap-2">
+                {/* Active Accent Bar */}
+                {isActive && !isSelectionMode && (
+                    <div className="absolute left-0 top-1.5 bottom-1.5 w-1 bg-blue-600 dark:bg-blue-500 rounded-r-full shadow-[0_0_8px_rgba(37,99,235,0.4)]" />
+                )}
+
+                <div className="flex items-center truncate flex-1 gap-3">
                     {isSelectionMode && !item.isDefault && (
-                        <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${isSelected ? "bg-blue-600 border-blue-600" : "border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700"
+                        <div className={`w-4 h-4 rounded border flex items-center justify-center transition-all ${isSelected ? "bg-blue-600 border-blue-600" : "border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700"
                             }`}>
                             {isSelected && <CheckSquare size={10} className="text-white" />}
                         </div>
                     )}
-                    {item.isPrivate ? (
-                        <Lock size={14} className="text-purple-400 dark:text-purple-400" />
-                    ) : (item.label || '').toLowerCase() === 'announcements' ? (
-                        <Megaphone size={14} className="text-gray-400 dark:text-gray-500" />
-                    ) : (
-                        <Hash size={14} className="text-gray-400 dark:text-gray-500" />
-                    )}
-                    <span className="truncate text-sm font-medium">{(item.label || 'Unnamed Channel').replace(/^#/, '')}</span>
-                    {/* Default badge removed */}
+
+                    {/* Icon Backdrop */}
+                    <div className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors shadow-sm ${isActive
+                        ? "bg-blue-100/50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400"
+                        : item.label.toLowerCase() === 'announcements'
+                            ? "bg-orange-50 dark:bg-orange-900/20 text-orange-500 dark:text-orange-400"
+                            : item.isPrivate
+                                ? "bg-purple-50 dark:bg-purple-900/20 text-purple-500 dark:text-purple-400"
+                                : "bg-gray-100 dark:bg-gray-800/50 text-gray-400 dark:text-gray-500 group-hover:bg-gray-200 dark:group-hover:bg-gray-700"
+                        }`}>
+                        {item.isPrivate ? (
+                            <Lock size={14} strokeWidth={2.5} />
+                        ) : (item.label || '').toLowerCase() === 'announcements' ? (
+                            <Megaphone size={14} strokeWidth={2.5} />
+                        ) : (
+                            <Hash size={14} strokeWidth={2.5} />
+                        )}
+                    </div>
+
+                    <span className={`truncate text-sm tracking-tight transition-all ${isActive ? "font-bold text-gray-900 dark:text-white" : "font-semibold group-hover:text-gray-900 dark:group-hover:text-gray-100"}`}>
+                        {(item.label || 'Unnamed Channel').replace(/^#/, '')}
+                    </span>
                 </div>
             </div>
         );
