@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Plus, Hash, Search, Trash2, X, CheckSquare, Settings2, Lock } from 'lucide-react';
+import { Plus, Hash, Search, Trash2, X, CheckSquare, Settings2, Lock, Megaphone } from 'lucide-react';
 import { useWorkspace } from "../../../contexts/WorkspaceContext";
 import { useToast } from "../../../contexts/ToastContext";
 import api from "../../../services/api";
@@ -397,6 +397,8 @@ const ChannelsPanel = ({ title }) => {
                     )}
                     {item.isPrivate ? (
                         <Lock size={14} className="text-purple-400 dark:text-purple-400" />
+                    ) : (item.label || '').toLowerCase() === 'announcements' ? (
+                        <Megaphone size={14} className="text-gray-400 dark:text-gray-500" />
                     ) : (
                         <Hash size={14} className="text-gray-400 dark:text-gray-500" />
                     )}

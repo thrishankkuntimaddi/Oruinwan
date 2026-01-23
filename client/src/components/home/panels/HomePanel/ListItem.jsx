@@ -1,6 +1,6 @@
 import React from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
-import { CheckSquare, Lock } from 'lucide-react';
+import { CheckSquare, Lock, Megaphone } from 'lucide-react';
 
 const ListItem = ({ item, isSelectionMode, selectedItems, setSelectedItems, toggleFavorite }) => {
     const location = useLocation();
@@ -46,7 +46,6 @@ const ListItem = ({ item, isSelectionMode, selectedItems, setSelectedItems, togg
                     </div>
                 )}
 
-                {/* Channel/DM Icon or Avatar */}
                 {item.type === 'dm' ? (
                     <div className="relative">
                         {/* Dynamic avatar color based on user status */}
@@ -71,7 +70,13 @@ const ListItem = ({ item, isSelectionMode, selectedItems, setSelectedItems, togg
                     </div>
                 ) : (
                     <span className="opacity-70 text-lg flex items-center">
-                        {item.isPrivate ? <Lock size={16} /> : "#"}
+                        {item.isPrivate ? (
+                            <Lock size={16} />
+                        ) : item.label.toLowerCase() === 'announcements' ? (
+                            <Megaphone size={16} />
+                        ) : (
+                            "#"
+                        )}
                     </span>
                 )}
 

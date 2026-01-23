@@ -3,6 +3,7 @@ import {
   Phone,
   Video,
   Search,
+  Hash,
   MoreVertical,
   Settings,
   User,
@@ -16,7 +17,8 @@ import {
   Link2,
   Lock,
   MessageSquare,
-  Users
+  Users,
+  Megaphone
 } from "lucide-react";
 import ConfirmationModal from "../../../../shared/components/ui/ConfirmationModal";
 
@@ -115,12 +117,18 @@ export default function Header({
                 className={`w-8 h-8 rounded flex items-center justify-center font-medium text-sm ${chat.name?.toLowerCase().replace(/^#/, '') === 'announcements'
                   ? 'bg-orange-50 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400'
                   : chat.isPrivate
-                    ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'
+                    ? 'bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400'
                     : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400'
                   }`}
                 title={chat.description || (chat.isPrivate ? 'Private Channel' : 'Public Channel')}
               >
-                {chat.name?.toLowerCase().replace(/^#/, '') === 'announcements' ? '📢' : (chat.isPrivate ? <Lock size={14} /> : '#')}
+                {chat.name?.toLowerCase().replace(/^#/, '') === 'announcements' ? (
+                  <Megaphone size={14} />
+                ) : chat.isPrivate ? (
+                  <Lock size={14} />
+                ) : (
+                  <Hash size={14} /> // Explicitly use Hash icon
+                )}
               </div>
             )
           ) : (
