@@ -709,8 +709,8 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
                     )
                 )}
 
-                {/* Thread Panel (if active) */}
-                {activeThread && (
+                {/* Thread Panel (if active and in chat tab) */}
+                {activeTab === 'chat' && activeThread && (
                     <ThreadPanel
                         parentMessage={activeThread}
                         onClose={handleThreadClose}

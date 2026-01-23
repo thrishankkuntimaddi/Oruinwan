@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { MessageSquare, ArrowRight, User, Clock, Search, ListFilter } from 'lucide-react';
+import { MessageSquare, ArrowRight, Clock, Search, ListFilter } from 'lucide-react';
 import ThreadPanel from '../ThreadPanel';
 import api from '../../../../services/api';
 import { formatTime } from '../helpers/helpers';
@@ -20,7 +20,39 @@ export default function ThreadsTab({ channelId, currentUserId, socket }) {
 
             // Filter distinct parent messages that have replies
             const activeThreads = allMessages.filter(m => m.replyCount > 0);
-            setThreads(activeThreads);
+
+            // DUMMY DATA FOR TESTING
+            const dummyThreads = [
+                {
+                    _id: 'dummy-1',
+                    sender: { username: 'Alice Design', profilePicture: null },
+                    senderName: 'Alice Design',
+                    createdAt: new Date().toISOString(),
+                    payload: { text: 'Hey team, I just uploaded the new design specs. Let me know what you think!' },
+                    text: 'Hey team, I just uploaded the new design specs. Let me know what you think!',
+                    replyCount: 3
+                },
+                {
+                    _id: 'dummy-2',
+                    sender: { username: 'Bob DevOps', profilePicture: null },
+                    senderName: 'Bob DevOps',
+                    createdAt: new Date(Date.now() - 3600000).toISOString(),
+                    payload: { text: 'Deployment is scheduled for this Friday at 10 PM. Please freeze code by Thursday.' },
+                    text: 'Deployment is scheduled for this Friday at 10 PM. Please freeze code by Thursday.',
+                    replyCount: 5
+                },
+                {
+                    _id: 'dummy-3',
+                    sender: { username: 'Charlie PM', profilePicture: null },
+                    senderName: 'Charlie PM',
+                    createdAt: new Date(Date.now() - 86400000).toISOString(),
+                    payload: { text: 'Q3 Roadmap meeting is shifted to next Monday.' },
+                    text: 'Q3 Roadmap meeting is shifted to next Monday.',
+                    replyCount: 12
+                }
+            ];
+
+            setThreads([...activeThreads, ...dummyThreads]);
         } catch (err) {
             console.error('Failed to fetch threads:', err);
         } finally {
@@ -104,8 +136,8 @@ export default function ThreadsTab({ channelId, currentUserId, socket }) {
                                 key={thread._id}
                                 onClick={() => setSelectedThread(thread)}
                                 className={`group p-3 rounded-xl cursor-pointer border transition-all hover:shadow-md ${selectedThread?._id === thread._id
-                                        ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800/50 shadow-sm'
-                                        : 'bg-white dark:bg-gray-800/50 border-transparent hover:border-gray-200 dark:hover:border-gray-700'
+                                    ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800/50 shadow-sm'
+                                    : 'bg-white dark:bg-gray-800/50 border-transparent hover:border-gray-200 dark:hover:border-gray-700'
                                     }`}
                             >
                                 <div className="flex items-start justify-between mb-2">
@@ -150,6 +182,7 @@ export default function ThreadsTab({ channelId, currentUserId, socket }) {
                         socket={socket}
                         currentUserId={currentUserId}
                         fullHeight={true} // New prop hint: might need to adjust ThreadPanel to fill height nicely
+                        showHeader={false}
                     />
                 ) : (
                     <div className="flex-1 flex flex-col items-center justify-center text-gray-400 dark:text-gray-600 p-8 text-center animate-fade-in">

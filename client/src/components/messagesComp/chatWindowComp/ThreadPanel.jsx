@@ -6,7 +6,7 @@ import { Smile, X } from "lucide-react";
 import FooterInput from "./footer/footerInput";
 import { API_BASE } from "../../../services/api";
 
-export default function ThreadPanel({ parentMessage, onClose, socket, currentUserId }) {
+export default function ThreadPanel({ parentMessage, onClose, socket, currentUserId, showHeader = true }) {
     const { showToast } = useToast();
     // We use a local state for the parent message in case we fetch a fresher version,
     // but we initialize it with the prop passed from the parent.
@@ -157,20 +157,22 @@ export default function ThreadPanel({ parentMessage, onClose, socket, currentUse
 
     return (
         <div className="w-[400px] h-full bg-white dark:bg-gray-900 border-l dark:border-gray-800 shadow-xl flex flex-col animate-slide-in-right flex-shrink-0">
-            {/* Header */}
-            <div className="flex items-center justify-between px-4 py-1.5 border-b border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900">
-                <div className="flex items-center gap-2">
-                    <h3 className="font-bold text-gray-800 dark:text-gray-100 text-sm">Thread</h3>
-                    <span className="text-xs text-gray-400">#{parentMessageState?.channelId?.name || "discussion"}</span>
+            {/* Header (Optional) */}
+            {showHeader && (
+                <div className="flex items-center justify-between px-4 py-1.5 border-b border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900">
+                    <div className="flex items-center gap-2">
+                        <h3 className="font-bold text-gray-800 dark:text-gray-100 text-sm">Thread</h3>
+                        <span className="text-xs text-gray-400">#{parentMessageState?.channelId?.name || "discussion"}</span>
+                    </div>
+                    <button
+                        onClick={onClose}
+                        className="p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400 transition-colors"
+                        title="Close"
+                    >
+                        <X size={18} />
+                    </button>
                 </div>
-                <button
-                    onClick={onClose}
-                    className="p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400 transition-colors"
-                    title="Close"
-                >
-                    <X size={18} />
-                </button>
-            </div>
+            )}
 
             {loading ? (
                 <div className="flex-1 flex items-center justify-center">

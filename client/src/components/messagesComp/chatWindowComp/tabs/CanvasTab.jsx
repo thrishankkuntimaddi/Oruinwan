@@ -5,7 +5,7 @@ import {
     Heading1, Heading2, Heading3,
     List, ListOrdered, Link, Code, Quote,
     AlignLeft, AlignCenter, AlignRight,
-    Undo, Redo, Type, Palette, Minus,
+    Undo, Redo, Type, Minus,
     FileText, WifiOff
 } from 'lucide-react';
 

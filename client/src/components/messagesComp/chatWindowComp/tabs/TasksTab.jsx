@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Plus, CheckCircle, Clock, User, Trash2, Edit2, Layout, CheckSquare, MoreVertical, Calendar } from 'lucide-react';
+import { Plus, CheckCircle, User, Trash2, Edit2, Layout, CheckSquare, Calendar } from 'lucide-react';
 
 export default function TasksTab({ channelId, channelName, currentUserId, socket }) {
     const [tasks, setTasks] = useState([]);
