@@ -58,7 +58,7 @@ export default function ChannelTabs({
     return (
         <div className="flex flex-col bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800">
             {/* Tabs Bar - Modern Underline Layout */}
-            <div className="flex items-center gap-4 px-4 overflow-x-auto no-scrollbar">
+            <div className="flex items-center gap-2 px-4 overflow-x-auto no-scrollbar">
                 {/* Main Chat Tab */}
                 <button
                     onClick={() => onTabChange("chat")}
@@ -147,19 +147,7 @@ export default function ChannelTabs({
                             </div>
                         )}
 
-                        {/* Delete Tab Button - only show if user can delete */}
-                        {!editingTabId && canDeleteTab(tab) && (
-                            <button
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    onDeleteTab(tab._id);
-                                }}
-                                className={`p-0.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity`}
-                                title="Delete canvas"
-                            >
-                                <X size={12} />
-                            </button>
-                        )}
+                        {/* Delete Tab Button - Removed per user request */}
                     </div>
                 ))}
 

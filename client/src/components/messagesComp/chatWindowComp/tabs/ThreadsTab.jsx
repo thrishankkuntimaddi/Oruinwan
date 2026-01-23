@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { MessageSquare, ArrowRight, Clock, Search, ListFilter } from 'lucide-react';
+import { MessageSquare, ArrowRight, Clock, Search, ListFilter, X } from 'lucide-react';
 import ThreadPanel from '../ThreadPanel';
 import api from '../../../../services/api';
 import { formatTime } from '../helpers/helpers';
@@ -14,6 +14,37 @@ export default function ThreadsTab({ channelId, currentUserId, socket }) {
     // In a production app, we should have a dedicated /threads endpoint
     const fetchThreads = useCallback(async () => {
         setLoading(true);
+        // DUMMY DATA FOR TESTING
+        const dummyThreads = [
+            {
+                _id: 'dummy-1',
+                sender: { username: 'Alice Design', profilePicture: null },
+                senderName: 'Alice Design',
+                createdAt: new Date().toISOString(),
+                payload: { text: 'Hey team, I just uploaded the new design specs. Let me know what you think!' },
+                text: 'Hey team, I just uploaded the new design specs. Let me know what you think!',
+                replyCount: 3
+            },
+            {
+                _id: 'dummy-2',
+                sender: { username: 'Bob DevOps', profilePicture: null },
+                senderName: 'Bob DevOps',
+                createdAt: new Date(Date.now() - 3600000).toISOString(),
+                payload: { text: 'Deployment is scheduled for this Friday at 10 PM. Please freeze code by Thursday.' },
+                text: 'Deployment is scheduled for this Friday at 10 PM. Please freeze code by Thursday.',
+                replyCount: 5
+            },
+            {
+                _id: 'dummy-3',
+                sender: { username: 'Charlie PM', profilePicture: null },
+                senderName: 'Charlie PM',
+                createdAt: new Date(Date.now() - 86400000).toISOString(),
+                payload: { text: 'Q3 Roadmap meeting is shifted to next Monday.' },
+                text: 'Q3 Roadmap meeting is shifted to next Monday.',
+                replyCount: 12
+            }
+        ];
+
         try {
             const res = await api.get(`/api/channels/${channelId}/messages?limit=100`);
             const allMessages = res.data.messages || [];
@@ -21,40 +52,11 @@ export default function ThreadsTab({ channelId, currentUserId, socket }) {
             // Filter distinct parent messages that have replies
             const activeThreads = allMessages.filter(m => m.replyCount > 0);
 
-            // DUMMY DATA FOR TESTING
-            const dummyThreads = [
-                {
-                    _id: 'dummy-1',
-                    sender: { username: 'Alice Design', profilePicture: null },
-                    senderName: 'Alice Design',
-                    createdAt: new Date().toISOString(),
-                    payload: { text: 'Hey team, I just uploaded the new design specs. Let me know what you think!' },
-                    text: 'Hey team, I just uploaded the new design specs. Let me know what you think!',
-                    replyCount: 3
-                },
-                {
-                    _id: 'dummy-2',
-                    sender: { username: 'Bob DevOps', profilePicture: null },
-                    senderName: 'Bob DevOps',
-                    createdAt: new Date(Date.now() - 3600000).toISOString(),
-                    payload: { text: 'Deployment is scheduled for this Friday at 10 PM. Please freeze code by Thursday.' },
-                    text: 'Deployment is scheduled for this Friday at 10 PM. Please freeze code by Thursday.',
-                    replyCount: 5
-                },
-                {
-                    _id: 'dummy-3',
-                    sender: { username: 'Charlie PM', profilePicture: null },
-                    senderName: 'Charlie PM',
-                    createdAt: new Date(Date.now() - 86400000).toISOString(),
-                    payload: { text: 'Q3 Roadmap meeting is shifted to next Monday.' },
-                    text: 'Q3 Roadmap meeting is shifted to next Monday.',
-                    replyCount: 12
-                }
-            ];
-
             setThreads([...activeThreads, ...dummyThreads]);
         } catch (err) {
             console.error('Failed to fetch threads:', err);
+            // Fallback to dummy data on error
+            setThreads(dummyThreads);
         } finally {
             setLoading(false);
         }
@@ -176,14 +178,32 @@ export default function ThreadsTab({ channelId, currentUserId, socket }) {
             {/* Right Column: Thread Panel */}
             <div className={`flex-1 flex flex-col bg-white dark:bg-gray-950/50 ${!selectedThread ? 'hidden md:flex' : 'flex'}`}>
                 {selectedThread ? (
-                    <ThreadPanel
-                        parentMessage={selectedThread}
-                        onClose={() => setSelectedThread(null)}
-                        socket={socket}
-                        currentUserId={currentUserId}
-                        fullHeight={true} // New prop hint: might need to adjust ThreadPanel to fill height nicely
-                        showHeader={false}
-                    />
+                    <div className="flex-1 flex flex-col h-full overflow-hidden">
+                        {/* Custom Close Header */}
+                        <div className="flex items-center justify-between px-4 py-2 border-b border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 flex-shrink-0">
+                            <div className="flex items-center gap-2">
+                                <MessageSquare size={16} className="text-blue-500" />
+                                <span className="text-sm font-bold text-gray-800 dark:text-gray-100">Thread</span>
+                            </div>
+                            <button
+                                onClick={() => setSelectedThread(null)}
+                                className="p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400 transition-colors"
+                                title="Close Thread"
+                            >
+                                <X size={18} />
+                            </button>
+                        </div>
+
+                        <ThreadPanel
+                            parentMessage={selectedThread}
+                            onClose={() => setSelectedThread(null)}
+                            socket={socket}
+                            currentUserId={currentUserId}
+                            fullHeight={true}
+                            showHeader={false}
+                            className="w-full border-none shadow-none flex-1"
+                        />
+                    </div>
                 ) : (
                     <div className="flex-1 flex flex-col items-center justify-center text-gray-400 dark:text-gray-600 p-8 text-center animate-fade-in">
                         <div className="w-24 h-24 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mb-6">

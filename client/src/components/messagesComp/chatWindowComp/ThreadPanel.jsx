@@ -6,7 +6,7 @@ import { Smile, X } from "lucide-react";
 import FooterInput from "./footer/footerInput";
 import { API_BASE } from "../../../services/api";
 
-export default function ThreadPanel({ parentMessage, onClose, socket, currentUserId, showHeader = true }) {
+export default function ThreadPanel({ parentMessage, onClose, socket, currentUserId, showHeader = true, className = "" }) {
     const { showToast } = useToast();
     // We use a local state for the parent message in case we fetch a fresher version,
     // but we initialize it with the prop passed from the parent.
@@ -156,7 +156,7 @@ export default function ThreadPanel({ parentMessage, onClose, socket, currentUse
     }, [onClose]);
 
     return (
-        <div className="w-[400px] h-full bg-white dark:bg-gray-900 border-l dark:border-gray-800 shadow-xl flex flex-col animate-slide-in-right flex-shrink-0">
+        <div className={`h-full bg-white dark:bg-gray-900 border-l dark:border-gray-800 shadow-xl flex flex-col animate-slide-in-right flex-shrink-0 ${className || 'w-[400px]'}`}>
             {/* Header (Optional) */}
             {showHeader && (
                 <div className="flex items-center justify-between px-4 py-1.5 border-b border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900">
@@ -271,7 +271,7 @@ export default function ThreadPanel({ parentMessage, onClose, socket, currentUse
                         setNewMessage={setNewReply}
                         onSend={handleSendReply}
                         onChange={(e) => setNewReply(e.target.value)}
-                        showAI={false} // Disable AI button
+                        showAI={true} // Enable AI button for thread replies
                         showVoice={false} // Disable Voice button
                         blocked={false}
                         recording={false} // Simplified for thread for now, or hoist state if needed
