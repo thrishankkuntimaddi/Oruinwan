@@ -3,7 +3,6 @@
 
 import { useEffect, useRef, useCallback } from 'react';
 import { useSocket } from '../contexts/SocketContext';
-import { useAuth } from '../contexts/AuthContext';
 
 /**
  * Manages socket connection lifecycle for a conversation
@@ -14,7 +13,6 @@ import { useAuth } from '../contexts/AuthContext';
  */
 export function useChatSocket(conversationId, conversationType, onEvent) {
     const { socket } = useSocket();
-    const { user } = useAuth();
     const onEventRef = useRef(onEvent);
     const joinedRef = useRef(false);
 

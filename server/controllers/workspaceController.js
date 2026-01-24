@@ -13,6 +13,7 @@ const { createInvite } = require("../utils/invite");
 const sendEmail = require("../utils/sendEmail");
 const { handleError, notFound, badRequest, forbidden } = require("../utils/responseHelpers");
 const { isMember, normalizeMemberFormat } = require("../utils/memberHelpers");
+const conversationKeysService = require("../src/modules/conversations/conversationKeys.service");
 
 /**
  * Create new workspace (Personal or Company)
@@ -579,6 +580,37 @@ exports.joinWorkspace = async (req, res) => {
         });
 
         await channel.save();
+      }
+    }
+
+    // 🔐 PHASE 4: Distribute conversation keys to new member
+    // After adding user to default channels, distribute existing conversation keys
+    // This uses SERVER_KEK to unwrap workspace-encrypted keys and re-encrypt for new user
+    console.log(`🔐 [PHASE 4] Distributing conversation keys to user ${userId}...`);
+    for (const channel of defaultChannels) {
+      try {
+        // Check if conversation keys exist for this channel
+        const hasKeys = await conversationKeysService.hasConversationKeys(channel._id, 'channel');
+
+        if (hasKeys) {
+          // Distribute existing key to new user (idempotent)
+          const distributed = await conversationKeysService.distributeKeyToNewMember(
+            channel._id,
+            'channel',
+            userId
+          );
+
+          if (distributed) {
+            console.log(`✅ [PHASE 4] Distributed conversation key for #${channel.name} to user ${userId}`);
+          } else {
+            console.warn(`⚠️ [PHASE 4] Could not distribute key for #${channel.name} to user ${userId}`);
+          }
+        } else {
+          console.log(`ℹ️ [PHASE 4] No conversation key exists for #${channel.name} yet (will be created on first message)`);
+        }
+      } catch (keyError) {
+        // Non-blocking: log error but don't fail workspace join
+        console.error(`❌ [PHASE 4] Key distribution failed for #${channel.name}:`, keyError.message);
       }
     }
 
