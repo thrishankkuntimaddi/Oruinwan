@@ -42,6 +42,7 @@ export function useChatSocket(conversationId, conversationType, onEvent) {
             return;
         }
 
+        // ✅ FIX: Use chat:join which joins channel:ID format (matches server broadcast in messages.service.js line 83)
         socket.emit('chat:join', conversationId);
         joinedRef.current = true;
         console.log(`✅ Joined ${conversationType}:`, conversationId);

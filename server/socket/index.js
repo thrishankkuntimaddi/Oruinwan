@@ -67,10 +67,14 @@ module.exports = async function registerChatHandlers(io, socket) {
         return;
       }
       console.log(`📥 [chat:join] Received for channel: ${channelId}`);
+      console.log(`👤 [chat:join] User: ${userId}, Socket: ${socket.id}`);
+
       // CRITICAL: Use colon format (channel:id) to match new message service broadcasts
       const room = `channel:${channelId}`;
       socket.join(room);
+
       console.log(`✅ [chat:join] User ${userId} joined ${room}`);
+      console.log(`📊 [chat:join] Socket rooms:`, Array.from(socket.rooms));
     } catch (err) {
       logger.error("Error joining channel room (chat:join):", err);
     }
