@@ -307,30 +307,61 @@ exports.removeChannelMember = async (req, res) => {
  */
 exports.joinChannel = async (req, res) => {
   try {
+    const { id: channelId } = req.params;
     const userId = req.user.sub;
-    const channelId = req.params.id;
 
     const channel = await Channel.findById(channelId);
-    if (!channel) return res.status(404).json({ message: "Channel not found" });
+    if (!channel) return notFound(res, "Channel not found");
 
-    if (channel.isPrivate) return res.status(403).json({ message: "Cannot join private channel" });
+    const isChannelMember = isMember(channel.members, userId);
+    if (isChannelMember) {
+      return res.status(400).json({ message: "Already a member of this channel" });
+    }
 
-    // Check if already member
-    const isAlreadyMember = isMember(channel.members, userId);
+    // Normalize members + add new user
+    channel.members = normalizeMemberFormat(channel.members, channel.createdAt);
+    channel.members.push({ user: userId, joinedAt: new Date() });
+    await channel.save();
 
-    if (!isAlreadyMember) {
-      // 🔧 FIX: Convert all existing members to new format before adding new member
-      channel.members = normalizeMemberFormat(channel.members, channel.createdAt);
+    // ✅ PHASE 2: Server-side key distribution (canonical approach)
+    try {
+      const conversationKeysService = require('../src/modules/conversations/conversationKeys.service');
 
-      channel.members.push({
+      console.log(`🔐 [joinChannel] Distributing conversation key to user ${userId}...`);
+      const distributed = await conversationKeysService.distributeKeyToNewMember(
+        channelId,
+        'channel',
+        userId
+      );
+
+      if (!distributed) {
+        console.warn(`⚠️ [joinChannel] Key distribution failed for user ${userId}`);
+        // Don't fail the join - user can still participate, just not with E2EE
+      } else {
+        console.log(`✅ [joinChannel] Key distributed successfully to user ${userId}`);
+      }
+    } catch (keyError) {
+      console.error(`❌ [joinChannel] Key distribution error:`, keyError);
+      // Non-blocking - user successfully joined, just E2EE may not work
+    }
+
+    const io = req.app?.get("io");
+    if (io) {
+      const populatedUser = await User.findById(userId).select("username profilePicture");
+      const memberPayload = {
         user: userId,
+        username: populatedUser?.username || "Unknown",
+        profilePicture: populatedUser?.profilePicture || null,
         joinedAt: new Date()
+      };
+
+      io.to(`channel_${channelId}`).emit("channel:member-joined", {
+        channelId,
+        member: memberPayload
       });
-      await saveWithRetry(channel);
 
       // Get username for system message
-      const joiningUser = await User.findById(userId).select('username');
-      const username = joiningUser?.username || 'User';
+      const username = populatedUser?.username || 'User';
       const joinDate = new Date();
 
       // Create system message for join
@@ -351,37 +382,28 @@ exports.joinChannel = async (req, res) => {
       });
 
       // optional socket: join user to room on server side handled by socket connection when client emits join-channel
-      const io = req.app?.get("io");
-      if (io) {
-        io.to(`channel:${channelId}`).emit("member-joined", {
-          channelId,
-          userId,
-          username,
-          joinedAt: joinDate,
-          systemMessage: {
-            _id: systemMessage._id,
-            payload: systemMessage.payload,
-            type: systemMessage.type,
-            createdAt: systemMessage.createdAt
-          }
-        });
-
-        // 🔐 E2EE: Emit key distribution event to existing members
-        // Existing members will re-encrypt conversation key for new user (client-side)
-        const newUserData = await User.findById(userId).select('e2eePublicKey username');
-        if (newUserData?.e2eePublicKey) {
-          io.to(`channel:${channelId}`).emit("channel:user-joined", {
-            channelId,
-            newUserId: userId,
-            newUserName: newUserData.username,
-            newUserPublicKey: newUserData.e2eePublicKey
-          });
-          console.log(`🔐 [E2EE] Key distribution event emitted for user ${userId} joining channel ${channelId}`);
+      io.to(`channel:${channelId}`).emit("member-joined", {
+        channelId,
+        userId,
+        username,
+        joinedAt: joinDate,
+        systemMessage: {
+          _id: systemMessage._id,
+          payload: systemMessage.payload,
+          type: systemMessage.type,
+          createdAt: systemMessage.createdAt
         }
-      }
+      });
     }
 
-    return res.json({ channelId, joined: true });
+    return res.status(200).json({
+      message: "Successfully joined channel",
+      channel: {
+        _id: channel._id,
+        name: channel.name,
+        workspace: channel.workspace
+      }
+    });
   } catch (err) {
     return handleError(res, err, "JOIN CHANNEL ERROR");
   }

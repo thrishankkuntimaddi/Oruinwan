@@ -8,7 +8,8 @@ const requiredEnvVars = [
   'ACCESS_TOKEN_SECRET',
   'REFRESH_TOKEN_SECRET',
   'FRONTEND_URL',
-  'GOOGLE_CLIENT_ID'
+  'GOOGLE_CLIENT_ID',
+  'SERVER_KEK'  // Server Key Encryption Key for E2EE workspace key decryption
 ];
 
 console.log('🔍 Validating environment variables...');

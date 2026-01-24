@@ -165,9 +165,43 @@ exports.createWorkspace = async (req, res) => {
     workspace.defaultChannels = [generalChannel._id, announcementsChannel._id];
     await workspace.save();
 
-    // NOTE: E2EE conversation keys are generated LAZILY when first message is sent
-    // Default channels start WITHOUT encryption keys - this is expected and correct
-    // Keys will be automatically generated client-side when needed
+    // ✅ CRITICAL: Initialize conversation keys for default channels (server-side, atomic)
+    // This ensures the invariant: channel exists ⇒ conversation key exists
+    try {
+      const conversationKeysService = require('../src/modules/conversations/conversationKeys.service');
+
+      console.log('🔐 [createWorkspace] Bootstrapping conversation keys for default channels...');
+
+      await conversationKeysService.bootstrapConversationKey({
+        conversationId: generalChannel._id.toString(),
+        conversationType: 'channel',
+        workspaceId: workspace._id.toString(),
+        members: [userId]
+      });
+
+      await conversationKeysService.bootstrapConversationKey({
+        conversationId: announcementsChannel._id.toString(),
+        conversationType: 'channel',
+        workspaceId: workspace._id.toString(),
+        members: [userId]
+      });
+
+      console.log('✅ [createWorkspace] Default channel keys initialized');
+    } catch (keyBootstrapError) {
+      console.error('❌ [createWorkspace] Failed to bootstrap default channel keys:', keyBootstrapError);
+      // This is CRITICAL - if keys aren't created, channels are broken
+      // Roll back workspace creation
+      await Workspace.findByIdAndDelete(workspace._id);
+      await Channel.deleteMany({ _id: { $in: [generalChannel._id, announcementsChannel._id] } });
+      await User.findByIdAndUpdate(userId, {
+        $pull: { workspaces: { workspace: workspace._id } }
+      });
+
+      return res.status(500).json({
+        message: 'Failed to initialize encryption for default channels. Please try again.',
+        error: 'ENCRYPTION_INIT_FAILED'
+      });
+    }
 
     // Add workspace to user's workspaces list
     user.workspaces.push({

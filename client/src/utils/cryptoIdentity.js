@@ -174,7 +174,10 @@ export async function exportPublicKeyPEM(publicKey, algorithm) {
         const exported = await crypto.subtle.exportKey(format, publicKey);
         const exportedBase64 = btoa(String.fromCharCode(...new Uint8Array(exported)));
 
-        const keyType = algorithm === 'X25519' ? 'X25519 PUBLIC KEY' : 'RSA PUBLIC KEY';
+        // Standardize headers:
+        // X25519 = X25519 PUBLIC KEY (non-standard but common for raw)
+        // RSA = PUBLIC KEY (SPKI standard) -- NOT "RSA PUBLIC KEY" which is PKCS#1
+        const keyType = algorithm === 'X25519' ? 'X25519 PUBLIC KEY' : 'PUBLIC KEY';
         const pem = `-----BEGIN ${keyType}-----\n${exportedBase64}\n-----END ${keyType}-----`;
 
         return pem;

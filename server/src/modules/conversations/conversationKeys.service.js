@@ -5,7 +5,10 @@
  * CRITICAL: Server NEVER generates keys, only stores encrypted blobs from client
  */
 
+const crypto = require('crypto');
 const ConversationKey = require('../../../models/ConversationKey');
+const UserIdentityKey = require('../../../models/UserIdentityKey');
+const cryptoUtils = require('./cryptoUtils');
 
 // ==================== KEY STORAGE ====================
 
@@ -261,99 +264,78 @@ async function addEncryptedKeyForUser(conversationId, conversationType, userId, 
 // ==================== KEY DISTRIBUTION ====================
 
 /**
- * Distribute conversation key to new member
- * Server-side re-encryption using workspace master key
+ * Distribute conversation key to new member (server-side)
+ * 
+ * This is the CANONICAL way to distribute keys when users join channels
+ * Uses SERVER_KEK to unwrap workspace-encrypted key, then re-encrypts for new user
  * 
  * @param {String} conversationId - Channel/DM ID
  * @param {String} conversationType - 'channel' or 'dm'
- * @param {String} newUserId - New participant's user ID
- * @param {String} workspaceId - Workspace ID
+ * @param {String} newUserId - ID of user who needs the key
  * @returns {Promise<Boolean>} True if successful
  */
-async function distributeKeyToNewMember(conversationId, conversationType, newUserId, workspaceId) {
-    const crypto = require('./conversationKeys.crypto');
-    const { WorkspaceKey } = require('../../../models/encryption');
-
+async function distributeKeyToNewMember(conversationId, conversationType, newUserId) {
     try {
-        console.log(`🔐 Distributing conversation key to user ${newUserId}...`);
+        console.log(`🔐 [Server Distribution] Distributing key for ${conversationType}:${conversationId} to user ${newUserId}`);
 
         // 1. Fetch conversation key document
         const conversationKey = await ConversationKey.findByConversation(conversationId, conversationType);
 
         if (!conversationKey) {
-            throw new Error('Conversation keys not found');
+            console.error(`❌ [Server Distribution] No conversation key found for ${conversationType}:${conversationId}`);
+            return false;
         }
 
-        // 2. Check if user already has access
+        // 2. Check if workspace-wrapped key exists
+        if (!conversationKey.workspaceEncryptedKey) {
+            console.error(`❌ [Server Distribution] Conversation key not wrapped with workspace key`);
+            console.error(`   This indicates the key was created before mandatory workspace wrapping`);
+            return false;
+        }
+
+        // 3. Check if user already has access
         if (conversationKey.hasAccess(newUserId)) {
-            console.log(`User ${newUserId} already has access to ${conversationType}:${conversationId}`);
+            console.log(`✅ [Server Distribution] User ${newUserId} already has access`);
             return true;
         }
 
-        // 3. Check if workspace-encrypted key exists
-        if (!conversationKey.workspaceEncryptedKey) {
-            console.warn(`No workspace-encrypted key for ${conversationType}:${conversationId} - cannot distribute`);
+        // 4. Fetch new user's public key
+        // FIX: Fetch from UserIdentityKey model
+        const newUserKeyDoc = await UserIdentityKey.findByUserId(newUserId);
+
+        if (!newUserKeyDoc || !newUserKeyDoc.publicKey) {
+            console.error(`❌ [Server Distribution] User ${newUserId} has no E2EE public key`);
             return false;
         }
 
-        // 4. Fetch workspace master key (encrypted with admin's key)
-        const workspaceKey = await WorkspaceKey.findOne({ workspaceId }).populate('creator');
 
-        if (!workspaceKey || !workspaceKey.encryptedKeys || workspaceKey.encryptedKeys.length === 0) {
-            console.warn(`No workspace master key found for workspace ${workspaceId}`);
-            return false;
-        }
-
-        // 5. TODO: Decrypt workspace master key
-        // BLOCKER: Requires server-side KEK or different architecture
-        // For now, this returns false and relies on client-side lazy E2EE
-        console.warn(`⚠️ Server-side key distribution requires server KEK (not implemented)`);
-        console.warn(`User ${newUserId} will receive key via lazy E2EE on first message send`);
-
-        return false;
-
-        /* 
-        // 6. Once server KEK is implemented:
-        const workspaceMasterKeyBytes = await decryptWorkspaceKeyWithServerKEK(workspaceKey);
-        
-        // 7. Decrypt conversation key using workspace master key
-        const conversationKeyBytes = crypto.unwrapConversationKeyWithWorkspaceKey(
+        // 5. Unwrap conversation key using SERVER_KEK
+        console.log(`🔓 [Server Distribution] Unwrapping conversation key with SERVER_KEK...`);
+        const conversationKeyBytes = cryptoUtils.unwrapWithServerKEK(
             conversationKey.workspaceEncryptedKey,
             conversationKey.workspaceKeyIv,
-            conversationKey.workspaceKeyAuthTag,
-            workspaceMasterKeyBytes
+            conversationKey.workspaceKeyAuthTag
         );
 
-        // 8. Get new user's public key
-        const userPublicKey = await crypto.getUserPublicKey(newUserId);
-        
-        if (!userPublicKey) {
-            throw new Error(`No public key found for user ${newUserId}`);
-        }
+        // 6. Re-encrypt for new user's public key
+        console.log(`🔐 [Server Distribution] Re-encrypting for user ${newUserId}...`);
+        const wrapped = cryptoUtils.wrapForUser(conversationKeyBytes, newUserKeyDoc.publicKey);
 
-        // 9. Re-encrypt conversation key for new user
-        const { encryptedKey, ephemeralPublicKey } = await crypto.wrapConversationKeyForUser(
-            conversationKeyBytes,
-            userPublicKey.publicKey,
-            userPublicKey.algorithm
-        );
-
-        // 10. Add encrypted key to conversation key document
+        // 7. Store new encrypted key entry
         conversationKey.encryptedKeys.push({
             userId: newUserId,
-            encryptedKey: encryptedKey.toString('base64'),
-            ephemeralPublicKey: ephemeralPublicKey ? ephemeralPublicKey.toString('base64') : undefined,
-            algorithm: userPublicKey.algorithm
+            encryptedKey: wrapped.encryptedKey,
+            algorithm: wrapped.algorithm
         });
 
         await conversationKey.save();
 
-        console.log(`✅ Distributed conversation key to user ${newUserId}`);
+        console.log(`✅ [Server Distribution] Key distributed successfully to user ${newUserId} for ${conversationType}:${conversationId}`);
         return true;
-        */
+
     } catch (error) {
-        console.error('Failed to distribute conversation key:', error);
-        throw error;
+        console.error(`❌ [Server Distribution] Failed to distribute key:`, error);
+        return false;
     }
 }
 
@@ -377,6 +359,91 @@ async function hasConversationKeys(conversationId, conversationType) {
     }
 }
 
+// ==================== BOOTSTRAP (Server-Side Key Generation) ====================
+
+/**
+ * Bootstrap conversation key server-side
+ * ⚠️ CRITICAL: Use ONLY for default channels during workspace creation
+ * 
+ * This is server-assisted key generation for default channels (#general, #announcements)
+ * to ensure atomic workspace creation. Regular channels use client-side generation.
+ * 
+ * @param {Object} params
+ * @param {String} params.conversationId - Channel ID
+ * @param {String} params.conversationType - 'channel' (only channels supported)
+ * @param {String} params.workspaceId - Workspace ID
+ * @param {Array} params.members - Array of user IDs
+ * @returns {Promise<Object>} Created conversation key document
+ */
+async function bootstrapConversationKey({ conversationId, conversationType, workspaceId, members }) {
+    try {
+        console.log(`🔐 [Bootstrap] Creating conversation key for ${conversationType}:${conversationId}`);
+
+        // Check if already exists
+        const existing = await ConversationKey.findByConversation(conversationId, conversationType);
+        if (existing) {
+            console.log(`✅ Conversation key already exists for ${conversationType}:${conversationId}`);
+            return existing;
+        }
+
+        // 1. Generate random AES-256 conversation key (server-side)
+        const conversationKey = crypto.randomBytes(32);
+
+        // 2. Wrap with SERVER_KEK (acts as workspace wrapper for default channels)
+        const workspaceWrapped = cryptoUtils.encryptWithWorkspaceKey(conversationKey, workspaceId);
+
+        // 3. Wrap for each user - fetch public keys from UserIdentityKey model
+        const identityKeys = await UserIdentityKey.batchFindByUserIds(members);
+
+        // Map userId -> publicKey
+        const publicKeyMap = new Map();
+        identityKeys.forEach(k => publicKeyMap.set(k.userId.toString(), k));
+
+        const encryptedKeys = [];
+        for (const userId of members) {
+            const keyDoc = publicKeyMap.get(userId.toString());
+
+            if (!keyDoc || !keyDoc.publicKey) {
+                console.warn(`⚠️ User ${userId} has no E2EE public key, skipping`);
+                continue;
+            }
+
+            // Re-encrypt conversation key for this user
+            const wrapped = cryptoUtils.wrapForUser(conversationKey, keyDoc.publicKey);
+            encryptedKeys.push({
+                userId: userId.toString(),
+                encryptedKey: wrapped.encryptedKey,
+                algorithm: wrapped.algorithm
+            });
+        }
+
+        if (encryptedKeys.length === 0) {
+            throw new Error('No users with E2EE keys found');
+        }
+
+        // 4. Store in database
+        const conversationKeyDoc = await ConversationKey.create({
+            conversationId,
+            conversationType,
+            workspaceId,
+            createdBy: members[0],
+            encryptedKeys,
+            workspaceEncryptedKey: workspaceWrapped.ciphertext,
+            workspaceKeyIv: workspaceWrapped.iv,
+            workspaceKeyAuthTag: workspaceWrapped.authTag,
+            version: 1,
+            isActive: true
+        });
+
+        console.log(`✅ [Bootstrap] Conversation key created for ${conversationType}:${conversationId} (${encryptedKeys.length} users)`);
+        return conversationKeyDoc;
+
+    } catch (error) {
+        console.error(`❌ [Bootstrap] Failed to create conversation key:`, error);
+        throw error;
+    }
+}
+
 // ==================== EXPORTS ====================
 
 module.exports = {
@@ -387,5 +454,6 @@ module.exports = {
     removeParticipant,
     addEncryptedKeyForUser,
     hasConversationKeys,
-    distributeKeyToNewMember
+    distributeKeyToNewMember,
+    bootstrapConversationKey  // Server-side key generation for default channels
 };

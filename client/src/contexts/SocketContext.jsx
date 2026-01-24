@@ -66,9 +66,38 @@ export const SocketProvider = ({ children }) => {
             setIsConnected(false);
         });
 
-        socketInstance.on('connect_error', (error) => {
+        socketInstance.on('connect_error', async (error) => {
             console.error('❌ Socket connection error:', error.message, error);
             setIsConnected(false);
+
+            // If authentication failed, try to refresh the token
+            if (error.message === 'Authentication failed') {
+                console.log('🔄 Attempting to refresh token for socket reconnection...');
+                try {
+                    // Use fetch instead of axios to avoid import
+                    const response = await fetch(`${API_BASE}/api/auth/refresh`, {
+                        method: 'POST',
+                        credentials: 'include'
+                    });
+
+                    if (response.ok) {
+                        const { accessToken } = await response.json();
+                        localStorage.setItem('accessToken', accessToken);
+                        console.log('✅ Token refreshed, reconnecting socket...');
+
+                        // Update socket auth and reconnect
+                        socketInstance.auth = { token: accessToken };
+                        socketInstance.connect();
+                    } else {
+                        console.error('❌ Token refresh failed, redirecting to login');
+                        localStorage.removeItem('accessToken');
+                        window.location.href = '/login';
+                    }
+                } catch (refreshError) {
+                    console.error('❌ Token refresh error:', refreshError);
+                    // Don't redirect immediately - let user try manual refresh
+                }
+            }
         });
 
         // Store socket instance
@@ -170,6 +199,25 @@ export const SocketProvider = ({ children }) => {
             channelListenersRef.current.forEach(cb => cb('tab-deleted', data));
         });
 
+        // 🔐 E2EE: Handle key distribution when new user joins
+        socket.on('channel:user-joined', async (payload) => {
+            try {
+                const { channelId, newUserId } = payload;
+                console.log(`🔐 [E2EE] New user ${newUserId} joined channel ${channelId}, distributing key...`);
+
+                // Dynamically import to avoid circular dependencies
+                const { handleKeyNeededEvent } = await import('../services/clientKeyDistribution');
+                const currentUserId = user?.sub || user?._id;
+
+                await handleKeyNeededEvent(
+                    { channelId, newUserId, conversationType: 'channel' },
+                    currentUserId
+                );
+            } catch (error) {
+                console.error('❌ [E2EE] Failed to distribute key:', error);
+            }
+        });
+
         return () => {
             socket.off('channel-created');
             socket.off('channel-updated');
@@ -187,8 +235,9 @@ export const SocketProvider = ({ children }) => {
             socket.off('tab-added');
             socket.off('tab-updated');
             socket.off('tab-deleted');
+            socket.off('channel:user-joined'); // 🔐 Cleanup E2EE listener
         };
-    }, [socket]);
+    }, [socket, user]);
 
     // Broadcast message events
     useEffect(() => {

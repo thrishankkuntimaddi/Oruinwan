@@ -1,22 +1,41 @@
-.
-├── .DS_Store
-├── .gitignore
+/Users/thrishankkuntimaddi/Documents/Chttrix/ChttrixCollab
 ├── README.md
 ├── client
-│   ├── .DS_Store
-│   ├── .env
-│   ├── .env.example
-│   ├── .env.production.template
-│   ├── .gitignore
+│   ├── build
+│   │   ├── ChttrixAI-animation.mp4
+│   │   ├── Screenshot 2026-01-11 at 3.53.36 PM.png
+│   │   ├── asset-manifest.json
+│   │   ├── assets
+│   │   │   ├── ChttrixAI-logo.png
+│   │   │   ├── ChttrixFavico.png
+│   │   │   ├── ChttrixLogo-dark.svg
+│   │   │   ├── ChttrixLogo-light.svg
+│   │   │   └── ChttrixLogo.svg
+│   │   ├── chttrix-logo.jpg
+│   │   ├── favicon.ico
+│   │   ├── favicon.png
+│   │   ├── hover-animation.mp4
+│   │   ├── index.html
+│   │   ├── manifest.json
+│   │   └── static
+│   │       ├── css
+│   │       │   ├── main.2b54999f.css
+│   │       │   └── main.2b54999f.css.map
+│   │       └── js
+│   │           ├── 357.575ce109.chunk.js
+│   │           ├── 357.575ce109.chunk.js.map
+│   │           ├── 903.e0a46825.chunk.js
+│   │           ├── 903.e0a46825.chunk.js.map
+│   │           ├── main.bdc3ac37.js
+│   │           ├── main.bdc3ac37.js.LICENSE.txt
+│   │           └── main.bdc3ac37.js.map
 │   ├── jsconfig.json
 │   ├── package-lock.json
 │   ├── package.json
 │   ├── public
-│   │   ├── .DS_Store
 │   │   ├── ChttrixAI-animation.mp4
 │   │   ├── Screenshot 2026-01-11 at 3.53.36 PM.png
 │   │   ├── assets
-│   │   │   ├── .DS_Store
 │   │   │   ├── ChttrixAI-logo.png
 │   │   │   ├── ChttrixFavico.png
 │   │   │   ├── ChttrixLogo-dark.svg
@@ -29,15 +48,12 @@
 │   │   ├── index.html
 │   │   └── manifest.json
 │   ├── src
-│   │   ├── .DS_Store
 │   │   ├── App.js
 │   │   ├── __tests__
 │   │   │   └── crypto.test.js
 │   │   ├── api
 │   │   │   └── endpoints
 │   │   ├── components
-│   │   │   ├── .DS_Store
-│   │   │   ├── E2EESetup.jsx
 │   │   │   ├── InvitePeopleModal.jsx
 │   │   │   ├── RequireAdmin.jsx
 │   │   │   ├── RequireAuth.jsx
@@ -57,7 +73,6 @@
 │   │   │   │   └── onboarding
 │   │   │   │       └── OnboardingWizard.jsx
 │   │   │   ├── ai
-│   │   │   │   ├── .DS_Store
 │   │   │   │   └── ChttrixAIChat
 │   │   │   │       └── ChttrixAIChat.jsx
 │   │   │   ├── auth
@@ -82,7 +97,6 @@
 │   │   │   │   └── index.js
 │   │   │   ├── dashboard
 │   │   │   ├── home
-│   │   │   │   ├── .DS_Store
 │   │   │   │   └── panels
 │   │   │   │       └── HomePanel
 │   │   │   │           ├── ChannelDMModals.jsx
@@ -95,7 +109,6 @@
 │   │   │   │           ├── WorkspaceSettingsModal.jsx.backup
 │   │   │   │           └── index.jsx
 │   │   │   ├── layout
-│   │   │   │   ├── .DS_Store
 │   │   │   │   ├── CompanyAdminLayout.jsx
 │   │   │   │   ├── IconSidebar.jsx
 │   │   │   │   ├── MainLayout.jsx
@@ -128,7 +141,6 @@
 │   │   │   ├── messages
 │   │   │   │   └── MessageListWithE2EE.jsx
 │   │   │   ├── messagesComp
-│   │   │   │   ├── .DS_Store
 │   │   │   │   ├── BroadcastChatWindow.jsx
 │   │   │   │   ├── BroadcastModal.jsx
 │   │   │   │   ├── BroadcastView.jsx
@@ -140,7 +152,6 @@
 │   │   │   │   ├── MessageList.jsx
 │   │   │   │   ├── NewDMModal.jsx
 │   │   │   │   ├── chatWindowComp
-│   │   │   │   │   ├── .DS_Store
 │   │   │   │   │   ├── ChatWindowUnified.jsx
 │   │   │   │   │   ├── ChatWindowV2.jsx
 │   │   │   │   │   ├── ThreadPanel.jsx
@@ -231,8 +242,6 @@
 │   │   │   ├── useChannels.js
 │   │   │   ├── useChatSocket.js
 │   │   │   ├── useConversation.js
-│   │   │   ├── useDecryptMessages.js
-│   │   │   ├── useEncryption.js
 │   │   │   ├── useForm.js
 │   │   │   ├── useMessageActions.js
 │   │   │   ├── useUniversalSearch.js
@@ -257,7 +266,6 @@
 │   │   │       └── types
 │   │   │           └── primitives.js
 │   │   ├── pages
-│   │   │   ├── .DS_Store
 │   │   │   ├── AcceptInvite.jsx
 │   │   │   ├── AdminDashboard
 │   │   │   │   ├── AuditSecurity.jsx
@@ -386,7 +394,6 @@
 │   │   │   ├── debugKeyDistribution.js
 │   │   │   ├── departmentService.js
 │   │   │   ├── identityKeyService.js
-│   │   │   ├── keyDistributionService.js
 │   │   │   ├── keyManagement.js
 │   │   │   ├── managerDashboardService.js
 │   │   │   ├── messageEncryptionService.js
@@ -423,11 +430,6 @@
 ├── postcss.config.js
 ├── railway.json
 ├── server
-│   ├── .DS_Store
-│   ├── .env
-│   ├── .env.example
-│   ├── .env.production.template
-│   ├── .gitignore
 │   ├── Dockerfile
 │   ├── clearMessages.js
 │   ├── config
@@ -665,4 +667,4 @@
 ├── structure.txt
 └── verify-security.sh
 
-129 directories, 537 files
+134 directories, 534 files

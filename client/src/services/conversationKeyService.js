@@ -105,6 +105,60 @@ class ConversationKeyService {
     // ==================== KEY STORAGE ====================
 
     /**
+     * Create and store conversation key (convenience method)
+     * Combines createAndDistributeConversationKey + storeConversationKeysOnServer
+     * 
+     * @param {string} conversationId - Channel/DM ID
+     * @param {string} conversationType - 'channel' or 'dm'
+     * @param {string} workspaceId - Workspace ID
+     * @param {Array<{user: string} | string>} members - Array of member objects or IDs
+     * @returns {Promise<{conversationKey: CryptoKey, encryptedKeys: Array}>}
+     */
+    async createAndStoreConversationKey(conversationId, conversationType, workspaceId, members) {
+        try {
+            console.log(`🔐 Creating and storing conversation key for ${conversationType}:${conversationId}...`);
+
+            // Extract user IDs from members array (handle both object and string formats)
+            const participantUserIds = members.map(m => {
+                if (typeof m === 'string') return m;
+                if (m.user) return typeof m.user === 'string' ? m.user : m.user._id || m.user.toString();
+                if (m._id) return m._id.toString();
+                return m.toString();
+            });
+
+            console.log(`🔐 Participants: ${participantUserIds.length} users`);
+
+            // Create and distribute key
+            const { conversationKey, encryptedKeys } = await this.createAndDistributeConversationKey(
+                participantUserIds,
+                workspaceId
+            );
+
+            // Store on server
+            await this.storeConversationKeysOnServer(
+                conversationId,
+                conversationType,
+                workspaceId,
+                encryptedKeys,
+                null, // workspaceEncryptedKey
+                null, // workspaceKeyIv
+                null  // workspaceKeyAuthTag
+            );
+
+            // Cache the key
+            const cacheKey = `${conversationType}:${conversationId}`;
+            this.conversationKeys.set(cacheKey, { key: conversationKey, algorithm: 'AES-256' });
+
+            console.log(`✅ Created and stored conversation key for ${cacheKey}`);
+
+            return { conversationKey, encryptedKeys };
+        } catch (error) {
+            console.error('Failed to create and store conversation key:', error);
+            throw error;
+        }
+    }
+
+    /**
      * Store conversation keys on server
      * Called after creating a new channel or DM
      * 
@@ -171,8 +225,13 @@ class ConversationKeyService {
 
             if (!response.ok) {
                 if (response.status === 404) {
-                    console.warn(`⚠️ No conversation key found for ${cacheKey}`);
-                    return null;
+                    // ❌ CRITICAL ERROR: Channel exists without keys
+                    // This indicates a server invariant violation
+                    throw new Error(
+                        `BROKEN_CHANNEL: No encryption keys found for ${conversationType}:${conversationId}. ` +
+                        `This indicates a server invariant violation. The channel exists but has no conversation keys. ` +
+                        `Contact support or ask an admin to reinitialize this channel.`
+                    );
                 }
                 throw new Error('Failed to fetch conversation key');
             }

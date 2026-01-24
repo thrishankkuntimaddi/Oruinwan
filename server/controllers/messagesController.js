@@ -211,47 +211,56 @@ exports.getDMs = async (req, res) => {
 ===================================================== */
 exports.getChannelMessages = async (req, res) => {
   try {
+    const { channelId } = req.params;
+    const { limit = 50, before } = req.query;
     const userId = req.user.sub;
-    const channelId = req.params.channelId;
-    const limit = parseInt(req.query.limit) || 50;
-    const before = req.query.before;
 
     const channel = await Channel.findById(channelId);
     if (!channel) {
-      return res.status(404).json({ message: "Channel not found" });
+      return res.status(404).json({ message: 'Channel not found' });
     }
 
-    if (!isMember(channel.members, userId)) {
-      return res.status(403).json({ message: "Not a channel member" });
+    // Check if user is a member
+    const member = channel.members.find(m => {
+      const memberId = m.user ? m.user.toString() : m.toString();
+      return memberId === userId;
+    });
+
+    if (!member) {
+      return res.status(403).json({ message: 'Not a member of this channel' });
     }
 
-    const joinedAt = channel.getUserJoinDate(userId);
+    // ✅ PHASE 3: Filter messages by joinedAt timestamp
+    // Users should ONLY see messages created after they joined
+    const joinedAt = member.joinedAt || channel.createdAt; // Fallback to channel creation for old data
 
+    console.log(`📨 [getChannelMessages] User ${userId} joined at ${joinedAt.toISOString()}`);
+
+    // Build query with joinedAt filter
     const query = {
       channel: channelId,
-      parentId: null,
-      createdAt: { $gte: joinedAt }
+      createdAt: { $gte: joinedAt } // Only messages after join time
     };
 
     if (before) {
-      query._id = { $lt: before };
+      query.createdAt.$lt = new Date(before);
     }
 
     const messages = await Message.find(query)
-      .sort({ _id: -1 })
-      .limit(limit)
-      .populate("sender", "username profilePicture")
-      .populate("readBy.user", "username");
+      .sort({ createdAt: -1 })
+      .limit(parseInt(limit))
+      .populate('sender', 'username profilePicture')
+      .lean();
 
-    messages.reverse();
+    console.log(`📨 [getChannelMessages] Returning ${messages.length} messages (filtered by joinedAt)`);
 
     return res.json({
-      messages,
-      hasMore: messages.length === limit,
-      userJoinedAt: joinedAt
+      messages: messages.reverse(), // Reverse to chronological order
+      hasMore: messages.length === parseInt(limit)
     });
   } catch (err) {
-    return handleError(res, err, "GET CHANNEL ERROR");
+    console.error('GET CHANNEL MESSAGES ERROR:', err);
+    return res.status(500).json({ message: 'Server error' });
   }
 };
 

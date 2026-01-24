@@ -113,7 +113,11 @@ exports.getConversationKey = async (req, res) => {
 
         if (!encryptedKeyData) {
             return res.status(404).json({
-                message: 'Conversation keys not found'
+                error: 'KEY_NOT_INITIALIZED',
+                message: 'Conversation key not initialized',
+                hint: 'Client must create and store conversation keys first. Keys are generated client-side only.',
+                conversationId,
+                conversationType
             });
         }
 
