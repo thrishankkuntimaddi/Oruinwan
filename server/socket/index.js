@@ -71,36 +71,6 @@ module.exports = async function registerChatHandlers(io, socket) {
       const room = `channel:${channelId}`;
       socket.join(room);
       console.log(`✅ [chat:join] User ${userId} joined ${room}`);
-
-      // 🔐 E2EE: Check if keys exist and emit distribution event to existing members
-      console.log(`🔐 [E2EE Socket] ENTERING E2EE BLOCK for channel ${channelId}`);
-      try {
-        const conversationKeysService = require('../modules/conversations/conversationKeys.service');
-        const hasKeys = await conversationKeysService.hasConversationKeys(channelId, 'channel');
-        console.log(`🔐 [E2EE Socket] User ${userId} joined channel ${channelId}, hasKeys=${hasKeys}`);
-
-        if (hasKeys) {
-          // Get channel for workspace info
-          const channel = await Channel.findById(channelId).select('workspace');
-          const eventPayload = {
-            channelId,
-            newUserId: userId,
-            conversationType: 'channel',
-            workspaceId: channel?.workspace?.toString()
-          };
-
-          console.log(`🔐 [E2EE Socket] Emitting key-needed event to room ${room}`);
-          console.log(`🔐 [E2EE Socket] Payload:`, eventPayload);
-
-          io.to(room).emit('conversation:key-needed', eventPayload);
-          console.log(`✅ [E2EE Socket] Emitted conversation:key-needed for user ${userId}`);
-        } else {
-          console.log(`ℹ️ [E2EE Socket] No keys exist for channel ${channelId}, skip distribution`);
-        }
-      } catch (keyError) {
-        console.error('❌ [E2EE Socket] Key distribution event failed (non-blocking):', keyError.message);
-        console.error('❌ [E2EE Socket] Stack:', keyError.stack);
-      }
     } catch (err) {
       logger.error("Error joining channel room (chat:join):", err);
     }

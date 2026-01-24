@@ -32,84 +32,6 @@ export function useMessageActions(conversationId, conversationType, workspaceId 
         return `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     }, []);
 
-    /**
-     * 🔐 LAZY E2EE: Ensure conversation key exists before sending message
-     * Implements Safeguard #1 (single-writer) and Safeguard #2 (non-blocking)
-     * 
-     *
-     * @param {string} conversationId - Channel ID or DM Session ID
-     * @param {string} conversationType - "channel" | "dm"
-     * @param {string} workspaceId - Workspace ID
-     * @param {Array} participantUserIds - Array of user IDs who need access
-     * @returns {Promise<CryptoKey|null>} Conversation key or null if failed
-     */
-    const ensureConversationKey = useCallback(async (conversationId, conversationType, workspaceId, participantUserIds) => {
-        console.log('🔐 [Lazy E2EE] Checking for conversation key...');
-
-        // Dynamically import to avoid circular dependencies
-        const conversationKeyService = (await import('../services/conversationKeyService')).default;
-
-        // Try to get existing key from cache or server
-        let key = await conversationKeyService.getConversationKey(conversationId, conversationType);
-
-        if (!key) {
-            // ✅ Key doesn't exist - could be NEW channel or existing channel we don't have access to
-            // Check if keys exist on server for this conversation
-            try {
-                const checkResponse = await api.get(`/api/v2/conversations/${conversationId}/keys/exists?type=${conversationType}`);
-                const keysExistOnServer = checkResponse?.data?.exists;
-
-                if (keysExistOnServer) {
-                    // ❌ Keys exist on server but we don't have them
-                    // This means we're a NEW JOINER to EXISTING encrypted channel
-                    // Do NOT generate new key - wait for distribution
-                    console.error('❌ [Lazy E2EE] Channel is encrypted but you don\'t have the key yet');
-                    console.error('❌ Waiting for existing member to distribute key...');
-                    throw new Error('Conversation encryption not ready. Waiting for secure key exchange...');
-                } else {
-                    // ✅ No keys on server - this is a BRAND NEW conversation
-                    // Safe to generate keys
-                    console.log('🔐 [Lazy E2EE] New conversation - generating keys...');
-
-                    const keyData = await conversationKeyService.createAndDistributeConversationKey(participantUserIds, workspaceId);
-
-                    await conversationKeyService.storeConversationKeysOnServer(
-                        conversationId,
-                        conversationType,
-                        workspaceId,
-                        keyData.encryptedKeys,
-                        keyData.workspaceEncryptedKey,
-                        keyData.workspaceKeyIv,
-                        keyData.workspaceKeyAuthTag
-                    );
-
-                    console.log('✅ [Lazy E2EE] Conversation key generated and stored');
-                    key = keyData.conversationKey;
-                }
-            } catch (checkError) {
-                if (checkError.message?.includes('not ready') || checkError.message?.includes('Waiting for')) {
-                    throw checkError;
-                }
-                // If check fails, assume new conversation (fallback)
-                console.warn('⚠️ Could not check key existence, assuming new conversation');
-                const keyData = await conversationKeyService.createAndDistributeConversationKey(participantUserIds, workspaceId);
-                await conversationKeyService.storeConversationKeysOnServer(
-                    conversationId,
-                    conversationType,
-                    workspaceId,
-                    keyData.encryptedKeys,
-                    keyData.workspaceEncryptedKey,
-                    keyData.workspaceKeyIv,
-                    keyData.workspaceKeyAuthTag
-                );
-                key = keyData.conversationKey;
-            }
-        }
-
-        console.log('✅ [Lazy E2EE] Conversation key ready');
-        return key;
-    }, []);
-
     // Send message
     const sendMessage = useCallback(async ({ text, attachments = [], replyTo = null }) => {
         console.log('📤 [sendMessage] Called with:', { text, attachments, replyTo });
@@ -149,49 +71,20 @@ export function useMessageActions(conversationId, conversationType, workspaceId 
         let encryptionReady = true;
 
         try {
-            // ⚡ SAFEGUARD #2: Encryption is NON-BLOCKING
-            // If this fails, message still sends (encryption eventual)
-            try {
-                // 🔧 FIX #1: Extract real user IDs from channel members
-                let participantUserIds = [];
+            // ✅ DETERMINISTIC: Message send requires conversation key to exist
+            // No lazy generation - conversation must already be encrypted
+            const conversationKeyService = (await import('../services/conversationKeyService')).default;
+            const key = await conversationKeyService.getConversationKey(conversationId, conversationType);
 
-                // 🔧 FIX: Use ref to get latest channel members (avoid stale closure)
-                const latestChannelMembers = channelMembersRef.current;
-
-                if (conversationType === 'channel' && latestChannelMembers && latestChannelMembers.length > 0) {
-                    // Extract user IDs from channel members
-                    participantUserIds = latestChannelMembers
-                        .map(m => m.userId || m.user?._id || m.user)
-                        .filter(id => id); // Remove any undefined/null values
-
-                    console.log(`🔐 [E2EE] Channel members found: ${participantUserIds.length} participants`);
-                } else if (conversationType === 'dm') {
-                    // For DMs, include current user (TODO: add recipient)
-                    participantUserIds = [user?.sub || user?._id];
-                } else {
-                    // Fallback: at minimum include current user
-                    participantUserIds = [user?.sub || user?._id];
-                    console.warn('⚠️ [E2EE] No channel members provided, using current user only');
-                }
-
-                await ensureConversationKey(conversationId, conversationType, workspaceId, participantUserIds);
-            } catch (encryptionSetupError) {
-                console.error('🔐 [Non-blocking] Encryption setup failed:', encryptionSetupError);
-                encryptionReady = false;
-                // DO NOT throw - message send continues
-            }
-
-            // 🔧 FIX #2 & #3: Only encrypt if key setup succeeded
-            if (!encryptionReady) {
-                console.error('❌ [E2EE] Skipping encryption - key setup failed');
+            if (!key) {
+                console.error('❌ [E2EE] No conversation key found');
                 return {
                     success: false,
-                    error: 'Message encryption failed. Conversation not yet encrypted. Please refresh and try again.'
+                    error: 'Conversation is not encrypted yet. Please wait for encryption to be initialized.'
                 };
             }
 
             // ============ E2EE: ENCRYPT MESSAGE ============
-            // ✅ NON-BLOCKING: Never throw to UI, always graceful fallback
             console.log('🔐 [E2EE] Encrypting message with conversation key...');
             console.log('🔐 [E2EE] Context:', { conversationId, conversationType, parentId: replyTo });
 
@@ -208,11 +101,7 @@ export function useMessageActions(conversationId, conversationType, workspaceId 
 
             console.log('✅ [E2EE] Message encrypted successfully');
         } catch (encError) {
-            // ✅ CRITICAL: Non-blocking error handling
-            // If encryption fails, we could either:
-            // 1. Block send (current behavior - safer)
-            // 2. Send plaintext with warning (less safe)
-            // Current: Block send for security
+            // ✅ CRITICAL: Block send if encryption fails (security requirement)
             console.error('❌ [E2EE] Encryption failed:', encError);
             console.error('❌ [E2EE] Context:', { conversationId, conversationType });
 
@@ -286,7 +175,7 @@ export function useMessageActions(conversationId, conversationType, workspaceId 
                 }
             };
         }
-    }, [conversationId, conversationType, workspaceId, user, socket, generateTempId, ensureConversationKey, channelMembersRef]);
+    }, [conversationId, conversationType, workspaceId, user, socket, generateTempId]);
 
     // Add reaction
     const addReaction = useCallback(async (messageId, emoji) => {

@@ -182,41 +182,6 @@ exports.inviteToChannel = async (req, res) => {
 
     await saveWithRetry(channel);
 
-    // 🔐 E2EE: Notify existing members to distribute key to new joiner (client-mediated)
-    try {
-      const hasKeys = await conversationKeysService.hasConversationKeys(channelId, 'channel');
-      console.log(`🔐 [E2EE Server] Checking keys for channel ${channelId}: hasKeys=${hasKeys}`);
-
-      if (hasKeys) {
-        // Instead of server-side distribution, emit socket event
-        // Any existing member's client will handle distribution
-        const io = req.app?.get("io");
-        const eventPayload = {
-          channelId,
-          newUserId: inviteeId,
-          conversationType: 'channel',
-          workspaceId: channel.workspace.toString()
-        };
-
-        console.log(`🔐 [E2EE Server] Keys exist! Preparing to emit 'conversation:key-needed'`);
-        console.log(`🔐 [E2EE Server] Socket.io available: ${!!io}`);
-        console.log(`🔐 [E2EE Server] Room: channel:${channelId}`);
-        console.log(`🔐 [E2EE Server] Event payload:`, eventPayload);
-
-        if (io) {
-          io.to(`channel:${channelId}`).emit('conversation:key-needed', eventPayload);
-          console.log(`✅ [E2EE Server] Successfully emitted 'conversation:key-needed' to room: channel:${channelId}`);
-        } else {
-          console.error(`❌ [E2EE Server] Socket.io not available!`);
-        }
-      } else {
-        console.log(`ℹ️ [E2EE Server] No keys exist for channel ${channelId}, skipping event`);
-      }
-    } catch (keyError) {
-      // Non-blocking: log error but don't fail the invite
-      console.error('❌ [E2EE Server] Key distribution event failed (non-blocking):', keyError.message);
-    }
-
     // optional: emit socket event to channel room or to invitee
     const io = req.app?.get("io");
     if (io) {

@@ -8,7 +8,6 @@
 import { generateWorkspaceKey, exportKey, importKey, encryptAESGCM, arrayBufferToBase64 } from '../utils/crypto';
 import { wrapKeyWithRSA, wrapKeyWithX25519, unwrapKeyWithRSA, unwrapKeyWithX25519 } from '../utils/cryptoIdentity';
 import identityKeyService from './identityKeyService';
-import { getWorkspaceKeyForEncryption } from './keyManagement';
 
 // ==================== CONVERSATION KEY SERVICE ====================
 
@@ -93,41 +92,9 @@ class ConversationKeyService {
 
             console.log(`✅ Conversation key encrypted for ${encryptedKeys.length} participants`);
 
-            // 5. Encrypt conversation key with workspace master key (for server-side re-encryption)
-            let workspaceEncryptedKey, workspaceKeyIv, workspaceKeyAuthTag;
-
-            if (workspaceId) {
-                try {
-                    const workspaceKey = await getWorkspaceKeyForEncryption(workspaceId);
-
-                    if (workspaceKey) {
-                        const iv = crypto.getRandomValues(new Uint8Array(12));
-                        const encrypted = await encryptAESGCM(conversationKeyBytes, workspaceKey, iv);
-
-                        // Split ciphertext and auth tag (GCM appends 16-byte auth tag)
-                        const ciphertext = encrypted.ciphertext.slice(0, -16);
-                        const authTag = encrypted.ciphertext.slice(-16);
-
-                        workspaceEncryptedKey = arrayBufferToBase64(ciphertext);
-                        workspaceKeyIv = arrayBufferToBase64(iv);
-                        workspaceKeyAuthTag = arrayBufferToBase64(authTag);
-
-                        console.log('✅ Encrypted conversation key with workspace master key');
-                    } else {
-                        console.warn('⚠️ No workspace key available for encryption');
-                    }
-                } catch (error) {
-                    console.error('Failed to encrypt with workspace key (non-critical):', error);
-                    // Continue without workspace encryption
-                }
-            }
-
             return {
                 conversationKey,
-                encryptedKeys,
-                workspaceEncryptedKey,
-                workspaceKeyIv,
-                workspaceKeyAuthTag
+                encryptedKeys
             };
         } catch (error) {
             console.error('Failed to create and distribute conversation key:', error);

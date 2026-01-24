@@ -179,30 +179,6 @@ export async function enrollUserKeys(password, encryptedKeys) {
 }
 
 /**
- * Get workspace key for encryption/decryption
- * Returns cached key from memory
- * 
- * @param {string} workspaceId - Workspace ID
- * @returns {Promise<CryptoKey|null>} Workspace key or null
- */
-export async function getWorkspaceKeyForEncryption(workspaceId) {
-    console.log(`🔍 [getWorkspaceKeyForEncryption] Looking up key for workspace: ${workspaceId}`);
-
-    const key = await getWorkspaceKey(workspaceId);
-
-    if (!key) {
-        console.error(`❌ [getWorkspaceKeyForEncryption] No key found for workspace: ${workspaceId}`);
-        console.error(`❌ [getWorkspaceKeyForEncryption] Available keys in sessionStorage:`,
-            Object.keys(sessionStorage).filter(k => k.startsWith(STORAGE_KEY_PREFIX))
-        );
-        throw new Error("E2EE key missing for workspace. Please log out and log back in to re-initialize encryption keys.");
-    }
-
-    console.log(`✅ [getWorkspaceKeyForEncryption] Key found for workspace: ${workspaceId}`);
-    return key;
-}
-
-/**
  * Check if user has key for workspace
  * 
  * @param {string} workspaceId - Workspace ID
@@ -274,7 +250,6 @@ export async function refreshWorkspaceKeys(password, workspaceId = null) {
 
 const keyManagementService = {
     enrollUserKeys,
-    getWorkspaceKeyForEncryption,
     hasWorkspaceKey,
     getEnrolledWorkspaces,
     clearAllKeys,
