@@ -76,6 +76,10 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
     const [showAttach, setShowAttach] = useState(false);
     const [showEmoji, setShowEmoji] = useState(false);
 
+    // ✅ PHASE 0: Broken channel detection
+    const [channelBroken, setChannelBroken] = useState(false);
+    const [brokenChannelError, setBrokenChannelError] = useState(null);
+
     // Dashboard State
     const [dashboardView, setDashboardView] = useState('grid');
     const [dashboardSearch, setDashboardSearch] = useState('');
@@ -95,6 +99,33 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
     React.useEffect(() => {
         conversationRef.current = conversation;
     }, [conversation]);
+
+    // ✅ PHASE 0: Check encryption status on mount and when conversation changes
+    useEffect(() => {
+        const checkEncryptionStatus = async () => {
+            if (!conversationId || !conversationType) return;
+
+            try {
+                const conversationKeyService = (await import('../../../services/conversationKeyService')).default;
+                await conversationKeyService.getConversationKey(conversationId, conversationType);
+                // Key exists - channel is healthy
+                setChannelBroken(false);
+                setBrokenChannelError(null);
+            } catch (error) {
+                // Check if this is a BROKEN_CHANNEL error
+                if (error.message && error.message.includes('BROKEN_CHANNEL')) {
+                    console.error('❌ Channel broken - no encryption keys:', error);
+                    setChannelBroken(true);
+                    setBrokenChannelError(error.message);
+                } else {
+                    // Other errors (network, etc.) - don't mark as broken
+                    console.warn('⚠️ Error checking encryption status:', error);
+                }
+            }
+        };
+
+        checkEncryptionStatus();
+    }, [conversationId, conversationType]);
 
     // Header action handlers
     const handleShowThreadsView = useCallback(() => {
@@ -327,6 +358,12 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
 
     // Handle sending message from footer
     const handleSend = useCallback(async (markdown) => {
+        // ✅ PHASE 0: Block sending if channel is broken
+        if (channelBroken) {
+            showToast('Cannot send messages - channel encryption keys not available', 'error');
+            return { success: false, error: 'BROKEN_CHANNEL' };
+        }
+
         // Prepare message data (encryption handled in useMessageActions)
         const messageData = {
             text: markdown,
@@ -341,11 +378,11 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
             setReplyingTo(null);
             setNewMessage('');
         } else {
-            showToast(result.error || 'Failed to send message', 'error');
+            showToast(result.message || result.error || 'Failed to send message', 'error');
         }
 
         return result;
-    }, [actions, replyingTo, showToast]);
+    }, [actions, replyingTo, showToast, channelBroken]);
 
     // Handle emoji pick
     const handleEmojiPick = useCallback((emoji) => {
@@ -517,6 +554,20 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
                 onShowMemberList={handleShowMemberList}
             />
 
+            {/* ✅ PHASE 0: Broken Channel Warning Banner */}
+            {channelBroken && (
+                <div className="bg-red-500 text-white px-4 py-3 flex items-center gap-3 shadow-lg border-b-4 border-red-600">
+                    <span className="text-2xl">⚠️</span>
+                    <div className="flex-1">
+                        <span className="font-semibold">Channel Encryption Broken:</span>
+                        <span className="ml-2">
+                            Encryption keys not available. Messages cannot be sent or decrypted.
+                            Contact your workspace admin to reinitialize this channel.
+                        </span>
+                    </div>
+                </div>
+            )}
+
             {/* Canvas Tabs (channels only) */}
             {chat?.type === 'channel' && (
                 <ChannelTabs
@@ -568,6 +619,7 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
                                 setRecording={setRecording}
                                 blocked={false}
                                 setNewMessage={setNewMessage}
+                                disabled={channelBroken}
                             />
                         </div>
                     </>

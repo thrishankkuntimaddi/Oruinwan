@@ -105,9 +105,15 @@ export function useMessageActions(conversationId, conversationType, workspaceId 
             console.error('❌ [E2EE] Encryption failed:', encError);
             console.error('❌ [E2EE] Context:', { conversationId, conversationType });
 
+            // ✅ PHASE 0: Detect BROKEN_CHANNEL vs other errors
+            const isBrokenChannel = encError.message && encError.message.includes('BROKEN_CHANNEL');
+
             return {
                 success: false,
-                error: `Message encryption failed. ${encError.message.includes('not found') ? 'Conversation not yet encrypted. Please refresh and try again.' : 'Please try again.'}`
+                error: isBrokenChannel ? 'BROKEN_CHANNEL' : 'ENCRYPTION_FAILED',
+                message: isBrokenChannel
+                    ? 'Channel encryption keys not available. Contact workspace admin to reinitialize this channel.'
+                    : `Message encryption failed. ${encError.message.includes('not found') ? 'Conversation not yet encrypted. Please refresh and try again.' : 'Please try again.'}`
             };
         }
         // ==============================================

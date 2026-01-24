@@ -29,6 +29,7 @@ export default function FooterInput({
   setNewMessage,
   showAI = true,
   showVoice = true,
+  disabled = false, // ✅ PHASE 0: Support for broken channels
 }) {
   const emojiRef = useRef(null);
   const attachRef = useRef(null);
@@ -93,7 +94,7 @@ export default function FooterInput({
   };
 
   const insertFormat = (type) => {
-    if (blocked) return;
+    if (blocked || disabled) return; // ✅ PHASE 0: Also block when channel broken
 
     // Ensure focus before executing
     if (editableRef.current) editableRef.current.focus();
@@ -131,7 +132,7 @@ export default function FooterInput({
   const handleSend = React.useCallback(() => {
     // Use stripTags to check if there's actual text content (not just HTML tags)
     const textContent = stripTags(newMessage).trim();
-    if (!textContent || blocked) return;
+    if (!textContent || blocked || disabled) return; // ✅ PHASE 0: Block send when channel broken
 
     // Convert HTML to Markdown
     let markdown = turndownService.turndown(newMessage);
@@ -144,7 +145,7 @@ export default function FooterInput({
 
     // Clear the input immediately after sending
     setNewMessage("");
-  }, [newMessage, blocked, onSend, setNewMessage]);
+  }, [newMessage, blocked, disabled, onSend, setNewMessage]); // ✅ PHASE 0: Add disabled to deps
 
   // CRITICAL FIX: react-contenteditable doesn't properly support onKeyDown prop
   // We need to use a native event listener instead
@@ -183,13 +184,13 @@ export default function FooterInput({
           <ContentEditable
             innerRef={editableRef}
             html={newMessage} // innerHTML of the editable div
-            disabled={blocked}       // use true to disable editing
+            disabled={blocked || disabled}       // ✅ PHASE 0: Disable when channel broken
             onChange={(evt) => {
               // react-contenteditable provides the new HTML in evt.target.value
               onChange({ target: { value: evt.target.value } });
             }}
-            className={`focus:outline-none min-h-[40px] whitespace-pre-wrap break-words text-gray-800 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 ${blocked ? "cursor-not-allowed opacity-50" : ""}`}
-            placeholder="Message..."
+            className={`focus:outline-none min-h-[40px] whitespace-pre-wrap break-words text-gray-800 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 ${(blocked || disabled) ? "cursor-not-allowed opacity-50" : ""}`}
+            placeholder={disabled ? "Channel encryption unavailable" : "Message..."}
           />
           {!newMessage && !blocked && (
             <div className="absolute top-2 left-3 text-gray-400 pointer-events-none text-sm">
@@ -310,12 +311,12 @@ export default function FooterInput({
             {/* Send */}
             <button
               onClick={handleSend}
-              disabled={!hasText || blocked}
-              className={`ml-2 p-2 rounded-full transition-all duration-200 flex items-center justify-center ${hasText && !blocked
+              disabled={!hasText || blocked || disabled}
+              className={`ml-2 p-2 rounded-full transition-all duration-200 flex items-center justify-center ${hasText && !blocked && !disabled
                 ? "bg-blue-600 text-white hover:bg-blue-700 shadow-md hover:shadow-lg"
                 : "bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed"
                 }`}
-              title="Send message"
+              title={disabled ? "Cannot send - channel encryption unavailable" : "Send message"}
             >
               <SendHorizontal size={18} strokeWidth={2.5} />
             </button>

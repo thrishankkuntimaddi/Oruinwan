@@ -87,11 +87,12 @@ export async function encryptMessageForSending(plaintext, conversationId, conver
 export async function decryptReceivedMessage(ciphertextBase64, ivBase64, conversationId, conversationType, parentMessageId = null) {
     try {
         // Get conversation key
+        // ✅ PHASE 0: Let BROKEN_CHANNEL error propagate instead of returning fallback text
         let decryptionKey = await conversationKeyService.getConversationKey(conversationId, conversationType);
 
         if (!decryptionKey) {
-            console.warn(`⚠️ No conversation key found for ${conversationType}:${conversationId}`);
-            return '🔒 Encrypted message (key not available)';
+            // This should trigger BROKEN_CHANNEL error in conversationKeyService
+            throw new Error(`BROKEN_CHANNEL: No encryption key available for ${conversationType}:${conversationId}`);
         }
 
         // If this is a thread reply, derive thread-specific key
@@ -173,14 +174,11 @@ export async function batchDecryptMessages(messages, conversationId, conversatio
         console.log(`🔐 [Batch Decrypt] Starting for ${messages.length} messages in ${conversationType}:${conversationId}`);
 
         // Pre-fetch conversation key once
+        // ✅ PHASE 0: Throw error instead of returning fallback text
         const conversationKey = await conversationKeyService.getConversationKey(conversationId, conversationType);
 
         if (!conversationKey) {
-            console.warn(`⚠️ No conversation key for batch decryption of ${conversationType}:${conversationId}`);
-            return messages.map(msg => ({
-                ...msg,
-                decryptedContent: '🔒 Encrypted message (key not available)'
-            }));
+            throw new Error(`BROKEN_CHANNEL: No encryption key available for ${conversationType}:${conversationId}`);
         }
 
         console.log(`✅ [Batch Decrypt] Got conversation key, decrypting ${messages.length} messages...`);
@@ -253,11 +251,9 @@ export async function batchDecryptMessages(messages, conversationId, conversatio
         return decrypted;
     } catch (error) {
         console.error('❌ [Batch Decrypt] Batch decryption failed:', error);
-        // Return messages with encrypted indicator
-        return messages.map(msg => ({
-            ...msg,
-            decryptedContent: '🔒 Encrypted message'
-        }));
+        // ✅ PHASE 0: Throw error instead of returning fallback messages
+        // This allows UI to detect broken channel state
+        throw error;
     }
 }
 
