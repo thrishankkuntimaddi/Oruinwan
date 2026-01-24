@@ -80,7 +80,7 @@ export function useMessageActions(conversationId, conversationType, workspaceId 
             // ✅ PHASE 3: FIRST MESSAGE KEY GENERATION
             // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
             if (!key && conversationType === 'channel') {
-                console.log('🔑 [PHASE 3] No key found — FIRST MESSAGE — generating conversation key');
+                console.log('🔑 [PHASE 3] No key found — generating conversation key for first message');
 
                 // Fetch channel members to encrypt key for all of them
                 const api = (await import('../services/api')).default;
@@ -103,15 +103,16 @@ export function useMessageActions(conversationId, conversationType, workspaceId 
                     console.log('✅ [PHASE 3] Conversation key created and stored');
 
                 } catch (keyError) {
-                    // Handle 409 (key already exists - race condition)
+                    // ⚠️ 409 = race condition between early members (both trying to create key)
+                    // This should NEVER happen for late joiners (blocked above)
                     if (keyError.message && keyError.message.includes('already exist')) {
-                        console.log('⚠️ [PHASE 3] Key already exists (409) - fetching existing key');
+                        console.log('⚠️ [RACE] Key already exists (409) - fetching existing key');
                         // Fetch the existing key
                         key = await conversationKeyService.fetchAndDecryptConversationKey(
                             conversationId,
                             'channel'
                         );
-                        console.log('✅ [PHASE 3] Fetched existing conversation key');
+                        console.log('✅ [RACE] Fetched existing conversation key');
                     } else {
                         // Re-throw other errors
                         throw keyError;

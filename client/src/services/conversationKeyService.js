@@ -400,6 +400,38 @@ class ConversationKeyService {
         }
     }
 
+    // ==================== ACCESS STATE DETECTION ====================
+
+    /**
+     * Fetch conversation keys from server
+     * Use cached key if available and fresh
+     * 
+     * @param {string} conversationId - Channel/DM ID
+     * @param {string} conversationType - 'channel' or 'dm'
+     * @returns {Promise<object|null>} Decrypted key data or null if not found
+     */
+    async fetchConversationKeys(conversationId, conversationType) {
+        try {
+            const response = await fetch(`/api/v2/conversations/${conversationId}/keys?type=${conversationType}`, {
+                credentials: 'include'
+            });
+
+            if (response.status === 404) {
+                // No keys exist yet (normal for Phase 3 UNINITIALIZED channels)
+                return null;
+            }
+
+            if (!response.ok) {
+                throw new Error(`Failed to fetch conversation keys: ${response.status}`);
+            }
+
+            return await response.json();
+        } catch (error) {
+            console.error('[conversationKeyService] fetchConversationKeys error:', error);
+            throw error;
+        }
+    }
+
     // ==================== CACHE MANAGEMENT ====================
 
     /**

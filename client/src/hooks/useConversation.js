@@ -4,6 +4,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import api from '../services/api';
 import { batchDecryptMessages } from '../services/messageEncryptionService';
+import { useAuth } from '../contexts/AuthContext';
 
 /**
  * Manages conversation events (messages, polls, system events)
@@ -13,6 +14,10 @@ import { batchDecryptMessages } from '../services/messageEncryptionService';
  * @returns {object} Conversation state and methods
  */
 export function useConversation(conversationId, conversationType, workspaceId = null) {
+    // ✅ Get user at top level (hooks must be called at top level)
+    const { user } = useAuth();
+    const currentUserId = user?.sub || user?._id;
+
     const [events, setEvents] = useState([]);
     const [loading, setLoading] = useState(false);
     const [hasMore, setHasMore] = useState(false);
@@ -66,9 +71,10 @@ export function useConversation(conversationId, conversationType, workspaceId = 
             }));
 
             // 🔐 Decrypt messages before displaying (ONLY if messages exist)
+            // Server already filters messages by joinedAt, so we don't need client-side filtering
             let decrypted = normalized;
             if (normalized.length > 0) {
-                decrypted = await batchDecryptMessages(normalized, conversationId, conversationType);
+                decrypted = await batchDecryptMessages(normalized, conversationId, conversationType, null);
             } else {
                 console.log('ℹ️ [PHASE 3] No messages to decrypt - channel UNINITIALIZED');
             }
@@ -89,7 +95,7 @@ export function useConversation(conversationId, conversationType, workspaceId = 
         } finally {
             setLoading(false);
         }
-    }, [conversationId, conversationType, workspaceId]);
+    }, [conversationId, conversationType, workspaceId, currentUserId]);
 
     // Load more messages (pagination)
     const loadMore = useCallback(async () => {
@@ -125,9 +131,10 @@ export function useConversation(conversationId, conversationType, workspaceId = 
             }));
 
             // 🔐 Decrypt messages before displaying (ONLY if messages exist)
+            // Server already filters messages by joinedAt, so we don't need client-side filtering
             let decrypted = normalized;
             if (normalized.length > 0) {
-                decrypted = await batchDecryptMessages(normalized, conversationId, conversationType);
+                decrypted = await batchDecryptMessages(normalized, conversationId, conversationType, null);
             }
 
             // Add to dedup map
@@ -145,7 +152,7 @@ export function useConversation(conversationId, conversationType, workspaceId = 
         } finally {
             setLoading(false);
         }
-    }, [conversationId, conversationType, workspaceId, events, loading, hasMore]);
+    }, [conversationId, conversationType, workspaceId, events, loading, hasMore, currentUserId]);
 
     // Add optimistic event (for sending messages)
     const addOptimisticEvent = useCallback((event) => {
@@ -229,7 +236,9 @@ export function useConversation(conversationId, conversationType, workspaceId = 
                 isEncrypted: event.payload?.isEncrypted || event.payload?.payload?.isEncrypted
             });
 
-            const decrypted = await batchDecryptMessages([event], conversationId, conversationType);
+            // Server-sent realtime messages are already valid for this user
+            // No need for client-side filtering
+            const decrypted = await batchDecryptMessages([event], conversationId, conversationType, null);
             processedEvent = decrypted[0] || event;
 
             console.log(`✅ [useConversation] Decrypted realtime message:`, {

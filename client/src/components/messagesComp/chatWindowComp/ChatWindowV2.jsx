@@ -99,6 +99,16 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
         conversationRef.current = conversation;
     }, [conversation]);
 
+    // ✅ PHASE 4: Connect socket when ChatWindow opens
+    // By this point, identity keys are already loaded (user is authenticated)
+    const { connectSocket } = useSocket();
+    React.useEffect(() => {
+        if (connectSocket) {
+            console.log('🔌 [ChatWindowV2] Connecting socket for real-time messages');
+            connectSocket();
+        }
+    }, [connectSocket]);
+
     // ✅ PHASE 3: NO premature encryption check
     // Conversation keys are ONLY checked/generated when sending first message
     // Missing key = UNINITIALIZED state (normal for new channels)

@@ -120,6 +120,17 @@ export const SocketProvider = ({ children }) => {
         };
     }, []);
 
+    // ✅ Explicit socket connection function
+    // Call this from components AFTER identity keys are loaded
+    const connectSocket = useCallback(() => {
+        if (socket && !socket.connected) {
+            console.log('🔌 [Socket] Explicit connect after Phase 1 complete');
+            socket.connect();
+        } else if (socket?.connected) {
+            console.log('✅ [Socket] Already connected');
+        }
+    }, [socket]);
+
     // Broadcast channel events to all registered listeners
     useEffect(() => {
         if (!socket) return;
@@ -439,6 +450,7 @@ export const SocketProvider = ({ children }) => {
         addTaskListener,
         addNoteListener,
         addUpdateListener,
+        connectSocket, // ✅ Export socket connection function
     };
 
     return (

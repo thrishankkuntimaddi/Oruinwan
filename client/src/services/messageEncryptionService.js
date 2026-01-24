@@ -163,29 +163,55 @@ export async function decryptMessageGracefully(message, conversationId, conversa
 /**
  * Decrypt multiple messages efficiently
  * Pre-fetches conversation key to avoid repeated lookups
+ * NEVER returns placeholders - filters messages instead
  * 
  * @param {Array} messages - Array of encrypted message objects
  * @param {string} conversationId - Channel/DM ID
  * @param {string} conversationType - 'channel' or 'dm'
- * @returns {Promise<Array>} Array of messages with decrypted content
+ * @param {Date|null} userJoinedAt - When user joined (for filtering)
+ * @returns {Promise<Array>} Array of decrypted messages (filtered by joinedAt)
  */
-export async function batchDecryptMessages(messages, conversationId, conversationType) {
+export async function batchDecryptMessages(messages, conversationId, conversationType, userJoinedAt = null) {
     try {
         console.log(`🔐 [Batch Decrypt] Starting for ${messages.length} messages in ${conversationType}:${conversationId}`);
 
-        // Pre-fetch conversation key once
-        // ✅ PHASE 0: Throw error instead of returning fallback text
+        // ✅ Early return for empty messages
+        if (!messages || messages.length === 0) {
+            console.log('ℹ️ [Batch Decrypt] No messages to decrypt');
+            return [];
+        }
+
+        // ✅ Filter messages by joinedAt FIRST (before attempting decryption)
+        let messagesToDecrypt = messages;
+        if (userJoinedAt) {
+            const joinTimestamp = new Date(userJoinedAt).getTime();
+            messagesToDecrypt = messages.filter(msg => {
+                const msgTimestamp = new Date(msg.createdAt).getTime();
+                return msgTimestamp >= joinTimestamp;
+            });
+
+            console.log(`📅 [Batch Decrypt] Filtered ${messages.length} → ${messagesToDecrypt.length} messages (joinedAt: ${userJoinedAt})`);
+
+            if (messagesToDecrypt.length === 0) {
+                console.log('ℹ️ [Batch Decrypt] All messages filtered out - user joined after all messages');
+                return [];
+            }
+        }
+
+        // ✅ Fetch conversation key
         const conversationKey = await conversationKeyService.getConversationKey(conversationId, conversationType);
 
         if (!conversationKey) {
-            throw new Error(`BROKEN_CHANNEL: No encryption key available for ${conversationType}:${conversationId}`);
+            // No key exists = UNINITIALIZED channel (no messages should exist)
+            console.warn('⚠️ [Batch Decrypt] No conversation key found - returning empty array');
+            return [];
         }
 
-        console.log(`✅ [Batch Decrypt] Got conversation key, decrypting ${messages.length} messages...`);
+        console.log(`✅ [Batch Decrypt] Got conversation key, decrypting ${messagesToDecrypt.length} messages...`);
 
         // Decrypt each message
         const decrypted = await Promise.all(
-            messages.map(async (message) => {
+            messagesToDecrypt.map(async (message) => {
                 try {
                     // Handle nested payload structure from Message model
                     // Server stores encryption data in payload.payload.{ciphertext, messageIv}
@@ -204,7 +230,8 @@ export async function batchDecryptMessages(messages, conversationId, conversatio
                         });
                         return {
                             ...message,
-                            decryptedContent: '⚠️ Invalid message format'
+                            decryptedContent: '⚠️ Invalid message format',
+                            isDecryptable: false
                         };
                     }
 
@@ -235,13 +262,15 @@ export async function batchDecryptMessages(messages, conversationId, conversatio
 
                     return {
                         ...message,
-                        decryptedContent: plaintext
+                        decryptedContent: plaintext,
+                        isDecryptable: true
                     };
                 } catch (error) {
                     console.error(`❌ [Batch Decrypt] Failed to decrypt message ${message.id}:`, error);
                     return {
                         ...message,
-                        decryptedContent: '🔒 Unable to decrypt message'
+                        decryptedContent: '🔒 Unable to decrypt message',
+                        isDecryptable: false
                     };
                 }
             })
@@ -251,9 +280,12 @@ export async function batchDecryptMessages(messages, conversationId, conversatio
         return decrypted;
     } catch (error) {
         console.error('❌ [Batch Decrypt] Batch decryption failed:', error);
-        // ✅ PHASE 0: Throw error instead of returning fallback messages
-        // This allows UI to detect broken channel state
-        throw error;
+        // ✅ NEVER throw - return messages with error indicators
+        return messages.map(message => ({
+            ...message,
+            decryptedContent: '⚠️ Decryption failed',
+            isDecryptable: false
+        }));
     }
 }
 
