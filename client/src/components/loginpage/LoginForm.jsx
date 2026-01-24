@@ -7,7 +7,6 @@ import { useToast } from "../../contexts/ToastContext";
 import { useGoogleLogin } from "@react-oauth/google";
 import axios from "axios";
 import { Eye, EyeOff } from "lucide-react";
-import identityKeyService from "../../services/identityKeyService";
 
 
 
@@ -65,45 +64,8 @@ const LoginForm = ({ onSwitch, initialEmail = "" }) => {
       await new Promise(resolve => setTimeout(resolve, 100));
 
       // ============================================================
-      // 🔐 TRANSPARENT E2EE IDENTITY KEY INITIALIZATION
-      // ============================================================
-      // This happens automatically in the background
-      // User sees no prompts, no delays
-      try {
-        console.log('🔐 Initializing E2EE identity keys...');
-        console.log('🔍 Login response:', response);
-
-        // Get user ID from response (check multiple possible locations)
-        const userId = response.user?._id || response.user?.id || response._id || response.id;
-
-        if (!userId) {
-          console.error('❌ Cannot initialize E2EE: User ID not found in response');
-          console.log('Response structure:', response);
-          throw new Error('User ID not found');
-        }
-
-        console.log('✅ User ID found:', userId);
-
-        const { existed, algorithm } = await identityKeyService.initializeIdentityKeys(userId);
-
-        if (!existed) {
-          // New keypair generated - upload public key to server
-          console.log(`✅ Generated new ${algorithm} identity keypair`);
-          await identityKeyService.uploadPublicKeyToServer();
-          console.log('✅ Public key uploaded to server');
-        } else {
-          console.log(`✅ Loaded existing ${algorithm} identity keypair from IndexedDB`);
-        }
-
-        // Identity keys are now ready for E2EE
-        // Private key stored in IndexedDB, public key on server
-        // User experienced ZERO friction
-      } catch (e2eeError) {
-        // Don't block login if E2EE initialization fails
-        // Just log it for debugging
-        console.error('⚠️ E2EE initialization failed (non-blocking):', e2eeError);
-        // Could optionally show a non-intrusive toast here
-      }
+      // ℹ️ Identity key initialization happens automatically in AuthContext.login()
+      // NO identity init logic needed here - centralized in AuthContext
       // ============================================================
 
       // Check if there's a pending invite to redirect to
@@ -191,46 +153,21 @@ const LoginForm = ({ onSwitch, initialEmail = "" }) => {
         showToast("Google login successful!", "success");
 
         // ============================================================
-        // 🔐 INITIALIZE E2EE IDENTITY KEYS FOR OAUTH USERS
+        // 🔐 PASSWORD SETUP CHECK (UX Flow - Decoupled from Phase 1)
         // ============================================================
-        // This ensures OAuth users have identity keys before creating workspaces
-        try {
-          console.log('🔐 [OAuth] Initializing E2EE identity keys...');
-          
-          // Get user ID from response
-          const userId = res.data.user?._id || res.data.user?.id;
-          
-          if (!userId) {
-            console.error('❌ Cannot initialize E2EE: User ID not found in OAuth response');
-          } else {
-            const { existed, algorithm } = await identityKeyService.initializeIdentityKeys(userId);
-            
-            if (!existed) {
-              // New keypair generated - upload public key to server
-              console.log(`✅ Generated new ${algorithm} identity keypair for OAuth user`);
-              await identityKeyService.uploadPublicKeyToServer();
-              console.log('✅ Public key uploaded to server');
-            } else {
-              console.log(`✅ Loaded existing ${algorithm} identity keypair from IndexedDB`);
-            }
-          }
-        } catch (e2eeError) {
-          // Don't block login if E2EE initialization fails
-          console.error('⚠️ E2EE initialization failed for OAuth user (non-blocking):', e2eeError);
-        }
+        // NOTE: requiresPasswordSetup is UX-only
+        // Identity keys are initialized via AuthContext.loadUser() on page mount
+        // Password setup happens AFTER identity is established
         // ============================================================
-
-        // ================================================================
-        // 🔐 CHECK IF OAUTH USER NEEDS TO SET PASSWORD (FIRST-TIME LOGIN)
-        // ================================================================
         if (res.data.requiresPasswordSetup || res.data.isFirstLogin) {
-          console.log('🔐 OAuth user needs to set password - redirecting to /set-password');
+          console.log('ℹ️ [UX] OAuth user will be prompted to set password (optional)');
           // Store flag in localStorage for the setup-password page
           localStorage.setItem("oauthPasswordSetupRequired", "true");
           localStorage.setItem("oauthProvider", "google");
           navigate("/set-password");
           return;
         }
+        // ============================================================
 
         console.log('✅ Password already set or skipped - redirecting to dashboard');
 

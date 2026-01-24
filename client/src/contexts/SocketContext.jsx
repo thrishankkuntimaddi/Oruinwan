@@ -103,9 +103,14 @@ export const SocketProvider = ({ children }) => {
         // Store socket instance
         setSocket(socketInstance);
 
-        // Connect manually after token is verified
-        console.log('🔌 Connecting socket with auth token...');
-        socketInstance.connect();
+        // ⏸️ PHASE 1 ISOLATION: Socket connection disabled during login
+        // Socket should be connected EXPLICITLY after Phase 1 (identity keys) complete
+        // To enable: Call socket.connect() from components AFTER identity initialization
+        console.log('⏸️ Socket instance created but NOT auto-connected (Phase 1 isolation)');
+        console.log('ℹ️ Components must explicitly call socket.connect() after Phase 1');
+
+        // REMOVED: socketInstance.connect(); 
+        // This was auto-connecting during login, violating Phase 1 isolation
 
         return () => {
             if (socketInstance.connected) {
@@ -199,24 +204,25 @@ export const SocketProvider = ({ children }) => {
             channelListenersRef.current.forEach(cb => cb('tab-deleted', data));
         });
 
-        // 🔐 E2EE: Handle key distribution when new user joins
-        socket.on('channel:user-joined', async (payload) => {
-            try {
-                const { channelId, newUserId } = payload;
-                console.log(`🔐 [E2EE] New user ${newUserId} joined channel ${channelId}, distributing key...`);
+        // ⏸️ PHASE 1 ISOLATION: Disabled channel:user-joined listener
+        // This listener triggers conversation key distribution during Phase 1
+        // Should be re-enabled AFTER Phase 1 in a separate initialization step
 
-                // Dynamically import to avoid circular dependencies
-                const { handleKeyNeededEvent } = await import('../services/clientKeyDistribution');
-                const currentUserId = user?.sub || user?._id;
-
-                await handleKeyNeededEvent(
-                    { channelId, newUserId, conversationType: 'channel' },
-                    currentUserId
-                );
-            } catch (error) {
-                console.error('❌ [E2EE] Failed to distribute key:', error);
-            }
-        });
+        // COMMENTED OUT FOR PHASE 1 ISOLATION:
+        // socket.on('channel:user-joined', async (payload) => {
+        //     try {
+        //         const { channelId, newUserId } = payload;
+        //         console.log(`🔐 [E2EE] New user ${newUserId} joined channel ${channelId}, distributing key...`);
+        //         const { handleKeyNeededEvent } = await import('../services/clientKeyDistribution');
+        //         const currentUserId = user?.sub || user?._id;
+        //         await handleKeyNeededEvent(
+        //             { channelId, newUserId, conversationType: 'channel' },
+        //             currentUserId
+        //         );
+        //     } catch (error) {
+        //         console.error('❌ [E2EE] Failed to distribute key:', error);
+        //     }
+        // });
 
         return () => {
             socket.off('channel-created');
@@ -235,7 +241,7 @@ export const SocketProvider = ({ children }) => {
             socket.off('tab-added');
             socket.off('tab-updated');
             socket.off('tab-deleted');
-            socket.off('channel:user-joined'); // 🔐 Cleanup E2EE listener
+            // socket.off('channel:user-joined'); // Already disabled
         };
     }, [socket, user]);
 

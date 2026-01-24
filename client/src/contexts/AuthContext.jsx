@@ -89,18 +89,21 @@ export const AuthProvider = ({ children }) => {
         setUser(data);
 
         // ============================================================
-        // 🔐 IDENTITY KEY INITIALIZATION (Silent & Non-Blocking)
-        // Runs for ALL users: OAuth, regular login, page refresh
+        // 🔐 PHASE 1: IDENTITY KEY INITIALIZATION (Silent & Non-Blocking)
+        // Runs for ALL authenticated users (OAuth, email/password, page refresh)
+        // NOTE: requiresPasswordSetup is UX-only and does NOT block crypto
         // ============================================================
         (async () => {
           try {
             const userId = data._id || data.id || data.sub;
             if (!userId) {
-              console.warn('⚠️ [Identity Keys] No user ID found, skipping initialization');
+              console.warn('⚠️ [PHASE 1] No user ID found, skipping initialization');
               return;
             }
 
-            console.log('🔐 [Identity Keys] Initializing for user:', userId);
+            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+            console.log('🔐 [PHASE 1] Initializing identity keys for user:', userId);
+            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
             // Dynamically import to avoid circular dependencies
             const identityKeyService = (await import('../services/identityKeyService')).default;
@@ -109,16 +112,24 @@ export const AuthProvider = ({ children }) => {
 
             if (!result.existed) {
               // New keypair generated - upload public key to server
+              console.log('🔑 [PHASE 1] Generating new identity keypair');
               await identityKeyService.uploadPublicKeyToServer();
-              console.log(`✅ [Identity Keys] Created & uploaded (${result.algorithm})`);
+              console.log('📤 [PHASE 1] Uploading public key');
+              console.log(`✅ [PHASE 1] Created & uploaded new identity key (${result.algorithm})`);
             } else {
-              console.log(`✅ [Identity Keys] Loaded existing key (${result.algorithm})`);
+              console.log(`✅ [PHASE 1] Found existing identity key (${result.algorithm})`);
             }
+
+            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+            console.log('✅ [PHASE 1] COMPLETE — Identity established');
+            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
           } catch (err) {
-            console.warn('⚠️ [Identity Keys] Init failed (non-blocking):', err);
+            console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+            console.error('❌ [PHASE 1] FAILED — Identity initialization error:', err);
+            console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
             // ❌ NO alert()
             // ❌ NO throw
-            // Message encryption will retry later
+            // Non-blocking: User can still access app
           }
         })();
         // ============================================================
@@ -182,12 +193,15 @@ export const AuthProvider = ({ children }) => {
     setUser(userWithCompany);
 
     // ============================================================
-    // 🔐 IDENTITY KEY INITIALIZATION (Silent & Non-Blocking)
+    // 🔐 PHASE 1: IDENTITY KEY INITIALIZATION (Silent & Non-Blocking)
+    // Email/password authentication = user is finalized
     // ============================================================
     (async () => {
       try {
         const userId = data.user._id || data.user.id;
-        console.log('🔐 [Identity Keys] Initializing for user:', userId);
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        console.log('🔐 [PHASE 1] Initializing identity keys for user:', userId);
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
         // Dynamically import to avoid circular dependencies
         const identityKeyService = (await import('../services/identityKeyService')).default;
@@ -196,115 +210,29 @@ export const AuthProvider = ({ children }) => {
 
         if (!result.existed) {
           // New keypair generated - upload public key to server
+          console.log('🔑 [PHASE 1] Generating new identity keypair');
           await identityKeyService.uploadPublicKeyToServer();
-          console.log(`✅ [Identity Keys] Created & uploaded (${result.algorithm})`);
+          console.log('📤 [PHASE 1] Uploading public key');
+          console.log(`✅ [PHASE 1] Created & uploaded new identity key (${result.algorithm})`);
         } else {
-          console.log(`✅ [Identity Keys] Loaded existing key (${result.algorithm})`);
+          console.log(`✅ [PHASE 1] Found existing identity key (${result.algorithm})`);
         }
+
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        console.log('✅ [PHASE 1] COMPLETE — Identity established');
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
       } catch (err) {
-        console.warn('⚠️ [Identity Keys] Init failed (non-blocking):', err);
+        console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        console.error('❌ [PHASE 1] FAILED — Identity initialization error:', err);
+        console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
         // ❌ NO alert()
         // ❌ NO throw
-        // Message encryption will retry later
+        // Non-blocking: User can still access app, encryption will initialize lazily
       }
     })();
     // ============================================================
-
-
+    // END PHASE 1
     // ============================================================
-    // 🔐 E2EE KEY INITIALIZATION
-    // ============================================================
-    try {
-      console.log('🔐 [E2EE] Starting workspace key enrollment...');
-      console.log('🔐 [E2EE] User ID:', data.user._id || data.user.id);
-
-      // STEP 1: Auto-enroll in workspaces user is member of but doesn't have keys for
-      console.log('🔐 [E2EE] Step 1: Auto-enrolling in missing workspaces...');
-      try {
-        const autoEnrollRes = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/keys/auto-enroll`, {
-          method: 'POST',
-          credentials: "include",
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${data.accessToken}`
-          },
-          body: JSON.stringify({ password })
-        });
-
-        if (autoEnrollRes.ok) {
-          const autoEnrollData = await autoEnrollRes.json();
-          console.log(`✅ [E2EE] Auto-enrolled in ${autoEnrollData.enrolledCount} workspaces`);
-        } else {
-          console.warn('⚠️ [E2EE] Auto-enrollment failed (non-blocking):', await autoEnrollRes.text());
-        }
-      } catch (autoEnrollError) {
-        console.warn('⚠️ [E2EE] Auto-enrollment error (non-blocking):', autoEnrollError);
-      }
-
-      // STEP 2: Fetch encrypted workspace keys from backend
-      console.log('🔐 [E2EE] Step 2: Fetching workspace keys from /api/keys/all...');
-      const keysRes = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/keys/all`, {
-        credentials: "include",
-        headers: {
-          Authorization: `Bearer ${data.accessToken}`
-        }
-      });
-
-      console.log('🔐 [E2EE] API Response status:', keysRes.status);
-
-      if (keysRes.ok) {
-        const keysData = await keysRes.json();
-        console.log('🔐 [E2EE] API Response data:', keysData);
-
-        const { encryptedKeys } = keysData;
-
-        if (encryptedKeys && encryptedKeys.length > 0) {
-          console.log(`🔑 [E2EE] Found ${encryptedKeys.length} workspace keys to decrypt`);
-          console.log('🔑 [E2EE] Workspace IDs:', encryptedKeys.map(k => k.workspaceId));
-
-          // Dynamically import to avoid circular dependencies
-          const { enrollUserKeys } = await import('../services/keyManagement');
-
-          console.log('🔓 [E2EE] Step 3: Starting decryption with user password...');
-          const result = await enrollUserKeys(password, encryptedKeys);
-
-          if (result.success) {
-            console.log(`✅ [E2EE] Successfully enrolled in ${result.workspaceIds.length} workspaces`);
-            console.log('✅ [E2EE] Enrolled workspace IDs:', result.workspaceIds);
-
-            // Verify keys are in sessionStorage
-            const storedKeys = result.workspaceIds.map(id => ({
-              workspaceId: id,
-              hasKey: sessionStorage.getItem(`e2ee_workspace_key_${id}`) !== null
-            }));
-            console.log('🔍 [E2EE] sessionStorage verification:', storedKeys);
-          } else {
-            console.error('❌ [E2EE] Key enrollment failed:', result.error);
-            // Silent failure - encryption will initialize lazily on first message send
-          }
-        } else {
-          console.log('ℹ️ [E2EE] No workspace keys found (user not in any workspaces yet)');
-          // This is expected - encryption will initialize when user joins/creates workspace
-        }
-      } else {
-        const errorText = await keysRes.text();
-        console.error('❌ [E2EE] Failed to fetch workspace keys');
-        console.error('❌ [E2EE] Status:', keysRes.status);
-        console.error('❌ [E2EE] Response:', errorText);
-        // Silent failure - encryption will initialize lazily when needed
-      }
-    } catch (e2eeError) {
-      // Non-blocking: User can still use the app
-      console.error('❌ [E2EE] Initialization failed (non-blocking):', e2eeError);
-      console.error('❌ [E2EE] Stack trace:', e2eeError.stack);
-      // Silent failure - encryption will initialize lazily on first message
-    }
-    // ============================================================
-
-    // E2EE: Try to unlock encryption keys with password (non-blocking)
-    // This will be handled by useEncryption hook in components
-    // Store password temporarily for E2EE unlock
-    sessionStorage.setItem('e2ee_unlock_password', password);
 
     return data;
   };
@@ -322,7 +250,6 @@ export const AuthProvider = ({ children }) => {
     setAccessToken(null);
     localStorage.removeItem("accessToken");
     sessionStorage.removeItem("lastLoginAttempt");
-    sessionStorage.removeItem('e2ee_unlock_password');
 
     // E2EE: Clear encryption keys from IndexedDB
     // This will be handled by useEncryption hook cleanup

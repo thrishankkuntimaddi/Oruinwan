@@ -23,21 +23,23 @@ export default function OAuthSuccess() {
         // Store access token to localStorage
         saveAccessToken(access);
 
-
-        // Load user data - this updates the AuthContext
+        // ============================================================
+        // 🔐 PHASE 1: OAuth authentication = user is finalized
+        // Load user data and initialize identity keys
+        // NOTE: requiresPasswordSetup is UX-only (optional password prompt)
+        // and does NOT affect Phase 1 identity establishment
+        // ============================================================
         await loadUser();
-
 
         // Wait a bit for context to update
         await new Promise(resolve => setTimeout(resolve, 500));
 
-
-
-        // Check if password setup is required
+        // ============================================================
+        // Password setup check (UX flow - happens AFTER identity)
+        // ============================================================
         if (requiresPasswordSetup) {
           navigate("/set-password");
         } else {
-          // Redirect to workspaces page
           navigate("/workspaces");
         }
       } catch (error) {

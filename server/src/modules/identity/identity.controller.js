@@ -24,20 +24,26 @@ exports.uploadPublicKey = async (req, res) => {
         const userId = req.user.sub;
         const { publicKey, algorithm, version } = req.body;
 
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        console.log(`📥 [PHASE 1] Public key upload request from user ${userId}`);
+        console.log(`📥 [PHASE 1] Algorithm: ${algorithm}, Version: ${version || 1}`);
+
         // Validation
         if (!publicKey || !algorithm) {
+            console.error('❌ [PHASE 1] Missing required fields');
             return res.status(400).json({
                 message: 'publicKey and algorithm are required'
             });
         }
 
         if (!['X25519', 'RSA-2048'].includes(algorithm)) {
+            console.error(`❌ [PHASE 1] Invalid algorithm: ${algorithm}`);
             return res.status(400).json({
                 message: 'algorithm must be X25519 or RSA-2048'
             });
         }
 
-        // Store key
+        // Store key (PURE PHASE 1 OPERATION - NO SIDE EFFECTS)
         const keyDoc = await identityService.storePublicKey(
             userId,
             publicKey,
@@ -45,66 +51,8 @@ exports.uploadPublicKey = async (req, res) => {
             version || 1
         );
 
-        // 🔐 AUTOMATIC KEY DISTRIBUTION
-        // After uploading public key, distribute conversation keys for all channels
-        // this user has access to but doesn't have keys for yet (e.g., OAuth users
-        // who created workspaces before uploading their public keys)
-        try {
-            console.log(`🔐 [Identity] Public key uploaded for user ${userId}, distributing conversation keys...`);
-
-            // Get all channels/conversations user is a member of
-            const Channel = require('../../../models/Channel');
-            const ConversationKey = require('../../../models/ConversationKey');
-            const conversationKeysService = require('../conversations/conversationKeys.service');
-
-            // Find all channels user is a member of
-            const channels = await Channel.find({
-                'members.user': userId
-            }).select('_id');
-
-            let distributedCount = 0;
-            for (const channel of channels) {
-                try {
-                    // Check if conversation key exists for this channel
-                    const conversationKey = await ConversationKey.findByConversation(
-                        channel._id.toString(),
-                        'channel'
-                    );
-
-                    if (!conversationKey) {
-                        console.log(`⚠️ No conversation key found for channel ${channel._id}`);
-                        continue;
-                    }
-
-                    // Check if user already has access
-                    if (conversationKey.hasAccess(userId)) {
-                        // User already has key, skip
-                        continue;
-                    }
-
-                    // Distribute key to this user
-                    const distributed = await conversationKeysService.distributeKeyToNewMember(
-                        channel._id.toString(),
-                        'channel',
-                        userId
-                    );
-
-                    if (distributed) {
-                        distributedCount++;
-                    }
-                } catch (channelError) {
-                    console.error(`Failed to distribute key for channel ${channel._id}:`, channelError);
-                    // Continue with other channels
-                }
-            }
-
-            if (distributedCount > 0) {
-                console.log(`✅ [Identity] Distributed ${distributedCount} conversation keys to user ${userId}`);
-            }
-        } catch (distributionError) {
-            // Non-blocking: User's public key is still stored
-            console.error('⚠️ [Identity] Failed to auto-distribute conversation keys:', distributionError);
-        }
+        console.log(`✅ [PHASE 1] Public ${algorithm} key stored successfully`);
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
         return res.status(201).json({
             message: 'Public key stored successfully',
@@ -112,6 +60,9 @@ exports.uploadPublicKey = async (req, res) => {
             version: keyDoc.version
         });
     } catch (err) {
+        console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        console.error('❌ [PHASE 1] Upload public key error:', err);
+        console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
         return handleError(res, err, 'UPLOAD PUBLIC KEY ERROR');
     }
 };
