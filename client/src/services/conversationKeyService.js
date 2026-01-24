@@ -225,10 +225,22 @@ class ConversationKeyService {
 
             if (!response.ok) {
                 if (response.status === 404) {
-                    // ✅ PHASE 3: 404 is NORMAL for new channels (no key yet)
-                    // Return null to allow first message send to trigger key generation
-                    console.log(`ℹ️ [PHASE 3] No conversation key found for ${conversationType}:${conversationId} - will be created on first message`);
-                    return null;
+                    // 🔐 PHASE 4 FIX: 404 means key NOT YET DISTRIBUTED to this user
+                    // This can mean:
+                    // 1. Channel has no key yet (Phase 3 - first message)
+                    // 2. Channel has key but not distributed to late joiner (Phase 4)
+                    // 3. Legacy key without workspace wrapping (Phase 4)
+
+                    console.warn(`⚠️ [PHASE 4] Conversation key missing for user in ${conversationType}:${conversationId}`);
+                    console.warn(`   This may indicate: (1) new channel, (2) late joiner, or (3) legacy key`);
+
+                    // Return typed state to prevent Phase 3 fallback
+                    return {
+                        status: 'MISSING_FOR_USER',
+                        reason: 'KEY_NOT_DISTRIBUTED',
+                        conversationId,
+                        conversationType
+                    };
                 }
                 throw new Error('Failed to fetch conversation key');
             }

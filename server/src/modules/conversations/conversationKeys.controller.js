@@ -105,6 +105,25 @@ exports.getConversationKey = async (req, res) => {
             });
         }
 
+        // 🔐 CRITICAL PHASE 4 FIX: Check if conversation key EXISTS at all
+        const keyExists = await conversationKeysService.hasConversationKeys(
+            conversationId,
+            conversationType
+        );
+
+        if (!keyExists) {
+            // ✅ PHASE 3: No key exists at all - client should generate
+            return res.status(404).json({
+                error: 'KEY_NOT_INITIALIZED',
+                phase: 'UNINITIALIZED',
+                message: 'No conversation key exists yet',
+                hint: 'This is a new conversation. First message will trigger key generation.',
+                conversationId,
+                conversationType
+            });
+        }
+
+        // Key exists - now check if user has access
         const encryptedKeyData = await conversationKeysService.getUserConversationKey(
             conversationId,
             conversationType,
@@ -112,10 +131,12 @@ exports.getConversationKey = async (req, res) => {
         );
 
         if (!encryptedKeyData) {
-            return res.status(404).json({
-                error: 'KEY_NOT_INITIALIZED',
-                message: 'Conversation key not initialized',
-                hint: 'Client must create and store conversation keys first. Keys are generated client-side only.',
+            // 🔐 PHASE 4: Key exists but NOT distributed to this user
+            return res.status(403).json({
+                error: 'KEY_NOT_DISTRIBUTED',
+                phase: 'AWAITING_DISTRIBUTION',
+                message: 'Conversation key exists but you do not have access yet',
+                hint: 'Wait for automatic distribution or request key share from existing member.',
                 conversationId,
                 conversationType
             });

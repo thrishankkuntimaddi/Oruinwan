@@ -290,21 +290,28 @@ async function distributeKeyToNewMember(conversationId, conversationType, newUse
             return false;
         }
 
-        // 2. Check if workspace-wrapped key exists
-        if (!conversationKey.workspaceEncryptedKey) {
-            console.error(`❌ [Server Distribution] Conversation key not wrapped with workspace key`);
-            console.error(`   This indicates the key was created before mandatory workspace wrapping`);
-            return false;
-        }
-
-        // 3. Check if user already has access
+        // 2. Check if user already has access (idempotent)
         if (conversationKey.hasAccess(newUserId)) {
-            console.log(`✅ [Server Distribution] User ${newUserId} already has access`);
+            console.log(`ℹ️ [PHASE 4] User ${newUserId} already has conversation key`);
             return true;
         }
 
+        // 3. Handle legacy keys (created before workspace wrapping was enforced)
+        let conversationKeyBytes;
+
+        if (!conversationKey.workspaceEncryptedKey) {
+            console.warn(`⚠️ [PHASE 4] Legacy conversation key detected (not workspace-wrapped) for ${conversationType}:${conversationId}`);
+
+            // Extract conversation key from an existing user's encrypted key
+            // This requires the first user's private key, which we don't have access to
+            // CRITICAL FIX: We cannot unwrap legacy keys without private keys
+            // The only solution is to have the client re-share the key
+            console.error(`❌ [PHASE 4] Cannot distribute legacy unwrapped key - requires client-side re-sharing`);
+            console.error(`   Solution: Original member must re-encrypt key for new member via client`);
+            return false;
+        }
+
         // 4. Fetch new user's public key
-        // FIX: Fetch from UserIdentityKey model
         const newUserKeyDoc = await UserIdentityKey.findByUserId(newUserId);
 
         if (!newUserKeyDoc || !newUserKeyDoc.publicKey) {
@@ -312,10 +319,9 @@ async function distributeKeyToNewMember(conversationId, conversationType, newUse
             return false;
         }
 
-
         // 5. Unwrap conversation key using SERVER_KEK
         console.log(`🔓 [Server Distribution] Unwrapping conversation key with SERVER_KEK...`);
-        const conversationKeyBytes = cryptoUtils.unwrapWithServerKEK(
+        conversationKeyBytes = cryptoUtils.unwrapWithServerKEK(
             conversationKey.workspaceEncryptedKey,
             conversationKey.workspaceKeyIv,
             conversationKey.workspaceKeyAuthTag
@@ -334,7 +340,7 @@ async function distributeKeyToNewMember(conversationId, conversationType, newUse
 
         await conversationKey.save();
 
-        console.log(`✅ [Server Distribution] Key distributed successfully to user ${newUserId} for ${conversationType}:${conversationId}`);
+        console.log(`✅ [PHASE 4] Distributed conversation key for ${conversationType}:${conversationId} to user ${newUserId}`);
         return true;
 
     } catch (error) {
@@ -455,6 +461,60 @@ async function bootstrapConversationKey({ conversationId, conversationType, work
     }
 }
 
+// ==================== PHASE 5: SERVER-SIDE KEY GENERATION ====================
+
+/**
+ * PHASE 5: Generate conversation key server-side for new channels
+ * This is ONLY used during channel creation to ensure encryption at birth
+ * 
+ * @param {String} conversationId - Channel ID
+ * @param {String} conversationType - Must be 'channel'
+ * @param {String} workspaceId - Workspace ID
+ * @param {String} creatorId - Channel creator's user ID
+ * @param {String} creatorPublicKey - Creator's public identity key (PEM)
+ * @returns {Promise<Boolean>} True if successful
+ */
+async function generateConversationKeyServerSide(conversationId, conversationType, workspaceId, creatorId, creatorPublicKey) {
+    try {
+        console.log(`🔐 [PHASE 5] Generating conversation key at channel birth for ${conversationId}`);
+
+        // 1. Generate random AES-256 conversation key (32 bytes)
+        const conversationKeyBytes = crypto.randomBytes(32);
+        console.log(`✅ [PHASE 5] Generated random AES-256 conversation key`);
+
+        // 2. Wrap conversation key with workspace key (using SERVER_KEK)
+        const workspaceWrapped = cryptoUtils.encryptWithWorkspaceKey(conversationKeyBytes, workspaceId);
+        console.log(`✅ [PHASE 5] Wrapped conversation key with workspace key`);
+
+        // 3. Encrypt conversation key for creator's public identity key
+        const creatorWrapped = cryptoUtils.wrapForUser(conversationKeyBytes, creatorPublicKey);
+        console.log(`✅ [PHASE 5] Encrypted conversation key for creator`);
+
+        // 4. Store conversation key
+        await storeConversationKeys({
+            conversationId,
+            conversationType,
+            workspaceId,
+            createdBy: creatorId,
+            encryptedKeys: [{
+                userId: creatorId,
+                encryptedKey: creatorWrapped.encryptedKey,
+                algorithm: creatorWrapped.algorithm
+            }],
+            workspaceEncryptedKey: workspaceWrapped.ciphertext,
+            workspaceKeyIv: workspaceWrapped.iv,
+            workspaceKeyAuthTag: workspaceWrapped.authTag
+        });
+
+        console.log(`✅ [PHASE 5] Conversation key created and stored at channel birth for ${conversationId}`);
+        return true;
+
+    } catch (error) {
+        console.error(`❌ [PHASE 5] Failed to generate conversation key:`, error);
+        throw error;
+    }
+}
+
 // ==================== EXPORTS ====================
 
 module.exports = {
@@ -466,5 +526,6 @@ module.exports = {
     addEncryptedKeyForUser,
     hasConversationKeys,
     distributeKeyToNewMember,
-    bootstrapConversationKey  // Server-side key generation for default channels
+    bootstrapConversationKey,  // Server-side key generation for default channels
+    generateConversationKeyServerSide  // PHASE 5: Server-side key generation for new channels
 };

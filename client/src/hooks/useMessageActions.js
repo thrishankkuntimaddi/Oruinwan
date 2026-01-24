@@ -71,53 +71,44 @@ export function useMessageActions(conversationId, conversationType, workspaceId 
 
 
         try {
-            // ✅ PHASE 3: For channels, conversation key may not exist yet (UNINITIALIZED state)
-            // If no key exists, generate it CLIENT-SIDE before encrypting the first message
+            // ✅ PHASE 3/4: Fetch conversation key
             const conversationKeyService = (await import('../services/conversationKeyService')).default;
             let key = await conversationKeyService.getConversationKey(conversationId, conversationType);
 
             // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-            // ✅ PHASE 3: FIRST MESSAGE KEY GENERATION
+            // 🔐 PHASE 4 FIX: DETECT MISSING KEY STATE
+            // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+            if (key && typeof key === 'object' && key.status === 'MISSING_FOR_USER') {
+                // 🛑 CRITICAL: Key exists but not distributed to this user
+                // This is a LATE JOINER or LEGACY KEY scenario
+                // BLOCK message sending - DO NOT regenerate key
+                console.error('🛑 [PHASE 4] Conversation key missing for user - blocking message send');
+                console.error('   User is a late joiner or legacy key detected');
+                console.error('   Key distribution required before sending');
+
+                return {
+                    success: false,
+                    error: 'KEY_NOT_AVAILABLE',
+                    message: 'You do not have access to this conversation\'s encryption key. Please wait for key distribution or contact an admin.'
+                };
+            }
+
+            // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+            // 🔐 PHASE 5/6: NO LAZY KEY CREATION
             // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
             if (!key && conversationType === 'channel') {
-                console.log('🔑 [PHASE 3] No key found — generating conversation key for first message');
+                // PHASE 5: Channels MUST be encrypted at birth (no lazy creation)
+                // PHASE 6: Joiners receive keys via Phase 4 distribution
+                console.error('❌ [PHASE 5/6] Channel has no conversation key');
+                console.error('   PHASE 5 ensures channels are encrypted at creation');
+                console.error('   PHASE 6 ensures joiners receive keys via distribution');
+                console.error('   This channel was not properly initialized');
 
-                // Fetch channel members to encrypt key for all of them
-                const api = (await import('../services/api')).default;
-                const channelResponse = await api.get(`/api/channels/${conversationId}/details`);
-                const channelMembers = channelResponse.data.channel.members || [];
-                const memberIds = channelMembers.map(m => m.user._id || m.user);
-
-                console.log(`🔑 [PHASE 3] Encrypting for ${memberIds.length} members`);
-
-                try {
-                    // Generate key and encrypt for all members
-                    const result = await conversationKeyService.createAndStoreConversationKey(
-                        conversationId,
-                        'channel',
-                        workspaceId,
-                        memberIds
-                    );
-
-                    key = result.conversationKey;
-                    console.log('✅ [PHASE 3] Conversation key created and stored');
-
-                } catch (keyError) {
-                    // ⚠️ 409 = race condition between early members (both trying to create key)
-                    // This should NEVER happen for late joiners (blocked above)
-                    if (keyError.message && keyError.message.includes('already exist')) {
-                        console.log('⚠️ [RACE] Key already exists (409) - fetching existing key');
-                        // Fetch the existing key
-                        key = await conversationKeyService.fetchAndDecryptConversationKey(
-                            conversationId,
-                            'channel'
-                        );
-                        console.log('✅ [RACE] Fetched existing conversation key');
-                    } else {
-                        // Re-throw other errors
-                        throw keyError;
-                    }
-                }
+                return {
+                    success: false,
+                    error: 'CHANNEL_NOT_ENCRYPTED',
+                    message: 'This channel is not properly encrypted. Please contact an administrator.'
+                };
             }
 
             // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
