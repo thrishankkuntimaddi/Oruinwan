@@ -65,8 +65,13 @@ export function useConversation(conversationId, conversationType, workspaceId = 
                 parentId: msg.threadParent
             }));
 
-            // 🔐 Decrypt messages before displaying
-            const decrypted = await batchDecryptMessages(normalized, conversationId, conversationType);
+            // 🔐 Decrypt messages before displaying (ONLY if messages exist)
+            let decrypted = normalized;
+            if (normalized.length > 0) {
+                decrypted = await batchDecryptMessages(normalized, conversationId, conversationType);
+            } else {
+                console.log('ℹ️ [PHASE 3] No messages to decrypt - channel UNINITIALIZED');
+            }
 
             // Populate Map for deduplication
             decrypted.forEach(event => {
@@ -119,8 +124,11 @@ export function useConversation(conversationId, conversationType, workspaceId = 
                 parentId: msg.threadParent
             }));
 
-            // 🔐 Decrypt messages before displaying
-            const decrypted = await batchDecryptMessages(normalized, conversationId, conversationType);
+            // 🔐 Decrypt messages before displaying (ONLY if messages exist)
+            let decrypted = normalized;
+            if (normalized.length > 0) {
+                decrypted = await batchDecryptMessages(normalized, conversationId, conversationType);
+            }
 
             // Add to dedup map
             decrypted.forEach(event => {

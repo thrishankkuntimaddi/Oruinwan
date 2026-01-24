@@ -225,13 +225,10 @@ class ConversationKeyService {
 
             if (!response.ok) {
                 if (response.status === 404) {
-                    // ❌ CRITICAL ERROR: Channel exists without keys
-                    // This indicates a server invariant violation
-                    throw new Error(
-                        `BROKEN_CHANNEL: No encryption keys found for ${conversationType}:${conversationId}. ` +
-                        `This indicates a server invariant violation. The channel exists but has no conversation keys. ` +
-                        `Contact support or ask an admin to reinitialize this channel.`
-                    );
+                    // ✅ PHASE 3: 404 is NORMAL for new channels (no key yet)
+                    // Return null to allow first message send to trigger key generation
+                    console.log(`ℹ️ [PHASE 3] No conversation key found for ${conversationType}:${conversationId} - will be created on first message`);
+                    return null;
                 }
                 throw new Error('Failed to fetch conversation key');
             }

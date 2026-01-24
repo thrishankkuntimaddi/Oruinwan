@@ -70,32 +70,8 @@ exports.createChannel = async (req, res) => {
         io.to(`workspace_${workspaceId}`).emit("channel-created", payload);
       }
 
-      // 🔐 E2EE: Emit key distribution events for all NON-CREATOR members
-      // Creator will have the first conversation key, others need it distributed
-      const nonCreatorMembers = distinctMemberIds.filter(mid => mid !== userId);
-
-      if (nonCreatorMembers.length > 0) {
-        console.log(`🔐 [E2EE] Channel created with ${nonCreatorMembers.length} additional members, emitting key distribution events...`);
-
-        // Fetch all member public keys in parallel
-        const memberUsers = await User.find({ _id: { $in: nonCreatorMembers } }).select('_id e2eePublicKey username');
-
-        // Emit key distribution event for each non-creator member
-        // CRITICAL: Emit to creator's USER room, not channel room (which is empty!)
-        memberUsers.forEach(memberUser => {
-          if (memberUser.e2eePublicKey) {
-            io.to(`user_${userId}`).emit("channel:user-joined", {
-              channelId: channel._id.toString(),
-              newUserId: memberUser._id.toString(),
-              newUserName: memberUser.username,
-              newUserPublicKey: memberUser.e2eePublicKey
-            });
-            console.log(`🔐 [E2EE] Key distribution event emitted to creator (user_${userId}) for member ${memberUser.username}`);
-          } else {
-            console.warn(`⚠️ [E2EE] Member ${memberUser.username} has no public key, skipping distribution`);
-          }
-        });
-      }
+      // ✅ PHASE 3: NO automatic key distribution
+      // Keys will be generated when first message is sent
     }
 
     return res.status(201).json({ channel: payload });
@@ -247,17 +223,8 @@ exports.inviteToChannel = async (req, res) => {
       });
       io.to(`user_${inviteeId}`).emit("invited-to-channel", { channelId, channelName: channel.name });
 
-      // 🔐 E2EE: Emit key distribution event to existing members
-      const inviteeData = await User.findById(inviteeId).select('e2eePublicKey');
-      if (inviteeData?.e2eePublicKey) {
-        io.to(`channel:${channelId}`).emit("channel:user-joined", {
-          channelId,
-          newUserId: inviteeId,
-          newUserName: inviteeName,
-          newUserPublicKey: inviteeData.e2eePublicKey
-        });
-        console.log(`🔐 [E2EE] Key distribution event emitted for invited user ${inviteeId}`);
-      }
+      // ✅ PHASE 3: NO automatic key distribution
+      // Keys will be generated when first message is sent
     }
 
     return res.json({ channelId, userId: inviteeId, systemMessage });
@@ -323,27 +290,8 @@ exports.joinChannel = async (req, res) => {
     channel.members.push({ user: userId, joinedAt: new Date() });
     await channel.save();
 
-    // ✅ PHASE 2: Server-side key distribution (canonical approach)
-    try {
-      const conversationKeysService = require('../src/modules/conversations/conversationKeys.service');
-
-      console.log(`🔐 [joinChannel] Distributing conversation key to user ${userId}...`);
-      const distributed = await conversationKeysService.distributeKeyToNewMember(
-        channelId,
-        'channel',
-        userId
-      );
-
-      if (!distributed) {
-        console.warn(`⚠️ [joinChannel] Key distribution failed for user ${userId}`);
-        // Don't fail the join - user can still participate, just not with E2EE
-      } else {
-        console.log(`✅ [joinChannel] Key distributed successfully to user ${userId}`);
-      }
-    } catch (keyError) {
-      console.error(`❌ [joinChannel] Key distribution error:`, keyError);
-      // Non-blocking - user successfully joined, just E2EE may not work
-    }
+    // ✅ PHASE 3: NO automatic key distribution
+    // Keys will be distributed when user sends first message
 
     const io = req.app?.get("io");
     if (io) {

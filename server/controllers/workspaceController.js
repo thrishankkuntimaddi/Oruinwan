@@ -13,7 +13,6 @@ const { createInvite } = require("../utils/invite");
 const sendEmail = require("../utils/sendEmail");
 const { handleError, notFound, badRequest, forbidden } = require("../utils/responseHelpers");
 const { isMember, normalizeMemberFormat } = require("../utils/memberHelpers");
-const { emitToWorkspace } = require("../utils/socketHelpers");
 
 /**
  * Create new workspace (Personal or Company)
@@ -27,12 +26,7 @@ exports.createWorkspace = async (req, res) => {
       description,
       icon,
       color,
-      rules,
-      // E2EE parameters (optional, for client-side key generation)
-      e2eeEnabled,
-      encryptedWorkspaceKey,
-      workspaceKeyIv,
-      workspaceKeySalt
+      rules
     } = req.body;
     const userId = req.user?.sub;
 
@@ -98,45 +92,7 @@ exports.createWorkspace = async (req, res) => {
       }
     });
 
-    // 🔐 E2EE: Store encrypted workspace key if provided
-    if (e2eeEnabled && encryptedWorkspaceKey && workspaceKeyIv && workspaceKeySalt) {
-      try {
-        console.log('🔐 [createWorkspace] Storing E2EE workspace keys...');
-
-        const { UserWorkspaceKey, WorkspaceKey } = require('../models/encryption');
-
-        // Store the master workspace key (for distribution to new members)
-        await WorkspaceKey.create({
-          workspaceId: workspace._id,
-          encryptedMasterKey: encryptedWorkspaceKey,
-          masterKeyIv: workspaceKeyIv,
-          creatorSalt: workspaceKeySalt,
-          createdBy: userId,
-          keyVersion: 1,
-          isActive: true
-        });
-
-        console.log('✅ [createWorkspace] Workspace master key stored');
-
-        // Store creator's encrypted copy (for immediate use)
-        await UserWorkspaceKey.create({
-          userId,
-          workspaceId: workspace._id,
-          encryptedKey: encryptedWorkspaceKey,
-          keyIv: workspaceKeyIv,
-          pbkdf2Salt: workspaceKeySalt,
-          pbkdf2Iterations: 100000
-        });
-
-        console.log('✅ [createWorkspace] Creator UserWorkspaceKey stored');
-      } catch (keyError) {
-        console.error('❌ [createWorkspace] Failed to store workspace key:', keyError);
-        // Non-blocking: Workspace is created but encryption won't work
-        // User can re-initialize keys later
-      }
-    } else {
-      console.warn('⚠️ [createWorkspace] No E2EE keys provided - workspace created without encryption');
-    }
+    console.log("🏗 [PHASE 2] Workspace created:", workspace._id.toString());
 
     // Create default channels (#general and #announcements)
     const generalChannel = await Channel.create({
@@ -165,43 +121,7 @@ exports.createWorkspace = async (req, res) => {
     workspace.defaultChannels = [generalChannel._id, announcementsChannel._id];
     await workspace.save();
 
-    // ✅ CRITICAL: Initialize conversation keys for default channels (server-side, atomic)
-    // This ensures the invariant: channel exists ⇒ conversation key exists
-    try {
-      const conversationKeysService = require('../src/modules/conversations/conversationKeys.service');
-
-      console.log('🔐 [createWorkspace] Bootstrapping conversation keys for default channels...');
-
-      await conversationKeysService.bootstrapConversationKey({
-        conversationId: generalChannel._id.toString(),
-        conversationType: 'channel',
-        workspaceId: workspace._id.toString(),
-        members: [userId]
-      });
-
-      await conversationKeysService.bootstrapConversationKey({
-        conversationId: announcementsChannel._id.toString(),
-        conversationType: 'channel',
-        workspaceId: workspace._id.toString(),
-        members: [userId]
-      });
-
-      console.log('✅ [createWorkspace] Default channel keys initialized');
-    } catch (keyBootstrapError) {
-      console.error('❌ [createWorkspace] Failed to bootstrap default channel keys:', keyBootstrapError);
-      // This is CRITICAL - if keys aren't created, channels are broken
-      // Roll back workspace creation
-      await Workspace.findByIdAndDelete(workspace._id);
-      await Channel.deleteMany({ _id: { $in: [generalChannel._id, announcementsChannel._id] } });
-      await User.findByIdAndUpdate(userId, {
-        $pull: { workspaces: { workspace: workspace._id } }
-      });
-
-      return res.status(500).json({
-        message: 'Failed to initialize encryption for default channels. Please try again.',
-        error: 'ENCRYPTION_INIT_FAILED'
-      });
-    }
+    console.log("📢 [PHASE 2] Default channels created: general, announcements");
 
     // Add workspace to user's workspaces list
     user.workspaces.push({
@@ -216,34 +136,7 @@ exports.createWorkspace = async (req, res) => {
 
     await user.save();
 
-    // ✅ FIX: Emit workspace-created event to company room
-    const io = req.app?.get("io");
-    if (io) {
-      // Emit to company room if company workspace
-      if (companyId) {
-        io.to(`company_${companyId}`).emit("workspace-created", {
-          workspaceId: workspace._id,
-          workspace: {
-            id: workspace._id,
-            name: workspace.name,
-            type: workspace.type,
-            icon: workspace.icon,
-            color: workspace.color
-          }
-        });
-      }
-      // Also emit to creator's user room
-      io.to(`user_${userId}`).emit("workspace-created", {
-        workspaceId: workspace._id,
-        workspace: {
-          id: workspace._id,
-          name: workspace.name,
-          type: workspace.type,
-          icon: workspace.icon,
-          color: workspace.color
-        }
-      });
-    }
+    console.log("👤 [PHASE 2] User added as member:", userId);
 
     return res.status(201).json({
       message: "Workspace created successfully",
@@ -253,8 +146,7 @@ exports.createWorkspace = async (req, res) => {
         type: workspace.type,
         icon: workspace.icon,
         color: workspace.color || "#2563eb",
-        defaultChannels: workspace.defaultChannels,
-        e2eeEnabled: !!e2eeEnabled
+        defaultChannels: workspace.defaultChannels
       }
     });
   } catch (err) {

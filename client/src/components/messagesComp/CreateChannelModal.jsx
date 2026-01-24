@@ -77,53 +77,9 @@ export default function CreateChannelModal({ onClose, onCreated, workspaceId }) 
             const res = await api.post("/api/chat/channel/create", payload);
             const channel = res.data.channel;
 
-            // ============ E2EE: GENERATE CONVERSATION KEY ============
-            // ✅ Correction #2: Idempotent - Check if keys already exist
-            // ✅ Correction #3: Non-blocking - Don't fail channel creation if E2EE fails
-            try {
-                console.log('🔐 [E2EE] Generating conversation key for channel:', channel._id);
-
-                // Check if conversation keys already exist (idempotency)
-                const keysExistResponse = await fetch(
-                    `/api/v2/conversations/${channel._id}/keys/exists?type=channel`,
-                    { credentials: 'include' }
-                );
-                const { exists } = await keysExistResponse.json();
-
-                if (exists) {
-                    console.log('✅ [E2EE] Conversation keys already exist, skipping generation');
-                } else {
-                    // All participants: current user + selected members
-                    const allParticipantIds = [
-                        user?.sub || user?._id,
-                        ...Array.from(selectedMemberIds)
-                    ];
-
-                    console.log('🔐 [E2EE] Generating keys for', allParticipantIds.length, 'participants');
-
-                    // Generate and encrypt conversation key for all participants
-                    const { conversationKey, encryptedKeys, workspaceEncryptedKey, workspaceKeyIv, workspaceKeyAuthTag } =
-                        await conversationKeyService.createAndDistributeConversationKey(allParticipantIds, workspaceId);
-
-                    // Store encrypted keys on server
-                    await conversationKeyService.storeConversationKeysOnServer(
-                        channel._id,
-                        'channel',
-                        workspaceId,
-                        encryptedKeys,
-                        workspaceEncryptedKey,
-                        workspaceKeyIv,
-                        workspaceKeyAuthTag
-                    );
-
-                    console.log('✅ [E2EE] Channel created with end-to-end encryption');
-                }
-            } catch (e2eeError) {
-                // ✅ NON-BLOCKING: Don't fail channel creation if E2EE fails
-                console.error('⚠️ [E2EE] Failed to generate conversation keys (non-blocking):', e2eeError);
-                console.error('⚠️ [E2EE] Channel created successfully, but messages may not be encrypted');
-            }
-            // ========================================================
+            // ✅ PHASE 2: Channel created (container only)
+            console.log('🏗 [PHASE 2] Channel created (NO encryption yet)');
+            console.log('⛔ [PHASE 2] Conversation key will be generated on first message');
 
             showToast(`Channel #${channel.name} created successfully!`);
             onCreated && onCreated(channel);

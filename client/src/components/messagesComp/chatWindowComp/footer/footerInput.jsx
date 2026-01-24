@@ -192,6 +192,7 @@ export default function FooterInput({
             className={`focus:outline-none min-h-[40px] whitespace-pre-wrap break-words text-gray-800 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 ${(blocked || disabled) ? "cursor-not-allowed opacity-50" : ""}`}
             placeholder={disabled ? "Channel encryption unavailable" : "Message..."}
           />
+          {disabled && console.log("⛔ [PHASE 2] Chat input disabled — conversation not initialized")}
           {!newMessage && !blocked && (
             <div className="absolute top-2 left-3 text-gray-400 pointer-events-none text-sm">
               Message...

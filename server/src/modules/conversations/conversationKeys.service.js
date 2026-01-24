@@ -49,7 +49,11 @@ async function storeConversationKeys(params) {
             isActive: true
         });
 
-        console.log(`✅ Stored conversation keys for ${conversationType}:${conversationId} (${encryptedKeys.length} participants)`);
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        console.log(`🔐 [PHASE 3] Conversation key stored for ${conversationType}:${conversationId}`);
+        console.log(`📥 [PHASE 3] Members encrypted: ${encryptedKeys.length}`);
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+
         return conversationKey;
     } catch (error) {
         console.error('Failed to store conversation keys:', error);

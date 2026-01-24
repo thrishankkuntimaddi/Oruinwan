@@ -28,6 +28,8 @@ import FooterInput from "./footer/footerInput.jsx";
 import { pickFile } from "./helpers/helpers.js";
 
 import api, { pollApi } from "../../../services/api";
+import conversationKeyService from "../../../services/conversationKeyService";
+import { encryptMessageForSending } from "../../../services/messageEncryptionService";
 import { jwtDecode } from "jwt-decode";
 import { useAuth } from "../../../contexts/AuthContext";
 import { useSocket } from "../../../contexts/SocketContext";
@@ -846,12 +848,16 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
 
     const socket = socketRef.current;
 
-    // Check if socket is connected
+    // Check    if (!msgText.trim()) return;
     if (!socket || !connected) {
       console.error('❌ [ChatWindow] Cannot send message: socket not connected');
       showToast("Not connected. Please wait...", "error");
       return;
     }
+
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    console.log(`🔑 [PHASE 3] Checking conversation key for ${chat.type}:${chat.id}`);
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
     const clientTempId = generateTempId();
 
@@ -870,10 +876,87 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
     setMessages((prev) => [...prev, uiMsg]);
     pendingMessagesRef.current[clientTempId] = uiMsg;
 
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // ✅ PHASE 3: CONVERSATION KEY CHECK & FIRST MESSAGE GENESIS
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+    let conversationKey = null;
+    let encryptedPayload = null;
+
+    // Only check/generate keys for channels (not DMs for now)
+    if (chat.type === "channel") {
+      try {
+        // 1. Check if conversation key exists
+        conversationKey = await conversationKeyService.getConversationKey(chat.id, 'channel');
+
+        if (!conversationKey) {
+          // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+          // 🔑 FIRST MESSAGE - GENERATE KEY
+          // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+          console.log('🔑 [PHASE 3] No key found — FIRST MESSAGE — generating conversation key');
+
+          // Fetch channel members
+          const channelResponse = await api.get(`/api/channels/${chat.id}/details`);
+          const channelMembers = channelResponse.data.channel.members || [];
+          const memberIds = channelMembers.map(m => m.user._id || m.user);
+
+          console.log(`📤 [PHASE 3] Encrypting for ${memberIds.length} members`);
+
+          // Generate and distribute key
+          try {
+            const result = await conversationKeyService.createAndStoreConversationKey(
+              chat.id,
+              'channel',
+              chat.workspaceId,
+              memberIds
+            );
+
+            conversationKey = result.conversationKey;
+            console.log('✅ [PHASE 3] Conversation key created and stored');
+
+          } catch (keyError) {
+            // Handle 409 (key already exists - race condition)
+            if (keyError.message && keyError.message.includes('already exist')) {
+              console.log('⚠️ [PHASE 3] Key already exists (409) - fetching existing key');
+              conversationKey = await conversationKeyService.fetchAndDecryptConversationKey(chat.id, 'channel');
+            } else {
+              throw keyError;
+            }
+          }
+        } else {
+          console.log('✅ [PHASE 3] Using existing conversation key');
+        }
+
+        // 2. Encrypt message with conversation key
+        if (conversationKey) {
+          console.log('🔐 [PHASE 3] Encrypting message with conversation key');
+          encryptedPayload = await encryptMessageForSending(
+            msgText.trim(),
+            chat.id,
+            'channel',
+            uiMsg.repliedToId
+          );
+          console.log('✅ [PHASE 3] Message encrypted');
+        }
+
+      } catch (cryptoError) {
+        console.error('❌ [PHASE 3] Encryption failed:', cryptoError);
+        showToast("Failed to encrypt message", "error");
+        // Remove optimistic UI message
+        setMessages((prev) => prev.filter(m => m.id !== clientTempId));
+        delete pendingMessagesRef.current[clientTempId];
+        setNewMessage("");
+        setReplyingTo(null);
+        return;
+      }
+    }
+
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // ✉️ PHASE 3: SEND ENCRYPTED MESSAGE
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
     try {
-      socket.emit("send-message", {
+      const messagePayload = {
         text: msgText.trim(),
         attachments: [],
         replyTo: uiMsg.repliedToId,
@@ -882,7 +965,19 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
         dmSessionId: (chat.type === "dm" && !chat.isNew) ? chat.id : null,
         receiverId: (chat.type === "dm" && chat.isNew) ? chat.id : null,
         channelId: chat.type === "channel" ? chat.id : null,
-      });
+      };
+
+      // Add encrypted payload if available
+      if (encryptedPayload) {
+        messagePayload.payload = {
+          ciphertext: encryptedPayload.ciphertext,
+          messageIv: encryptedPayload.messageIv
+        };
+        messagePayload.isEncrypted = true;
+        console.log('✉️ [PHASE 3] Sending encrypted message');
+      }
+
+      socket.emit("send-message", messagePayload);
 
       // Set a timeout to mark message as failed if no response
       setTimeout(() => {

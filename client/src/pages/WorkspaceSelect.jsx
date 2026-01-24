@@ -111,55 +111,24 @@ const WorkspaceSelect = () => {
         if (!createData.name.trim()) return setNameError("Workspace name is required");
 
         try {
-            // ============ E2EE: INITIALIZE WORKSPACE KEYS (PASSWORD-FREE) ============
-            console.log('🔐 [CreateWorkspace] Initializing E2EE workspace keys (no password needed)...');
+            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+            console.log('🏗 [PHASE 2] Creating workspace');
+            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
-            let workspaceKeyData = null;
-
-            try {
-                // Dynamically import the workspace key initialization service
-                const { initializeWorkspaceKeys } =
-                    await import('../services/workspaceKeyInit');
-
-                // Generate workspace keys automatically (NO PASSWORD NEEDED!)
-                workspaceKeyData = await initializeWorkspaceKeys();
-
-                console.log('✅ [CreateWorkspace] Workspace keys initialized automatically');
-            } catch (keyInitError) {
-                console.error('❌ [CreateWorkspace] Failed to initialize workspace keys:', keyInitError);
-                alert(`Failed to initialize workspace encryption: ${keyInitError.message}\n\nWorkspace creation canceled.`);
-                return;
-            }
-            // =========================================================
-
-            // 1. Create Workspace (with E2EE keys)
+            // Create Workspace (PHASE 2: Container only, NO encryption)
             const res = await api.post('/api/workspaces', {
                 name: createData.name,
                 icon: createData.icon,
                 color: createData.color,
-                rules: createData.rules,
-                // E2EE: Include encrypted workspace key
-                e2eeEnabled: true,
-                encryptedWorkspaceKey: workspaceKeyData.encryptedKey,
-                workspaceKeyIv: workspaceKeyData.keyIv,
-                workspaceKeySalt: workspaceKeyData.pbkdf2Salt
+                rules: createData.rules
             });
 
             const newWorkspaceId = res.data.workspace.id;
-            const defaultChannels = res.data.workspace.defaultChannels; // [generalId, announcementsId]
-            console.log('✅ [CreateWorkspace] Workspace created:', newWorkspaceId);
-            console.log('🔐 [CreateWorkspace] Default channels:', defaultChannels);
+            const defaultChannels = res.data.workspace.defaultChannels;
 
-            // ============ E2EE: AUTO-ENROLL CREATOR (PASSWORD-FREE) ============
-            try {
-                const { enrollCreatorInWorkspace } = await import('../services/workspaceKeyInit');
-                await enrollCreatorInWorkspace(newWorkspaceId, workspaceKeyData);
-                console.log('✅ [CreateWorkspace] Creator auto-enrolled in workspace (no password needed)');
-            } catch (enrollError) {
-                console.error('❌ [CreateWorkspace] Failed to auto-enroll creator:', enrollError);
-                // Non-blocking: Creator can still use the workspace
-            }
-            // ===================================================
+            console.log('📢 [PHASE 2] Default channels ready');
+            console.log('⛔ [PHASE 2] Messaging disabled — awaiting Phase 3');
+            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
             // 2. Send Invites (if any)
             if (createData.invites && createData.invites.trim()) {

@@ -68,16 +68,64 @@ export function useMessageActions(conversationId, conversationType, workspaceId 
         // Declare variables for encrypted payload
         let ciphertext;
         let messageIv;
-        let encryptionReady = true;
+
 
         try {
-            // ✅ DETERMINISTIC: Message send requires conversation key to exist
-            // No lazy generation - conversation must already be encrypted
+            // ✅ PHASE 3: For channels, conversation key may not exist yet (UNINITIALIZED state)
+            // If no key exists, generate it CLIENT-SIDE before encrypting the first message
             const conversationKeyService = (await import('../services/conversationKeyService')).default;
-            const key = await conversationKeyService.getConversationKey(conversationId, conversationType);
+            let key = await conversationKeyService.getConversationKey(conversationId, conversationType);
+
+            // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+            // ✅ PHASE 3: FIRST MESSAGE KEY GENERATION
+            // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+            if (!key && conversationType === 'channel') {
+                console.log('🔑 [PHASE 3] No key found — FIRST MESSAGE — generating conversation key');
+
+                // Fetch channel members to encrypt key for all of them
+                const api = (await import('../services/api')).default;
+                const channelResponse = await api.get(`/api/channels/${conversationId}/details`);
+                const channelMembers = channelResponse.data.channel.members || [];
+                const memberIds = channelMembers.map(m => m.user._id || m.user);
+
+                console.log(`🔑 [PHASE 3] Encrypting for ${memberIds.length} members`);
+
+                try {
+                    // Generate key and encrypt for all members
+                    const result = await conversationKeyService.createAndStoreConversationKey(
+                        conversationId,
+                        'channel',
+                        workspaceId,
+                        memberIds
+                    );
+
+                    key = result.conversationKey;
+                    console.log('✅ [PHASE 3] Conversation key created and stored');
+
+                } catch (keyError) {
+                    // Handle 409 (key already exists - race condition)
+                    if (keyError.message && keyError.message.includes('already exist')) {
+                        console.log('⚠️ [PHASE 3] Key already exists (409) - fetching existing key');
+                        // Fetch the existing key
+                        key = await conversationKeyService.fetchAndDecryptConversationKey(
+                            conversationId,
+                            'channel'
+                        );
+                        console.log('✅ [PHASE 3] Fetched existing conversation key');
+                    } else {
+                        // Re-throw other errors
+                        throw keyError;
+                    }
+                }
+            }
+
+            // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+            // ✅ PHASE 3: ENCRYPT MESSAGE (for both first and subsequent messages)
+            // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
             if (!key) {
-                console.error('❌ [E2EE] No conversation key found');
+                // DMs must have keys initialized first (Phase 4 requirement)
+                console.error('❌ [E2EE] No conversation key found for DM');
                 return {
                     success: false,
                     error: 'Conversation is not encrypted yet. Please wait for encryption to be initialized.'
@@ -105,15 +153,10 @@ export function useMessageActions(conversationId, conversationType, workspaceId 
             console.error('❌ [E2EE] Encryption failed:', encError);
             console.error('❌ [E2EE] Context:', { conversationId, conversationType });
 
-            // ✅ PHASE 0: Detect BROKEN_CHANNEL vs other errors
-            const isBrokenChannel = encError.message && encError.message.includes('BROKEN_CHANNEL');
-
             return {
                 success: false,
-                error: isBrokenChannel ? 'BROKEN_CHANNEL' : 'ENCRYPTION_FAILED',
-                message: isBrokenChannel
-                    ? 'Channel encryption keys not available. Contact workspace admin to reinitialize this channel.'
-                    : `Message encryption failed. ${encError.message.includes('not found') ? 'Conversation not yet encrypted. Please refresh and try again.' : 'Please try again.'}`
+                error: 'ENCRYPTION_FAILED',
+                message: `Message encryption failed. ${encError.message.includes('not found') ? 'Conversation not yet encrypted. Please refresh and try again.' : 'Please try again.'}`
             };
         }
         // ==============================================
@@ -124,7 +167,9 @@ export function useMessageActions(conversationId, conversationType, workspaceId 
             let response;
 
             if (conversationType === 'channel') {
-                console.log('📤 [sendMessage] Sending to channel:', conversationId);
+                console.log('📤 [sendMessage] Sending encrypted message to channel:', conversationId);
+
+                // ✅ PHASE 3: Always send encrypted (key was generated above if needed)
                 response = await api.post('/api/v2/messages/channel', {
                     channelId: conversationId,
                     ciphertext,

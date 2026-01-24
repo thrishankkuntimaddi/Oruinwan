@@ -191,6 +191,8 @@ module.exports = async function registerChatHandlers(io, socket) {
       // Save message
       const saved = await Message.create(doc);
 
+      console.log(`✉️ [PHASE 3] Encrypted message saved for ${channelId ? `channel:${channelId}` : `dm:${actualDMSessionId}`}`);
+
       const populated = await Message.findById(saved._id)
         .populate("sender", "username profilePicture")
         .populate({
