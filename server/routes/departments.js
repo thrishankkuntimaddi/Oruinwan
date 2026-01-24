@@ -102,6 +102,27 @@ router.post('/', requireAuth, async (req, res) => {
         workspace.defaultChannels = createdChanIds;
         await workspace.save();
 
+        // 🔐 PHASE 5: Bootstrap conversation keys for default channels
+        // This ensures ALL channels have encryption keys at creation time
+        const conversationKeysService = require('../src/modules/conversations/conversationKeys.service');
+        const channelCreatorId = head || req.user.sub;
+        const memberIds = workspace.members.map(m => m.user.toString());
+
+        for (const chanId of createdChanIds) {
+            try {
+                await conversationKeysService.bootstrapConversationKey({
+                    conversationId: chanId.toString(),
+                    conversationType: 'channel',
+                    workspaceId: workspace._id.toString(),
+                    members: memberIds
+                });
+                console.log(`✅ [PHASE 5] Bootstrapped conversation key for channel ${chanId}`);
+            } catch (keyError) {
+                console.error(`❌ [PHASE 5] Failed to bootstrap key for channel ${chanId}:`, keyError);
+                throw new Error('Failed to initialize channel encryption');
+            }
+        }
+
         // 4. Link Workspace to Department
         department.workspaces.push(workspace._id);
         await department.save();

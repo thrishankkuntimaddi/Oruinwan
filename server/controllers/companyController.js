@@ -610,6 +610,24 @@ exports.verifyCompany = async (req, res) => {
 
         ws.defaultChannels = createdChanIds;
         await ws.save();
+
+        // 🔐 PHASE 5: Bootstrap conversation keys for default channels
+        // This ensures ALL channels have encryption keys at creation time
+        for (const chanId of createdChanIds) {
+          try {
+            await conversationKeysService.bootstrapConversationKey({
+              conversationId: chanId.toString(),
+              conversationType: 'channel',
+              workspaceId: ws._id.toString(),
+              members: [adminUser._id.toString()]
+            });
+            console.log(`✅ [PHASE 5] Bootstrapped conversation key for channel ${chanId}`);
+          } catch (keyError) {
+            console.error(`❌ [PHASE 5] Failed to bootstrap key for channel ${chanId}:`, keyError);
+            throw new Error('Failed to initialize channel encryption');
+          }
+        }
+
         return ws;
       };
 
@@ -875,6 +893,24 @@ exports.updateCompanySetup = async (req, res) => {
         }
         ws.defaultChannels = createdChanIds;
         await ws.save();
+
+        // 🔐 PHASE 5: Bootstrap conversation keys for default channels
+        // This ensures ALL channels have encryption keys at creation time
+        for (const chanId of createdChanIds) {
+          try {
+            await conversationKeysService.bootstrapConversationKey({
+              conversationId: chanId.toString(),
+              conversationType: 'channel',
+              workspaceId: ws._id.toString(),
+              members: [userId]
+            });
+            console.log(`✅ [PHASE 5] Bootstrapped conversation key for channel ${chanId}`);
+          } catch (keyError) {
+            console.error(`❌ [PHASE 5] Failed to bootstrap key for channel ${chanId}:`, keyError);
+            throw new Error('Failed to initialize channel encryption');
+          }
+        }
+
         return ws;
       };
 

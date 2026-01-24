@@ -118,11 +118,41 @@ exports.createWorkspace = async (req, res) => {
       members: [{ user: userId, joinedAt: new Date() }]
     });
 
+    console.log("📢 [PHASE 2] Default channels created: general, announcements");
+
+    // 🔐 PHASE 5: Generate conversation keys for default channels
+    // This ensures ALL channels have encryption keys at creation time
+    console.log(`🔐 [PHASE 5] Generating conversation keys for default channels...`);
+
+    const channelsToBootstrap = [
+      { channel: generalChannel, name: 'general' },
+      { channel: announcementsChannel, name: 'announcements' }
+    ];
+
+    for (const { channel, name } of channelsToBootstrap) {
+      try {
+        await conversationKeysService.bootstrapConversationKey({
+          conversationId: channel._id.toString(),
+          conversationType: 'channel',
+          workspaceId: workspace._id.toString(),
+          members: [userId]
+        });
+        console.log(`✅ [PHASE 5] Bootstrapped conversation key for #${name}`);
+      } catch (keyError) {
+        console.error(`❌ [PHASE 5] Failed to bootstrap key for #${name}:`, keyError);
+        // CRITICAL: Rollback workspace and channels to maintain invariant
+        await Channel.deleteMany({ workspace: workspace._id });
+        await Workspace.findByIdAndDelete(workspace._id);
+        return res.status(500).json({
+          message: 'Failed to initialize workspace encryption. Please ensure E2EE is properly configured.',
+          error: 'KEY_GENERATION_FAILED'
+        });
+      }
+    }
+
     // Update workspace with default channels
     workspace.defaultChannels = [generalChannel._id, announcementsChannel._id];
     await workspace.save();
-
-    console.log("📢 [PHASE 2] Default channels created: general, announcements");
 
     // Add workspace to user's workspaces list
     user.workspaces.push({
@@ -839,6 +869,45 @@ exports.createWorkspaceChannel = async (req, res) => {
       members: finalMembers,
       admins: [userId] // Creator is initial admin
     });
+
+    // 🔐 PHASE 5: Generate conversation key immediately at channel birth
+    // This ensures every channel is encrypted BEFORE any member can join or send messages
+    try {
+      console.log(`🔐 [PHASE 5] Channel created, generating conversation key for "${channel.name}"...`);
+
+      // Fetch creator's public identity key (REQUIRED for encryption at birth)
+      const UserIdentityKey = require('../models/UserIdentityKey');
+      const creatorKeyDoc = await UserIdentityKey.findByUserId(userId);
+
+      if (!creatorKeyDoc || !creatorKeyDoc.publicKey) {
+        // HARD FAIL: Creator must have identity key to create encrypted channel
+        await Channel.findByIdAndDelete(channel._id);
+        return res.status(400).json({
+          message: 'Cannot create encrypted channel: Identity key not found. Please ensure E2EE is initialized.',
+          error: 'IDENTITY_KEY_REQUIRED'
+        });
+      }
+
+      // Generate conversation key server-side (PHASE 5)
+      await conversationKeysService.generateConversationKeyServerSide(
+        channel._id.toString(),
+        'channel',
+        workspaceId,
+        userId,
+        creatorKeyDoc.publicKey
+      );
+
+      console.log(`✅ [PHASE 5] Conversation key created for channel: ${channel.name}`);
+
+    } catch (keyError) {
+      console.error(`❌ [PHASE 5] Failed to generate conversation key:`, keyError);
+      // Rollback channel creation
+      await Channel.findByIdAndDelete(channel._id);
+      return res.status(500).json({
+        message: 'Failed to initialize channel encryption',
+        error: 'KEY_GENERATION_FAILED'
+      });
+    }
 
     return res.status(201).json({
       message: "Channel created successfully",

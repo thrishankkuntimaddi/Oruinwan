@@ -112,6 +112,14 @@ exports.getConversationKey = async (req, res) => {
         );
 
         if (!keyExists) {
+            // 🚨 PHASE 5 INVARIANT CHECK: Log if this is a channel (should NEVER happen post-Phase 5)
+            if (conversationType === 'channel') {
+                console.error(`🚨 [INVARIANT VIOLATION] Channel ${conversationId} exists but has NO conversation key`);
+                console.error(`   ⚠️ This should NEVER happen in Phase 5+`);
+                console.error(`   ⚠️ ALL channels must have keys at creation time`);
+                console.error(`   📝 User ${userId} attempted to access channel that violated Phase 5`);
+            }
+
             // ✅ PHASE 3: No key exists at all - client should generate
             return res.status(404).json({
                 error: 'KEY_NOT_INITIALIZED',
@@ -119,7 +127,8 @@ exports.getConversationKey = async (req, res) => {
                 message: 'No conversation key exists yet',
                 hint: 'This is a new conversation. First message will trigger key generation.',
                 conversationId,
-                conversationType
+                conversationType,
+                invariantViolation: conversationType === 'channel' // Flag for monitoring
             });
         }
 
