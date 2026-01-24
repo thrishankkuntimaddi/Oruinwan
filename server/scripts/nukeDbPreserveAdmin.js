@@ -2,7 +2,7 @@
 // Clear entire database EXCEPT the Chttrix platform admin account
 // Use with caution - this deletes all company data, users, workspaces, messages, etc.
 
-require("dotenv").config({ path: ".env" });
+require("dotenv").config({ path: "server/.env" });
 const mongoose = require("mongoose");
 
 // Import all models
