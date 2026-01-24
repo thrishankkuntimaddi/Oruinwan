@@ -417,17 +417,24 @@ async function bootstrapConversationKey({ conversationId, conversationType, work
             });
         }
 
+        // ⚠️ GRACEFUL HANDLING: Allow creation even if no users have keys yet
+        // The workspace-wrapped key is still created, and user keys can be distributed later
+        // when users upload their E2EE public keys via distributeKeyToNewMember
         if (encryptedKeys.length === 0) {
-            throw new Error('No users with E2EE keys found');
+            console.warn(`⚠️ [Bootstrap] No users with E2EE keys found for ${conversationType}:${conversationId}`);
+            console.warn(`   Creating conversation key with workspace wrapping only`);
+            console.warn(`   User-specific keys will be distributed when users upload public keys`);
         }
 
         // 4. Store in database
+        // Even with 0 user keys, we still create the conversation key with workspace wrapping
+        // This allows the workspace to be created, and keys can be distributed later
         const conversationKeyDoc = await ConversationKey.create({
             conversationId,
             conversationType,
             workspaceId,
             createdBy: members[0],
-            encryptedKeys,
+            encryptedKeys, // May be empty array, that's okay
             workspaceEncryptedKey: workspaceWrapped.ciphertext,
             workspaceKeyIv: workspaceWrapped.iv,
             workspaceKeyAuthTag: workspaceWrapped.authTag,

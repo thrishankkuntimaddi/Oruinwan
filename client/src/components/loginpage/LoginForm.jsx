@@ -190,6 +190,36 @@ const LoginForm = ({ onSwitch, initialEmail = "" }) => {
 
         showToast("Google login successful!", "success");
 
+        // ============================================================
+        // 🔐 INITIALIZE E2EE IDENTITY KEYS FOR OAUTH USERS
+        // ============================================================
+        // This ensures OAuth users have identity keys before creating workspaces
+        try {
+          console.log('🔐 [OAuth] Initializing E2EE identity keys...');
+          
+          // Get user ID from response
+          const userId = res.data.user?._id || res.data.user?.id;
+          
+          if (!userId) {
+            console.error('❌ Cannot initialize E2EE: User ID not found in OAuth response');
+          } else {
+            const { existed, algorithm } = await identityKeyService.initializeIdentityKeys(userId);
+            
+            if (!existed) {
+              // New keypair generated - upload public key to server
+              console.log(`✅ Generated new ${algorithm} identity keypair for OAuth user`);
+              await identityKeyService.uploadPublicKeyToServer();
+              console.log('✅ Public key uploaded to server');
+            } else {
+              console.log(`✅ Loaded existing ${algorithm} identity keypair from IndexedDB`);
+            }
+          }
+        } catch (e2eeError) {
+          // Don't block login if E2EE initialization fails
+          console.error('⚠️ E2EE initialization failed for OAuth user (non-blocking):', e2eeError);
+        }
+        // ============================================================
+
         // ================================================================
         // 🔐 CHECK IF OAUTH USER NEEDS TO SET PASSWORD (FIRST-TIME LOGIN)
         // ================================================================

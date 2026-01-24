@@ -45,6 +45,67 @@ exports.uploadPublicKey = async (req, res) => {
             version || 1
         );
 
+        // 🔐 AUTOMATIC KEY DISTRIBUTION
+        // After uploading public key, distribute conversation keys for all channels
+        // this user has access to but doesn't have keys for yet (e.g., OAuth users
+        // who created workspaces before uploading their public keys)
+        try {
+            console.log(`🔐 [Identity] Public key uploaded for user ${userId}, distributing conversation keys...`);
+
+            // Get all channels/conversations user is a member of
+            const Channel = require('../../../models/Channel');
+            const ConversationKey = require('../../../models/ConversationKey');
+            const conversationKeysService = require('../conversations/conversationKeys.service');
+
+            // Find all channels user is a member of
+            const channels = await Channel.find({
+                'members.user': userId
+            }).select('_id');
+
+            let distributedCount = 0;
+            for (const channel of channels) {
+                try {
+                    // Check if conversation key exists for this channel
+                    const conversationKey = await ConversationKey.findByConversation(
+                        channel._id.toString(),
+                        'channel'
+                    );
+
+                    if (!conversationKey) {
+                        console.log(`⚠️ No conversation key found for channel ${channel._id}`);
+                        continue;
+                    }
+
+                    // Check if user already has access
+                    if (conversationKey.hasAccess(userId)) {
+                        // User already has key, skip
+                        continue;
+                    }
+
+                    // Distribute key to this user
+                    const distributed = await conversationKeysService.distributeKeyToNewMember(
+                        channel._id.toString(),
+                        'channel',
+                        userId
+                    );
+
+                    if (distributed) {
+                        distributedCount++;
+                    }
+                } catch (channelError) {
+                    console.error(`Failed to distribute key for channel ${channel._id}:`, channelError);
+                    // Continue with other channels
+                }
+            }
+
+            if (distributedCount > 0) {
+                console.log(`✅ [Identity] Distributed ${distributedCount} conversation keys to user ${userId}`);
+            }
+        } catch (distributionError) {
+            // Non-blocking: User's public key is still stored
+            console.error('⚠️ [Identity] Failed to auto-distribute conversation keys:', distributionError);
+        }
+
         return res.status(201).json({
             message: 'Public key stored successfully',
             algorithm: keyDoc.algorithm,
