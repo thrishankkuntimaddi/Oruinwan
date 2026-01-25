@@ -899,6 +899,37 @@ exports.createWorkspaceChannel = async (req, res) => {
 
       console.log(`✅ [PHASE 5] Conversation key created for channel: ${channel.name}`);
 
+      // 🔐 PHASE 6: Distribute keys to invited members
+      // For private channels, all invited members need keys at creation
+      // For public channels, keys are distributed on join (Phase 6 join flow)
+      if (finalMemberIds.length > 1) {
+        console.log(`🔐 [PHASE 6] Distributing keys to ${finalMemberIds.length - 1} invited members...`);
+        
+        for (const memberId of finalMemberIds) {
+          // Skip creator - they already have the key from generateConversationKeyServerSide
+          if (memberId === userId) continue;
+          
+          try {
+            const distributed = await conversationKeysService.distributeKeyToNewMember(
+              channel._id.toString(),
+              'channel',
+              memberId
+            );
+            
+            if (distributed) {
+              console.log(`✅ [PHASE 6] Distributed conversation key to member ${memberId}`);
+            } else {
+              console.warn(`⚠️ [PHASE 6] Could not distribute key to member ${memberId} (they may not have E2EE setup)`);
+            }
+          } catch (distError) {
+            console.error(`❌ [PHASE 6] Key distribution failed for member ${memberId}:`, distError.message);
+            // Non-blocking: member can request key later or admin can re-invite
+          }
+        }
+        
+        console.log(`✅ [PHASE 6] Key distribution complete for channel: ${channel.name}`);
+      }
+
     } catch (keyError) {
       console.error(`❌ [PHASE 5] Failed to generate conversation key:`, keyError);
       // Rollback channel creation

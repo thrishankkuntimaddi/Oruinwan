@@ -1,19 +1,16 @@
 import React, { useState, useEffect } from "react";
 import api from "../../services/api";
 import { useToast } from "../../contexts/ToastContext";
-import { useAuth } from "../../contexts/AuthContext";
-import conversationKeyService from "../../services/conversationKeyService";
-import { X, Search, Check, AlertCircle, Info, Lock, Hash } from 'lucide-react';
+import { X, Search, Check, Info, Hash, ChevronRight, Globe, Lock, UserPlus } from 'lucide-react';
 
 export default function CreateChannelModal({ onClose, onCreated, workspaceId }) {
     const { showToast } = useToast();
-    const { user } = useAuth(); // ✅ Correction #1: Hook at top level
-    const [step, setStep] = useState(1);
+    const [currentTab, setCurrentTab] = useState(1);
 
     // Step 1: Details
     const [name, setName] = useState("");
     const [description, setDescription] = useState("");
-    const [isPrivate, setIsPrivate] = useState(false);
+    const [visibility, setVisibility] = useState('public'); // 'public' or 'private'
 
     // Step 2: Members
     const [workspaceMembers, setWorkspaceMembers] = useState([]);
@@ -23,31 +20,23 @@ export default function CreateChannelModal({ onClose, onCreated, workspaceId }) 
 
     // Fetch workspace members when entering step 2
     useEffect(() => {
-        if (step === 2 && workspaceId) {
+        const fetchMembers = async () => {
+            setLoadingMembers(true);
+            try {
+                const res = await api.get(`/api/workspaces/${workspaceId}/all-members`);
+                setWorkspaceMembers(res.data.members || []);
+            } catch (err) {
+                console.error("Failed to load members:", err);
+                showToast("Failed to load workspace members", "error");
+            } finally {
+                setLoadingMembers(false);
+            }
+        };
+
+        if (currentTab === 2 && workspaceId) {
             fetchMembers();
         }
-    }, [step, workspaceId]);
-
-    const fetchMembers = async () => {
-        setLoadingMembers(true);
-        try {
-            const res = await api.get(`/api/workspaces/${workspaceId}/all-members`);
-            setWorkspaceMembers(res.data.members || []);
-        } catch (err) {
-            console.error("Failed to load members:", err);
-            showToast("Failed to load workspace members", "error");
-        } finally {
-            setLoadingMembers(false);
-        }
-    };
-
-    const handleNext = () => {
-        if (!name.trim()) {
-            showToast("Channel name is required", "error");
-            return;
-        }
-        setStep(2);
-    };
+    }, [currentTab, workspaceId, showToast]);
 
     const toggleMember = (id) => {
         const newSet = new Set(selectedMemberIds);
@@ -59,226 +48,323 @@ export default function CreateChannelModal({ onClose, onCreated, workspaceId }) 
         setSelectedMemberIds(newSet);
     };
 
+    const handleNextTab = () => {
+        if (!name.trim()) {
+            showToast("Channel name is required", "error");
+            return;
+        }
+        setCurrentTab(2);
+    };
+
     const handleCreate = async () => {
-        if (selectedMemberIds.size < 2) {
-            showToast("Please add at least 2 members to create a channel (minimum 3 people total including you).", "error");
+        if (!name.trim()) {
+            showToast("Channel name is required", "error");
+            return;
+        }
+
+        // ✅ ENFORCE: Private channels MUST have at least 1 invited member
+        if (visibility === 'private' && selectedMemberIds.size === 0) {
+            showToast("Private channels require at least one invited member", "error");
             return;
         }
 
         try {
             const payload = {
-                workspaceId,
                 name: name.trim(),
                 description,
-                isPrivate,
-                memberIds: Array.from(selectedMemberIds)
+                isPrivate: visibility === 'private',
+                memberIds: Array.from(selectedMemberIds),
+                workspaceId
             };
 
-            const res = await api.post("/api/chat/channel/create", payload);
+            const res = await api.post(`/api/workspaces/${workspaceId}/channels`, payload);
             const channel = res.data.channel;
 
-            // ✅ PHASE 2: Channel created (container only)
-            console.log('🏗 [PHASE 2] Channel created (NO encryption yet)');
-            console.log('⛔ [PHASE 2] Conversation key will be generated on first message');
-
-            showToast(`Channel #${channel.name} created successfully!`);
+            const channelType = visibility === 'private' ? 'Private' : 'Public';
+            showToast(`${channelType} channel #${channel.name} created successfully!`);
             onCreated && onCreated(channel);
             onClose();
         } catch (err) {
             console.error("Create channel failed:", err);
-            showToast(err?.response?.data?.message || "Create failed", "error");
+            const errorMsg = err?.response?.data?.message || "Failed to create channel";
+            showToast(errorMsg, "error");
         }
     };
 
+    // Filter members
     const filteredMembers = workspaceMembers.filter(m =>
         m.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (m.email && m.email.toLowerCase().includes(searchQuery.toLowerCase()))
     );
 
+    // Check if "Create Channel" should be enabled
+    const canCreate = visibility === 'public' || (visibility === 'private' && selectedMemberIds.size > 0);
+
     return (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] animate-fade-in">
-            <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+        <div className="fixed inset-0 bg-gray-900/40 backdrop-blur-md flex items-center justify-center z-[100] animate-in fade-in duration-200 p-6">
+            <div
+                className="bg-white dark:bg-gray-900 rounded-3xl w-full max-w-4xl shadow-2xl overflow-hidden flex flex-col transform transition-all animate-in zoom-in-95 duration-200"
+                onClick={(e) => e.stopPropagation()}
+            >
 
                 {/* Header */}
-                <div className="px-8 py-6 border-b border-gray-100 flex justify-between items-center bg-white sticky top-0 z-10">
-                    <div>
-                        <h3 className="text-xl font-bold text-gray-900 leading-tight">
-                            {step === 1 ? "Create a channel" : `Add members to #${name}`}
-                        </h3>
-                        {step === 2 && (
-                            <p className="text-xs text-gray-500 mt-1">
-                                Channels must have at least 3 members (you + 2 others)
+                <div className="px-10 py-6 border-b border-gray-50 dark:border-gray-800 flex justify-between items-center bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm sticky top-0 z-20">
+                    <div className="flex items-center gap-5">
+                        <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white shadow-lg shadow-blue-500/30">
+                            <Hash size={24} strokeWidth={3} />
+                        </div>
+                        <div>
+                            <h3 className="text-xl font-bold text-gray-900 dark:text-white leading-tight tracking-tight">
+                                Create Channel
+                            </h3>
+                            <p className="text-sm text-gray-400 dark:text-gray-500 font-medium mt-0.5">
+                                Step {currentTab}/2: {currentTab === 1 ? "Setup" : "Members"}
                             </p>
-                        )}
+                        </div>
                     </div>
+
                     <button
                         onClick={onClose}
-                        className="p-1.5 hover:bg-gray-100 rounded-md text-gray-400 transition-colors"
+                        className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-all duration-200"
                     >
-                        <X size={18} />
+                        <X size={20} strokeWidth={2.5} />
                     </button>
                 </div>
 
-                {/* Content */}
-                <div className="p-8 overflow-y-auto custom-scrollbar flex-1">
-                    {step === 1 ? (
-                        <div className="space-y-6">
-                            {/* Name Input */}
-                            <div>
-                                <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">
-                                    Name
-                                </label>
-                                <div className="relative">
-                                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
-                                        <Hash size={16} />
+                {/* Progress Line */}
+                <div className="relative h-1 bg-gray-50 dark:bg-gray-800 w-full overflow-hidden">
+                    <div
+                        className="absolute h-full bg-blue-600 shadow-[0_0_10px_rgba(37,99,235,0.5)] transition-all duration-500 ease-out"
+                        style={{ width: currentTab === 1 ? '50%' : '100%' }}
+                    />
+                </div>
+
+                {/* Content Area */}
+                <div className="flex-1 bg-white dark:bg-gray-900 p-10 min-h-[420px]">
+                    {currentTab === 1 ? (
+                        <div className="grid grid-cols-12 gap-12 h-full animate-in slide-in-from-left-4 fade-in duration-300">
+
+                            {/* LEFT COLUMN: Inputs (7 cols) */}
+                            <div className="col-span-12 md:col-span-7 space-y-8">
+                                {/* Name Input */}
+                                <div className="group space-y-3">
+                                    <label className="block text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest pl-1">
+                                        Channel Name
+                                    </label>
+                                    <div className="relative transform transition-all duration-200 focus-within:scale-[1.01]">
+                                        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300 dark:text-gray-600 group-focus-within:text-blue-500 transition-colors">
+                                            <Hash size={22} strokeWidth={2.5} />
+                                        </div>
+                                        <input
+                                            value={name}
+                                            onChange={(e) => setName(e.target.value.toLowerCase().replace(/\s+/g, '-'))}
+                                            className="w-full pl-12 pr-4 py-4 bg-gray-50 dark:bg-gray-800/50 rounded-2xl border-none focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900 text-lg font-bold text-gray-900 dark:text-white placeholder-gray-300 dark:placeholder-gray-600 transition-all shadow-inner"
+                                            placeholder="project-name"
+                                            autoFocus
+                                        />
                                     </div>
-                                    <input
-                                        value={name}
-                                        onChange={(e) => setName(e.target.value.toLowerCase().replace(/\s+/g, '-'))}
-                                        className="w-full pl-10 pr-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all font-medium text-gray-900 placeholder-gray-400"
-                                        placeholder="e.g. project-x"
-                                        autoFocus
+                                    <p className="text-xs text-gray-400 pl-1 font-medium flex items-center gap-1">
+                                        <Info size={12} />
+                                        Lowercase, spaces become hyphens
+                                    </p>
+                                </div>
+
+                                {/* Description Input */}
+                                <div className="group space-y-3">
+                                    <label className="block text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest pl-1">
+                                        Description <span className="normal-case font-normal text-gray-300 ml-1 opacity-70">(Optional)</span>
+                                    </label>
+                                    <textarea
+                                        value={description}
+                                        onChange={(e) => setDescription(e.target.value)}
+                                        className="w-full px-5 py-4 bg-gray-50 dark:bg-gray-800/50 rounded-2xl border-none focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900 text-sm font-medium text-gray-700 dark:text-gray-200 placeholder-gray-300 dark:placeholder-gray-600 resize-none leading-relaxed transition-all shadow-inner"
+                                        placeholder="What is this channel about?"
+                                        rows={4}
                                     />
                                 </div>
-                                <p className="text-[12px] text-gray-400 mt-2">
-                                    Names must be lowercase, without spaces or periods.
-                                </p>
                             </div>
 
-                            {/* Description Input */}
-                            <div>
-                                <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">
-                                    Description <span className="text-gray-300 font-normal normal-case">(Optional)</span>
+                            {/* RIGHT COLUMN: Visibility (5 cols) */}
+                            <div className="col-span-12 md:col-span-5 flex flex-col gap-5">
+                                <label className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest px-1">
+                                    Channel Visibility
                                 </label>
-                                <input
-                                    value={description}
-                                    onChange={(e) => setDescription(e.target.value)}
-                                    className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all text-gray-900 placeholder-gray-400"
-                                    placeholder="What's this channel about?"
-                                />
-                            </div>
 
-                            {/* Privacy Toggle */}
-                            <div
-                                className={`flex items-start gap-4 p-5 rounded-2xl border transition-all cursor-pointer ${isPrivate ? "border-blue-200 bg-blue-50/30" : "border-gray-200 bg-gray-50/50 hover:bg-gray-50"}`}
-                                onClick={() => setIsPrivate(!isPrivate)}
-                            >
-                                <div className={`mt-1 w-10 h-5 rounded-full p-1 transition-colors relative ${isPrivate ? "bg-blue-600" : "bg-gray-300"}`}>
-                                    <div className={`w-3 h-3 bg-white rounded-full shadow-sm transition-transform ${isPrivate ? "translate-x-5" : "translate-x-0"}`} />
-                                </div>
-                                <div className="flex-1">
-                                    <div className="flex items-center gap-2 font-bold text-gray-900 text-sm mb-0.5">
-                                        Make Private
-                                        {isPrivate && <Lock size={12} className="text-blue-600" />}
+                                {/* Public Channel */}
+                                <div
+                                    onClick={() => setVisibility('public')}
+                                    className={`relative p-5 rounded-2xl cursor-pointer transition-all duration-300 ${visibility === 'public'
+                                        ? 'bg-gradient-to-br from-blue-600 to-blue-700 shadow-xl shadow-blue-500/20 transform scale-[1.02]'
+                                        : 'bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700/50'
+                                        }`}
+                                >
+                                    <div className="flex items-start gap-4">
+                                        <div className={`p-2.5 rounded-xl transition-colors ${visibility === 'public' ? 'bg-white/20 text-white' : 'bg-white dark:bg-gray-700 text-gray-400 dark:text-gray-400 shadow-sm'}`}>
+                                            <Globe size={20} strokeWidth={2.5} />
+                                        </div>
+                                        <div className="flex-1">
+                                            <h4 className={`text-[15px] font-bold mb-0.5 ${visibility === 'public' ? 'text-white' : 'text-gray-900 dark:text-white'}`}>Public</h4>
+                                            <p className={`text-xs font-medium leading-relaxed ${visibility === 'public' ? 'text-blue-100' : 'text-gray-400 dark:text-gray-500'}`}>
+                                                Anyone in workspace can discover and join.
+                                            </p>
+                                        </div>
+                                        {visibility === 'public' && <div className="w-5 h-5 bg-white text-blue-600 rounded-full flex items-center justify-center shadow-sm"><Check size={12} strokeWidth={4} /></div>}
                                     </div>
-                                    <p className="text-xs text-gray-500 leading-relaxed">
-                                        {isPrivate
-                                            ? "Only invited members can view or join this channel."
-                                            : "Anyone in this workspace can view and join this channel."}
-                                    </p>
+                                </div>
+
+                                {/* Private Channel */}
+                                <div
+                                    onClick={() => setVisibility('private')}
+                                    className={`relative p-5 rounded-2xl cursor-pointer transition-all duration-300 ${visibility === 'private'
+                                        ? 'bg-gray-900 dark:bg-gray-700 shadow-xl shadow-gray-200/50 dark:shadow-none text-white transform scale-[1.02]'
+                                        : 'bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700/50'
+                                        }`}
+                                >
+                                    <div className="flex items-start gap-4">
+                                        <div className={`p-2.5 rounded-xl transition-colors ${visibility === 'private' ? 'bg-white/20 text-white' : 'bg-white dark:bg-gray-700 text-gray-400 dark:text-gray-400 shadow-sm'}`}>
+                                            <Lock size={20} strokeWidth={2.5} />
+                                        </div>
+                                        <div className="flex-1">
+                                            <h4 className={`text-[15px] font-bold mb-0.5 ${visibility === 'private' ? 'text-white' : 'text-gray-900 dark:text-white'}`}>Private</h4>
+                                            <p className={`text-xs font-medium leading-relaxed ${visibility === 'private' ? 'text-gray-400' : 'text-gray-400 dark:text-gray-500'}`}>
+                                                Only invited members can access.
+                                            </p>
+                                        </div>
+                                        {visibility === 'private' && <div className="w-5 h-5 bg-white text-gray-900 rounded-full flex items-center justify-center shadow-sm"><Check size={12} strokeWidth={4} /></div>}
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     ) : (
-                        <div className="space-y-4 h-full flex flex-col">
-                            {/* Search */}
-                            <div className="relative">
-                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
-                                <input
-                                    type="text"
-                                    placeholder="Search workspace members..."
-                                    value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                    className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all text-sm"
-                                />
+                        <div className="h-full flex flex-col animate-in slide-in-from-right-8 fade-in duration-300">
+                            {/* Member Selection Header */}
+                            <div className="mb-6">
+                                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
+                                    {visibility === 'private' ? 'Invite Members' : 'Invite Members (Optional)'}
+                                </h3>
+                                {visibility === 'private' && (
+                                    <p className="text-sm text-orange-600 dark:text-orange-400 font-medium">
+                                        ⚠️ Private channels require at least one invited member for encryption setup.
+                                    </p>
+                                )}
                             </div>
 
-                            {/* List */}
-                            <div className="flex-1 overflow-y-auto -mx-2 px-2 space-y-0.5">
-                                {loadingMembers ? (
-                                    <div className="flex flex-col items-center justify-center py-10 text-gray-400 space-y-3">
-                                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
-                                        <span className="text-xs">Loading members...</span>
-                                    </div>
-                                ) : filteredMembers.length === 0 ? (
-                                    <div className="text-center py-10 text-gray-400 text-xs">No members found in this workspace</div>
-                                ) : (
-                                    filteredMembers.map(user => {
-                                        const isSelected = selectedMemberIds.has(user.id);
-                                        return (
-                                            <div
-                                                key={user.id}
-                                                onClick={() => toggleMember(user.id)}
-                                                className={`flex items-center gap-3 p-2.5 rounded-xl cursor-pointer transition-all group ${isSelected ? "bg-blue-50/50" : "hover:bg-gray-50"}`}
-                                            >
-                                                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-bold transition-colors ${isSelected ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-500 group-hover:bg-gray-200"}`}>
-                                                    {user.name.charAt(0).toUpperCase()}
-                                                </div>
-                                                <div className="flex-1 min-w-0">
-                                                    <div className={`text-sm font-medium truncate ${isSelected ? "text-blue-900" : "text-gray-900"}`}>{user.name}</div>
-                                                    <div className="text-[11px] text-gray-400 truncate">{user.email}</div>
-                                                </div>
-                                                {isSelected ? (
-                                                    <div className="w-5 h-5 bg-blue-600 rounded-full flex items-center justify-center text-white scale-110">
-                                                        <Check size={12} strokeWidth={3} />
-                                                    </div>
-                                                ) : (
-                                                    <div className="w-5 h-5 rounded-full border border-gray-200 group-hover:border-gray-300" />
-                                                )}
+                            {/* Member Search Header */}
+                            <div className="flex items-center gap-4 mb-8">
+                                <div className="flex-1 relative group">
+                                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors" size={20} strokeWidth={2.5} />
+                                    <input
+                                        type="text"
+                                        placeholder="Search people..."
+                                        value={searchQuery}
+                                        onChange={(e) => setSearchQuery(e.target.value)}
+                                        className="w-full pl-12 pr-4 py-3.5 bg-gray-50 dark:bg-gray-800/50 border-none rounded-2xl focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900 outline-none transition-all font-semibold text-gray-900 dark:text-white placeholder-gray-400 shadow-inner"
+                                        autoFocus
+                                    />
+                                </div>
+                                <div className="bg-blue-50 dark:bg-blue-900/20 px-5 py-3.5 rounded-2xl text-xs font-bold text-blue-600 dark:text-blue-300 whitespace-nowrap">
+                                    {selectedMemberIds.size} Selected
+                                </div>
+                            </div>
+
+                            {/* Grid List for Members */}
+                            <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar -mr-4">
+                                <div className="grid grid-cols-2 gap-4">
+                                    {loadingMembers ? (
+                                        <div className="col-span-2 flex flex-col items-center justify-center py-20 text-gray-400 space-y-4">
+                                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                                            <span className="text-xs font-semibold uppercase tracking-wide">Fetching members...</span>
+                                        </div>
+                                    ) : filteredMembers.length === 0 ? (
+                                        <div className="col-span-2 text-center py-20 text-gray-400 flex flex-col items-center gap-3">
+                                            <div className="w-16 h-16 bg-gray-50 dark:bg-gray-800 rounded-2xl flex items-center justify-center text-gray-300">
+                                                <Search size={32} />
                                             </div>
-                                        );
-                                    })
-                                )}
+                                            <div className="text-sm font-medium">No members found matching "{searchQuery}"</div>
+                                        </div>
+                                    ) : (
+                                        filteredMembers.map(user => {
+                                            const isSelected = selectedMemberIds.has(user.id);
+                                            return (
+                                                <div
+                                                    key={user.id}
+                                                    onClick={() => toggleMember(user.id)}
+                                                    className={`flex items-center gap-3 p-3 rounded-2xl cursor-pointer transition-all duration-200 ${isSelected
+                                                        ? "bg-blue-600 shadow-lg shadow-blue-500/20 transform scale-[1.01]"
+                                                        : "bg-gray-50 dark:bg-gray-800 hover:bg-white dark:hover:bg-gray-700/80 hover:shadow-md"
+                                                        }`}
+                                                >
+                                                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-sm font-bold shadow-sm ${isSelected
+                                                        ? "bg-white/20 text-white"
+                                                        : "bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 shadow-sm"
+                                                        }`}>
+                                                        {user.name.charAt(0).toUpperCase()}
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className={`text-sm font-bold truncate ${isSelected ? "text-white" : "text-gray-900 dark:text-white"}`}>
+                                                            {user.name}
+                                                        </div>
+                                                        <div className={`text-xs truncate font-medium ${isSelected ? "text-blue-100" : "text-gray-400"}`}>{user.email}</div>
+                                                    </div>
+                                                    <div className={`w-6 h-6 rounded-full flex items-center justify-center transition-all ${isSelected
+                                                        ? "bg-white text-blue-600 shadow-sm"
+                                                        : "border-2 border-gray-200 dark:border-gray-700"
+                                                        }`}>
+                                                        {isSelected && <Check size={14} strokeWidth={4} />}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })
+                                    )}
+                                </div>
                             </div>
                         </div>
                     )}
                 </div>
 
                 {/* Footer */}
-                <div className="px-8 py-5 bg-gray-50/80 border-t border-gray-100 flex justify-between items-center sticky bottom-0 z-10">
-                    <div className="flex items-center text-[11px] text-gray-400">
-                        {step === 2 && (
-                            <div className="flex items-center gap-1.5">
-                                <Info size={12} />
-                                <span className={selectedMemberIds.size >= 2 ? "text-green-600 font-medium" : ""}>
-                                    {selectedMemberIds.size}/2 required members added
-                                </span>
-                            </div>
-                        )}
-                    </div>
+                <div className="px-10 py-6 bg-white dark:bg-gray-900 border-t border-gray-50 dark:border-gray-800 flex justify-between items-center sticky bottom-0 z-20">
+                    <button
+                        onClick={onClose}
+                        className="px-6 py-3 text-sm font-bold text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 transition-colors"
+                    >
+                        Cancel
+                    </button>
 
-                    <div className="flex gap-2">
-                        {step === 1 ? (
-                            <>
-                                <button
-                                    onClick={onClose}
-                                    className="px-5 py-2 text-xs font-semibold text-gray-500 hover:text-gray-700 transition-colors"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    onClick={handleNext}
-                                    className="px-6 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition-all"
-                                >
-                                    Next
-                                </button>
-                            </>
+                    <div className="flex items-center gap-4">
+                        {currentTab === 2 && (
+                            <button
+                                onClick={() => setCurrentTab(1)}
+                                className="px-6 py-3 text-sm font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl transition-colors"
+                            >
+                                Back
+                            </button>
+                        )}
+
+                        {currentTab === 1 ? (
+                            <button
+                                onClick={handleNextTab}
+                                disabled={!name.trim()}
+                                className={`flex items-center gap-2 px-8 py-3.5 text-sm font-bold text-white rounded-xl shadow-lg transition-all duration-300 transform ${!name.trim()
+                                    ? "bg-gray-200 dark:bg-gray-800 text-gray-400 dark:text-gray-600 cursor-not-allowed shadow-none"
+                                    : "bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 shadow-blue-500/30 hover:shadow-blue-500/40 hover:-translate-y-0.5"
+                                    }`}
+                            >
+                                Next Step
+                                <ChevronRight size={16} strokeWidth={3} />
+                            </button>
                         ) : (
-                            <>
-                                <button
-                                    onClick={() => setStep(1)}
-                                    className="px-5 py-2 text-xs font-semibold text-gray-500 hover:text-gray-700 transition-colors"
-                                >
-                                    Back
-                                </button>
-                                <button
-                                    onClick={handleCreate}
-                                    disabled={selectedMemberIds.size < 2}
-                                    className={`px-6 py-2 text-xs font-bold text-white rounded-lg transition-all ${selectedMemberIds.size < 2 ? "bg-gray-300 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700 shadow-sm"}`}
-                                >
-                                    Create Channel
-                                </button>
-                            </>
+                            <button
+                                onClick={handleCreate}
+                                disabled={!canCreate}
+                                className={`flex items-center gap-2 px-8 py-3.5 text-sm font-bold text-white rounded-xl shadow-lg transition-all duration-300 transform ${!canCreate
+                                    ? "bg-gray-200 dark:bg-gray-800 text-gray-400 dark:text-gray-600 cursor-not-allowed shadow-none"
+                                    : "bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 shadow-blue-500/30 hover:shadow-blue-500/40 hover:-translate-y-0.5"
+                                    }`}
+                            >
+                                <UserPlus size={18} strokeWidth={2.5} />
+                                Create Channel
+                            </button>
                         )}
                     </div>
                 </div>

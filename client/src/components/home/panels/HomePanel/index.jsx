@@ -117,15 +117,13 @@ const HomePanel = ({ title }) => {
     const [isSelectionMode, setIsSelectionMode] = useState(false);
     const [selectedItems, setSelectedItems] = useState(new Set());
 
-    // Channel Creation State
-    const [newChannelData, setNewChannelData] = useState({ name: "", description: "", isPrivate: false });
-    const [createStep, setCreateStep] = useState(1);
-    const [selectedChannelMembers, setSelectedChannelMembers] = useState([]);
+    // Workspace members for DM creation
+
     const [workspaceMembers, setWorkspaceMembers] = useState([]);
 
-    // Fetch workspace members for channel creation
+    // Fetch workspace members for DM creation
     React.useEffect(() => {
-        const fetchMembers = async () => {
+        const fetchWorkspaceMembers = async () => {
             if (!activeWorkspace?.id) return;
 
             try {
@@ -136,7 +134,7 @@ const HomePanel = ({ title }) => {
             }
         };
 
-        fetchMembers();
+        fetchWorkspaceMembers();
     }, [activeWorkspace?.id]);
 
     // No more MOCK_USERS - using real data from useUsers hook
@@ -506,18 +504,27 @@ const HomePanel = ({ title }) => {
             />
 
             {/* Create Channel Modal */}
-            <CreateChannelModal
-                showCreateChannelModal={showCreateChannelModal}
-                setShowCreateChannelModal={setShowCreateChannelModal}
-                newChannelData={newChannelData}
-                setNewChannelData={setNewChannelData}
-                createStep={createStep}
-                setCreateStep={setCreateStep}
-                selectedChannelMembers={selectedChannelMembers}
-                setSelectedChannelMembers={setSelectedChannelMembers}
-                workspaceMembers={workspaceMembers}
-                addItem={addItem}
-            />
+            {showCreateChannelModal && (
+                <CreateChannelModal
+                    onClose={() => setShowCreateChannelModal(false)}
+                    onCreated={(channel) => {
+                        // Add the new channel to the list
+                        addItem({
+                            id: channel._id,
+                            type: 'channel',
+                            label: channel.name,
+                            path: `/workspace/${activeWorkspace.id}/channel/${channel._id}`,
+                            isFavorite: false,
+                            isPrivate: channel.isPrivate,
+                            isDefault: false,
+                            description: channel.description || '',
+                            canDelete: true,
+                            createdBy: channel.createdBy
+                        });
+                    }}
+                    workspaceId={activeWorkspace?.id}
+                />
+            )}
 
             {/* New DM Modal */}
             <NewDMModal

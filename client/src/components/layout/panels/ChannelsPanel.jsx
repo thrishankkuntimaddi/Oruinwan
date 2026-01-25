@@ -6,6 +6,7 @@ import { useToast } from "../../../contexts/ToastContext";
 import api from "../../../services/api";
 import ConfirmationModal from "../../../shared/components/ui/ConfirmationModal";
 import { useSocket } from "../../../contexts/SocketContext"; // ✅ Use global socket
+import CreateChannelModal from "../../messagesComp/CreateChannelModal";
 
 const ChannelsPanel = ({ title }) => {
     const navigate = useNavigate();
@@ -22,33 +23,9 @@ const ChannelsPanel = ({ title }) => {
     const [isSelectionMode, setIsSelectionMode] = useState(false);
     const [selectedItems, setSelectedItems] = useState(new Set());
 
-    // Channel Creation State 
-    const [newChannelData, setNewChannelData] = useState({ name: "", description: "" });
-    const [createStep, setCreateStep] = useState(1);
-    const [selectedChannelMembers, setSelectedChannelMembers] = useState([]);
-
-    // Workspace members (for channel creation)
-    const [workspaceMembers, setWorkspaceMembers] = useState([]);
-
     // Real channels from backend - NO FILTERING NEEDED
     const [channels, setChannels] = useState([]);
     const [isLoadingChannels, setIsLoadingChannels] = useState(true);
-
-    // Fetch workspace members for channel creation
-    useEffect(() => {
-        const fetchMembers = async () => {
-            if (!workspaceId) return;
-
-            try {
-                const response = await api.get(`/api/workspaces/${workspaceId}/members`);
-                setWorkspaceMembers(response.data.members || []);
-            } catch (err) {
-                console.error('Error fetching workspace members:', err);
-            }
-        };
-
-        fetchMembers();
-    }, [workspaceId]);
 
     // Fetch workspace-specific channels (✅ CORRECT ENDPOINT)
     useEffect(() => {
@@ -223,62 +200,6 @@ const ChannelsPanel = ({ title }) => {
             unsubscribe();
         };
     }, [socket, workspaceId, channelId, navigate, showToast, addChannelListener]);
-
-    // ✅ CORRECT: Create channel via backend
-    const handleCreateChannel = async () => {
-        if (!newChannelData.name) return;
-
-        try {
-
-
-            // ✨ NEW LOGIC: Backend determines public/private based on members array
-            // - undefined/empty array → PUBLIC (all workspace members)
-            // - array with IDs → PRIVATE (only selected members + creator)
-            const payload = {
-                name: newChannelData.name,
-                description: newChannelData.description,
-                members: selectedChannelMembers.length > 0
-                    ? selectedChannelMembers
-                    : undefined // Backend will make it public
-            };
-
-
-
-            // ✅ CORRECT: Call backend API
-            const response = await api.post(`/api/workspaces/${workspaceId}/channels`, payload);
-            const createdChannel = response.data.channel; // Backend returns { message, channel }
-
-
-
-            // Append real channel to list
-            const newChannel = {
-                id: createdChannel._id,
-                type: 'channel',
-                label: createdChannel.name,
-                path: `/workspace/${workspaceId}/channel/${createdChannel._id}`, // ✅ CORRECT PATH
-                isFavorite: false,
-                isPrivate: createdChannel.isPrivate,
-                isDefault: false,
-                description: createdChannel.description || '',
-                canDelete: true,
-                createdBy: createdChannel.createdBy // Add createdBy for newly created channel
-            };
-
-            setChannels(prev => [...prev, newChannel]);
-
-            // ✅ CORRECT: Navigate with workspace context
-            navigate(`/workspace/${workspaceId}/channel/${createdChannel._id}`);
-
-            // Reset
-            setShowCreateChannelModal(false);
-            setNewChannelData({ name: "", description: "" });
-            setCreateStep(1);
-            setSelectedChannelMembers([]);
-        } catch (err) {
-            console.error('❌ Error creating channel:', err);
-            showToast(err.response?.data?.message || 'Failed to create channel', 'error');
-        }
-    };
 
     // ✅ Delete channels via backend API
     const handleDeleteSelected = async () => {
@@ -548,144 +469,31 @@ const ChannelsPanel = ({ title }) => {
             />
 
             {/* Create Channel Modal */}
-            {
-                showCreateChannelModal && (
-                    <div className="fixed inset-0 bg-black/60 z-[70] flex items-center justify-center animate-fade-in backdrop-blur-sm">
-                        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-[500px] overflow-hidden transform transition-all scale-100 border border-gray-100 dark:border-gray-700">
-                            <div className="px-8 py-6 border-b border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50 flex justify-between items-center">
-                                <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">
-                                    {createStep === 1 ? "Create New Channel" : "Add Members"}
-                                </h3>
-                                <button onClick={() => setShowCreateChannelModal(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">✕</button>
-                            </div>
+            {showCreateChannelModal && (
+                <CreateChannelModal
+                    onClose={() => setShowCreateChannelModal(false)}
+                    onCreated={(channel) => {
+                        // Append to channels list
+                        const newChannel = {
+                            id: channel._id,
+                            type: 'channel',
+                            label: channel.name,
+                            path: `/workspace/${workspaceId}/channel/${channel._id}`,
+                            isFavorite: false,
+                            isPrivate: channel.isPrivate,
+                            isDefault: false,
+                            description: channel.description || '',
+                            canDelete: true,
+                            createdBy: channel.createdBy
+                        };
+                        setChannels(prev => [...prev, newChannel]);
 
-                            {createStep === 1 ? (
-                                <div className="p-8 space-y-6">
-                                    <div>
-                                        <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">Channel Name</label>
-                                        <div className="relative">
-                                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold">#</span>
-                                            <input
-                                                type="text"
-                                                value={newChannelData.name}
-                                                onChange={(e) => setNewChannelData({ ...newChannelData, name: e.target.value })}
-                                                placeholder="e.g. marketing-updates"
-                                                className="w-full pl-8 pr-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl focus:outline-none focus:bg-white dark:focus:bg-gray-700 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-gray-900 dark:text-gray-100 transition-all font-medium"
-                                                autoFocus
-                                            />
-                                        </div>
-                                        <p className="text-xs text-gray-400 mt-2">Channels are where your team communicates. They're best when organized around a topic.</p>
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">Description <span className="text-gray-300 dark:text-gray-600 font-normal">(Optional)</span></label>
-                                        <input
-                                            type="text"
-                                            value={newChannelData.description}
-                                            onChange={(e) => setNewChannelData({ ...newChannelData, description: e.target.value })}
-                                            placeholder="What's this channel about?"
-                                            className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl focus:outline-none focus:bg-white dark:focus:bg-gray-700 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-gray-900 dark:text-gray-100 transition-all"
-                                        />
-                                    </div>
-
-                                    {/* ✨ NEW: Channel Visibility Info */}
-                                    <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-900 rounded-xl p-4">
-                                        <h4 className="text-sm font-bold text-blue-900 dark:text-blue-300 mb-2">Channel Visibility</h4>
-                                        <div className="space-y-2 text-xs text-blue-800 dark:text-blue-200">
-                                            <p>
-                                                <span className="font-bold">🌐 Public:</span> Skip member selection - all workspace members can view and join
-                                            </p>
-                                            <p>
-                                                <span className="font-bold">🔒 Private:</span> Select specific members - only they can view and participate
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-                            ) : (
-                                <div className="p-0">
-                                    <div className="p-4 bg-blue-50 dark:bg-blue-900/30 border-b border-blue-100 dark:border-blue-800 text-sm text-blue-800 dark:text-blue-300 flex items-center gap-2">
-                                        <span>#</span>
-                                        <span>Adding members to <strong>#{newChannelData.name}</strong> (Private Channel)</span>
-                                    </div>
-                                    <div className="max-h-[300px] overflow-y-auto p-2">
-                                        {workspaceMembers.map(member => (
-                                            <label key={member._id} className="flex items-center justify-between p-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-xl cursor-pointer transition-colors">
-                                                <div className="flex items-center gap-3">
-                                                    <input
-                                                        type="checkbox"
-                                                        className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
-                                                        checked={selectedChannelMembers.includes(member._id)}
-                                                        onChange={(e) => {
-                                                            if (e.target.checked) {
-                                                                setSelectedChannelMembers([...selectedChannelMembers, member._id]);
-                                                            } else {
-                                                                setSelectedChannelMembers(selectedChannelMembers.filter(id => id !== member._id));
-                                                            }
-                                                        }}
-                                                    />
-                                                    <div className="w-7 h-7 rounded-full bg-blue-500 flex items-center justify-center text-white font-medium text-xs">
-                                                        {(member?.name || member?.username || 'U').charAt(0)}
-                                                    </div>
-                                                    <div>
-                                                        <div className="font-medium text-sm text-gray-900 dark:text-gray-200">{member?.name || member?.username || 'Unknown'}</div>
-                                                        <div className="text-xs text-gray-500 dark:text-gray-400">{member?.email || ''}</div>
-                                                    </div>
-                                                </div>
-                                            </label>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-
-                            <div className="px-8 py-5 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-100 dark:border-gray-700 flex justify-end gap-3">
-                                <button onClick={() => {
-                                    setShowCreateChannelModal(false);
-                                    setNewChannelData({ name: "", description: "" });
-                                    setCreateStep(1);
-                                    setSelectedChannelMembers([]);
-                                }} className="px-6 py-2.5 text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-xl transition-colors">Cancel</button>
-
-                                {createStep === 1 ? (
-                                    <>
-                                        <button
-                                            onClick={() => setCreateStep(2)}
-                                            disabled={!newChannelData.name}
-                                            className="px-6 py-2.5 text-sm font-medium text-blue-600 hover:bg-blue-50 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                        >
-                                            Add Specific Members
-                                        </button>
-                                        <button
-                                            onClick={handleCreateChannel}
-                                            disabled={!newChannelData.name}
-                                            className="px-6 py-2.5 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-md hover:shadow-lg transition-all transform active:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed"
-                                        >
-                                            Create Public Channel
-                                        </button>
-                                    </>
-                                ) : (
-                                    <>
-                                        <button
-                                            onClick={() => {
-                                                setCreateStep(1);
-                                                setSelectedChannelMembers([]);
-                                            }}
-                                            className="px-6 py-2.5 text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-xl transition-colors"
-                                        >
-                                            Back
-                                        </button>
-                                        <button
-                                            onClick={handleCreateChannel}
-                                            disabled={selectedChannelMembers.length === 0}
-                                            className="px-6 py-2.5 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-md hover:shadow-lg transition-all transform active:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed"
-                                        >
-                                            Create Private Channel
-                                        </button>
-                                    </>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-                )
-            }
+                        // Navigate to new channel
+                        navigate(`/workspace/${workspaceId}/channel/${channel._id}`);
+                    }}
+                    workspaceId={workspaceId}
+                />
+            )}
         </div >
     );
 };

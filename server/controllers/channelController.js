@@ -48,6 +48,73 @@ exports.createChannel = async (req, res) => {
       isPrivate,
     });
 
+    // ============================================================
+    // 🔐 PHASE 5: ENCRYPTION-AT-BIRTH
+    // Generate conversation key immediately after channel creation
+    // ============================================================
+    const UserIdentityKey = require('../models/UserIdentityKey');
+    const conversationKeysService = require('../src/modules/conversations/conversationKeys.service');
+
+    try {
+      const creatorIdentityKey = await UserIdentityKey.findByUserId(userId);
+
+      if (!creatorIdentityKey || !creatorIdentityKey.publicKey) {
+        // Rollback channel creation
+        await channel.deleteOne();
+        return res.status(400).json({
+          message: "You must set up E2EE encryption keys before creating channels. Please complete your security setup first."
+        });
+      }
+
+      // Generate conversation key for creator
+      const keyGenerated = await conversationKeysService.generateConversationKeyServerSide(
+        channel._id.toString(),
+        'channel',
+        workspaceId,
+        userId,
+        creatorIdentityKey.publicKey
+      );
+
+      if (!keyGenerated) {
+        await channel.deleteOne();
+        return res.status(500).json({
+          message: "Failed to generate encryption key for channel. Please try again."
+        });
+      }
+
+      console.log(`✅ [PHASE 5] Conversation key generated for channel ${channel._id}`);
+
+      // ============================================================
+      // 🔐 PHASE 6: KEY DISTRIBUTION FOR INVITED MEMBERS
+      // Distribute keys to invited members (excluding creator)
+      // ============================================================
+      if (isPrivate && memberIds && memberIds.length > 0) {
+        const invitedMemberIds = memberIds.filter(id => String(id) !== String(userId));
+
+        for (const memberId of invitedMemberIds) {
+          const distributed = await conversationKeysService.distributeKeyToNewMember(
+            channel._id.toString(),
+            'channel',
+            memberId
+          );
+
+          if (!distributed) {
+            console.warn(`⚠️ [PHASE 6] Failed to distribute key to member ${memberId} (they may not have E2EE keys set up)`);
+            // Don't fail - user can still join, key will be distributed when they set up E2EE
+          }
+        }
+        console.log(`✅ [PHASE 6] Keys distributed to ${invitedMemberIds.length} invited members`);
+      }
+
+    } catch (keyError) {
+      console.error('[PHASE 5/6] Key generation/distribution error:', keyError);
+      // Rollback channel creation
+      await channel.deleteOne();
+      return res.status(500).json({
+        message: "Failed to set up encryption for channel. Please try again."
+      });
+    }
+
     const payload = {
       _id: channel._id,
       name: channel.name,
@@ -69,9 +136,6 @@ exports.createChannel = async (req, res) => {
       } else {
         io.to(`workspace_${workspaceId}`).emit("channel-created", payload);
       }
-
-      // ✅ PHASE 3: NO automatic key distribution
-      // Keys will be generated when first message is sent
     }
 
     return res.status(201).json({ channel: payload });
@@ -184,6 +248,29 @@ exports.inviteToChannel = async (req, res) => {
 
     await saveWithRetry(channel);
 
+    // ============================================================
+    // 🔐 PHASE 6: DISTRIBUTE CONVERSATION KEY TO INVITED MEMBER
+    // ============================================================
+    const conversationKeysService = require('../src/modules/conversations/conversationKeys.service');
+
+    try {
+      const distributed = await conversationKeysService.distributeKeyToNewMember(
+        channelId,
+        'channel',
+        inviteeId
+      );
+
+      if (!distributed) {
+        console.warn(`⚠️ [PHASE 6] Failed to distribute key to invited user ${inviteeId} in channel ${channelId}`);
+        // Don't fail the invite - user successfully joined, key distribution can be retried
+      } else {
+        console.log(`✅ [PHASE 6] Distributed conversation key to invited user ${inviteeId} in channel ${channelId}`);
+      }
+    } catch (keyError) {
+      console.error('[PHASE 6] Key distribution error on invite:', keyError);
+      // Don't fail the invite - user successfully joined the channel
+    }
+
     // Get invitee username for system message
     const inviteeUser = await User.findById(inviteeId).select('username');
     const inviteeName = inviteeUser?.username || 'User';
@@ -222,9 +309,6 @@ exports.inviteToChannel = async (req, res) => {
         }
       });
       io.to(`user_${inviteeId}`).emit("invited-to-channel", { channelId, channelName: channel.name });
-
-      // ✅ PHASE 3: NO automatic key distribution
-      // Keys will be generated when first message is sent
     }
 
     return res.json({ channelId, userId: inviteeId, systemMessage });
@@ -290,8 +374,28 @@ exports.joinChannel = async (req, res) => {
     channel.members.push({ user: userId, joinedAt: new Date() });
     await channel.save();
 
-    // ✅ PHASE 3: NO automatic key distribution
-    // Keys will be distributed when user sends first message
+    // ============================================================
+    // 🔐 PHASE 6: DISTRIBUTE CONVERSATION KEY TO NEW MEMBER
+    // ============================================================
+    const conversationKeysService = require('../src/modules/conversations/conversationKeys.service');
+
+    try {
+      const distributed = await conversationKeysService.distributeKeyToNewMember(
+        channelId,
+        'channel',
+        userId
+      );
+
+      if (!distributed) {
+        console.warn(`⚠️ [PHASE 6] Failed to distribute key to user ${userId} joining channel ${channelId}`);
+        // Don't fail the join - user successfully joined, key distribution can be retried
+      } else {
+        console.log(`✅ [PHASE 6] Distributed conversation key to user ${userId} joining channel ${channelId}`);
+      }
+    } catch (keyError) {
+      console.error('[PHASE 6] Key distribution error on join:', keyError);
+      // Don't fail the join - user successfully joined the channel
+    }
 
     const io = req.app?.get("io");
     if (io) {
@@ -1210,6 +1314,29 @@ exports.joinChannelViaLink = async (req, res) => {
     }
 
     await saveWithRetry(channel);
+
+    // ============================================================
+    // 🔐 PHASE 6: DISTRIBUTE CONVERSATION KEY TO NEW MEMBER
+    // ============================================================
+    const conversationKeysService = require('../src/modules/conversations/conversationKeys.service');
+
+    try {
+      const distributed = await conversationKeysService.distributeKeyToNewMember(
+        channelId,
+        'channel',
+        userId
+      );
+
+      if (!distributed) {
+        console.warn(`⚠️ [PHASE 6] Failed to distribute key to user ${userId} joining via link in channel ${channelId}`);
+        // Don't fail the join - user successfully joined, key distribution can be retried
+      } else {
+        console.log(`✅ [PHASE 6] Distributed conversation key to user ${userId} joining via link in channel ${channelId}`);
+      }
+    } catch (keyError) {
+      console.error('[PHASE 6] Key distribution error on join via link:', keyError);
+      // Don't fail the join - user successfully joined the channel
+    }
 
     // 5. Emit socket event
     const io = req.app.get("io");
