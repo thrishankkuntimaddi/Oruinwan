@@ -54,34 +54,32 @@ exports.createChannel = async (req, res) => {
     try {
       console.log(`🔐 [PHASE 5] Channel created, generating conversation key...`);
 
-      // Fetch creator's public identity key (REQUIRED for encryption at birth)
-      const UserIdentityKey = require('../../../models/UserIdentityKey');
-      const creatorKeyDoc = await UserIdentityKey.findByUserId(userId);
-
-      if (!creatorKeyDoc || !creatorKeyDoc.publicKey) {
-        // HARD FAIL: Creator must have identity key to create encrypted channel
-        await Channel.findByIdAndDelete(channel._id);
-        return res.status(400).json({
-          message: 'Cannot create encrypted channel: Identity key not found. Please ensure E2EE is initialized.',
-          error: 'IDENTITY_KEY_REQUIRED'
-        });
-      }
-
       // Generate conversation key server-side (PHASE 5)
+      // Pass ALL initial member IDs for encryption (Phase 5 invariant)
       await conversationKeysService.generateConversationKeyServerSide(
         channel._id.toString(),
         'channel',
         workspaceId,
-        userId,
-        creatorKeyDoc.publicKey
+        distinctMemberIds,  // ALL initial members
+        userId  // Creator ID for validation
       );
 
       console.log(`✅ [PHASE 5] Conversation key created for channel: ${channel.name}`);
 
     } catch (keyError) {
       console.error(`❌ [PHASE 5] Failed to generate conversation key:`, keyError);
+
       // Rollback channel creation
       await Channel.findByIdAndDelete(channel._id);
+
+      // Check for specific error types
+      if (keyError.message && keyError.message.includes('IDENTITY_KEY_REQUIRED')) {
+        return res.status(400).json({
+          message: 'Cannot create encrypted channel: Identity key not found. Please ensure E2EE is initialized.',
+          error: 'IDENTITY_KEY_REQUIRED'
+        });
+      }
+
       return res.status(500).json({
         message: 'Failed to initialize channel encryption',
         error: 'KEY_GENERATION_FAILED'

@@ -51,28 +51,21 @@ exports.createChannel = async (req, res) => {
     // ============================================================
     // 🔐 PHASE 5: ENCRYPTION-AT-BIRTH
     // Generate conversation key immediately after channel creation
+    // Encrypts for ALL initial members (Phase 5 invariant)
     // ============================================================
-    const UserIdentityKey = require('../models/UserIdentityKey');
     const conversationKeysService = require('../src/modules/conversations/conversationKeys.service');
 
     try {
-      const creatorIdentityKey = await UserIdentityKey.findByUserId(userId);
+      console.log(`🔐 [PHASE 5] Channel created, generating conversation key for "${name}"...`);
 
-      if (!creatorIdentityKey || !creatorIdentityKey.publicKey) {
-        // Rollback channel creation
-        await channel.deleteOne();
-        return res.status(400).json({
-          message: "You must set up E2EE encryption keys before creating channels. Please complete your security setup first."
-        });
-      }
-
-      // Generate conversation key for creator
+      // Generate conversation key server-side (PHASE 5)
+      // Pass ALL initial member IDs for encryption (Phase 5 invariant)
       const keyGenerated = await conversationKeysService.generateConversationKeyServerSide(
         channel._id.toString(),
         'channel',
         workspaceId,
-        userId,
-        creatorIdentityKey.publicKey
+        distinctMemberIds,  // ALL initial members (not just creator)
+        userId              // Creator ID for validation
       );
 
       if (!keyGenerated) {
@@ -84,34 +77,23 @@ exports.createChannel = async (req, res) => {
 
       console.log(`✅ [PHASE 5] Conversation key generated for channel ${channel._id}`);
 
-      // ============================================================
-      // 🔐 PHASE 6: KEY DISTRIBUTION FOR INVITED MEMBERS
-      // Distribute keys to invited members (excluding creator)
-      // ============================================================
-      if (memberIds && memberIds.length > 0) {
-        const invitedMemberIds = memberIds.filter(id => String(id) !== String(userId));
-
-        for (const memberId of invitedMemberIds) {
-          const distributed = await conversationKeysService.distributeKeyToNewMember(
-            channel._id.toString(),
-            'channel',
-            memberId
-          );
-
-          if (!distributed) {
-            console.warn(`⚠️ [PHASE 6] Failed to distribute key to member ${memberId} (they may not have E2EE keys set up)`);
-            // Don't fail - user can still join, key will be distributed when they set up E2EE
-          }
-        }
-        console.log(`✅ [PHASE 6] Keys distributed to ${invitedMemberIds.length} invited members`);
-      }
-
     } catch (keyError) {
-      console.error('[PHASE 5/6] Key generation/distribution error:', keyError);
+      console.error('[PHASE 5] Key generation error:', keyError);
+
       // Rollback channel creation
       await channel.deleteOne();
+
+      // Check for specific error types
+      if (keyError.message && keyError.message.includes('IDENTITY_KEY_REQUIRED')) {
+        return res.status(400).json({
+          message: "Cannot create encrypted channel: Identity key not found. Please ensure E2EE is initialized.",
+          error: 'IDENTITY_KEY_REQUIRED'
+        });
+      }
+
       return res.status(500).json({
-        message: "Failed to set up encryption for channel. Please try again."
+        message: "Failed to set up encryption for channel. Please try again.",
+        error: 'KEY_GENERATION_FAILED'
       });
     }
 

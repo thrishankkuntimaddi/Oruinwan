@@ -470,11 +470,11 @@ async function bootstrapConversationKey({ conversationId, conversationType, work
  * @param {String} conversationId - Channel ID
  * @param {String} conversationType - Must be 'channel'
  * @param {String} workspaceId - Workspace ID
- * @param {String} creatorId - Channel creator's user ID
- * @param {String} creatorPublicKey - Creator's public identity key (PEM)
+ * @param {Array<String>} members - Array of all initial member user IDs
+ * @param {String} creatorId - Channel creator's user ID (for validation)
  * @returns {Promise<Boolean>} True if successful
  */
-async function generateConversationKeyServerSide(conversationId, conversationType, workspaceId, creatorId, creatorPublicKey) {
+async function generateConversationKeyServerSide(conversationId, conversationType, workspaceId, members, creatorId) {
     try {
         console.log(`🔐 [PHASE 5] Generating conversation key at channel birth for ${conversationId}`);
 
@@ -486,27 +486,64 @@ async function generateConversationKeyServerSide(conversationId, conversationTyp
         const workspaceWrapped = cryptoUtils.encryptWithWorkspaceKey(conversationKeyBytes, workspaceId);
         console.log(`✅ [PHASE 5] Wrapped conversation key with workspace key`);
 
-        // 3. Encrypt conversation key for creator's public identity key
-        const creatorWrapped = cryptoUtils.wrapForUser(conversationKeyBytes, creatorPublicKey);
-        console.log(`✅ [PHASE 5] Encrypted conversation key for creator`);
+        // 3. Fetch public keys for ALL initial members (Phase 5 invariant)
+        const identityKeys = await UserIdentityKey.batchFindByUserIds(members);
 
-        // 4. Store conversation key
+        // Map userId -> publicKey for efficient lookup
+        const publicKeyMap = new Map();
+        identityKeys.forEach(k => publicKeyMap.set(k.userId.toString(), k));
+
+        // 4. Encrypt conversation key for ALL initial members
+        const encryptedKeys = [];
+        let creatorHasKey = false;
+
+        for (const userId of members) {
+            const keyDoc = publicKeyMap.get(userId.toString());
+
+            if (!keyDoc || !keyDoc.publicKey) {
+                console.warn(`⚠️ [PHASE 5] User ${userId} has no E2EE public key, skipping`);
+                continue;
+            }
+
+            // Re-encrypt conversation key for this user
+            const wrapped = cryptoUtils.wrapForUser(conversationKeyBytes, keyDoc.publicKey);
+            encryptedKeys.push({
+                userId: userId.toString(),
+                encryptedKey: wrapped.encryptedKey,
+                algorithm: wrapped.algorithm
+            });
+
+            console.log(`✅ [PHASE 5] Encrypted conversation key for user ${userId}`);
+
+            // Track if creator received key
+            if (userId.toString() === creatorId.toString()) {
+                creatorHasKey = true;
+            }
+        }
+
+        // HARD FAIL if creator has no E2EE key
+        if (!creatorHasKey) {
+            throw new Error('IDENTITY_KEY_REQUIRED: Creator must have E2EE public key to create encrypted channel');
+        }
+
+        // WARN if some members missing keys, but allow creation
+        if (encryptedKeys.length < members.length) {
+            console.warn(`⚠️ [PHASE 5] ${members.length - encryptedKeys.length} members without E2EE keys will not have access`);
+        }
+
+        // 5. Store conversation key with ALL encrypted user keys
         await storeConversationKeys({
             conversationId,
             conversationType,
             workspaceId,
             createdBy: creatorId,
-            encryptedKeys: [{
-                userId: creatorId,
-                encryptedKey: creatorWrapped.encryptedKey,
-                algorithm: creatorWrapped.algorithm
-            }],
+            encryptedKeys,  // Array of encrypted keys for ALL valid members
             workspaceEncryptedKey: workspaceWrapped.ciphertext,
             workspaceKeyIv: workspaceWrapped.iv,
             workspaceKeyAuthTag: workspaceWrapped.authTag
         });
 
-        console.log(`✅ [PHASE 5] Conversation key created and stored at channel birth for ${conversationId}`);
+        console.log(`✅ [PHASE 5] Conversation key created and stored at channel birth for ${conversationId} (${encryptedKeys.length} users)`);
         return true;
 
     } catch (error) {
