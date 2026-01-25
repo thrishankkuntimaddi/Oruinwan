@@ -69,11 +69,14 @@ export default function CreateChannelModal({ onClose, onCreated, workspaceId }) 
         }
 
         try {
+            // Ensure channelMembers is ALWAYS an array (never undefined)
+            const channelMembers = selectedMemberIds ? Array.from(selectedMemberIds) : [];
+
             const payload = {
                 name: name.trim(),
                 description,
                 isPrivate: visibility === 'private',
-                memberIds: Array.from(selectedMemberIds),
+                channelMembers, // ✅ ALWAYS present, ALWAYS an array
                 workspaceId
             };
 

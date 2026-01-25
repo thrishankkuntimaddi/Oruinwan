@@ -9,82 +9,190 @@ const { emitToWorkspace, emitToChannel, emitToUser, emitToUsers } = require("../
 
 /**
  * Create channel (public or private).
- * Body: { name, description?, isPrivate?, memberIds?: [id,...] }
+ * Body: { name, description?, isPrivate?, channelMembers: [id,...], workspaceId }
  * Creator becomes createdBy and is added to members.
  */
 exports.createChannel = async (req, res) => {
   try {
     const userId = req.user.sub;
-    const { name, description = "", isPrivate = false, memberIds = [], workspaceId } = req.body;
+    const { name, description = "", isPrivate = false, channelMembers, workspaceId } = req.body;
 
+    // ============================================================
+    // FIX 1: CHANNEL CREATION CONTRACT ENFORCEMENT
+    // Validate all inputs BEFORE any database operations
+    // ============================================================
+
+    // Validation 1: Field presence check
+    if (!req.body.hasOwnProperty('channelMembers')) {
+      return res.status(400).json({
+        message: "channelMembers field is required",
+        error: "FIELD_REQUIRED"
+      });
+    }
+
+    // Validation 2: Type validation
+    if (!Array.isArray(channelMembers)) {
+      return res.status(400).json({
+        message: "channelMembers must be an array",
+        error: "INVALID_TYPE"
+      });
+    }
+
+    // Validation 3: Workspace ID required
     if (!workspaceId) {
       return res.status(400).json({ message: "Workspace ID is required" });
     }
 
+    // Validation 4: Channel name required
     if (!name || typeof name !== "string" || name.trim().length === 0) {
       return res.status(400).json({ message: "Channel name required" });
     }
 
-    // Normalize members: include creator
-    const distinctMemberIds = Array.from(new Set([userId, ...(memberIds || [])].map(String)));
-
-    // ENFORCE MIN 3 RULE
-    if (distinctMemberIds.length < 3) {
-      return res.status(400).json({ message: "At least 3 members are required to create a channel." });
+    // Validation 5: Member ID validation
+    for (const memberId of channelMembers) {
+      if (typeof memberId !== 'string' || memberId.length === 0) {
+        return res.status(400).json({
+          message: "All member IDs must be non-empty strings",
+          error: "INVALID_MEMBER_ID"
+        });
+      }
     }
 
-    // New format: members: [{ user, joinedAt }]
-    const members = distinctMemberIds.map(id => ({
-      user: id,
-      joinedAt: new Date()
-    }));
+    // Auto-add creator if not present
+    const creatorId = userId.toString();
+    if (!channelMembers.includes(creatorId)) {
+      channelMembers.push(creatorId);
+    }
 
-    const channel = await Channel.create({
-      workspace: workspaceId,
-      name: name.trim(),
-      description,
-      members,
-      createdBy: userId,
-      isPrivate,
-    });
+    // Deduplicate members
+    const distinctMemberIds = Array.from(new Set(channelMembers.map(String)));
+
+    // Validation 6: Workspace membership validation
+    const Workspace = require('../models/Workspace');
+    const workspace = await Workspace.findById(workspaceId);
+
+    if (!workspace) {
+      return res.status(404).json({
+        message: "Workspace not found",
+        error: "WORKSPACE_NOT_FOUND"
+      });
+    }
+
+    for (const memberId of distinctMemberIds) {
+      const isMember = workspace.members.some(m =>
+        (m.user?._id || m.user).toString() === memberId
+      );
+
+      if (!isMember) {
+        return res.status(403).json({
+          message: `User ${memberId} is not a workspace member`,
+          error: "NOT_WORKSPACE_MEMBER"
+        });
+      }
+    }
+
+    // Validation 7: Public key verification
+    const UserIdentityKey = require('../models/UserIdentityKey');
+    for (const memberId of distinctMemberIds) {
+      const publicKey = await UserIdentityKey.findOne({ userId: memberId });
+
+      if (!publicKey) {
+        return res.status(400).json({
+          message: `User ${memberId} has no active public key. Cannot create encrypted channel.`,
+          error: "MISSING_PUBLIC_KEY"
+        });
+      }
+    }
 
     // ============================================================
-    // 🔐 PHASE 5: ENCRYPTION-AT-BIRTH
-    // Generate conversation key immediately after channel creation
-    // Encrypts for ALL initial members (Phase 5 invariant)
+    // ALL VALIDATION PASSED - Proceed with channel creation
     // ============================================================
+
+    // ============================================================
+    // FIX 2: ATOMIC CONVERSATION KEY DISTRIBUTION
+    // Use MongoDB transactions to ensure channel creation and
+    // key distribution happen atomically
+    // ============================================================
+    const mongoose = require('mongoose');
     const conversationKeysService = require('../src/modules/conversations/conversationKeys.service');
 
-    try {
-      console.log(`🔐 [PHASE 5] Channel created, generating conversation key for "${name}"...`);
+    const session = await mongoose.startSession();
+    session.startTransaction();
 
-      // Generate conversation key server-side (PHASE 5)
-      // Pass ALL initial member IDs for encryption (Phase 5 invariant)
+    try {
+      // New format: members: [{ user, joinedAt }]
+      const members = distinctMemberIds.map(id => ({
+        user: id,
+        joinedAt: new Date()
+      }));
+
+      // Step 1: Create channel (within transaction)
+      const channelDocs = await Channel.create([{
+        workspace: workspaceId,
+        name: name.trim(),
+        description,
+        members,
+        createdBy: userId,
+        isPrivate,
+      }], { session });
+
+      const channel = channelDocs[0];
+      console.log(`✅ [TRANSACTION] Channel document created: ${channel._id}`);
+
+      // Step 2: Generate conversation key for ALL members (within transaction)
+      console.log(`🔐 [PHASE 5][TRANSACTION] Generating conversation key for "${name}"...`);
+
       const keyGenerated = await conversationKeysService.generateConversationKeyServerSide(
         channel._id.toString(),
         'channel',
         workspaceId,
-        distinctMemberIds,  // ALL initial members (not just creator)
-        userId              // Creator ID for validation
+        distinctMemberIds,  // ALL initial members
+        userId,             // Creator ID for validation
+        session             // Pass session for transactional key storage
       );
 
       if (!keyGenerated) {
-        await channel.deleteOne();
-        return res.status(500).json({
-          message: "Failed to generate encryption key for channel. Please try again."
-        });
+        throw new Error('Failed to generate encryption key for channel');
       }
 
-      console.log(`✅ [PHASE 5] Conversation key generated for channel ${channel._id}`);
+      console.log(`✅ [PHASE 5][TRANSACTION] Conversation key generated and stored for ${distinctMemberIds.length} members`);
 
-    } catch (keyError) {
-      console.error('[PHASE 5] Key generation error:', keyError);
+      // Step 3: Commit transaction
+      await session.commitTransaction();
+      console.log(`✅ [TRANSACTION] Committed: Channel ${channel._id} with keys for ${distinctMemberIds.length} members`);
 
-      // Rollback channel creation
-      await channel.deleteOne();
+      const payload = {
+        _id: channel._id,
+        name: channel.name,
+        description: channel.description,
+        members: channel.members,
+        isPrivate: channel.isPrivate,
+        createdBy: channel.createdBy,
+        createdAt: channel.createdAt,
+        workspace: channel.workspace,
+      };
+
+      const io = req.app?.get("io");
+      if (io) {
+        // Notify only invited members if private, or the whole workspace room if public
+        if (isPrivate) {
+          distinctMemberIds.forEach(mId => {
+            io.to(`user_${mId}`).emit("channel-created", payload);
+          });
+        } else {
+          io.to(`workspace_${workspaceId}`).emit("channel-created", payload);
+        }
+      }
+
+      return res.status(201).json({ channel: payload });
+
+    } catch (error) {
+      // Rollback transaction on ANY error
+      await session.abortTransaction();
+      console.error('❌ [TRANSACTION] Aborted: Channel creation failed:', error);
 
       // Check for specific error types
-      if (keyError.message && keyError.message.includes('IDENTITY_KEY_REQUIRED')) {
+      if (error.message && error.message.includes('IDENTITY_KEY_REQUIRED')) {
         return res.status(400).json({
           message: "Cannot create encrypted channel: Identity key not found. Please ensure E2EE is initialized.",
           error: 'IDENTITY_KEY_REQUIRED'
@@ -92,35 +200,12 @@ exports.createChannel = async (req, res) => {
       }
 
       return res.status(500).json({
-        message: "Failed to set up encryption for channel. Please try again.",
-        error: 'KEY_GENERATION_FAILED'
+        message: "Failed to create channel. Please try again.",
+        error: 'CHANNEL_CREATION_FAILED'
       });
+    } finally {
+      session.endSession();
     }
-
-    const payload = {
-      _id: channel._id,
-      name: channel.name,
-      description: channel.description,
-      members: channel.members,
-      isPrivate: channel.isPrivate,
-      createdBy: channel.createdBy,
-      createdAt: channel.createdAt,
-      workspace: channel.workspace,
-    };
-
-    const io = req.app?.get("io");
-    if (io) {
-      // Notify only invited members if private, or the whole workspace room if public
-      if (isPrivate) {
-        distinctMemberIds.forEach(mId => {
-          io.to(`user_${mId}`).emit("channel-created", payload);
-        });
-      } else {
-        io.to(`workspace_${workspaceId}`).emit("channel-created", payload);
-      }
-    }
-
-    return res.status(201).json({ channel: payload });
   } catch (err) {
     return handleError(res, err, "CREATE CHANNEL ERROR");
   }

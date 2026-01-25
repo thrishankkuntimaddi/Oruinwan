@@ -41,9 +41,30 @@ export function useChatSocket(conversationId, conversationType, onEvent) {
         }
 
         // ✅ FIX: Use chat:join which joins channel:ID format (matches server broadcast in messages.service.js line 83)
-        socket.emit('chat:join', conversationId);
-        joinedRef.current = true;
-        console.log(`✅ Joined ${conversationType}:`, conversationId);
+        // FIX 3: Handle authorization callback from server
+        socket.emit('chat:join', conversationId, (response) => {
+            if (response?.error) {
+                console.error(`❌ [chat:join] Failed to join ${conversationType}: ${response.error}`, response);
+                joinedRef.current = false;
+
+                // Handle specific error codes
+                if (response.code === 'UNAUTHORIZED') {
+                    console.error(`🚫 [chat:join] Not authorized to join channel ${conversationId}`);
+                    onEventRef.current?.({
+                        type: 'join-error',
+                        payload: {
+                            error: response.error,
+                            code: response.code,
+                            conversationId
+                        }
+                    });
+                }
+            } else if (response?.success) {
+                joinedRef.current = true;
+                console.log(`✅ [chat:join] Successfully joined ${conversationType}:`, conversationId);
+            }
+        });
+        console.log(`📤 [chat:join] Emit sent for ${conversationType}:`, conversationId);
     }, [socket, conversationId, conversationType]);
 
     // Leave conversation room

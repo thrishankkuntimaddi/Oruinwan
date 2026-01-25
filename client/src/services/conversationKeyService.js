@@ -224,6 +224,63 @@ class ConversationKeyService {
             });
 
             if (!response.ok) {
+                // ============================================================
+                // FIX 4: CLIENT SAFETY NET
+                // Handle authorization failures with membership reconciliation
+                // ============================================================
+
+                if (response.status === 403) {
+                    console.warn(`🚫 [FIX 4] 403 Forbidden for conversation key in ${conversationType}:${conversationId}`);
+
+                    // Re-fetch channel membership to verify current state
+                    try {
+                        const channelResponse = await fetch(`/api/v2/channels/${conversationId}`, {
+                            credentials: 'include'
+                        });
+
+                        if (channelResponse.ok) {
+                            const channelData = await channelResponse.json();
+                            const currentUserId = localStorage.getItem('userId'); // Assuming userId stored
+
+                            // Check if user is actually a member
+                            const isMember = channelData.channel?.members?.some(m =>
+                                (m.user?._id || m.user) === currentUserId || m === currentUserId
+                            );
+
+                            if (!isMember) {
+                                console.error(`❌ [FIX 4] User is NOT a member of channel ${conversationId}`);
+                                return {
+                                    status: 'ACCESS_DENIED',
+                                    reason: 'NOT_A_MEMBER',
+                                    message: 'You are not a member of this channel',
+                                    conversationId,
+                                    conversationType
+                                };
+                            } else {
+                                console.error(`⚠️ [FIX 4] User IS a member but key access denied (system error)`);
+                                return {
+                                    status: 'SYSTEM_ERROR',
+                                    reason: 'KEY_ACCESS_ERROR',
+                                    message: 'Unable to access encryption keys. Please refresh the page.',
+                                    conversationId,
+                                    conversationType
+                                };
+                            }
+                        }
+                    } catch (reconciliationError) {
+                        console.error('[FIX 4] Membership reconciliation failed:', reconciliationError);
+                    }
+
+                    // Fallback: return generic access denied
+                    return {
+                        status: 'ACCESS_DENIED',
+                        reason: 'FORBIDDEN',
+                        message: 'Access to encryption keys denied',
+                        conversationId,
+                        conversationType
+                    };
+                }
+
                 if (response.status === 404) {
                     // 🔐 PHASE 4 FIX: 404 means key NOT YET DISTRIBUTED to this user
                     // This can mean:

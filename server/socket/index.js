@@ -59,24 +59,75 @@ module.exports = async function registerChatHandlers(io, socket) {
 
   /* ----------------------------------------------------
      JOIN CHANNEL ROOM (NEW - chat:join compatibility)
+     FIX 3: SOCKET.IO AUTHORIZATION ALIGNMENT
   ---------------------------------------------------- */
-  socket.on("chat:join", async (channelId) => {
+  socket.on("chat:join", async (channelId, callback) => {
     try {
+      // Validation: channelId required
       if (!channelId) {
         logger.error("chat:join: missing channelId");
+        if (callback) callback({ error: 'Channel ID is required', code: 'MISSING_CHANNEL_ID' });
         return;
       }
+
       console.log(`📥 [chat:join] Received for channel: ${channelId}`);
       console.log(`👤 [chat:join] User: ${userId}, Socket: ${socket.id}`);
+
+      // ============================================================
+      // FIX 3: AUTHORIZATION CHECK
+      // Verify user is a member before allowing socket.join()
+      // ============================================================
+
+      // Step 1: Verify channel exists
+      const channel = await Channel.findById(channelId);
+
+      if (!channel) {
+        console.log(`❌ [chat:join] Channel ${channelId} not found`);
+        if (callback) callback({
+          error: 'Channel not found',
+          code: 'CHANNEL_NOT_FOUND',
+          channelId
+        });
+        return;
+      }
+
+      // Step 2: Verify user is a member
+      // Use same membership logic as REST API
+      const isMember = channel.members.some(m => {
+        const memberId = m.user?._id ? m.user._id.toString() : m.user.toString();
+        return memberId === userId.toString();
+      });
+
+      if (!isMember) {
+        console.log(`🚫 [chat:join] User ${userId} is NOT a member of channel ${channelId}`);
+        if (callback) callback({
+          error: 'Not a member of this channel',
+          code: 'UNAUTHORIZED',
+          channelId
+        });
+        return;
+      }
+
+      // ============================================================
+      // AUTHORIZATION PASSED - Proceed with room join
+      // ============================================================
 
       // CRITICAL: Use colon format (channel:id) to match new message service broadcasts
       const room = `channel:${channelId}`;
       socket.join(room);
 
-      console.log(`✅ [chat:join] User ${userId} joined ${room}`);
+      console.log(`✅ [chat:join] User ${userId} joined ${room} (authorized member)`);
       console.log(`📊 [chat:join] Socket rooms:`, Array.from(socket.rooms));
+
+      // Send success callback
+      if (callback) callback({ success: true });
+
     } catch (err) {
       logger.error("Error joining channel room (chat:join):", err);
+      if (callback) callback({
+        error: 'Internal server error',
+        code: 'SERVER_ERROR'
+      });
     }
   });
 

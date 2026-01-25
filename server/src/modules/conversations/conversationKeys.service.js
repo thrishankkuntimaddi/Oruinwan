@@ -22,10 +22,11 @@ const cryptoUtils = require('./cryptoUtils');
  * @param {String} params.workspaceId - Workspace ID
  * @param {String} params.createdBy - User who created the key
  * @param {Array} params.encryptedKeys - [{userId, encryptedKey, ephemeralPublicKey?, algorithm}]
+ * @param {Object} params.session - Optional MongoDB session for transactions
  * @returns {Promise<Object>} Created conversation key document
  */
 async function storeConversationKeys(params) {
-    const { conversationId, conversationType, workspaceId, createdBy, encryptedKeys, workspaceEncryptedKey, workspaceKeyIv, workspaceKeyAuthTag } = params;
+    const { conversationId, conversationType, workspaceId, createdBy, encryptedKeys, workspaceEncryptedKey, workspaceKeyIv, workspaceKeyAuthTag, session } = params;
 
     try {
         // Check if keys already exist for this conversation
@@ -35,8 +36,8 @@ async function storeConversationKeys(params) {
             throw new Error('Conversation keys already exist. Use addParticipant to add new users.');
         }
 
-        // Create new conversation key document
-        const conversationKey = await ConversationKey.create({
+        // Create new conversation key document (with optional session for transactions)
+        const createOptions = {
             conversationId,
             conversationType,
             workspaceId,
@@ -47,7 +48,11 @@ async function storeConversationKeys(params) {
             workspaceKeyAuthTag,
             version: 1,
             isActive: true
-        });
+        };
+
+        const conversationKey = session
+            ? (await ConversationKey.create([createOptions], { session }))[0]
+            : await ConversationKey.create(createOptions);
 
         console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
         console.log(`🔐 [PHASE 3] Conversation key stored for ${conversationType}:${conversationId}`);
@@ -472,9 +477,10 @@ async function bootstrapConversationKey({ conversationId, conversationType, work
  * @param {String} workspaceId - Workspace ID
  * @param {Array<String>} members - Array of all initial member user IDs
  * @param {String} creatorId - Channel creator's user ID (for validation)
+ * @param {Object} session - Optional MongoDB session for transactions
  * @returns {Promise<Boolean>} True if successful
  */
-async function generateConversationKeyServerSide(conversationId, conversationType, workspaceId, members, creatorId) {
+async function generateConversationKeyServerSide(conversationId, conversationType, workspaceId, members, creatorId, session = null) {
     try {
         console.log(`🔐 [PHASE 5] Generating conversation key at channel birth for ${conversationId}`);
 
@@ -531,7 +537,7 @@ async function generateConversationKeyServerSide(conversationId, conversationTyp
             console.warn(`⚠️ [PHASE 5] ${members.length - encryptedKeys.length} members without E2EE keys will not have access`);
         }
 
-        // 5. Store conversation key with ALL encrypted user keys
+        // 5. Store conversation key with ALL encrypted user keys (with optional session)
         await storeConversationKeys({
             conversationId,
             conversationType,
@@ -540,7 +546,8 @@ async function generateConversationKeyServerSide(conversationId, conversationTyp
             encryptedKeys,  // Array of encrypted keys for ALL valid members
             workspaceEncryptedKey: workspaceWrapped.ciphertext,
             workspaceKeyIv: workspaceWrapped.iv,
-            workspaceKeyAuthTag: workspaceWrapped.authTag
+            workspaceKeyAuthTag: workspaceWrapped.authTag,
+            session  // Pass session for transactional storage
         });
 
         console.log(`✅ [PHASE 5] Conversation key created and stored at channel birth for ${conversationId} (${encryptedKeys.length} users)`);
