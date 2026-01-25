@@ -88,7 +88,7 @@ exports.createChannel = async (req, res) => {
       // 🔐 PHASE 6: KEY DISTRIBUTION FOR INVITED MEMBERS
       // Distribute keys to invited members (excluding creator)
       // ============================================================
-      if (isPrivate && memberIds && memberIds.length > 0) {
+      if (memberIds && memberIds.length > 0) {
         const invitedMemberIds = memberIds.filter(id => String(id) !== String(userId));
 
         for (const memberId of invitedMemberIds) {
