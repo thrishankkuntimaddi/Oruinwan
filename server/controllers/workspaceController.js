@@ -847,10 +847,20 @@ exports.createWorkspaceChannel = async (req, res) => {
     // Public channels: discoverable + self-joinable by workspace members
     // Private channels: invite-only, not visible to non-members
 
+    console.log(`🔍 [DEBUG] Channel creation request:`, {
+      channelMembers,
+      channelMembersType: typeof channelMembers,
+      channelMembersLength: channelMembers?.length,
+      userId,
+      isPrivate: isPrivateChannel
+    });
+
     // Ensure creator is always included
     const finalMemberIds = channelMembers && channelMembers.length > 0
       ? [...new Set([userId, ...channelMembers])]
       : [userId]; // If no members specified, just the creator
+
+    console.log(`🔍 [DEBUG] finalMemberIds:`, finalMemberIds);
 
     const finalMembers = finalMemberIds.map(memberId => ({
       user: memberId,
@@ -872,68 +882,36 @@ exports.createWorkspaceChannel = async (req, res) => {
 
     // 🔐 PHASE 5: Generate conversation key immediately at channel birth
     // This ensures every channel is encrypted BEFORE any member can join or send messages
+    // Encrypts for ALL initial members (Phase 5 invariant)
     try {
       console.log(`🔐 [PHASE 5] Channel created, generating conversation key for "${channel.name}"...`);
 
-      // Fetch creator's public identity key (REQUIRED for encryption at birth)
-      const UserIdentityKey = require('../models/UserIdentityKey');
-      const creatorKeyDoc = await UserIdentityKey.findByUserId(userId);
+      // Generate conversation key server-side (PHASE 5)
+      // Pass ALL initial member IDs for encryption (Phase 5 invariant)
+      await conversationKeysService.generateConversationKeyServerSide(
+        channel._id.toString(),
+        'channel',
+        workspaceId,
+        finalMemberIds,  // ALL initial members (not just creator)
+        userId           // Creator ID for validation
+      );
 
-      if (!creatorKeyDoc || !creatorKeyDoc.publicKey) {
-        // HARD FAIL: Creator must have identity key to create encrypted channel
-        await Channel.findByIdAndDelete(channel._id);
+      console.log(`✅ [PHASE 5] Conversation key created for channel: ${channel.name}`);
+
+    } catch (keyError) {
+      console.error(`❌ [PHASE 5] Failed to generate conversation key:`, keyError);
+
+      // Rollback channel creation
+      await Channel.findByIdAndDelete(channel._id);
+
+      // Check for specific error types
+      if (keyError.message && keyError.message.includes('IDENTITY_KEY_REQUIRED')) {
         return res.status(400).json({
           message: 'Cannot create encrypted channel: Identity key not found. Please ensure E2EE is initialized.',
           error: 'IDENTITY_KEY_REQUIRED'
         });
       }
 
-      // Generate conversation key server-side (PHASE 5)
-      await conversationKeysService.generateConversationKeyServerSide(
-        channel._id.toString(),
-        'channel',
-        workspaceId,
-        userId,
-        creatorKeyDoc.publicKey
-      );
-
-      console.log(`✅ [PHASE 5] Conversation key created for channel: ${channel.name}`);
-
-      // 🔐 PHASE 6: Distribute keys to invited members
-      // For private channels, all invited members need keys at creation
-      // For public channels, keys are distributed on join (Phase 6 join flow)
-      if (finalMemberIds.length > 1) {
-        console.log(`🔐 [PHASE 6] Distributing keys to ${finalMemberIds.length - 1} invited members...`);
-        
-        for (const memberId of finalMemberIds) {
-          // Skip creator - they already have the key from generateConversationKeyServerSide
-          if (memberId === userId) continue;
-          
-          try {
-            const distributed = await conversationKeysService.distributeKeyToNewMember(
-              channel._id.toString(),
-              'channel',
-              memberId
-            );
-            
-            if (distributed) {
-              console.log(`✅ [PHASE 6] Distributed conversation key to member ${memberId}`);
-            } else {
-              console.warn(`⚠️ [PHASE 6] Could not distribute key to member ${memberId} (they may not have E2EE setup)`);
-            }
-          } catch (distError) {
-            console.error(`❌ [PHASE 6] Key distribution failed for member ${memberId}:`, distError.message);
-            // Non-blocking: member can request key later or admin can re-invite
-          }
-        }
-        
-        console.log(`✅ [PHASE 6] Key distribution complete for channel: ${channel.name}`);
-      }
-
-    } catch (keyError) {
-      console.error(`❌ [PHASE 5] Failed to generate conversation key:`, keyError);
-      // Rollback channel creation
-      await Channel.findByIdAndDelete(channel._id);
       return res.status(500).json({
         message: 'Failed to initialize channel encryption',
         error: 'KEY_GENERATION_FAILED'
