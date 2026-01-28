@@ -91,10 +91,39 @@ module.exports = async function registerChatHandlers(io, socket) {
         return;
       }
 
+      // ============================================================
+      // 🔍 DEBUG LOGS: Diagnose membership check failures
+      // ============================================================
+      console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+      console.log("🔍 [SOCKET][DEBUG] chat:join membership check");
+      console.log("🔍 [SOCKET][DEBUG] Channel ID:", channelId);
+      console.log("🔍 [SOCKET][DEBUG] Joining userId:", userId);
+      console.log("🔍 [SOCKET][DEBUG] Channel members raw:", JSON.stringify(channel.members, null, 2));
+      console.log("🔍 [SOCKET][DEBUG] Members count:", channel.members.length);
+
+      // Inspect each member
+      channel.members.forEach((m, i) => {
+        const extractedId = m?.user?._id?.toString() ?? m?.user?.toString() ?? m?.toString();
+        console.log(`🔍 [SOCKET][DEBUG] member[${i}]:`, {
+          raw: m,
+          hasUserField: !!m?.user,
+          userValue: m?.user,
+          extracted_id: extractedId,
+          matches: extractedId === userId.toString()
+        });
+      });
+      console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+
       // Step 2: Verify user is a member
-      // Use same membership logic as REST API
+      // Defensive check handles ALL possible formats:
+      // - { user: populatedUser } where user._id exists
+      // - { user: ObjectId } unpopulated
+      // - ObjectId (legacy bare format)
       const isMember = channel.members.some(m => {
-        const memberId = m.user?._id ? m.user._id.toString() : m.user.toString();
+        const memberId =
+          m?.user?._id?.toString() ??
+          m?.user?.toString() ??
+          m?.toString();
         return memberId === userId.toString();
       });
 

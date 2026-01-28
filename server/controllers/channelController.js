@@ -121,8 +121,9 @@ exports.createChannel = async (req, res) => {
 
     try {
       // New format: members: [{ user, joinedAt }]
+      // CRITICAL: Convert to ObjectId for consistency
       const members = distinctMemberIds.map(id => ({
-        user: id,
+        user: mongoose.Types.ObjectId(id),
         joinedAt: new Date()
       }));
 
@@ -301,8 +302,9 @@ exports.inviteToChannel = async (req, res) => {
     // 🔧 FIX: Convert all existing members to new format before adding new member
     channel.members = normalizeMemberFormat(channel.members, channel.createdAt);
 
+    // CRITICAL: Convert to ObjectId for consistency
     channel.members.push({
-      user: inviteeId,
+      user: mongoose.Types.ObjectId(inviteeId),
       joinedAt: new Date()
     });
 
@@ -438,7 +440,8 @@ exports.joinChannel = async (req, res) => {
 
     // Normalize members + add new user
     channel.members = normalizeMemberFormat(channel.members, channel.createdAt);
-    channel.members.push({ user: userId, joinedAt: new Date() });
+    // CRITICAL: Convert to ObjectId for consistency
+    channel.members.push({ user: mongoose.Types.ObjectId(userId), joinedAt: new Date() });
 
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     // PHASE 1 AUDIT: Track membership commit BEFORE key distribution
@@ -1428,8 +1431,9 @@ exports.joinChannelViaLink = async (req, res) => {
     }
 
     // 4. Add user to channel
+    // CRITICAL: Convert to ObjectId for consistency
     channel.members.push({
-      user: userId,
+      user: mongoose.Types.ObjectId(userId),
       joinedAt: new Date()
     });
 

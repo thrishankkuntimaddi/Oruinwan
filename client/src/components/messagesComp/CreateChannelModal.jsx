@@ -76,7 +76,7 @@ export default function CreateChannelModal({ onClose, onCreated, workspaceId }) 
                 name: name.trim(),
                 description,
                 isPrivate: visibility === 'private',
-                channelMembers, // ✅ ALWAYS present, ALWAYS an array
+                members: channelMembers, // ✅ Backend expects 'members', not 'channelMembers'
                 workspaceId
             };
 
