@@ -214,9 +214,20 @@ class ConversationKeyService {
             // Check cache first
             const cacheKey = `${conversationType}:${conversationId}`;
             if (this.conversationKeys.has(cacheKey)) {
-                console.log(`✅ Using cached conversation key for ${cacheKey}`);
+                // PHASE 1 AUDIT: Log cache hit
+                console.log(`✅ [AUDIT][PHASE1][CLIENT-FETCH] Cache HIT for ${cacheKey}`);
+                console.log(`   └─ Returning cached conversation key`);
                 return this.conversationKeys.get(cacheKey).key;
             }
+
+            // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+            // PHASE 1 AUDIT: Log key fetch attempt
+            // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+            console.log(`🔑 [AUDIT][PHASE1][CLIENT-FETCH] Fetching conversation key from server`);
+            console.log(`   ├─ Conversation: ${conversationType}:${conversationId}`);
+            console.log(`   ├─ Cache hit: NO`);
+            console.log(`   └─ Timestamp: ${new Date().toISOString()}`);
+
 
             // Fetch encrypted key from server
             const response = await fetch(`/api/v2/conversations/${conversationId}/keys?type=${conversationType}`, {
@@ -230,6 +241,16 @@ class ConversationKeyService {
                 // ============================================================
 
                 if (response.status === 403) {
+                    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+                    // PHASE 1 AUDIT: Log 403 KEY_NOT_DISTRIBUTED response
+                    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+                    console.error(`🚫 [AUDIT][PHASE1][CLIENT-FETCH] Server returned 403 KEY_NOT_DISTRIBUTED`);
+                    console.error(`   ├─ Conversation: ${conversationType}:${conversationId}`);
+                    console.error(`   ├─ Meaning: Conversation key EXISTS but user lacks access`);
+                    console.error(`   ├─ INV-001 violation: User in channel.members but NOT in encryptedKeys[]`);
+                    console.error(`   └─ Action: User BLOCKED from sending messages`);
+                    console.error(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+
                     console.warn(`🚫 [FIX 4] 403 Forbidden for conversation key in ${conversationType}:${conversationId}`);
 
                     // Re-fetch channel membership to verify current state
@@ -281,7 +302,18 @@ class ConversationKeyService {
                     };
                 }
 
+
                 if (response.status === 404) {
+                    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+                    // PHASE 1 AUDIT: Log 404 NOT_FOUND response
+                    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+                    console.warn(`❌ [AUDIT][PHASE1][CLIENT-FETCH] Server returned 404 NOT_FOUND`);
+                    console.warn(`   ├─ Conversation: ${conversationType}:${conversationId}`);
+                    console.warn(`   ├─ Meaning: No conversation key exists OR user not distributed`);
+                    console.warn(`   ├─ Possible reasons: (1) New channel (2) Late joiner (3) Legacy key`);
+                    console.warn(`   └─ Action: Cannot decrypt messages`);
+                    console.warn(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+
                     // 🔐 PHASE 4 FIX: 404 means key NOT YET DISTRIBUTED to this user
                     // This can mean:
                     // 1. Channel has no key yet (Phase 3 - first message)
@@ -299,6 +331,7 @@ class ConversationKeyService {
                         conversationType
                     };
                 }
+
                 throw new Error('Failed to fetch conversation key');
             }
 
@@ -322,7 +355,17 @@ class ConversationKeyService {
             // Cache
             this.conversationKeys.set(cacheKey, { key: conversationKey, algorithm: 'AES-256' });
 
+            // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+            // PHASE 1 AUDIT: Log successful decrypt and cache
+            // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+            console.log(`✅ [AUDIT][PHASE1][CLIENT-FETCH] Key fetch and decrypt SUCCESS`);
+            console.log(`   ├─ Conversation: ${cacheKey}`);
+            console.log(`   ├─ Algorithm: ${algorithm}`);
+            console.log(`   └─ Cached for future use`);
+            console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+
             console.log(`✅ Fetched and decrypted conversation key for ${cacheKey}`);
+
 
             return conversationKey;
         } catch (error) {
