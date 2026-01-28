@@ -1671,3 +1671,132 @@ exports.getTabs = async (req, res) => {
     return res.status(500).json({ message: "Server error" });
   }
 };
+
+/**
+ * Join a public discoverable channel (self-service)
+ * POST /api/channels/:id/join-discoverable
+ * 
+ * This endpoint allows workspace members to self-join public discoverable channels.
+ * GUARDS:
+ * 1. Channel must be public (!isPrivate)
+ * 2. Channel must be discoverable (isDiscoverable === true)
+ * 3. User must be workspace member
+ * 4. User must NOT already be channel member
+ */
+exports.joinDiscoverableChannel = async (req, res) => {
+  try {
+    const { id: channelId } = req.params;
+    const userId = req.user.sub;
+    const mongoose = require('mongoose');
+    const Workspace = require('../models/Workspace');
+    const conversationKeysService = require('../src/modules/conversations/conversationKeys.service');
+
+    // Step 1: Fetch channel
+    const channel = await Channel.findById(channelId);
+    if (!channel) {
+      return res.status(404).json({ message: "Channel not found" });
+    }
+
+    // GUARD 1: Must be public
+    if (channel.isPrivate) {
+      console.log(`❌ [JOIN_DISCOVERABLE] Rejected: Channel ${channelId} is private`);
+      return res.status(403).json({
+        message: "Cannot join private channels without invitation",
+        code: "CHANNEL_PRIVATE"
+      });
+    }
+
+    // GUARD 2: Must be discoverable
+    if (!channel.isDiscoverable) {
+      console.log(`❌ [JOIN_DISCOVERABLE] Rejected: Channel ${channelId} is not discoverable`);
+      return res.status(403).json({
+        message: "This channel is not open for self-service joining",
+        code: "CHANNEL_NOT_DISCOVERABLE"
+      });
+    }
+
+    // GUARD 3: User must be workspace member
+    const workspace = await Workspace.findById(channel.workspace);
+    if (!workspace) {
+      return res.status(404).json({ message: "Workspace not found" });
+    }
+
+    const isWorkspaceMember = workspace.members.some(m => {
+      const memberId = m.user?._id ? m.user._id.toString() : m.user.toString();
+      return memberId === userId.toString();
+    });
+
+    if (!isWorkspaceMember) {
+      console.log(`❌ [JOIN_DISCOVERABLE] Rejected: User ${userId} not a workspace member`);
+      return res.status(403).json({
+        message: "You must be a workspace member to join this channel",
+        code: "NOT_WORKSPACE_MEMBER"
+      });
+    }
+
+    // GUARD 4: User must NOT already be a channel member
+    const isChannelMember = channel.members.some(m => {
+      const memberId = m.user ? m.user.toString() : m.toString();
+      return memberId === userId.toString();
+    });
+
+    if (isChannelMember) {
+      console.log(`⚠️ [JOIN_DISCOVERABLE] User ${userId} already a member of channel ${channelId}`);
+      return res.status(400).json({
+        message: "You are already a member of this channel",
+        code: "ALREADY_MEMBER"
+      });
+    }
+
+    // ALL GUARDS PASSED - Add user to channel
+    console.log(`✅ [JOIN_DISCOVERABLE] Adding user ${userId} to channel ${channelId}`);
+
+    channel.members.push({
+      user: mongoose.Types.ObjectId(userId),
+      joinedAt: new Date()
+    });
+
+    // Add system event for join
+    channel.systemEvents.push({
+      type: 'user_joined',
+      userId: mongoose.Types.ObjectId(userId),
+      timestamp: new Date()
+    });
+
+    await channel.save();
+
+    // PHASE 4: Distribute existing conversation key to new member
+    // This reuses existing Phase 4 logic - NO CHANGES to key distribution
+    try {
+      await conversationKeysService.distributeKeyToNewMember(
+        channelId,
+        'channel',
+        userId
+      );
+      console.log(`✅ [JOIN_DISCOVERABLE] Distributed key to user ${userId} for channel ${channelId}`);
+    } catch (keyError) {
+      console.error(`❌ [JOIN_DISCOVERABLE] Key distribution failed:`, keyError.message);
+      // Non-blocking - user is still added to members
+    }
+
+    // Real-time notification
+    const io = req.app?.get("io");
+    if (io) {
+      io.to(`channel:${channelId}`).emit("user-joined-channel", {
+        channelId,
+        userId,
+        timestamp: new Date()
+      });
+    }
+
+    return res.json({
+      message: "Successfully joined channel",
+      channelId,
+      channelName: channel.name
+    });
+
+  } catch (err) {
+    console.error("JOIN DISCOVERABLE CHANNEL ERROR:", err);
+    return res.status(500).json({ message: "Server error" });
+  }
+};

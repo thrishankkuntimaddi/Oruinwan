@@ -19,6 +19,9 @@ router.delete("/:id/member", requireAuth, channelCtrl.removeChannelMember);
 // join public
 router.post("/:id/join", requireAuth, channelCtrl.joinChannel);
 
+// join public discoverable channel (self-service)
+router.post("/:id/join-discoverable", requireAuth, channelCtrl.joinDiscoverableChannel);
+
 // update channel metadata
 router.put("/:id", requireAuth, channelCtrl.updateChannel);
 

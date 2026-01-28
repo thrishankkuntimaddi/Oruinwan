@@ -66,6 +66,43 @@ const ChannelSchema = new mongoose.Schema(
       default: false
     },
 
+    /**
+     * Discoverability (for public channels):
+     * - true: Non-members can see and self-join this channel
+     * - false: Only visible to members (invite-only)
+     * - Private channels ignore this (always invite-only)
+     */
+    isDiscoverable: {
+      type: Boolean,
+      default: true // Backward compatible: existing channels become discoverable
+    },
+
+    /* ---------- System Events (Timeline Markers) ---------- */
+
+    /**
+     * Non-encrypted timeline events (NOT chat messages)
+     * Examples: user joined, user left, channel created
+     * Displayed as timeline separators in UI
+     */
+    systemEvents: [
+      {
+        type: {
+          type: String,
+          enum: ['user_joined', 'user_left', 'channel_created'],
+          required: true
+        },
+        userId: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: 'User'
+        },
+        timestamp: {
+          type: Date,
+          default: Date.now
+        },
+        metadata: mongoose.Schema.Types.Mixed
+      }
+    ],
+
     /* ---------- Ownership ---------- */
 
     createdBy: {

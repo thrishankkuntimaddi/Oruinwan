@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Plus, Hash, Search, Trash2, X, CheckSquare, Settings2, Lock, Megaphone } from 'lucide-react';
+import { Plus, Hash, Search, Trash2, X, CheckSquare, Settings2, Lock, Megaphone, UserPlus } from 'lucide-react';
 import { useWorkspace } from "../../../contexts/WorkspaceContext";
 import { useToast } from "../../../contexts/ToastContext";
 import api from "../../../services/api";
@@ -46,6 +46,8 @@ const ChannelsPanel = ({ title }) => {
                     isFavorite: ch.isDefault || false,
                     isPrivate: ch.isPrivate || false,
                     isDefault: ch.isDefault || false,
+                    isDiscoverable: ch.isDiscoverable ?? true, // Default to true for backward compatibility
+                    isMember: ch.isMember ?? false, // Is current user a member
                     description: ch.description || '',
                     canDelete: !ch.isDefault, // ✅ Default channels cannot be deleted
                     workspaceId: ch.workspace
@@ -303,10 +305,12 @@ const ChannelsPanel = ({ title }) => {
             <div
                 onClick={handleClick}
                 className={`px-3 py-2 mx-2 transition-all duration-200 rounded-lg cursor-pointer flex items-center justify-between group relative ${isSelectionMode && isSelected
-                    ? "bg-blue-50/80 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800"
-                    : isActive
-                        ? "bg-gradient-to-r from-blue-50 to-white dark:from-blue-900/30 dark:to-gray-900/50 text-blue-600 dark:text-blue-400"
-                        : "hover:bg-gray-100 dark:hover:bg-gray-800/60 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
+                        ? "bg-blue-50/80 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800"
+                        : isActive
+                            ? "bg-gradient-to-r from-blue-50 to-white dark:from-blue-900/30 dark:to-gray-900/50 text-blue-600 dark:text-blue-400"
+                            : !item.isMember && item.isDiscoverable
+                                ? "opacity-60 hover:opacity-100 hover:bg-gray-100 dark:hover:bg-gray-800/60 text-gray-500 dark:text-gray-400"
+                                : "hover:bg-gray-100 dark:hover:bg-gray-800/60 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
                     }`}
             >
                 {/* Active Accent Bar */}
@@ -343,6 +347,13 @@ const ChannelsPanel = ({ title }) => {
                     <span className={`truncate text-sm tracking-tight transition-all ${isActive ? "font-bold text-gray-900 dark:text-white" : "font-semibold group-hover:text-gray-900 dark:group-hover:text-gray-100"}`}>
                         {(item.label || 'Unnamed Channel').replace(/^#/, '')}
                     </span>
+
+                    {/* Join badge for non-member discoverable channels */}
+                    {!item.isMember && item.isDiscoverable && (
+                        <div className="ml-2 p-1 rounded-md bg-blue-100 dark:bg-blue-900/30" title="Click to join">
+                            <UserPlus size={12} className="text-blue-600 dark:text-blue-400" strokeWidth={2.5} />
+                        </div>
+                    )}
                 </div>
             </div>
         );
@@ -482,6 +493,8 @@ const ChannelsPanel = ({ title }) => {
                             isFavorite: false,
                             isPrivate: channel.isPrivate,
                             isDefault: false,
+                            isDiscoverable: channel.isDiscoverable ?? true,
+                            isMember: true, // Creator is always a member
                             description: channel.description || '',
                             canDelete: true,
                             createdBy: channel.createdBy

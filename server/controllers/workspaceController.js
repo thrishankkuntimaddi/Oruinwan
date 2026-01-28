@@ -746,7 +746,7 @@ exports.getWorkspaceChannels = async (req, res) => {
 
     // Fetch ALL channels for this workspace
     const allChannels = await Channel.find({ workspace: workspaceId })
-      .select('name description isPrivate isDefault members createdBy createdAt workspace admins')
+      .select('name description isPrivate isDefault isDiscoverable members createdBy createdAt workspace admins')
       .sort({ isDefault: -1, createdAt: 1 }) // Default channels first, then by creation time
       .lean();
 
@@ -776,7 +776,20 @@ exports.getWorkspaceChannels = async (req, res) => {
 
     });
 
-    return res.json({ channels: visibleChannels });
+    // Add isMember flag to each visible channel
+    const channelsWithMembershipInfo = visibleChannels.map(channel => {
+      const isMember = channel.members.some(m => {
+        const memberId = m.user ? m.user.toString() : m.toString();
+        return memberId === userId.toString();
+      });
+
+      return {
+        ...channel,
+        isMember // Add membership flag for frontend
+      };
+    });
+
+    return res.json({ channels: channelsWithMembershipInfo });
   } catch (err) {
     console.error("GET WORKSPACE CHANNELS ERROR:", err);
     return res.status(500).json({ message: "Server error" });

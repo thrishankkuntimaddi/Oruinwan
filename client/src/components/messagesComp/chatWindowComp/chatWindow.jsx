@@ -24,6 +24,7 @@ import ThreadPanel from "./ThreadPanel.jsx";
 import MessagesContainer from "./messages/messagesContainer.jsx";
 import ReplyPreview from "./messages/replyPreview.jsx";
 import FooterInput from "./footer/footerInput.jsx";
+import JoinChannelCTA from "../JoinChannelCTA.jsx"; // ✅ INTEGRATION: Join CTA for non-members
 
 import { pickFile } from "./helpers/helpers.js";
 
@@ -613,6 +614,15 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
 
       /* --- CHANNEL DELETED --- */
       socket.on("channel-deleted", ({ channelId, channelName }) => {
+
+      // ✅ PHASE 3 INTEGRATION: Real-time join updates
+      socket.on("user-joined-channel", ({ channelId, userId }) => {
+        if (channelId === chat.id) {
+          // Refetch messages/events to show system event
+          loadMessages();
+        }
+      });
+
 
 
         showToast(`#${channelName} has been deleted`, "warning");
@@ -1703,23 +1713,36 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
                 />
               )}
 
-              {/* Footer Input */}
-              <FooterInput
-                newMessage={newMessage}
-                onChange={onInputChange}
-                onSend={sendMessage}
-                onAttach={handleAttach}
-                showAttach={showAttach}
-                setShowAttach={setShowAttach}
-                showEmoji={showEmoji}
-                setShowEmoji={setShowEmoji}
-                onPickEmoji={(em) => setNewMessage((m) => m + em.native)}
-                recording={recording}
-                startRecording={() => setRecording(true)}
-                stopRecording={() => setRecording(false)}
-                blocked={blocked}
-                setNewMessage={setNewMessage}
-              />
+              {/* ✅ PHASE 1 INTEGRATION: Conditional Footer vs Join CTA */}
+              {chat.type === 'channel' && chat.isMember === false && chat.isDiscoverable ? (
+                // Non-member of discoverable channel → Show Join CTA
+                <JoinChannelCTA
+                  channel={chat}
+                  onJoinSuccess={() => {
+                    // Refetch channel data to update membership status
+                    loadMessages();
+                    showToast(`Successfully joined #${chat.name}`, 'success');
+                  }}
+                />
+              ) : (
+                // Member or default channel → Show normal input
+                <FooterInput
+                  newMessage={newMessage}
+                  onChange={onInputChange}
+                  onSend={sendMessage}
+                  onAttach={handleAttach}
+                  showAttach={showAttach}
+                  setShowAttach={setShowAttach}
+                  showEmoji={showEmoji}
+                  setShowEmoji={setShowEmoji}
+                  onPickEmoji={(em) => setNewMessage((m) => m + em.native)}
+                  recording={recording}
+                  startRecording={() => setRecording(true)}
+                  stopRecording={() => setRecording(false)}
+                  blocked={blocked}
+                  setNewMessage={setNewMessage}
+                />
+              )}
             </>
           ) : activeTab === 'tasks' ? (
             /* TASKS TAB CONTENT */
