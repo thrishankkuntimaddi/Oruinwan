@@ -439,7 +439,24 @@ exports.joinChannel = async (req, res) => {
     // Normalize members + add new user
     channel.members = normalizeMemberFormat(channel.members, channel.createdAt);
     channel.members.push({ user: userId, joinedAt: new Date() });
+
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // PHASE 1 AUDIT: Track membership commit BEFORE key distribution
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    const membershipCommitTime = new Date();
+    console.log(`👤 [AUDIT][PHASE1][JOIN] User joining channel`);
+    console.log(`   ├─ User ID: ${userId}`);
+    console.log(`   ├─ Channel ID: ${channelId}`);
+    console.log(`   └─ About to commit membership to DB...`);
+
     await channel.save();
+
+    console.log(`✅ [AUDIT][PHASE1][JOIN] Membership COMMITTED to database`);
+    console.log(`   ├─ User: ${userId} is NOW in channel.members[]`);
+    console.log(`   ├─ Commit timestamp: ${membershipCommitTime.toISOString()}`);
+    console.log(`   └─ Key distribution: NOT YET ATTEMPTED`);
+    console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+
 
     // ============================================================
     // 🔐 PHASE 6: DISTRIBUTE CONVERSATION KEY TO NEW MEMBER
@@ -447,22 +464,65 @@ exports.joinChannel = async (req, res) => {
     const conversationKeysService = require('../src/modules/conversations/conversationKeys.service');
 
     try {
+      // PHASE 1 AUDIT: Track key distribution attempt timing
+      const distributionStartTime = Date.now();
+      console.log(`🔐 [AUDIT][PHASE1][JOIN] Attempting key distribution`);
+      console.log(`   ├─ User: ${userId}`);
+      console.log(`   ├─ Channel: ${channelId}`);
+      console.log(`   ├─ Membership already committed: YES`);
+      console.log(`   └─ Distribution start: ${new Date().toISOString()}`);
+
       const distributed = await conversationKeysService.distributeKeyToNewMember(
         channelId,
         'channel',
         userId
       );
 
+      const distributionDuration = Date.now() - distributionStartTime;
+
       if (!distributed) {
         console.warn(`⚠️ [PHASE 6] Failed to distribute key to user ${userId} joining channel ${channelId}`);
+        // PHASE 1 AUDIT: Log distribution failure details
+        console.error(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+        console.error(`❌ [AUDIT][PHASE1][JOIN] Key distribution FAILED`);
+        console.error(`   ├─ User: ${userId}`);
+        console.error(`   ├─ Channel: ${channelId}`);
+        console.error(`   ├─ Duration: ${distributionDuration}ms`);
+        console.error(`   ├─ Membership status: COMMITTED ✓`);
+        console.error(`   ├─ Key access status: DENIED ✗`);
+        console.error(`   ├─ ⚠️ INVARIANT VIOLATION: User in members[] but NOT in encryptedKeys[]`);
+        console.error(`   └─ Result: User WILL get 403 on key fetch`);
+        console.error(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
         // Don't fail the join - user successfully joined, key distribution can be retried
       } else {
         console.log(`✅ [PHASE 6] Distributed conversation key to user ${userId} joining channel ${channelId}`);
+        // PHASE 1 AUDIT: Log successful distribution
+        console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+        console.log(`✅ [AUDIT][PHASE1][JOIN] Key distribution SUCCESS`);
+        console.log(`   ├─ User: ${userId}`);
+        console.log(`   ├─ Channel: ${channelId}`);
+        console.log(`   ├─ Duration: ${distributionDuration}ms`);
+        console.log(`   ├─ Membership status: COMMITTED ✓`);
+        console.log(`   ├─ Key access status: GRANTED ✓`);
+        console.log(`   └─ INV-001 restored: User now in BOTH members[] AND encryptedKeys[]`);
+        console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
       }
     } catch (keyError) {
       console.error('[PHASE 6] Key distribution error on join:', keyError);
+      // PHASE 1 AUDIT: Log exception details
+      console.error(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+      console.error(`❌ [AUDIT][PHASE1][JOIN] Key distribution EXCEPTION`);
+      console.error(`   ├─ User: ${userId}`);
+      console.error(`   ├─ Channel: ${channelId}`);
+      console.error(`   ├─ Error: ${keyError.message}`);
+      console.error(`   ├─ Stack: ${keyError.stack}`);
+      console.error(`   ├─ Membership status: COMMITTED ✓`);
+      console.error(`   ├─ Key access status: UNKNOWN ⚠️`);
+      console.error(`   └─ ⚠️ CRITICAL: Exception swallowed, user joined without key`);
+      console.error(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
       // Don't fail the join - user successfully joined the channel
     }
+
 
     const io = req.app?.get("io");
     if (io) {

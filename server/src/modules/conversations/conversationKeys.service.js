@@ -287,19 +287,42 @@ async function distributeKeyToNewMember(conversationId, conversationType, newUse
     try {
         console.log(`🔐 [Server Distribution] Distributing key for ${conversationType}:${conversationId} to user ${newUserId}`);
 
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        // PHASE 1 AUDIT: Track key distribution request
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        console.log(`🔗 [AUDIT][PHASE1][DISTRIBUTE] Key distribution request received`);
+        console.log(`   ├─ Conversation: ${conversationType}:${conversationId}`);
+        console.log(`   ├─ Target user: ${newUserId}`);
+        console.log(`   └─ Timestamp: ${new Date().toISOString()}`);
+
+
         // 1. Fetch conversation key document
         const conversationKey = await ConversationKey.findByConversation(conversationId, conversationType);
 
         if (!conversationKey) {
             console.error(`❌ [Server Distribution] No conversation key found for ${conversationType}:${conversationId}`);
+            // PHASE 1 AUDIT: Log missing conversation key
+            console.error(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+            console.error(`❌ [AUDIT][PHASE1][DISTRIBUTE] CRITICAL: No conversation key exists`);
+            console.error(`   ├─ Conversation: ${conversationType}:${conversationId}`);
+            console.error(`   ├─ Target user: ${newUserId}`);
+            console.error(`   ├─ Reason: ConversationKey document NOT FOUND in database`);
+            console.error(`   └─ This channel was NEVER encrypted (Phase 5 failed or skipped)`);
+            console.error(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
             return false;
         }
+
 
         // 2. Check if user already has access (idempotent)
         if (conversationKey.hasAccess(newUserId)) {
             console.log(`ℹ️ [PHASE 4] User ${newUserId} already has conversation key`);
+            // PHASE 1 AUDIT: Log idempotent case
+            console.log(`✅ [AUDIT][PHASE1][DISTRIBUTE] User already has key (idempotent)`);
+            console.log(`   ├─ User: ${newUserId}`);
+            console.log(`   └─ Already in encryptedKeys[] - no action needed`);
             return true;
         }
+
 
         // 3. Handle legacy keys (created before workspace wrapping was enforced)
         let conversationKeyBytes;
@@ -313,16 +336,37 @@ async function distributeKeyToNewMember(conversationId, conversationType, newUse
             // The only solution is to have the client re-share the key
             console.error(`❌ [PHASE 4] Cannot distribute legacy unwrapped key - requires client-side re-sharing`);
             console.error(`   Solution: Original member must re-encrypt key for new member via client`);
+
+            // PHASE 1 AUDIT: Log legacy key detection
+            console.error(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+            console.error(`⚠️ [AUDIT][PHASE1][DISTRIBUTE] LEGACY KEY DETECTED`);
+            console.error(`   ├─ Conversation: ${conversationType}:${conversationId}`);
+            console.error(`   ├─ Target user: ${newUserId}`);
+            console.error(`   ├─ Missing: workspaceEncryptedKey field`);
+            console.error(`   ├─ Reason: Channel created BEFORE workspace wrapping was enforced`);
+            console.error(`   ├─ Server cannot decrypt: Needs user's private key`);
+            console.error(`   └─ Solution: Client-side key re-sharing required`);
+            console.error(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
             return false;
         }
+
 
         // 4. Fetch new user's public key
         const newUserKeyDoc = await UserIdentityKey.findByUserId(newUserId);
 
         if (!newUserKeyDoc || !newUserKeyDoc.publicKey) {
             console.error(`❌ [Server Distribution] User ${newUserId} has no E2EE public key`);
+            // PHASE 1 AUDIT: Log missing public key
+            console.error(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+            console.error(`❌ [AUDIT][PHASE1][DISTRIBUTE] User has no E2EE public key`);
+            console.error(`   ├─ User: ${newUserId}`);
+            console.error(`   ├─ Conversation: ${conversationType}:${conversationId}`);
+            console.error(`   ├─ Reason: UserIdentityKey NOT FOUND or publicKey missing`);
+            console.error(`   └─ Cannot encrypt key for this user`);
+            console.error(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
             return false;
         }
+
 
         // 5. Unwrap conversation key using SERVER_KEK
         console.log(`🔓 [Server Distribution] Unwrapping conversation key with SERVER_KEK...`);
@@ -346,12 +390,33 @@ async function distributeKeyToNewMember(conversationId, conversationType, newUse
         await conversationKey.save();
 
         console.log(`✅ [PHASE 4] Distributed conversation key for ${conversationType}:${conversationId} to user ${newUserId}`);
+
+        // PHASE 1 AUDIT: Log successful distribution
+        console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+        console.log(`✅ [AUDIT][PHASE1][DISTRIBUTE] Key distribution SUCCESS`);
+        console.log(`   ├─ User: ${newUserId}`);
+        console.log(`   ├─ Conversation: ${conversationType}:${conversationId}`);
+        console.log(`   ├─ Method: SERVER_KEK unwrap + user public key re-encrypt`);
+        console.log(`   ├─ User added to encryptedKeys[] array`);
+        console.log(`   └─ INV-001 gap closed for this user`);
+        console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
         return true;
+
 
     } catch (error) {
         console.error(`❌ [Server Distribution] Failed to distribute key:`, error);
+        // PHASE 1 AUDIT: Log exception details
+        console.error(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+        console.error(`❌ [AUDIT][PHASE1][DISTRIBUTE] Distribution EXCEPTION`);
+        console.error(`   ├─ Conversation: ${conversationType}:${conversationId}`);
+        console.error(`   ├─ Target user: ${newUserId}`);
+        console.error(`   ├─ Error message: ${error.message}`);
+        console.error(`   ├─ Error stack: ${error.stack}`);
+        console.error(`   └─ Returning false (distribution failed)`);
+        console.error(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
         return false;
     }
+
 }
 
 
@@ -482,7 +547,20 @@ async function bootstrapConversationKey({ conversationId, conversationType, work
  */
 async function generateConversationKeyServerSide(conversationId, conversationType, workspaceId, members, creatorId, session = null) {
     try {
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        // PHASE 1 AUDIT: Channel Creation - Track INV-001 violations
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
         console.log(`🔐 [PHASE 5] Generating conversation key at channel birth for ${conversationId}`);
+        console.log(`📊 [AUDIT][PHASE1][CREATION] Channel key generation starting`);
+        console.log(`   ├─ Channel ID: ${conversationId}`);
+        console.log(`   ├─ Conversation Type: ${conversationType}`);
+        console.log(`   ├─ Workspace ID: ${workspaceId}`);
+        console.log(`   ├─ Total members: ${members.length}`);
+        console.log(`   ├─ Members list: ${JSON.stringify(members)}`);
+        console.log(`   ├─ Creator ID: ${creatorId}`);
+        console.log(`   └─ Timestamp: ${new Date().toISOString()}`);
+        console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+
 
         // 1. Generate random AES-256 conversation key (32 bytes)
         const conversationKeyBytes = crypto.randomBytes(32);
@@ -503,11 +581,17 @@ async function generateConversationKeyServerSide(conversationId, conversationTyp
         const encryptedKeys = [];
         let creatorHasKey = false;
 
+        // PHASE 1 AUDIT: Track members skipped during key generation
+        const skippedMembers = [];
+
+
         for (const userId of members) {
             const keyDoc = publicKeyMap.get(userId.toString());
 
             if (!keyDoc || !keyDoc.publicKey) {
                 console.warn(`⚠️ [PHASE 5] User ${userId} has no E2EE public key, skipping`);
+                // PHASE 1 AUDIT: Record why this member was skipped
+                skippedMembers.push({ userId: userId.toString(), reason: 'MISSING_PUBLIC_KEY' });
                 continue;
             }
 
@@ -537,6 +621,27 @@ async function generateConversationKeyServerSide(conversationId, conversationTyp
             console.warn(`⚠️ [PHASE 5] ${members.length - encryptedKeys.length} members without E2EE keys will not have access`);
         }
 
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        // PHASE 1 AUDIT: Report key generation results vs membership
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        const coveragePercent = Math.round((encryptedKeys.length / members.length) * 100);
+        console.log(`📊 [AUDIT][PHASE1][CREATION] Key generation complete`);
+        console.log(`   ├─ Channel ID: ${conversationId}`);
+        console.log(`   ├─ Total members in channel.members: ${members.length}`);
+        console.log(`   ├─ Keys generated in encryptedKeys[]: ${encryptedKeys.length}`);
+        console.log(`   ├─ Coverage: ${coveragePercent}% (${encryptedKeys.length}/${members.length})`);
+
+        if (skippedMembers.length > 0) {
+            console.warn(`   ├─ ⚠️ INVARIANT VIOLATION DETECTED`);
+            console.warn(`   ├─ INV-001 broken: ${skippedMembers.length} members WITHOUT keys`);
+            console.warn(`   ├─ Skipped members: ${JSON.stringify(skippedMembers)}`);
+            console.warn(`   └─ These users are IN channel.members but NOT IN encryptedKeys[]`);
+        } else {
+            console.log(`   └─ ✅ INV-001 satisfied: All members have keys`);
+        }
+        console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+
+
         // 5. Store conversation key with ALL encrypted user keys (with optional session)
         await storeConversationKeys({
             conversationId,
@@ -559,6 +664,238 @@ async function generateConversationKeyServerSide(conversationId, conversationTyp
     }
 }
 
+// ==================== PHASE 2: REPAIR FUNCTION ====================
+
+/**
+ * PHASE 2: Repair INV-001 violation for a single user
+ * 
+ * Repairs the gap between channel.members[] and encryptedKeys[]
+ * by re-distributing the EXISTING conversation key to a legitimate member.
+ * 
+ * SAFETY: This function performs 5 sequential safety gates before any mutation.
+ * IDEMPOTENT: Safe to call multiple times for the same user.
+ * E2EE SAFE: Uses existing key, no generation, server has SERVER_KEK authority.
+ * 
+ * @param {string} channelId - Channel ID
+ * @param {string} userId - User ID to repair
+ * @returns {Promise<RepairResult>} Repair outcome with result enum
+ */
+async function repairConversationKeyForUser(channelId, userId) {
+    const Channel = require('../../../models/Channel');
+
+    console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+    console.log(`🔧 [PHASE2][REPAIR] Repair request received`);
+    console.log(`   ├─ Channel: ${channelId}`);
+    console.log(`   ├─ User: ${userId}`);
+    console.log(`   └─ Timestamp: ${new Date().toISOString()}`);
+    console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+
+    try {
+        // ═══════════════════════════════════════════════════════════
+        // GATE 1: Conversation key exists with workspace wrapping
+        // ═══════════════════════════════════════════════════════════
+        console.log(`🔍 [PHASE2][REPAIR][GATE-1] Checking conversation key existence...`);
+
+        const conversationKey = await ConversationKey.findOne({
+            conversationId: channelId,
+            conversationType: 'channel'
+        });
+
+        if (!conversationKey) {
+            console.error(`❌ [PHASE2][REPAIR][GATE-1] FAILED: No conversation key found`);
+            console.error(`   ├─ Channel was never encrypted (Phase 5 failure)`);
+            console.error(`   └─ Result: CANNOT_REPAIR_NO_CONVERSATION_KEY`);
+            return {
+                result: 'CANNOT_REPAIR_NO_CONVERSATION_KEY',
+                reason: 'Conversation key document does not exist'
+            };
+        }
+
+        if (!conversationKey.workspaceEncryptedKey) {
+            console.error(`❌ [PHASE2][REPAIR][GATE-1] FAILED: Legacy key (no workspace wrapping)`);
+            console.error(`   ├─ Channel has legacy key without SERVER_KEK wrapping`);
+            console.error(`   └─ Result: CANNOT_REPAIR_NO_CONVERSATION_KEY`);
+            return {
+                result: 'CANNOT_REPAIR_NO_CONVERSATION_KEY',
+                reason: 'Legacy key without workspace wrapping'
+            };
+        }
+
+        console.log(`✅ [PHASE2][REPAIR][GATE-1] PASSED ✓`);
+        console.log(`   ├─ Conversation key exists: YES`);
+        console.log(`   └─ Workspace-wrapped: YES`);
+
+        // ═══════════════════════════════════════════════════════════
+        // GATE 2: User is legitimate channel member
+        // ═══════════════════════════════════════════════════════════
+        console.log(`🔍 [PHASE2][REPAIR][GATE-2] Checking channel membership...`);
+
+        const channel = await Channel.findById(channelId).select('members');
+
+        if (!channel) {
+            console.error(`❌ [PHASE2][REPAIR][GATE-2] FAILED: Channel not found`);
+            return {
+                result: 'CANNOT_REPAIR_NOT_A_MEMBER',
+                reason: 'Channel does not exist'
+            };
+        }
+
+        const isMember = channel.members.some(m => {
+            const memberId = m.user ? m.user.toString() : m.toString();
+            return memberId === userId.toString();
+        });
+
+        if (!isMember) {
+            console.error(`❌ [PHASE2][REPAIR][GATE-2] FAILED: User not in channel.members[]`);
+            console.error(`   ├─ User: ${userId}`);
+            console.error(`   ├─ Channel: ${channelId}`);
+            console.error(`   └─ Result: CANNOT_REPAIR_NOT_A_MEMBER`);
+            return {
+                result: 'CANNOT_REPAIR_NOT_A_MEMBER',
+                reason: 'User is not a member of this channel'
+            };
+        }
+
+        console.log(`✅ [PHASE2][REPAIR][GATE-2] PASSED ✓`);
+        console.log(`   └─ User is in channel.members[]: YES`);
+
+        // ═══════════════════════════════════════════════════════════
+        // GATE 3: User does NOT already have key (idempotent check)
+        // ═══════════════════════════════════════════════════════════
+        console.log(`🔍 [PHASE2][REPAIR][GATE-3] Checking if user already has key...`);
+
+        const userHasKey = conversationKey.encryptedKeys.some(ek =>
+            ek.userId.toString() === userId.toString()
+        );
+
+        if (userHasKey) {
+            console.log(`ℹ️ [PHASE2][REPAIR][GATE-3] User already has key (idempotent)`);
+            console.log(`   ├─ User: ${userId}`);
+            console.log(`   ├─ Already in encryptedKeys[]: YES`);
+            console.log(`   └─ Result: NO_REPAIR_NEEDED`);
+            return {
+                result: 'NO_REPAIR_NEEDED',
+                reason: 'User already has encryption key'
+            };
+        }
+
+        console.log(`✅ [PHASE2][REPAIR][GATE-3] PASSED ✓`);
+        console.log(`   ├─ User in encryptedKeys[]: NO`);
+        console.log(`   └─ INV-001 violation confirmed - repair needed`);
+
+        // ═══════════════════════════════════════════════════════════
+        // GATE 4: User has valid E2EE public key
+        // ═══════════════════════════════════════════════════════════
+        console.log(`🔍 [PHASE2][REPAIR][GATE-4] Checking user's E2EE public key...`);
+
+        const userIdentityKey = await UserIdentityKey.findByUserId(userId);
+
+        if (!userIdentityKey || !userIdentityKey.publicKey) {
+            console.error(`❌ [PHASE2][REPAIR][GATE-4] FAILED: User has no E2EE public key`);
+            console.error(`   ├─ User: ${userId}`);
+            console.error(`   ├─ UserIdentityKey exists: ${!!userIdentityKey}`);
+            console.error(`   ├─ Public key exists: NO`);
+            console.error(`   └─ Result: CANNOT_REPAIR_MISSING_PUBLIC_KEY`);
+            return {
+                result: 'CANNOT_REPAIR_MISSING_PUBLIC_KEY',
+                reason: 'User has no E2EE identity key'
+            };
+        }
+
+        console.log(`✅ [PHASE2][REPAIR][GATE-4] PASSED ✓`);
+        console.log(`   ├─ User has E2EE public key: YES`);
+        console.log(`   └─ Algorithm: ${userIdentityKey.algorithm}`);
+
+        // ═══════════════════════════════════════════════════════════
+        // GATE 5: Server can unwrap conversation key
+        // ═══════════════════════════════════════════════════════════
+        console.log(`🔍 [PHASE2][REPAIR][GATE-5] Unwrapping conversation key with SERVER_KEK...`);
+
+        let conversationKeyBytes;
+        try {
+            conversationKeyBytes = cryptoUtils.unwrapWithServerKEK(
+                conversationKey.workspaceEncryptedKey,
+                conversationKey.workspaceKeyIv,
+                conversationKey.workspaceKeyAuthTag
+            );
+
+            if (!conversationKeyBytes || conversationKeyBytes.length !== 32) {
+                throw new Error('Invalid conversation key bytes');
+            }
+
+        } catch (unwrapError) {
+            console.error(`❌ [PHASE2][REPAIR][GATE-5] FAILED: Cannot unwrap conversation key`);
+            console.error(`   ├─ Error: ${unwrapError.message}`);
+            console.error(`   ├─ Channel: ${channelId}`);
+            console.error(`   └─ Result: CANNOT_REPAIR_UNWRAP_FAILED`);
+            return {
+                result: 'CANNOT_REPAIR_UNWRAP_FAILED',
+                reason: `Unwrap failed: ${unwrapError.message}`
+            };
+        }
+
+        console.log(`✅ [PHASE2][REPAIR][GATE-5] PASSED ✓`);
+        console.log(`   ├─ Conversation key unwrapped successfully`);
+        console.log(`   └─ Key size: 32 bytes (AES-256)`);
+
+        // ═══════════════════════════════════════════════════════════
+        // ALL GATES PASSED - PERFORM REPAIR
+        // ═══════════════════════════════════════════════════════════
+        console.log(`🔧 [PHASE2][REPAIR] ALL GATES PASSED - Proceeding with repair`);
+        console.log(`   ├─ User: ${userId}`);
+        console.log(`   └─ Channel: ${channelId}`);
+
+        // Re-encrypt conversation key for user's public key
+        const wrapped = cryptoUtils.wrapForUser(
+            conversationKeyBytes,
+            userIdentityKey.publicKey
+        );
+
+        // Append to encryptedKeys[] (MUTATION POINT)
+        conversationKey.encryptedKeys.push({
+            userId: userId,
+            encryptedKey: wrapped.encryptedKey,
+            algorithm: wrapped.algorithm
+        });
+
+        await conversationKey.save();
+
+        console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+        console.log(`✅ [PHASE2][REPAIR] REPAIR SUCCESS`);
+        console.log(`   ├─ User: ${userId}`);
+        console.log(`   ├─ Channel: ${channelId}`);
+        console.log(`   ├─ Method: SERVER_KEK unwrap + user public key re-encrypt`);
+        console.log(`   ├─ Added to encryptedKeys[]: YES`);
+        console.log(`   ├─ INV-001 violation REPAIRED`);
+        console.log(`   └─ User can now: Fetch key, decrypt messages, send messages`);
+        console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+
+        return {
+            result: 'REPAIR_SUCCESS',
+            userId: userId,
+            channelId: channelId,
+            algorithm: wrapped.algorithm
+        };
+
+    } catch (error) {
+        console.error(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+        console.error(`❌ [PHASE2][REPAIR] EXCEPTION during repair`);
+        console.error(`   ├─ User: ${userId}`);
+        console.error(`   ├─ Channel: ${channelId}`);
+        console.error(`   ├─ Error: ${error.message}`);
+        console.error(`   └─ Stack: ${error.stack}`);
+        console.error(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+
+        return {
+            result: 'CANNOT_REPAIR_EXCEPTION',
+            reason: error.message,
+            error: error.message
+        };
+    }
+
+    
+}
+
 // ==================== EXPORTS ====================
 
 module.exports = {
@@ -571,5 +908,6 @@ module.exports = {
     hasConversationKeys,
     distributeKeyToNewMember,
     bootstrapConversationKey,  // Server-side key generation for default channels
-    generateConversationKeyServerSide  // PHASE 5: Server-side key generation for new channels
+    generateConversationKeyServerSide,  // PHASE 5: Server-side key generation for new channels
+    repairConversationKeyForUser  // PHASE 2: Repair INV-001 violations
 };

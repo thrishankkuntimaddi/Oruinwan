@@ -139,7 +139,29 @@ exports.getConversationKey = async (req, res) => {
             userId
         );
 
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        // PHASE 1 AUDIT: Log key fetch authorization decision
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        console.log(`🔑 [AUDIT][PHASE1][FETCH] Key fetch request`);
+        console.log(`   ├─ User ID: ${userId}`);
+        console.log(`   ├─ Conversation: ${conversationType}:${conversationId}`);
+        console.log(`   └─ Checking if user is in encryptedKeys[] array...`);
+
+
         if (!encryptedKeyData) {
+            // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+            // PHASE 1 AUDIT: Log access DENIED
+            // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+            console.warn(`🚫 [AUDIT][PHASE1][FETCH] Key access DENIED`);
+            console.warn(`   ├─ User ID: ${userId}`);
+            console.warn(`   ├─ Conversation: ${conversationType}:${conversationId}`);
+            console.warn(`   ├─ Reason: User NOT in encryptedKeys[] array`);
+            console.warn(`   ├─ Conversation key exists: YES`);
+            console.warn(`   ├─ User has access: NO`);
+            console.warn(`   ├─ ⚠️ INVARIANT VIOLATION: User may be in channel.members but NOT in encryptedKeys[]`);
+            console.warn(`   └─ Response: 403 KEY_NOT_DISTRIBUTED`);
+            console.warn(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+
             // 🔐 PHASE 4: Key exists but NOT distributed to this user
             return res.status(403).json({
                 error: 'KEY_NOT_DISTRIBUTED',
@@ -150,6 +172,17 @@ exports.getConversationKey = async (req, res) => {
                 conversationType
             });
         }
+
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        // PHASE 1 AUDIT: Log access GRANTED
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        console.log(`✅ [AUDIT][PHASE1][FETCH] Key access GRANTED`);
+        console.log(`   ├─ User ID: ${userId}`);
+        console.log(`   ├─ Conversation: ${conversationType}:${conversationId}`);
+        console.log(`   ├─ User is in encryptedKeys[] array: YES`);
+        console.log(`   └─ Response: 200 with encrypted key data`);
+        console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+
 
         return res.json(encryptedKeyData);
     } catch (err) {

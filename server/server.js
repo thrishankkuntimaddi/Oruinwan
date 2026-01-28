@@ -41,6 +41,11 @@ const logger = require("./utils/logger");
 const passport = require("./config/passport");
 const User = require("./models/User"); // ✅ Add User model import
 
+// ——————————————————————————————————————————————————————————————————
+const { generateAuditDigest } = require('./src/services/auditDigestService');
+// ——————————————————————————————————————————————————————————————————
+
+
 // Initialize app
 const app = express();
 
@@ -229,6 +234,9 @@ app.use("/api/v2/identity", require("./src/modules/identity/identity.routes"));
 // Conversations Module - Conversation key management for E2EE
 app.use("/api/v2/conversations", require("./src/modules/conversations/conversationKeys.routes"));
 
+// PHASE 2: Internal Admin Routes - E2EE Repair (Admin-only)
+app.use("/internal/e2ee", require("./src/modules/conversations/internal.routes"));
+
 // ✅ Module routes are now ACTIVE
 // - New code should use /api/v2/* endpoints
 // - Legacy /api/messages and /api/keys still work
@@ -342,7 +350,31 @@ mongoose
       logger.success(`Server (Express + Socket.IO) running on port ${PORT}`);
       logger.info(`Environment: ${process.env.NODE_ENV || 'development'}`);
       logger.info(`CORS allowed origins: ${allowedOrigins.join(', ')}`);
+
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      // PHASE 1 AUDIT: Schedule hourly digest reports
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      logger.info('📊 [AUDIT][PHASE1] Scheduling hourly key distribution health checks');
+
+      // Run immediately on startup
+      setTimeout(() => {
+        logger.info('📊 [AUDIT][PHASE1] Running initial audit digest...');
+        generateAuditDigest().catch(err => {
+          logger.error('[AUDIT][PHASE1] Initial digest failed:', err);
+        });
+      }, 5000); // Wait 5 seconds for DB to stabilize
+
+      // Then run every hour
+      setInterval(() => {
+        generateAuditDigest().catch(err => {
+          logger.error('[AUDIT][PHASE1] Hourly digest failed:', err);
+        });
+      }, 60 * 60 * 1000); // 1 hour in milliseconds
+
+      logger.info('✅ [AUDIT][PHASE1] Digest scheduler active (runs every 60 minutes)');
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     });
+
   })
   .catch((err) => {
     logger.error("MongoDB Connection Failed ❌", err);
