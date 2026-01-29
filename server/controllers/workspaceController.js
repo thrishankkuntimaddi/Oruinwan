@@ -96,6 +96,7 @@ exports.createWorkspace = async (req, res) => {
     console.log("🏗 [PHASE 2] Workspace created:", workspace._id.toString());
 
     // Create default channels (#general and #announcements)
+    const creationDate = new Date();
     const generalChannel = await Channel.create({
       workspace: workspace._id,
       company: companyId || null,
@@ -104,7 +105,12 @@ exports.createWorkspace = async (req, res) => {
       isPrivate: false,
       isDefault: true,
       createdBy: userId,
-      members: [{ user: userId, joinedAt: new Date() }]
+      members: [{ user: userId, joinedAt: creationDate }],
+      systemEvents: [{
+        type: 'channel_created',
+        userId: userId,
+        timestamp: creationDate
+      }]
     });
 
     const announcementsChannel = await Channel.create({
@@ -115,7 +121,12 @@ exports.createWorkspace = async (req, res) => {
       isPrivate: false,
       isDefault: true,
       createdBy: userId,
-      members: [{ user: userId, joinedAt: new Date() }]
+      members: [{ user: userId, joinedAt: creationDate }],
+      systemEvents: [{
+        type: 'channel_created',
+        userId: userId,
+        timestamp: creationDate
+      }]
     });
 
     console.log("📢 [PHASE 2] Default channels created: general, announcements");

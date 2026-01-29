@@ -339,6 +339,15 @@ exports.inviteToChannel = async (req, res) => {
 
     await saveWithRetry(channel);
 
+    // Add user_joined systemEvent
+    const joinTimestamp = new Date();
+    channel.systemEvents.push({
+      type: 'user_joined',
+      userId: mongoose.Types.ObjectId(inviteeId),
+      timestamp: joinTimestamp
+    });
+    await saveWithRetry(channel);
+
     // ============================================================
     // 🔐 PHASE 6: DISTRIBUTE CONVERSATION KEY TO INVITED MEMBER
     // ============================================================

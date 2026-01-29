@@ -80,6 +80,7 @@ router.post('/', requireAuth, async (req, res) => {
         // 2. Create Default Channels
         const channelsToCreate = ['general', 'announcements'];
         const createdChanIds = [];
+        const creationDate = new Date();
 
         for (const chanName of channelsToCreate) {
             const channel = new Channel({
@@ -91,8 +92,13 @@ router.post('/', requireAuth, async (req, res) => {
                 // Add all workspace members to channel
                 members: workspace.members.map(m => ({
                     user: m.user,
-                    joinedAt: new Date()
-                }))
+                    joinedAt: creationDate
+                })),
+                systemEvents: [{
+                    type: 'channel_created',
+                    userId: head || req.user.sub,
+                    timestamp: creationDate
+                }]
             });
             await channel.save();
             createdChanIds.push(channel._id);

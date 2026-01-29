@@ -594,6 +594,7 @@ exports.verifyCompany = async (req, res) => {
         // Create Default Channels (General, Announcement)
         const channelsToCreate = ["general", "announcements"];
         const createdChanIds = [];
+        const creationDate = new Date();
 
         for (const channelName of channelsToCreate) {
           const chan = new Channel({
@@ -602,7 +603,12 @@ exports.verifyCompany = async (req, res) => {
             name: channelName,
             isDefault: true,
             createdBy: adminUser._id,
-            members: [{ user: adminUser._id, joinedAt: new Date() }]
+            members: [{ user: adminUser._id, joinedAt: creationDate }],
+            systemEvents: [{
+              type: 'channel_created',
+              userId: adminUser._id,
+              timestamp: creationDate
+            }]
           });
           await chan.save();
           createdChanIds.push(chan._id);
@@ -879,6 +885,7 @@ exports.updateCompanySetup = async (req, res) => {
         // Create Default Channels
         const channelsToCreate = ["general", "announcements"];
         const createdChanIds = [];
+        const creationDate = new Date();
         for (const channelName of channelsToCreate) {
           const chan = new Channel({
             workspace: ws._id,
@@ -886,7 +893,12 @@ exports.updateCompanySetup = async (req, res) => {
             name: channelName,
             isDefault: true,
             createdBy: userId,
-            members: [{ user: userId, joinedAt: new Date() }]
+            members: [{ user: userId, joinedAt: creationDate }],
+            systemEvents: [{
+              type: 'channel_created',
+              userId: userId,
+              timestamp: creationDate
+            }]
           });
           await chan.save();
           createdChanIds.push(chan._id);

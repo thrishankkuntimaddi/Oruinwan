@@ -108,7 +108,7 @@ function ConversationStream({
             type: 'system_timeline',
             createdAt: sysEvent.timestamp,
             payload: {
-                eventType: sysEvent.type,
+                type: sysEvent.type,  // Use 'type' not 'eventType' for SystemEventItem
                 userId: sysEvent.userId,
                 timestamp: sysEvent.timestamp,
                 userName: sysEvent.userName
@@ -253,81 +253,102 @@ function ConversationStream({
                 </div>
             )}
 
-            {/* Join Marker (for channels) */}
-            {conversationType === 'channel' && userJoinedAt && (
+            {/* Join Marker (for channels) - only show if no channel_created system event exists */}
+            {conversationType === 'channel' && userJoinedAt && !systemEvents.some(e => e.type === 'channel_created') && (
                 <div style={{ padding: '0 1rem' }}>
-                    <JoinMarker joinedAt={userJoinedAt} />
+                    <JoinMarker date={userJoinedAt} />
                 </div>
             )}
 
-            {/* Grouped Events by Date */}
+            {/* Channel Created System Event - show at the top, before any date dividers */}
+            {systemEvents.filter(e => e.type === 'channel_created').map(event => (
+                <div key={`channel-created-${event._id || event.timestamp}`} style={{ padding: '0 1rem', marginTop: '1rem' }}>
+                    <SystemEventItem
+                        event={event}
+                        currentUserId={currentUserId}
+                        creatorName={creatorName}
+                    />
+                </div>
+            ))}
+
+            {/* Grouped Events by Date - only show if there are actual messages */}
             <div style={{ padding: '0 1rem' }}>
-                {Object.keys(groupedEvents).map(dateKey => (
-                    <div key={dateKey}>
-                        {/* Date Divider */}
-                        <div
-                            className="date-divider"
-                            style={{
-                                textAlign: 'center',
-                                margin: '1.5rem 0',
-                                position: 'relative'
-                            }}
-                        >
-                            <span
+                {Object.keys(groupedEvents).map(dateKey => {
+                    // Filter out channel_created events since they're shown above
+                    const eventsForDate = groupedEvents[dateKey].filter(
+                        event => !(event.type === 'system_timeline' && event.payload.type === 'channel_created')
+                    );
+
+                    // Don't show date divider if no events for this date (after filtering)
+                    if (eventsForDate.length === 0) return null;
+
+                    return (
+                        <div key={dateKey}>
+                            {/* Date Divider */}
+                            <div
+                                className="date-divider"
                                 style={{
-                                    background: 'var(--bg-secondary)',
-                                    padding: '0.25rem 1rem',
-                                    borderRadius: '1rem',
-                                    fontSize: '0.75rem',
-                                    color: 'var(--text-muted)',
-                                    position: 'relative',
-                                    zIndex: 1
+                                    textAlign: 'center',
+                                    margin: '1.5rem 0',
+                                    position: 'relative'
                                 }}
                             >
-                                {dateKey}
-                            </span>
-                            <div
-                                style={{
-                                    position: 'absolute',
-                                    top: '50%',
-                                    left: 0,
-                                    right: 0,
-                                    height: '1px',
-                                    background: 'var(--border-color)',
-                                    zIndex: 0
-                                }}
-                            />
-                        </div>
-
-                        {/* Events for this date */}
-                        {groupedEvents[dateKey].map((event, idx) => (
-                            <div key={event.id || `event-${dateKey}-${idx}`}>
-                                {renderEvent(event)}
+                                <span
+                                    style={{
+                                        background: 'var(--bg-secondary)',
+                                        padding: '0.25rem 1rem',
+                                        borderRadius: '1rem',
+                                        fontSize: '0.75rem',
+                                        color: 'var(--text-muted)',
+                                        position: 'relative',
+                                        zIndex: 1
+                                    }}
+                                >
+                                    {dateKey}
+                                </span>
+                                <div
+                                    style={{
+                                        position: 'absolute',
+                                        top: '50%',
+                                        left: 0,
+                                        right: 0,
+                                        height: '1px',
+                                        background: 'var(--border-color)',
+                                        zIndex: 0
+                                    }}
+                                />
                             </div>
-                        ))}
 
-                        {/* Member Join Markers (for channels) */}
-                        {conversationType === 'channel' && channelMembers.map(member => {
-                            const memberJoinDate = new Date(member.joinedAt).toLocaleDateString();
-                            if (memberJoinDate === dateKey) {
-                                return (
-                                    <div
-                                        key={`join-${member.userId}`}
-                                        style={{
-                                            textAlign: 'center',
-                                            padding: '0.5rem',
-                                            fontSize: '0.75rem',
-                                            color: 'var(--text-muted)'
-                                        }}
-                                    >
-                                        <strong>{member.username}</strong> joined the channel
-                                    </div>
-                                );
-                            }
-                            return null;
-                        })}
-                    </div>
-                ))}
+                            {/* Events for this date */}
+                            {eventsForDate.map((event, idx) => (
+                                <div key={event.id || `event-${dateKey}-${idx}`}>
+                                    {renderEvent(event)}
+                                </div>
+                            ))}
+
+                            {/* Member Join Markers (for channels) */}
+                            {conversationType === 'channel' && channelMembers.map(member => {
+                                const memberJoinDate = new Date(member.joinedAt).toLocaleDateString();
+                                if (memberJoinDate === dateKey) {
+                                    return (
+                                        <div
+                                            key={`join-${member.userId}`}
+                                            style={{
+                                                textAlign: 'center',
+                                                padding: '0.5rem',
+                                                fontSize: '0.75rem',
+                                                color: 'var(--text-muted)'
+                                            }}
+                                        >
+                                            <strong>{member.username}</strong> joined the channel
+                                        </div>
+                                    );
+                                }
+                                return null;
+                            })}
+                        </div>
+                    )
+                })}
             </div>
 
             {/* Empty State */}
