@@ -746,9 +746,31 @@ exports.getWorkspaceChannels = async (req, res) => {
 
     // Fetch ALL channels for this workspace
     const allChannels = await Channel.find({ workspace: workspaceId })
-      .select('name description isPrivate isDefault isDiscoverable members createdBy createdAt workspace admins')
+      .select('name description isPrivate isDefault isDiscoverable members createdBy createdAt workspace admins systemEvents')
+      .populate('createdBy', 'firstName lastName')
       .sort({ isDefault: -1, createdAt: 1 }) // Default channels first, then by creation time
       .lean();
+
+    // Populate systemEvents user names
+    const User = require('../models/User');
+    for (const channel of allChannels) {
+      // Add creator name
+      if (channel.createdBy) {
+        channel.creatorName = `${channel.createdBy.firstName || ''} ${channel.createdBy.lastName || ''}`.trim() || 'Unknown';
+      }
+
+      //Populate systemEvents with user names
+      if (channel.systemEvents && channel.systemEvents.length > 0) {
+        for (const event of channel.systemEvents) {
+          if (event.userId) {
+            const user = await User.findById(event.userId).select('firstName lastName').lean();
+            if (user) {
+              event.userName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Unknown';
+            }
+          }
+        }
+      }
+    }
 
     // 🔒 CRITICAL: Filter channels based on privacy AND discoverability
     // - Public channels (isPrivate = false):

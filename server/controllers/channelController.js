@@ -135,6 +135,12 @@ exports.createChannel = async (req, res) => {
         members,
         createdBy: userId,
         isPrivate,
+        // Add initial system event for channel creation
+        systemEvents: [{
+          type: 'channel_created',
+          userId: mongoose.Types.ObjectId(userId),
+          timestamp: new Date()
+        }]
       }], { session });
 
       const channel = channelDocs[0];

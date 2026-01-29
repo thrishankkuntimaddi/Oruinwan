@@ -49,7 +49,9 @@ export default function Messages() {
             workspaceId,
             isPrivate: channel.isPrivate,
             isDiscoverable: channel.isDiscoverable,
-            members: channel.members || []
+            members: channel.members || [],
+            creatorName: channel.creatorName,
+            systemEvents: channel.systemEvents || []
           });
           setCurrentBroadcast(null);
         } catch (error) {

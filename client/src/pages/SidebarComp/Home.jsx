@@ -35,6 +35,8 @@ const Home = () => {
               isDiscoverable: channel.isDiscoverable,
               members: channel.members || [],
               createdBy: channel.createdBy,
+              creatorName: channel.creatorName,
+              systemEvents: channel.systemEvents || [],
               isDefault: channel.isDefault,
               description: channel.description,
               admins: channel.admins || [], // Include admins array

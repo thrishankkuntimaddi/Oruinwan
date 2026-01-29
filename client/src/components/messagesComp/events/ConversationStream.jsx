@@ -5,6 +5,7 @@ import React, { useRef, useEffect, useMemo, useState } from 'react';
 import MessageEvent from './MessageEvent';
 import PollEvent from './PollEvent';
 import SystemEvent from './SystemEvent';
+import SystemEventItem from '../SystemEventItem';
 import MeetingEvent from './MeetingEvent';
 import JoinMarker from '../chatWindowComp/messages/JoinMarker';
 import { Loader2 } from 'lucide-react';
@@ -23,6 +24,8 @@ import { Loader2 } from 'lucide-react';
  */
 function ConversationStream({
     events = [],
+    systemEvents = [],
+    creatorName = null,
     loading = false,
     onLoadMore,
     hasMore = false,
@@ -97,10 +100,34 @@ function ConversationStream({
     // Filter out thread messages (they render in ThreadPanel)
     const mainStreamEvents = events.filter(event => !event.parentId);
 
+    // Merge systemEvents into the event stream
+    const mergedEvents = useMemo(() => {
+        // Transform systemEvents to match event stream format
+        const transformedSystemEvents = systemEvents.map(sysEvent => ({
+            id: `system-${sysEvent._id || sysEvent.timestamp}`,
+            type: 'system_timeline',
+            createdAt: sysEvent.timestamp,
+            payload: {
+                eventType: sysEvent.type,
+                userId: sysEvent.userId,
+                timestamp: sysEvent.timestamp,
+                userName: sysEvent.userName
+            }
+        }));
+
+        // Merge and sort by timestamp
+        const merged = [...mainStreamEvents, ...transformedSystemEvents];
+        return merged.sort((a, b) => {
+            const dateA = new Date(a.createdAt);
+            const dateB = new Date(b.createdAt);
+            return dateA - dateB;
+        });
+    }, [mainStreamEvents, systemEvents]);
+
     // Group by date - create our own implementation to ensure arrays
     const groupedEvents = useMemo(() => {
         const grouped = {};
-        mainStreamEvents.forEach(event => {
+        mergedEvents.forEach(event => {
             const date = new Date(event.createdAt || event.payload?.createdAt);
             const dateKey = date.toLocaleDateString('en-US', {
                 weekday: 'long',
@@ -115,7 +142,7 @@ function ConversationStream({
             grouped[dateKey].push(event);
         });
         return grouped;
-    }, [mainStreamEvents]);
+    }, [mergedEvents]);
 
     // Render event based on type
     const renderEvent = (event) => {
@@ -171,6 +198,16 @@ function ConversationStream({
                     <SystemEvent
                         key={event.id}
                         event={event}
+                    />
+                );
+
+            case 'system_timeline':
+                return (
+                    <SystemEventItem
+                        key={event.id}
+                        event={event.payload}
+                        currentUserId={currentUserId}
+                        creatorName={creatorName}
                     />
                 );
 

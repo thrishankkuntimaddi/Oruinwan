@@ -777,6 +777,8 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
                             {/* Conversation Stream - scrollable */}
                             <ConversationStream
                                 events={conversation.events}
+                                systemEvents={chat.systemEvents || []}
+                                creatorName={chat.creatorName}
                                 loading={conversation.loading}
                                 onLoadMore={conversation.loadMore}
                                 hasMore={conversation.hasMore}
