@@ -173,10 +173,12 @@ class ConversationKeyService {
      */
     async storeConversationKeysOnServer(conversationId, conversationType, workspaceId, encryptedKeys, workspaceEncryptedKey, workspaceKeyIv, workspaceKeyAuthTag) {
         try {
+            const token = localStorage.getItem('accessToken');
             const response = await fetch(`/api/v2/conversations/${conversationId}/keys`, {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
                 },
                 credentials: 'include',
                 body: JSON.stringify({
@@ -230,7 +232,11 @@ class ConversationKeyService {
 
 
             // Fetch encrypted key from server
+            const token = localStorage.getItem('accessToken');
             const response = await fetch(`/api/v2/conversations/${conversationId}/keys?type=${conversationType}`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                },
                 credentials: 'include'
             });
 
@@ -255,7 +261,11 @@ class ConversationKeyService {
 
                     // Re-fetch channel membership to verify current state
                     try {
+                        const token = localStorage.getItem('accessToken');
                         const channelResponse = await fetch(`/api/v2/channels/${conversationId}`, {
+                            headers: {
+                                'Authorization': `Bearer ${token}`
+                            },
                             credentials: 'include'
                         });
 
@@ -382,7 +392,11 @@ class ConversationKeyService {
      */
     async fetchWorkspaceConversationKeys(workspaceId) {
         try {
+            const token = localStorage.getItem('accessToken');
             const response = await fetch(`/api/v2/conversations/workspace/${workspaceId}/keys`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                },
                 credentials: 'include'
             });
 
@@ -486,10 +500,12 @@ class ConversationKeyService {
             }
 
             // Send to server
+            const token = localStorage.getItem('accessToken');
             const response = await fetch(`/api/v2/conversations/${conversationId}/keys/add-user`, {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
                 },
                 credentials: 'include',
                 body: JSON.stringify({
@@ -524,7 +540,11 @@ class ConversationKeyService {
      */
     async fetchConversationKeys(conversationId, conversationType) {
         try {
+            const token = localStorage.getItem('accessToken');
             const response = await fetch(`/api/v2/conversations/${conversationId}/keys?type=${conversationType}`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                },
                 credentials: 'include'
             });
 

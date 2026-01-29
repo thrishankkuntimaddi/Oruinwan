@@ -615,13 +615,13 @@ export default function ChatWindow({ chat, onClose, contacts = [], onDeleteChat 
       /* --- CHANNEL DELETED --- */
       socket.on("channel-deleted", ({ channelId, channelName }) => {
 
-      // ✅ PHASE 3 INTEGRATION: Real-time join updates
-      socket.on("user-joined-channel", ({ channelId, userId }) => {
-        if (channelId === chat.id) {
-          // Refetch messages/events to show system event
-          loadMessages();
-        }
-      });
+        // ✅ PHASE 3 INTEGRATION: Real-time join updates
+        socket.on("user-joined-channel", ({ channelId, userId }) => {
+          if (channelId === chat.id) {
+            // Refetch messages/events to show system event
+            loadMessages();
+          }
+        });
 
 
 
