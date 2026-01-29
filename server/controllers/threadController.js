@@ -62,16 +62,19 @@ exports.getThread = async (req, res) => {
 /**
  * Post a reply to a thread
  * POST /api/messages/thread/:messageId
- * Body: { text, attachments? }
+ * Body: { ciphertext, messageIv, attachments?, clientTempId? }
  */
 exports.postThreadReply = async (req, res) => {
     try {
         const { messageId } = req.params;
-        const { text, attachments = [] } = req.body;
+        // E2EE: Expect ciphertext/iv instead of text
+        const { ciphertext, messageIv, attachments = [], clientTempId } = req.body;
         const userId = req.user.sub;
 
-        if (!text || text.trim().length === 0) {
-            return res.status(400).json({ message: "Message text required" });
+        console.log(`[THREAD][E2EE] Processing reply for parent ${messageId}`);
+
+        if (!ciphertext || !messageIv) {
+            return res.status(400).json({ message: "Encrypted payload required (ciphertext + messageIv)" });
         }
 
         // Get parent message to determine context (DM or channel)
@@ -86,13 +89,16 @@ exports.postThreadReply = async (req, res) => {
             type: 'message',
             sender: userId,
             payload: {
-                text: text.trim(),
-                attachments
+                ciphertext,
+                messageIv,
+                attachments,
+                isEncrypted: true
             },
             parentId: messageId,
             readBy: [{ user: userId, readAt: new Date() }], // Sender has read it
             workspace: parentMessage.workspace,
             company: parentMessage.company,
+            clientTempId // Store optimistic ID if provided
         };
 
         // Set context (DM or channel)
@@ -153,6 +159,7 @@ exports.postThreadReply = async (req, res) => {
             }
         }
 
+        console.log(`[THREAD][E2EE] Reply created successfully: ${reply._id}`);
         return res.status(201).json({ reply });
     } catch (err) {
         console.error("POST THREAD REPLY ERROR:", err);

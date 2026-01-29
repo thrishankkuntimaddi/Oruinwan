@@ -954,6 +954,8 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
                 {activeTab === 'chat' && activeThread && (
                     <ThreadPanel
                         parentMessage={activeThread}
+                        channelId={conversationId}
+                        conversationType="channel"
                         onClose={handleThreadClose}
                         socket={rawSocket}
                         currentUserId={currentUserId}

@@ -225,6 +225,39 @@ export function useConversation(conversationId, conversationType, workspaceId = 
             return;
         }
 
+        // ✅ THREAD FIX: Handle thread replies separately
+        // Thread replies should NOT be inserted into main conversation message list
+        const isThreadReply = event.payload?.parentId || event.payload?.message?.parentId;
+
+        if (isThreadReply) {
+            console.log(`[THREAD][REALTIME][DECRYPT] Thread reply received, bypassing main message list:`, {
+                messageId: event.id || event.payload?._id,
+                parentId: event.payload?.parentId || event.payload?.message?.parentId,
+                channelId: event.payload?.channelId || event.payload?.channel
+            });
+
+            // Decrypt thread reply using message's channel context
+            const messageChannelId = event.payload?.channelId
+                || event.payload?.channel?._id
+                || event.payload?.channel
+                || conversationId;
+
+            console.log(`[THREAD][REALTIME][DECRYPT] Decrypting thread reply with channel context: ${messageChannelId}`);
+
+            try {
+                const decrypted = await batchDecryptMessages([event], messageChannelId, conversationType, null);
+                const processedEvent = decrypted[0] || event;
+                console.log(`✅ [THREAD][REALTIME][DECRYPT] Thread reply decrypted successfully`);
+
+                // Thread replies are handled by ThreadPanel listeners, not main conversation
+                // Exit early to prevent insertion into main message list
+            } catch (err) {
+                console.error('[THREAD][REALTIME][DECRYPT] Failed to decrypt thread reply:', err);
+            }
+
+            return; // Exit early - thread replies don't go in main message list
+        }
+
         // 🔐 Decrypt message if it's encrypted (ALL messages are encrypted now)
         let processedEvent = event;
         if (event.type === 'message') {

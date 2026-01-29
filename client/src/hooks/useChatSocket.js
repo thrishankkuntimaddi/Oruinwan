@@ -121,7 +121,7 @@ export function useChatSocket(conversationId, conversationType, onEvent) {
             // Extract message and channelId from payload
             const message = data.message || data;
             const messageChannelId = message.channelId || message.channel?._id || message.channel;
-            
+
             // ✅ CRITICAL FIX: Only process if message belongs to active conversation
             // Prevents cross-channel contamination when user is in multiple rooms
             if (messageChannelId && messageChannelId !== conversationId) {
@@ -132,7 +132,24 @@ export function useChatSocket(conversationId, conversationType, onEvent) {
                 });
                 return; // Ignore messages from other channels
             }
-            
+
+            // ✅ THREAD FIX: Route thread replies separately
+            // Thread replies should NOT appear in main chat message list
+            if (message.parentId) {
+                console.log(`[THREAD][SOCKET][RECEIVE] Thread reply detected:`, {
+                    messageId: message._id,
+                    parentId: message.parentId,
+                    channelId: messageChannelId,
+                    action: 'ROUTING_TO_THREAD_HANDLER'
+                });
+
+                onEventRef.current?.({
+                    type: 'thread-reply',
+                    payload: data
+                });
+                return; // Do NOT emit as regular message
+            }
+
             onEventRef.current?.({
                 type: 'new-message',
                 payload: data
@@ -142,6 +159,21 @@ export function useChatSocket(conversationId, conversationType, onEvent) {
         const handleMessageSent = (data) => {
             onEventRef.current?.({
                 type: 'message-sent',
+                payload: data
+            });
+        };
+
+        // ✅ THREAD FIX: Listen for dedicated thread-reply events from backend
+        const handleThreadReply = (data) => {
+            console.log(`[SOCKET][THREAD-REPLY] Received thread reply event:`, {
+                parentId: data.parentId,
+                replyId: data.reply?._id,
+                hasReply: !!data.reply
+            });
+
+            // Route to conversation handler as thread-reply event
+            onEventRef.current?.({
+                type: 'thread-reply',
                 payload: data
             });
         };
@@ -265,6 +297,7 @@ export function useChatSocket(conversationId, conversationType, onEvent) {
 
         // Register all event listeners
         socket.on('new-message', handleNewMessage);
+        socket.on('thread-reply', handleThreadReply); // ✅ NEW: Listen for thread replies
         socket.on('message-sent', handleMessageSent);
         socket.on('send-error', handleSendError);
         socket.on('message-deleted', handleMessageDeleted);
@@ -290,6 +323,7 @@ export function useChatSocket(conversationId, conversationType, onEvent) {
         // Cleanup on unmount
         return () => {
             socket.off('new-message', handleNewMessage);
+            socket.off('thread-reply', handleThreadReply); // ✅ Cleanup thread-reply listener
             socket.off('message-sent', handleMessageSent);
             socket.off('send-error', handleSendError);
             socket.off('message-deleted', handleMessageDeleted);

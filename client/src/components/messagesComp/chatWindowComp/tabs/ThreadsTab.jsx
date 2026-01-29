@@ -3,6 +3,7 @@ import { MessageSquare, ArrowRight, Clock, Search, ListFilter, X } from 'lucide-
 import ThreadPanel from '../ThreadPanel';
 import api from '../../../../services/api';
 import { formatTime } from '../helpers/helpers';
+import { batchDecryptMessages } from '../../../../services/messageEncryptionService';
 
 export default function ThreadsTab({ channelId, currentUserId, socket }) {
     const [threads, setThreads] = useState([]);
@@ -52,7 +53,27 @@ export default function ThreadsTab({ channelId, currentUserId, socket }) {
             // Filter distinct parent messages that have replies
             const activeThreads = allMessages.filter(m => m.replyCount > 0);
 
-            setThreads([...activeThreads, ...dummyThreads]);
+            console.log(`[THREADS_TAB][DECRYPT] Fetched ${activeThreads.length} threads for channel ${channelId}`);
+
+            // Decrypt thread preview messages
+            let decryptedThreads = activeThreads;
+            if (activeThreads.length > 0) {
+                try {
+                    decryptedThreads = await batchDecryptMessages(
+                        activeThreads,
+                        channelId,
+                        'channel',
+                        null
+                    );
+                    console.log(`[THREADS_TAB][DECRYPT] Decrypted ${decryptedThreads.length} thread previews`);
+                } catch (err) {
+                    console.error('[THREADS_TAB][DECRYPT] Failed to decrypt threads:', err);
+                    // Keep encrypted threads if decryption fails
+                    decryptedThreads = activeThreads;
+                }
+            }
+
+            setThreads([...decryptedThreads, ...dummyThreads]);
         } catch (err) {
             console.error('Failed to fetch threads:', err);
             // Fallback to dummy data on error
