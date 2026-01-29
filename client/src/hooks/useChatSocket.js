@@ -118,6 +118,21 @@ export function useChatSocket(conversationId, conversationType, onEvent) {
         // ==================== MESSAGE EVENTS ====================
 
         const handleNewMessage = (data) => {
+            // Extract message and channelId from payload
+            const message = data.message || data;
+            const messageChannelId = message.channelId || message.channel?._id || message.channel;
+            
+            // ✅ CRITICAL FIX: Only process if message belongs to active conversation
+            // Prevents cross-channel contamination when user is in multiple rooms
+            if (messageChannelId && messageChannelId !== conversationId) {
+                console.log(`⏭️ [useChatSocket] Message from different channel IGNORED:`, {
+                    activeConversationId: conversationId,
+                    receivedMessageChannelId: messageChannelId,
+                    action: 'IGNORED'
+                });
+                return; // Ignore messages from other channels
+            }
+            
             onEventRef.current?.({
                 type: 'new-message',
                 payload: data

@@ -196,6 +196,28 @@ export async function batchDecryptMessages(messages, conversationId, conversatio
                 console.log('ℹ️ [Batch Decrypt] All messages filtered out - user joined after all messages');
                 return [];
             }
+
+            // ✅ DIAGNOSTIC: Check for conversationId mismatches in message payloads
+            console.log(`🔍 [Batch Decrypt] Validating message contexts...`);
+            messagesToDecrypt.forEach(msg => {
+                const msgChannelId = msg.payload?.channelId || msg.payload?.channel?._id || msg.payload?.channel;
+                const matches = !msgChannelId || msgChannelId === conversationId;
+
+                console.log(`  📋 Message ${msg.id}:`, {
+                    messageChannelId: msgChannelId || '(not set)',
+                    providedConversationId: conversationId,
+                    match: matches
+                });
+
+                if (msgChannelId && !matches) {
+                    console.warn(`⚠️ [Batch Decrypt] MISMATCH DETECTED:`, {
+                        messageId: msg.id,
+                        messageChannelId: msgChannelId,
+                        providedConversationId: conversationId,
+                        impact: 'Will attempt decrypt with provided conversationId (may fail)'
+                    });
+                }
+            });
         }
 
         // ✅ Fetch conversation key

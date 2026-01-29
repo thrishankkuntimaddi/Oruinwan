@@ -236,9 +236,23 @@ export function useConversation(conversationId, conversationType, workspaceId = 
                 isEncrypted: event.payload?.isEncrypted || event.payload?.payload?.isEncrypted
             });
 
+            // ✅ CRITICAL FIX: Extract channelId from MESSAGE, not from hook closure
+            // This prevents using stale/wrong conversationId for decryption
+            const messageChannelId = event.payload?.channelId
+                || event.payload?.channel?._id
+                || event.payload?.channel
+                || conversationId; // Fallback for DMs or legacy messages
+
+            console.log(`🔐 [useConversation] Decryption context:`, {
+                eventId: event.id,
+                extractedMessageChannelId: messageChannelId,
+                activeConversationId: conversationId,
+                isMatch: messageChannelId === conversationId
+            });
+
             // Server-sent realtime messages are already valid for this user
             // No need for client-side filtering
-            const decrypted = await batchDecryptMessages([event], conversationId, conversationType, null);
+            const decrypted = await batchDecryptMessages([event], messageChannelId, conversationType, null);
             processedEvent = decrypted[0] || event;
 
             console.log(`✅ [useConversation] Decrypted realtime message:`, {
