@@ -750,21 +750,29 @@ exports.getWorkspaceChannels = async (req, res) => {
       .sort({ isDefault: -1, createdAt: 1 }) // Default channels first, then by creation time
       .lean();
 
-    // 🔒 CRITICAL: Filter channels based on privacy
-    // - Public channels (isPrivate = false): Show to all workspace members
+    // 🔒 CRITICAL: Filter channels based on privacy AND discoverability
+    // - Public channels (isPrivate = false):
+    //   - If isDiscoverable = true: Show to all workspace members
+    //   - If isDiscoverable = false: Show ONLY to channel members
     // - Private channels (isPrivate = true): Show ONLY to members of that channel
     const visibleChannels = allChannels.filter(channel => {
-      if (!channel.isPrivate) {
-        // Public channel - visible to all workspace members
+      // Check if user is a member of this channel
+      const isMemberOfChannel = channel.members.some(m => {
+        const memberId = m.user ? m.user.toString() : m.toString();
+        return memberId === userId.toString();
+      });
 
-        return true;
+      if (!channel.isPrivate) {
+        // Public channel
+        if (channel.isDiscoverable) {
+          // Discoverable public channel - visible to all workspace members
+          return true;
+        } else {
+          // Non-discoverable public channel - only visible to members
+          return isMemberOfChannel;
+        }
       } else {
         // Private channel - only visible if user is a member
-        const isMemberOfChannel = channel.members.some(m => {
-          const memberId = m.user ? m.user.toString() : m.toString();
-          return memberId === userId.toString();
-        });
-
         return isMemberOfChannel;
       }
     });
@@ -803,7 +811,7 @@ exports.getWorkspaceChannels = async (req, res) => {
 exports.createWorkspaceChannel = async (req, res) => {
   try {
     const { workspaceId } = req.params;
-    const { name, description, isPrivate, members: channelMembers } = req.body;
+    const { name, description, isPrivate, isDiscoverable, members: channelMembers } = req.body;
     const userId = req.user?.sub;
 
     if (!name) {
@@ -887,6 +895,7 @@ exports.createWorkspaceChannel = async (req, res) => {
       name: name.toLowerCase().trim(),
       description: description || "",
       isPrivate: isPrivateChannel, // Use explicit flag from request
+      isDiscoverable: isPrivateChannel ? false : (isDiscoverable !== undefined ? isDiscoverable : true), // Private channels are never discoverable
       isDefault: false, // User-created channels are not default
       createdBy: userId,
       members: finalMembers,

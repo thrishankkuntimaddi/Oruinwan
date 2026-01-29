@@ -225,20 +225,36 @@ exports.getMyChannels = async (req, res) => {
       return res.status(400).json({ message: "Workspace ID is required" });
     }
 
-    // Find channels:
-    // 1. Belong to workspace
-    // 2. AND (is NOT private OR user is a member)
-    const channels = await Channel.find({
-      workspace: workspaceId,
-      $or: [
-        { isPrivate: false },
-        { 'members.user': userId } // Query using the populated user field
-      ]
-    })
+    // Find ALL channels in the workspace first
+    const allChannels = await Channel.find({ workspace: workspaceId })
       .select("-__v")
       .lean();
 
-    return res.json({ channels });
+    // Filter channels based on privacy AND discoverability
+    // Same logic as workspaceController.getWorkspaceChannels
+    const visibleChannels = allChannels.filter(channel => {
+      // Check if user is a member of this channel
+      const isMemberOfChannel = channel.members.some(m => {
+        const memberId = m.user ? m.user.toString() : m.toString();
+        return memberId === userId.toString();
+      });
+
+      if (!channel.isPrivate) {
+        // Public channel
+        if (channel.isDiscoverable) {
+          // Discoverable public channel - visible to all workspace members
+          return true;
+        } else {
+          // Non-discoverable public channel - only visible to members
+          return isMemberOfChannel;
+        }
+      } else {
+        // Private channel - only visible if user is a member
+        return isMemberOfChannel;
+      }
+    });
+
+    return res.json({ channels: visibleChannels });
   } catch (err) {
     return handleError(res, err, "GET MY CHANNELS ERROR");
   }

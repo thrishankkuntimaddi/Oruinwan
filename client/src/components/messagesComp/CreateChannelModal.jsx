@@ -11,6 +11,7 @@ export default function CreateChannelModal({ onClose, onCreated, workspaceId }) 
     const [name, setName] = useState("");
     const [description, setDescription] = useState("");
     const [visibility, setVisibility] = useState('public'); // 'public' or 'private'
+    const [isDiscoverable, setIsDiscoverable] = useState(true);
 
     // Step 2: Members
     const [workspaceMembers, setWorkspaceMembers] = useState([]);
@@ -76,6 +77,7 @@ export default function CreateChannelModal({ onClose, onCreated, workspaceId }) 
                 name: name.trim(),
                 description,
                 isPrivate: visibility === 'private',
+                isDiscoverable: visibility === 'public' ? isDiscoverable : false,
                 members: channelMembers, // ✅ Backend expects 'members', not 'channelMembers'
                 workspaceId
             };
@@ -213,6 +215,30 @@ export default function CreateChannelModal({ onClose, onCreated, workspaceId }) 
                                         </div>
                                         {visibility === 'public' && <div className="w-5 h-5 bg-white text-blue-600 rounded-full flex items-center justify-center shadow-sm"><Check size={12} strokeWidth={4} /></div>}
                                     </div>
+                                    
+                                    {visibility === 'public' && (
+                                        <div 
+                                            className="mt-4 pt-4 border-t border-white/20 flex items-start gap-3 animate-in fade-in slide-in-from-top-2 duration-300"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setIsDiscoverable(!isDiscoverable);
+                                            }}
+                                        >
+                                            <div className={`mt-0.5 w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${
+                                                isDiscoverable 
+                                                    ? 'bg-white border-white text-blue-600' 
+                                                    : 'bg-transparent border-white/60 text-transparent hover:border-white'
+                                            }`}>
+                                                <Check size={14} strokeWidth={4} />
+                                            </div>
+                                            <div className="flex-1">
+                                                <h5 className="text-[13px] font-bold text-white leading-none mb-1">Discoverable</h5>
+                                                <p className="text-[11px] font-medium text-blue-100 opacity-90 leading-tight">
+                                                    Others can find and join this channel
+                                                </p>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
 
                                 {/* Private Channel */}
