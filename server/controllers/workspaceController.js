@@ -770,13 +770,13 @@ exports.getWorkspaceChannels = async (req, res) => {
         channel.creatorName = `${channel.createdBy.firstName || ''} ${channel.createdBy.lastName || ''}`.trim() || 'Unknown';
       }
 
-      //Populate systemEvents with user names
+      //Populate systemEvents with user names (only if not already set)
       if (channel.systemEvents && channel.systemEvents.length > 0) {
         for (const event of channel.systemEvents) {
-          if (event.userId) {
-            const user = await User.findById(event.userId).select('firstName lastName').lean();
+          if (event.userId && !event.userName) {
+            const user = await User.findById(event.userId).select('firstName lastName username').lean();
             if (user) {
-              event.userName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Unknown';
+              event.userName = user.username || `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Unknown';
             }
           }
         }
