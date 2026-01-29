@@ -260,6 +260,30 @@ exports.getMyChannels = async (req, res) => {
       }
     });
 
+    // Populate systemEvents with user names and add creatorName
+    const User = require('../models/User');
+    for (const channel of visibleChannels) {
+      // Populate systemEvents userName
+      if (channel.systemEvents && channel.systemEvents.length > 0) {
+        for (const event of channel.systemEvents) {
+          if (event.userId && !event.userName) {
+            const user = await User.findById(event.userId).select('firstName lastName').lean();
+            if (user) {
+              event.userName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Unknown';
+            }
+          }
+        }
+      }
+
+      // Add creatorName - fetch creator info
+      if (channel.createdBy) {
+        const creator = await User.findById(channel.createdBy).select('firstName lastName username').lean();
+        if (creator) {
+          channel.creatorName = creator.username || `${creator.firstName || ''} ${creator.lastName || ''}`.trim() || 'Unknown';
+        }
+      }
+    }
+
     return res.json({ channels: visibleChannels });
   } catch (err) {
     return handleError(res, err, "GET MY CHANNELS ERROR");
@@ -983,6 +1007,23 @@ exports.getChannelDetails = async (req, res) => {
     if (!isUserMember) {
       return forbidden(res, "You are not a member of this channel");
     }
+    // Populate systemEvents with user names
+    const User = require('../models/User');
+    if (channel.systemEvents && channel.systemEvents.length > 0) {
+      for (const event of channel.systemEvents) {
+        if (event.userId && !event.userName) {
+          const user = await User.findById(event.userId).select('firstName lastName').lean();
+          if (user) {
+            event.userName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Unknown';
+          }
+        }
+      }
+    }
+
+    // Add creator name for UI
+    const creatorName = channel.createdBy
+      ? `${channel.createdBy.username || 'Unknown'}`
+      : 'Unknown';
 
     // Format response
     const response = {
@@ -998,7 +1039,9 @@ exports.getChannelDetails = async (req, res) => {
       members: channel.members.map(m => ({
         user: m.user,
         joinedAt: m.joinedAt
-      }))
+      })),
+      systemEvents: channel.systemEvents || [],
+      creatorName: creatorName
     };
 
     return res.json({ channel: response });
