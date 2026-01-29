@@ -30,7 +30,7 @@ import { useAuth } from '../../../contexts/AuthContext';
 import { useSocket } from '../../../contexts/SocketContext';
 import api from '../../../services/api';
 import { useToast } from '../../../contexts/ToastContext';
-import { FileText, Layout, Plus, Trash2, MoreVertical, Search, Grid, List as ListIcon, Edit2, Share2 } from 'lucide-react';
+import { FileText, Layout, Plus, Trash2, MoreVertical, Search, Grid, List as ListIcon, Edit2, Share2, Lock } from 'lucide-react';
 
 import './chatWindow.css';
 
@@ -47,6 +47,49 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
     const { socket: rawSocket } = useSocket(); // Get raw socket for ThreadPanel
     const currentUserId = user?.sub || user?._id;
     const { showToast } = useToast();
+
+    // Check if user is a member of the channel
+    const isMember = useMemo(() => {
+        if (!chat || chat.type !== 'channel') return true; // DMs are always accessible
+        if (!chat.members || !currentUserId) return false;
+
+        return chat.members.some(m => {
+            const memberId = m.user?._id || m.user || m._id || m;
+            const memberIdStr = memberId?.toString();
+            const currentUserIdStr = currentUserId?.toString();
+            return memberIdStr === currentUserIdStr;
+        });
+
+
+    }, [chat, currentUserId]);
+
+    // Check if channel is public and discoverable
+    const isDiscoverablePublicChannel = useMemo(() => {
+        if (!chat || chat.type !== 'channel') return false;
+        return !chat.isPrivate && chat.isDiscoverable !== false;
+    }, [chat]);
+
+    // State for joining
+    const [isJoining, setIsJoining] = useState(false);
+
+    // Join handler
+    const handleJoinChannel = useCallback(async () => {
+        if (!chat || !chat.id) return;
+
+        setIsJoining(true);
+        try {
+            await api.post(`/api/channels/${chat.id}/join-discoverable`);
+            showToast(`Joined ${chat.name} successfully!`, 'success');
+
+            // Refresh the page or trigger a re-fetch
+            window.location.reload();
+        } catch (err) {
+            console.error('Join channel error:', err);
+            showToast(err.response?.data?.message || 'Failed to join channel', 'error');
+        } finally {
+            setIsJoining(false);
+        }
+    }, [chat, showToast]);
 
     // Conversation state
     const [activeThread, setActiveThread] = useState(null);
@@ -556,7 +599,7 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
             <Header
                 chat={chat}
                 onClose={onClose}
-                connected={socket.connected}
+                connected={socket?.connected || false}
                 typingUsers={typingUsers}
                 onCreatePoll={() => setShowPollModal(true)}
                 showSearch={showSearch}
@@ -597,7 +640,137 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
 
             {/* Main Content Area - flex to fill space */}
             <div className="chat-content" style={{ display: 'flex', flex: 1, overflow: 'hidden', minHeight: 0, backgroundColor: 'var(--bg-primary)' }}>
-                {activeTab === 'chat' ? (
+                {/* Show Join Prompt if non-member viewing discoverable public channel */}
+                {!isMember && isDiscoverablePublicChannel ? (
+                    <div style={{
+                        flex: 1,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: '3rem',
+                        textAlign: 'center',
+                        backgroundColor: 'var(--bg-primary)'
+                    }}>
+                        {/* Lock Icon - Remastered */}
+                        <div style={{
+                            width: '120px',
+                            height: '120px',
+                            borderRadius: '50%',
+                            background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(147, 51, 234, 0.1) 100%)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            marginBottom: '2.5rem',
+                            border: '1px solid rgba(59, 130, 246, 0.2)',
+                            boxShadow: '0 8px 32px rgba(59, 130, 246, 0.1)',
+                            animation: 'pulse 3s infinite'
+                        }}>
+                            <Lock size={48} style={{ color: '#3B82F6', filter: 'drop-shadow(0 2px 4px rgba(59, 130, 246, 0.2))' }} />
+                        </div>
+
+                        {/* Message */}
+                        <h2 style={{
+                            color: 'var(--text-primary)',
+                            fontSize: '2rem',
+                            fontWeight: '700',
+                            marginBottom: '1rem',
+                            textAlign: 'center',
+                            letterSpacing: '-0.025em'
+                        }}>
+                            You're not a member of this channel
+                        </h2>
+
+                        <p style={{
+                            color: 'var(--text-secondary)',
+                            fontSize: '1.1rem',
+                            marginBottom: '3rem',
+                            maxWidth: '500px',
+                            textAlign: 'center',
+                            lineHeight: '1.6'
+                        }}>
+                            Would you like to join <strong>{chat?.name}</strong> to start viewing and sending messages?
+                        </p>
+
+                        {/* Action Buttons */}
+                        <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center', width: '100%', maxWidth: '400px', justifyContent: 'center' }}>
+                            <button
+                                onClick={handleJoinChannel}
+                                disabled={isJoining}
+                                style={{
+                                    flex: 1,
+                                    padding: '1rem 0',
+                                    backgroundColor: isJoining ? '#9CA3AF' : '#3B82F6',
+                                    color: '#FFFFFF',
+                                    border: 'none',
+                                    borderRadius: '12px',
+                                    fontSize: '1rem',
+                                    fontWeight: '600',
+                                    cursor: isJoining ? 'not-allowed' : 'pointer',
+                                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                                    opacity: isJoining ? 0.7 : 1,
+                                    boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: '8px'
+                                }}
+                                onMouseOver={(e) => {
+                                    if (!isJoining) {
+                                        e.currentTarget.style.transform = 'translateY(-1px)';
+                                        e.currentTarget.style.backgroundColor = '#2563EB';
+                                        e.currentTarget.style.boxShadow = '0 6px 16px rgba(59, 130, 246, 0.4)';
+                                    }
+                                }}
+                                onMouseOut={(e) => {
+                                    if (!isJoining) {
+                                        e.currentTarget.style.transform = 'translateY(0)';
+                                        e.currentTarget.style.backgroundColor = '#3B82F6';
+                                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(59, 130, 246, 0.3)';
+                                    }
+                                }}
+                            >
+                                {isJoining ? (
+                                    <>
+                                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                        <span>Joining...</span>
+                                    </>
+                                ) : 'Join Channel'}
+                            </button>
+
+                            <button
+                                onClick={onClose}
+                                disabled={isJoining}
+                                style={{
+                                    flex: 1,
+                                    padding: '1rem 0',
+                                    backgroundColor: 'transparent',
+                                    color: 'var(--text-secondary)',
+                                    border: '1px solid var(--border-color)',
+                                    borderRadius: '12px',
+                                    fontSize: '1rem',
+                                    fontWeight: '500',
+                                    cursor: isJoining ? 'not-allowed' : 'pointer',
+                                    transition: 'all 0.2s ease'
+                                }}
+                                onMouseOver={(e) => {
+                                    if (!isJoining) {
+                                        e.currentTarget.style.backgroundColor = 'var(--bg-secondary)';
+                                        e.currentTarget.style.borderColor = 'var(--text-secondary)';
+                                    }
+                                }}
+                                onMouseOut={(e) => {
+                                    if (!isJoining) {
+                                        e.currentTarget.style.backgroundColor = 'transparent';
+                                        e.currentTarget.style.borderColor = 'var(--border-color)';
+                                    }
+                                }}
+                            >
+                                Ignore
+                            </button>
+                        </div>
+                    </div>
+                ) : activeTab === 'chat' ? (
                     <>
                         {/* Main Stream - flex column */}
                         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minHeight: 0 }}>
@@ -763,7 +936,7 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
                         <CanvasTab
                             tab={tabs.find(t => t._id === activeTab)}
                             onSave={(data) => handleSaveCanvas(activeTab, data)}
-                            connected={socket.connected}
+                            connected={socket?.connected || false}
                             socket={rawSocket}
                             channelId={chat.id}
                             currentUserId={currentUserId}

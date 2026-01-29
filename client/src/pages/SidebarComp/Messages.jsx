@@ -48,6 +48,7 @@ export default function Messages() {
             type: "channel",
             workspaceId,
             isPrivate: channel.isPrivate,
+            isDiscoverable: channel.isDiscoverable,
             members: channel.members || []
           });
           setCurrentBroadcast(null);

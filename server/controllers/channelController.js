@@ -445,6 +445,7 @@ exports.joinChannel = async (req, res) => {
   try {
     const { id: channelId } = req.params;
     const userId = req.user.sub;
+    const mongoose = require('mongoose');
 
     const channel = await Channel.findById(channelId);
     if (!channel) return notFound(res, "Channel not found");
@@ -1768,14 +1769,14 @@ exports.joinDiscoverableChannel = async (req, res) => {
     console.log(`✅ [JOIN_DISCOVERABLE] Adding user ${userId} to channel ${channelId}`);
 
     channel.members.push({
-      user: mongoose.Types.ObjectId(userId),
+      user: new mongoose.Types.ObjectId(userId),
       joinedAt: new Date()
     });
 
     // Add system event for join
     channel.systemEvents.push({
       type: 'user_joined',
-      userId: mongoose.Types.ObjectId(userId),
+      userId: new mongoose.Types.ObjectId(userId),
       timestamp: new Date()
     });
 

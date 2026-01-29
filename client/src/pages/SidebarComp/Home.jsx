@@ -32,6 +32,8 @@ const Home = () => {
               type: "channel",
               workspaceId,
               isPrivate: channel.isPrivate,
+              isDiscoverable: channel.isDiscoverable,
+              members: channel.members || [],
               createdBy: channel.createdBy,
               isDefault: channel.isDefault,
               description: channel.description,
@@ -44,6 +46,7 @@ const Home = () => {
               name: "Channel",
               type: "channel",
               workspaceId,
+              members: [],
               workspaceRole: activeWorkspace?.role
             });
           }
