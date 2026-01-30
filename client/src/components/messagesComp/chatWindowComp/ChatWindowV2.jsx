@@ -72,12 +72,7 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
     // ✅ FIX 3: SOFT GATING - UI renders but controls disabled until ready
     const canInteract = encryptionReady && (chat?.type !== 'channel' || isMember);
 
-    console.log('🔐 [ChatWindowV2] Interaction gate status:', {
-        encryptionReady,
-        isMember,
-        canInteract,
-        chatType: chat?.type
-    });
+    // Interaction gate check - encryption ready and membership verified
 
     // State for joining
     const [isJoining, setIsJoining] = useState(false);
@@ -136,6 +131,9 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
     const [dashboardView, setDashboardView] = useState('grid');
     const [dashboardSearch, setDashboardSearch] = useState('');
 
+    // Thread reply counts (separate from message state for persistence)
+    const [threadCounts, setThreadCounts] = useState({});
+
     // Extract conversation details
     const conversationId = chat?.id || chat?._id;
     const conversationType = chat?.type || (chat?.participants ? 'dm' : 'channel');
@@ -158,24 +156,15 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
     React.useEffect(() => {
         // Step 1: Check encryption ready
         if (!encryptionReady) {
-            console.log('⏳ [ChatWindowV2] Phase 1: Waiting for encryption readiness');
             return;
         }
 
-        // Step 2: Check membership (for channels only)
         if (chat?.type === 'channel' && !isMember) {
-            console.log('⏳ [ChatWindowV2] Phase 2: Not a member, skipping socket connect');
             return;
         }
 
-        // Step 3: Connect socket only after all prerequisites met
-        if (connectSocket) {
-            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-            console.log('🔌 [ChatWindowV2] Phase 3: All checks passed');
-            console.log('   ✅ Encryption ready');
-            console.log('   ✅ Membership confirmed (or DM)');
-            console.log('   🎯 Connecting socket for realtime messages');
-            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        // ✅ All checks passed - proceed with normal operation
+        if (encryptionReady && (chat?.type !== 'channel' || isMember)) {
             connectSocket();
         }
     }, [connectSocket, encryptionReady, isMember, chat?.type]); // ✅ Explicit dependencies
@@ -237,45 +226,28 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
 
     // Socket event handler - use conversationRef.current to avoid stale closures
     const handleSocketEvent = useCallback((event) => {
-        console.log('🔔 [PHASE 4][SOCKET] Received event:', event.type);
+        // Handle socket events
 
         switch (event.type) {
             case 'message':
             case 'new-message':
-                console.log('📨 [PHASE 4][REALTIME] New message received via socket:', event.payload);
+                // Normalize backend message to match expected structure
+                const backendMsg = event.payload;
 
-                // Handle incoming message
-                const message = event.payload.message || event.payload;
-
-                if (message) {
-                    console.log('📨 [PHASE 4][REALTIME] Message structure:', {
-                        id: message._id || message.id,
-                        senderId: message.sender?._id || message.sender,
-                        hasCiphertext: !!message.payload?.ciphertext || !!message.ciphertext,
-                        isEncrypted: message.payload?.isEncrypted || message.isEncrypted
-                    });
-
-                    // Normalize the message to ensure consistent structure
-                    const normalizedMessage = {
-                        id: message._id || message.id,
-                        type: message.pollId ? 'poll' : 'message',
-                        payload: {
-                            ...message,
-                            text: message.payload?.text || message.text || '',
-                            attachments: message.payload?.attachments || message.attachments || [],
-                            replyCount: message.replyCount || 0,
-                            reactions: message.reactions || [],
-                            isPinned: message.isPinned || false,
-                            isDeleted: message.isDeleted || false
-                        },
-                        sender: message.sender,
-                        createdAt: message.createdAt,
-                        parentId: message.threadParent || message.parentId
+                if (backendMsg) {
+                    // Normalize to event structure expected by ConversationStream
+                    const normalizedEvent = {
+                        id: backendMsg._id,
+                        type: backendMsg.type || 'message',
+                        payload: backendMsg.payload || {},
+                        sender: backendMsg.sender,
+                        createdAt: backendMsg.createdAt,
+                        channelId: backendMsg.channel,
+                        dmId: backendMsg.dm,
+                        backend: backendMsg // Keep original for reference
                     };
 
-                    console.log('✅ [PHASE 4][REALTIME] Adding normalized message to conversation state');
-                    conversationRef.current.addRealtimeEvent(normalizedMessage, currentUserId);
-                    console.log('✅ [PHASE 4][REALTIME] Message added, events count:', conversationRef.current.events.length);
+                    conversationRef.current.addRealtimeEvent(normalizedEvent);
                 }
                 break;
 
@@ -296,12 +268,21 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
                 // Handle message updates (e.g., reply count changed)
                 const { messageId, updates } = event.payload;
                 if (messageId && updates) {
-                    // Update the message with the new replyCount in the payload
+                    // Update the message with the new replyCount and lastReplyAt in the payload
                     conversationRef.current.updateEvent(messageId, {
                         payload: {
-                            replyCount: updates.replyCount
+                            replyCount: updates.replyCount,
+                            lastReplyAt: updates.lastReplyAt
                         }
                     });
+
+                    // Also update threadCounts state for persistence
+                    if (updates.replyCount !== undefined) {
+                        setThreadCounts(prev => ({
+                            ...prev,
+                            [messageId]: updates.replyCount
+                        }));
+                    }
                 }
                 break;
 
@@ -378,13 +359,23 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
                 });
                 break;
 
+            case 'thread-reply':
+                // Handle thread reply events - update thread count
+                const { parentId: replyParentId } = event.payload;
+                if (replyParentId) {
+                    // Increment thread count for parent message
+                    // Increment thread count for the parent message
+                    setThreadCounts(prev => ({
+                        ...prev,
+                        [replyParentId]: (prev[replyParentId] || 0) + 1
+                    }));
+                }
+                break;
+
             case 'thread:created':
                 // ✅ THREAD AWARENESS: Update parent message when thread is created
                 const { parentMessageId, replyCount, lastReplyAt } = event.payload;
-                console.log('🧵 [THREAD][AWARENESS] Thread created, updating parent message:', {
-                    parentMessageId,
-                    replyCount
-                });
+                // Thread created - update parent message with reply count
 
                 // Update the parent message to show it has a thread
                 conversationRef.current.updateEvent(parentMessageId, {
@@ -393,6 +384,12 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
                         lastReplyAt: lastReplyAt
                     }
                 });
+
+                // Initialize threadCounts for new threads
+                setThreadCounts(prev => ({
+                    ...prev,
+                    [parentMessageId]: replyCount || 1
+                }));
                 break;
 
             default:
@@ -403,6 +400,24 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
 
     // Initialize socket with event handler
     const socket = useChatSocket(conversationId, conversationType, handleSocketEvent);
+
+    // Initialize threadCounts from loaded messages
+    useEffect(() => {
+        if (!conversation.events || conversation.loading) return;
+
+        const newCounts = {};
+        conversation.events.forEach(event => {
+            if (event.payload?.replyCount > 0) {
+                newCounts[event.id] = event.payload.replyCount;
+            }
+        });
+
+        // Only update if there are new counts to add
+        if (Object.keys(newCounts).length > 0) {
+            setThreadCounts(prev => ({ ...prev, ...newCounts }));
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [conversation.events.length, conversation.loading]);
 
     // Socket listeners for tab events
     useEffect(() => {
@@ -459,7 +474,7 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
         const result = await actions.sendMessage(messageData);
 
         if (result.success) {
-            console.log('✅ [PHASE 3][UI] Message sent successfully:', result.message);
+            // Message sent successfully
 
             // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
             // ✅ PHASE 3 UI FIX: Commit API response to state IMMEDIATELY
@@ -486,8 +501,7 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
                 // Add to conversation state (will replace optimistic message)
                 await conversation.addRealtimeEvent(normalizedEvent, currentUserId);
 
-                console.log('✅ [PHASE 3][UI] Message committed to state');
-                console.log('✅ [PHASE 3][UI] Messages count:', conversation.events.length);
+                // Message committed to conversation state
             }
 
             setReplyingTo(null);
@@ -497,6 +511,7 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
         }
 
         return result;
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [actions, replyingTo, showToast]);
 
     // Handle emoji pick
@@ -832,6 +847,7 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
                                 channelMembers={channelMembers}
                                 userJoinedAt={userJoinedAt}
                                 onThreadOpen={handleThreadOpen}
+                                threadCounts={threadCounts}
                                 replyingTo={replyingTo}
                                 onCancelReply={() => setReplyingTo(null)}
                                 currentUserId={currentUserId}
