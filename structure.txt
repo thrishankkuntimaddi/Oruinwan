@@ -654,6 +654,7 @@
 │       ├── taskPermissions.js
 │       └── workflowValidator.js
 ├── structure.txt
+├── update-structure.sh
 └── verify-security.sh
 
-130 directories, 527 files
+130 directories, 528 files
