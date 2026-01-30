@@ -14,18 +14,20 @@ import DMMessageItem from '../chatWindowComp/messages/DMMessageItem';
  * @param {object} replyingTo - Currently replying to message
  * @param {function} onCancelReply - Cancel reply callback
  * @param {string} currentUserId - Current user's ID
+ * @param {object} threadCounts - Object containing thread counts for messages
  */
 function MessageEvent({
     event,
     actions = {},
-    isDM = false,
     onThreadOpen,
     replyingTo,
     onCancelReply,
     currentUserId,
+    isDM = false,
     openMsgMenuId,
     toggleMsgMenu,
-    setOpenMsgMenuId
+    setOpenMsgMenuId,
+    threadCounts = {} // ✅ Add threadCounts prop
 }) {
     // NEW SCHEMA: event IS the message, event.payload contains text/attachments
     // FALLBACK: Support both new (payload.text) and old (direct text) structures
@@ -118,7 +120,7 @@ function MessageEvent({
                 infoMessage={() => { }}
                 currentUserId={currentUserId}
                 onOpenThread={handleThreadOpen}
-                threadCounts={{}}
+                threadCounts={threadCounts} // ✅ Forward threadCounts
             />
         );
     }
@@ -141,7 +143,7 @@ function MessageEvent({
             infoMessage={() => { }}
             currentUserId={currentUserId}
             onOpenThread={handleThreadOpen}
-            threadCounts={{}}
+            threadCounts={threadCounts} // ✅ Forward threadCounts
             channelMembers={[]}
             isAdmin={false}
         />

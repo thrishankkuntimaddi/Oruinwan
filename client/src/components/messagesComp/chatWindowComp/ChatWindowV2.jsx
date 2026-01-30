@@ -267,9 +267,13 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
             case 'message-updated':
                 // Handle message updates (e.g., reply count changed)
                 const { messageId, updates } = event.payload;
+                console.log('[CHATWINDOW][UPDATE] Received message-updated:', { messageId, updates });
+
                 if (messageId && updates) {
-                    // Update the message with the new replyCount and lastReplyAt in the payload
+                    // ✅ Update the message's replyCount directly in the event object
                     conversationRef.current.updateEvent(messageId, {
+                        replyCount: updates.replyCount,
+                        lastReplyAt: updates.lastReplyAt,
                         payload: {
                             replyCount: updates.replyCount,
                             lastReplyAt: updates.lastReplyAt
@@ -282,6 +286,7 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
                             ...prev,
                             [messageId]: updates.replyCount
                         }));
+                        console.log('[CHATWINDOW][UPDATE] Updated thread count for', messageId, 'to', updates.replyCount);
                     }
                 }
                 break;
@@ -360,16 +365,9 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
                 break;
 
             case 'thread-reply':
-                // Handle thread reply events - update thread count
-                const { parentId: replyParentId } = event.payload;
-                if (replyParentId) {
-                    // Increment thread count for parent message
-                    // Increment thread count for the parent message
-                    setThreadCounts(prev => ({
-                        ...prev,
-                        [replyParentId]: (prev[replyParentId] || 0) + 1
-                    }));
-                }
+                // Handle thread reply events - this is primarily for ThreadPanel
+                // The count update is handled by 'message-updated' event which has the authoritative count
+                console.log('[CHATWINDOW][THREAD-REPLY] Received thread-reply, count will be updated by message-updated event');
                 break;
 
             case 'thread:created':

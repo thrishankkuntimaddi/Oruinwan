@@ -31,11 +31,10 @@ function ChannelMessageItem({
     isAdmin = false, // Admin check for pin permissions
 }) {
     // DEBUG LOG
-
+    const scrollRef = useRef(null);
 
     // TEMPORARY FIX: Fallback to msg.replyCount if threadCounts missing?
-    // But threadCounts is the source of truth for updates.
-
+    // But threadCounts is the source    const scrollRef = useRef(null);
     const count = (threadCounts && threadCounts[msg.id]) || msg.replyCount || 0;
 
     // ✅ Fix: Properly check if message is from current user by comparing IDs
@@ -330,7 +329,9 @@ function ChannelMessageItem({
 }
 
 // Optimize with React.memo to prevent unnecessary re-renders
-export default React.memo(ChannelMessageItem, (prevProps, nextProps) => {
+// ⚠️ TEMPORARILY DISABLED FOR DEBUGGING - Testing if memo blocks real-time updates
+export default ChannelMessageItem;
+/* export default React.memo(ChannelMessageItem, (prevProps, nextProps) => {
     // Re-render only if these specific props change
     return (
         prevProps.msg.id === nextProps.msg.id &&
@@ -342,6 +343,7 @@ export default React.memo(ChannelMessageItem, (prevProps, nextProps) => {
         prevProps.selectedIds === nextProps.selectedIds &&
         prevProps.openMsgMenuId === nextProps.openMsgMenuId &&
         JSON.stringify(prevProps.msg.reactions) === JSON.stringify(nextProps.msg.reactions) &&
+        prevProps.msg.replyCount === nextProps.msg.replyCount && // ✅ Check msg.replyCount
         prevProps.threadCounts?.[prevProps.msg.id] === nextProps.threadCounts?.[nextProps.msg.id]
     );
-});
+}); */

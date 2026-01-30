@@ -36,7 +36,8 @@ function ConversationStream({
     onThreadOpen,
     replyingTo = null,
     onCancelReply,
-    currentUserId
+    currentUserId,
+    threadCounts = {} // ✅ Add threadCounts prop
 }) {
     const streamRef = useRef(null);
     const bottomRef = useRef(null);
@@ -160,6 +161,7 @@ function ConversationStream({
                         openMsgMenuId={openMsgMenuId}
                         toggleMsgMenu={toggleMsgMenu}
                         setOpenMsgMenuId={setOpenMsgMenuId}
+                        threadCounts={threadCounts} // ✅ Forward threadCounts
                     />
                 ) : (
                     <MessageEvent
@@ -171,6 +173,7 @@ function ConversationStream({
                         openMsgMenuId={openMsgMenuId}
                         toggleMsgMenu={toggleMsgMenu}
                         setOpenMsgMenuId={setOpenMsgMenuId}
+                        threadCounts={threadCounts} // ✅ Forward threadCounts
                     />
                 );
 
