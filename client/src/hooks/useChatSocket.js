@@ -34,6 +34,16 @@ export function useChatSocket(conversationId, conversationType, eventHandler) {
 
     // Join conversation room
     const joinConversation = useCallback(() => {
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        // 🚫 DM GUARD: Skip chat:join for Direct Messages
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        // DMs use 'join-dm' event (handled in ChatWindowV2.jsx)
+        // Channels/threads use 'chat:join' (continue normally below)
+        if (conversationType === 'dm') {
+            console.log('🚫 [useChatSocket] Skipping chat:join for DM (using join-dm instead)');
+            return; // Exit early - DM join handled elsewhere
+        }
+
         if (!conversationId || !conversationType) {
             console.log('⚠️ [chat:join] Skipped - missing conversation details');
             return;
@@ -98,6 +108,12 @@ export function useChatSocket(conversationId, conversationType, eventHandler) {
 
     // Leave conversation room
     const leaveConversation = useCallback(() => {
+        // 🚫 DM GUARD: Skip chat:leave for Direct Messages
+        if (conversationType === 'dm') {
+            console.log('🚫 [useChatSocket] Skipping chat:leave for DM (handled separately)');
+            return;
+        }
+
         if (!socket || !conversationId) return;
 
         // The `joinedRef` is removed, so we just emit leave if socket is connected

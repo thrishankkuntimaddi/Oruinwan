@@ -8,6 +8,7 @@ const Workspace = require("../models/Workspace");
 const { logAction } = require("../utils/historyLogger");
 const { isValidTransition, getAllowedTransitions, validateBlocked } = require("../utils/workflowValidator");
 const { isWorkspaceManager, canEditTask, canChangeStatus, canManageAssignees, canDelete, canAddSubtask } = require("../utils/taskPermissions");
+const messagesService = require("../src/modules/messages/messages.service");
 
 /**
  * Get tasks for a workspace
@@ -255,23 +256,16 @@ exports.createTask = async (req, res) => {
                 else if (task.assignedTo.length === 1 && task.assignedTo[0].toString() !== userId) {
                     const assigneeId = task.assignedTo[0];
 
-                    // Find or Create DM Session
-                    let session = await DMSession.findOne({
-                        workspace: workspaceId,
-                        participants: { $all: [userId, assigneeId], $size: 2 }
-                    });
-
-                    if (!session) {
-                        session = new DMSession({
-                            workspace: workspaceId,
-                            company: user.companyId,
-                            participants: [userId, assigneeId],
-                            lastMessageAt: new Date()
-                        });
-                        await session.save();
-                        // Notify workspace about new session? (Optional)
-                        if (req.io) req.io.to(`workspace_${workspaceId}`).emit("dm-session-created", session);
-                    }
+                    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+                    // DM E2EE FIX: Delegate to centralized service that bootstraps encryption keys
+                    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+                    // BEFORE: Inline new DMSession() without key bootstrap (BROKEN)
+                    // AFTER: Delegate to findOrCreateDMSession() which correctly bootstraps keys
+                    const session = await messagesService.findOrCreateDMSession(
+                        userId,
+                        assigneeId,
+                        workspaceId
+                    );
 
                     // Send Message
                     const msg = new Message({

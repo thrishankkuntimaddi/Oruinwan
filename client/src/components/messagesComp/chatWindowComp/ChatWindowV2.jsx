@@ -400,18 +400,18 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
     // Initialize socket with event handler
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     // NOTE: useChatSocket is called for ALL types to satisfy React Hooks rules
-    // For DMs, we override the join behavior below with DM-specific 'join-dm' event
+    // useChatSocket automatically skips chat:join for DMs (see DM guard in useChatSocket.js)
     const socket = useChatSocket(conversationId, conversationType, handleSocketEvent);
 
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    // DM-ONLY FIX: Override socket join for Direct Messages
+    // DM-ONLY FIX: Handle DM room join (useChatSocket skips DMs)
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     // 
-    // PROBLEM: useChatSocket emits 'chat:join' which is channel-only on backend
-    // SOLUTION: For DMs only, emit 'join-dm' event directly to backend
+    // useChatSocket emits 'chat:join' for CHANNELS/THREADS only (DMs are excluded)
+    // DMs use 'join-dm' event via this dedicated effect
     // 
     // CHANNELS/THREADS: Use useChatSocket's 'chat:join' (untouched)
-    // DMs: Emit additional 'join-dm' to DM-aware backend handler
+    // DMs: Use 'join-dm' via this dedicated effect
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     useEffect(() => {
         if (conversationType !== 'dm') return; // DM-ONLY guard - channels/threads skip

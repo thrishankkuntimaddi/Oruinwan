@@ -6,6 +6,7 @@ const DMSession = require("../models/DMSession");
 const Workspace = require("../models/Workspace");
 const User = require("../models/User");
 const logger = require("../utils/logger");
+const messagesService = require("../src/modules/messages/messages.service");
 
 module.exports = async function registerChatHandlers(io, socket) {
   const userId = socket.user.id; // extracted from JWT
@@ -231,35 +232,30 @@ module.exports = async function registerChatHandlers(io, socket) {
 
       let actualDMSessionId = dmSessionId;
 
-      // Handle new DM session creation
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      // DM E2EE FIX: Handle new DM session creation with key bootstrap
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      // BEFORE: Inline DMSession.create() without key bootstrap (BROKEN)
+      // AFTER: Delegate to findOrCreateDMSession() which correctly bootstraps keys
       if (receiverId && !actualDMSessionId) {
-        let dmSession = await DMSession.findOne({
-          workspace: workspaceId,
-          participants: { $all: [userId, receiverId], $size: 2 }
+        const dmSession = await messagesService.findOrCreateDMSession(
+          userId,
+          receiverId,
+          workspaceId
+        );
+
+        actualDMSessionId = dmSession._id;
+
+        // ✅ Emit to both participants to refresh their DM lists
+        io.to(`user_${userId}`).emit("new-dm-session", {
+          dmSessionId: dmSession._id,
+          otherUserId: receiverId
+        });
+        io.to(`user_${receiverId}`).emit("new-dm-session", {
+          dmSessionId: dmSession._id,
+          otherUserId: userId
         });
 
-        if (!dmSession) {
-          const workspace = await Workspace.findById(workspaceId);
-          if (!workspace) throw new Error("Workspace not found");
-
-          dmSession = await DMSession.create({
-            workspace: workspaceId,
-            company: workspace.company || null,
-            participants: [userId, receiverId],
-            lastMessageAt: new Date()
-          });
-
-          // ✅ Emit to both participants to refresh their DM lists
-          io.to(`user_${userId}`).emit("new-dm-session", {
-            dmSessionId: dmSession._id,
-            otherUserId: receiverId
-          });
-          io.to(`user_${receiverId}`).emit("new-dm-session", {
-            dmSessionId: dmSession._id,
-            otherUserId: userId
-          });
-        }
-        actualDMSessionId = dmSession._id;
         // Join the new room
         socket.join(`dm_${actualDMSessionId}`);
       }
