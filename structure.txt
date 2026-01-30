@@ -1,30 +1,6 @@
 .
 ├── README.md
 ├── client
-│   ├── build
-│   │   ├── ChttrixAI-animation.mp4
-│   │   ├── Screenshot 2026-01-11 at 3.53.36 PM.png
-│   │   ├── asset-manifest.json
-│   │   ├── assets
-│   │   │   ├── ChttrixAI-logo.png
-│   │   │   ├── ChttrixFavico.png
-│   │   │   ├── ChttrixLogo-dark.svg
-│   │   │   ├── ChttrixLogo-light.svg
-│   │   │   └── ChttrixLogo.svg
-│   │   ├── chttrix-logo.jpg
-│   │   ├── favicon.ico
-│   │   ├── favicon.png
-│   │   ├── hover-animation.mp4
-│   │   ├── index.html
-│   │   ├── manifest.json
-│   │   └── static
-│   │       ├── css
-│   │       │   ├── main.2f7b15fa.css
-│   │       │   └── main.2f7b15fa.css.map
-│   │       └── js
-│   │           ├── main.f6f584e2.js
-│   │           ├── main.f6f584e2.js.LICENSE.txt
-│   │           └── main.f6f584e2.js.map
 │   ├── jsconfig.json
 │   ├── package-lock.json
 │   ├── package.json
@@ -680,4 +656,4 @@
 ├── structure.txt
 └── verify-security.sh
 
-135 directories, 546 files
+130 directories, 527 files
