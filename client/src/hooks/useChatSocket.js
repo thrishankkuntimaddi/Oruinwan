@@ -184,29 +184,44 @@ export function useChatSocket(conversationId, conversationType, eventHandler) {
         // ==================== MESSAGE EVENTS ====================
 
         const handleNewMessage = (data) => {
-            // Extract message and channelId from payload
+            // Extract message and identify conversation ID
             const message = data.message || data;
+
+            // ✅ CRITICAL FIX: Handle both channels (channel field) and DMs (dm field)
             const messageChannelId = message.channelId || message.channel?._id || message.channel;
+            const messageDmId = message.dmId || message.dm?._id || message.dm;
+
+            // Determine which conversationId to compare against
+            const messageConversationId = conversationType === 'dm' ? messageDmId : messageChannelId;
+
+            console.log(`📨 [useChatSocket][new-message] Received`, {
+                conversationType,
+                activeConversationId: conversationId,
+                messageConversationId,
+                messageChannelId,
+                messageDmId,
+                willProcess: messageConversationId === conversationId
+            });
 
             // ✅ CRITICAL FIX: Only process if message belongs to active conversation
             // Prevents cross-channel contamination when user is in multiple rooms
-            // Also rejects messages with missing/invalid channelId
-            if (messageChannelId !== conversationId) {
-                console.log(`⏭️[useChatSocket] Message from different channel IGNORED: `, {
+            // Also rejects messages with missing/invalid conversationId
+            if (messageConversationId !== conversationId) {
+                console.log(`⏭️ [useChatSocket] Message from different conversation IGNORED:`, {
                     activeConversationId: conversationId,
-                    receivedMessageChannelId: messageChannelId || 'MISSING',
+                    receivedMessageConversationId: messageConversationId || 'MISSING',
                     action: 'IGNORED'
                 });
-                return; // Ignore messages from other channels
+                return; // Ignore messages from other conversations
             }
 
             // ✅ THREAD FIX: Route thread replies separately
             // Thread replies should NOT appear in main chat message list
             if (message.parentId) {
-                console.log(`[THREAD][SOCKET][RECEIVE] Thread reply detected: `, {
+                console.log(`[THREAD][SOCKET][RECEIVE] Thread reply detected:`, {
                     messageId: message._id,
                     parentId: message.parentId,
-                    channelId: messageChannelId,
+                    conversationId: messageConversationId,
                     action: 'ROUTING_TO_THREAD_HANDLER'
                 });
 
@@ -216,6 +231,8 @@ export function useChatSocket(conversationId, conversationType, eventHandler) {
                 });
                 return; // Do NOT emit as regular message
             }
+
+            console.log(`✅ [useChatSocket][new-message] Processing message ${message._id} for ${conversationType}`);
 
             eventHandlerRef.current?.({
                 type: 'new-message',

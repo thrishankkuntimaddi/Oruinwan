@@ -34,6 +34,12 @@ module.exports = async function registerChatHandlers(io, socket) {
       // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
       // 🔍 DEBUG LOG: What did join-dm handler receive?
       // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+      console.log(`🔷 [JOIN-DM] Event received`);
+      console.log(`🔷 [JOIN-DM] dmSessionId:`, dmSessionId);
+      console.log(`🔷 [JOIN-DM] User ID:`, socket.user?.id);
+      console.log(`🔷 [JOIN-DM] Socket ID:`, socket.id);
+
       logger.socket('[DEBUG][JOIN][RECEIVE]', {
         event: 'join-dm',
         receivedIdOrPayload: { dmSessionId },
@@ -41,6 +47,7 @@ module.exports = async function registerChatHandlers(io, socket) {
       });
 
       if (!dmSessionId) {
+        console.log(`❌ [JOIN-DM] Missing dmSessionId!`);
         logger.error("join-dm: missing dmSessionId");
         return;
       }
@@ -49,6 +56,11 @@ module.exports = async function registerChatHandlers(io, socket) {
       // AFTER: `dm:${dmSessionId}` (colon) - matches io.to(`dm:${dm}`)
       const room = `dm:${dmSessionId}`;
       socket.join(room);
+
+      console.log(`✅ [JOIN-DM] User ${socket.user?.id} joined room: ${room}`);
+      console.log(`✅ [JOIN-DM] Socket rooms:`, Array.from(socket.rooms));
+      console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+
       logger.info(`✅ [join-dm] User ${socket.user?.id} joined ${room}`);
     } catch (err) {
       logger.error("Error joining DM room:", err);
