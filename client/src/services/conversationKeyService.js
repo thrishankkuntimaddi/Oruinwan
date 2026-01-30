@@ -5,7 +5,7 @@
  * CRITICAL: Keys are generated CLIENT-SIDE ONLY, never on server
  */
 
-import { generateWorkspaceKey, exportKey, importKey, encryptAESGCM, arrayBufferToBase64 } from '../utils/crypto';
+import { generateWorkspaceKey, exportKey, importKey } from '../utils/crypto';
 import { wrapKeyWithRSA, wrapKeyWithX25519, unwrapKeyWithRSA, unwrapKeyWithX25519 } from '../utils/cryptoIdentity';
 import identityKeyService from './identityKeyService';
 
@@ -168,6 +168,75 @@ class ConversationKeyService {
             return { conversationKey, encryptedKeys };
         } catch (error) {
             console.error('Failed to create and store conversation key:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Ensure conversation key exists for DMs ONLY
+     * If key missing, generates it client-side, encrypts for participants, and stores on server
+     * 
+     * ⚠️ DM ONLY - CHANNELS UNTOUCHED
+     * 
+     * @param {string} conversationId - DM Session ID
+     * @param {string} conversationType - Must be 'dm'
+     * @param {string} workspaceId - Workspace ID
+     * @param {Array<string>} participantIds - Array of participant user IDs
+     * @returns {Promise<CryptoKey>} Conversation key
+     */
+    async ensureConversationKey(conversationId, conversationType, workspaceId, participantIds) {
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        // DM ONLY - DO NOT USE FOR CHANNELS
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        if (conversationType !== 'dm') {
+            throw new Error('ensureConversationKey is DM-only. Use channel flow for channels.');
+        }
+
+        try {
+            console.log(`🔐 [DM ONLY] Ensuring conversation key exists for dm:${conversationId}`);
+
+            // 1. Check if key already exists (cached or on server)
+            let conversationKey = await this.getConversationKey(conversationId, conversationType);
+
+            if (conversationKey && conversationKey.key) {
+                console.log(`✅ [DM ONLY] Using existing conversation key for dm:${conversationId}`);
+                return conversationKey.key;
+            }
+
+            // Handle typed error response from getConversationKey
+            if (conversationKey && conversationKey.status === 'MISSING_FOR_USER') {
+                console.log(`📤 [DM ONLY] Key not yet distributed to this user - attempting to create`);
+            }
+
+            // 2. Key missing - generate new one (FIRST MESSAGE scenario)
+            console.log(`🔑 [DM ONLY] No key found - FIRST MESSAGE - generating conversation key for dm:${conversationId}`);
+            console.log(`📤 [DM ONLY] Encrypting for ${participantIds.length} participants`);
+
+            // Generate and distribute key
+            try {
+                const result = await this.createAndStoreConversationKey(
+                    conversationId,
+                    conversationType,
+                    workspaceId,
+                    participantIds
+                );
+
+                console.log(`✅ [DM ONLY] Conversation key created and stored for dm:${conversationId}`);
+                return result.conversationKey;
+
+            } catch (keyError) {
+                // Handle 409 (key already exists - race condition)
+                if (keyError.message && keyError.message.includes('already exist')) {
+                    console.log(`⚠️ [DM ONLY] Key already exists (409) - fetching existing key`);
+                    const fetchedKey = await this.fetchAndDecryptConversationKey(conversationId, conversationType);
+                    return fetchedKey;
+                } else {
+                    throw keyError;
+                }
+            }
+
+        } catch (error) {
+            console.error(`❌ [DM ONLY] Failed to ensure conversation key for dm:${conversationId}:`, error);
             throw error;
         }
     }

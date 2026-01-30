@@ -210,6 +210,179 @@ function registerMessageHandlers(io, socket) {
     });
 
     // ============================================================
+    // DIRECT MESSAGE HANDLERS
+    // ============================================================
+
+    /**
+     * Join DM room
+     * Client emits this when opening a DM conversation
+     * Validates user is a participant before allowing join
+     */
+    socket.on('join-dm', async (data) => {
+        try {
+            const { dmSessionId } = data;
+
+            if (!dmSessionId) {
+                socket.emit('error', { message: 'Missing dmSessionId' });
+                return;
+            }
+
+            // Validate user is authenticated
+            if (!socket.user || !socket.user.id) {
+                socket.emit('error', { message: 'Unauthorized' });
+                return;
+            }
+
+            // Load DMSession model
+            const DMSession = require('../../../models/DMSession');
+
+            // Verify DM session exists and user is a participant
+            const dmSession = await DMSession.findById(dmSessionId);
+
+            if (!dmSession) {
+                socket.emit('error', { message: 'DM session not found' });
+                return;
+            }
+
+            // Check if user is a participant
+            const isParticipant = dmSession.participants.some(
+                p => p.toString() === socket.user.id.toString()
+            );
+
+            if (!isParticipant) {
+                logger.warn(`🚫 User ${socket.user.id} attempted to join DM ${dmSessionId} without authorization`);
+                socket.emit('error', { message: 'Not a participant of this DM' });
+                return;
+            }
+
+            // Join DM room
+            const room = `dm:${dmSessionId}`;
+
+            // Idempotent check
+            if (socket.rooms.has(room)) {
+                logger.socket(`⏭️ User ${socket.user.id} already in ${room}`);
+                return;
+            }
+
+            socket.join(room);
+            logger.socket(`💬 User ${socket.user.id} joined ${room}`);
+
+        } catch (error) {
+            console.error('Error joining DM room:', error);
+            socket.emit('error', { message: 'Failed to join DM' });
+        }
+    });
+
+    /**
+     * Send DM message via socket
+     * Calls existing messagesController.sendDirectMessage for persistence
+     * Provides real-time delivery and optimistic UI reconciliation
+     */
+    socket.on('send-message', async (data) => {
+        try {
+            const { workspaceId, dmSessionId, receiverId, clientTempId, text } = data;
+
+            // Validate required fields
+            if (!workspaceId) {
+                socket.emit('send-error', {
+                    clientTempId,
+                    message: 'Missing workspaceId'
+                });
+                return;
+            }
+
+            // Must have either dmSessionId (existing DM) or receiverId (new DM)
+            if (!dmSessionId && !receiverId) {
+                socket.emit('send-error', {
+                    clientTempId,
+                    message: 'Missing dmSessionId or receiverId'
+                });
+                return;
+            }
+
+            if (!text || !text.trim()) {
+                socket.emit('send-error', {
+                    clientTempId,
+                    message: 'Message text is required'
+                });
+                return;
+            }
+
+            // Load required models and controllers
+            const messagesController = require('../../../controllers/messagesController');
+            const DMSession = require('../../../models/DMSession');
+
+            // Create mock request/response objects for controller
+            const mockReq = {
+                user: { sub: socket.user.id },
+                body: {
+                    workspaceId,
+                    receiverId: receiverId || null,
+                    text: text.trim(),
+                    // Support encrypted payloads if provided
+                    ciphertext: data.ciphertext,
+                    messageIv: data.messageIv,
+                    isEncrypted: data.isEncrypted || false
+                },
+                io // Pass io instance for broadcasting
+            };
+
+            const mockRes = {
+                status: function (code) {
+                    this.statusCode = code;
+                    return this;
+                },
+                json: function (data) {
+                    this.jsonData = data;
+                    return this;
+                }
+            };
+
+            // Call existing controller
+            await messagesController.sendDirectMessage(mockReq, mockRes);
+
+            // Check response status
+            if (mockRes.statusCode === 201 && mockRes.jsonData && mockRes.jsonData.message) {
+                const serverMessage = mockRes.jsonData.message;
+
+                // Emit success to sender with clientTempId for optimistic UI reconciliation
+                socket.emit('message-sent', {
+                    clientTempId,
+                    message: serverMessage
+                });
+
+                // Determine DM session ID
+                const sessionId = dmSessionId || serverMessage.dm;
+
+                // Broadcast to DM room (includes both participants)
+                io.to(`dm:${sessionId}`).emit('new-message', {
+                    message: serverMessage,
+                    clientTempId
+                });
+
+                logger.socket(`✅ DM message sent: ${serverMessage._id} in dm:${sessionId}`);
+
+            } else {
+                // Controller returned error
+                const errorMessage = mockRes.jsonData?.message || 'Failed to send message';
+                socket.emit('send-error', {
+                    clientTempId,
+                    message: errorMessage
+                });
+
+                logger.warn(`⚠️ DM send failed for user ${socket.user.id}: ${errorMessage}`);
+            }
+
+        } catch (error) {
+            console.error('Error sending DM message via socket:', error);
+            socket.emit('send-error', {
+                clientTempId: data.clientTempId,
+                message: error.message || 'Internal server error'
+            });
+        }
+    });
+
+    // ============================================================
     // LEGACY MESSAGE HANDLER (Deprecated)
     // ============================================================
 

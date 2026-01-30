@@ -8,6 +8,8 @@ import { useToast } from "../../contexts/ToastContext";
 import { useSocket } from "../../contexts/SocketContext";
 import DMMessageItem from "./chatWindowComp/messages/DMMessageItem";
 import { groupByDate } from "./chatWindowComp/helpers/helpers";
+import conversationKeyService from "../../services/conversationKeyService"; // DM ONLY
+import { encryptMessageForSending } from "../../services/messageEncryptionService"; // DM ONLY
 
 export default function DMChatWindow({ chat, onClose, onDeleteChat }) {
     const { accessToken } = useAuth();
@@ -56,20 +58,20 @@ export default function DMChatWindow({ chat, onClose, onDeleteChat }) {
 
             // Add real message
             const formattedMsg = {
-    id: message._id,
+                id: message._id,
 
-    // keep sender object, don't flatten too early
-    sender: message.sender,
+                // keep sender object, don't flatten too early
+                sender: message.sender,
 
-    senderName: message.sender.username,
-    senderAvatar: message.sender.profilePicture,
+                senderName: message.sender.username,
+                senderAvatar: message.sender.profilePicture,
 
-    // ✅ KEEP PAYLOAD (THIS IS THE FIX)
-    payload: message.payload,
+                // ✅ KEEP PAYLOAD (THIS IS THE FIX)
+                payload: message.payload,
 
-    ts: message.createdAt,
-    backend: message,
-};
+                ts: message.createdAt,
+                backend: message,
+            };
 
 
             setMessages(prev => {
@@ -182,19 +184,19 @@ export default function DMChatWindow({ chat, onClose, onDeleteChat }) {
                 const msgs = response.data.messages || [];
 
                 const formatted = msgs.map(msg => ({
-    id: msg._id,
+                    id: msg._id,
 
-    sender: msg.sender,
+                    sender: msg.sender,
 
-    senderName: msg.sender.username,
-    senderAvatar: msg.sender.profilePicture,
+                    senderName: msg.sender.username,
+                    senderAvatar: msg.sender.profilePicture,
 
-    // ✅ KEEP PAYLOAD
-    payload: msg.payload,
+                    // ✅ KEEP PAYLOAD
+                    payload: msg.payload,
 
-    ts: msg.createdAt,
-    backend: msg,
-}));
+                    ts: msg.createdAt,
+                    backend: msg,
+                }));
 
 
                 setMessages(formatted);
@@ -209,7 +211,7 @@ export default function DMChatWindow({ chat, onClose, onDeleteChat }) {
         loadMessages();
     }, [chat, currentUserId, showToast]);
 
-    const sendMessage = () => {
+    const sendMessage = async () => {
         if (!newMessage.trim() || !sharedSocketConnected || !socketRef.current) return;
 
         const socket = socketRef.current;
@@ -217,42 +219,170 @@ export default function DMChatWindow({ chat, onClose, onDeleteChat }) {
 
         // Optimistic UI
         const optimisticMsg = {
-    id: clientTempId,
-    sender: { _id: currentUserId },
-    payload: {
-        text: newMessage.trim(),
-        isEncrypted: false, // local only
-    },
-    ts: new Date().toISOString(),
-    sending: true,
-};
-
+            id: clientTempId,
+            sender: { _id: currentUserId },
+            payload: {
+                text: newMessage.trim(),
+                isEncrypted: false, // local only
+            },
+            ts: new Date().toISOString(),
+            sending: true,
+        };
 
         setMessages(prev => [...prev, optimisticMsg]);
         pendingMessagesRef.current[clientTempId] = optimisticMsg;
 
         console.log(`📤 [DMChatWindow] Sending message to DM:`, chat.id);
 
-        // Send to server
-        socket.emit("send-message", {
-            text: newMessage.trim(),
-            clientTempId,
-            workspaceId: chat.workspaceId,
-            dmSessionId: !chat.isNew ? chat.id : null,
-            receiverId: chat.isNew ? chat.id : null,
-        });
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        // ✅ DM ONLY — FIRST MESSAGE KEY BINDING
+        // CRITICAL: Conversation keys MUST use real DMSession._id
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-        setNewMessage("");
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        // CASE A: NEW DM (chat.isNew === true)
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        if (chat.isNew) {
+            console.log(`🆕 [DM ONLY] First message to new DM - sending unencrypted to create DMSession`);
 
-        // Timeout for failed sends
-        setTimeout(() => {
-            if (pendingMessagesRef.current[clientTempId]) {
+            // ❌ DO NOT create conversation key yet
+            // ❌ DO NOT encrypt the message yet
+            // ✅ Send plaintext first message to get real dmSessionId from server
+
+            try {
+                const messagePayload = {
+                    text: newMessage.trim(),
+                    clientTempId,
+                    workspaceId: chat.workspaceId,
+                    receiverId: chat.id, // receiverId for new DM
+                    // NO ciphertext, NO isEncrypted - server creates DMSession
+                };
+
+                socket.emit("send-message", messagePayload);
+                setNewMessage("");
+
+                console.log(`✉️ [DM ONLY] Sent first message (unencrypted) to create DMSession`);
+
+                // Timeout for failed sends
+                setTimeout(() => {
+                    if (pendingMessagesRef.current[clientTempId]) {
+                        setMessages(prev => prev.map(m =>
+                            m.id === clientTempId ? { ...m, failed: true, sending: false } : m
+                        ));
+                        delete pendingMessagesRef.current[clientTempId];
+                        showToast("Message send timeout", "error");
+                    }
+                }, 10000);
+
+            } catch (sendError) {
+                console.error(`❌ [DM ONLY] Send failed:`, sendError);
                 setMessages(prev => prev.map(m =>
                     m.id === clientTempId ? { ...m, failed: true, sending: false } : m
                 ));
                 delete pendingMessagesRef.current[clientTempId];
+                showToast("Failed to send message", "error");
             }
-        }, 10000);
+
+            return; // Exit early for new DMs
+        }
+
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        // CASE B: EXISTING DM (chat.isNew === false)
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        console.log(`🔑 [DM ONLY] Existing DM - ensuring conversation key with real dmSessionId: ${chat.id}`);
+
+        let encryptedPayload = null;
+
+        try {
+            // Get DM participants
+            let participantIds = [];
+            if (chat.participants && Array.isArray(chat.participants)) {
+                participantIds = chat.participants.map(p => p._id || p);
+            } else {
+                // Fallback: fetch from API
+                const dmResponse = await api.get(`/api/messages/dm/${chat.workspaceId}/${chat.id}`);
+                const messages = dmResponse.data.messages || [];
+                // Extract unique participants from messages
+                const uniqueParticipants = new Set();
+                messages.forEach(msg => {
+                    if (msg.sender && msg.sender._id) uniqueParticipants.add(msg.sender._id);
+                });
+                participantIds = Array.from(uniqueParticipants);
+                if (participantIds.length === 0) {
+                    participantIds = [currentUserId]; // At minimum include self
+                }
+            }
+
+            console.log(`📤 [DM ONLY] Ensuring conversation key for ${participantIds.length} participants`);
+
+            // ✅ Use REAL DMSession._id (chat.id) - NEVER temp IDs
+            const conversationKey = await conversationKeyService.ensureConversationKey(
+                chat.id, // REAL dmSessionId from server
+                'dm',
+                chat.workspaceId,
+                participantIds
+            );
+
+            console.log(`✅ [DM ONLY] Conversation key ready`);
+
+            // Encrypt message with conversation key
+            console.log(`🔐 [DM ONLY] Encrypting message`);
+            encryptedPayload = await encryptMessageForSending(
+                newMessage.trim(),
+                chat.id, // REAL dmSessionId
+                'dm',
+                null // no replyTo for DMs
+            );
+            console.log(`✅ [DM ONLY] Message encrypted`);
+
+        } catch (cryptoError) {
+            console.error(`❌ [DM ONLY] Encryption failed:`, cryptoError);
+            showToast("Failed to encrypt message", "error");
+            // Remove optimistic UI message
+            setMessages(prev => prev.filter(m => m.id !== clientTempId));
+            delete pendingMessagesRef.current[clientTempId];
+            setNewMessage("");
+            return;
+        }
+
+        // Send encrypted message to server
+        try {
+            const messagePayload = {
+                text: newMessage.trim(),
+                clientTempId,
+                workspaceId: chat.workspaceId,
+                dmSessionId: chat.id, // REAL dmSessionId
+            };
+
+            // Add encrypted payload if available
+            if (encryptedPayload) {
+                messagePayload.ciphertext = encryptedPayload.ciphertext;
+                messagePayload.messageIv = encryptedPayload.messageIv;
+                messagePayload.isEncrypted = true;
+                console.log(`✉️ [DM ONLY] Sending encrypted message`);
+            }
+
+            socket.emit("send-message", messagePayload);
+            setNewMessage("");
+
+            // Timeout for failed sends
+            setTimeout(() => {
+                if (pendingMessagesRef.current[clientTempId]) {
+                    setMessages(prev => prev.map(m =>
+                        m.id === clientTempId ? { ...m, failed: true, sending: false } : m
+                    ));
+                    delete pendingMessagesRef.current[clientTempId];
+                    showToast("Message send timeout", "error");
+                }
+            }, 10000);
+        } catch (sendError) {
+            console.error(`❌ [DM ONLY] Send failed:`, sendError);
+            setMessages(prev => prev.map(m =>
+                m.id === clientTempId ? { ...m, failed: true, sending: false } : m
+            ));
+            delete pendingMessagesRef.current[clientTempId];
+            showToast("Failed to send message", "error");
+        }
     };
 
     const handleKeyPress = (e) => {
