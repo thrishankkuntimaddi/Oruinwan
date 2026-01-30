@@ -43,7 +43,7 @@ import './chatWindow.css';
  * @param {string} workspaceId - Workspace ID (required for DMs)
  */
 function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId }) {
-    const { user } = useAuth();
+    const { user, encryptionReady } = useAuth(); // ✅ FIX 3: Get encryption ready flag
     const { socket: rawSocket } = useSocket(); // Get raw socket for ThreadPanel
     const currentUserId = user?.sub || user?._id;
     const { showToast } = useToast();
@@ -68,6 +68,16 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
         if (!chat || chat.type !== 'channel') return false;
         return !chat.isPrivate && chat.isDiscoverable !== false;
     }, [chat]);
+
+    // ✅ FIX 3: SOFT GATING - UI renders but controls disabled until ready
+    const canInteract = encryptionReady && (chat?.type !== 'channel' || isMember);
+
+    console.log('🔐 [ChatWindowV2] Interaction gate status:', {
+        encryptionReady,
+        isMember,
+        canInteract,
+        chatType: chat?.type
+    });
 
     // State for joining
     const [isJoining, setIsJoining] = useState(false);
@@ -142,15 +152,33 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
         conversationRef.current = conversation;
     }, [conversation]);
 
-    // ✅ PHASE 4: Connect socket when ChatWindow opens
-    // By this point, identity keys are already loaded (user is authenticated)
+    // ✅ FIX 3: Explicit socket connection ordering with guards
+    // GUARDRAIL: encryptionReady THEN isMember THEN socket.connect()
     const { connectSocket } = useSocket();
     React.useEffect(() => {
+        // Step 1: Check encryption ready
+        if (!encryptionReady) {
+            console.log('⏳ [ChatWindowV2] Phase 1: Waiting for encryption readiness');
+            return;
+        }
+
+        // Step 2: Check membership (for channels only)
+        if (chat?.type === 'channel' && !isMember) {
+            console.log('⏳ [ChatWindowV2] Phase 2: Not a member, skipping socket connect');
+            return;
+        }
+
+        // Step 3: Connect socket only after all prerequisites met
         if (connectSocket) {
-            console.log('🔌 [ChatWindowV2] Connecting socket for real-time messages');
+            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+            console.log('🔌 [ChatWindowV2] Phase 3: All checks passed');
+            console.log('   ✅ Encryption ready');
+            console.log('   ✅ Membership confirmed (or DM)');
+            console.log('   🎯 Connecting socket for realtime messages');
+            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
             connectSocket();
         }
-    }, [connectSocket]);
+    }, [connectSocket, encryptionReady, isMember, chat?.type]); // ✅ Explicit dependencies
 
     // ✅ PHASE 3: NO premature encryption check
     // Conversation keys are ONLY checked/generated when sending first message
@@ -805,9 +833,9 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
                                 onPickEmoji={handleEmojiPick}
                                 recording={recording}
                                 setRecording={setRecording}
-                                blocked={false}
+                                blocked={muted}
                                 setNewMessage={setNewMessage}
-                                disabled={false}
+                                disabled={!canInteract} // ✅ FIX 3: SOFT GATE - disable input until ready
                             />
                         </div>
                     </>

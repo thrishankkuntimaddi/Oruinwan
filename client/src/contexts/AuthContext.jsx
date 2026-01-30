@@ -8,6 +8,8 @@ export const AuthContext = createContext(null);
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  // ✅ FIX 1: Add encryption ready state
+  const [encryptionReady, setEncryptionReady] = useState(false);
   // Initialize from localStorage immediately
   const [accessToken, setAccessToken] = useState(() => {
     return localStorage.getItem("accessToken") || null;
@@ -112,7 +114,7 @@ export const AuthProvider = ({ children }) => {
 
             if (!result.existed) {
               // New keypair generated - upload public key to server
-              console.log('🔑 [PHASE 1] Generating new identity keypair');
+              console.log('🔑 [PHASE 1] Generating new identity key pair');
               await identityKeyService.uploadPublicKeyToServer();
               console.log('📤 [PHASE 1] Uploading public key');
               console.log(`✅ [PHASE 1] Created & uploaded new identity key (${result.algorithm})`);
@@ -122,11 +124,22 @@ export const AuthProvider = ({ children }) => {
 
             console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
             console.log('✅ [PHASE 1] COMPLETE — Identity established');
+            console.log('✅ [REHYDRATION] Encryption ready at:', new Date().toISOString());
+            console.log('   Algorithm:', result.algorithm);
             console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+
+            // ✅ FIX 1: Signal encryption is ready
+            setEncryptionReady(true);
           } catch (err) {
             console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
             console.error('❌ [PHASE 1] FAILED — Identity initialization error:', err);
+            console.error('❌ [REHYDRATION] Encryption NOT ready - keys failed to load');
             console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+
+            // ⚠️ GUARDRAIL: Do NOT auto-regenerate keys - could be corruption
+            // User must explicitly reset if keys are corrupted
+            setEncryptionReady(false);
+
             // ❌ NO alert()
             // ❌ NO throw
             // Non-blocking: User can still access app
@@ -251,9 +264,13 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem("accessToken");
     sessionStorage.removeItem("lastLoginAttempt");
 
+    // ✅ FIX 1: Reset encryption ready state
+    setEncryptionReady(false);
+
     // E2EE: Clear encryption keys from IndexedDB
-    // This will be handled by useEncryption hook cleanup
+    // This will be handled by service cleanup listeners
     // Trigger event for encryption cleanup
+    console.log('🗑️ [LOGOUT] Dispatching auth:logout event for cache cleanup');
     window.dispatchEvent(new Event('auth:logout'));
   };
 
@@ -306,6 +323,7 @@ export const AuthProvider = ({ children }) => {
         setUser,        // <-- IMPORTANT FIX
         loading,
         accessToken,
+        encryptionReady, // ✅ FIX 1: Export encryption ready state
         login,
         logout,
         loadUser,

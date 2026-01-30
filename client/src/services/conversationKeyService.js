@@ -14,6 +14,20 @@ import identityKeyService from './identityKeyService';
 class ConversationKeyService {
     constructor() {
         this.conversationKeys = new Map(); // conversationId → {key: CryptoKey, algorithm: string}
+
+        // ✅ FIX 2: Setup logout listener to clear cache
+        this.setupLogoutListener();
+    }
+
+    /**
+     * Setup logout event listener (FIX 2)
+     * Clears all cached conversation keys when user logs out
+     */
+    setupLogoutListener() {
+        window.addEventListener('auth:logout', () => {
+            console.log('🗑️ [ConversationKeyService] Received auth:logout - clearing cache');
+            this.clearCache();
+        });
     }
 
     // ==================== KEY GENERATION ====================

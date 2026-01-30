@@ -1,10 +1,10 @@
 // client/src/hooks/useConversation.js
 // Manage conversation state, pagination, and optimistic updates
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
+import { useAuth } from '../contexts/AuthContext'; // ✅ FIX 4: Import useAuth
 import api from '../services/api';
 import { batchDecryptMessages } from '../services/messageEncryptionService';
-import { useAuth } from '../contexts/AuthContext';
 
 /**
  * Manages conversation events (messages, polls, system events)
@@ -13,11 +13,9 @@ import { useAuth } from '../contexts/AuthContext';
  * @param {string} workspaceId - Workspace ID (for DMs)
  * @returns {object} Conversation state and methods
  */
-export function useConversation(conversationId, conversationType, workspaceId = null) {
-    // ✅ Get user at top level (hooks must be called at top level)
-    const { user } = useAuth();
-    const currentUserId = user?.sub || user?._id;
-
+export function useConversation(conversationId, conversationType, workspaceId) {
+    // eslint-disable-next-line no-unused-vars
+    const { encryptionReady } = useAuth(); // ✅ FIX 4: Get encryption ready flag (prepared for guarded prefetch)
     const [events, setEvents] = useState([]);
     const [loading, setLoading] = useState(false);
     const [hasMore, setHasMore] = useState(false);
@@ -95,7 +93,7 @@ export function useConversation(conversationId, conversationType, workspaceId = 
         } finally {
             setLoading(false);
         }
-    }, [conversationId, conversationType, workspaceId, currentUserId]);
+    }, [conversationId, conversationType, workspaceId]);
 
     // Load more messages (pagination)
     const loadMore = useCallback(async () => {
@@ -152,7 +150,7 @@ export function useConversation(conversationId, conversationType, workspaceId = 
         } finally {
             setLoading(false);
         }
-    }, [conversationId, conversationType, workspaceId, events, loading, hasMore, currentUserId]);
+    }, [conversationId, conversationType, workspaceId, events, loading, hasMore]);
 
     // Add optimistic event (for sending messages)
     const addOptimisticEvent = useCallback((event) => {
@@ -245,8 +243,7 @@ export function useConversation(conversationId, conversationType, workspaceId = 
             console.log(`[THREAD][REALTIME][DECRYPT] Decrypting thread reply with channel context: ${messageChannelId}`);
 
             try {
-                const decrypted = await batchDecryptMessages([event], messageChannelId, conversationType, null);
-                const processedEvent = decrypted[0] || event;
+                await batchDecryptMessages([event], messageChannelId, conversationType, null);
                 console.log(`✅ [THREAD][REALTIME][DECRYPT] Thread reply decrypted successfully`);
 
                 // Thread replies are handled by ThreadPanel listeners, not main conversation
@@ -271,9 +268,17 @@ export function useConversation(conversationId, conversationType, workspaceId = 
 
             // ✅ CRITICAL FIX: Extract channelId from MESSAGE, not from hook closure
             // This prevents using stale/wrong conversationId for decryption
+            // Handle multiple possible payload structures:
+            // 1. event.payload.channelId (direct field)
+            // 2. event.payload.channel (ObjectId or populated)
+            // 3. event.payload.message.channelId (nested structure from socket)
+            // 4. event.payload.message.channel (nested structure from socket)
             const messageChannelId = event.payload?.channelId
                 || event.payload?.channel?._id
                 || event.payload?.channel
+                || event.payload?.message?.channelId
+                || event.payload?.message?.channel?._id
+                || event.payload?.message?.channel
                 || conversationId; // Fallback for DMs or legacy messages
 
             console.log(`🔐 [useConversation] Decryption context:`, {
@@ -358,7 +363,7 @@ export function useConversation(conversationId, conversationType, workspaceId = 
             });
             return newEvents;
         });
-    }, [updateEvent]);
+    }, [conversationId, conversationType, updateEvent]);
 
     // Reset conversation (for switching conversations)
     const reset = useCallback(() => {

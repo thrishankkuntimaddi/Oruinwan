@@ -3,7 +3,7 @@
 
 import { useCallback, useRef, useEffect } from 'react';
 import { useSocket } from '../contexts/SocketContext';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../contexts/AuthContext'; // ✅ FIX 6: Import useAuth
 import api from '../services/api';
 import { encryptMessageForSending } from '../services/messageEncryptionService';
 
@@ -17,7 +17,7 @@ import { encryptMessageForSending } from '../services/messageEncryptionService';
  */
 export function useMessageActions(conversationId, conversationType, workspaceId = null, channelMembers = []) {
     const { socket } = useSocket();
-    const { user } = useAuth();
+    const { user, encryptionReady } = useAuth(); // ✅ FIX 6: Get encryption ready flag
 
     // 🔧 FIX: Use ref to store latest channelMembers (avoid stale closure)
     const channelMembersRef = useRef(channelMembers);
@@ -36,6 +36,18 @@ export function useMessageActions(conversationId, conversationType, workspaceId 
     const sendMessage = useCallback(async ({ text, attachments = [], replyTo = null }) => {
         console.log('📤 [sendMessage] Called with:', { text, attachments, replyTo });
         console.log('📤 [sendMessage] Context:', { conversationId, conversationType, workspaceId });
+
+        // ⚠️ CRITICAL FIX 6: Block send if encryption not ready
+        if (!encryptionReady) {
+            console.error('🛑 [E2EE] Message send BLOCKED - Encryption not ready yet');
+            console.error('   Identity keys are still loading from IndexedDB');
+            console.error('   This prevents "Encryption failed" errors during rehydration');
+            return {
+                success: false,
+                error: 'ENCRYPTION_NOT_READY',
+                message: 'Encryption is initializing. Please wait a moment and try again.'
+            };
+        }
 
         if (!conversationId || (!text?.trim() && attachments.length === 0)) {
             console.error('❌ [sendMessage] Validation failed:', { conversationId, text: text?.trim(), attachments });
@@ -218,7 +230,7 @@ export function useMessageActions(conversationId, conversationType, workspaceId 
                 }
             };
         }
-    }, [conversationId, conversationType, workspaceId, user, socket, generateTempId]);
+    }, [conversationId, conversationType, workspaceId, user, socket, encryptionReady, generateTempId]); // ✅ FIX 6: Add encryptionReady
 
     // Add reaction
     const addReaction = useCallback(async (messageId, emoji) => {

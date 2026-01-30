@@ -133,6 +133,20 @@ class IdentityKeyService {
         this.myPublicKey = null;
         this.myAlgorithm = null;
         this.myUserId = null;
+
+        // ✅ FIX 2: Setup logout listener to clear cache
+        this.setupLogoutListener();
+    }
+
+    /**
+     * Setup logout event listener (FIX 2)
+     * Clears all cached keys when user logs out
+     */
+    setupLogoutListener() {
+        window.addEventListener('auth:logout', () => {
+            console.log('🗑️ [IdentityKeyService] Received auth:logout - clearing cache');
+            this.clearCache();
+        });
     }
 
     /**
