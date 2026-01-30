@@ -100,6 +100,60 @@ exports.sendDirectMessage = async (req, res) => {
 };
 
 /* =====================================================
+   RESOLVE USER ID TO DM SESSION ID
+   Find or create DM session with encryption keys
+   GET /api/messages/workspace/:workspaceId/dm/resolve/:userId
+===================================================== */
+exports.resolveDMSession = async (req, res) => {
+  try {
+    const { workspaceId, userId: otherUserId } = req.params;
+    const senderId = req.user.sub;
+
+    console.log(`[resolveDMSession] Finding/creating DM: ${senderId} <-> ${otherUserId} in workspace ${workspaceId}`);
+
+    // Validate inputs
+    if (!otherUserId) {
+      return res.status(400).json({ message: "User ID required" });
+    }
+
+    if (String(senderId) === String(otherUserId)) {
+      return res.status(400).json({ message: "Cannot create DM with yourself" });
+    }
+
+    // Validate other user exists
+    const otherUser = await User.findById(otherUserId);
+    if (!otherUser) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // DM E2EE FIX: Delegate to centralized service that bootstraps encryption keys
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // This ensures every DM session has encryption keys BEFORE the frontend opens it
+    const dmSession = await messagesService.findOrCreateDMSession(
+      senderId,
+      otherUserId,
+      workspaceId
+    );
+
+    console.log(`[resolveDMSession] Success - DM session ID: ${dmSession._id}`);
+
+    return res.status(200).json({
+      success: true,
+      dmSessionId: dmSession._id.toString(),
+      otherUserId: otherUserId,
+      encrypted: true
+    });
+  } catch (error) {
+    console.error('[resolveDMSession] Error:', error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Failed to resolve DM session"
+    });
+  }
+};
+
+/* =====================================================
    SEND CHANNEL MESSAGE (E2EE ONLY)
 ===================================================== */
 exports.sendChannelMessage = async (req, res) => {

@@ -10,7 +10,8 @@ const {
   sendChannelMessage,
   getDMs,
   getChannelMessages,
-  getWorkspaceDMList
+  getWorkspaceDMList,
+  resolveDMSession
 } = require("../controllers/messagesController");
 
 // -----------------------
@@ -42,6 +43,10 @@ router.post("/upload", requireAuth, upload.array('files', 5), (req, res) => {
 // -----------------------
 router.post("/dm/send", requireAuth, sendDirectMessage);
 router.get("/dm/:workspaceId/:dmSessionId", requireAuth, getDMs);
+
+// Resolve user ID to DM session ID (find or create with encryption)
+router.get("/workspace/:workspaceId/dm/resolve/:userId", requireAuth, resolveDMSession);
+
 router.get("/workspace/:workspaceId/dms", requireAuth, getWorkspaceDMList);
 
 // -----------------------

@@ -296,6 +296,12 @@ io.on("connection", async (socket) => {
 
 // 404 Handler - catch routes that don't exist
 app.use((req, res) => {
+  console.log('❌ [404] Route not found:', {
+    method: req.method,
+    path: req.path,
+    originalUrl: req.originalUrl,
+    headers: req.headers['authorization'] ? 'Has Auth' : 'No Auth'
+  });
   res.status(404).json({
     error: 'Not Found',
     message: `Cannot ${req.method} ${req.path}`,

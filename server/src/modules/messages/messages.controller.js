@@ -23,6 +23,7 @@ exports.sendDirectMessage = async (req, res) => {
         const senderId = req.user.sub;
         const {
             receiverId,
+            dmSessionId,  // NEW: Accept DM session ID directly
             workspaceId,
             attachments,
             replyTo,
@@ -41,33 +42,68 @@ exports.sendDirectMessage = async (req, res) => {
             });
         }
 
-        // Validation
-        if (!receiverId) {
-            return res.status(400).json({ message: 'receiverId required' });
-        }
-        if (!workspaceId) {
-            return res.status(400).json({ message: 'workspaceId required' });
-        }
+        // ============================================================
+        // DUAL MODE: Accept either dmSessionId OR receiverId
+        // ============================================================
+        let dmSession;
 
-        // Verify receiver exists
-        const receiver = await User.findById(receiverId);
-        if (!receiver) {
-            return res.status(404).json({ message: 'Receiver not found' });
-        }
+        if (dmSessionId) {
+            // MODE 1: Use existing DM session (recommended, more efficient)
+            console.log('📨 [sendDirectMessage] Using DM session ID:', dmSessionId);
 
-        // Find or create DM session
-        const dmSession = await messagesService.findOrCreateDMSession(
-            senderId,
-            receiverId,
-            workspaceId
-        );
+            dmSession = await DMSession.findById(dmSessionId);
+            if (!dmSession) {
+                return res.status(404).json({ message: 'DM Session not found' });
+            }
+
+            // Verify sender is a participant
+            const isParticipant = dmSession.participants.some(
+                (p) => String(p) === String(senderId)
+            );
+            if (!isParticipant) {
+                return res.status(403).json({
+                    message: 'Not authorized to send messages in this DM'
+                });
+            }
+
+            console.log('✅ [sendDirectMessage] DM session verified, participants:',
+                dmSession.participants.map(p => String(p)));
+
+        } else if (receiverId) {
+            // MODE 2: Legacy mode - find/create by receiver ID
+            console.log('📨 [sendDirectMessage] Using receiver ID:', receiverId);
+
+            // Validation
+            if (!workspaceId) {
+                return res.status(400).json({ message: 'workspaceId required when using receiverId' });
+            }
+
+            // Verify receiver exists
+            const receiver = await User.findById(receiverId);
+            if (!receiver) {
+                return res.status(404).json({ message: 'Receiver not found' });
+            }
+
+            // Find or create DM session
+            dmSession = await messagesService.findOrCreateDMSession(
+                senderId,
+                receiverId,
+                workspaceId
+            );
+
+            console.log('✅ [sendDirectMessage] DM session resolved:', dmSession._id);
+        } else {
+            return res.status(400).json({
+                message: 'Either dmSessionId or receiverId must be provided'
+            });
+        }
 
         // Create message (E2EE enforced in service layer)
         const message = await messagesService.createMessage(
             {
                 type: 'message',
                 company: dmSession.company,
-                workspace: workspaceId,
+                workspace: dmSession.workspace,
                 dm: dmSession._id,
                 sender: senderId,
                 attachments,
@@ -96,13 +132,65 @@ exports.getDMs = async (req, res) => {
         const { workspaceId, dmSessionId, dmId } = req.params;
         const { limit, before } = req.query;
 
+        console.log('🔍 [getDMs] DEBUG:', {
+            userId,
+            workspaceId,
+            dmSessionId,
+            dmId,
+            allParams: req.params,
+            fullPath: req.path,
+            originalUrl: req.originalUrl
+        });
+
         // Support both parameter names for backward compatibility
         const sessionId = dmSessionId || dmId;
 
+        console.log('🔍 [getDMs] Looking up DM session:', {
+            sessionId,
+            sessionIdType: typeof sessionId,
+            sessionIdLength: sessionId?.length
+        });
+
         // Validate DM session
-        const dmSession = await DMSession.findById(sessionId);
+        let dmSession = await DMSession.findById(sessionId);
+
+        console.log('🔍 [getDMs] DM session lookup result:', {
+            found: !!dmSession,
+            sessionId,
+            dmSessionData: dmSession ? {
+                _id: dmSession._id,
+                workspace: dmSession.workspace,
+                participants: dmSession.participants
+            } : null
+        });
+
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        // AUTO-FIX: If DM session doesn't exist, try treating sessionId as userId
+        // This handles cases where frontend passes userId instead of sessionId
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
         if (!dmSession) {
-            return res.status(404).json({ message: 'DM Session not found' });
+            console.log('⚠️ [getDMs] DM session not found, attempting to resolve as userId...');
+            console.log('🔄 [getDMs] Treating sessionId as otherUserId and creating DM session');
+
+            try {
+                // Try to create/find DM session using the ID as a user ID
+                dmSession = await messagesService.findOrCreateDMSession(
+                    userId,           // Current user
+                    sessionId,        // Treat sessionId as the other user's ID
+                    workspaceId
+                );
+
+                console.log('✅ [getDMs] DM session resolved/created:', {
+                    newSessionId: dmSession._id,
+                    originalIdWasUserId: true
+                });
+            } catch (resolveError) {
+                console.error('❌ [getDMs] Failed to resolve DM session:', resolveError.message);
+                return res.status(404).json({
+                    message: 'DM Session not found and could not be created',
+                    details: resolveError.message
+                });
+            }
         }
 
         // Verify user is a participant
@@ -115,7 +203,7 @@ exports.getDMs = async (req, res) => {
 
         // Fetch messages
         const result = await messagesService.fetchMessages(
-            { dm: sessionId },
+            { dm: dmSession._id },  // Use the resolved session ID
             {
                 limit: parseInt(limit) || 50,
                 before,

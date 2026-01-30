@@ -60,38 +60,74 @@ const Home = () => {
           const targetId = dmId || id; // Use dmId for new DMs, id for existing DMs
 
           if (targetId) {
-            // Fetch user info to get the name
-            const res = await api.get(`/api/workspaces/${workspaceId}/members`);
-            const members = res.data.members || [];
+            console.log('[Home] Processing DM with targetId:', targetId);
 
-            // Try to find member - check both direct ID and nested user.id
-            let member = members.find(m =>
-              String(m._id || m.id) === String(targetId) ||
-              String(m.user?._id || m.user?.id) === String(targetId)
-            );
+            // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+            // DM E2EE FIX: Always resolve to DM session ID before opening ChatWindow
+            // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+            // PROBLEM: targetId might be a user ID or DM session ID (ambiguous)
+            // SOLUTION: Call resolve endpoint which finds or creates DM with encryption keys
+            // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-            let dmSession = null; // Declare dmSession
-            // If not found, targetId might be a DM session ID - fetch the session
-            if (!member) {
-              try {
-                const dmRes = await api.get(`/api/messages/workspace/${workspaceId}/dms`);
-                const dmSessions = dmRes.data.sessions || [];
-                dmSession = dmSessions.find(s => String(s.id) === String(targetId));
+            let resolvedDMSessionId = null;
+            let otherUserId = null;
 
-                if (dmSession && dmSession.otherUserId) {
-                  member = members.find(m =>
-                    String(m._id || m.id) === String(dmSession.otherUserId) ||
-                    String(m.user?._id || m.user?.id) === String(dmSession.otherUserId)
-                  );
+            try {
+              // First, try to resolve as user ID → DM session ID
+              console.log('[Home] Calling resolve endpoint for user:', targetId);
+              const resolveRes = await api.get(
+                `/api/messages/workspace/${workspaceId}/dm/resolve/${targetId}`
+              );
+
+              if (resolveRes.data.success) {
+                console.log('[Home] ✅ Resolved to DM session:', resolveRes.data.dmSessionId);
+                resolvedDMSessionId = resolveRes.data.dmSessionId;
+                otherUserId = resolveRes.data.otherUserId;
+              }
+            } catch (resolveErr) {
+              // If resolve fails, targetId might already be a DM session ID
+              // Try to fetch it directly
+              console.log('[Home] Resolve failed, checking if targetId is DM session ID:', resolveErr.response?.status);
+
+              if (resolveErr.response?.status === 404) {
+                // User not found - targetId might be DM session ID
+                try {
+                  const dmRes = await api.get(`/api/messages/workspace/${workspaceId}/dms`);
+                  const dmSessions = dmRes.data.sessions || [];
+                  const existingSession = dmSessions.find(s => String(s.id) === String(targetId));
+
+                  if (existingSession) {
+                    console.log('[Home] ✅ Found existing DM session');
+                    resolvedDMSessionId = existingSession.id;
+                    otherUserId = existingSession.otherUserId;
+                  } else {
+                    console.error('[Home] ❌ Could not resolve DM - neither user ID nor valid session ID');
+                    setActiveChat(null);
+                    return;
+                  }
+                } catch (dmErr) {
+                  console.error('[Home] ❌ Failed to fetch DM sessions:', dmErr);
+                  setActiveChat(null);
+                  return;
                 }
-              } catch (err) {
-                console.error('❌ [Home] Failed to fetch DM sessions:', err);
+              } else {
+                console.error('[Home] ❌ Unexpected resolve error:', resolveErr);
+                setActiveChat(null);
+                return;
               }
             }
 
+            // Now fetch member info for display
+            const res = await api.get(`/api/workspaces/${workspaceId}/members`);
+            const members = res.data.members || [];
+
+            let member = members.find(m =>
+              String(m._id || m.id) === String(otherUserId) ||
+              String(m.user?._id || m.user?.id) === String(otherUserId)
+            );
+
             // Extract user data from nested structure if needed
             const userData = member?.user || member;
-            const memberId = userData?._id || userData?.id;
             const memberName = userData?.username || userData?.name || userData?.email?.split('@')[0];
             const memberPicture = userData?.profilePicture || userData?.avatar;
 
@@ -101,14 +137,15 @@ const Home = () => {
               status = userData.userStatus || "active";
             }
 
+            // ✅ CRITICAL: Always pass DM SESSION ID, never user ID
             setActiveChat({
-              id: targetId,
-              userId: dmSession?.otherUserId || memberId,
+              id: resolvedDMSessionId,  // ✅ DM session ID (not user ID)
+              userId: otherUserId,       // Store other user's ID for display
               name: memberName || "Unknown User",
               image: memberPicture,
               status: status,
               type: "dm",
-              isNew: !dmSession || location.pathname.includes("/dm/new/"), // New DM if no session exists OR on new route
+              isNew: location.pathname.includes("/dm/new/"),
               workspaceId,
               workspaceRole: activeWorkspace?.role
             });

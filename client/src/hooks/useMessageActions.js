@@ -184,9 +184,9 @@ export function useMessageActions(conversationId, conversationType, workspaceId 
                     clientTempId: tempId
                 });
             } else if (conversationType === 'dm') {
-                console.log('📤 [sendMessage] Sending DM to:', conversationId);
+                console.log('📤 [sendMessage] Sending DM to session:', conversationId);
                 response = await api.post('/api/v2/messages/direct', {
-                    receiverId: conversationId,
+                    dmSessionId: conversationId,  // ✅ FIXED: Send DM session ID
                     workspaceId,
                     ciphertext,
                     messageIv,

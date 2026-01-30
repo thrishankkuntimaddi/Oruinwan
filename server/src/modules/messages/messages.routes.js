@@ -22,6 +22,15 @@ router.post('/direct', messagesController.sendDirectMessage);
 // Get DM conversation
 router.get(
     '/workspace/:workspaceId/dm/:dmId',
+    (req, res, next) => {
+        console.log('🔍 [ROUTE MATCHED] DM conversation route hit!', {
+            params: req.params,
+            query: req.query,
+            path: req.path,
+            originalUrl: req.originalUrl
+        });
+        next();
+    },
     messagesController.getDMs
 );
 
