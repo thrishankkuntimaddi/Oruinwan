@@ -44,8 +44,12 @@ module.exports = async function registerChatHandlers(io, socket) {
         logger.error("join-dm: missing dmSessionId");
         return;
       }
-      const room = `dm_${dmSessionId}`;
+      // CRITICAL FIX: Use dm: format (colon) to match createMessage broadcasts
+      // BEFORE: `dm_${dmSessionId}` (underscore) - WRONG!
+      // AFTER: `dm:${dmSessionId}` (colon) - matches io.to(`dm:${dm}`)
+      const room = `dm:${dmSessionId}`;
       socket.join(room);
+      logger.info(`✅ [join-dm] User ${socket.user?.id} joined ${room}`);
     } catch (err) {
       logger.error("Error joining DM room:", err);
     }
@@ -257,7 +261,7 @@ module.exports = async function registerChatHandlers(io, socket) {
         });
 
         // Join the new room
-        socket.join(`dm_${actualDMSessionId}`);
+        socket.join(`dm:${actualDMSessionId}`);
       }
 
       // Populate common message data
@@ -306,7 +310,7 @@ module.exports = async function registerChatHandlers(io, socket) {
 
       if (actualDMSessionId) {
         // Emit to DM room
-        io.to(`dm_${actualDMSessionId}`).emit(eventName, payload);
+        io.to(`dm:${actualDMSessionId}`).emit(eventName, payload);
 
         // Also emit to each participant's personal user room for real-time delivery
         const dmSession = await DMSession.findById(actualDMSessionId);
@@ -358,7 +362,7 @@ module.exports = async function registerChatHandlers(io, socket) {
           { $addToSet: { readBy: readerId } }
         );
 
-        io.to(`dm_${dmSessionId}`).emit("read-update", {
+        io.to(`dm:${dmSessionId}`).emit("read-update", {
           readerId,
           dmSessionId: dmSessionId,
         });
@@ -412,7 +416,7 @@ module.exports = async function registerChatHandlers(io, socket) {
           messageIds: [messageId],
         });
       } else if (msg.dm) { // Changed to check for dm
-        io.to(`dm_${msg.dm.toString()}`).emit("read-update", { // Use dm session ID
+        io.to(`dm:${msg.dm.toString()}`).emit("read-update", { // Use dm session ID
           readerId,
           messageIds: [messageId],
         });
@@ -432,7 +436,7 @@ module.exports = async function registerChatHandlers(io, socket) {
       const fromName = socket.user?.username || "Someone";
 
       if (dmSessionId) {
-        io.to(`dm_${dmSessionId}`).emit("typing", { from: userId, fromName });
+        io.to(`dm:${dmSessionId}`).emit("typing", { from: userId, fromName });
       } else if (channelId) {
         io.to(`channel_${channelId}`).emit("typing", { from: userId, fromName });
       }
@@ -470,7 +474,7 @@ module.exports = async function registerChatHandlers(io, socket) {
       // Broadcast to appropriate room
       const room = message.channel
         ? `channel_${message.channel}`
-        : `dm_${message.dm}`;
+        : `dm:${message.dm}`;
 
       io.to(room).emit("reaction-added", {
         messageId,
@@ -505,7 +509,7 @@ module.exports = async function registerChatHandlers(io, socket) {
       // Broadcast to appropriate room
       const room = message.channel
         ? `channel_${message.channel}`
-        : `dm_${message.dm}`;
+        : `dm:${message.dm}`;
 
       io.to(room).emit("reaction-removed", {
         messageId,
@@ -569,7 +573,7 @@ module.exports = async function registerChatHandlers(io, socket) {
         await message.save();
 
         // Broadcast to all participants
-        const room = channelId ? `channel_${channelId}` : `dm_${dmSessionId}`;
+        const room = channelId ? `channel_${channelId}` : `dm:${dmSessionId}`;
         io.to(room).emit("message-deleted", {
           messageId,
           deletedBy: userId,
