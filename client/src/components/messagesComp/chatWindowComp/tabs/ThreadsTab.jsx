@@ -88,27 +88,92 @@ export default function ThreadsTab({ channelId, currentUserId, socket }) {
         fetchThreads();
     }, [fetchThreads]);
 
-    // Real-time updates
+    // Real-time updates - OPTIMIZED
     useEffect(() => {
         if (!socket) return;
 
-        const handleThreadUpdate = (data) => {
-            // Re-fetch or optimistically update
-            // For simplicity in this version, avoiding complex optimistic logic for list re-ordering
-            // We just re-fetch if a reply is added
-            if (data.type === 'message' && data.replyTo) {
-                fetchThreads();
+        // ✅ Handle when a new thread is created (first reply)
+        const handleThreadCreated = async (data) => {
+            console.log('[THREADS_TAB][REALTIME] New thread created:', data);
+            
+            // Fetch and decrypt the new parent message
+            if (data.parentMessage) {
+                try {
+                    const decrypted = await batchDecryptMessages(
+                        [data.parentMessage],
+                        channelId,
+                        'channel',
+                        null
+                    );
+                    const decryptedParent = decrypted[0] || data.parentMessage;
+                    
+                    // Add to thread list at the top
+                    setThreads(prev => [decryptedParent, ...prev]);
+                } catch (err) {
+                    console.error('[THREADS_TAB][DECRYPT] Failed to decrypt new thread:', err);
+                    // Fall back to adding encrypted version
+                    setThreads(prev => [data.parentMessage, ...prev]);
+                }
             }
         };
 
-        socket.on('message', handleThreadUpdate); // Listen for general messages to detect replies
-        socket.on('thread-reply', fetchThreads); // Listen for explicit thread replies
+        // ✅ Handle reply count updates
+        const handleMessageUpdated = (data) => {
+            const { messageId, updates } = data;
+            
+            if (updates?.replyCount !== undefined) {
+                console.log('[THREADS_TAB][REALTIME] Updating reply count:', {
+                    messageId,
+                    newCount: updates.replyCount
+                });
+                
+                setThreads(prev => prev.map(thread => 
+                    thread._id === messageId 
+                        ? { ...thread, replyCount: updates.replyCount }
+                        : thread
+                ));
+            }
+        };
+
+        // ✅ Handle individual thread replies (update last reply time, move to top)
+        const handleThreadReply = (data) => {
+            const { parentId, reply } = data;
+            
+            console.log('[THREADS_TAB][REALTIME] Thread reply received:', {
+                parentId,
+                replyId: reply?._id
+            });
+            
+            // Move thread to top and update metadata
+            setThreads(prev => {
+                const thread = prev.find(t => t._id === parentId);
+                if (!thread) {
+                    console.log('[THREADS_TAB][REALTIME] Thread not in list, ignoring');
+                    return prev;
+                }
+                
+                const updated = {
+                    ...thread,
+                    lastReplyAt: reply.createdAt,
+                    lastReplyUser: reply.sender
+                };
+                
+                // Remove from current position and add to top
+                const others = prev.filter(t => t._id !== parentId);
+                return [updated, ...others];
+            });
+        };
+
+        socket.on('thread:created', handleThreadCreated);
+        socket.on('message-updated', handleMessageUpdated);
+        socket.on('thread-reply', handleThreadReply);
 
         return () => {
-            socket.off('message', handleThreadUpdate);
-            socket.off('thread-reply', fetchThreads);
+            socket.off('thread:created', handleThreadCreated);
+            socket.off('message-updated', handleMessageUpdated);
+            socket.off('thread-reply', handleThreadReply);
         };
-    }, [socket, fetchThreads]);
+    }, [socket, channelId]);
 
 
     const filteredThreads = threads.filter(t =>
@@ -217,6 +282,8 @@ export default function ThreadsTab({ channelId, currentUserId, socket }) {
 
                         <ThreadPanel
                             parentMessage={selectedThread}
+                            channelId={channelId}
+                            conversationType="channel"
                             onClose={() => setSelectedThread(null)}
                             socket={socket}
                             currentUserId={currentUserId}
