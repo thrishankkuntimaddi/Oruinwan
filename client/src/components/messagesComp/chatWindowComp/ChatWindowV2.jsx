@@ -396,8 +396,45 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
         }
     }, [currentUserId]); // Include currentUserId in dependencies
 
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     // Initialize socket with event handler
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // NOTE: useChatSocket is called for ALL types to satisfy React Hooks rules
+    // For DMs, we override the join behavior below with DM-specific 'join-dm' event
     const socket = useChatSocket(conversationId, conversationType, handleSocketEvent);
+
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // DM-ONLY FIX: Override socket join for Direct Messages
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // 
+    // PROBLEM: useChatSocket emits 'chat:join' which is channel-only on backend
+    // SOLUTION: For DMs only, emit 'join-dm' event directly to backend
+    // 
+    // CHANNELS/THREADS: Use useChatSocket's 'chat:join' (untouched)
+    // DMs: Emit additional 'join-dm' to DM-aware backend handler
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    useEffect(() => {
+        if (conversationType !== 'dm') return; // DM-ONLY guard - channels/threads skip
+        if (!rawSocket || !conversationId) return;
+
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        console.log('🔷 [DM-ONLY] Emitting join-dm event (bypassing chat:join)');
+        console.log('🔷 [DM-ONLY] DM Session ID:', conversationId);
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+
+        // Join DM room using DM-specific event
+        rawSocket.emit('join-dm', { dmSessionId: conversationId });
+
+        // Leave DM room on unmount
+        return () => {
+            if (rawSocket?.connected) {
+                console.log('🔷 [DM-ONLY] Leaving DM room:', conversationId);
+                rawSocket.emit('leave-dm', { dmSessionId: conversationId });
+            }
+        };
+    }, [conversationType, conversationId, rawSocket]);
+
+
 
     // Initialize threadCounts from loaded messages
     useEffect(() => {

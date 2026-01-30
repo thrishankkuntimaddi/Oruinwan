@@ -30,6 +30,15 @@ module.exports = async function registerChatHandlers(io, socket) {
   ---------------------------------------------------- */
   socket.on("join-dm", ({ dmSessionId }) => {
     try {
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      // 🔍 DEBUG LOG: What did join-dm handler receive?
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      logger.socket('[DEBUG][JOIN][RECEIVE]', {
+        event: 'join-dm',
+        receivedIdOrPayload: { dmSessionId },
+        userId: socket.user?.id
+      });
+
       if (!dmSessionId) {
         logger.error("join-dm: missing dmSessionId");
         return;
@@ -63,6 +72,15 @@ module.exports = async function registerChatHandlers(io, socket) {
   ---------------------------------------------------- */
   socket.on("chat:join", async (channelId, callback) => {
     try {
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      // 🔍 DEBUG LOG: What did chat:join handler receive?
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      logger.socket('[DEBUG][JOIN][RECEIVE]', {
+        event: 'chat:join',
+        receivedIdOrPayload: channelId,
+        userId: socket.user?.id
+      });
+
       // Validation: channelId required
       if (!channelId) {
         logger.error("chat:join: missing channelId");

@@ -31,6 +31,15 @@ function registerMessageHandlers(io, socket) {
     socket.on('conversation:join', (data) => {
         const { conversationId, type, workspaceId } = data;
 
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        // 🔍 DEBUG LOG: What did conversation:join handler receive?
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        logger.socket('[DEBUG][JOIN][RECEIVE]', {
+            event: 'conversation:join',
+            receivedIdOrPayload: data,
+            userId: socket.user?.id
+        });
+
         // Validate
         if (!conversationId || !type) {
             socket.emit('error', { message: 'Missing conversationId or type' });
@@ -105,6 +114,15 @@ function registerMessageHandlers(io, socket) {
         logger.socket(`📥 [chat:join] Channel ID: ${channelId}`);
         logger.socket(`📥 [chat:join] Socket ID: ${socket.id}`);
         logger.socket(`📥 [chat:join] User ID: ${socket.user.id}`);
+
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        // 🔍 DEBUG LOG: What did chat:join (legacy) receive?
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        logger.socket('[DEBUG][JOIN][RECEIVE]', {
+            event: 'chat:join (legacy)',
+            receivedIdOrPayload: channelId,
+            userId: socket.user?.id
+        });
 
         socket.join(`channel:${channelId}`);
         logger.socket(`💬 User ${socket.user.id} joined channel:${channelId} (legacy)`);
@@ -221,6 +239,15 @@ function registerMessageHandlers(io, socket) {
     socket.on('join-dm', async (data) => {
         try {
             const { dmSessionId } = data;
+
+            // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+            // 🔍 DEBUG LOG: What did join-dm handler receive?
+            // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+            logger.socket('[DEBUG][JOIN][RECEIVE]', {
+                event: 'join-dm',
+                receivedIdOrPayload: data,
+                userId: socket.user?.id
+            });
 
             if (!dmSessionId) {
                 socket.emit('error', { message: 'Missing dmSessionId' });

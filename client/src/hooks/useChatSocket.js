@@ -19,6 +19,14 @@ export function useChatSocket(conversationId, conversationType, eventHandler) {
     // eslint-disable-next-line no-unused-vars
     const lastEventHashRef = useRef(new Set()); // Track processed event hashes (reserved for deduplication)
 
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // 🔍 DEBUG LOG: Hook initialization
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    console.log('[DEBUG][useChatSocket][INIT]', {
+        conversationId,
+        conversationType
+    });
+
     // Keep callback ref fresh
     useEffect(() => {
         eventHandlerRef.current = eventHandler;
@@ -54,6 +62,16 @@ export function useChatSocket(conversationId, conversationType, eventHandler) {
         console.log('   ✅ Socket connected');
         console.log('   🎯 Joining:', conversationType, conversationId);
         console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        // 🔍 DEBUG LOG: What event is being emitted
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        console.log('[DEBUG][JOIN][EMIT]', {
+            conversationId,
+            conversationType,
+            event: 'chat:join',
+            payload: conversationId // What's being sent as first parameter
+        });
 
         // ✅ CRITICAL FIX: Server expects conversationId as first param, NOT an object
         socket.emit('chat:join', conversationId, (response) => {

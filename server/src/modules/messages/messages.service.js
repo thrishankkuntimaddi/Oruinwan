@@ -11,6 +11,7 @@ const DMSession = require('../../../models/DMSession');
 const Channel = require('../../../models/Channel');
 const Workspace = require('../../../models/Workspace');
 const { isMember } = require('../../../utils/memberHelpers');
+const conversationKeysService = require('../conversations/conversationKeys.service');
 
 // ==================== MESSAGE CREATION ====================
 
@@ -215,6 +216,28 @@ async function findOrCreateDMSession(userId1, userId2, workspaceId) {
             participants: [userId1, userId2],
             lastMessageAt: new Date()
         });
+
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        // DM E2EE: Bootstrap conversation key at creation (same as channels)
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        // CRITICAL: DMs must have encryption keys before any messages can be sent
+        // This mirrors the channel pattern: bootstrapConversationKey({ conversationType: 'channel', ... })
+        console.log(`🔐 [DM][E2EE] Bootstrapping conversation key for new DM session ${dmSession._id}`);
+
+        try {
+            await conversationKeysService.bootstrapConversationKey({
+                conversationId: dmSession._id,
+                conversationType: 'dm',  // DM-specific type
+                workspaceId: workspaceId,
+                members: [userId1, userId2]  // Both participants
+            });
+            console.log(`✅ [DM][E2EE] Conversation key created for DM ${dmSession._id}`);
+        } catch (keyError) {
+            console.error(`❌ [DM][E2EE] Failed to create conversation key for DM ${dmSession._id}:`, keyError);
+            // Note: DMSession exists but without encryption keys
+            // Frontend will fail gracefully with E2EE enforcement
+            throw new Error('Failed to initialize DM encryption: ' + keyError.message);
+        }
     } else {
         // Update last message time
         dmSession.lastMessageAt = new Date();
