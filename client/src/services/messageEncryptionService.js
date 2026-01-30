@@ -259,7 +259,9 @@ export async function batchDecryptMessages(messages, conversationId, conversatio
 
                     // Use conversation key or derived thread key
                     let decryptionKey = conversationKey;
-                    if (parentId) {
+                    // ✅ CRITICAL: Only derive thread key if message was explicitly encrypted as thread message
+                    // Thread replies in this app are encrypted with conversation key (UI grouping only)
+                    if (parentId && message.isThreadEncrypted === true) {
                         decryptionKey = await deriveThreadKey(conversationKey, parentId);
                     }
 

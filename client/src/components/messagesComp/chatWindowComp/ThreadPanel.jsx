@@ -78,8 +78,15 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
             // Decrypt all replies
             let decryptedReplies = res.data.replies || [];
             if (decryptedReplies.length > 0 && channelId) {
+                // ✅ NORMALIZE: Add id field for batchDecryptMessages compatibility
+                const normalizedReplies = decryptedReplies.map(reply => ({
+                    ...reply,
+                    id: reply._id || reply.id,  // Required by batchDecryptMessages
+                    isThreadEncrypted: false  // Thread replies use conversation key, not thread key
+                }));
+
                 // ✅ FILTER: Only decrypt valid encrypted replies
-                const validReplies = decryptedReplies.filter((reply, idx) => {
+                const validReplies = normalizedReplies.filter((reply, idx) => {
                     const isValid = reply?._id &&
                         reply.payload?.ciphertext &&
                         reply.payload?.messageIv;
@@ -104,11 +111,12 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
                             validReplies.map(r => r._id)
                         );
 
+                        // Thread replies do NOT use userJoinedAt filtering — access is inherited from the parent message
                         decryptedReplies = await batchDecryptMessages(
                             validReplies,  // ✅ Only valid replies
                             channelId,
                             conversationType,
-                            messageId  // ✅ Pass parent message ID for thread key derivation
+                            null  // Threads don't filter by joinedAt
                         );
                         console.log(`[THREAD][DECRYPT][SUCCESS] Decrypted ${decryptedReplies.length} replies successfully`);
                     } catch (err) {
@@ -166,26 +174,34 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
                 return;
             }
 
+            // ✅ NORMALIZE: Add id field for batchDecryptMessages compatibility
+            const normalizedReply = {
+                ...reply,
+                id: reply._id || reply.id,  // Required by batchDecryptMessages
+                isThreadEncrypted: false  // Thread replies use conversation key, not thread key
+            };
+
             // ✅ DECRYPT realtime reply before adding to state
-            let decryptedReply = reply;
+            let decryptedReply = normalizedReply;
 
             // ✅ VALIDATE reply before attempting decrypt
-            const canDecrypt = reply?._id &&
-                reply.payload?.ciphertext &&
-                reply.payload?.messageIv &&
+            const canDecrypt = normalizedReply?._id &&
+                normalizedReply.payload?.ciphertext &&
+                normalizedReply.payload?.messageIv &&
                 channelId;
 
             if (canDecrypt) {
                 try {
                     const messageId = parentMessage._id || parentMessage.id;
-                    console.log(`[THREAD][DECRYPT][INPUT] Realtime reply ${reply._id} valid, decrypting with parent ${messageId}...`);
+                    console.log(`[THREAD][DECRYPT][INPUT] Realtime reply ${normalizedReply._id} valid, decrypting with parent ${messageId}...`);
+                    // Thread replies do NOT use userJoinedAt filtering — access is inherited from the parent message
                     const decrypted = await batchDecryptMessages(
-                        [reply],
+                        [normalizedReply],
                         channelId,
                         conversationType,
-                        messageId  // ✅ Pass parent message ID for thread key derivation
+                        null  // Threads don't filter by joinedAt
                     );
-                    decryptedReply = decrypted[0] || reply;
+                    decryptedReply = decrypted[0] || normalizedReply;
                     console.log(`[THREAD][REALTIME][DECRYPT] Successfully decrypted reply`);
                 } catch (err) {
                     console.error('[THREAD][REALTIME][DECRYPT] Failed to decrypt reply:', err);
@@ -193,9 +209,9 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
                 }
             } else {
                 console.log(`[THREAD][DECRYPT][SKIP] Reply cannot be decrypted:`, {
-                    hasId: !!reply?._id,
-                    hasCiphertext: !!reply?.payload?.ciphertext,
-                    hasIv: !!reply?.payload?.messageIv,
+                    hasId: !!normalizedReply?._id,
+                    hasCiphertext: !!normalizedReply?.payload?.ciphertext,
+                    hasIv: !!normalizedReply?.payload?.messageIv,
                     hasChannelId: !!channelId
                 });
             }
@@ -315,26 +331,34 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
                 isEncrypted: res.data.reply.payload?.isEncrypted
             });
 
+            // ✅ NORMALIZE: Add id field for batchDecryptMessages compatibility
+            const normalizedServerReply = {
+                ...res.data.reply,
+                id: res.data.reply._id || res.data.reply.id,  // Required by batchDecryptMessages
+                isThreadEncrypted: false  // Thread replies use conversation key, not thread key
+            };
+
             // Decrypt the reply from server
-            let decryptedServerReply = res.data.reply;
+            let decryptedServerReply = normalizedServerReply;
 
             // ✅ VALIDATE server response before attempting decrypt
-            const serverReplyValid = res.data.reply?._id &&
-                res.data.reply.payload?.ciphertext &&
-                res.data.reply.payload?.messageIv &&
+            const serverReplyValid = normalizedServerReply?._id &&
+                normalizedServerReply.payload?.ciphertext &&
+                normalizedServerReply.payload?.messageIv &&
                 channelId;
 
             if (serverReplyValid) {
                 try {
                     const messageId = parentMessage._id || parentMessage.id;
-                    console.log(`[THREAD][DECRYPT][INPUT] Server response valid, decrypting ${res.data.reply._id} with parent ${messageId}`);
+                    console.log(`[THREAD][DECRYPT][INPUT] Server response valid, decrypting ${normalizedServerReply._id} with parent ${messageId}`);
+                    // Thread replies do NOT use userJoinedAt filtering — access is inherited from the parent message
                     const decrypted = await batchDecryptMessages(
-                        [res.data.reply],
+                        [normalizedServerReply],
                         channelId,
                         conversationType,
-                        messageId  // ✅ Pass parent message ID for thread key derivation
+                        null  // Threads don't filter by joinedAt
                     );
-                    decryptedServerReply = decrypted[0] || res.data.reply;
+                    decryptedServerReply = decrypted[0] || normalizedServerReply;
                     console.log(`[THREAD][DECRYPT][SUCCESS] Server reply decrypted successfully`);
                 } catch (err) {
                     console.error('[THREAD][DECRYPT] Failed to decrypt server reply:', err);
@@ -342,9 +366,9 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
                 }
             } else {
                 console.log(`[THREAD][DECRYPT][SKIP] Server reply cannot be decrypted:`, {
-                    hasId: !!res.data.reply?._id,
-                    hasCiphertext: !!res.data.reply?.payload?.ciphertext,
-                    hasIv: !!res.data.reply?.payload?.messageIv,
+                    hasId: !!normalizedServerReply?._id,
+                    hasCiphertext: !!normalizedServerReply?.payload?.ciphertext,
+                    hasIv: !!normalizedServerReply?.payload?.messageIv,
                     hasChannelId: !!channelId
                 });
             }
@@ -445,7 +469,7 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
                                                     </span>
                                                 </div>
                                                 <p className="text-xs text-gray-800 dark:text-gray-200 mt-0.5 leading-relaxed whitespace-pre-wrap break-words">
-                                                    {parentMessageState.payload?.text || parentMessageState.text}
+                                                    {parentMessageState.decryptedContent || parentMessageState.payload?.text || parentMessageState.text}
                                                 </p>
                                             </div>
                                         </div>
@@ -486,7 +510,7 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
                                                             </span>
                                                         </div>
                                                         <p className="text-sm text-gray-700 dark:text-gray-300 mt-0.5 leading-relaxed whitespace-pre-wrap break-words">
-                                                            {reply.payload?.text || reply.text}
+                                                            {reply.decryptedContent || reply.payload?.text || reply.text}
                                                         </p>
                                                     </div>
                                                 </div>

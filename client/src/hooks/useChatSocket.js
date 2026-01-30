@@ -211,6 +211,20 @@ export function useChatSocket(conversationId, conversationType, eventHandler) {
             });
         };
 
+        // ✅ THREAD AWARENESS: Listen for thread:created when first reply is added
+        const handleThreadCreated = (data) => {
+            console.log('🧵 [THREAD][REALTIME] Thread created:', {
+                parentMessageId: data.parentMessageId,
+                replyCount: data.replyCount
+            });
+
+            // Route to conversation handler to update parent message
+            eventHandlerRef.current?.({
+                type: 'thread:created',
+                payload: data
+            });
+        };
+
         const handleSendError = (data) => {
             eventHandlerRef.current?.({
                 type: 'send-error',
@@ -331,6 +345,7 @@ export function useChatSocket(conversationId, conversationType, eventHandler) {
         // Register all event listeners
         socket.on('new-message', handleNewMessage);
         socket.on('thread-reply', handleThreadReply); // ✅ NEW: Listen for thread replies
+        socket.on('thread:created', handleThreadCreated); // ✅ NEW: Listen for thread creation
         socket.on('message-sent', handleMessageSent);
         socket.on('send-error', handleSendError);
         socket.on('message-deleted', handleMessageDeleted);
@@ -357,6 +372,7 @@ export function useChatSocket(conversationId, conversationType, eventHandler) {
         return () => {
             socket.off('new-message', handleNewMessage);
             socket.off('thread-reply', handleThreadReply); // ✅ Cleanup thread-reply listener
+            socket.off('thread:created', handleThreadCreated); // ✅ Cleanup thread:created listener
             socket.off('message-sent', handleMessageSent);
             socket.off('send-error', handleSendError);
             socket.off('message-deleted', handleMessageDeleted);

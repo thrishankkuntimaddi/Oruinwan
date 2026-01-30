@@ -378,6 +378,23 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
                 });
                 break;
 
+            case 'thread:created':
+                // ✅ THREAD AWARENESS: Update parent message when thread is created
+                const { parentMessageId, replyCount, lastReplyAt } = event.payload;
+                console.log('🧵 [THREAD][AWARENESS] Thread created, updating parent message:', {
+                    parentMessageId,
+                    replyCount
+                });
+
+                // Update the parent message to show it has a thread
+                conversationRef.current.updateEvent(parentMessageId, {
+                    payload: {
+                        replyCount: replyCount,
+                        lastReplyAt: lastReplyAt
+                    }
+                });
+                break;
+
             default:
                 // Unhandled socket event types are silently ignored
                 break;

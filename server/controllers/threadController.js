@@ -126,6 +126,23 @@ exports.postThreadReply = async (req, res) => {
         // Emit socket event for real-time updates
         const io = req.app?.get("io");
         if (io) {
+            const roomName = parentMessage.channel
+                ? `channel:${parentMessage.channel}`
+                : `dm_${parentMessage.dm}`;
+
+            // ✅ THREAD AWARENESS: Emit thread:created on FIRST reply only
+            if (updatedParent.replyCount === 1) {
+                io.to(roomName).emit("thread:created", {
+                    parentMessageId: messageId,
+                    channelId: parentMessage.channel,
+                    dmId: parentMessage.dm,
+                    replyCount: 1,
+                    lastReplyAt: new Date().toISOString(),
+                    parentMessage: updatedParent
+                });
+                console.log(`[THREAD][REALTIME] Emitted thread:created for parent ${messageId}`);
+            }
+
             if (parentMessage.channel) {
                 // Broadcast thread-reply to channel for thread panel updates
                 io.to(`channel:${parentMessage.channel}`).emit("thread-reply", {
