@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const pollController = require('../controllers/pollController');
+const pollController = require('../src/features/polls/poll.controller');
 const authMiddleware = require('../middleware/auth');
 
 // All routes require authentication

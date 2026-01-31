@@ -255,8 +255,8 @@ exports.resolveDMSession = async (req, res) => {
             workspace: workspaceId,
             participants: {
                 $all: [
-                    mongoose.Types.ObjectId(currentUserId),
-                    mongoose.Types.ObjectId(otherUserId)
+                    new mongoose.Types.ObjectId(currentUserId),
+                    new mongoose.Types.ObjectId(otherUserId)
                 ],
                 $size: 2
             }
@@ -283,7 +283,9 @@ exports.resolveDMSession = async (req, res) => {
         }
 
         return res.json({
+            success: true,
             dmSessionId: dmSession._id,
+            otherUserId: otherUserId,
             workspaceId: dmSession.workspace,
             participants: dmSession.participants
         });

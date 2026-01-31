@@ -1,12 +1,13 @@
-const Poll = require("../models/Poll");
-const Channel = require("../models/Channel");
-const User = require("../models/User");
+const Poll = require("../../../models/Poll");
+const Channel = require("../../../models/Channel");
+const User = require("../../../models/User");
 
 /**
  * Create a new poll in a channel
  * POST /api/polls
  */
 exports.createPoll = async (req, res) => {
+    console.log('🔄 [POLLS:MODULAR] Function invoked: createPoll');
     try {
         const { channelId, question, options, type } = req.body;
         const userId = req.user.sub;
@@ -60,10 +61,41 @@ exports.createPoll = async (req, res) => {
 };
 
 /**
+ * Get a single poll by ID
+ * GET /api/polls/:pollId
+ */
+exports.getPollById = async (req, res) => {
+    console.log('🔄 [POLLS:MODULAR] Function invoked: getPollById');
+    try {
+        const { pollId } = req.params;
+        const userId = req.user.sub;
+
+        const poll = await Poll.findById(pollId)
+            .populate('createdBy', 'username email profilePicture');
+
+        if (!poll) {
+            return res.status(404).json({ error: "Poll not found" });
+        }
+
+        // Verify user is a member of the channel
+        const channel = await Channel.findById(poll.channel);
+        if (!channel || !channel.isMember(userId)) {
+            return res.status(403).json({ error: "You must be a channel member to view this poll" });
+        }
+
+        res.json({ poll });
+    } catch (err) {
+        console.error("Error fetching poll:", err);
+        res.status(500).json({ error: "Failed to fetch poll" });
+    }
+};
+
+/**
  * Get all polls for a channel
  * GET /api/polls/channel/:channelId
  */
 exports.getPollsByChannel = async (req, res) => {
+    console.log('🔄 [POLLS:MODULAR] Function invoked: getPollsByChannel');
     try {
         const { channelId } = req.params;
         const userId = req.user.sub;
@@ -94,6 +126,7 @@ exports.getPollsByChannel = async (req, res) => {
  * POST /api/polls/:pollId/vote
  */
 exports.vote = async (req, res) => {
+    console.log('🔄 [POLLS:MODULAR] Function invoked: vote');
     try {
         const { pollId } = req.params;
         const { optionIds } = req.body; // Array of option IDs
@@ -162,6 +195,7 @@ exports.vote = async (req, res) => {
  * DELETE /api/polls/:pollId
  */
 exports.deletePoll = async (req, res) => {
+    console.log('🔄 [POLLS:MODULAR] Function invoked: deletePoll');
     try {
         const { pollId } = req.params;
         const userId = req.user.sub;
@@ -194,6 +228,7 @@ exports.deletePoll = async (req, res) => {
  * PATCH /api/polls/:pollId/close
  */
 exports.closePoll = async (req, res) => {
+    console.log('🔄 [POLLS:MODULAR] Function invoked: closePoll');
     try {
         const { pollId } = req.params;
         const userId = req.user.sub;

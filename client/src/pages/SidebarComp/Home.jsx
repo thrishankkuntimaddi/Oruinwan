@@ -18,6 +18,13 @@ const Home = () => {
 
   useEffect(() => {
     const detectChat = async () => {
+      console.log('[Home] ═══════════════════════════════════════');
+      console.log('[Home] detectChat triggered');
+      console.log('[Home] location.pathname:', location.pathname);
+      console.log('[Home] id:', id, 'dmId:', dmId);
+      console.log('[Home] workspaceId:', workspaceId);
+      console.log('[Home] ═══════════════════════════════════════');
+
       // Reset activeChat when route changes to prevent stale data
       setActiveChat(null);
       setIsLoading(true);
