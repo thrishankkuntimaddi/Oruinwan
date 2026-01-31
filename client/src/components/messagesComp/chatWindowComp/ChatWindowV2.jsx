@@ -1,16 +1,8 @@
 // client/src/components/messagesComp/chatWindowComp/ChatWindowV2.jsx
-// NEW: Refactored ChatWindow using hooks and event-based architecture
-// This is the new version that will eventually replace chatWindow.jsx
+// Unified Chat Interface - Canonical Implementation
 
-/**
- * @owner chat-module
- * @status legacy
- * @remove-after 2026-03
- * @deprecated Use src/modules/chat/components/ChatWindow.jsx instead
- * 
- * FROZEN: This component is in legacy mode. Do NOT add new features here.
- * All new chat functionality should go to src/modules/chat/components/
- */
+
+
 
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { useChatSocket, useConversation, useMessageActions } from '../../../hooks';

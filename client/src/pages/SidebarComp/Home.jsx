@@ -16,6 +16,8 @@ const Home = () => {
 
   useEffect(() => {
     const detectChat = async () => {
+      // Reset activeChat when route changes to prevent stale data
+      setActiveChat(null);
       setIsLoading(true);
       try {
         // 1. Check if it's a channel route
@@ -60,7 +62,11 @@ const Home = () => {
           const targetId = dmId || id; // Use dmId for new DMs, id for existing DMs
 
           if (targetId) {
+            console.log('[Home] ═══════════════════════════════════════');
             console.log('[Home] Processing DM with targetId:', targetId);
+            console.log('[Home] URL:', location.pathname);
+            console.log('[Home] id param:', id, 'dmId param:', dmId);
+            console.log('[Home] ═══════════════════════════════════════');
 
             // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
             // DM E2EE FIX: Always resolve to DM session ID before opening ChatWindow
@@ -118,18 +124,28 @@ const Home = () => {
             }
 
             // Now fetch member info for display
+            console.log('[Home] Fetching workspace members, otherUserId:', otherUserId);
             const res = await api.get(`/api/workspaces/${workspaceId}/members`);
             const members = res.data.members || [];
+            console.log('[Home] Total members fetched:', members.length);
 
             let member = members.find(m =>
               String(m._id || m.id) === String(otherUserId) ||
               String(m.user?._id || m.user?.id) === String(otherUserId)
             );
 
+            console.log('[Home] Found member:', member);
+
             // Extract user data from nested structure if needed
             const userData = member?.user || member;
             const memberName = userData?.username || userData?.name || userData?.email?.split('@')[0];
             const memberPicture = userData?.profilePicture || userData?.avatar;
+
+            console.log('[Home] Extracted member data:', {
+              memberName,
+              memberPicture,
+              userData
+            });
 
             // Determine status
             let status = "offline";
@@ -138,7 +154,7 @@ const Home = () => {
             }
 
             // ✅ CRITICAL: Always pass DM SESSION ID, never user ID
-            setActiveChat({
+            const chatObject = {
               id: resolvedDMSessionId,  // ✅ DM session ID (not user ID)
               userId: otherUserId,       // Store other user's ID for display
               name: memberName || "Unknown User",
@@ -148,7 +164,10 @@ const Home = () => {
               isNew: location.pathname.includes("/dm/new/"),
               workspaceId,
               workspaceRole: activeWorkspace?.role
-            });
+            };
+
+            console.log('[Home] Setting activeChat to:', chatObject);
+            setActiveChat(chatObject);
           }
           return;
         }
