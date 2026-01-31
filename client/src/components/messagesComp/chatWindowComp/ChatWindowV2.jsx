@@ -9,14 +9,8 @@
 
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { useChatSocket, useConversation, useMessageActions } from '../../../hooks';
-import { ConversationStream } from '../events';
 import Header from './header/header.jsx';
-import FooterInput from './footer/footerInput.jsx';
-import ThreadPanel from './ThreadPanel.jsx';
 import ChannelTabs from './tabs/ChannelTabs.jsx';
-import CanvasTab from './tabs/CanvasTab.jsx';
-import TasksTab from './tabs/TasksTab.jsx';
-import ThreadsTab from './tabs/ThreadsTab.jsx';
 import PollCreationModal from './modals/PollCreationModal.jsx';
 import MemberListModal from './modals/MemberListModal.jsx';
 import ContactInfoModal from './modals/contactInfoModal.jsx';
@@ -25,11 +19,10 @@ import { useAuth } from '../../../contexts/AuthContext';
 import { useSocket } from '../../../contexts/SocketContext';
 import api from '../../../services/api';
 import { useToast } from '../../../contexts/ToastContext';
-import { FileText, Layout, Plus, Trash2, MoreVertical, Search, Grid, List as ListIcon, Edit2, Share2, Lock } from 'lucide-react';
-import CanvasCard from './CanvasCard.jsx';
-import ChannelJoinPrompt from './states/ChannelJoinPrompt.jsx';
 
-
+// Extracted view components
+import CentralContentView from './views/CentralContentView.jsx';
+import ErrorDisplay from './views/ErrorDisplay.jsx';
 
 import './chatWindow.css';
 
@@ -732,228 +725,74 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
                 />
             )}
 
+
             {/* Main Content Area - flex to fill space */}
-            <div className="chat-content" style={{ display: 'flex', flex: 1, overflow: 'hidden', minHeight: 0, backgroundColor: 'var(--bg-primary)' }}>
-                {/* Access-gate UI: non-member, discoverable public channel */}
-                {!isMember && isDiscoverablePublicChannel ? (
-                    <ChannelJoinPrompt
-                        chatName={chat?.name}
-                        isJoining={isJoining}
-                        onJoinChannel={handleJoinChannel}
-                        onIgnore={onClose}
-                    />
-                ) : activeTab === 'chat' ? (
-                    <>
-                        {/* Main Stream - flex column */}
-                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minHeight: 0 }}>
-                            {/* Conversation Stream - scrollable */}
-                            <ConversationStream
-                                events={conversation.events}
-                                systemEvents={chat.systemEvents || []}
-                                creatorName={chat.creatorName}
-                                loading={conversation.loading}
-                                onLoadMore={conversation.loadMore}
-                                hasMore={conversation.hasMore}
-                                actions={enhancedActions}
-                                conversationType={conversationType}
-                                channelMembers={channelMembers}
-                                userJoinedAt={userJoinedAt}
-                                onThreadOpen={handleThreadOpen}
-                                threadCounts={threadCounts}
-                                replyingTo={replyingTo}
-                                onCancelReply={() => setReplyingTo(null)}
-                                currentUserId={currentUserId}
-                            />
+            <CentralContentView
+                // Tab routing
+                activeTab={activeTab}
+                tabs={tabs}
 
-                            {/* Footer - fixed at bottom */}
-                            <FooterInput
-                                newMessage={newMessage}
-                                onChange={handleMessageChange}
-                                onSend={handleSend}
-                                onAttach={handleAttach}
-                                showAttach={showAttach}
-                                setShowAttach={setShowAttach}
-                                showEmoji={showEmoji}
-                                setShowEmoji={setShowEmoji}
-                                onPickEmoji={handleEmojiPick}
-                                recording={recording}
-                                setRecording={setRecording}
-                                blocked={muted}
-                                setNewMessage={setNewMessage}
-                                disabled={!canInteract} // ✅ FIX 3: SOFT GATE - disable input until ready
-                            />
-                        </div>
-                    </>
-                ) : activeTab === 'tasks' ? (
-                    // Tasks Tab
-                    <TasksTab
-                        channelId={chat.id}
-                        channelName={chat.name}
-                        currentUserId={currentUserId}
-                        socket={rawSocket}
-                    />
-                ) : activeTab === 'threads' ? (
-                    // Threads Tab
-                    <ThreadsTab
-                        channelId={chat.id}
-                        currentUserId={currentUserId}
-                        socket={rawSocket}
-                    />
-                ) : activeTab === 'canvas' ? (
-                    // Default Canvas Tab (Main Canvas Dashboard)
-                    <div className="flex-1 bg-gray-50 dark:bg-gray-900 overflow-y-auto p-8">
-                        <div className="max-w-5xl mx-auto w-full">
-                            {/* Dashboard Header */}
-                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
-                                <div>
-                                    <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2 tracking-tight">Canvas Dashboard</h1>
-                                    <p className="text-gray-500 dark:text-gray-400 font-medium">
-                                        Manage your team's whiteboards and documents
-                                    </p>
-                                </div>
+                // Membership & access
+                isMember={isMember}
+                isDiscoverablePublicChannel={isDiscoverablePublicChannel}
+                isJoining={isJoining}
+                canInteract={canInteract}
 
-                                <div className="flex items-center gap-3 bg-white dark:bg-gray-800 p-1.5 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
-                                    <div className="relative group">
-                                        <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-                                            <Search size={16} className="text-gray-400 group-focus-within:text-blue-500 transition-colors" />
-                                        </div>
-                                        <input
-                                            type="text"
-                                            placeholder="Search canvases..."
-                                            value={dashboardSearch}
-                                            onChange={(e) => setDashboardSearch(e.target.value)}
-                                            className="pl-10 pr-4 py-2 w-48 md:w-64 bg-transparent text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none"
-                                        />
-                                    </div>
-                                    <div className="h-6 w-px bg-gray-200 dark:bg-gray-700 mx-1"></div>
-                                    <button
-                                        onClick={() => setDashboardView('grid')}
-                                        className={`p - 2 rounded - lg transition - all ${dashboardView === 'grid' ? 'bg-gray-100 dark:bg-gray-700 text-blue-600 dark:text-blue-400' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'} `}
-                                        title="Grid View"
-                                    >
-                                        <Grid size={18} />
-                                    </button>
-                                    <button
-                                        onClick={() => setDashboardView('list')}
-                                        className={`p - 2 rounded - lg transition - all ${dashboardView === 'list' ? 'bg-gray-100 dark:bg-gray-700 text-blue-600 dark:text-blue-400' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'} `}
-                                        title="List View"
-                                    >
-                                        <ListIcon size={18} />
-                                    </button>
-                                </div>
-                            </div>
+                // Chat/conversation props
+                chat={chat}
+                conversation={conversation}
+                enhancedActions={enhancedActions}
+                conversationType={conversationType}
+                channelMembers={channelMembers}
+                userJoinedAt={userJoinedAt}
+                currentUserId={currentUserId}
 
-                            {tabs.length === 0 ? (
-                                <div className="flex flex-col items-center justify-center p-16 bg-white dark:bg-gray-800 rounded-3xl border border-dashed border-gray-200 dark:border-gray-700 min-h-[500px] shadow-sm">
-                                    <div className="p-8 bg-blue-50 dark:bg-blue-900/10 rounded-full mb-8 animate-pulse">
-                                        <Layout size={64} className="text-blue-500/80" />
-                                    </div>
-                                    <h3 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-3">No canvases yet</h3>
-                                    <p className="text-gray-500 dark:text-gray-400 text-center max-w-md mb-10 text-lg">
-                                        Create a blank canvas to brainstorm, sketch, or plan projects with your team.
-                                    </p>
-                                    <button
-                                        onClick={() => handleAddTab(`Untitled ${tabs.length + 1} `)}
-                                        className="group flex items-center gap-3 px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-semibold transition-all shadow-xl hover:shadow-blue-600/30 hover:-translate-y-1"
-                                    >
-                                        <Plus size={22} className="group-hover:rotate-90 transition-transform duration-300" />
-                                        Create New Canvas
-                                    </button>
-                                </div>
-                            ) : (
-                                <div className={dashboardView === 'grid' ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6" : "flex flex-col gap-3"}>
+                // Thread state
+                threadCounts={threadCounts}
+                replyingTo={replyingTo}
+                onCancelReply={() => setReplyingTo(null)}
+                activeThread={activeThread}
+                onThreadOpen={handleThreadOpen}
+                onThreadClose={handleThreadClose}
 
-                                    {/* Create New Row (List Only) */}
-                                    {dashboardView === 'list' && (
-                                        <button
-                                            onClick={() => handleAddTab(`Untitled ${tabs.length + 1} `)}
-                                            className="flex items-center gap-4 p-4 bg-white dark:bg-gray-800 rounded-xl border border-dashed border-gray-300 dark:border-gray-700 hover:border-blue-500 text-gray-500 hover:text-blue-600 transition-colors group"
-                                        >
-                                            <div className="p-1.5 bg-gray-100 dark:bg-gray-700 rounded-lg group-hover:bg-blue-50 dark:group-hover:bg-blue-900/20">
-                                                <Plus size={20} />
-                                            </div>
-                                            <span className="font-semibold">Create New Canvas</span>
-                                        </button>
-                                    )}
+                // Message input
+                newMessage={newMessage}
+                onMessageChange={handleMessageChange}
+                onSend={handleSend}
+                onAttach={handleAttach}
+                showAttach={showAttach}
+                setShowAttach={setShowAttach}
+                showEmoji={showEmoji}
+                setShowEmoji={setShowEmoji}
+                onPickEmoji={handleEmojiPick}
+                recording={recording}
+                setRecording={setRecording}
+                muted={muted}
+                setNewMessage={setNewMessage}
 
-                                    {/* Filtered Tabs */}
-                                    {tabs.filter(t => t.name.toLowerCase().includes(dashboardSearch.toLowerCase())).map((tab) => (
-                                        <CanvasCard
-                                            key={tab._id}
-                                            tab={tab}
-                                            view={dashboardView}
-                                            onClick={() => setActiveTab(tab._id)}
-                                            onDelete={(id) => handleDeleteTab(id)}
-                                            onRename={(id, name) => handleRenameTab(id, name)}
-                                            onShare={(id) => handleShareTab(id)}
-                                        />
-                                    ))}
+                // Channel join handlers
+                onJoinChannel={handleJoinChannel}
+                onIgnore={onClose}
 
-                                    {/* Create New Card (Grid Only) - Moved to End */}
-                                    {dashboardView === 'grid' && (
-                                        <button
-                                            onClick={() => handleAddTab(`Untitled ${tabs.length + 1} `)}
-                                            className="flex flex-col items-center justify-center p-8 bg-gray-100/50 dark:bg-gray-800/50 rounded-2xl border-2 border-dashed border-gray-300 dark:border-gray-700 hover:border-blue-500 dark:hover:border-blue-500 hover:bg-white dark:hover:bg-gray-800 transition-all group min-h-[240px]"
-                                        >
-                                            <div className="p-4 bg-white dark:bg-gray-800 rounded-full mb-4 shadow-sm group-hover:shadow-md group-hover:text-blue-600 dark:group-hover:text-blue-400 group-hover:scale-110 transition-all">
-                                                <Plus size={32} />
-                                            </div>
-                                            <span className="font-bold text-gray-500 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 text-lg">Create New</span>
-                                        </button>
-                                    )}
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                ) : (
-                    // Canvas Tab View (Dynamic Tabs)
-                    tabs.find(t => t._id === activeTab) ? (
-                        <CanvasTab
-                            tab={tabs.find(t => t._id === activeTab)}
-                            onSave={(data) => handleSaveCanvas(activeTab, data)}
-                            connected={socket?.connected || false}
-                            socket={rawSocket}
-                            channelId={chat.id}
-                            currentUserId={currentUserId}
-                        />
-                    ) : (
-                        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
-                            <p style={{ color: 'var(--text-muted)' }}>Loading canvas...</p>
-                        </div>
-                    )
-                )}
+                // Socket
+                rawSocket={rawSocket}
+                socket={socket}
 
-                {/* Thread Panel (if active and in chat tab) */}
-                {activeTab === 'chat' && activeThread && (
-                    <ThreadPanel
-                        parentMessage={activeThread}
-                        channelId={conversationId}
-                        conversationType="channel"
-                        onClose={handleThreadClose}
-                        socket={rawSocket}
-                        currentUserId={currentUserId}
-                    />
-                )}
-            </div>
+                // Canvas/dashboard handlers
+                dashboardView={dashboardView}
+                dashboardSearch={dashboardSearch}
+                onDashboardViewChange={setDashboardView}
+                onDashboardSearchChange={setDashboardSearch}
+                onAddTab={handleAddTab}
+                onSaveCanvas={handleSaveCanvas}
+                onDeleteTab={handleDeleteTab}
+                onRenameTab={handleRenameTab}
+                onShareTab={handleShareTab}
+            />
 
             {/* Error Display */}
-            {conversation.error && (
-                <div
-                    style={{
-                        position: 'absolute',
-                        bottom: '5rem',
-                        left: '50%',
-                        transform: 'translateX(-50%)',
-                        background: 'var(--error-color)',
-                        color: 'white',
-                        padding: '0.5rem 1rem',
-                        borderRadius: '0.5rem',
-                        fontSize: '0.875rem'
-                    }}
-                >
-                    {conversation.error}
-                </div>
-            )}
+            <ErrorDisplay error={conversation.error} />
+
 
             {/* Poll Creation Modal */}
             {showPollModal && (
