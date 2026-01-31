@@ -1,7 +1,10 @@
 // client/src/components/messagesComp/chatWindowComp/ChatWindowV2.jsx
 // Unified Chat Interface - Canonical Implementation
 
-
+// 🔒 CANONICAL CHAT WINDOW
+// This file owns ALL chat orchestration logic.
+// UI-only components may be extracted,
+// but business logic MUST remain here unless explicitly migrated.
 
 
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
@@ -23,6 +26,10 @@ import { useSocket } from '../../../contexts/SocketContext';
 import api from '../../../services/api';
 import { useToast } from '../../../contexts/ToastContext';
 import { FileText, Layout, Plus, Trash2, MoreVertical, Search, Grid, List as ListIcon, Edit2, Share2, Lock } from 'lucide-react';
+import CanvasCard from './CanvasCard.jsx';
+import ChannelJoinPrompt from './states/ChannelJoinPrompt.jsx';
+
+
 
 import './chatWindow.css';
 
@@ -727,136 +734,14 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
 
             {/* Main Content Area - flex to fill space */}
             <div className="chat-content" style={{ display: 'flex', flex: 1, overflow: 'hidden', minHeight: 0, backgroundColor: 'var(--bg-primary)' }}>
-                {/* Show Join Prompt if non-member viewing discoverable public channel */}
+                {/* Access-gate UI: non-member, discoverable public channel */}
                 {!isMember && isDiscoverablePublicChannel ? (
-                    <div style={{
-                        flex: 1,
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        padding: '3rem',
-                        textAlign: 'center',
-                        backgroundColor: 'var(--bg-primary)'
-                    }}>
-                        {/* Lock Icon - Remastered */}
-                        <div style={{
-                            width: '120px',
-                            height: '120px',
-                            borderRadius: '50%',
-                            background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(147, 51, 234, 0.1) 100%)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            marginBottom: '2.5rem',
-                            border: '1px solid rgba(59, 130, 246, 0.2)',
-                            boxShadow: '0 8px 32px rgba(59, 130, 246, 0.1)',
-                            animation: 'pulse 3s infinite'
-                        }}>
-                            <Lock size={48} style={{ color: '#3B82F6', filter: 'drop-shadow(0 2px 4px rgba(59, 130, 246, 0.2))' }} />
-                        </div>
-
-                        {/* Message */}
-                        <h2 style={{
-                            color: 'var(--text-primary)',
-                            fontSize: '2rem',
-                            fontWeight: '700',
-                            marginBottom: '1rem',
-                            textAlign: 'center',
-                            letterSpacing: '-0.025em'
-                        }}>
-                            You're not a member of this channel
-                        </h2>
-
-                        <p style={{
-                            color: 'var(--text-secondary)',
-                            fontSize: '1.1rem',
-                            marginBottom: '3rem',
-                            maxWidth: '500px',
-                            textAlign: 'center',
-                            lineHeight: '1.6'
-                        }}>
-                            Would you like to join <strong>{chat?.name}</strong> to start viewing and sending messages?
-                        </p>
-
-                        {/* Action Buttons */}
-                        <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center', width: '100%', maxWidth: '400px', justifyContent: 'center' }}>
-                            <button
-                                onClick={handleJoinChannel}
-                                disabled={isJoining}
-                                style={{
-                                    flex: 1,
-                                    padding: '1rem 0',
-                                    backgroundColor: isJoining ? '#9CA3AF' : '#3B82F6',
-                                    color: '#FFFFFF',
-                                    border: 'none',
-                                    borderRadius: '12px',
-                                    fontSize: '1rem',
-                                    fontWeight: '600',
-                                    cursor: isJoining ? 'not-allowed' : 'pointer',
-                                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                                    opacity: isJoining ? 0.7 : 1,
-                                    boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    gap: '8px'
-                                }}
-                                onMouseOver={(e) => {
-                                    if (!isJoining) {
-                                        e.currentTarget.style.transform = 'translateY(-1px)';
-                                        e.currentTarget.style.backgroundColor = '#2563EB';
-                                        e.currentTarget.style.boxShadow = '0 6px 16px rgba(59, 130, 246, 0.4)';
-                                    }
-                                }}
-                                onMouseOut={(e) => {
-                                    if (!isJoining) {
-                                        e.currentTarget.style.transform = 'translateY(0)';
-                                        e.currentTarget.style.backgroundColor = '#3B82F6';
-                                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(59, 130, 246, 0.3)';
-                                    }
-                                }}
-                            >
-                                {isJoining ? (
-                                    <>
-                                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                                        <span>Joining...</span>
-                                    </>
-                                ) : 'Join Channel'}
-                            </button>
-
-                            <button
-                                onClick={onClose}
-                                disabled={isJoining}
-                                style={{
-                                    flex: 1,
-                                    padding: '1rem 0',
-                                    backgroundColor: 'transparent',
-                                    color: 'var(--text-secondary)',
-                                    border: '1px solid var(--border-color)',
-                                    borderRadius: '12px',
-                                    fontSize: '1rem',
-                                    fontWeight: '500',
-                                    cursor: isJoining ? 'not-allowed' : 'pointer',
-                                    transition: 'all 0.2s ease'
-                                }}
-                                onMouseOver={(e) => {
-                                    if (!isJoining) {
-                                        e.currentTarget.style.backgroundColor = 'var(--bg-secondary)';
-                                        e.currentTarget.style.borderColor = 'var(--text-secondary)';
-                                    }
-                                }}
-                                onMouseOut={(e) => {
-                                    if (!isJoining) {
-                                        e.currentTarget.style.backgroundColor = 'transparent';
-                                        e.currentTarget.style.borderColor = 'var(--border-color)';
-                                    }
-                                }}
-                            >
-                                Ignore
-                            </button>
-                        </div>
-                    </div>
+                    <ChannelJoinPrompt
+                        chatName={chat?.name}
+                        isJoining={isJoining}
+                        onJoinChannel={handleJoinChannel}
+                        onIgnore={onClose}
+                    />
                 ) : activeTab === 'chat' ? (
                     <>
                         {/* Main Stream - flex column */}
@@ -1118,213 +1003,6 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
     );
 }
 
-// Helper Component for Canvas Card (extracted for cleanliness)
-function CanvasCard({ tab, view, onClick, onDelete, onRename, onShare }) {
-    const [showMenu, setShowMenu] = useState(false);
-    const [isRenaming, setIsRenaming] = useState(false);
-    const [renameValue, setRenameValue] = useState(tab.name);
-    const menuRef = React.useRef(null);
-    const inputRef = React.useRef(null);
-
-    useEffect(() => {
-        const handleClickOutside = (e) => {
-            if (menuRef.current && !menuRef.current.contains(e.target)) {
-                setShowMenu(false);
-            }
-        };
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
-
-    useEffect(() => {
-        if (isRenaming && inputRef.current) {
-            inputRef.current.focus();
-        }
-    }, [isRenaming]);
-
-    const handleSaveRename = (e) => {
-        e.stopPropagation();
-        if (renameValue.trim()) {
-            onRename(tab._id, renameValue.trim());
-        } else {
-            setRenameValue(tab.name); // Revert if empty
-        }
-        setIsRenaming(false);
-    };
-
-    const handleKeyDown = (e) => {
-        if (e.key === 'Enter') handleSaveRename(e);
-        if (e.key === 'Escape') {
-            setIsRenaming(false);
-            setRenameValue(tab.name);
-        }
-    };
-
-    if (view === 'list') {
-        return (
-            <div
-                onClick={onClick}
-                className="group flex items-center justify-between p-4 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-700 hover:shadow-md transition-all cursor-pointer"
-            >
-                <div className="flex items-center gap-4">
-                    <div className="p-2 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg text-indigo-600 dark:text-indigo-400">
-                        <FileText size={20} />
-                    </div>
-                    {isRenaming ? (
-                        <input
-                            ref={inputRef}
-                            value={renameValue}
-                            onChange={(e) => setRenameValue(e.target.value)}
-                            onBlur={handleSaveRename}
-                            onKeyDown={handleKeyDown}
-                            onClick={(e) => e.stopPropagation()}
-                            className="bg-transparent border-b border-blue-500 focus:outline-none text-gray-900 dark:text-gray-100 font-medium w-64"
-                        />
-                    ) : (
-                        <div>
-                            <h3 className="text-gray-900 dark:text-gray-100 font-medium">{tab.name}</h3>
-                            <p className="text-xs text-gray-500">Edited recently</p>
-                        </div>
-                    )}
-                </div>
-
-                <div className="flex items-center gap-2" ref={menuRef}>
-                    <div className="relative">
-                        <button
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                setShowMenu(!showMenu);
-                            }}
-                            className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-                        >
-                            <MoreVertical size={18} />
-                        </button>
-                        {showMenu && (
-                            <div className="absolute right-0 top-full mt-1 w-48 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-100 dark:border-gray-700 z-[60] overflow-hidden py-1">
-                                <button
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        onShare(tab._id);
-                                        setShowMenu(false);
-                                    }}
-                                    className="w-full text-left px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2"
-                                >
-                                    <Share2 size={14} /> Share
-                                </button>
-                                <button
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        setIsRenaming(true);
-                                        setShowMenu(false);
-                                    }}
-                                    className="w-full text-left px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2"
-                                >
-                                    <Edit2 size={14} /> Rename
-                                </button>
-                                <button
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        onDelete(tab._id);
-                                        setShowMenu(false);
-                                    }}
-                                    className="w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2"
-                                >
-                                    <Trash2 size={14} /> Delete
-                                </button>
-                            </div>
-                        )}
-                    </div>
-                </div>
-            </div>
-        );
-    }
-
-    // Grid View
-    return (
-        <div
-            onClick={onClick}
-            className="group relative flex flex-col p-6 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all cursor-pointer min-h-[240px]"
-        >
-            {/* Top Bar */}
-            <div className="flex items-start justify-between mb-6 z-10">
-                <div className="p-3 bg-gradient-to-br from-indigo-50 to-blue-50 dark:from-indigo-900/30 dark:to-blue-900/10 rounded-2xl text-indigo-600 dark:text-indigo-400 shadow-sm">
-                    <FileText size={28} />
-                </div>
-
-                <div className="relative" ref={menuRef}>
-                    <button
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            setShowMenu(!showMenu);
-                        }}
-                        className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-xl transition-all opacity-0 group-hover:opacity-100"
-                    >
-                        <MoreVertical size={20} />
-                    </button>
-                    {showMenu && (
-                        <div className="absolute right-0 top-full mt-1 w-48 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-100 dark:border-gray-700 z-[60] overflow-hidden py-1">
-                            <button
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    onShare(tab._id);
-                                    setShowMenu(false);
-                                }}
-                                className="w-full text-left px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2"
-                            >
-                                <Share2 size={14} /> Share
-                            </button>
-                            <button
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    setIsRenaming(true);
-                                    setShowMenu(false);
-                                }}
-                                className="w-full text-left px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2"
-                            >
-                                <Edit2 size={14} /> Rename
-                            </button>
-                            <button
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    onDelete(tab._id);
-                                }}
-                                className="w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2"
-                            >
-                                <Trash2 size={14} /> Delete
-                            </button>
-                        </div>
-                    )}
-                </div>
-            </div>
-
-            {/* Visual Preview Placeholder */}
-            <div className="absolute inset-0 bg-gradient-to-b from-transparent to-white/5 dark:to-black/20 pointer-events-none rounded-2xl" />
-
-            {/* Bottom Content */}
-            <div className="mt-auto relative z-10">
-                {isRenaming ? (
-                    <input
-                        ref={inputRef}
-                        value={renameValue}
-                        onChange={(e) => setRenameValue(e.target.value)}
-                        onBlur={handleSaveRename}
-                        onKeyDown={handleKeyDown}
-                        onClick={(e) => e.stopPropagation()}
-                        className="bg-transparent border-b-2 border-blue-500 focus:outline-none text-gray-900 dark:text-gray-100 font-bold text-xl w-full mb-1"
-                    />
-                ) : (
-                    <h3 className="font-bold text-xl text-gray-900 dark:text-gray-100 mb-2 truncate tracking-tight group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                        {tab.name}
-                    </h3>
-                )}
-
-                <div className="flex items-center justify-between text-xs font-medium text-gray-400 dark:text-gray-500">
-                    <span className="uppercase tracking-wider">Canvas</span>
-                    <span>Just now</span>
-                </div>
-            </div>
-        </div>
-    );
-}
 
 export default ChatWindowV2;
+
