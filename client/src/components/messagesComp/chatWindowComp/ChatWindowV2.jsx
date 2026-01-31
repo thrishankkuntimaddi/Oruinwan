@@ -11,10 +11,6 @@ import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { useChatSocket, useConversation, useMessageActions } from '../../../hooks';
 import Header from './header/header.jsx';
 import ChannelTabs from './tabs/ChannelTabs.jsx';
-import PollCreationModal from './modals/PollCreationModal.jsx';
-import MemberListModal from './modals/MemberListModal.jsx';
-import ContactInfoModal from './modals/contactInfoModal.jsx';
-import ChannelManagementModal from '../ChannelManagementModal.jsx';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useSocket } from '../../../contexts/SocketContext';
 import api from '../../../services/api';
@@ -23,6 +19,12 @@ import { useToast } from '../../../contexts/ToastContext';
 // Extracted view components
 import CentralContentView from './views/CentralContentView.jsx';
 import ErrorDisplay from './views/ErrorDisplay.jsx';
+import ModalRenderer from './views/ModalRenderer.jsx';
+
+// Custom hooks
+import useHeaderActions from './hooks/useHeaderActions.js';
+import useCanvasActions from './hooks/useCanvasActions.js';
+import useMessageInput from './hooks/useMessageInput.js';
 
 import './chatWindow.css';
 
@@ -98,18 +100,15 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
     const [activeTab, setActiveTab] = useState('chat');
     const [tabs, setTabs] = useState([]);
 
-    // Poll state
-    const [showPollModal, setShowPollModal] = useState(false);
+    // Modal state (consolidated)
+    const [activeModal, setActiveModal] = useState(null);
 
     // Header UI state
     const [showSearch, setShowSearch] = useState(false);
     const [showMenu, setShowMenu] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
-    const [showContactInfo, setShowContactInfo] = useState(false);
-    const [showChannelManagement, setShowChannelManagement] = useState(null);
     const [muted, setMuted] = useState(false);
     const [blocked, setBlocked] = useState(false);
-    const [showMemberList, setShowMemberList] = useState(false);
 
     // Message input state
     const [newMessage, setNewMessage] = useState('');
@@ -142,6 +141,30 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
         conversationRef.current = conversation;
     }, [conversation]);
 
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // Custom Hooks - Extract handler functions
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    const headerActions = useHeaderActions({
+        chat,
+        showToast,
+        onClose,
+        onDeleteChat
+    });
+
+    const canvasActions = useCanvasActions({
+        chat,
+        tabs,
+        setTabs,
+        activeTab,
+        setActiveTab,
+        showToast
+    });
+
+    const messageInputActions = useMessageInput({
+        setNewMessage,
+        setShowEmoji
+    });
+
     // ✅ FIX 3: Explicit socket connection ordering with guards
     // GUARDRAIL: encryptionReady THEN isMember THEN socket.connect()
     const { connectSocket } = useSocket();
@@ -165,56 +188,15 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
     // Conversation keys are ONLY checked/generated when sending first message
     // Missing key = UNINITIALIZED state (normal for new channels)
 
-    // Header action handlers
-    const handleShowThreadsView = useCallback(() => {
-        showToast('Threads view coming soon!', 'info');
-    }, [showToast]);
-
+    // Header action handlers (from custom hook)
+    const handleShowThreadsView = headerActions.handleShowThreadsView;
     const handleShowMemberList = useCallback(() => {
-        setShowMemberList(true);
+        setActiveModal('members');
     }, []);
-
-    const handleExitChannel = useCallback(async () => {
-        if (!window.confirm('Are you sure you want to exit this channel?')) return;
-        try {
-            await api.post(`/api/channels/${chat.id}/exit`);
-            showToast('Exited channel successfully', 'success');
-            onClose?.();
-        } catch (err) {
-            console.error('Exit channel error:', err);
-            showToast(err.response?.data?.message || 'Failed to exit channel', 'error');
-        }
-    }, [chat, onClose, showToast]);
-
-    const handleDeleteChannel = useCallback(async () => {
-        if (!window.confirm('Are you sure you want to permanently delete this channel? This action cannot be undone.')) return;
-        try {
-            await api.delete(`/api/channels/${chat.id}`);
-            showToast('Channel deleted successfully', 'success');
-            onClose?.();
-        } catch (err) {
-            console.error('Delete channel error:', err);
-            showToast(err.response?.data?.message || 'Failed to delete channel', 'error');
-        }
-    }, [chat, onClose, showToast]);
-
-    const handleClearChat = useCallback(async () => {
-        try {
-            await api.post(`/api/dm/${chat.id}/clear`);
-            showToast('Chat cleared successfully', 'success');
-        } catch (err) {
-            console.error('Clear chat error:', err);
-            showToast('Failed to clear chat', 'error');
-        }
-    }, [chat, showToast]);
-
-    const handleDeleteChat = useCallback(() => {
-        if (onDeleteChat) {
-            onDeleteChat();
-        } else {
-            onClose?.();
-        }
-    }, [onDeleteChat, onClose]);
+    const handleExitChannel = headerActions.handleExitChannel;
+    const handleDeleteChannel = headerActions.handleDeleteChannel;
+    const handleClearChat = headerActions.handleClearChat;
+    const handleDeleteChat = headerActions.handleDeleteChat;
 
     // Socket event handler - use conversationRef.current to avoid stale closures
     const handleSocketEvent = useCallback((event) => {
@@ -386,7 +368,7 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
                 // Unhandled socket event types are silently ignored
                 break;
         }
-    }, [currentUserId]); // Include currentUserId in dependencies
+    }, []); // No dependencies needed - all state updates use functional form
 
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     // Initialize socket with event handler
@@ -480,10 +462,10 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
         };
     }, [rawSocket, chat?.type, activeTab]);
 
-    // Handle message input change
-    const handleMessageChange = useCallback((e) => {
-        setNewMessage(e.target.value);
-    }, []);
+    // Message input handlers (from custom hook)
+    const handleMessageChange = messageInputActions.handleMessageChange;
+    const handleEmojiPick = messageInputActions.handleEmojiPick;
+    const handleAttach = messageInputActions.handleAttach;
 
     // Handle sending message from footer
     const handleSend = useCallback(async (markdown) => {
@@ -541,27 +523,15 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [actions, replyingTo, showToast]);
 
-    // Handle emoji pick
-    const handleEmojiPick = useCallback((emoji) => {
-        setNewMessage(prev => prev + emoji);
-        setShowEmoji(false);
-    }, []);
 
-    // Handle attachments
-    const handleAttach = useCallback((file) => {
-        // TODO: Implement file upload
-    }, []);
 
-    // Canvas/Tabs handlers
-    const fetchTabs = useCallback(async () => {
-        if (!chat || chat.type !== 'channel') return;
-        try {
-            const res = await api.get(`/api/channels/${chat.id}/tabs`);
-            setTabs(res.data.tabs || []);
-        } catch (err) {
-            console.error('Fetch tabs error:', err);
-        }
-    }, [chat]);
+    // Canvas/Tab handlers (from custom hook)
+    const fetchTabs = canvasActions.fetchTabs;
+    const handleAddTab = canvasActions.handleAddTab;
+    const handleDeleteTab = canvasActions.handleDeleteTab;
+    const handleRenameTab = canvasActions.handleRenameTab;
+    const handleSaveCanvas = canvasActions.handleSaveCanvas;
+    const handleShareTab = canvasActions.handleShareTab;
 
     useEffect(() => {
         if (chat?.type === 'channel') {
@@ -572,75 +542,7 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
         }
     }, [chat, fetchTabs]);
 
-    const handleAddTab = useCallback(async (name) => {
-        if (tabs.length >= 5) {
-            showToast('Maximum 5 canvases allowed per channel', 'error');
-            return;
-        }
 
-        try {
-            const tempId = 'temp-' + Date.now();
-            const newTab = { _id: tempId, name, type: 'canvas', content: '' };
-            setTabs(prev => [...prev, newTab]);
-            setActiveTab(tempId);
-
-            const res = await api.post(`/api/channels/${chat.id}/tabs`, { name, type: 'canvas' });
-
-            setTabs(prev => prev.filter(t => t._id !== tempId));
-
-            // Add the real tab from response to state if it's not already there (socket might have added it)
-            if (res.data.tab) {
-                setTabs(prev => {
-                    if (prev.find(t => t._id === res.data.tab._id)) return prev;
-                    return [...prev, res.data.tab];
-                });
-                setActiveTab(res.data.tab._id);
-            }
-
-            showToast(`Canvas "${name}" created`, 'success');
-        } catch (err) {
-            console.error('Add tab error:', err);
-            showToast(err.response?.data?.message || 'Failed to create tab', 'error');
-            setTabs(prev => prev.filter(t => !t._id.startsWith('temp-')));
-            setActiveTab('chat');
-        }
-    }, [tabs.length, chat, showToast]);
-
-    const handleDeleteTab = useCallback(async (tabId) => {
-        try {
-            await api.delete(`/api/channels/${chat.id}/tabs/${tabId}`);
-            setTabs(prev => prev.filter(t => t._id !== tabId));
-            if (activeTab === tabId) setActiveTab('chat');
-            showToast('Canvas deleted successfully', 'success');
-        } catch (err) {
-            console.error('Delete tab error:', err);
-            showToast('Failed to delete tab', 'error');
-        }
-    }, [chat, activeTab, showToast]);
-
-    const handleRenameTab = useCallback(async (tabId, name) => {
-        try {
-            await api.put(`/api/channels/${chat.id}/tabs/${tabId}`, { name });
-            setTabs(prev => prev.map(t => t._id === tabId ? { ...t, name } : t));
-        } catch (err) {
-            console.error('Rename tab error:', err);
-            showToast('Failed to rename tab', 'error');
-        }
-    }, [chat, showToast]);
-
-    const handleSaveCanvas = useCallback(async (tabId, data) => {
-        try {
-            await api.put(`/api/channels/${chat.id}/tabs/${tabId}`, data);
-        } catch (err) {
-            console.error('Save canvas error:', err);
-        }
-    }, [chat]);
-
-    const handleShareTab = useCallback((tabId) => {
-        const url = `${window.location.origin}/canvas/${tabId}`;
-        navigator.clipboard.writeText(url);
-        showToast('Link copied to clipboard', 'success');
-    }, [showToast]);
 
     // Poll handler
     const handleCreatePoll = useCallback(async (pollData) => {
@@ -648,7 +550,7 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
             const result = await actions.createPoll(pollData);
             if (result.success) {
                 showToast('Poll created successfully', 'success');
-                setShowPollModal(false);
+                setActiveModal(null);
             } else {
                 showToast(result.error || 'Failed to create poll', 'error');
             }
@@ -682,21 +584,20 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
 
     return (
         <div className="chat-window" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-            {/* Header */}
             <Header
                 chat={chat}
                 onClose={onClose}
                 connected={socket?.connected || false}
                 typingUsers={typingUsers}
-                onCreatePoll={() => setShowPollModal(true)}
+                onCreatePoll={() => setActiveModal('poll')}
                 showSearch={showSearch}
                 setShowSearch={setShowSearch}
                 searchQuery={searchQuery}
                 setSearchQuery={setSearchQuery}
                 showMenu={showMenu}
                 setShowMenu={setShowMenu}
-                setShowContactInfo={setShowContactInfo}
-                setShowChannelManagement={setShowChannelManagement}
+                setShowContactInfo={() => setActiveModal('contact')}
+                setShowChannelManagement={(tab) => setActiveModal(tab ? `channel-${tab}` : 'channel-settings')}
                 muted={muted}
                 setMuted={setMuted}
                 blocked={blocked}
@@ -793,51 +694,29 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
             {/* Error Display */}
             <ErrorDisplay error={conversation.error} />
 
+            {/* Consolidated Modal Renderer */}
+            <ModalRenderer
+                activeModal={activeModal}
+                onClose={() => setActiveModal(null)}
+                modalProps={{
+                    // Poll creation props
+                    onCreate: handleCreatePoll,
+                    channelId: chat?.id,
 
-            {/* Poll Creation Modal */}
-            {showPollModal && (
-                <PollCreationModal
-                    isOpen={showPollModal}
-                    onClose={() => setShowPollModal(false)}
-                    onCreate={handleCreatePoll}
-                    channelId={chat?.id}
-                />
-            )}
+                    // Member list props
+                    members: chat?.members || [],
+                    channelName: chat?.name,
+                    currentUserId,
 
-            {/* Member List Modal */}
-            {showMemberList && (
-                <MemberListModal
-                    isOpen={showMemberList}
-                    onClose={() => setShowMemberList(false)}
-                    members={chat?.members || []}
-                    channelName={chat?.name}
-                    currentUserId={currentUserId}
-                />
-            )}
+                    // Contact info props
+                    contact: chat,
 
-            {/* Contact Info Modal (DMs) */}
-            {showContactInfo && chat?.type === 'dm' && (
-                <ContactInfoModal
-                    isOpen={showContactInfo}
-                    onClose={() => setShowContactInfo(false)}
-                    contact={chat}
-                    currentUserId={currentUserId}
-                />
-            )}
-
-            {/* Channel Management Modal */}
-            {showChannelManagement && chat?.type === 'channel' && (
-                <ChannelManagementModal
-                    channel={{
-                        ...chat,
-                        id: chat.id || chat._id, // Ensure id field exists
-                        workspaceId: workspaceId || chat.workspaceId
-                    }}
-                    onClose={() => setShowChannelManagement(null)}
-                    currentUserId={currentUserId}
-                    initialTab={showChannelManagement}
-                />
-            )}
+                    // Channel management props
+                    channel: chat,
+                    workspaceId,
+                    initialTab: activeModal?.startsWith('channel-') ? activeModal.replace('channel-', '') : 'settings'
+                }}
+            />
         </div>
     );
 }
