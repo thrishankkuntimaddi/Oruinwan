@@ -7,6 +7,7 @@ const auth = require("../middleware/auth");
 
 // Create workspace (personal or company)
 router.post("/", auth, workspaceController.createWorkspace);
+router.post("/create", auth, workspaceController.createWorkspace); // Alias for client compatibility
 
 // IMPORTANT: Specific routes MUST come BEFORE parameterized routes
 // Get MY workspaces (only workspaces I'm a member of)

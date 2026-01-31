@@ -2,7 +2,7 @@
 const express = require("express");
 const router = express.Router();
 const requireAuth = require("../middleware/auth");
-const channelCtrl = require("../controllers/channelController");
+const channelCtrl = require("../src/features/channels/channel.controller");
 
 // create channel
 router.post("/", requireAuth, channelCtrl.createChannel);

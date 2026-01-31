@@ -28,7 +28,7 @@ const {
   resendVerification,
   setPrimaryEmail,
   deleteEmail
-} = require("../controllers/authController");
+} = require("../src/features/auth/auth.controller");
 
 const requireAuth = require("../middleware/auth");
 

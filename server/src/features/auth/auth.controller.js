@@ -3,18 +3,18 @@
 const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
-const User = require("../models/User");
-const sendEmail = require("../utils/sendEmail");
-const { passwordResetTemplate } = require("../utils/emailTemplates");
+const User = require("../../../models/User");
+const sendEmail = require("../../../utils/sendEmail");
+const { passwordResetTemplate } = require("../../../utils/emailTemplates");
 const { OAuth2Client } = require("google-auth-library");
 const axios = require("axios");
 
 // Production hardening utilities
-const { saveWithRetry } = require("../utils/mongooseRetry");
-const { setRefreshTokenCookie, clearRefreshTokenCookie } = require("../utils/cookieHelper");
-const { TIME } = require("../constants");
-const { sha256 } = require("../utils/hashUtils");
-const { handleError } = require("../utils/responseHelpers");
+const { saveWithRetry } = require("../../../utils/mongooseRetry");
+const { setRefreshTokenCookie, clearRefreshTokenCookie } = require("../../../utils/cookieHelper");
+const { TIME } = require("../../../constants");
+const { sha256 } = require("../../../utils/hashUtils");
+const { handleError } = require("../../../utils/responseHelpers");
 
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
@@ -44,6 +44,7 @@ function generateRefreshToken(user) {
 // SIGNUP (with Company Assignment Logic)
 // ----------------------------------------------------
 exports.signup = async (req, res) => {
+  console.log('🔄 [MODULAR AUTH] Function invoked: signup');
   try {
     const { username, email, password, phone, phoneCode, inviteToken } = req.body;
 
@@ -81,10 +82,10 @@ exports.signup = async (req, res) => {
     // ==================== COMPANY ASSIGNMENT LOGIC ====================
 
     const emailLower = email.toLowerCase();
-    const Company = require("../models/Company");
-    const Invite = require("../models/Invite");
-    const Workspace = require("../models/Workspace");
-    const Channel = require("../models/Channel");
+    const Company = require("../../../models/Company");
+    const Invite = require("../../../models/Invite");
+    const Workspace = require("../../../models/Workspace");
+    const Channel = require("../../../models/Channel");
 
     // Helper to extract domain
     const extractDomain = (email) => {
@@ -342,6 +343,7 @@ exports.signup = async (req, res) => {
 // VERIFY EMAIL
 // ----------------------------------------------------
 exports.verifyEmail = async (req, res) => {
+  console.log('🔄 [MODULAR AUTH] Function invoked: verifyEmail');
   try {
     const { token, email } = req.query;
 
@@ -378,6 +380,7 @@ exports.verifyEmail = async (req, res) => {
 // LOGIN
 // ----------------------------------------------------
 exports.login = async (req, res) => {
+  console.log('🔄 [MODULAR AUTH] Function invoked: login');
   try {
     const { email, password } = req.body;
 
@@ -394,7 +397,7 @@ exports.login = async (req, res) => {
     let isCompanyAccount = false;
     let targetCompanyId = null;
 
-    const Company = require("../models/Company");
+    const Company = require("../../../models/Company");
 
     // Check if strict public provider (gmail, outlook, etc.) - Simplified check
     // In a real app we might have a list of public providers. 
@@ -585,6 +588,7 @@ exports.login = async (req, res) => {
 // REFRESH TOKEN
 // ----------------------------------------------------
 exports.refresh = async (req, res) => {
+  console.log('🔄 [MODULAR AUTH] Function invoked: refresh');
   const MAX_RETRIES = 3;
   let attempts = 0;
 
@@ -717,6 +721,7 @@ exports.logoutAll = async (req, res) => {
 // FORGOT PASSWORD
 // ----------------------------------------------------
 exports.forgotPassword = async (req, res) => {
+  console.log('🔄 [MODULAR AUTH] Function invoked: forgotPassword');
   try {
     const { email } = req.body;
 
@@ -767,6 +772,7 @@ exports.forgotPassword = async (req, res) => {
 // RESET PASSWORD
 // ----------------------------------------------------
 exports.resetPassword = async (req, res) => {
+  console.log('🔄 [MODULAR AUTH] Function invoked: resetPassword');
   try {
     const { token, email, password } = req.body;
 
@@ -1077,6 +1083,7 @@ exports.updatePassword = async (req, res) => {
 // SET PASSWORD (For OAuth Users)
 // ----------------------------------------------------
 exports.setPassword = async (req, res) => {
+  console.log('🔄 [MODULAR AUTH] Function invoked: setPassword (OAuth)');
   try {
     const { password } = req.body;
     const userId = req.user.sub;
@@ -1120,7 +1127,7 @@ exports.setPassword = async (req, res) => {
 
     // Send confirmation email
     try {
-      const { passwordSetTemplate } = require('../utils/emailTemplates');
+      const { passwordSetTemplate } = require('../../../utils/emailTemplates');
       const template = passwordSetTemplate(user.username, user.authProvider);
 
       await sendEmail({
@@ -1151,6 +1158,7 @@ exports.setPassword = async (req, res) => {
 // GOOGLE LOGIN (FINAL)
 // ----------------------------------------------------
 exports.googleLogin = async (req, res) => {
+  console.log('🔄 [MODULAR AUTH] Function invoked: googleLogin');
   try {
     const { credential, accessToken: googleAccessToken } = req.body;
 
@@ -1180,8 +1188,15 @@ exports.googleLogin = async (req, res) => {
 
     let user = await User.findOne({ email });
 
+    // Track if this is a new user
+    let isNewUser = false;
+    let needsPasswordSetup = false;
+
     // CREATE USER IF NEW
     if (!user) {
+      isNewUser = true;
+      needsPasswordSetup = true;
+
       const randomPassword = crypto.randomBytes(16).toString("hex");
       const randomHash = await bcrypt.hash(randomPassword, 12);
 
@@ -1194,6 +1209,12 @@ exports.googleLogin = async (req, res) => {
         googleAccount: true,
         passwordHash: randomHash, // <-- SAFE DEFAULT
       });
+    } else {
+      // Existing user - check if they need to set up password
+      // If they only have Google login (no custom password), they might need to set one
+      if (user.googleAccount && !user.passwordHash) {
+        needsPasswordSetup = true;
+      }
     }
 
     // TOKENS
@@ -1217,11 +1238,14 @@ exports.googleLogin = async (req, res) => {
     return res.json({
       message: "Google login success",
       accessToken,
+      isFirstLogin: isNewUser,  // Client checks for isFirstLogin
+      requiresPasswordSetup: needsPasswordSetup,  // Client checks for requiresPasswordSetup
       user: {
         username: user.username,
         email: user.email,
         profilePicture: user.profilePicture,
         userStatus: user.userStatus,
+        googleAccount: user.googleAccount,
       },
     });
 
@@ -1387,7 +1411,7 @@ exports.revokeOtherSessions = async (req, res) => {
 // ----------------------------------------------------
 // EMAIL MANAGEMENT
 // ----------------------------------------------------
-const { generateVerificationCode, emailVerificationTemplate } = require("../utils/emailTemplates");
+const { generateVerificationCode, emailVerificationTemplate } = require("../../../utils/emailTemplates");
 
 // Add new email
 exports.addEmail = async (req, res) => {
@@ -1706,3 +1730,50 @@ exports.deleteEmail = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
+
+// ----------------------------------------------------
+// SKIP PASSWORD SETUP (OAuth Users)
+// ----------------------------------------------------
+exports.skipPassword = async (req, res) => {
+  console.log('🔄 [MODULAR AUTH] Function invoked: skipPassword');
+  try {
+    const userId = req.user.sub;
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Only allow for OAuth users who haven't set a password
+    if (user.authProvider === 'local') {
+      return res.status(400).json({
+        message: "This endpoint is only for OAuth users"
+      });
+    }
+
+    if (user.passwordSetAt) {
+      return res.status(400).json({
+        message: "Password already set. Cannot skip."
+      });
+    }
+
+    // Mark password as skipped
+    user.passwordSkipped = true;
+    await saveWithRetry(user);
+
+    return res.json({
+      message: "Password setup skipped. You can set a password later in settings.",
+      passwordSkipped: true
+    });
+
+  } catch (err) {
+    console.error("SKIP PASSWORD ERROR:", err);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+
+// ----------------------------------------------------
+// BACKWARD COMPATIBILITY ALIASES
+// ----------------------------------------------------
+// Legacy routes expect 'setOAuthPassword' but modular uses 'setPassword'
+exports.setOAuthPassword = exports.setPassword;

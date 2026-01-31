@@ -11,6 +11,8 @@ const Channel = require('../../../models/Channel');
 const User = require('../../../models/User');
 const DMSession = require('../../../models/DMSession');
 const { handleError } = require('../../../utils/responseHelpers');
+const conversationKeysService = require('../conversations/conversationKeys.service');
+const mongoose = require('mongoose');
 
 // ==================== DIRECT MESSAGES ====================
 
@@ -19,6 +21,7 @@ const { handleError } = require('../../../utils/responseHelpers');
  * POST /api/messages/direct
  */
 exports.sendDirectMessage = async (req, res) => {
+    console.log('🔄 [MESSAGES:MODULAR] Function invoked: sendDirectMessage');
     try {
         const senderId = req.user.sub;
         const {
@@ -127,6 +130,7 @@ exports.sendDirectMessage = async (req, res) => {
  * GET /api/messages/workspace/:workspaceId/dm/:dmSessionId
  */
 exports.getDMs = async (req, res) => {
+    console.log('🔄 [MESSAGES:MODULAR] Function invoked: getDMs');
     try {
         const userId = req.user.sub;
         const { workspaceId, dmSessionId, dmId } = req.params;
@@ -222,6 +226,7 @@ exports.getDMs = async (req, res) => {
  * GET /api/messages/workspace/:workspaceId/dms
  */
 exports.getWorkspaceDMList = async (req, res) => {
+    console.log('🔄 [MESSAGES:MODULAR] Function invoked: getWorkspaceDMList');
     try {
         const userId = req.user.sub;
         const { workspaceId } = req.params;
@@ -234,6 +239,60 @@ exports.getWorkspaceDMList = async (req, res) => {
     }
 };
 
+/**
+ * Resolve user ID to DM session ID
+ * Find or create DM session with encryption keys
+ * GET /api/messages/workspace/:workspaceId/dm/resolve/:userId
+ */
+exports.resolveDMSession = async (req, res) => {
+    console.log('🔄 [MESSAGES:MODULAR] Function invoked: resolveDMSession');
+    try {
+        const { workspaceId, userId: otherUserId } = req.params;
+        const currentUserId = req.user.sub;
+
+        // Find existing DM session
+        let dmSession = await DMSession.findOne({
+            workspace: workspaceId,
+            participants: {
+                $all: [
+                    mongoose.Types.ObjectId(currentUserId),
+                    mongoose.Types.ObjectId(otherUserId)
+                ],
+                $size: 2
+            }
+        });
+
+        // If not exist, create new DM session + conversation key
+        if (!dmSession) {
+            dmSession = await DMSession.create({
+                workspace: workspaceId,
+                participants: [currentUserId, otherUserId],
+                createdAt: new Date()
+            });
+
+            // Create conversation key for DM (E2EE bootstrapping)
+            await conversationKeysService.createConversationKey(
+                dmSession._id,
+                'dm',
+                [currentUserId, otherUserId]
+            );
+
+            console.log(`✅ [MESSAGES:MODULAR][RESOLVE_DM] Created new DM session ${dmSession._id} with keys`);
+        } else {
+            console.log(`✅ [MESSAGES:MODULAR][RESOLVE_DM] Found existing DM session ${dmSession._id}`);
+        }
+
+        return res.json({
+            dmSessionId: dmSession._id,
+            workspaceId: dmSession.workspace,
+            participants: dmSession.participants
+        });
+    } catch (err) {
+        console.error('[MESSAGES:MODULAR][RESOLVE_DM] ERROR:', err);
+        return handleError(res, err, 'RESOLVE DM SESSION ERROR');
+    }
+};
+
 // ==================== CHANNEL MESSAGES ====================
 
 /**
@@ -241,6 +300,7 @@ exports.getWorkspaceDMList = async (req, res) => {
  * POST /api/messages/channel
  */
 exports.sendChannelMessage = async (req, res) => {
+    console.log('🔄 [MESSAGES:MODULAR] Function invoked: sendChannelMessage');
     try {
         const senderId = req.user.sub;
         const {
@@ -307,6 +367,7 @@ exports.sendChannelMessage = async (req, res) => {
  * GET /api/messages/channel/:channelId
  */
 exports.getChannelMessages = async (req, res) => {
+    console.log('🔄 [MESSAGES:MODULAR] Function invoked: getChannelMessages');
     try {
         const userId = req.user.sub;
         const { channelId } = req.params;

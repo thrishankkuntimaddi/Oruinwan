@@ -12,7 +12,7 @@ const {
   getChannelMessages,
   getWorkspaceDMList,
   resolveDMSession
-} = require("../controllers/messagesController");
+} = require("../src/modules/messages/messages.controller");
 
 // -----------------------
 // FILE UPLOAD
