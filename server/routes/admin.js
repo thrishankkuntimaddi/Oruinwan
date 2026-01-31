@@ -1,4 +1,4 @@
-
+// TODO (Phase 2D): Extract inline admin route logic into admin.controller.js
 const express = require('express');
 const router = express.Router();
 const mongoose = require('mongoose');

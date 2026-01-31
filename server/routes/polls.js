@@ -1,3 +1,4 @@
+// CANONICAL: src/features/polls/poll.controller.js
 const express = require('express');
 const router = express.Router();
 const pollController = require('../src/features/polls/poll.controller');

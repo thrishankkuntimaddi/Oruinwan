@@ -1,4 +1,5 @@
 // server/routes/departments.js
+// TODO (Phase 2D): Create departments.controller.js and move inline logic
 const express = require('express');
 const router = express.Router();
 const Department = require('../models/Department');

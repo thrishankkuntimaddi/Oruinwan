@@ -1,4 +1,6 @@
 // server/routes/messages.js
+// CANONICAL: src/modules/messages/messages.controller.js
+// TODO (Phase 2D): Migrate threadController to src/modules/threads/threads.controller.js
 const express = require("express");
 const router = express.Router();
 
