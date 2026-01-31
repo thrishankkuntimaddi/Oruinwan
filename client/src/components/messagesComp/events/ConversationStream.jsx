@@ -10,17 +10,48 @@ import MeetingEvent from './MeetingEvent';
 import JoinMarker from '../chatWindowComp/messages/JoinMarker';
 import { Loader2 } from 'lucide-react';
 
+// ⚠️ PURE RENDERING COMPONENT
+// This component receives ALL business logic as props (actions, callbacks).
+// DO NOT add API calls, socket emissions, encryption logic, or state mutations here.
+// Business orchestration lives in ChatWindowV2.jsx + useMessageActions.js
+// This component ONLY: renders messages, handles scroll, groups by date.
+
+
 /**
- * Renders a unified stream of conversation events
- * @param {array} events - Array of conversation events
- * @param {boolean} loading - Loading state
- * @param {function} onLoadMore - Callback for pagination
+ * ConversationStream - Pure Message Rendering Layer
+ * 
+ * ARCHITECTURE: This component is a PURE RENDERER that receives all business logic as props.
+ * It delegates actions to child components (MessageEvent, PollEvent) without executing them.
+ * 
+ * RESPONSIBILITIES:
+ * ✅ Render message stream with infinite scroll
+ * ✅ Group messages by date
+ * ✅ Merge system events into timeline
+ * ✅ Handle scroll position maintenance
+ * ✅ Display loading states and empty states
+ * 
+ * DOES NOT (Business logic in parent):
+ * ❌ Make API calls
+ * ❌ Emit socket events
+ * ❌ Perform encryption/decryption
+ * ❌ Mutate message state
+ * ❌ Contain business handlers
+ * 
+ * @param {array} events - Array of conversation events (messages, polls, meetings)
+ * @param {array} systemEvents - System events (joins, leaves, channel created)
+ * @param {string} creatorName - Channel creator name (for system events)
+ * @param {boolean} loading - Loading state for pagination
+ * @param {function} onLoadMore - Callback for pagination (handled by useConversation)
  * @param {boolean} hasMore - Whether more messages exist
- * @param {object} actions - Message actions from useMessageActions
- * @param {string} conversationType - "channel" | "dm"
+ * @param {object} actions - Message actions from useMessageActions (delegated to children)
+ * @param {string} conversationType - "channel" | "dm"  
  * @param {array} channelMembers - Channel members with join dates (for markers)
- * @param {date} userJoinedAt - When current user joined (for marker)
- * @param {function} onThreadOpen - Callback when thread is opened
+ * @param {date} userJoinedAt - When current user joined (for join marker)
+ * @param {function} onThreadOpen - Callback when thread is opened (handled by ChatWindowV2)
+ * @param {object} replyingTo - Current reply state
+ * @param {function} onCancelReply - Callback to cancel reply
+ * @param {string} currentUserId - Current user ID
+ * @param {object} threadCounts - Thread reply counts by message ID
  */
 function ConversationStream({
     events = [],
