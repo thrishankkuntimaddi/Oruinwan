@@ -1121,6 +1121,7 @@ exports.setPassword = async (req, res) => {
     // Set the password and timestamp
     user.passwordHash = await bcrypt.hash(password, 12);
     user.passwordSetAt = new Date(); // Track when password was set
+    user.passwordLoginEnabled = true; // ✅ Enable password login for OAuth user
     await saveWithRetry(user);
 
     console.log(`✅ Password set for OAuth user: ${user.email} (${user.authProvider})`);
@@ -1207,6 +1208,7 @@ exports.googleLogin = async (req, res) => {
         googleId,
         profilePicture: picture,
         googleAccount: true,
+        authProvider: "google", // ✅ Required for setPassword endpoint to work
         passwordHash: randomHash, // <-- SAFE DEFAULT
       });
     } else {

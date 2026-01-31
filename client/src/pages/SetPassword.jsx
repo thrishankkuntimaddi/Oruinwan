@@ -4,7 +4,7 @@ import { Lock, Eye, EyeOff, Check, AlertCircle, Shield, Key, CheckCircle2, Sun, 
 import { useToast } from '../contexts/ToastContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
-import axios from 'axios';
+import api from '../services/api';
 
 const SetPassword = () => {
     const navigate = useNavigate();
@@ -46,9 +46,9 @@ const SetPassword = () => {
 
         setLoading(true);
         try {
-            await axios.post('/api/auth/oauth/set-password', {
+            await api.post('/api/auth/oauth/set-password', {
                 password
-            }, { withCredentials: true });
+            });
 
             showToast('Password set successfully!', 'success');
 
@@ -75,7 +75,7 @@ const SetPassword = () => {
     const handleSkip = async () => {
         setLoading(true);
         try {
-            await axios.post('/api/auth/oauth/skip-password', {}, { withCredentials: true });
+            await api.post('/api/auth/oauth/skip-password');
 
             showToast('You can set a password later from settings', 'info');
 

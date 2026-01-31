@@ -72,8 +72,14 @@ export default function ContactsProvider({ children }) {
         path: `/channels/${ch._id}`,
         isFavorite: favoriteItemIds.includes(String(ch._id)),
         isPrivate: ch.isPrivate,
+        isDiscoverable: ch.isDiscoverable ?? true, // Default to true for backward compatibility
+        isMember: ch.isMember ?? true, // Assume member if returned by endpoint
         description: ch.description
       }));
+
+      // Filter: Only show channels where user is a member OR channel is discoverable
+      // This ensures non-discoverable public channels don't appear for non-members
+      const filteredChannels = channelsData.filter(ch => ch.isMember || ch.isDiscoverable);
 
       // Format DMs from workspace sessions
       const rawDMs = chatListRes.data.sessions || [];
@@ -125,10 +131,10 @@ export default function ContactsProvider({ children }) {
         role: member.role
       }));
 
-      setChannels(channelsData);
+      setChannels(filteredChannels);
       setDms(dmsData);
       setMembers(membersData);
-      setContacts([...channelsData, ...dmsData]);
+      setContacts([...filteredChannels, ...dmsData]);
 
     } catch (err) {
       console.error("Error loading contacts:", err);
@@ -166,6 +172,8 @@ export default function ContactsProvider({ children }) {
         path: `/channels/${channel._id}`,
         isFavorite: false,
         isPrivate: channel.isPrivate,
+        isDiscoverable: channel.isDiscoverable ?? true,
+        isMember: true, // If we received this event, we're likely a member or it's discoverable
         description: channel.description
       };
       setChannels(prev => [...prev, newChannel]);
