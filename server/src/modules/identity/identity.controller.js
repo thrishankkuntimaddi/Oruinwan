@@ -54,6 +54,69 @@ exports.uploadPublicKey = async (req, res) => {
         console.log(`✅ [PHASE 1] Public ${algorithm} key stored successfully`);
         console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
+        // ============================================================
+        // 🔧 PHASE 2: AUTO-REPAIR - Fix any invariant violations
+        // When a user uploads their public key (possibly late), scan
+        // all channels they're a member of and repair missing keys
+        // ============================================================
+        try {
+            console.log('🔧 [PHASE 2] Starting auto-repair for late key upload...');
+
+            const Channel = require('../../../models/Channel');
+            const conversationKeysService = require('../conversations/conversationKeys.service');
+
+            // Find all channels user is a member of
+            const channels = await Channel.find({
+                'members.user': userId
+            }).select('_id name').lean();
+
+            if (channels.length === 0) {
+                console.log('ℹ️ [PHASE 2] User is not a member of any channels yet');
+            } else {
+                console.log(`🔍 [PHASE 2] Found ${channels.length} channels to check`);
+
+                let repaired = 0;
+                let alreadyOk = 0;
+                let cannotRepair = 0;
+
+                for (const channel of channels) {
+                    try {
+                        const repairResult = await conversationKeysService.repairConversationKeyForUser(
+                            channel._id.toString(),
+                            userId
+                        );
+
+                        if (repairResult.result === 'REPAIR_SUCCESS') {
+                            console.log(`   ✅ Repaired: ${channel.name} (${channel._id})`);
+                            repaired++;
+                        } else if (repairResult.result === 'NO_REPAIR_NEEDED') {
+                            alreadyOk++;
+                        } else {
+                            console.log(`   ⚠️ Cannot repair: ${channel.name} - ${repairResult.reason}`);
+                            cannotRepair++;
+                        }
+                    } catch (repairError) {
+                        console.error(`   ❌ Error repairing ${channel.name}:`, repairError.message);
+                        cannotRepair++;
+                    }
+                }
+
+                console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+                console.log('📊 [PHASE 2] Auto-repair summary:');
+                console.log(`   ✅ Repaired: ${repaired}`);
+                console.log(`   ℹ️  Already OK: ${alreadyOk}`);
+                console.log(`   ⚠️  Cannot repair: ${cannotRepair}`);
+                console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+            }
+        } catch (autoRepairError) {
+            // Don't fail the upload if auto-repair fails
+            console.error('⚠️ [PHASE 2] Auto-repair failed (non-fatal):', autoRepairError);
+            console.error('   Public key upload was successful, but auto-repair skipped');
+        }
+        // ============================================================
+        // END PHASE 2
+        // ============================================================
+
         return res.status(201).json({
             message: 'Public key stored successfully',
             algorithm: keyDoc.algorithm,
