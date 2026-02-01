@@ -255,6 +255,9 @@ app.use("/api/v2/notes", require("./src/features/notes/notes.routes"));
 // Favorites (Migrated from legacy)
 app.use("/api/v2/favorites", require("./src/features/favorites/favorites.routes"));
 
+// Status (Migrated from legacy) - PUBLIC endpoint
+app.use("/api/v2/status", require("./src/features/status/status.routes"));
+
 // ============================================================================
 // 📦 V1 ROUTES (LEGACY - TO BE MIGRATED)
 // ============================================================================
