@@ -24,6 +24,8 @@ const { handleError } = require("../utils/responseHelpers");
 // Import shared services
 const otpService = require("../src/shared/services/otp.service");
 const companyService = require("../src/features/company/company.service");
+const settingsService = require("../src/features/company/settings.service");
+const metricsService = require("../src/features/company/metrics.service");
 
 /**
  * Send OTP (Dev Mode: Logs to Terminal)
@@ -2069,23 +2071,10 @@ exports.checkPhone = async (req, res) => {
 exports.updateCompanyProfile = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, description, industry, size, location, website, phone, address } = req.body;
+    const profileData = req.body;
 
-    const company = await Company.findByIdAndUpdate(
-      id,
-      {
-        name,
-        description,
-        industry,
-        size,
-        location,
-        website,
-        phone,
-        address
-      },
-      { new: true, runValidators: true }
-    );
-
+    // Use service layer
+    const company = await settingsService.updateCompanyProfile(id, profileData);
     if (!company) {
       return res.status(404).json({ message: "Company not found" });
     }
@@ -2107,28 +2096,17 @@ exports.updateCompanyProfile = async (req, res) => {
 exports.updateSecuritySettings = async (req, res) => {
   try {
     const { id } = req.params;
-    const { passwordPolicy, twoFactorAuth, sessionTimeout, ipWhitelist } = req.body;
+    const securityData = req.body;
 
-    const company = await Company.findByIdAndUpdate(
-      id,
-      {
-        "settings.security": {
-          passwordPolicy,
-          twoFactorAuth,
-          sessionTimeout,
-          ipWhitelist
-        }
-      },
-      { new: true, runValidators: true }
-    );
-
-    if (!company) {
+    // Use service layer
+    const settings = await settingsService.updateSecuritySettings(id, securityData);
+    if (!settings) {
       return res.status(404).json({ message: "Company not found" });
     }
 
     return res.json({
       message: "Security settings updated successfully",
-      settings: company.settings?.security
+      settings
     });
   } catch (err) {
     console.error("UPDATE SECURITY SETTINGS ERROR:", err);
@@ -2143,33 +2121,26 @@ exports.updateSecuritySettings = async (req, res) => {
 exports.updateDomainSettings = async (req, res) => {
   try {
     const { id } = req.params;
-    const { autoJoin, ssoEnabled, ssoProvider } = req.body;
+    const domainData = req.body;
 
-    const company = await Company.findById(id);
-    if (!company) {
-      return res.status(404).json({ message: "Company not found" });
-    }
-
-    // Can only enable autoJoin if domain is verified
-    if (autoJoin && !company.domainVerified) {
-      return res.status(400).json({
-        message: "Domain must be verified before enabling auto-join"
-      });
-    }
-
-    company.autoJoinByDomain = autoJoin;
-    if (company.settings) {
-      company.settings.sso = { enabled: ssoEnabled, provider: ssoProvider };
-    }
-
-    await company.save();
+    // Use service layer
+    const result = await settingsService.updateDomainSettings(id, domainData);
 
     return res.json({
       message: "Domain & SSO settings updated successfully",
-      settings: { autoJoin, sso: company.settings?.sso }
+      settings: { autoJoin: result.autoJoin, sso: result.sso }
     });
   } catch (err) {
     console.error("UPDATE DOMAIN SETTINGS ERROR:", err);
+
+    // Handle specific errors
+    if (err.message === 'Company not found') {
+      return res.status(404).json({ message: err.message });
+    }
+    if (err.message === 'Domain must be verified before enabling auto-join') {
+      return res.status(400).json({ message: err.message });
+    }
+
     return res.status(500).json({ message: "Server error" });
   }
 };
@@ -2182,100 +2153,8 @@ exports.getCompanyAnalytics = async (req, res) => {
   try {
     const { id } = req.params;
 
-    // Get basic counts
-    const [totalUsers, workspaces, departments, messages, tasks] = await Promise.all([
-      User.countDocuments({ companyId: id }),
-      require('../models/Workspace').countDocuments({ companyId: id }),
-      require('../models/Department').countDocuments({ companyId: id }),
-      require('../models/Message').countDocuments({ companyId: id }),
-      require('../models/Task').find({ companyId: id })
-    ]);
-
-    // Count active users (logged in last 7 days)
-    const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-    const activeUsers = await User.countDocuments({
-      companyId: id,
-      lastLogin: { $gte: sevenDaysAgo }
-    });
-
-    // Messages stats
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const weekAgo = new Date();
-    weekAgo.setDate(weekAgo.getDate() - 7);
-    const monthAgo = new Date();
-    monthAgo.setDate(monthAgo.getDate() - 30);
-
-    const [messagesToday, messagesWeek, messagesMonth] = await Promise.all([
-      require('../models/Message').countDocuments({
-        companyId: id,
-        createdAt: { $gte: today }
-      }),
-      require('../models/Message').countDocuments({
-        companyId: id,
-        createdAt: { $gte: weekAgo }
-      }),
-      require('../models/Message').countDocuments({
-        companyId: id,
-        createdAt: { $gte: monthAgo }
-      })
-    ]);
-
-    // Task stats
-    const taskStats = {
-      open: tasks.filter(t => t.status === 'open' || t.status === 'in-progress').length,
-      completed: tasks.filter(t => t.status === 'completed').length,
-      overdue: tasks.filter(t => t.dueDate && new Date(t.dueDate) < new Date() && t.status !== 'completed').length
-    };
-
-    // Department stats
-    const departmentList = await require('../models/Department').find({ companyId: id }).lean();
-    const departmentStats = await Promise.all(
-      departmentList.map(async (dept) => {
-        const memberCount = await User.countDocuments({
-          companyId: id,
-          departmentId: dept._id
-        });
-
-        return {
-          name: dept.name,
-          memberCount,
-          activityScore: Math.floor(Math.random() * 100), // Placeholder
-          score: Math.floor(Math.random() * 500) // Placeholder
-        };
-      })
-    );
-
-    // Top users by activity
-    const users = await User.find({ companyId: id })
-      .select('username email')
-      .limit(10)
-      .lean();
-
-    const topUsers = users.map(u => ({
-      ...u,
-      activityCount: Math.floor(Math.random() * 100) // Placeholder
-    })).sort((a, b) => b.activityCount - a.activityCount);
-
-    const analytics = {
-      overview: {
-        totalUsers,
-        activeUsers,
-        totalWorkspaces: workspaces,
-        totalDepartments: departments,
-        messagesCount: {
-          today: messagesToday,
-          week: messagesWeek,
-          month: messagesMonth
-        },
-        tasksStats: taskStats
-      },
-      departmentStats,
-      topUsers,
-      userGrowth: [], // Placeholder for charts
-      activityData: [] // Placeholder for charts
-    };
+    // Use service layer
+    const analytics = await metricsService.getCompanyAnalytics(id);
 
     return res.json(analytics);
   } catch (err) {
