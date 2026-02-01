@@ -1,9 +1,9 @@
-// server/routes/messages.js
+// server/src/features/messages/message.routes.js
 const express = require("express");
 const router = express.Router();
 
-const requireAuth = require("../middleware/auth");
-const { upload } = require("../utils/fileUpload");
+const requireAuth = require("../../shared/middleware/auth");
+const { upload } = require("../../../utils/fileUpload");
 
 const {
   sendDirectMessage,
@@ -11,7 +11,7 @@ const {
   getDMs,
   getChannelMessages,
   getWorkspaceDMList
-} = require("../controllers/messagesController");
+} = require("../../modules/messages/messages.controller");
 
 // -----------------------
 // FILE UPLOAD
@@ -57,7 +57,7 @@ const {
   getThread,
   postThreadReply,
   getThreadCount
-} = require("../controllers/threadController");
+} = require("../../../controllers/threadController");
 
 router.get("/thread/:messageId", requireAuth, getThread);
 router.post("/thread/:messageId", requireAuth, postThreadReply);

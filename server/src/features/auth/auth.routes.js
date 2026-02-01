@@ -27,9 +27,9 @@ const {
   resendVerification,
   setPrimaryEmail,
   deleteEmail
-} = require("../controllers/authController");
+} = require("./auth.controller");
 
-const requireAuth = require("../middleware/auth");
+const requireAuth = require("../../shared/middleware/auth");
 
 // AUTH ROUTES
 router.post("/signup", signup);
@@ -63,7 +63,7 @@ router.delete("/sessions/:id", requireAuth, revokeSession);
 router.get("/users", requireAuth, async (req, res) => {
   try {
     const currentUserId = req.user.sub;
-    const User = require("../models/User");
+    const User = require("../../../models/User");
 
     // Get all users except the current user
     const users = await User.find({ _id: { $ne: currentUserId } })
@@ -82,8 +82,8 @@ router.get("/users", requireAuth, async (req, res) => {
 router.post("/google-login", googleLogin);
 router.post("/google", googleAuth);  // alias
 
-const passport = require("../config/passport");
-const User = require("../models/User");
+const passport = require("../../../config/passport");
+const User = require("../../../models/User");
 const jwt = require("jsonwebtoken");
 
 // Helper to generate token (if not exported from controller)

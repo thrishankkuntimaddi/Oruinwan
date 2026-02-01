@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const pollController = require('../controllers/pollController');
-const authMiddleware = require('../middleware/auth');
+const pollController = require('./poll.controller');
+const authMiddleware = require('../../shared/middleware/auth');
 
 // All routes require authentication
 router.use(authMiddleware);
