@@ -21,8 +21,9 @@ const bcrypt = require("bcryptjs");
 const { sha256 } = require("../utils/hashUtils");
 const { handleError } = require("../utils/responseHelpers");
 
-// Import shared OTP service
+// Import shared services
 const otpService = require("../src/shared/services/otp.service");
+const companyService = require("../src/features/company/company.service");
 
 /**
  * Send OTP (Dev Mode: Logs to Terminal)
@@ -1711,25 +1712,15 @@ exports.getCompany = async (req, res) => {
     const companyId = req.params.id;
     const userId = req.user.sub;
 
-    const company = await Company.findById(companyId)
-      .populate("admins.user", "username email profilePicture")
-      .populate("defaultWorkspace", "name")
-      .populate({
-        path: 'departments',
-        select: 'name head memberCount',
-        populate: {
-          path: 'head',
-          select: 'username email'
-        }
-      });
-
+    // Use service layer
+    const company = await companyService.getCompanyById(companyId);
     if (!company) {
       return res.status(404).json({ message: "Company not found" });
     }
 
-    // Check if user belongs to this company
-    const user = await User.findById(userId);
-    if (user.companyId && user.companyId.toString() !== companyId) {
+    // Check access
+    const { hasAccess } = await companyService.checkUserAccess(userId, companyId);
+    if (!hasAccess) {
       return res.status(403).json({ message: "Access denied" });
     }
 
@@ -1752,22 +1743,13 @@ exports.updateCompany = async (req, res) => {
     const updates = req.body;
 
     // Check if user is admin
-    const user = await User.findById(userId);
-    if (!user || user.companyId.toString() !== companyId) {
-      return res.status(403).json({ message: "Access denied" });
-    }
-
-    if (user.companyRole !== 'owner' && user.companyRole !== 'admin') {
+    const { isAdmin } = await companyService.checkIsAdmin(userId, companyId);
+    if (!isAdmin) {
       return res.status(403).json({ message: "Only admins can update company settings" });
     }
 
-    const company = await Company.findByIdAndUpdate(
-      companyId,
-      { $set: updates },
-      { new: true, runValidators: true }
-    ).populate("admins.user", "username email profilePicture")
-      .populate("defaultWorkspace", "name");
-
+    // Use service layer
+    const company = await companyService.updateCompany(companyId, updates);
     if (!company) {
       return res.status(404).json({ message: "Company not found" });
     }
@@ -1789,24 +1771,21 @@ exports.getCompanyMembers = async (req, res) => {
     const companyId = req.params.id;
     const userId = req.user.sub;
 
+    // Check company exists
     const company = await Company.findById(companyId);
     if (!company) {
       return res.status(404).json({ message: "Company not found" });
     }
 
     // Check access
-    const user = await User.findById(userId);
-    if (user.companyId && user.companyId.toString() !== companyId) {
+    const { hasAccess } = await companyService.checkUserAccess(userId, companyId);
+    if (!hasAccess) {
       return res.status(403).json({ message: "Access denied" });
     }
 
+    // Use service layer
     console.log(`[COMPANY] Fetching members for company ${companyId}`);
-    const members = await User.find({ companyId })
-      .select("username email profilePicture companyRole createdAt lastLoginAt isOnline departments workspaces")
-      .populate("departments", "name")
-      .populate("workspaces.workspace", "name")
-      .lean();
-
+    const members = await companyService.getCompanyMembers(companyId);
     console.log(`[COMPANY] Found ${members.length} members`);
 
     return res.json({ members });
@@ -1831,27 +1810,15 @@ exports.getCompanyMetrics = async (req, res) => {
     }
 
     // Check access
-    const user = await User.findById(userId);
-    if (user.companyId && user.companyId.toString() !== companyId) {
+    const { hasAccess } = await companyService.checkUserAccess(userId, companyId);
+    if (!hasAccess) {
       return res.status(403).json({ message: "Access denied" });
     }
 
-    // Parallel fetch for speed
-    const [totalUsers, activeUsers, totalWorkspaces, totalDepartments] = await Promise.all([
-      User.countDocuments({ companyId }),
-      User.countDocuments({ companyId, isOnline: true }), // Simple "active" check based on online status or lastLogin
-      Workspace.countDocuments({ company: companyId }),
-      Department.countDocuments({ company: companyId })
-    ]);
+    // Use service layer
+    const metrics = await companyService.getCompanyMetrics(companyId);
 
-    return res.json({
-      metrics: {
-        totalUsers,
-        activeUsers,
-        totalWorkspaces,
-        totalDepartments
-      }
-    });
+    return res.json({ metrics });
 
   } catch (err) {
     console.error("GET COMPANY METRICS ERROR:", err);
@@ -1867,82 +1834,38 @@ exports.updateMemberRole = async (req, res) => {
   try {
     const { id: companyId, userId: targetUserId } = req.params;
     const requesterId = req.user.sub;
-    const { role } = req.body;
+    const { role: newRole } = req.body;
 
-    if (!["owner", "admin", "manager", "member", "guest"].includes(role)) {
-      return res.status(400).json({ message: "Invalid role" });
-    }
-
-    const company = await Company.findById(companyId);
-    if (!company) {
-      return res.status(404).json({ message: "Company not found" });
-    }
-
-    // Only owners and admins can change roles
-    if (!company.isAdmin(requesterId)) {
-      return res.status(403).json({ message: "Only company admins can change roles" });
-    }
-
-    // Prevent non-owners from assigning owner role
-    const requester = await User.findById(requesterId);
-    if (role === "owner" && requester.companyRole !== "owner") {
-      return res.status(403).json({ message: "Only owners can assign owner role" });
-    }
-
-    const targetUser = await User.findById(targetUserId);
-    if (!targetUser) {
-      return res.status(404).json({ message: "User not found" });
-    }
-
-    if (targetUser.companyId.toString() !== companyId) {
-      return res.status(400).json({ message: "User does not belong to this company" });
-    }
-
-    // Update role
-    targetUser.companyRole = role;
-    await targetUser.save();
-
-    // Update company admins array if needed
-    if (role === "owner" || role === "admin") {
-      const existingAdmin = company.admins.find(
-        a => a.user.toString() === targetUserId
-      );
-      if (!existingAdmin) {
-        company.admins.push({ user: targetUserId, role });
-        await company.save();
-      }
-    } else {
-      // Remove from admins if downgraded
-      company.admins = company.admins.filter(
-        a => a.user.toString() !== targetUserId
-      );
-      await company.save();
-    }
-
-    // Log role change
-    await logAction({
-      userId: requesterId,
-      action: "user_role_changed",
-      description: `Changed ${targetUser.username}'s role to ${role}`,
-      resourceType: "user",
-      resourceId: targetUserId,
+    // Use service layer
+    const user = await companyService.updateMemberRole({
       companyId,
-      metadata: { oldRole: targetUser.companyRole, newRole: role },
+      targetUserId,
+      requesterId,
+      newRole,
       req
     });
 
     return res.json({
       message: "Role updated successfully",
-      user: {
-        id: targetUser._id,
-        username: targetUser.username,
-        email: targetUser.email,
-        companyRole: targetUser.companyRole
-      }
+      user
     });
 
   } catch (err) {
     console.error("UPDATE MEMBER ROLE ERROR:", err);
+
+    // Handle specific errors
+    if (err.message === "Invalid role" ||
+      err.message === "Company not found" ||
+      err.message === "User not found" ||
+      err.message === "User does not belong to this company") {
+      return res.status(400).json({ message: err.message });
+    }
+
+    if (err.message === "Only company admins can change roles" ||
+      err.message === "Only owners can assign owner role") {
+      return res.status(403).json({ message: err.message });
+    }
+
     return res.status(500).json({ message: "Server error" });
   }
 };
