@@ -261,6 +261,9 @@ app.use("/api/v2/status", require("./src/features/status/status.routes"));
 // Admin (Migrated from legacy) - ADMIN-ONLY endpoints
 app.use("/api/v2/admin", require("./src/features/admin/admin.routes"));
 
+// Audit (Migrated from legacy)
+app.use("/api/v2/audit", require("./src/features/audit/audit.routes"));
+
 // ============================================================================
 // 📦 V1 ROUTES (LEGACY - TO BE MIGRATED)
 // ============================================================================
