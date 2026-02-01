@@ -28,9 +28,6 @@ function DMMessageItem({
     onOpenThread,
     threadCounts,
 }) {
-    const scrollRef = useRef(null);
-    const count = (threadCounts && threadCounts[msg.id]) || msg.replyCount || 0;
-
     // Check if message is from current user
     const senderId = typeof msg.sender === 'object' ? msg.sender?._id : msg.sender;
     const isMe = senderId === currentUserId || msg.sender === "you" || msg.sender === "me";

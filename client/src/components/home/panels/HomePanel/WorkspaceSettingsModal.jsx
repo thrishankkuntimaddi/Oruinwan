@@ -45,7 +45,6 @@ const WorkspaceSettingsModal = ({ showSettingsModal, setShowSettingsModal, setSh
     // Members Tab State
     const [members, setMembers] = useState([]);
     const [loadingMembers, setLoadingMembers] = useState(true);
-    const [memberActionLoading, setMemberActionLoading] = useState({});
     const [openMemberDropdown, setOpenMemberDropdown] = useState(null);
 
     // Stats State (for General and Billing tabs)
@@ -207,7 +206,6 @@ const WorkspaceSettingsModal = ({ showSettingsModal, setShowSettingsModal, setSh
                             isAdmin={isAdmin}
                             members={members}
                             loadingMembers={loadingMembers}
-                            memberActionLoading={memberActionLoading}
                             openMemberDropdown={openMemberDropdown}
                             setOpenMemberDropdown={setOpenMemberDropdown}
                             fetchMembers={fetchMembers}

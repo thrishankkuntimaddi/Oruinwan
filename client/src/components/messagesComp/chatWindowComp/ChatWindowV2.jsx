@@ -241,7 +241,6 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
             case 'message-updated':
                 // Handle message updates (e.g., reply count changed)
                 const { messageId, updates } = event.payload;
-                console.log('[CHATWINDOW][UPDATE] Received message-updated:', { messageId, updates });
 
                 if (messageId && updates) {
                     // ✅ Update the message's replyCount directly in the event object
@@ -260,7 +259,6 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
                             ...prev,
                             [messageId]: updates.replyCount
                         }));
-                        console.log('[CHATWINDOW][UPDATE] Updated thread count for', messageId, 'to', updates.replyCount);
                     }
                 }
                 break;
@@ -341,7 +339,6 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
             case 'thread-reply':
                 // Handle thread reply events - this is primarily for ThreadPanel
                 // The count update is handled by 'message-updated' event which has the authoritative count
-                console.log('[CHATWINDOW][THREAD-REPLY] Received thread-reply, count will be updated by message-updated event');
                 break;
 
             case 'thread:created':
@@ -391,10 +388,6 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
         if (conversationType !== 'dm') return; // DM-ONLY guard - channels/threads skip
         if (!rawSocket || !conversationId) return;
 
-        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        console.log('🔷 [DM-ONLY] Emitting join-dm event (bypassing chat:join)');
-        console.log('🔷 [DM-ONLY] DM Session ID:', conversationId);
-        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
         // Join DM room using DM-specific event
         rawSocket.emit('join-dm', { dmSessionId: conversationId });
@@ -402,7 +395,6 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
         // Leave DM room on unmount
         return () => {
             if (rawSocket?.connected) {
-                console.log('🔷 [DM-ONLY] Leaving DM room:', conversationId);
                 rawSocket.emit('leave-dm', { dmSessionId: conversationId });
             }
         };

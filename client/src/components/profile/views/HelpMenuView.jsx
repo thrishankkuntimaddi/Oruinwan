@@ -1,5 +1,5 @@
 import React from 'react';
-import { ChevronLeft, HelpCircle, BookOpen, Command, Bug, Sparkles, MessageCircle } from 'lucide-react';
+import { ChevronLeft, BookOpen, Command, Bug, Sparkles, MessageCircle } from 'lucide-react';
 
 /**
  * HelpMenuView Component

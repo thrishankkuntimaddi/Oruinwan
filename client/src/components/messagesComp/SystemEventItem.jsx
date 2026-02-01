@@ -15,7 +15,6 @@ export default function SystemEventItem({ event, currentUserId, creatorName }) {
     }
 
     if (process.env.NODE_ENV === 'development') {
-        console.log('[SYSTEM_EVENT] Rendering', event.type, '— timestamp valid:', !!event.timestamp);
     }
 
     // Format date to match ConversationStream separators

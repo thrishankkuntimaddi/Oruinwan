@@ -39,7 +39,6 @@ class ChatEncryptionManager {
         try {
             validateCryptoSetup();
             this.isReady = true;
-            console.log('🔐 Chat encryption initialized');
         } catch (error) {
             console.error('❌ Chat encryption not available:', error);
             this.isReady = false;
@@ -61,7 +60,6 @@ class ChatEncryptionManager {
      */
     setWorkspaceKey(workspaceId, key) {
         this.workspaceKeys.set(workspaceId, key);
-        console.log(`🔑 Workspace key set for: ${workspaceId}`);
     }
 
     /**
@@ -138,7 +136,6 @@ class ChatEncryptionManager {
      */
     clearWorkspaceKey(workspaceId) {
         this.workspaceKeys.delete(workspaceId);
-        console.log(`🗑️ Cleared workspace key for: ${workspaceId}`);
     }
 
     /**
@@ -146,7 +143,6 @@ class ChatEncryptionManager {
      */
     clearAllKeys() {
         this.workspaceKeys.clear();
-        console.log('🗑️ Cleared all workspace keys');
     }
 }
 

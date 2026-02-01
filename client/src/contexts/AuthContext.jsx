@@ -103,9 +103,6 @@ export const AuthProvider = ({ children }) => {
               return;
             }
 
-            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-            console.log('🔐 [PHASE 1] Initializing identity keys for user:', userId);
-            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
             // Dynamically import to avoid circular dependencies
             const identityKeyService = (await import('../services/identityKeyService')).default;
@@ -114,19 +111,10 @@ export const AuthProvider = ({ children }) => {
 
             if (!result.existed) {
               // New keypair generated - upload public key to server
-              console.log('🔑 [PHASE 1] Generating new identity key pair');
               await identityKeyService.uploadPublicKeyToServer();
-              console.log('📤 [PHASE 1] Uploading public key');
-              console.log(`✅ [PHASE 1] Created & uploaded new identity key (${result.algorithm})`);
             } else {
-              console.log(`✅ [PHASE 1] Found existing identity key (${result.algorithm})`);
             }
 
-            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-            console.log('✅ [PHASE 1] COMPLETE — Identity established');
-            console.log('✅ [REHYDRATION] Encryption ready at:', new Date().toISOString());
-            console.log('   Algorithm:', result.algorithm);
-            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
             // ✅ FIX 1: Signal encryption is ready
             setEncryptionReady(true);
@@ -212,9 +200,6 @@ export const AuthProvider = ({ children }) => {
     (async () => {
       try {
         const userId = data.user._id || data.user.id;
-        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        console.log('🔐 [PHASE 1] Initializing identity keys for user:', userId);
-        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
         // Dynamically import to avoid circular dependencies
         const identityKeyService = (await import('../services/identityKeyService')).default;
@@ -223,17 +208,10 @@ export const AuthProvider = ({ children }) => {
 
         if (!result.existed) {
           // New keypair generated - upload public key to server
-          console.log('🔑 [PHASE 1] Generating new identity keypair');
           await identityKeyService.uploadPublicKeyToServer();
-          console.log('📤 [PHASE 1] Uploading public key');
-          console.log(`✅ [PHASE 1] Created & uploaded new identity key (${result.algorithm})`);
         } else {
-          console.log(`✅ [PHASE 1] Found existing identity key (${result.algorithm})`);
         }
 
-        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        console.log('✅ [PHASE 1] COMPLETE — Identity established');
-        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
       } catch (err) {
         console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
         console.error('❌ [PHASE 1] FAILED — Identity initialization error:', err);
@@ -270,7 +248,6 @@ export const AuthProvider = ({ children }) => {
     // E2EE: Clear encryption keys from IndexedDB
     // This will be handled by service cleanup listeners
     // Trigger event for encryption cleanup
-    console.log('🗑️ [LOGOUT] Dispatching auth:logout event for cache cleanup');
     window.dispatchEvent(new Event('auth:logout'));
   };
 

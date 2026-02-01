@@ -139,7 +139,6 @@ export async function deriveKeyFromPassword(password, salt, iterations = CRYPTO_
  */
 export async function deriveThreadKey(conversationKey, parentMessageId) {
     try {
-        console.log(`🔑 Deriving thread key for message ${parentMessageId}...`);
 
         // Convert parent message ID to bytes (this is our "info" parameter in HKDF)
         const info = new TextEncoder().encode(`thread:${parentMessageId}`);
@@ -173,7 +172,6 @@ export async function deriveThreadKey(conversationKey, parentMessageId) {
             ['encrypt', 'decrypt']
         );
 
-        console.log(`✅ Thread key derived for message ${parentMessageId}`);
         return threadKey;
     } catch (error) {
         console.error('Thread key derivation failed:', error);

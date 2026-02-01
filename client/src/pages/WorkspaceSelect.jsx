@@ -143,7 +143,6 @@ const WorkspaceSelect = () => {
         // Final submission on step 4
         if (createStep === 4) {
             try {
-                console.log('🚀 [PHASE 1] Creating workspace with data:', createData);
 
                 // 1. Create Workspace
                 const res = await api.post('/api/workspaces/create', {
@@ -155,9 +154,6 @@ const WorkspaceSelect = () => {
 
                 const newWorkspaceId = res.data.workspace.id;
 
-                console.log('📢 [PHASE 2] Default channels ready');
-                console.log('⛔ [PHASE 2] Messaging disabled — awaiting Phase 3');
-                console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
                 // 2. Send Invites (if any)
                 if (createData.invites && createData.invites.trim()) {

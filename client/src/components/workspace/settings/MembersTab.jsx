@@ -80,8 +80,7 @@ const MembersTab = ({
         }
     };
 
-    const renderMemberCard = (member, roleColor, roleLabel, roleIcon) => {
-        const Icon = roleIcon;
+    const renderMemberCard = (member, roleColor, roleLabel) => {
         return (
             <div
                 key={member.id}
@@ -219,7 +218,7 @@ const MembersTab = ({
                                     </h3>
                                 </div>
                                 <div className="space-y-2">
-                                    {owners.map((member) => renderMemberCard(member, 'yellow', 'Owner', Crown))}
+                                    {owners.map((member) => renderMemberCard(member, 'yellow', 'Owner'))}
                                 </div>
                             </div>
                         );
@@ -238,7 +237,7 @@ const MembersTab = ({
                                     </h3>
                                 </div>
                                 <div className="space-y-2">
-                                    {admins.map((member) => renderMemberCard(member, 'blue', 'Admin', Shield))}
+                                    {admins.map((member) => renderMemberCard(member, 'blue', 'Admin'))}
                                 </div>
                             </div>
                         );
@@ -257,7 +256,7 @@ const MembersTab = ({
                                     </h3>
                                 </div>
                                 <div className="space-y-2">
-                                    {regularMembers.map((member) => renderMemberCard(member, 'gray', 'Member', UserCheck))}
+                                    {regularMembers.map((member) => renderMemberCard(member, 'gray', 'Member'))}
                                 </div>
                             </div>
                         );

@@ -210,7 +210,6 @@ export default function Header({
                     <button
                       title="Create Poll"
                       onClick={() => {
-                        console.log('🎯 POLL BUTTON CLICKED');
                         onCreatePoll();
                       }}
                       className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded transition-colors"

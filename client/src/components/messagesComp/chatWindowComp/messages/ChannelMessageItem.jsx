@@ -30,11 +30,7 @@ function ChannelMessageItem({
     channelMembers,
     isAdmin = false, // Admin check for pin permissions
 }) {
-    // DEBUG LOG
-    const scrollRef = useRef(null);
-
-    // TEMPORARY FIX: Fallback to msg.replyCount if threadCounts missing?
-    // But threadCounts is the source    const scrollRef = useRef(null);
+    // TEMPORARY FIX: Fallback to msg.replyCount if threadCounts missing
     const count = (threadCounts && threadCounts[msg.id]) || msg.replyCount || 0;
 
     // ✅ Fix: Properly check if message is from current user by comparing IDs

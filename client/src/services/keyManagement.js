@@ -109,11 +109,7 @@ function clearAllWorkspaceKeys() {
  */
 export async function enrollUserKeys(password, encryptedKeys) {
     try {
-        console.log('🔐 [enrollUserKeys] Starting enrollment process...');
-        console.log('🔐 [enrollUserKeys] Number of keys to process:', encryptedKeys.length);
-
         validateCryptoSetup();
-        console.log('✅ [enrollUserKeys] Crypto setup validated');
 
         const enrolledWorkspaces = [];
 
@@ -122,34 +118,18 @@ export async function enrollUserKeys(password, encryptedKeys) {
             const item = encryptedKeys[i];
             const { workspaceId, encryptedKey, iv, salt } = item;
 
-            console.log(`🔑 [enrollUserKeys] Processing workspace ${i + 1}/${encryptedKeys.length}: ${workspaceId}`);
-            console.log(`🔑 [enrollUserKeys] Key data present:`, {
-                hasEncryptedKey: !!encryptedKey,
-                hasIv: !!iv,
-                hasSalt: !!salt
-            });
-
             try {
                 // Convert salt from Base64
                 const saltBytes = base64ToArrayBuffer(salt);
-                console.log(`🔓 [enrollUserKeys] Deriving KEK from password for ${workspaceId}...`);
 
                 // Derive KEK from password
                 const kek = await deriveKeyFromPassword(password, new Uint8Array(saltBytes));
-                console.log(`✅ [enrollUserKeys] KEK derived for ${workspaceId}`);
 
                 // Decrypt workspace key
-                console.log(`🔓 [enrollUserKeys] Decrypting workspace key for ${workspaceId}...`);
                 const workspaceKey = await decryptWorkspaceKey(encryptedKey, iv, kek);
-                console.log(`✅ [enrollUserKeys] Workspace key decrypted for ${workspaceId}`);
 
                 // Store workspace key
-                console.log(`💾 [enrollUserKeys] Storing key in sessionStorage for ${workspaceId}...`);
                 await storeWorkspaceKey(workspaceId, workspaceKey);
-
-                // Verify storage
-                const stored = sessionStorage.getItem(STORAGE_KEY_PREFIX + workspaceId);
-                console.log(`✅ [enrollUserKeys] Key stored for ${workspaceId}:`, stored ? 'YES' : 'NO');
 
                 enrolledWorkspaces.push(workspaceId);
             } catch (keyError) {
@@ -157,9 +137,6 @@ export async function enrollUserKeys(password, encryptedKeys) {
                 // Continue processing other keys even if one fails
             }
         }
-
-        console.log(`✅ [enrollUserKeys] Enrolled in ${enrolledWorkspaces.length}/${encryptedKeys.length} workspaces`);
-        console.log(`✅ [enrollUserKeys] Successfully enrolled workspaces:`, enrolledWorkspaces);
 
         return {
             success: true,
@@ -208,7 +185,6 @@ export function getEnrolledWorkspaces() {
  */
 export function clearAllKeys() {
     clearAllWorkspaceKeys();
-    console.log('🔒 All encryption keys cleared');
 }
 
 // ==================== KEY REFRESH ====================

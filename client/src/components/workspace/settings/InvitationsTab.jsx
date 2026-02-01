@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useToast } from '../../../contexts/ToastContext';
 import api from '../../../services/api';
-import { Shield, Mail, Clock, CheckCircle, XCircle, RotateCw, Search, MoreVertical, Trash, Link2, AlertTriangle, Pause, Play, Trash2, Users } from 'lucide-react';
+import { Shield, Mail, Clock, CheckCircle, XCircle, RotateCw, Search, Trash, Link2, AlertTriangle, Trash2, Users } from 'lucide-react';
 
 /**
  * InvitationsTab Component

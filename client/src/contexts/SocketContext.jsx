@@ -30,7 +30,6 @@ export const SocketProvider = ({ children }) => {
     useEffect(() => {
         const token = localStorage.getItem('accessToken');
         if (!token) {
-            console.log('⏸️ No auth token, skipping socket initialization');
             return;
         }
 
@@ -50,19 +49,16 @@ export const SocketProvider = ({ children }) => {
         });
 
         socketInstance.on('connect', () => {
-            console.log('✅ Socket connected successfully');
             setIsConnected(true);
 
             // ✅ Join workspace room to receive workspace-wide events
             const workspaceId = localStorage.getItem('activeWorkspaceId');
             if (workspaceId) {
-                console.log(`📍 Joining workspace: ${workspaceId}`);
                 socketInstance.emit('join-workspace', { workspaceId });
             }
         });
 
         socketInstance.on('disconnect', (reason) => {
-            console.log(`⚠️ Socket disconnected: ${reason}`);
             setIsConnected(false);
         });
 
@@ -72,7 +68,6 @@ export const SocketProvider = ({ children }) => {
 
             // If authentication failed, try to refresh the token
             if (error.message === 'Authentication failed') {
-                console.log('🔄 Attempting to refresh token for socket reconnection...');
                 try {
                     // Use fetch instead of axios to avoid import
                     const response = await fetch(`${API_BASE}/api/auth/refresh`, {
@@ -83,7 +78,6 @@ export const SocketProvider = ({ children }) => {
                     if (response.ok) {
                         const { accessToken } = await response.json();
                         localStorage.setItem('accessToken', accessToken);
-                        console.log('✅ Token refreshed, reconnecting socket...');
 
                         // Update socket auth and reconnect
                         socketInstance.auth = { token: accessToken };
@@ -106,15 +100,12 @@ export const SocketProvider = ({ children }) => {
         // ⏸️ PHASE 1 ISOLATION: Socket connection disabled during login
         // Socket should be connected EXPLICITLY after Phase 1 (identity keys) complete
         // To enable: Call socket.connect() from components AFTER identity initialization
-        console.log('⏸️ Socket instance created but NOT auto-connected (Phase 1 isolation)');
-        console.log('ℹ️ Components must explicitly call socket.connect() after Phase 1');
 
         // REMOVED: socketInstance.connect(); 
         // This was auto-connecting during login, violating Phase 1 isolation
 
         return () => {
             if (socketInstance.connected) {
-                console.log('🔌 Disconnecting socket on cleanup');
                 socketInstance.disconnect();
             }
         };
@@ -124,10 +115,8 @@ export const SocketProvider = ({ children }) => {
     // Call this from components AFTER identity keys are loaded
     const connectSocket = useCallback(() => {
         if (socket && !socket.connected) {
-            console.log('🔌 [Socket] Explicit connect after Phase 1 complete');
             socket.connect();
         } else if (socket?.connected) {
-            console.log('✅ [Socket] Already connected');
         }
     }, [socket]);
 
@@ -223,7 +212,6 @@ export const SocketProvider = ({ children }) => {
         // socket.on('channel:user-joined', async (payload) => {
         //     try {
         //         const { channelId, newUserId } = payload;
-        //         console.log(`🔐 [E2EE] New user ${newUserId} joined channel ${channelId}, distributing key...`);
         //         const { handleKeyNeededEvent } = await import('../services/clientKeyDistribution');
         //         const currentUserId = user?.sub || user?._id;
         //         await handleKeyNeededEvent(

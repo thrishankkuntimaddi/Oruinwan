@@ -67,7 +67,6 @@ export function useRealtimeEvents(conversationId, conversationType, handlers = {
                     handlers.onMessageUpdate?.(event);
                     break;
                 default:
-                    console.log('Unknown event type:', event.type);
             }
 
             // Always call generic handler

@@ -34,7 +34,6 @@ const LoginPage = () => {
       // Don't auto-redirect if user needs to set password (OAuth first-time login)
       const needsPasswordSetup = localStorage.getItem("oauthPasswordSetupRequired") === "true";
       if (needsPasswordSetup) {
-        console.log('⏭️ Skipping LoginPage auto-redirect - user needs password setup');
         return;
       }
 

@@ -16,11 +16,8 @@ export async function handleKeyNeededEvent(payload, currentUserId) {
     const { channelId, newUserId, conversationType } = payload;
 
     try {
-        console.log(`🔐 [Key Distribution] Request to distribute key to user ${newUserId} in ${conversationType}:${channelId}`);
-
         // Don't distribute to ourselves
         if (newUserId === currentUserId) {
-            console.log('🔐 [Key Distribution] Skipping - new user is self');
             return;
         }
 
@@ -28,7 +25,6 @@ export async function handleKeyNeededEvent(payload, currentUserId) {
         const conversationKey = await conversationKeyService.getConversationKey(channelId, conversationType);
 
         if (!conversationKey) {
-            console.log(`🔐 [Key Distribution] Skipping - don't have key for ${conversationType}:${channelId}`);
             return;
         }
 
@@ -60,8 +56,6 @@ export async function handleKeyNeededEvent(payload, currentUserId) {
             algorithm: encrypted.algorithm,
             conversationType
         });
-
-        console.log(`✅ [Key Distribution] Successfully distributed key to user ${newUserId}`);
     } catch (error) {
         console.error(`❌ [Key Distribution] Failed:`, error);
         // Non-blocking - other members might succeed

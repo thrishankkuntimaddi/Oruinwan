@@ -6,7 +6,6 @@
  */
 
 // ============ STEP 1: Test Crypto Utilities ============
-console.log('🔐 E2EE Validation Starting...\n');
 
 async function testCrypto() {
     const {

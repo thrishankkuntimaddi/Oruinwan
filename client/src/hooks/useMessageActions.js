@@ -34,8 +34,6 @@ export function useMessageActions(conversationId, conversationType, workspaceId 
 
     // Send message
     const sendMessage = useCallback(async ({ text, attachments = [], replyTo = null }) => {
-        console.log('📤 [sendMessage] Called with:', { text, attachments, replyTo });
-        console.log('📤 [sendMessage] Context:', { conversationId, conversationType, workspaceId });
 
         // ⚠️ CRITICAL FIX 6: Block send if encryption not ready
         if (!encryptionReady) {
@@ -137,8 +135,6 @@ export function useMessageActions(conversationId, conversationType, workspaceId 
             }
 
             // ============ E2EE: ENCRYPT MESSAGE ============
-            console.log('🔐 [E2EE] Encrypting message with conversation key...');
-            console.log('🔐 [E2EE] Context:', { conversationId, conversationType, parentId: replyTo });
 
             // Use conversation key (or thread key if reply)
             const encrypted = await encryptMessageForSending(
@@ -151,7 +147,6 @@ export function useMessageActions(conversationId, conversationType, workspaceId 
             ciphertext = encrypted.ciphertext;
             messageIv = encrypted.messageIv;
 
-            console.log('✅ [E2EE] Message encrypted successfully');
         } catch (encError) {
             // ✅ CRITICAL: Block send if encryption fails (security requirement)
             console.error('❌ [E2EE] Encryption failed:', encError);
@@ -165,13 +160,11 @@ export function useMessageActions(conversationId, conversationType, workspaceId 
         }
         // ==============================================
 
-        console.log('📤 [sendMessage] Optimistic message created:', optimisticMessage);
 
         try {
             let response;
 
             if (conversationType === 'channel') {
-                console.log('📤 [sendMessage] Sending encrypted message to channel:', conversationId);
 
                 // ✅ PHASE 3: Always send encrypted (key was generated above if needed)
                 response = await api.post('/api/v2/messages/channel', {
@@ -184,7 +177,6 @@ export function useMessageActions(conversationId, conversationType, workspaceId 
                     clientTempId: tempId
                 });
             } else if (conversationType === 'dm') {
-                console.log('📤 [sendMessage] Sending DM to session:', conversationId);
                 response = await api.post('/api/v2/messages/direct', {
                     dmSessionId: conversationId,  // ✅ FIXED: Send DM session ID
                     workspaceId,
@@ -197,11 +189,9 @@ export function useMessageActions(conversationId, conversationType, workspaceId 
                 });
             }
 
-            console.log('✅ [sendMessage] API response:', response?.data);
 
             // Emit via socket for real-time delivery
             if (socket?.connected) {
-                console.log('📡 [sendMessage] Emitting socket event');
                 socket.emit('chat:message', {
                     channelId: conversationId,
                     message: response.data.message,

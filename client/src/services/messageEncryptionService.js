@@ -23,8 +23,6 @@ import conversationKeyService from './conversationKeyService';
  */
 export async function encryptMessageForSending(plaintext, conversationId, conversationType, parentMessageId = null) {
     try {
-        console.log(`🔐 Encrypting message for ${conversationType}:${conversationId}${parentMessageId ? ` (thread:${parentMessageId})` : ''}...`);
-
         // Get conversation key
         let encryptionKey = await conversationKeyService.getConversationKey(conversationId, conversationType);
 
@@ -34,7 +32,6 @@ export async function encryptMessageForSending(plaintext, conversationId, conver
 
         // If this is a thread reply, derive thread-specific key
         if (parentMessageId) {
-            console.log(`🔑 Deriving thread key for parent message ${parentMessageId}...`);
             encryptionKey = await deriveThreadKey(encryptionKey, parentMessageId);
         }
 
@@ -56,8 +53,6 @@ export async function encryptMessageForSending(plaintext, conversationId, conver
         // Convert to base64 for transmission
         const ciphertextBase64 = btoa(String.fromCharCode(...new Uint8Array(ciphertext)));
         const ivBase64 = btoa(String.fromCharCode(...new Uint8Array(iv)));
-
-        console.log(`✅ Message encrypted successfully`);
 
         return {
             ciphertext: ciphertextBase64,
@@ -173,11 +168,8 @@ export async function decryptMessageGracefully(message, conversationId, conversa
  */
 export async function batchDecryptMessages(messages, conversationId, conversationType, userJoinedAt = null) {
     try {
-        console.log(`🔐 [Batch Decrypt] Starting for ${messages.length} messages in ${conversationType}:${conversationId}`);
-
         // ✅ Early return for empty messages
         if (!messages || messages.length === 0) {
-            console.log('ℹ️ [Batch Decrypt] No messages to decrypt');
             return [];
         }
 
@@ -190,34 +182,9 @@ export async function batchDecryptMessages(messages, conversationId, conversatio
                 return msgTimestamp >= joinTimestamp;
             });
 
-            console.log(`📅 [Batch Decrypt] Filtered ${messages.length} → ${messagesToDecrypt.length} messages (joinedAt: ${userJoinedAt})`);
-
             if (messagesToDecrypt.length === 0) {
-                console.log('ℹ️ [Batch Decrypt] All messages filtered out - user joined after all messages');
                 return [];
             }
-
-            // ✅ DIAGNOSTIC: Check for conversationId mismatches in message payloads
-            console.log(`🔍 [Batch Decrypt] Validating message contexts...`);
-            messagesToDecrypt.forEach(msg => {
-                const msgChannelId = msg.payload?.channelId || msg.payload?.channel?._id || msg.payload?.channel;
-                const matches = !msgChannelId || msgChannelId === conversationId;
-
-                console.log(`  📋 Message ${msg.id}:`, {
-                    messageChannelId: msgChannelId || '(not set)',
-                    providedConversationId: conversationId,
-                    match: matches
-                });
-
-                if (msgChannelId && !matches) {
-                    console.warn(`⚠️ [Batch Decrypt] MISMATCH DETECTED:`, {
-                        messageId: msg.id,
-                        messageChannelId: msgChannelId,
-                        providedConversationId: conversationId,
-                        impact: 'Will attempt decrypt with provided conversationId (may fail)'
-                    });
-                }
-            });
         }
 
         // ✅ Fetch conversation key
@@ -228,8 +195,6 @@ export async function batchDecryptMessages(messages, conversationId, conversatio
             console.warn('⚠️ [Batch Decrypt] No conversation key found - returning empty array');
             return [];
         }
-
-        console.log(`✅ [Batch Decrypt] Got conversation key, decrypting ${messagesToDecrypt.length} messages...`);
 
         // Decrypt each message
         const decrypted = await Promise.all(
@@ -282,8 +247,6 @@ export async function batchDecryptMessages(messages, conversationId, conversatio
 
                     const plaintext = new TextDecoder().decode(plaintextBytes);
 
-                    console.log(`✅ [Batch Decrypt] Decrypted message ${message.id}: "${plaintext.substring(0, 30)}..."`);
-
                     return {
                         ...message,
                         decryptedContent: plaintext,
@@ -300,7 +263,6 @@ export async function batchDecryptMessages(messages, conversationId, conversatio
             })
         );
 
-        console.log(`✅ [Batch Decrypt] Completed ${decrypted.length} messages`);
         return decrypted;
     } catch (error) {
         console.error('❌ [Batch Decrypt] Batch decryption failed:', error);

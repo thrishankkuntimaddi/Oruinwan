@@ -149,7 +149,6 @@ export function useConversation({ conversationId, type, workspaceId, currentUser
             workspaceId
         });
 
-        console.log(`📡 Joined ${room}`);
 
         // Leave on unmount
         return () => {
@@ -157,7 +156,6 @@ export function useConversation({ conversationId, type, workspaceId, currentUser
                 conversationId,
                 type
             });
-            console.log(`👋 Left ${room}`);
         };
     }, [socket, conversationId, type, workspaceId]);
 

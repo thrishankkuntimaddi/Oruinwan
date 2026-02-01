@@ -135,7 +135,6 @@ export async function generateIdentityKeyPair() {
         try {
             keyPair = await generateX25519KeyPair();
             algorithm = 'X25519';
-            console.log('✅ Generated X25519 identity keypair (preferred)');
         } catch (error) {
             console.warn('X25519 generation failed, falling back to RSA:', error);
         }
@@ -145,7 +144,6 @@ export async function generateIdentityKeyPair() {
     if (!keyPair && support.rsa) {
         keyPair = await generateRSAKeyPair();
         algorithm = 'RSA-2048';
-        console.log('✅ Generated RSA-2048 identity keypair (fallback)');
     }
 
     if (!keyPair) {

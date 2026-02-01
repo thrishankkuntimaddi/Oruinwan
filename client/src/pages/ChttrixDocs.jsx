@@ -4,8 +4,8 @@ import { useTheme } from "../contexts/ThemeContext";
 import {
   BookOpen, MessageSquare, Hash, GitBranch, Users, CheckSquare, FileText,
   Shield, Search, Sparkles, BellRing, Settings, Sun, Moon, Building2,
-  Lock, UserCheck, CreditCard, AlertTriangle, Check, Menu, X, ArrowRight,
-  Key, Video, Mail, Workflow, Globe, Cpu, Zap, Layers, Command
+  Lock, UserCheck, AlertTriangle, Check, Menu, X, ArrowRight,
+  Key, Video, Globe, Zap, Layers, Command
 } from "lucide-react";
 
 const ChttrixDocs = () => {

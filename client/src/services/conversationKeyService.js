@@ -25,7 +25,6 @@ class ConversationKeyService {
      */
     setupLogoutListener() {
         window.addEventListener('auth:logout', () => {
-            console.log('🗑️ [ConversationKeyService] Received auth:logout - clearing cache');
             this.clearCache();
         });
     }
@@ -39,12 +38,10 @@ class ConversationKeyService {
      * @returns {Promise<CryptoKey>} Random AES-256-GCM key
      */
     async generateConversationKey() {
-        console.log('🔑 Generating random conversation key (AES-256)...');
 
         // Use the same function as workspace keys - it generates random AES-256
         const key = await generateWorkspaceKey();
 
-        console.log('✅ Generated random conversation key');
         return key;
     }
 
@@ -58,7 +55,6 @@ class ConversationKeyService {
      */
     async createAndDistributeConversationKey(participantUserIds, workspaceId) {
         try {
-            console.log(`🔐 Creating conversation key for ${participantUserIds.length} participants...`);
 
             // 1. Generate random conversation key
             const conversationKey = await this.generateConversationKey();
@@ -101,10 +97,8 @@ class ConversationKeyService {
                     algorithm
                 });
 
-                console.log(`✅ Encrypted conversation key for user ${userId} (${algorithm})`);
             }
 
-            console.log(`✅ Conversation key encrypted for ${encryptedKeys.length} participants`);
 
             return {
                 conversationKey,
@@ -130,7 +124,6 @@ class ConversationKeyService {
      */
     async createAndStoreConversationKey(conversationId, conversationType, workspaceId, members) {
         try {
-            console.log(`🔐 Creating and storing conversation key for ${conversationType}:${conversationId}...`);
 
             // Extract user IDs from members array (handle both object and string formats)
             const participantUserIds = members.map(m => {
@@ -140,7 +133,6 @@ class ConversationKeyService {
                 return m.toString();
             });
 
-            console.log(`🔐 Participants: ${participantUserIds.length} users`);
 
             // Create and distribute key
             const { conversationKey, encryptedKeys } = await this.createAndDistributeConversationKey(
@@ -163,7 +155,6 @@ class ConversationKeyService {
             const cacheKey = `${conversationType}:${conversationId}`;
             this.conversationKeys.set(cacheKey, { key: conversationKey, algorithm: 'AES-256' });
 
-            console.log(`✅ Created and stored conversation key for ${cacheKey}`);
 
             return { conversationKey, encryptedKeys };
         } catch (error) {
@@ -193,24 +184,19 @@ class ConversationKeyService {
         }
 
         try {
-            console.log(`🔐 [DM ONLY] Ensuring conversation key exists for dm:${conversationId}`);
 
             // 1. Check if key already exists (cached or on server)
             let conversationKey = await this.getConversationKey(conversationId, conversationType);
 
             if (conversationKey && conversationKey.key) {
-                console.log(`✅ [DM ONLY] Using existing conversation key for dm:${conversationId}`);
                 return conversationKey.key;
             }
 
             // Handle typed error response from getConversationKey
             if (conversationKey && conversationKey.status === 'MISSING_FOR_USER') {
-                console.log(`📤 [DM ONLY] Key not yet distributed to this user - attempting to create`);
             }
 
             // 2. Key missing - generate new one (FIRST MESSAGE scenario)
-            console.log(`🔑 [DM ONLY] No key found - FIRST MESSAGE - generating conversation key for dm:${conversationId}`);
-            console.log(`📤 [DM ONLY] Encrypting for ${participantIds.length} participants`);
 
             // Generate and distribute key
             try {
@@ -221,13 +207,11 @@ class ConversationKeyService {
                     participantIds
                 );
 
-                console.log(`✅ [DM ONLY] Conversation key created and stored for dm:${conversationId}`);
                 return result.conversationKey;
 
             } catch (keyError) {
                 // Handle 409 (key already exists - race condition)
                 if (keyError.message && keyError.message.includes('already exist')) {
-                    console.log(`⚠️ [DM ONLY] Key already exists (409) - fetching existing key`);
                     const fetchedKey = await this.fetchAndDecryptConversationKey(conversationId, conversationType);
                     return fetchedKey;
                 } else {
@@ -278,7 +262,6 @@ class ConversationKeyService {
                 throw new Error('Failed to store conversation keys on server');
             }
 
-            console.log(`✅ Stored conversation keys on server for ${conversationType}:${conversationId}`);
         } catch (error) {
             console.error('Failed to store conversation keys:', error);
             throw error;
@@ -300,18 +283,12 @@ class ConversationKeyService {
             const cacheKey = `${conversationType}:${conversationId}`;
             if (this.conversationKeys.has(cacheKey)) {
                 // PHASE 1 AUDIT: Log cache hit
-                console.log(`✅ [AUDIT][PHASE1][CLIENT-FETCH] Cache HIT for ${cacheKey}`);
-                console.log(`   └─ Returning cached conversation key`);
                 return this.conversationKeys.get(cacheKey).key;
             }
 
             // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
             // PHASE 1 AUDIT: Log key fetch attempt
             // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-            console.log(`🔑 [AUDIT][PHASE1][CLIENT-FETCH] Fetching conversation key from server`);
-            console.log(`   ├─ Conversation: ${conversationType}:${conversationId}`);
-            console.log(`   ├─ Cache hit: NO`);
-            console.log(`   └─ Timestamp: ${new Date().toISOString()}`);
 
 
             // Fetch encrypted key from server
@@ -451,13 +428,7 @@ class ConversationKeyService {
             // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
             // PHASE 1 AUDIT: Log successful decrypt and cache
             // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-            console.log(`✅ [AUDIT][PHASE1][CLIENT-FETCH] Key fetch and decrypt SUCCESS`);
-            console.log(`   ├─ Conversation: ${cacheKey}`);
-            console.log(`   ├─ Algorithm: ${algorithm}`);
-            console.log(`   └─ Cached for future use`);
-            console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
 
-            console.log(`✅ Fetched and decrypted conversation key for ${cacheKey}`);
 
 
             return conversationKey;
@@ -510,14 +481,12 @@ class ConversationKeyService {
                     const cacheKey = `${conversationType}:${conversationId}`;
                     this.conversationKeys.set(cacheKey, { key: conversationKey, algorithm: 'AES-256' });
 
-                    console.log(`✅ Decrypted and cached key for ${cacheKey}`);
                 } catch (error) {
                     console.error(`Failed to decrypt key for ${conversationType}:${conversationId}:`, error);
                     // Continue with other keys
                 }
             }
 
-            console.log(`✅ Fetched ${conversationKeys.length} conversation keys for workspace ${workspaceId}`);
         } catch (error) {
             console.error('Failed to fetch workspace conversation keys:', error);
             throw error;
@@ -604,7 +573,6 @@ class ConversationKeyService {
                 throw new Error('Failed to add participant');
             }
 
-            console.log(`✅ Added participant ${newUserId} to ${conversationType}:${conversationId}`);
         } catch (error) {
             console.error('Failed to add participant:', error);
             throw error;
@@ -654,7 +622,6 @@ class ConversationKeyService {
      */
     clearCache() {
         this.conversationKeys.clear();
-        console.log('🗑️ Conversation key cache cleared');
     }
 
     /**
@@ -666,7 +633,6 @@ class ConversationKeyService {
     removeCachedKey(conversationId, conversationType) {
         const cacheKey = `${conversationType}:${conversationId}`;
         this.conversationKeys.delete(cacheKey);
-        console.log(`🗑️ Removed cached key for ${cacheKey}`);
     }
 }
 

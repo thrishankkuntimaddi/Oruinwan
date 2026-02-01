@@ -2,9 +2,6 @@
 // Temporary debugging wrapper
 
 export async function handleKeyNeededEvent(payload, currentUserId) {
-    console.log('🔐🔐🔐 [KEY DISTRIBUTION] EVENT RECEIVED!', payload);
-    console.log(`🔐 [Key Distribution] newUserId: ${payload.newUserId}, currentUserId: ${currentUserId}`);
-
     try {
         const { handleKeyNeededEvent: actualHandler } = await import('./clientKeyDistribution');
         await actualHandler(payload, currentUserId);

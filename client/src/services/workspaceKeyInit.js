@@ -23,11 +23,8 @@ import { generateWorkspaceKey, arrayBufferToBase64, generateSalt } from '../util
  */
 export async function initializeWorkspaceKeys() {
     try {
-        console.log('🔐 [initializeWorkspaceKeys] Generating workspace master key (password-free)...');
-
         // 1. Generate random workspace encryption key (256-bit AES key)
         const workspaceKey = await generateWorkspaceKey();
-        console.log('✅ [initializeWorkspaceKeys] Workspace key generated');
 
         // 2. Export key as base64 for storage
         const keyBytes = await crypto.subtle.exportKey('raw', workspaceKey);
@@ -45,7 +42,6 @@ export async function initializeWorkspaceKeys() {
             pbkdf2Salt: arrayBufferToBase64(salt)
         };
 
-        console.log('✅ [initializeWorkspaceKeys] Key initialization complete (no password needed)');
         return result;
 
     } catch (error) {
@@ -61,7 +57,6 @@ export async function initializeWorkspaceKeys() {
  * @returns {Promise<string|null>}
  */
 export async function getUserPasswordForKeyInit() {
-    console.log('ℹ️  [getUserPasswordForKeyInit] Password no longer required for workspace creation');
     // Return null to indicate no password is needed
     return null;
 }
@@ -78,15 +73,12 @@ export async function getUserPasswordForKeyInit() {
  */
 export async function enrollCreatorInWorkspace(workspaceId, keyData) {
     try {
-        console.log(`🔐 [enrollCreatorInWorkspace] Enrolling in workspace: ${workspaceId} (password-free)`);
-
         const { encryptedKey } = keyData;
 
         // The "encryptedKey" is actually just the raw key in base64
         // Store it in sessionStorage for immediate use
         sessionStorage.setItem(`e2ee_workspace_key_${workspaceId}`, encryptedKey);
 
-        console.log(`✅ [enrollCreatorInWorkspace] Successfully enrolled in workspace: ${workspaceId}`);
         return true;
 
     } catch (error) {

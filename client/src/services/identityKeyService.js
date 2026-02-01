@@ -70,7 +70,6 @@ async function storeIdentityKeyPair(userId, keyData) {
         const request = store.put(data);
 
         request.onsuccess = () => {
-            console.log(`✅ Identity keypair stored in IndexedDB for user ${userId}`);
             resolve();
         };
         request.onerror = () => reject(request.error);
@@ -115,7 +114,6 @@ async function deleteIdentityKeyPair(userId) {
         const request = store.delete(userId);
 
         request.onsuccess = () => {
-            console.log(`🗑️ Identity keypair deleted for user ${userId}`);
             resolve();
         };
         request.onerror = () => reject(request.error);
@@ -144,7 +142,6 @@ class IdentityKeyService {
      */
     setupLogoutListener() {
         window.addEventListener('auth:logout', () => {
-            console.log('🗑️ [IdentityKeyService] Received auth:logout - clearing cache');
             this.clearCache();
         });
     }
@@ -172,7 +169,6 @@ class IdentityKeyService {
      * @returns {Promise<{existed: boolean, algorithm: string}>}
      */
     async initializeIdentityKeys(userId) {
-        console.log(`🔐 Initializing identity keys for user ${userId}...`);
 
         const support = checkCryptoSupport();
         if (!support.indexedDB) {
@@ -183,7 +179,6 @@ class IdentityKeyService {
         const existingKeyData = await getIdentityKeyPair(userId);
 
         if (existingKeyData) {
-            console.log(`✅ Found existing identity key (${existingKeyData.algorithm})`);
 
             // Import private key from JWK
             this.myPrivateKey = await importPrivateKeyJWK(
@@ -213,7 +208,6 @@ class IdentityKeyService {
         }
 
         // Generate new keypair
-        console.log('🔑 Generating new identity keypair...');
         const keyPair = await generateIdentityKeyPair();
 
         // Export for storage
@@ -240,7 +234,6 @@ class IdentityKeyService {
             algorithm: this.myAlgorithm
         });
 
-        console.log(`✅ Generated and stored new ${keyPair.algorithm} identity keypair`);
 
         return {
             existed: false,
@@ -307,7 +300,6 @@ class IdentityKeyService {
             // Cache
             this.publicKeysCache.set(userId, { publicKey, algorithm });
 
-            console.log(`✅ Fetched and cached public key for user ${userId} (${algorithm})`);
 
             return { publicKey, algorithm };
         } catch (error) {
@@ -360,7 +352,6 @@ class IdentityKeyService {
                 this.publicKeysCache.set(userId, { publicKey, algorithm });
             }
 
-            console.log(`✅ Batch fetched ${publicKeys.length} public keys`);
 
             // Return all requested keys
             const result = new Map();
@@ -404,7 +395,6 @@ class IdentityKeyService {
                 throw new Error('Failed to upload public key to server');
             }
 
-            console.log('✅ Public key uploaded to server');
         } catch (error) {
             console.error('Failed to upload public key:', error);
             throw error;
@@ -420,7 +410,6 @@ class IdentityKeyService {
         this.myPublicKey = null;
         this.myAlgorithm = null;
         this.myUserId = null;
-        console.log('🗑️ Identity key cache cleared');
     }
 
     /**

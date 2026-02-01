@@ -35,9 +35,6 @@ const OAuthPasswordSetup = () => {
 
     // Password strength indicators
     const hasMinLength = password.length >= 8;
-    const hasNumber = /\d/.test(password);
-    const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
-    const hasUpperCase = /[A-Z]/.test(password);
     const passwordsMatch = password && password === confirmPassword;
 
     const isPasswordValid = hasMinLength && passwordsMatch;
@@ -53,7 +50,7 @@ const OAuthPasswordSetup = () => {
         try {
             const token = localStorage.getItem("accessToken");
 
-            const response = await axios.post(
+            await axios.post(
                 `${process.env.REACT_APP_BACKEND_URL}/api/auth/oauth/set-password`,
                 { password },
                 {

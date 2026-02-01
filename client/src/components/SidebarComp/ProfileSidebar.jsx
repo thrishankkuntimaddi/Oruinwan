@@ -232,7 +232,7 @@ const ProfileMenu = ({ onClose }) => {
 
   const handleVerifyEmailSubmit = async () => {
     try {
-      const { data } = await api.post(`/api/users/emails/${verifyingEmailId}/verify`, { code: verificationCode });
+      await api.post(`/api/users/emails/${verifyingEmailId}/verify`, { code: verificationCode });
       setEmails(emails.map(e => e.id === verifyingEmailId ? { ...e, verified: true } : e));
       showToast("Email verified successfully!", "success");
       setShowVerifyModal(false);
