@@ -211,7 +211,7 @@ app.use("/api/audit", require("./routes/audit"));
 app.use("/api/managers", require("./routes/managers"));
 app.use("/api/analytics", require("./routes/analytics"));
 app.use("/api/ai", require("./routes/aiRoutes"));
-app.use("/api/keys", require("./routes/keys")); // E2EE key management (legacy)
+// app.use("/api/keys", require("./routes/keys")); // DEPRECATED - Moved to .deprecated/ (Day 2)
 app.use("/api/status", require("./routes/statusRoutes")); // System health status
 
 
