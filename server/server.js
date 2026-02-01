@@ -193,7 +193,21 @@ app.use("/api/messages", require("./routes/messages"));
 app.use("/api/polls", require("./routes/polls")); // Poll routes
 app.use("/api/chat", require("./routes/chatList"));
 app.use("/api/channels", require("./routes/channels"));
-app.use("/api/companies", require("./routes/companies"));
+// DEPRECATED: Legacy company controller - being replaced by modular routes (Phase 2)
+// app.use("/api/companies", require("./routes/companies"));
+
+// ============================================================================
+// MODULAR ROUTES (Phase 2: Domain Separation Complete)
+// ============================================================================
+// OTP (shared service)
+app.use("/api/otp", require("./src/shared/routes/otp.routes"));
+// Company domain routes
+app.use("/api/companies", require("./src/features/company/company.routes"));
+app.use("/api/companies", require("./src/features/company/settings.routes"));
+app.use("/api/companies", require("./src/features/company/metrics.routes"));
+app.use("/api/companies", require("./src/features/company-registration/registration.routes"));
+app.use("/api/companies", require("./src/features/employees/employee.routes"));
+app.use("/api/companies", require("./src/features/domain-verification/domain.routes"));
 app.use("/api/departments", require("./routes/departments"));
 app.use("/api/workspaces", require("./routes/workspaces"));
 app.use("/api/platform/support", require("./routes/platformSupport"));
