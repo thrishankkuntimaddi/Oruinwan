@@ -1,9 +1,9 @@
 // src/shared/controllers/otp.controller.js
 
 const otpService = require("../services/otp.service");
-const { handleError } = require("../../utils/responseHelpers");
-const Company = require("../../models/Company");
-const { sendOTP } = require("../../utils/sendOTP");
+const { handleError } = require("../../../utils/responseHelpers");
+const Company = require("../../../models/Company");
+const { sendOTP } = require("../../../utils/sendOTP");
 
 /**
  * Send OTP (Dev Mode: Logs to Terminal)
