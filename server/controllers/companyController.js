@@ -187,236 +187,53 @@ exports.verifyPhoneOtp = async (req, res) => {
  * Create a new company with admin user and default workspace/channels
  * POST /api/companies/register
  */
-exports.registerCompany = async (req, res) => {
-  try {
-    const {
-      companyName,
-      adminName,
-      adminEmail,
-      adminPassword,
-      domain,
-      documents,
-      // Enhanced Fields
-      personalEmail,
-      phone,
-      role, // This comes as "Owner", "Admin", "PA", "Manager" or custom string
-
-      departments = [], // Will be stored in metadata for later
-      workspaceName, // Will be stored in metadata for later
-      workspaceDescription, // Will be stored in metadata for later
-      defaultChannels = ["general", "announcements"], // Will be stored in metadata for later
-    } = req.body;
-
-    console.log("🚀 [CHECKPOINT 1] Starting company registration...");
-    console.log("📦 Received payload:", { companyName, adminEmail, domain });
-
-    // Validation
-    if (!companyName || !adminName || !adminEmail) {
-      return res.status(400).json({
-        message: "Company name, admin name, and admin email are required"
-      });
-    }
-
-    if (!adminPassword) {
-      return res.status(400).json({
-        message: "Admin password is required"
-      });
-    }
-
-    // Check if personal email is already associated with a Company Owner
-    if (personalEmail) {
-      const existingOwner = await User.findOne({
-        $or: [
-          { email: personalEmail.toLowerCase() },
-          { personalEmail: personalEmail.toLowerCase() },
-          { "emails.email": personalEmail.toLowerCase() }
-        ],
-        userType: "company",
-        companyRole: "owner"
-      });
-
-      if (existingOwner) {
-        return res.status(409).json({ message: "Personal email is already linked to a registered company." });
-      }
-    }
-
-    // Check if phone is already associated with a Company Owner or Company
-    if (phone) {
-      const existingPhoneUser = await User.findOne({ phone, companyRole: "owner" });
-      const existingCompanyPhone = await Company.findOne({ ownerPhone: phone });
-
-      if (existingPhoneUser || existingCompanyPhone) {
-        return res.status(409).json({ message: "Phone number is already associated with a registered company." });
-      }
-    }
-
-    // Check if email already exists
-    const existingUser = await User.findOne({ email: adminEmail });
-    if (existingUser) {
-      return res.status(409).json({
-        message: "Admin email already in use"
-      });
-    }
-
-    // Validate domain if provided
-    if (domain && !isValidDomain(domain)) {
-      return res.status(400).json({ message: "Invalid domain format" });
-    }
-
-    // Check if domain already claimed
-    if (domain) {
-      const existingCompany = await Company.findOne({ domain });
-      if (existingCompany) {
-        return res.status(409).json({ message: "Domain already registered" });
-      }
-    }
-
-    // Process Documents (Simple Local Storage)
-    const fs = require('fs');
-    const path = require('path');
-    const processedDocuments = [];
-
-    if (documents && Array.isArray(documents)) {
-      for (const doc of documents) {
-        // Check if it has content (base64)
-        if (doc.content && doc.name) {
-          try {
-            // Strip header "data:application/pdf;base64,"
-            const base64Data = doc.content.replace(/^data:([A-Za-z-+/]+);base64,/, '');
-            const buffer = Buffer.from(base64Data, 'base64');
-
-            const uniqueName = `${Date.now()}_${doc.name.replace(/\s+/g, '_')}`;
-            const uploadDir = path.join(__dirname, '../uploads/verification_docs');
-
-            if (!fs.existsSync(uploadDir)) {
-              fs.mkdirSync(uploadDir, { recursive: true });
-            }
-
-            const filePath = path.join(uploadDir, uniqueName);
-            fs.writeFileSync(filePath, buffer);
-
-            processedDocuments.push({
-              name: doc.name,
-              url: `/uploads/verification_docs/${uniqueName}`, // Public URL
-              uploadedAt: new Date()
-            });
-
-            console.log(`✅ File saved: ${filePath}`);
-          } catch (err) {
-            console.error("File write error:", err);
-            // Continue without failing (or decide to fail)
-          }
-        }
-      }
-    }
-
-
-    // Step 1: Create Company (Status: PENDING)
-    // We do NOT create workspaces, channels, or departments yet.
-    console.log("📝 Creating pending company...");
-
-    const company = new Company({
-      name: companyName,
-      ...(domain ? { domain: domain.toLowerCase() } : {}), // Only set if provided
-      domainVerified: false,
-      documents: processedDocuments, // Save the processed URLs
-      billingEmail: adminEmail,
-      ownerPhone: phone, // Store owner phone for admin review
-      verificationStatus: "pending", // Enforce pending status
-      metadata: {
-        // Store the requested configuration for the verification phase
-        requestedDepartments: departments,
-        requestedWorkspaceName: workspaceName,
-        requestedWorkspaceDescription: workspaceDescription,
-        requestedChannels: defaultChannels
-      }
-    });
-
-    await company.save();
-
-    // Step 2: Create Admin User (Status: PENDING_COMPANY)
-    console.log("👤 Creating pending admin user...");
-    const passwordHash = await bcrypt.hash(adminPassword, 12);
-
-    const adminUser = new User({
-      username: adminName,
-      name: adminName, // Add explicit name field for compatibility
-      email: adminEmail,
-      personalEmail: personalEmail || adminEmail, // Store personal email explicitly
-      passwordHash,
-      userType: "company",
-      companyId: company._id,
-      companyRole: "owner", // Always 'owner' for the creator
-      jobTitle: role || "Owner", // Store the self-declared role as Job Title
-      phone: phone || undefined,
-      phoneCode: req.body.phoneCode || "+91",
-      profile: {
-        name: adminName // Explicitly set profile.name as well
-      },
-      emails: personalEmail && personalEmail !== adminEmail
-        ? [{ email: personalEmail, isPrimary: false, verified: true }]
-        : [], // Only add to emails array if different from main email
-      verified: true, // Admin is verified as a user, but their access is blocked by accountStatus
-      accountStatus: "pending_company",
-      departments: [] // No departments yet
-    });
-
-    try {
-      await adminUser.save();
-    } catch (err) {
-      // Cleanup company if user creation fails
-      await Company.findByIdAndDelete(company._id);
-      throw new Error(`Failed to create admin user: ${err.message}`);
-    }
-
-    // Step 3: Link Admin to Company
-    company.admins.push({
-      user: adminUser._id,
-      role: "owner"
-    });
-    await company.save();
-
-    // Log the request
-    await logAction({
-      userId: adminUser._id,
-      action: "company_registration_requested",
-      description: `Company "${companyName}" registration submitted for verification`,
-      resourceType: "company",
-      resourceId: company._id,
-      companyId: company._id,
-      metadata: { companyName, domain, role },
-      req
-    });
-
-    console.log(`✅ Company "${companyName}" registered (PENDING VERIFICATION).`);
-
-    return res.status(201).json({
-      message: "Company registration submitted successfully. Your account is pending internal verification.",
-      status: "pending_verification",
-      company: {
-        id: company._id,
-        name: company.name,
-        verificationStatus: "pending"
-      }
-    });
-
-  } catch (err) {
-    console.error("❌ REGISTER COMPANY ERROR:");
-    console.error("Error Message:", err.message);
-    console.error("Error Stack:", err.stack);
-    console.error("Full Error:", err);
-    return res.status(500).json({
-      message: "Server error",
-      error: process.env.NODE_ENV === 'development' ? err.message : undefined
-    });
-  }
-};
-
 /**
- * Internal: Verify Company & Provision Resources
- * POST /api/companies/:id/verify
- * Body: { decision: "approve" | "reject", rejectionReason: string }
+ * Register new company (pending verification)
+ * POST /api/companies/register
  */
+exports.registerCompany = async (req, res) => {
+    try {
+        console.log("🚀 Starting company registration...");
+
+        // Use registration service
+        const { company, adminUser } = await registrationService.registerCompany({
+            ...req.body,
+            req
+        });
+
+        console.log(`✅ Company "${company.name}" registered (PENDING VERIFICATION).`);
+
+        return res.status(201).json({
+            message: "Company registration submitted successfully. Your account is pending internal verification.",
+            status: "pending_verification",
+            company: {
+                id: company._id,
+                name: company.name,
+                verificationStatus: "pending"
+            }
+        });
+
+    } catch (err) {
+        console.error("❌ REGISTER COMPANY ERROR:", err.message);
+
+        // Handle specific errors with appropriate status codes
+        const errorStatusMap = {
+            'Company name, admin name, email, and password are required': 400,
+            'Personal email is already linked to a registered company': 409,
+            'Phone number is already associated with a registered company': 409,
+            'Admin email already in use': 409,
+            'Invalid domain format': 400,
+            'Domain already registered': 409
+        };
+
+        const statusCode = errorStatusMap[err.message] || 500;
+
+        return res.status(statusCode).json({
+            message: err.message || "Server error",
+            error: process.env.NODE_ENV === 'development' ? err.message : undefined
+        });
+    }
+};
 exports.verifyCompany = async (req, res) => {
   try {
     const companyId = req.params.id;
