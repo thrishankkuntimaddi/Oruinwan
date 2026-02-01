@@ -212,21 +212,25 @@ app.use("/api/departments", require("./routes/departments"));
 app.use("/api/workspaces", require("./routes/workspaces"));
 app.use("/api/platform/support", require("./routes/platformSupport"));
 app.use("/api/internal", require("./routes/internalMessaging"));
-app.use("/api/tasks", require("./routes/tasks"));
-app.use("/api/notes", require("./routes/notes"));
+// MIGRATED TO V2 - Use /api/v2/tasks and /api/v2/notes instead
+// app.use("/api/tasks", require("./routes/tasks"));
+// app.use("/api/notes", require("./routes/notes"));
 app.use("/api/upload", require("./routes/upload")); // File upload routes
 app.use("/api/updates", require("./routes/updates"));
 app.use("/api/dashboard", require("./routes/dashboard"));
-app.use("/api/favorites", require("./routes/favorites"));
+// MIGRATED TO V2 - Use /api/v2/favorites instead
+// app.use("/api/favorites", require("./routes/favorites"));
 app.use("/api/users", require("./routes/user"));
 app.use("/api/search", require("./routes/search"));
 app.use("/api/support", require("./routes/support"));
-app.use("/api/audit", require("./routes/audit"));
+// MIGRATED TO V2 - Use /api/v2/audit instead
+// app.use("/api/audit", require("./routes/audit"));
 app.use("/api/managers", require("./routes/managers"));
 app.use("/api/analytics", require("./routes/analytics"));
 app.use("/api/ai", require("./routes/aiRoutes"));
 // app.use("/api/keys", require("./routes/keys")); // DEPRECATED - Moved to .deprecated/ (Day 2)
-app.use("/api/status", require("./routes/statusRoutes")); // System health status
+// MIGRATED TO V2 - Use /api/v2/status/health instead
+// app.use("/api/status", require("./routes/statusRoutes"));
 
 
 // =============================================================
