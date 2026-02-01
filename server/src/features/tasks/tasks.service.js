@@ -40,10 +40,9 @@ const messagesService = require('../../modules/messages/messages.service');
 const { logAction } = require('../../../utils/historyLogger');
 const { isValidTransition, getAllowedTransitions, validateBlocked } = require('../../../utils/workflowValidator');
 
-// Feature layers (to be created)
-// TODO: Import from tasks.policy.js after it's created
-// TODO: Import from tasks.notifications.js after it's created  
-// TODO: Import from tasks.activity.js after it's created
+// Feature layers
+const policy = require('./tasks.policy');
+const validator = require('./tasks.validator');
 
 // ============================================================================
 // SERVICE METHODS
@@ -436,10 +435,8 @@ async function updateTask(userId, taskId, updates, io, req) {
         throw error;
     }
 
-    // TODO: Import from tasks.policy.js in STEP 2
-    // For now, using inline permission checks from legacy utils
-    const { isWorkspaceManager, canEditTask, canChangeStatus, canManageAssignees } = require('../../../utils/taskPermissions');
-    const isManager = await isWorkspaceManager(userId, task.workspace);
+    // Use policy layer for permission checks
+    const isManager = await policy.isWorkspaceManager(userId, task.workspace);
 
     const changes = []; // Track changes for audit
 
@@ -448,7 +445,7 @@ async function updateTask(userId, taskId, updates, io, req) {
     // ============================================================================
     if (updates.status && updates.status !== task.status) {
         // Permission check
-        if (!canChangeStatus(task, userId, isManager)) {
+        if (!policy.canChangeStatus(task, userId, isManager)) {
             const error = new Error('Only assignees or workspace managers can change task status');
             error.statusCode = 403;
             throw error;
@@ -536,7 +533,7 @@ async function updateTask(userId, taskId, updates, io, req) {
     // ASSIGNEE MANAGEMENT
     // ============================================================================
     if (updates.assignedTo !== undefined) {
-        if (!canManageAssignees(task, userId, isManager)) {
+        if (!policy.canManageAssignees(task, userId, isManager)) {
             const error = new Error('Only task creator or workspace managers can manage assignees');
             error.statusCode = 403;
             throw error;
@@ -600,7 +597,7 @@ async function updateTask(userId, taskId, updates, io, req) {
 
     for (const field of editableFields) {
         if (updates[field] !== undefined && JSON.stringify(updates[field]) !== JSON.stringify(task[field])) {
-            if (!canEditTask(task, userId, isManager)) {
+            if (!policy.canEditTask(task, userId, isManager)) {
                 const error = new Error('Only task creator or workspace managers can edit task details');
                 error.statusCode = 403;
                 throw error;
@@ -1329,12 +1326,11 @@ async function createSubtask(userId, parentId, subtaskData, io, req) {
         throw error;
     }
 
-    // TODO: Import from tasks.policy.js in STEP 2
-    const { isWorkspaceManager, canAddSubtask } = require('../../../utils/taskPermissions');
-    const isManager = await isWorkspaceManager(userId, parentTask.workspace);
+    // Use policy layer
+    const isManager = await policy.isWorkspaceManager(userId, parentTask.workspace);
 
     // Permission check
-    if (!canAddSubtask(parentTask, userId, isManager)) {
+    if (!policy.canAddSubtask(parentTask, userId, isManager)) {
         const error = new Error('Only task creator, assignees, or workspace managers can add subtasks');
         error.statusCode = 403;
         throw error;
