@@ -258,6 +258,9 @@ app.use("/api/v2/favorites", require("./src/features/favorites/favorites.routes"
 // Status (Migrated from legacy) - PUBLIC endpoint
 app.use("/api/v2/status", require("./src/features/status/status.routes"));
 
+// Admin (Migrated from legacy) - ADMIN-ONLY endpoints
+app.use("/api/v2/admin", require("./src/features/admin/admin.routes"));
+
 // ============================================================================
 // 📦 V1 ROUTES (LEGACY - TO BE MIGRATED)
 // ============================================================================
