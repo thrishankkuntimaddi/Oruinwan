@@ -7,11 +7,11 @@
  * @module features/company/company.service
  */
 
-const Company = require('../../models/Company');
-const User = require('../../models/User');
-const Workspace = require('../../models/Workspace');
-const Department = require('../../models/Department');
-const { logAction } = require('../../utils/historyLogger');
+const Company = require('../../../models/Company');
+const User = require('../../../models/User');
+const Workspace = require('../../../models/Workspace');
+const Department = require('../../../models/Department');
+const { logAction } = require('../../../utils/historyLogger');
 
 /**
  * Get company by ID with populated relationships

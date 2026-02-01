@@ -7,7 +7,7 @@
  * @module features/company/settings.service
  */
 
-const Company = require('../../models/Company');
+const Company = require('../../../models/Company');
 
 /**
  * Update company profile settings

@@ -8,11 +8,11 @@
  * @module features/company/metrics.service
  */
 
-const User = require('../../models/User');
-const Workspace = require('../../models/Workspace');
-const Department = require('../../models/Department');
-const Message = require('../../models/Message');
-const Task = require('../../models/Task');
+const User = require('../../../models/User');
+const Workspace = require('../../../models/Workspace');
+const Department = require('../../../models/Department');
+const Message = require('../../../models/Message');
+const Task = require('../../../models/Task');
 
 /**
  * Get comprehensive company analytics

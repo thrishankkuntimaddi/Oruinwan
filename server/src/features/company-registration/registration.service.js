@@ -11,13 +11,13 @@
 const fs = require('fs');
 const path = require('path');
 const bcrypt = require('bcryptjs');
-const User = require('../../models/User');
-const Company = require('../../models/Company');
-const Workspace = require('../../models/Workspace');
-const Department = require('../../models/Department');
-const Channel = require('../../models/Channel');
-const sendEmail = require('../../utils/sendEmail');
-const { logAction } = require('../../utils/historyLogger');
+const User = require('../../../models/User');
+const Company = require('../../../models/Company');
+const Workspace = require('../../../models/Workspace');
+const Department = require('../../../models/Department');
+const Channel = require('../../../models/Channel');
+const sendEmail = require('../../../utils/sendEmail');
+const { logAction } = require('../../../utils/historyLogger');
 const conversationKeysService = require('../../modules/encryption/services/conversationKeys.service');
 
 /**

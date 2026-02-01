@@ -10,8 +10,8 @@
 
 const dns = require('dns').promises;
 const crypto = require('crypto');
-const Company = require('../../models/Company');
-const { logAction } = require('../../utils/historyLogger');
+const Company = require('../../../models/Company');
+const { logAction } = require('../../../utils/historyLogger');
 
 /**
  * Generate domain verification token and TXT record

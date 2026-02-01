@@ -9,14 +9,14 @@
 
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
-const User = require('../../models/User');
-const Company = require('../../models/Company');
-const Workspace = require('../../models/Workspace');
-const Channel = require('../../models/Channel');
-const Invite = require('../../models/Invite');
-const sendEmail = require('../../utils/sendEmail');
-const { sha256 } = require('../../utils/hashUtils');
-const { logAction } = require('../../utils/historyLogger');
+const User = require('../../../models/User');
+const Company = require('../../../models/Company');
+const Workspace = require('../../../models/Workspace');
+const Channel = require('../../../models/Channel');
+const Invite = require('../../../models/Invite');
+const sendEmail = require('../../../utils/sendEmail');
+const { sha256 } = require('../../../utils/hashUtils');
+const { logAction } = require('../../../utils/historyLogger');
 
 /**
  * Create and send invitation
