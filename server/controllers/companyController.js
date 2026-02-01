@@ -27,6 +27,8 @@ const companyService = require("../src/features/company/company.service");
 const settingsService = require("../src/features/company/settings.service");
 const metricsService = require("../src/features/company/metrics.service");
 const employeeService = require("../src/features/employees/employee.service");
+const registrationService = require("../src/features/company-registration/registration.service");
+const domainService = require("../src/features/domain-verification/domain.service");
 
 /**
  * Send OTP (Dev Mode: Logs to Terminal)
@@ -1027,54 +1029,41 @@ exports.updateCompanySetup = async (req, res) => {
  * Generate domain verification token
  * POST /api/companies/:id/domain/generate
  */
+/**
+ * Generate domain verification token
+ * POST /api/companies/:id/domain/generate
+ */
 exports.generateDomainVerification = async (req, res) => {
   try {
     const companyId = req.params.id;
     const userId = req.user.sub;
 
-    const company = await Company.findById(companyId);
-    if (!company) {
-      return res.status(404).json({ message: "Company not found" });
-    }
-
-    // Check if user is company admin
-    if (!company.isAdmin(userId)) {
-      return res.status(403).json({ message: "Only company admins can verify domain" });
-    }
-
-    if (!company.domain) {
-      return res.status(400).json({ message: "Company domain not set" });
-    }
-
-    // Generate verification token
-    const { token, txtRecord } = generateDomainVerificationToken();
-
-    company.domainVerificationToken = token;
-    company.domainVerificationExpires = new Date(Date.now() + 86400000); // 24 hours
-    company.domainVerified = false;
-    await company.save();
+    const result = await domainService.generateVerification({ companyId, userId });
 
     return res.json({
       message: "Domain verification token generated",
-      domain: company.domain,
-      txtRecord,
-      expiresAt: company.domainVerificationExpires,
-      instructions: [
-        `Add the following TXT record to your DNS settings for ${company.domain}: `,
-        `Record Type: TXT`,
-        `Host / Name: @(or leave blank for root domain)`,
-        `Value: ${txtRecord} `,
-        ``,
-        `After adding the DNS record, wait a few minutes for DNS propagation, then click "Verify Domain" to complete verification.`
-      ]
+      ...result
     });
 
   } catch (err) {
     console.error("GENERATE DOMAIN VERIFICATION ERROR:", err);
+
+    if (err.message === 'Company not found') {
+      return res.status(404).json({ message: err.message });
+    }
+    if (err.message === 'Only company admins can verify domain' ||
+      err.message === 'Company domain not set') {
+      return res.status(403).json({ message: err.message });
+    }
+
     return res.status(500).json({ message: "Server error" });
   }
 };
 
+/**
+ * Verify domain via DNS TXT record check
+ * POST /api/companies/:id/domain/verify
+ */
 /**
  * Verify domain via DNS TXT record check
  * POST /api/companies/:id/domain/verify
@@ -1084,61 +1073,26 @@ exports.verifyDomain = async (req, res) => {
     const companyId = req.params.id;
     const userId = req.user.sub;
 
-    const company = await Company.findById(companyId);
-    if (!company) {
-      return res.status(404).json({ message: "Company not found" });
-    }
-
-    if (!company.isAdmin(userId)) {
-      return res.status(403).json({ message: "Only company admins can verify domain" });
-    }
-
-    if (!company.domainVerificationToken || !company.domainVerificationExpires) {
-      return res.status(400).json({
-        message: "No verification token generated. Please generate one first."
-      });
-    }
-
-    if (company.domainVerificationExpires < new Date()) {
-      return res.status(400).json({
-        message: "Verification token expired. Please generate a new one."
-      });
-    }
-
-    // Verify DNS TXT record
-    const verified = await verifyDomainTXT(company.domain, company.domainVerificationToken);
-
-    if (!verified) {
-      return res.status(400).json({
-        message: "Domain verification failed. TXT record not found or incorrect."
-      });
-    }
-
-    // Mark as verified
-    company.domainVerified = true;
-    company.domainVerificationToken = null;
-    company.domainVerificationExpires = null;
-    await company.save();
-
-    // Log verification
-    await logAction({
-      userId,
-      action: "domain_verified",
-      description: `Domain ${company.domain} verified`,
-      resourceType: "company",
-      resourceId: company._id,
-      companyId: company._id,
-      req
-    });
+    const result = await domainService.verifyDomain({ companyId, userId, req });
 
     return res.json({
       message: "Domain verified successfully",
-      domain: company.domain,
-      verified: true
+      ...result
     });
 
   } catch (err) {
     console.error("VERIFY DOMAIN ERROR:", err);
+
+    if (err.message === 'Company not found') {
+      return res.status(404).json({ message: err.message });
+    }
+    if (err.message === 'Only company admins can verify domain') {
+      return res.status(403).json({ message: err.message });
+    }
+    if (err.message.includes('token') || err.message.includes('TXT record')) {
+      return res.status(400).json({ message: err.message });
+    }
+
     return res.status(500).json({ message: "Server error" });
   }
 };
