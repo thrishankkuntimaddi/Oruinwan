@@ -21,10 +21,8 @@ const bcrypt = require("bcryptjs");
 const { sha256 } = require("../utils/hashUtils");
 const { handleError } = require("../utils/responseHelpers");
 
-// ============================================================================
-// OTP STORE (In-Memory for Development)
-// ============================================================================
-const otpStore = new Map();
+// Import shared OTP service
+const otpService = require("../src/shared/services/otp.service");
 
 /**
  * Send OTP (Dev Mode: Logs to Terminal)
@@ -36,47 +34,13 @@ exports.sendOtp = async (req, res) => {
     const { target, type } = req.body;
     if (!target) return res.status(400).json({ message: "Target is required" });
 
-    // Generate 6-digit OTP
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    // Use shared OTP service
+    const result = await otpService.generateAndSendOTP({ target, type });
 
-    // Store with 5-minute expiration
-    otpStore.set(target, {
-      otp,
-      expires: Date.now() + 5 * 60 * 1000
+    return res.json({
+      message: "OTP sent successfully",
+      ...(result.devMode ? { devNote: "Check server terminal for code" } : {})
     });
-
-    // Send OTP based on type
-    try {
-      if (type === 'phone') {
-        // Phone number should already be in E.164 format from frontend
-        // E.g., +919381870544 or +14155552671
-        await sendOTP(target, otp);
-        console.log(`✅ Phone OTP sent to ${target}`);
-      } else if (type === 'email') {
-        // Send via Email
-        await sendEmail({
-          to: target,
-          subject: "Chttrix Verification Code",
-          html: `<p>Your verification code is: <strong>${otp}</strong></p><p>This code will expire in 5 minutes.</p>`
-        });
-        console.log(`✅ Email OTP sent to ${target}`);
-      }
-
-      return res.json({
-        message: "OTP sent successfully"
-      });
-    } catch (error) {
-      // If sending fails (e.g., Twilio not configured), log to console as fallback
-      console.log("\n" + "=".repeat(44));
-      console.log(`🔐 [DEV OTP] Verification Code for ${type} (${target})`);
-      console.log(`👉 CODE: ${otp}`);
-      console.log("=".repeat(44) + "\n");
-
-      return res.json({
-        message: "OTP sent successfully",
-        devNote: "Check server terminal for code"
-      });
-    }
   } catch (err) {
     return handleError(res, err, "SEND OTP ERROR");
   }
@@ -95,23 +59,13 @@ exports.verifyOtp = async (req, res) => {
       return res.status(400).json({ message: "Target and OTP are required" });
     }
 
-    const data = otpStore.get(target);
+    // Use shared OTP service
+    const result = otpService.verifyOTP(target, otp);
 
-    if (!data) {
-      return res.status(400).json({ message: "OTP not found or expired" });
+    if (!result.valid) {
+      return res.status(400).json({ message: result.error });
     }
 
-    if (Date.now() > data.expires) {
-      otpStore.delete(target);
-      return res.status(400).json({ message: "OTP expired" });
-    }
-
-    if (data.otp !== otp) {
-      return res.status(400).json({ message: "Invalid OTP" });
-    }
-
-    // OTP Valid
-    otpStore.delete(target); // Consume OTP
     return res.json({ message: "Verified successfully", verified: true });
 
   } catch (err) {
