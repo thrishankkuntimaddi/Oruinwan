@@ -252,6 +252,9 @@ app.use("/api/v2/tasks", require("./src/features/tasks/tasks.routes"));
 // Notes (Migrated from legacy)
 app.use("/api/v2/notes", require("./src/features/notes/notes.routes"));
 
+// Favorites (Migrated from legacy)
+app.use("/api/v2/favorites", require("./src/features/favorites/favorites.routes"));
+
 // ============================================================================
 // 📦 V1 ROUTES (LEGACY - TO BE MIGRATED)
 // ============================================================================
