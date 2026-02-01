@@ -7,8 +7,8 @@
  * @module shared/services/otp
  */
 
-const sendEmail = require('../../utils/sendEmail');
-const { sendOTP } = require('../../utils/sendOTP');
+const sendEmail = require('../../../utils/sendEmail');
+const { sendOTP } = require('../../../utils/sendOTP');
 
 // ============================================================================
 // OTP STORE (In-Memory for Development)
