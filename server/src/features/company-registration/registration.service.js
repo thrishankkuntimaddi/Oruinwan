@@ -18,7 +18,7 @@ const Department = require('../../../models/Department');
 const Channel = require('../../../models/Channel');
 const sendEmail = require('../../../utils/sendEmail');
 const { logAction } = require('../../../utils/historyLogger');
-const conversationKeysService = require('../../modules/encryption/services/conversationKeys.service');
+const conversationKeysService = require('../../../modules/encryption/services/conversationKeys.service');
 
 /**
  * Validate domain format
