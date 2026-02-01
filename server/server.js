@@ -246,8 +246,11 @@ app.use("/api/v2/identity", require("./src/modules/identity/identity.routes"));
 // Conversation Keys (E2EE-specific)
 app.use("/api/v2/conversations", require("./src/modules/conversations/conversationKeys.routes"));
 
-// Tasks (NEW - Migrated from legacy)
+// Tasks (Migrated from legacy)
 app.use("/api/v2/tasks", require("./src/features/tasks/tasks.routes"));
+
+// Notes (Migrated from legacy)
+app.use("/api/v2/notes", require("./src/features/notes/notes.routes"));
 
 // ============================================================================
 // 📦 V1 ROUTES (LEGACY - TO BE MIGRATED)
