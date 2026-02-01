@@ -416,8 +416,265 @@ async function createTask(userId, taskData, io, req) {
  * @returns {Promise<Object>} { message: string, task: Task }
  */
 async function updateTask(userId, taskId, updates, io, req) {
-    // PLACEHOLDER - Implementation in next step
-    throw new Error('Not implemented yet');
+    const task = await Task.findById(taskId);
+    if (!task || task.deleted) {
+        const error = new Error('Task not found');
+        error.statusCode = 404;
+        throw error;
+    }
+
+    const workspace = await Workspace.findById(task.workspace);
+    if (!workspace) {
+        const error = new Error('Workspace for this task not found');
+        error.statusCode = 404;
+        throw error;
+    }
+
+    if (!workspace.isMember(userId)) {
+        const error = new Error('Access denied');
+        error.statusCode = 403;
+        throw error;
+    }
+
+    // TODO: Import from tasks.policy.js in STEP 2
+    // For now, using inline permission checks from legacy utils
+    const { isWorkspaceManager, canEditTask, canChangeStatus, canManageAssignees } = require('../../../utils/taskPermissions');
+    const isManager = await isWorkspaceManager(userId, task.workspace);
+
+    const changes = []; // Track changes for audit
+
+    // ============================================================================
+    // STATUS CHANGE (WITH WORKFLOW VALIDATION)
+    // ============================================================================
+    if (updates.status && updates.status !== task.status) {
+        // Permission check
+        if (!canChangeStatus(task, userId, isManager)) {
+            const error = new Error('Only assignees or workspace managers can change task status');
+            error.statusCode = 403;
+            throw error;
+        }
+
+        // Workflow validation
+        if (!isValidTransition(task.status, updates.status)) {
+            const error = new Error(`Invalid status transition from "${task.status}" to "${updates.status}"`);
+            error.statusCode = 400;
+            error.allowedTransitions = getAllowedTransitions(task.status);
+            throw error;
+        }
+
+        // Validate blocked requirements
+        if (updates.status === 'blocked') {
+            const validation = validateBlocked(updates.status, updates.blockedReason);
+            if (!validation.valid) {
+                const error = new Error(validation.error);
+                error.statusCode = 400;
+                throw error;
+            }
+        }
+
+        // Log status change
+        changes.push({
+            action: 'status_changed',
+            field: 'status',
+            from: task.status,
+            to: updates.status,
+            metadata: updates.blockedReason ? { reason: updates.blockedReason } : {}
+        });
+
+        task.previousStatus = task.status;
+        task.status = updates.status;
+
+        // Handle blocked state
+        if (updates.status === 'blocked') {
+            task.blockedBy = userId;
+            task.blockedAt = new Date();
+            task.blockedReason = updates.blockedReason;
+        } else if (task.blockedReason && updates.status !== 'blocked') {
+            // Unblocking
+            changes.push({
+                action: 'unblocked',
+                field: 'status',
+                from: task.status,
+                to: updates.status
+            });
+            task.blockedBy = null;
+            task.blockedAt = null;
+            task.blockedReason = null;
+        }
+
+        // Handle completion
+        if (updates.status === 'done' && task.status !== 'done') {
+            task.completedBy = userId;
+            task.completedAt = new Date();
+            if (updates.completionNote) {
+                task.completionNote = updates.completionNote;
+            }
+
+            // STUB: Channel notification (STEP 3)
+            if (task.channel) {
+                try {
+                    const msg = new Message({
+                        company: task.company || null,
+                        workspace: task.workspace,
+                        channel: task.channel,
+                        sender: userId,
+                        text: `✅ **Completed Task:** ${task.title}`
+                    });
+                    await msg.save();
+                    await msg.populate("sender", "username profilePicture");
+                    if (io) {
+                        io.to(`channel_${task.channel}`).emit("new-message", msg);
+                    }
+                } catch (msgErr) {
+                    console.error("Failed to send completion message:", msgErr);
+                }
+            }
+        }
+    }
+
+    // ============================================================================
+    // ASSIGNEE MANAGEMENT
+    // ============================================================================
+    if (updates.assignedTo !== undefined) {
+        if (!canManageAssignees(task, userId, isManager)) {
+            const error = new Error('Only task creator or workspace managers can manage assignees');
+            error.statusCode = 403;
+            throw error;
+        }
+
+        const oldAssignees = task.assignedTo.map(id => id.toString());
+        const newAssignees = Array.isArray(updates.assignedTo)
+            ? updates.assignedTo.map(id => id.toString())
+            : [updates.assignedTo.toString()];
+
+        // Find additions and removals
+        const added = newAssignees.filter(id => !oldAssignees.includes(id));
+        const removed = oldAssignees.filter(id => !newAssignees.includes(id));
+
+        // Log each change
+        added.forEach(assigneeId => {
+            changes.push({
+                action: 'assignee_added',
+                field: 'assignedTo',
+                to: assigneeId
+            });
+        });
+
+        removed.forEach(assigneeId => {
+            changes.push({
+                action: 'assignee_removed',
+                field: 'assignedTo',
+                from: assigneeId
+            });
+        });
+
+        task.assignedTo = newAssignees;
+
+        // STUB: Socket notifications (STEP 3)
+        if (io && removed.length > 0) {
+            removed.forEach(assigneeId => {
+                io.to(`user_${assigneeId}`).emit("task-removed", {
+                    taskId: task._id,
+                    reason: "reassigned"
+                });
+            });
+        }
+
+        if (io && added.length > 0) {
+            const populatedTask = await Task.findById(task._id)
+                .populate("createdBy", "username profilePicture")
+                .populate("assignedTo", "username profilePicture")
+                .populate("channel", "name");
+
+            added.forEach(assigneeId => {
+                io.to(`user_${assigneeId}`).emit("task-assigned", populatedTask);
+            });
+        }
+    }
+
+    // ============================================================================
+    // OTHER METADATA (REQUIRES EDIT PERMISSION)
+    // ============================================================================
+    const editableFields = ['title', 'description', 'priority', 'dueDate', 'tags',
+        'storyPoints', 'estimatedHours', 'actualHours', 'resolution'];
+
+    for (const field of editableFields) {
+        if (updates[field] !== undefined && JSON.stringify(updates[field]) !== JSON.stringify(task[field])) {
+            if (!canEditTask(task, userId, isManager)) {
+                const error = new Error('Only task creator or workspace managers can edit task details');
+                error.statusCode = 403;
+                throw error;
+            }
+
+            changes.push({
+                action: 'updated',
+                field,
+                from: task[field],
+                to: updates[field]
+            });
+
+            task[field] = updates[field];
+        }
+    }
+
+    // Save task
+    await task.save();
+
+    // ============================================================================
+    // STUB: Activity Logging (STEP 3)
+    // ============================================================================
+    // TODO: Move to tasks.activity.js
+    for (const change of changes) {
+        await TaskActivity.create({
+            task: task._id,
+            user: userId,
+            action: change.action,
+            field: change.field,
+            from: change.from,
+            to: change.to,
+            metadata: change.metadata || {},
+            ipAddress: req?.ip,
+            userAgent: req?.get('user-agent')
+        });
+    }
+
+    await logAction({
+        userId,
+        action: "task_updated",
+        description: `Updated task: ${task.title}`,
+        resourceType: "task",
+        resourceId: task._id,
+        companyId: task.company,
+        metadata: updates,
+        req
+    });
+
+    // Populate and return
+    const populatedTask = await Task.findById(task._id)
+        .populate("createdBy", "username profilePicture")
+        .populate("assignedTo", "username profilePicture")
+        .populate("channel", "name");
+
+    // ============================================================================
+    // STUB: Socket Events (STEP 3)
+    // ============================================================================
+    // TODO: Move to tasks.notifications.js
+    if (io) {
+        task.assignedTo.forEach(assigneeId => {
+            io.to(`user_${assigneeId.toString()}`).emit("task-updated", populatedTask);
+        });
+
+        if (task.visibility === "workspace") {
+            io.to(`workspace_${task.workspace}`).emit("task-updated", populatedTask);
+        } else if (task.visibility === "channel" && task.channel) {
+            io.to(`channel_${task.channel}`).emit("task-updated", populatedTask);
+        }
+    }
+
+    return {
+        message: "Task updated successfully",
+        task: populatedTask
+    };
 }
 
 /**
@@ -811,8 +1068,65 @@ async function revokeTask(userId, taskId, req) {
  * @returns {Promise<Object>} { message: string, transferRequest: Object }
  */
 async function requestTransfer(userId, taskId, newAssigneeId, note, io, req) {
-    // PLACEHOLDER - Implementation in next step
-    throw new Error('Not implemented yet');
+    if (!newAssigneeId) {
+        const error = new Error('New assignee ID is required');
+        error.statusCode = 400;
+        throw error;
+    }
+
+    const task = await Task.findById(taskId);
+    if (!task) {
+        const error = new Error('Task not found');
+        error.statusCode = 404;
+        throw error;
+    }
+
+    // Permission: Only assignee can request transfer
+    const isAssignee = task.assignedTo.some(id => id.toString() === userId);
+    if (!isAssignee) {
+        const error = new Error('Only the task assignee can request a transfer');
+        error.statusCode = 403;
+        throw error;
+    }
+
+    // Create transfer request (allows overwriting pending requests)
+    task.transferRequest = {
+        requestedBy: userId,
+        requestedTo: newAssigneeId,
+        requestedAt: new Date(),
+        status: 'pending',
+        note: note || ''
+    };
+
+    await task.save();
+
+    // STUB: Audit logging (STEP 3)
+    await logAction({
+        userId,
+        action: "task_updated",
+        description: `Requested transfer for task: ${task.title}`,
+        resourceType: "task",
+        resourceId: taskId,
+        companyId: task.company,
+        metadata: { newAssigneeId, note },
+        req
+    });
+
+    // STUB: Notify creator (STEP 3)
+    if (io) {
+        const updatedTask = await Task.findById(taskId)
+            .populate("createdBy", "username profilePicture")
+            .populate("assignedTo", "username profilePicture")
+            .populate("transferRequest.requestedTo", "username profilePicture")
+            .populate("transferRequest.requestedBy", "username profilePicture");
+
+        io.to(`user_${task.createdBy}`).emit("task-updated", updatedTask);
+    }
+
+    return {
+        message: "Transfer request submitted. Waiting for creator's approval.",
+        transferRequest: task.transferRequest
+    };
 }
 
 /**
@@ -839,8 +1153,130 @@ async function requestTransfer(userId, taskId, newAssigneeId, note, io, req) {
  * @returns {Promise<Object>} { message: string, task?: Task }
  */
 async function handleTransferRequest(userId, taskId, action, io, req) {
-    // PLACEHOLDER - Implementation in next step
-    throw new Error('Not implemented yet');
+    if (!['approve', 'reject'].includes(action)) {
+        const error = new Error("Invalid action. Use 'approve' or 'reject'");
+        error.statusCode = 400;
+        throw error;
+    }
+
+    const task = await Task.findById(taskId)
+        .populate("transferRequest.requestedBy", "username")
+        .populate("transferRequest.requestedTo", "username");
+
+    if (!task) {
+        const error = new Error('Task not found');
+        error.statusCode = 404;
+        throw error;
+    }
+
+    // Permission: Only creator can approve/reject
+    if (task.createdBy.toString() !== userId) {
+        const error = new Error('Only the task creator can approve or reject transfer requests');
+        error.statusCode = 403;
+        throw error;
+    }
+
+    // Check if transfer request exists
+    if (!task.transferRequest || task.transferRequest.status !== 'pending') {
+        const error = new Error('No pending transfer request found for this task');
+        error.statusCode = 400;
+        throw error;
+    }
+
+    if (action === 'approve') {
+        // Check if requestedTo is valid
+        const requestedTo = task.transferRequest.requestedTo;
+        if (!requestedTo) {
+            const error = new Error('Cannot approve request: Target user not found or deleted');
+            error.statusCode = 400;
+            throw error;
+        }
+
+        // Update assignee
+        const newAssigneeId = requestedTo._id || requestedTo;
+        task.assignedTo = [newAssigneeId];
+        task.transferRequest.status = 'approved';
+
+        await task.save();
+
+        // STUB: Audit logging (STEP 3)
+        await logAction({
+            userId,
+            action: "task_updated",
+            description: `Approved transfer request for task: ${task.title}`,
+            resourceType: "task",
+            resourceId: taskId,
+            companyId: task.company,
+            req
+        });
+
+        // STUB: Socket notifications (STEP 3)
+        if (io) {
+            const populatedTask = await Task.findById(task._id)
+                .populate("createdBy", "username profilePicture")
+                .populate("assignedTo", "username profilePicture")
+                .populate("transferRequest.requestedTo", "username profilePicture")
+                .populate("transferRequest.requestedBy", "username profilePicture");
+
+            // Notify new assignee
+            if (newAssigneeId) {
+                io.to(`user_${newAssigneeId}`).emit("task-assigned", populatedTask);
+            }
+
+            // Notify old assignee (requester)
+            const requester = task.transferRequest.requestedBy;
+            if (requester) {
+                const requesterId = requester._id || requester;
+                io.to(`user_${requesterId}`).emit("task-removed", {
+                    taskId: task._id,
+                    reason: "reassigned"
+                });
+            }
+
+            // Notify creator
+            io.to(`user_${userId}`).emit("task-updated", populatedTask);
+        }
+
+        return {
+            message: "Transfer request approved. Task has been reassigned.",
+            task: await Task.findById(task._id)
+                .populate("createdBy", "username profilePicture")
+                .populate("assignedTo", "username profilePicture")
+        };
+    } else if (action === 'reject') {
+        task.transferRequest.status = 'rejected';
+        await task.save();
+
+        // STUB: Audit logging (STEP 3)
+        await logAction({
+            userId,
+            action: "task_updated",
+            description: `Rejected transfer request for task: ${task.title}`,
+            resourceType: "task",
+            resourceId: taskId,
+            companyId: task.company,
+            req
+        });
+
+        // STUB: Notify requester (STEP 3)
+        if (io) {
+            const populatedTask = await Task.findById(task._id)
+                .populate("createdBy", "username profilePicture")
+                .populate("assignedTo", "username profilePicture")
+                .populate("transferRequest.requestedTo", "username profilePicture")
+                .populate("transferRequest.requestedBy", "username profilePicture");
+
+            const requester = task.transferRequest.requestedBy;
+            if (requester) {
+                const requesterId = requester._id || requester;
+                io.to(`user_${requesterId}`).emit("task-updated", populatedTask);
+            }
+        }
+
+        return {
+            message: "Transfer request rejected. Task remains with current assignee."
+        };
+    }
 }
 
 /**
@@ -870,8 +1306,115 @@ async function handleTransferRequest(userId, taskId, action, io, req) {
  * @returns {Promise<Object>} { message: string, subtask: Task }
  */
 async function createSubtask(userId, parentId, subtaskData, io, req) {
-    // PLACEHOLDER - Implementation in next step
-    throw new Error('Not implemented yet');
+    const { title, description, assignedTo = [], priority, dueDate, tags } = subtaskData;
+
+    if (!title) {
+        const error = new Error('Subtask title is required');
+        error.statusCode = 400;
+        throw error;
+    }
+
+    // Get parent task
+    const parentTask = await Task.findById(parentId);
+    if (!parentTask || parentTask.deleted) {
+        const error = new Error('Parent task not found');
+        error.statusCode = 404;
+        throw error;
+    }
+
+    // Validate: cannot create subtask under another subtask
+    if (parentTask.type === 'subtask') {
+        const error = new Error('Cannot create subtask under another subtask. Please create it under the parent task.');
+        error.statusCode = 400;
+        throw error;
+    }
+
+    // TODO: Import from tasks.policy.js in STEP 2
+    const { isWorkspaceManager, canAddSubtask } = require('../../../utils/taskPermissions');
+    const isManager = await isWorkspaceManager(userId, parentTask.workspace);
+
+    // Permission check
+    if (!canAddSubtask(parentTask, userId, isManager)) {
+        const error = new Error('Only task creator, assignees, or workspace managers can add subtasks');
+        error.statusCode = 403;
+        throw error;
+    }
+
+    // Create subtask
+    const subtask = new Task({
+        type: 'subtask',
+        parentTask: parentId,
+        workspace: parentTask.workspace,
+        company: parentTask.company,
+        project: parentTask.project,
+        title,
+        description: description || '',
+        createdBy: userId,
+        assignedTo: Array.isArray(assignedTo) ? assignedTo : [],
+        status: 'todo',
+        priority: priority || parentTask.priority,
+        dueDate: dueDate ? new Date(dueDate) : null,
+        tags: tags || [],
+        visibility: parentTask.visibility,
+        channel: parentTask.channel,
+        epic: parentTask.type === 'epic' ? parentId : parentTask.epic,
+        source: 'manual'
+    });
+
+    await subtask.save();
+
+    // Update parent task's subtasks array
+    if (!parentTask.subtasks) parentTask.subtasks = [];
+    parentTask.subtasks.push(subtask._id);
+    await parentTask.save();
+
+    // STUB: Activity logging (STEP 3)
+    await TaskActivity.create({
+        task: parentId,
+        user: userId,
+        action: 'subtask_added',
+        metadata: {
+            subtaskId: subtask._id,
+            subtaskTitle: title
+        },
+        ipAddress: req?.ip,
+        userAgent: req?.get('user-agent')
+    });
+
+    await TaskActivity.create({
+        task: subtask._id,
+        user: userId,
+        action: 'created',
+        metadata: { parentTaskId: parentId },
+        ipAddress: req?.ip,
+        userAgent: req?.get('user-agent')
+    });
+
+    // Populate and return
+    const populatedSubtask = await Task.findById(subtask._id)
+        .populate('createdBy', 'username profilePicture')
+        .populate('assignedTo', 'username profilePicture')
+        .populate('parentTask', 'title');
+
+    // STUB: Socket notification (STEP 3)
+    if (io) {
+        const stakeholders = new Set([
+            parentTask.createdBy.toString(),
+            ...parentTask.assignedTo.map(id => id.toString()),
+            ...subtask.assignedTo.map(id => id.toString())
+        ]);
+        stakeholders.forEach(stakeholderId => {
+            io.to(`user_${stakeholderId}`).emit('subtask-created', {
+                subtask: populatedSubtask,
+                parentTaskId: parentId
+            });
+        });
+    }
+
+    return {
+        message: "Subtask created successfully",
+        subtask: populatedSubtask
+    };
 }
 
 /**
@@ -893,8 +1436,52 @@ async function createSubtask(userId, parentId, subtaskData, io, req) {
  * @returns {Promise<Object>} { activities: TaskActivity[], pagination: Object }
  */
 async function getTaskActivity(userId, taskId, pagination = {}) {
-    // PLACEHOLDER - Implementation in next step
-    throw new Error('Not implemented yet');
+    const { limit = 50, offset = 0 } = pagination;
+
+    // Check if task exists
+    const task = await Task.findById(taskId);
+    if (!task) {
+        const error = new Error('Task not found');
+        error.statusCode = 404;
+        throw error;
+    }
+
+    // Verify workspace access
+    const workspace = await Workspace.findById(task.workspace);
+    if (!workspace || !workspace.isMember(userId)) {
+        const error = new Error('Access denied');
+        error.statusCode = 403;
+        throw error;
+    }
+
+    // Check if user can view this task
+    const userChannels = await _getUserChannels(userId, task.workspace);
+    if (!task.canView(userId, userChannels.map(id => id.toString()))) {
+        const error = new Error("You don't have permission to view this task");
+        error.statusCode = 403;
+        throw error;
+    }
+
+    // Get activity history
+    const activities = await TaskActivity.find({ task: taskId })
+        .populate('user', 'username profilePicture')
+        .sort({ createdAt: -1 })
+        .limit(parseInt(limit))
+        .skip(parseInt(offset))
+        .lean();
+
+    // Get total count
+    const total = await TaskActivity.countDocuments({ task: taskId });
+
+    return {
+        activities,
+        pagination: {
+            total,
+            limit: parseInt(limit),
+            offset: parseInt(offset),
+            hasMore: (parseInt(offset) + parseInt(limit)) < total
+        }
+    };
 }
 
 // ============================================================================
