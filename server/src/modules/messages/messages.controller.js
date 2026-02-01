@@ -271,11 +271,12 @@ exports.resolveDMSession = async (req, res) => {
             });
 
             // Create conversation key for DM (E2EE bootstrapping)
-            await conversationKeysService.createConversationKey(
-                dmSession._id,
-                'dm',
-                [currentUserId, otherUserId]
-            );
+            await conversationKeysService.bootstrapConversationKey({
+                conversationId: dmSession._id,
+                conversationType: 'dm',
+                workspaceId: workspaceId,
+                members: [currentUserId, otherUserId]
+            });
 
             console.log(`✅ [MESSAGES:MODULAR][RESOLVE_DM] Created new DM session ${dmSession._id} with keys`);
         } else {
