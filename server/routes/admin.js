@@ -8,7 +8,8 @@ const Ticket = require('../models/Ticket');
 const Broadcast = require('../models/Broadcast');
 const Billing = require('../models/Billing');
 const sendEmail = require('../utils/sendEmail');
-const adminController = require('../controllers/adminController');
+// MIGRATED TO V2 - This controller is now at src/features/admin/
+// const adminController = require('../controllers/adminController');
 const platformController = require('../controllers/platformController');
 const AuditLog = require('../models/AuditLog');
 const Department = require('../models/Department');
@@ -648,10 +649,11 @@ router.get('/health/metrics', requireSuperAdmin, async (req, res) => {
 // ============================================================================
 
 // GET /api/admin/analytics/stats
-router.get('/analytics/stats', requireAuth, requireAdmin, adminController.getAnalyticsStats);
+// MIGRATED TO V2 - Use /api/v2/admin/analytics/stats instead
+// router.get('/analytics/stats', requireAuth, requireAdmin, adminController.getAnalyticsStats);
 
-// GET /api/admin/departments
-router.get('/departments', requireAuth, requireAdmin, adminController.getDepartments);
+// MIGRATED TO V2 - Use /api/v2/admin/departments instead
+// router.get('/departments', requireAuth, requireAdmin, adminController.getDepartments);
 
 // Support Tickets (Company Admin View)
 router.post('/tickets', requireAuth, requireAdmin, platformController.createTicket);
