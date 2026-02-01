@@ -26,6 +26,7 @@ const otpService = require("../src/shared/services/otp.service");
 const companyService = require("../src/features/company/company.service");
 const settingsService = require("../src/features/company/settings.service");
 const metricsService = require("../src/features/company/metrics.service");
+const employeeService = require("../src/features/employees/employee.service");
 
 /**
  * Send OTP (Dev Mode: Logs to Terminal)
@@ -1189,98 +1190,58 @@ exports.setAutoJoinPolicy = async (req, res) => {
  * Invite single user to company
  * POST /api/companies/:id/invite
  */
+/**
+ * Invite single user to company
+ * POST /api/companies/:id/invite
+ */
 exports.inviteEmployee = async (req, res) => {
   try {
     const companyId = req.params.id;
     const userId = req.user.sub;
-    // Enhanced to accept departmentId and extra metadata
     const { email, role = "member", workspaceId = null, departmentId = null, managerId = null } = req.body;
 
     if (!email) {
       return res.status(400).json({ message: "Email is required" });
     }
 
-    const company = await Company.findById(companyId);
-    if (!company) {
-      return res.status(404).json({ message: "Company not found" });
-    }
-
-    // Check permissions
-    if (!company.isAdmin(userId)) {
-      return res.status(403).json({ message: "Only company admins can invite employees" });
-    }
-
-    // Check if user already exists with this email
-    const existingUser = await User.findOne({ email });
-    if (existingUser && existingUser.companyId) {
-      if (existingUser.companyId.toString() === companyId) {
-        return res.status(400).json({ message: "User already belongs to this company" });
-      } else {
-        return res.status(400).json({ message: "User already belongs to another company" });
-      }
-    }
-
-    // Create invite
-    const rawToken = crypto.randomBytes(32).toString("hex");
-    const tokenHash = sha256(rawToken);
-
-    const invite = new Invite({
-      email: email.toLowerCase(),
-      tokenHash,
-      company: companyId,
-      workspace: workspaceId,
-      role,
-      invitedBy: userId,
-      department: departmentId, // Store department
-      metadata: { managerId },  // Store manager
-      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days
-    });
-
-
-    await invite.save();
-
-    const inviteLink = `${process.env.FRONTEND_URL}/accept-invite?token=${rawToken}&email=${encodeURIComponent(email)}`;
-
-    // Send email
-    try {
-      await sendEmail({
-        to: email,
-        subject: `You're invited to join ${company.name} on Chttrix`,
-        html: `
-          <h2>You've been invited!</h2>
-          <p>You've been invited to join ${company.name} on Chttrix.</p>
-          <p><a href="${inviteLink}">Accept Invitation</a></p>
-          <p>This invitation expires in 7 days.</p>
-        `
-      });
-    } catch (emailErr) {
-      console.warn("Failed to send invite email:", emailErr.message);
-    }
-
-    // Log invitation
-    await logAction({
-      userId,
-      action: "user_invited",
-      description: `Invited ${email} to company`,
-      resourceType: "invite",
-      resourceId: invite._id,
+    // Use service layer
+    const result = await employeeService.inviteEmployee({
       companyId,
-      metadata: { email, role },
+      email,
+      role,
+      workspaceId,
+      departmentId,
+      managerId,
+      userId,
       req
     });
 
     return res.json({
       message: "Invitation sent successfully",
-      inviteId: invite._id,
-      inviteLink // for testing
+      inviteId: result.inviteId,
+      inviteLink: result.inviteLink
     });
 
   } catch (err) {
     console.error("INVITE EMPLOYEE ERROR:", err);
+
+    if (err.message === 'Company not found') {
+      return res.status(404).json({ message: err.message });
+    }
+    if (err.message === 'Only company admins can invite employees' ||
+      err.message === 'User already belongs to a company') {
+      return res.status(403).json({ message: err.message });
+    }
+
     return res.status(500).json({ message: "Server error" });
   }
 };
 
+/**
+ * Bulk invite employees via CSV
+ * POST /api/companies/:id/invite/bulk
+ * Body: { employees: [{ name, email, department, role }] }
+ */
 /**
  * Bulk invite employees via CSV
  * POST /api/companies/:id/invite/bulk
@@ -1296,75 +1257,12 @@ exports.bulkInviteEmployees = async (req, res) => {
       return res.status(400).json({ message: "Employees array is required" });
     }
 
-    const company = await Company.findById(companyId);
-    if (!company) {
-      return res.status(404).json({ message: "Company not found" });
-    }
-
-    if (!company.isAdmin(userId)) {
-      return res.status(403).json({ message: "Only company admins can invite employees" });
-    }
-
-    const results = {
-      success: [],
-      failed: []
-    };
-
-    for (const emp of employees) {
-      try {
-        const { name, email, role = "member" } = emp;
-
-        if (!email || !name) {
-          results.failed.push({ email, error: "Missing name or email" });
-          continue;
-        }
-
-        // Check if user exists
-        const existingUser = await User.findOne({ email: email.toLowerCase() });
-        if (existingUser && existingUser.companyId) {
-          results.failed.push({ email, error: "User already has a company" });
-          continue;
-        }
-
-        // Create invite
-        const rawToken = crypto.randomBytes(32).toString("hex");
-        const tokenHash = sha256(rawToken);
-
-        const invite = new Invite({
-          email: email.toLowerCase(),
-          tokenHash,
-          company: companyId,
-          workspace: company.defaultWorkspace,
-          role,
-          invitedBy: userId,
-          expiresAt: new Date(Date.now() + 7 * 86400000)
-        });
-
-        await invite.save();
-
-        const inviteLink = `${process.env.FRONTEND_URL}/accept-invite?token=${rawToken}&email=${encodeURIComponent(email)}`;
-
-        // Send email
-        try {
-          await sendEmail({
-            to: email,
-            subject: `You're invited to join ${company.name} on Chttrix`,
-            html: `
-              <h2>Welcome ${name}!</h2>
-              <p>You've been invited to join ${company.name} on Chttrix.</p>
-              <p><a href="${inviteLink}">Accept Invitation</a></p>
-            `
-          });
-        } catch (emailErr) {
-          console.warn(`Failed to send email to ${email}:`, emailErr.message);
-        }
-
-        results.success.push({ name, email, inviteId: invite._id });
-
-      } catch (err) {
-        results.failed.push({ email: emp.email, error: err.message });
-      }
-    }
+    // Use service layer
+    const results = await employeeService.bulkInviteEmployees({
+      companyId,
+      employees,
+      userId
+    });
 
     return res.json({
       message: "Bulk invitation completed",
@@ -1378,6 +1276,14 @@ exports.bulkInviteEmployees = async (req, res) => {
 
   } catch (err) {
     console.error("BULK INVITE ERROR:", err);
+
+    if (err.message === 'Company not found') {
+      return res.status(404).json({ message: err.message });
+    }
+    if (err.message === 'Only company admins can invite employees') {
+      return res.status(403).json({ message: err.message });
+    }
+
     return res.status(500).json({ message: "Server error" });
   }
 };
@@ -1386,18 +1292,15 @@ exports.bulkInviteEmployees = async (req, res) => {
  * Method 4: Admin Direct Create Employee (No Email Confirmation)
  * POST /api/companies/:id/employees/create
  */
+/**
+ * Method 4: Admin Direct Create Employee (No Email Confirmation)
+ * POST /api/companies/:id/employees/create
+ */
 exports.directCreateEmployee = async (req, res) => {
   try {
     const companyId = req.params.id;
     const userId = req.user.sub;
-    const {
-      username,
-      email,
-      password,
-      role = "member",
-      department,
-      jobTitle
-    } = req.body;
+    const { username, email, password, role = "member", department, jobTitle } = req.body;
 
     if (!username || !email || !password) {
       return res.status(400).json({
@@ -1405,119 +1308,41 @@ exports.directCreateEmployee = async (req, res) => {
       });
     }
 
-    const company = await Company.findById(companyId);
-    if (!company) {
-      return res.status(404).json({ message: "Company not found" });
-    }
-
-    // Only admins can directly create employees
-    if (!company.isAdmin(userId)) {
-      return res.status(403).json({
-        message: "Only company admins can create employees directly"
-      });
-    }
-
-    // Check if user exists
-    const existingUser = await User.findOne({ email: email.toLowerCase() });
-    if (existingUser) {
-      return res.status(409).json({
-        message: "Email already in use"
-      });
-    }
-
-    // Create user account
-    const passwordHash = await bcrypt.hash(password, 12);
-
-    const newUser = new User({
+    // Use service layer
+    const result = await employeeService.directCreateEmployee({
+      companyId,
       username,
-      email: email.toLowerCase(),
-      passwordHash,
-      userType: "company",
-      companyId: company._id,
-      companyRole: role,
-      verified: true, // Auto-verified since created by admin
+      email,
+      password,
+      role,
+      department,
       jobTitle,
-      departments: department ? [department] : []
-    });
-
-    await newUser.save();
-
-    // Add to default workspace
-    if (company.defaultWorkspace) {
-      const workspace = await Workspace.findById(company.defaultWorkspace);
-
-      if (workspace && !workspace.isMember(newUser._id)) {
-        workspace.members.push({
-          user: newUser._id,
-          role: "member"
-        });
-        await workspace.save();
-
-        newUser.workspaces.push({
-          workspace: workspace._id,
-          role: "member"
-        });
-
-        // Add to default channels
-        const defaultChannels = await Channel.find({
-          workspace: workspace._id,
-          isDefault: true
-        });
-
-        for (const channel of defaultChannels) {
-          if (!channel.members.some(m => (m.user ? m.user.toString() : m.toString()) === newUser._id.toString())) {
-            // 🔧 FIX: Convert all existing members to new format before adding new member
-            channel.members = channel.members.map(m => {
-              if (m.user) return m;
-              return {
-                user: m,
-                joinedAt: channel.createdAt || new Date()
-              };
-            });
-
-            channel.members.push({
-              user: newUser._id,
-              joinedAt: new Date()
-            });
-            await channel.save();
-
-          }
-        }
-
-        await newUser.save();
-
-      }
-    }
-
-    // Log action
-    await logAction({
       userId,
-      action: "employee_created_direct",
-      description: `Admin directly created employee: ${username}`,
-      resourceType: "user",
-      resourceId: newUser._id,
-      companyId: company._id,
-      metadata: { email, role },
       req
     });
 
     return res.json({
       message: "Employee account created successfully",
-      user: {
-        id: newUser._id,
-        username: newUser.username,
-        email: newUser.email,
-        companyRole: newUser.companyRole,
-        verified: newUser.verified
-      },
+      user: result.user,
       credentials: {
-        email: newUser.email,
-        temporaryPassword: password // Send back so admin can share with employee
+        email: result.user.email,
+        temporaryPassword: result.temporaryPassword
       }
     });
 
   } catch (err) {
     console.error("DIRECT CREATE EMPLOYEE ERROR:", err);
+
+    if (err.message === 'Company not found') {
+      return res.status(404).json({ message: err.message });
+    }
+    if (err.message === 'Only company admins can create employees directly') {
+      return res.status(403).json({ message: err.message });
+    }
+    if (err.message === 'Email already in use') {
+      return res.status(409).json({ message: err.message });
+    }
+
     return res.status(500).json({ message: "Server error" });
   }
 };
