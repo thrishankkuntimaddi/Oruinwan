@@ -231,27 +231,28 @@ app.use("/api/status", require("./routes/statusRoutes")); // System health statu
 
 // =============================================================
 // 🔥 NEW MODULAR ROUTES (Active as of Week 2)
-// =============================================================
-// These routes use the new domain-driven module architecture
-// located in src/modules/*
-// Legacy routes above still work for backward compatibility
-
-// Messages Module - Clean architecture with E2EE support
+// ============================================================================
+// ✅ V2 ROUTES (NEW MODULAR ARCHITECTURE)
+// ============================================================================
+// Modular, domain-driven routes with clean separation
 app.use("/api/v2/messages", require("./src/modules/messages/messages.routes"));
 
-// Encryption Module - First-class E2EE key management
+// E2EE Infrastructure
 app.use("/api/v2/encryption", require("./src/modules/encryption/encryption.routes"));
 
-// Identity Module - User identity key management for E2EE
+// Identity & Public Key Management
 app.use("/api/v2/identity", require("./src/modules/identity/identity.routes"));
 
-// Conversations Module - Conversation key management for E2EE
+// Conversation Keys (E2EE-specific)
 app.use("/api/v2/conversations", require("./src/modules/conversations/conversationKeys.routes"));
 
-// PHASE 2: Internal Admin Routes - E2EE Repair (Admin-only)
-app.use("/internal/e2ee", require("./src/modules/conversations/internal.routes"));
+// Tasks (NEW - Migrated from legacy)
+app.use("/api/v2/tasks", require("./src/features/tasks/tasks.routes"));
 
-// ✅ Module routes are now ACTIVE
+// ============================================================================
+// 📦 V1 ROUTES (LEGACY - TO BE MIGRATED)
+// ============================================================================
+// - These routes should be gradually migrated to /api/v2
 // - New code should use /api/v2/* endpoints
 // - Legacy /api/messages and /api/keys still work
 // - Gradual migration in progress
