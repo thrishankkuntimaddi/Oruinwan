@@ -133,7 +133,7 @@ export function useConversation(conversationId, conversationType, workspaceId) {
         } finally {
             setLoading(false);
         }
-    }, [conversationId, conversationType, workspaceId]);
+    }, [conversationId, conversationType, workspaceId, navigate]);
 
     // Load more messages (pagination)
     const loadMore = useCallback(async () => {

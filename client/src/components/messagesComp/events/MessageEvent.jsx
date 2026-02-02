@@ -41,13 +41,6 @@ function MessageEvent({
     // Extract text with priority: decryptedContent > nested payload > direct payload
     const messageText = event.decryptedContent || event.payload?.payload?.text || event.payload?.text || event.text || '';
 
-    console.log(`📝 [MessageEvent] Rendering message ${event._id || event.id}:`, {
-        hasDecryptedContent: !!event.decryptedContent,
-        decryptedText: event.decryptedContent?.substring(0, 20),
-        finalText: messageText.substring(0, 20),
-        isEncrypted
-    });
-
     const enrichedMessage = {
         _id: event._id || event.id,
         id: event._id || event.id,

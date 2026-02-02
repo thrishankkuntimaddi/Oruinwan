@@ -5,9 +5,9 @@
  * Export all chat components for easy importing
  */
 
-export { ChatWindow } from './ChatWindow';
-export { MessageList } from './MessageList';
-
 // Re-export as default for backward compatibility
 import { ChatWindow } from './ChatWindow';
+
+export { ChatWindow } from './ChatWindow';
+export { MessageList } from './MessageList';
 export default ChatWindow;
