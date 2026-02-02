@@ -59,6 +59,9 @@ router.delete("/:id/messages", requireAuth, channelCtrl.clearChannelMessages);
 // Join channel via link (with workspace validation)
 router.post("/:id/join-via-link", requireAuth, channelCtrl.joinChannelViaLink);
 
+// Join discoverable channel (public workspace channels)
+router.post("/:id/join-discoverable", requireAuth, channelCtrl.joinDiscoverableChannel);
+
 // Delete channel permanently
 router.delete("/:id", requireAuth, channelCtrl.deleteChannel);
 
