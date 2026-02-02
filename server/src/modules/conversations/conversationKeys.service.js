@@ -681,7 +681,7 @@ async function generateConversationKeyServerSide(conversationId, conversationTyp
  * @returns {Promise<RepairResult>} Repair outcome with result enum
  */
 async function repairConversationKeyForUser(channelId, userId) {
-    const Channel = require('../../../models/Channel');
+    const Channel = require("../../features/channels/channel.model.js");
 
     console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
     console.log(`🔧 [PHASE2][REPAIR] Repair request received`);

@@ -1,7 +1,7 @@
 const AuditLog = require('../../../models/AuditLog');
 const SupportTicket = require('../../../models/SupportTicket');
 const PlatformSession = require('../../../models/PlatformSession');
-const Message = require('../../../models/Message');
+const Message = require("../messages/message.model.js");
 const User = require('../../../models/User');
 const Company = require('../../../models/Company');
 

@@ -273,8 +273,8 @@ exports.deleteAccount = async (req, res) => {
         // This works for both local users and OAuth users (Google, GitHub, LinkedIn)
 
         // 3. CASCADE DELETION - Clean up all user data
-        const Message = require('../../../models/Message');
-        const Channel = require('../../../models/Channel');
+        const Message = require("../messages/message.model.js");
+        const Channel = require("../channels/channel.model.js");
         const Workspace = require('../../../models/Workspace');
         const Task = require('../../../models/Task');
         const Note = require('../../../models/Note');

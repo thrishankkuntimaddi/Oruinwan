@@ -106,7 +106,7 @@ router.get('/workspaces-access', requireAuth, requireAdmin, async (req, res) => 
             .lean();
 
         // Enhance with activity data
-        const Message = require('../../../models/Message');
+        const Message = require("../messages/message.model.js");
         const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
         for (const workspace of workspaces) {
@@ -202,7 +202,7 @@ router.get('/workspaces', requireAuth, requireAdmin, async (req, res) => {
             .lean();
 
         // Get Channel model for counting
-        const Channel = require('../../../models/Channel');
+        const Channel = require("../channels/channel.model.js");
 
         // Enhance each workspace with additional data
         const enhancedWorkspaces = await Promise.all(workspaces.map(async (workspace) => {

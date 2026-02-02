@@ -62,7 +62,7 @@ exports.uploadPublicKey = async (req, res) => {
         try {
             console.log('🔧 [PHASE 2] Starting auto-repair for late key upload...');
 
-            const Channel = require('../../../models/Channel');
+            const Channel = require("../../features/channels/channel.model.js");
             const conversationKeysService = require('../conversations/conversationKeys.service');
 
             // Find all channels user is a member of

@@ -11,7 +11,7 @@
  */
 
 const Favorite = require('../../../models/Favorite');
-const Channel = require('../../../models/Channel');
+const Channel = require("../channels/channel.model.js");
 const DMSession = require('../../../models/DMSession');
 
 // ============================================================================

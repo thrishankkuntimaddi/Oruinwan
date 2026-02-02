@@ -13,7 +13,7 @@
 
 const mongoose = require('mongoose');
 const { migrateUp, migrateDown } = require('../models/encryption');
-const Message = require('../models/Message'); // Import Message model
+const Message = require("../src/features/messages/message.model.js"); // Import Message model
 
 // Load environment variables
 require('dotenv').config();

@@ -346,7 +346,7 @@ export function useMessageActions(conversationId, conversationType, workspaceId 
         if (!messageId || !targets?.length) return { success: false };
 
         try {
-            const response = await api.post('/api/messages/forward', {
+            const response = await api.post('/api/v2/messages/forward', {
                 messageId,
                 targets // [{ type: 'channel', id: '...' }, { type: 'dm', id: '...' }]
             });

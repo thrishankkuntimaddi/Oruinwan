@@ -1,6 +1,6 @@
 // server/src/modules/threads/threads.controller.js
-const Message = require("../../../models/Message");
-const Channel = require("../../../models/Channel");
+const Message = require("../../features/messages/message.model.js");
+const Channel = require("../../features/channels/channel.model.js");
 
 /**
  * Get all active threads for a channel
@@ -35,7 +35,7 @@ exports.getChannelThreads = async (req, res) => {
             parentId: null // Only parent messages, not replies
         })
             .populate("sender", "_id username profilePicture")
-            .sort({ updatedAt: -1 }) // Most recently updated first
+            .sort({ lastReplyAt: -1, createdAt: -1 }) // Most recent activity first
             .lean();
 
         console.log(`[THREADS][GET_CHANNEL_THREADS] Found ${threads.length} active threads in channel ${channelId}`);
@@ -84,7 +84,7 @@ exports.getThread = async (req, res) => {
             }
         } else if (parentMessage.channel) {
             // Channel message - check membership
-            const Channel = require("../../../models/Channel");
+            const Channel = require("../../features/channels/channel.model.js");
             const channel = await Channel.findById(parentMessage.channel);
 
             if (!channel || !channel.members.map(m => String(m.user || m)).includes(String(userId))) {
@@ -121,8 +121,6 @@ exports.postThreadReply = async (req, res) => {
         const { ciphertext, messageIv, attachments = [], clientTempId } = req.body;
         const userId = req.user.sub;
 
-        console.log(`[THREAD][E2EE] Processing reply for parent ${messageId}`);
-
         if (!ciphertext || !messageIv) {
             return res.status(400).json({ message: "Encrypted payload required (ciphertext + messageIv)" });
         }
@@ -145,7 +143,7 @@ exports.postThreadReply = async (req, res) => {
                 isEncrypted: true
             },
             parentId: messageId,
-            readBy: [{ user: userId, readAt: new Date() }], // Sender has read it
+            readBy: [userId], // Sender has read it (array of ObjectIds)
             workspace: parentMessage.workspace,
             company: parentMessage.company,
             clientTempId // Store optimistic ID if provided
@@ -163,9 +161,10 @@ exports.postThreadReply = async (req, res) => {
         // Populate sender info
         await reply.populate("sender", "_id username profilePicture");
 
-        // Update parent message reply count
+        // Update parent message reply count and timestamp
         await Message.findByIdAndUpdate(messageId, {
-            $inc: { replyCount: 1 }
+            $inc: { replyCount: 1 },
+            $set: { lastReplyAt: new Date() }
         });
 
         // Get updated parent message for broadcasting
@@ -175,6 +174,7 @@ exports.postThreadReply = async (req, res) => {
 
         // Emit socket event for real-time updates
         const io = req.app?.get("io");
+
         if (io) {
             const roomName = parentMessage.channel
                 ? `channel:${parentMessage.channel}`
@@ -190,7 +190,6 @@ exports.postThreadReply = async (req, res) => {
                     lastReplyAt: new Date().toISOString(),
                     parentMessage: updatedParent
                 });
-                console.log(`[THREAD][REALTIME] Emitted thread:created for parent ${messageId}`);
             }
 
             if (parentMessage.channel) {
@@ -198,6 +197,7 @@ exports.postThreadReply = async (req, res) => {
                 io.to(`channel:${parentMessage.channel}`).emit("thread-reply", {
                     parentId: messageId,
                     reply: reply.toObject(),
+                    clientTempId // ✅ Include for optimistic UI reconciliation
                 });
 
                 // Broadcast message-updated to update reply count in main chat
@@ -213,6 +213,7 @@ exports.postThreadReply = async (req, res) => {
                 io.to(`dm_${parentMessage.dm}`).emit("thread-reply", {
                     parentId: messageId,
                     reply: reply.toObject(),
+                    clientTempId // ✅ Include for optimistic UI reconciliation
                 });
 
                 // Broadcast message-updated to update reply count in main chat
@@ -225,8 +226,6 @@ exports.postThreadReply = async (req, res) => {
                 });
             }
         }
-
-        console.log(`[THREAD][E2EE] Reply created successfully: ${reply._id}`);
         return res.status(201).json({ reply });
     } catch (err) {
         console.error("POST THREAD REPLY ERROR:", err);

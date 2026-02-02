@@ -2,8 +2,8 @@
 
 const User = require("../models/User");
 const Workspace = require("../models/Workspace");
-const Channel = require("../models/Channel");
-const Message = require("../models/Message");
+const Channel = require("../src/features/channels/channel.model");
+const Message = require("../src/features/messages/message.model");
 const Task = require("../models/Task");
 const Analytics = require("../models/Analytics");
 

@@ -85,7 +85,7 @@ exports.signup = async (req, res) => {
     const Company = require("../../../models/Company");
     const Invite = require("../../../models/Invite");
     const Workspace = require("../../../models/Workspace");
-    const Channel = require("../../../models/Channel");
+    const Channel = require("../channels/channel.model.js");
 
     // Helper to extract domain
     const extractDomain = (email) => {

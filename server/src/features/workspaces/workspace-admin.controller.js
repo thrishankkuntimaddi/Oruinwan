@@ -1,6 +1,6 @@
 const Workspace = require("../../../models/Workspace");
 const User = require("../../../models/User");
-const Channel = require("../../../models/Channel");
+const Channel = require("../channels/channel.model.js");
 
 /**
  * Revoke a pending workspace invite

@@ -62,6 +62,12 @@ export default function ThreadsTab({ channelId, currentUserId, socket }) {
         const handleThreadCreated = async (data) => {
             console.log('[THREADS_TAB][REALTIME] New thread created:', data);
 
+            // ✅ Only add if it's for THIS channel (prevent cross-channel pollution)
+            if (data.channelId && data.channelId !== channelId) {
+                console.log('[THREADS_TAB][REALTIME] Thread from different channel, ignoring');
+                return;
+            }
+
             // Fetch and decrypt the new parent message
             if (data.parentMessage) {
                 try {

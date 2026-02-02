@@ -6,9 +6,9 @@
  * @module messages/service
  */
 
-const Message = require('../../../models/Message');
+const Message = require("../../features/messages/message.model.js");
 const DMSession = require('../../../models/DMSession');
-const Channel = require('../../../models/Channel');
+const Channel = require("../../features/channels/channel.model.js");
 const Workspace = require('../../../models/Workspace');
 const { isMember } = require('../../../utils/memberHelpers');
 const conversationKeysService = require('../conversations/conversationKeys.service');
@@ -89,12 +89,7 @@ async function createMessage(messageData, io = null) {
         messageObject.reactions = messageObject.reactions || [];
         messageObject.isPinned = messageObject.isPinned || false;
 
-        console.log(`📡 Broadcasting new-message to room: ${room}`);
-        console.log(`📨 Message ID: ${messageObject._id}, Sender: ${messageObject.sender?.username}`);
-
         io.to(room).emit('new-message', messageObject);
-
-        console.log(`✅ Successfully emitted new-message to ${room}`);
     }
 
     return message;

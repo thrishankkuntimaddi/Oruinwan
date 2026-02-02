@@ -2,7 +2,7 @@ const User = require("../../../models/User");
 const Workspace = require("../../../models/Workspace");
 const Department = require("../../../models/Department");
 const Task = require("../../../models/Task");
-const Channel = require("../../../models/Channel");
+const Channel = require("../channels/channel.model.js");
 
 /**
  * Get Manager Scope (Departments & Workspaces they manage)

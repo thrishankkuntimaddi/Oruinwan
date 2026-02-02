@@ -7,7 +7,7 @@
  */
 
 const messagesService = require('./messages.service');
-const Channel = require('../../../models/Channel');
+const Channel = require("../../features/channels/channel.model.js");
 const User = require('../../../models/User');
 const DMSession = require('../../../models/DMSession');
 const { handleError } = require('../../../utils/responseHelpers');
@@ -426,5 +426,130 @@ exports.getChannelMessages = async (req, res) => {
         });
     } catch (err) {
         return handleError(res, err, 'GET CHANNEL ERROR');
+    }
+};
+
+// ==================== MESSAGE ACTIONS ====================
+
+/**
+ * Forward a message to multiple targets (channels/DMs)
+ * POST /api/messages/forward
+ */
+exports.forwardMessage = async (req, res) => {
+    console.log('🔄 [MESSAGES:MODULAR] Function invoked: forwardMessage');
+    try {
+        const userId = req.user.sub;
+        const { messageId, targets } = req.body;
+
+        // Validation
+        if (!messageId || !targets || !Array.isArray(targets) || targets.length === 0) {
+            return res.status(400).json({
+                message: 'messageId and targets array are required'
+            });
+        }
+
+        // Find the original message
+        const InternalMessage = require('../../../models/InternalMessage');
+        const originalMessage = await InternalMessage.findById(messageId);
+
+        if (!originalMessage) {
+            return res.status(404).json({ message: 'Original message not found' });
+        }
+
+        // Verify user has access to the original message
+        // Check if user is in the channel/DM where the message exists
+        if (originalMessage.channel) {
+            const channel = await Channel.findById(originalMessage.channel);
+            if (!channel || !channel.isMember(userId)) {
+                return res.status(403).json({ message: 'Not authorized to access this message' });
+            }
+        } else if (originalMessage.dm) {
+            const dmSession = await DMSession.findById(originalMessage.dm);
+            if (!dmSession || !dmSession.participants.some(p => String(p) === String(userId))) {
+                return res.status(403).json({ message: 'Not authorized to access this message' });
+            }
+        }
+
+        let forwardedCount = 0;
+        const errors = [];
+
+        // Forward to each target
+        for (const target of targets) {
+            try {
+                const { type, id } = target;
+
+                if (type === 'channel') {
+                    // Verify user is a member of target channel
+                    const channel = await Channel.findById(id);
+                    if (!channel) {
+                        errors.push({ target, error: 'Channel not found' });
+                        continue;
+                    }
+                    if (!channel.isMember(userId)) {
+                        errors.push({ target, error: 'Not a member of target channel' });
+                        continue;
+                    }
+
+                    // Create forwarded message
+                    await messagesService.createMessage({
+                        type: 'message',
+                        company: channel.company,
+                        workspace: channel.workspace,
+                        channel: id,
+                        sender: userId,
+                        ciphertext: originalMessage.ciphertext,
+                        messageIv: originalMessage.messageIv,
+                        isEncrypted: originalMessage.isEncrypted,
+                        attachments: originalMessage.attachments || [],
+                        forwardedFrom: messageId
+                    }, req.io);
+
+                    forwardedCount++;
+
+                } else if (type === 'dm') {
+                    // Verify user is a participant in target DM
+                    const dmSession = await DMSession.findById(id);
+                    if (!dmSession) {
+                        errors.push({ target, error: 'DM session not found' });
+                        continue;
+                    }
+                    if (!dmSession.participants.some(p => String(p) === String(userId))) {
+                        errors.push({ target, error: 'Not a participant in target DM' });
+                        continue;
+                    }
+
+                    // Create forwarded message
+                    await messagesService.createMessage({
+                        type: 'message',
+                        company: dmSession.company,
+                        workspace: dmSession.workspace,
+                        dm: id,
+                        sender: userId,
+                        ciphertext: originalMessage.ciphertext,
+                        messageIv: originalMessage.messageIv,
+                        isEncrypted: originalMessage.isEncrypted,
+                        attachments: originalMessage.attachments || [],
+                        forwardedFrom: messageId
+                    }, req.io);
+
+                    forwardedCount++;
+                } else {
+                    errors.push({ target, error: 'Invalid target type (must be channel or dm)' });
+                }
+            } catch (targetError) {
+                console.error(`Error forwarding to ${target.type}:${target.id}:`, targetError);
+                errors.push({ target, error: targetError.message });
+            }
+        }
+
+        return res.json({
+            success: true,
+            forwardedCount,
+            totalTargets: targets.length,
+            errors: errors.length > 0 ? errors : undefined
+        });
+
+    } catch (err) {
+        return handleError(res, err, 'FORWARD MESSAGE ERROR');
     }
 };

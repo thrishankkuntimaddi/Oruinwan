@@ -154,17 +154,21 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
         if (!socket) return;
 
         const handleNewReply = async (data) => {
-            // Backend emits 'thread-reply' with { parentId, reply }
+            // Backend emits 'thread-reply' with { parentId, reply, clientTempId }
             const reply = data.reply || data.message || data;
             const replyParentId = reply.parentId || data.parentId || reply.replyTo || reply.threadParent;
             const messageId = parentMessage._id || parentMessage.id;
+
+            // ✅ Extract clientTempId from data payload (sent by backend)
+            const socketClientTempId = data.clientTempId || reply.clientTempId;
 
             console.log(`[THREAD][REALTIME] Received thread reply:`, {
                 replyId: reply._id,
                 replyParentId,
                 currentThreadParent: messageId,
                 isMatch: replyParentId === messageId,
-                hasClientTempId: !!reply.clientTempId,
+                hasClientTempId: !!socketClientTempId,
+                clientTempId: socketClientTempId,
                 isEncrypted: !!reply.payload?.ciphertext
             });
 
@@ -178,7 +182,8 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
             const normalizedReply = {
                 ...reply,
                 id: reply._id || reply.id,  // Required by batchDecryptMessages
-                isThreadEncrypted: false  // Thread replies use conversation key, not thread key
+                isThreadEncrypted: false,  // Thread replies use conversation key, not thread key
+                clientTempId: socketClientTempId // ✅ Attach clientTempId for reconciliation
             };
 
             // ✅ DECRYPT realtime reply before adding to state
@@ -246,12 +251,9 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
         };
 
         socket.on("thread-reply", handleNewReply);
-        // Also listen for standard receive-message if it's a thread reply (fallback)
-        socket.on("receive-message", handleNewReply);
 
         return () => {
             socket.off("thread-reply", handleNewReply);
-            socket.off("receive-message", handleNewReply);
         };
     }, [socket, parentMessage._id, parentMessage.id, channelId, conversationType]);
 

@@ -29,8 +29,8 @@ const Task = require('../../../models/Task');
 const TaskActivity = require('../../../models/TaskActivity');
 const User = require('../../../models/User');
 const Workspace = require('../../../models/Workspace');
-const Channel = require('../../../models/Channel');
-const Message = require('../../../models/Message');
+const Channel = require("../channels/channel.model.js");
+const Message = require("../messages/message.model.js");
 const DMSession = require('../../../models/DMSession');
 
 // Shared Services (from other modules)

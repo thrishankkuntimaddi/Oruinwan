@@ -17,9 +17,24 @@ const MessageSchema = new mongoose.Schema({
   dm: { type: mongoose.Schema.Types.ObjectId, ref: "DMSession", default: null },
   platformSession: { type: mongoose.Schema.Types.ObjectId, ref: "PlatformSession", default: null }, // Link to platform chat session
   sender: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+
+  // E2EE: Encrypted payload containing ciphertext, messageIv, and isEncrypted flag
+  payload: {
+    ciphertext: String,
+    messageIv: String,
+    attachments: [AttachmentSchema],
+    isEncrypted: { type: Boolean, default: false }
+  },
+
   text: { type: String, default: "" },
   attachments: [AttachmentSchema],
+
+  // Threading support
   threadParent: { type: mongoose.Schema.Types.ObjectId, ref: "Message", default: null },
+  parentId: { type: mongoose.Schema.Types.ObjectId, ref: "Message", default: null }, // Alias for controller compatibility
+  replyCount: { type: Number, default: 0, min: 0 }, // Number of replies to this message
+  lastReplyAt: { type: Date, default: null }, // Timestamp of most recent reply
+
   reactions: [ReactionSchema],
   readBy: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
 
@@ -40,6 +55,7 @@ MessageSchema.index({ company: 1, channel: 1, createdAt: -1 });
 MessageSchema.index({ company: 1, dm: 1, createdAt: -1 });
 MessageSchema.index({ workspace: 1, createdAt: -1 }); // For dashboard activity queries
 MessageSchema.index({ platformSession: 1, createdAt: -1 });
+MessageSchema.index({ parentId: 1 }); // For thread lookups
 MessageSchema.index({ createdAt: -1 });
 
 module.exports = mongoose.model("Message", MessageSchema);

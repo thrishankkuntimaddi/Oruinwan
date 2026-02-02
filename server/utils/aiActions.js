@@ -1,8 +1,8 @@
 // server/utils/aiActions.js
 // Helper functions for AI-powered actions
 
-const Channel = require('../models/Channel');
-const Message = require('../models/Message');
+const Channel = require('../src/features/channels/channel.model');
+const Message = require('../src/features/messages/message.model');
 const Task = require('../models/Task');
 const User = require('../models/User');
 const Workspace = require('../models/Workspace');

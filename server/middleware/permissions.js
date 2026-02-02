@@ -2,7 +2,7 @@
 
 const Company = require("../models/Company");
 const Workspace = require("../models/Workspace");
-const Channel = require("../models/Channel");
+const Channel = require("../src/features/channels/channel.model.js");
 const User = require("../models/User");
 
 /**

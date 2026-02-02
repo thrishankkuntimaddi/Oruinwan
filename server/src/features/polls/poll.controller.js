@@ -1,5 +1,5 @@
-const Poll = require("../../../models/Poll");
-const Channel = require("../../../models/Channel");
+const Poll = require("./poll.model.js");
+const Channel = require("../channels/channel.model.js");
 const User = require("../../../models/User");
 
 /**

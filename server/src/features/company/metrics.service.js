@@ -11,7 +11,7 @@
 const User = require('../../../models/User');
 const Workspace = require('../../../models/Workspace');
 const Department = require('../../../models/Department');
-const Message = require('../../../models/Message');
+const Message = require("../messages/message.model.js");
 const Task = require('../../../models/Task');
 
 /**

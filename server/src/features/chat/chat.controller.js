@@ -1,6 +1,6 @@
 // server/controllers/chatController.js
-const Message = require("../../../models/Message");
-const Channel = require("../../../models/Channel");
+const Message = require("../messages/message.model.js");
+const Channel = require("../channels/channel.model.js");
 const User = require("../../../models/User");
 const mongoose = require("mongoose");
 

@@ -1,7 +1,7 @@
 // server/controllers/channelController.js
-const Channel = require("../../../models/Channel");
+const Channel = require("./channel.model.js");
 const User = require("../../../models/User");
-const Message = require("../../../models/Message");
+const Message = require("../messages/message.model.js");
 const { saveWithRetry } = require("../../../utils/mongooseRetry");
 const { handleError, notFound, badRequest, forbidden } = require("../../../utils/responseHelpers");
 const { extractMemberId, isMember, normalizeMemberFormat } = require("../../../utils/memberHelpers");

@@ -7,7 +7,7 @@
  * READ-ONLY: No writes, no mutations, no repairs
  */
 
-const Channel = require('../../models/Channel');
+const Channel = require("../features/channels/channel.model.js");
 const ConversationKey = require('../../models/ConversationKey');
 
 /**

@@ -16,7 +16,7 @@
 
 require('dotenv').config();
 const mongoose = require('mongoose');
-const Channel = require('../models/Channel');
+const Channel = require("../src/features/channels/channel.model.js");
 const ConversationKey = require('../models/ConversationKey');
 const conversationKeysService = require('../src/modules/conversations/conversationKeys.service');
 

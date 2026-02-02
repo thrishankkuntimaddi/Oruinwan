@@ -4,7 +4,7 @@ const express = require('express');
 const router = express.Router();
 const Department = require('../../../models/Department');
 const Workspace = require('../../../models/Workspace');
-const Channel = require('../../../models/Channel');
+const Channel = require("../channels/channel.model.js");
 const requireAuth = require('../../../middleware/auth'); // Fixed: single default export
 
 // GET /api/departments/:companyId - Get all departments for a company

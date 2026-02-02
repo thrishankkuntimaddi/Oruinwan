@@ -1,8 +1,8 @@
 // server/controllers/dashboardController.js
 const User = require('../../../models/User');
 const Workspace = require('../../../models/Workspace');
-const Message = require('../../../models/Message');
-const Channel = require('../../../models/Channel');
+const Message = require("../messages/message.model.js");
+const Channel = require("../channels/channel.model.js");
 
 /**
  * GET /api/dashboard/metrics/:companyId

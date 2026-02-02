@@ -48,4 +48,9 @@ router.post('/channel', messagesController.sendChannelMessage);
 // Get channel messages
 router.get('/channel/:channelId', messagesController.getChannelMessages);
 
+// ==================== MESSAGE ACTIONS ====================
+
+// Forward message to multiple targets
+router.post('/forward', messagesController.forwardMessage);
+
 module.exports = router;

@@ -1,7 +1,7 @@
 // server/socket/index.js
 
-const Message = require("../models/Message");
-const Channel = require("../models/Channel");
+const Message = require("../src/features/messages/message.model");
+const Channel = require("../src/features/channels/channel.model");
 const DMSession = require("../models/DMSession");
 const Workspace = require("../models/Workspace");
 const User = require("../models/User");
@@ -127,28 +127,6 @@ module.exports = async function registerChatHandlers(io, socket) {
       }
 
       // ============================================================
-      // 🔍 DEBUG LOGS: Diagnose membership check failures
-      // ============================================================
-      console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-      console.log("🔍 [SOCKET][DEBUG] chat:join membership check");
-      console.log("🔍 [SOCKET][DEBUG] Channel ID:", channelId);
-      console.log("🔍 [SOCKET][DEBUG] Joining userId:", userId);
-      console.log("🔍 [SOCKET][DEBUG] Channel members raw:", JSON.stringify(channel.members, null, 2));
-      console.log("🔍 [SOCKET][DEBUG] Members count:", channel.members.length);
-
-      // Inspect each member
-      channel.members.forEach((m, i) => {
-        const extractedId = m?.user?._id?.toString() ?? m?.user?.toString() ?? m?.toString();
-        console.log(`🔍 [SOCKET][DEBUG] member[${i}]:`, {
-          raw: m,
-          hasUserField: !!m?.user,
-          userValue: m?.user,
-          extracted_id: extractedId,
-          matches: extractedId === userId.toString()
-        });
-      });
-      console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-
       // Step 2: Verify user is a member
       // Defensive check handles ALL possible formats:
       // - { user: populatedUser } where user._id exists
@@ -181,7 +159,7 @@ module.exports = async function registerChatHandlers(io, socket) {
       socket.join(room);
 
       console.log(`✅ [chat:join] User ${userId} joined ${room} (authorized member)`);
-      console.log(`📊 [chat:join] Socket rooms:`, Array.from(socket.rooms));
+
 
       // Send success callback
       if (callback) callback({ success: true });

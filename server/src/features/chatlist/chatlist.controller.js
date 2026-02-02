@@ -1,6 +1,6 @@
-const Message = require("../../../models/Message");
+const Message = require("../messages/message.model.js");
 const User = require("../../../models/User");
-const Channel = require("../../../models/Channel");
+const Channel = require("../channels/channel.model.js");
 
 exports.getChatList = async (req, res) => {
   try {

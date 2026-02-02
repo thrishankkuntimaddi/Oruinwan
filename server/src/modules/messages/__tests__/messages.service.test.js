@@ -6,7 +6,7 @@
  */
 
 const messagesService = require('../messages.service');
-const Message = require('../../../../models/Message');
+const Message = require("../../../features/messages/message.model.js");
 const DMSession = require('../../../../models/DMSession');
 const Workspace = require('../../../../models/Workspace');
 

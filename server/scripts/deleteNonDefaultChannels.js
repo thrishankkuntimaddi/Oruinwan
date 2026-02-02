@@ -13,8 +13,8 @@ const mongoose = require('mongoose');
 require('dotenv').config();
 
 // Models
-const Channel = require('../models/Channel');
-const Message = require('../models/Message');
+const Channel = require("../src/features/channels/channel.model.js");
+const Message = require("../src/features/messages/message.model.js");
 const ConversationKey = require('../models/ConversationKey');
 
 async function deleteNonDefaultChannels() {

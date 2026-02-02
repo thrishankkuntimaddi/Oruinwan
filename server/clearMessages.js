@@ -2,7 +2,7 @@
 const mongoose = require('mongoose');
 require('dotenv').config();
 
-const Message = require('./models/Message');
+const Message = require("./src/features/messages/message.model.js");
 
 async function clearMessages() {
     try {

@@ -1,8 +1,8 @@
 // server/controllers/workspaceController.js
 const Workspace = require("../../../models/Workspace");
-const Channel = require("../../../models/Channel");
+const Channel = require("../channels/channel.model.js");
 const User = require("../../../models/User");
-const Message = require("../../../models/Message");
+const Message = require("../messages/message.model.js");
 const DMSession = require("../../../models/DMSession");
 const Task = require("../../../models/Task");
 const Note = require("../../../models/Note");

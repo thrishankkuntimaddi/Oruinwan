@@ -12,7 +12,7 @@ const mongoose = require('mongoose');
 require('dotenv').config();
 
 // Models
-const Channel = require('../models/Channel');
+const Channel = require("../src/features/channels/channel.model.js");
 const ConversationKey = require('../models/ConversationKey');
 
 async function auditChannelKeys() {

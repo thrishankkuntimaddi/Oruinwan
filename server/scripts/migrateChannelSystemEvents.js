@@ -10,7 +10,7 @@
 
 require('dotenv').config();
 const mongoose = require('mongoose');
-const Channel = require('../models/Channel');
+const Channel = require("../src/features/channels/channel.model.js");
 
 async function migrateChannelSystemEvents() {
     try {
