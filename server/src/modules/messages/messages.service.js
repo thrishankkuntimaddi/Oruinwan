@@ -84,6 +84,17 @@ async function createMessage(messageData, io = null) {
         const room = channel ? `channel:${channel}` : `dm:${dm}`;
         const messageObject = message.toObject();
 
+        // 🔧 Ensure sender is properly structured for reliable frontend rendering
+        // This guarantees profile icons display correctly in real-time
+        if (message.sender) {
+            messageObject.sender = {
+                _id: message.sender._id,
+                username: message.sender.username,
+                email: message.sender.email,
+                profilePicture: message.sender.profilePicture
+            };
+        }
+
         // Add default values for client-side rendering
         messageObject.replyCount = 0;
         messageObject.reactions = messageObject.reactions || [];

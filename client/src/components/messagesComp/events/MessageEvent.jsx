@@ -64,7 +64,10 @@ function MessageEvent({
         parentId: event.parentId || event.payload?.parentId,
         threadParent: event.parentId || event.payload?.parentId,
         senderName: event.sender?.username || event.payload?.sender?.username || 'Unknown',
-        senderAvatar: event.sender?.profilePicture || event.payload?.sender?.profilePicture || null,
+        senderAvatar: event.sender?.profilePicture
+            || event.payload?.sender?.profilePicture
+            || event.backend?.sender?.profilePicture
+            || null,
         timestamp: event.createdAt || event.payload?.createdAt,
         ts: event.createdAt || event.payload?.createdAt,
         isRead: (event.readBy || event.payload?.readBy)?.some(r => (r.user?._id || r.user || r._id || r) === currentUserId),

@@ -370,7 +370,24 @@ function registerMessageHandlers(io, socket) {
 
             // Check response status
             if (mockRes.statusCode === 201 && mockRes.jsonData && mockRes.jsonData.message) {
-                const serverMessage = mockRes.jsonData.message;
+                let serverMessage = mockRes.jsonData.message;
+
+                // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+                // 🔧 FIX: Ensure sender is fully populated for profile icon display
+                // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+                // Socket emissions must include populated sender with username and profilePicture
+                // Otherwise frontend can't display profile icons in real-time messages
+                if (!serverMessage.sender?.username) {
+                    logger.socket(`🔍 Sender not populated, re-fetching message ${serverMessage._id}`);
+                    const Message = require('../../features/messages/message.model.js');
+                    const populatedMessage = await Message.findById(serverMessage._id)
+                        .populate('sender', 'username email profilePicture');
+
+                    if (populatedMessage) {
+                        serverMessage = populatedMessage.toObject();
+                        logger.socket(`✅ Re-populated sender: ${serverMessage.sender?.username}`);
+                    }
+                }
 
                 // Emit success to sender with clientTempId for optimistic UI reconciliation
                 socket.emit('message-sent', {
