@@ -12,48 +12,15 @@ export default function ThreadsTab({ channelId, currentUserId, socket }) {
     const [searchTerm, setSearchTerm] = useState('');
 
     // Fetch all messages and filter for threads (replyCount > 0)
-    // In a production app, we should have a dedicated /threads endpoint
     const fetchThreads = useCallback(async () => {
         setLoading(true);
-        // DUMMY DATA FOR TESTING
-        const dummyThreads = [
-            {
-                _id: 'dummy-1',
-                sender: { username: 'Alice Design', profilePicture: null },
-                senderName: 'Alice Design',
-                createdAt: new Date().toISOString(),
-                payload: { text: 'Hey team, I just uploaded the new design specs. Let me know what you think!' },
-                text: 'Hey team, I just uploaded the new design specs. Let me know what you think!',
-                replyCount: 3
-            },
-            {
-                _id: 'dummy-2',
-                sender: { username: 'Bob DevOps', profilePicture: null },
-                senderName: 'Bob DevOps',
-                createdAt: new Date(Date.now() - 3600000).toISOString(),
-                payload: { text: 'Deployment is scheduled for this Friday at 10 PM. Please freeze code by Thursday.' },
-                text: 'Deployment is scheduled for this Friday at 10 PM. Please freeze code by Thursday.',
-                replyCount: 5
-            },
-            {
-                _id: 'dummy-3',
-                sender: { username: 'Charlie PM', profilePicture: null },
-                senderName: 'Charlie PM',
-                createdAt: new Date(Date.now() - 86400000).toISOString(),
-                payload: { text: 'Q3 Roadmap meeting is shifted to next Monday.' },
-                text: 'Q3 Roadmap meeting is shifted to next Monday.',
-                replyCount: 12
-            }
-        ];
 
         try {
-            const res = await api.get(`/api/channels/${channelId}/messages?limit=100`);
-            const allMessages = res.data.messages || [];
+            // Use dedicated threads endpoint for this channel
+            const res = await api.get(`/api/threads/channels/${channelId}/threads`);
+            const activeThreads = res.data.threads || [];
 
-            // Filter distinct parent messages that have replies
-            const activeThreads = allMessages.filter(m => m.replyCount > 0);
-
-            console.log(`[THREADS_TAB][DECRYPT] Fetched ${activeThreads.length} threads for channel ${channelId}`);
+            console.log(`[THREADS_TAB][FETCH] Fetched ${activeThreads.length} real threads for channel ${channelId}`);
 
             // Decrypt thread preview messages
             let decryptedThreads = activeThreads;
@@ -73,11 +40,10 @@ export default function ThreadsTab({ channelId, currentUserId, socket }) {
                 }
             }
 
-            setThreads([...decryptedThreads, ...dummyThreads]);
+            setThreads(decryptedThreads);
         } catch (err) {
-            console.error('Failed to fetch threads:', err);
-            // Fallback to dummy data on error
-            setThreads(dummyThreads);
+            console.error('[THREADS_TAB][ERROR] Failed to fetch threads:', err);
+            setThreads([]); // Empty array on error, no dummy data
         } finally {
             setLoading(false);
         }
@@ -95,7 +61,7 @@ export default function ThreadsTab({ channelId, currentUserId, socket }) {
         // ✅ Handle when a new thread is created (first reply)
         const handleThreadCreated = async (data) => {
             console.log('[THREADS_TAB][REALTIME] New thread created:', data);
-            
+
             // Fetch and decrypt the new parent message
             if (data.parentMessage) {
                 try {
@@ -106,7 +72,7 @@ export default function ThreadsTab({ channelId, currentUserId, socket }) {
                         null
                     );
                     const decryptedParent = decrypted[0] || data.parentMessage;
-                    
+
                     // Add to thread list at the top
                     setThreads(prev => [decryptedParent, ...prev]);
                 } catch (err) {
@@ -120,15 +86,15 @@ export default function ThreadsTab({ channelId, currentUserId, socket }) {
         // ✅ Handle reply count updates
         const handleMessageUpdated = (data) => {
             const { messageId, updates } = data;
-            
+
             if (updates?.replyCount !== undefined) {
                 console.log('[THREADS_TAB][REALTIME] Updating reply count:', {
                     messageId,
                     newCount: updates.replyCount
                 });
-                
-                setThreads(prev => prev.map(thread => 
-                    thread._id === messageId 
+
+                setThreads(prev => prev.map(thread =>
+                    thread._id === messageId
                         ? { ...thread, replyCount: updates.replyCount }
                         : thread
                 ));
@@ -138,12 +104,12 @@ export default function ThreadsTab({ channelId, currentUserId, socket }) {
         // ✅ Handle individual thread replies (update last reply time, move to top)
         const handleThreadReply = (data) => {
             const { parentId, reply } = data;
-            
+
             console.log('[THREADS_TAB][REALTIME] Thread reply received:', {
                 parentId,
                 replyId: reply?._id
             });
-            
+
             // Move thread to top and update metadata
             setThreads(prev => {
                 const thread = prev.find(t => t._id === parentId);
@@ -151,13 +117,13 @@ export default function ThreadsTab({ channelId, currentUserId, socket }) {
                     console.log('[THREADS_TAB][REALTIME] Thread not in list, ignoring');
                     return prev;
                 }
-                
+
                 const updated = {
                     ...thread,
                     lastReplyAt: reply.createdAt,
                     lastReplyUser: reply.sender
                 };
-                
+
                 // Remove from current position and add to top
                 const others = prev.filter(t => t._id !== parentId);
                 return [updated, ...others];
