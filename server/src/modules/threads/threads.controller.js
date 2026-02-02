@@ -1,5 +1,55 @@
 // server/src/modules/threads/threads.controller.js
 const Message = require("../../../models/Message");
+const Channel = require("../../../models/Channel");
+
+/**
+ * Get all active threads for a channel
+ * GET /api/threads/channels/:channelId/threads
+ * 
+ * Returns parent messages that have at least one reply (replyCount > 0)
+ * Sorted by most recent reply first
+ */
+exports.getChannelThreads = async (req, res) => {
+    try {
+        const { channelId } = req.params;
+        const userId = req.user.sub;
+
+        console.log(`[THREADS][GET_CHANNEL_THREADS] Fetching threads for channel ${channelId}, user ${userId}`);
+
+        // 1. Verify user is a member of this channel
+        const channel = await Channel.findById(channelId);
+
+        if (!channel) {
+            return res.status(404).json({ message: "Channel not found" });
+        }
+
+        const isMember = channel.members.some(m => String(m.user || m) === String(userId));
+        if (!isMember) {
+            return res.status(403).json({ message: "Access denied: You are not a member of this channel" });
+        }
+
+        // 2. Find all parent messages in this channel that have replies
+        const threads = await Message.find({
+            channel: channelId,
+            replyCount: { $gt: 0 },
+            parentId: null // Only parent messages, not replies
+        })
+            .populate("sender", "_id username profilePicture")
+            .sort({ updatedAt: -1 }) // Most recently updated first
+            .lean();
+
+        console.log(`[THREADS][GET_CHANNEL_THREADS] Found ${threads.length} active threads in channel ${channelId}`);
+
+        return res.json({
+            threads,
+            count: threads.length,
+            channelId
+        });
+    } catch (err) {
+        console.error("[THREADS][GET_CHANNEL_THREADS] Error:", err);
+        return res.status(500).json({ message: "Server error fetching threads" });
+    }
+};
 
 /**
  * Get all replies to a specific message (thread)

@@ -235,6 +235,9 @@ app.use("/api/v2/messages", require("./src/modules/messages/messages.routes"));
 // E2EE Infrastructure
 app.use("/api/v2/encryption", require("./src/modules/encryption/encryption.routes"));
 
+// Threads (messaging threads)
+app.use("/api/threads", require("./src/modules/threads/threads.routes"));
+
 // Identity & Public Key Management
 app.use("/api/v2/identity", require("./src/modules/identity/identity.routes"));
 
