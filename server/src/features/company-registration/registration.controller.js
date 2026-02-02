@@ -2,6 +2,8 @@
 
 const registrationService = require("./registration.service");
 const Company = require("../../../models/Company");
+const Department = require("../../../models/Department");
+const User = require("../../../models/User");
 
 /**
  * Register new company (pending verification)
@@ -218,19 +220,44 @@ exports.updateCompanySetup = async (req, res) => {
             }
             company.setupStep = 3;
         } else if (step === 4) { // Complete
-            // This step contains complex workspace/channel/department provisioning
-            // For Phase 2, we're keeping this logic here to avoid breaking the setup flow
-            // TODO Phase 3: Extract to provisioning service
             console.log("🚀 Finalizing Company Setup & Provisioning Resources...");
+
+            // Create departments from setup wizard
+            const departmentsToCreate = company.metadata?.finalDepartments || [];
+            const createdDepartmentIds = [];
+
+            for (const deptName of departmentsToCreate) {
+                const dept = new Department({
+                    name: deptName,
+                    company: company._id,
+                    head: userId,  // Owner who completed setup
+                    members: [userId],
+                    createdAt: new Date()
+                });
+                await dept.save();
+                createdDepartmentIds.push(dept._id);
+                console.log(`✅ Created department: ${deptName}`);
+            }
+
+            // Update owner's departments
+            const ownerUser = await User.findById(userId);
+            if (ownerUser) {
+                ownerUser.departments = createdDepartmentIds;
+                await ownerUser.save();
+                console.log(`✅ Updated owner's departments: ${createdDepartmentIds.length} departments`);
+            }
 
             company.isSetupComplete = true;
             company.setupStep = 4;
             await company.save();
 
+            console.log(`✅ Setup complete for company: ${company.name}`);
+
             return res.json({
                 message: "Setup complete",
                 isSetupComplete: true,
-                redirectTo: "/admin/analytics"
+                redirectTo: "/owner/dashboard",
+                departmentsCreated: createdDepartmentIds.length
             });
         }
 

@@ -492,9 +492,11 @@ function App() {
                           <Route
                             element={
                               <RequireAuth>
-                                <RequireOwner>
-                                  <CompanyAdminLayout />
-                                </RequireOwner>
+                                <VerifiedOnlyRoute>
+                                  <RequireOwner>
+                                    <CompanyAdminLayout />
+                                  </RequireOwner>
+                                </VerifiedOnlyRoute>
                               </RequireAuth>
                             }
                           >
@@ -515,9 +517,11 @@ function App() {
                           <Route
                             element={
                               <RequireAuth>
-                                <RequireAdmin>
-                                  <CompanyAdminLayout />
-                                </RequireAdmin>
+                                <VerifiedOnlyRoute>
+                                  <RequireAdmin>
+                                    <CompanyAdminLayout />
+                                  </RequireAdmin>
+                                </VerifiedOnlyRoute>
                               </RequireAuth>
                             }
                           >
@@ -538,9 +542,11 @@ function App() {
                             path="/manager/dashboard"
                             element={
                               <RequireAuth>
-                                <RequireDepartmentManager>
-                                  <ManagerLayout />
-                                </RequireDepartmentManager>
+                                <VerifiedOnlyRoute>
+                                  <RequireDepartmentManager>
+                                    <ManagerLayout />
+                                  </RequireDepartmentManager>
+                                </VerifiedOnlyRoute>
                               </RequireAuth>
                             }
                           >
@@ -561,7 +567,9 @@ function App() {
                             path="/employee/dashboard"
                             element={
                               <RequireAuth>
-                                <EmployeeDashboard />
+                                <VerifiedOnlyRoute>
+                                  <EmployeeDashboard />
+                                </VerifiedOnlyRoute>
                               </RequireAuth>
                             }
                           />
