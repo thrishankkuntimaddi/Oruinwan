@@ -17,6 +17,7 @@ import RegionTab from './settingsTabs/RegionTab';
 import AppearanceTab from './settingsTabs/AppearanceTab';
 import SecurityTab from './settingsTabs/SecurityTab';
 import SessionsTab from './settingsTabs/SessionsTab';
+import AdvancedTab from './settingsTabs/AdvancedTab';
 
 const Settings = () => {
     const navigate = useNavigate();
@@ -175,6 +176,7 @@ const Settings = () => {
             { id: 'appearance', label: 'Appearance', icon: Palette, description: 'Dark mode & themes' },
             { id: 'security', label: 'Security', icon: Shield, description: 'Password & 2FA' },
             { id: 'sessions', label: 'Sessions', icon: Laptop, description: 'Active devices & history' },
+            { id: 'advanced', label: 'Advanced', icon: SettingsIcon, description: 'Account & data management' },
         ];
 
         if (!searchQuery) return sections;
@@ -327,6 +329,9 @@ const Settings = () => {
                                     handleLogoutSession={handleLogoutSession}
                                     handleLogoutOthers={handleLogoutOthers}
                                 />
+                            )}
+                            {activeSection === 'advanced' && (
+                                <AdvancedTab />
                             )}
                         </div>
                     </div>

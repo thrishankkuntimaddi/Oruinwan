@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Card from './Card';
+import axios from 'axios';
+import { Loader, Check } from 'lucide-react';
 
-// Toggle Component (inline for tab use)
+// Toggle Component
 const Toggle = ({ label, description, checked, onChange }) => (
     <div className="flex items-center justify-between py-4">
         <div className="pr-8">
@@ -20,61 +22,169 @@ const Toggle = ({ label, description, checked, onChange }) => (
 );
 
 /**
- * PrivacyTab - Privacy and safety settings
- * @param {object} props - Component props
- * @param {object} props.privacy - Privacy settings (readReceipts, typingIndicators, allowDiscovery, dataSharing)
- * @param {function} props.setPrivacy - Update privacy handler
+ * PrivacyTab - Privacy and safety settings with backend integration
  */
 const PrivacyTab = ({ privacy, setPrivacy }) => {
+    const [loading, setLoading] = useState(false);
+    const [saving, setSaving] = useState(false);
+    const [hasChanges, setHasChanges] = useState(false);
+    const [blockedUsers, setBlockedUsers] = useState([]);
+
+    useEffect(() => {
+        loadPreferences();
+        loadBlockedUsers();
+    }, []);
+
+    const loadPreferences = async () => {
+        setLoading(true);
+        try {
+            const response = await axios.get('/api/auth/me/preferences/privacy', { withCredentials: true });
+            if (response.data) {
+                setPrivacy(response.data);
+            }
+        } catch (error) {
+            console.log('Privacy preferences not available yet');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const loadBlockedUsers = async () => {
+        try {
+            const response = await axios.get('/api/auth/me/blocked-users', { withCredentials: true });
+            if (response.data) {
+                setBlockedUsers(response.data);
+            }
+        } catch (error) {
+            console.log('Blocked users list not available yet');
+        }
+    };
+
+    const handleSave = async () => {
+        setSaving(true);
+        try {
+            await axios.put('/api/auth/me/preferences/privacy', privacy, { withCredentials: true });
+            setHasChanges(false);
+            const event = new CustomEvent('show-toast', { detail: { message: 'Privacy settings saved', type: 'success' } });
+            window.dispatchEvent(event);
+        } catch (error) {
+            console.error('Failed to save privacy:', error);
+            const event = new CustomEvent('show-toast', { detail: { message: 'Failed to save settings', type: 'error' } });
+            window.dispatchEvent(event);
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const updatePrivacy = (key, value) => {
+        setPrivacy({ ...privacy, [key]: value });
+        setHasChanges(true);
+    };
+
+    const handleUnblockUser = async (userId) => {
+        try {
+            await axios.delete(`/api/auth/me/blocked-users/${userId}`, { withCredentials: true });
+            setBlockedUsers(blockedUsers.filter(u => u._id !== userId));
+            const event = new CustomEvent('show-toast', { detail: { message: 'User unblocked', type: 'success' } });
+            window.dispatchEvent(event);
+        } catch (error) {
+            console.error('Failed to unblock user:', error);
+        }
+    };
+
+    if (loading) {
+        return (
+            <div className="flex items-center justify-center py-12">
+                <Loader className="animate-spin text-indigo-600" size={32} />
+            </div>
+        );
+    }
+
     return (
         <div className="space-y-6 animate-fade-in-up">
-            <Card title="Privacy" subtitle="Control who can see your activity">
+            <Card title="Online Presence" subtitle="Control who can see your activity">
                 <div className="space-y-2">
                     <Toggle
                         label="Read Receipts"
-                        description="Let others know when you've seen their messages."
+                        description="Let others know when you've read their messages."
                         checked={privacy.readReceipts}
-                        onChange={(v) => setPrivacy({ ...privacy, readReceipts: v })}
+                        onChange={(v) => updatePrivacy('readReceipts', v)}
                     />
                     <div className="border-t border-slate-100 dark:border-white/5"></div>
                     <Toggle
                         label="Typing Indicators"
-                        description="Show others when you are writing a message."
+                        description="Show when you're typing a message."
                         checked={privacy.typingIndicators}
-                        onChange={(v) => setPrivacy({ ...privacy, typingIndicators: v })}
+                        onChange={(v) => updatePrivacy('typingIndicators', v)}
                     />
                 </div>
             </Card>
 
-            <Card title="Data & Safety" subtitle="Manage your data footprint">
-                <div className="space-y-2">
-                    <Toggle
-                        label="Allow Discovery"
-                        description="Let people find you by your email or phone number."
-                        checked={privacy.allowDiscovery}
-                        onChange={(v) => setPrivacy({ ...privacy, allowDiscovery: v })}
-                    />
-                    <div className="border-t border-slate-100 dark:border-white/5"></div>
-                    <Toggle
-                        label="Share Usage Data"
-                        description="Help us improve Chttrix by sharing anonymous usage data."
-                        checked={privacy.dataSharing}
-                        onChange={(v) => setPrivacy({ ...privacy, dataSharing: v })}
-                    />
-                </div>
+            <Card title="Discovery" subtitle="Allow others to find you">
+                <Toggle
+                    label="Allow Discovery"
+                    description="Let others find you by email or phone number."
+                    checked={privacy.allowDiscovery}
+                    onChange={(v) => updatePrivacy('allowDiscovery', v)}
+                />
             </Card>
 
-            <Card title="Danger Zone" className="border-red-200 dark:border-red-900/30">
-                <div className="flex items-center justify-between">
-                    <div>
-                        <div className="font-bold text-red-600 dark:text-red-400 text-sm">Delete Account</div>
-                        <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">Permanently remove your account and all data. This cannot be undone.</div>
+            <Card title="Data Sharing" subtitle="Control data usage">
+                <Toggle
+                    label="Share Usage Data"
+                    description="Help improve Chttrix by sharing anonymous usage data."
+                    checked={privacy.dataSharing}
+                    onChange={(v) => updatePrivacy('dataSharing', v)}
+                />
+            </Card>
+
+            {blockedUsers.length > 0 && (
+                <Card title="Blocked Users" subtitle="Manage your blocked users list">
+                    <div className="space-y-3">
+                        {blockedUsers.map(user => (
+                            <div key={user._id} className="flex items-center justify-between p-3 bg-slate-50 dark:bg-white/5 rounded-lg">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-slate-400 to-slate-600 flex items-center justify-center text-white font-bold">
+                                        {user.username?.charAt(0)?.toUpperCase()}
+                                    </div>
+                                    <div>
+                                        <div className="font-bold text-slate-900 dark:text-white text-sm">{user.username}</div>
+                                        <div className="text-xs text-slate-500">{user.email}</div>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => handleUnblockUser(user._id)}
+                                    className="px-4 py-2 text-sm font-bold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                                >
+                                    Unblock
+                                </button>
+                            </div>
+                        ))}
                     </div>
-                    <button className="px-4 py-2 bg-red-50 text-red-600 border border-red-200 rounded-lg text-sm font-bold hover:bg-red-100 transition-colors dark:bg-red-900/10 dark:border-red-900/30 dark:text-red-400 dark:hover:bg-red-900/20">
-                        Delete Account
+                </Card>
+            )}
+
+            {hasChanges && (
+                <div className="flex justify-end">
+                    <button
+                        onClick={handleSave}
+                        disabled={saving}
+                        className="px-6 py-2.5 bg-indigo-600 text-white font-bold rounded-lg shadow-lg shadow-indigo-500/20 hover:bg-indigo-700 hover:shadow-xl hover:-translate-y-0.5 transition-all disabled:opacity-70 flex items-center gap-2"
+                    >
+                        {saving ? (
+                            <>
+                                <Loader size={16} className="animate-spin" />
+                                Saving...
+                            </>
+                        ) : (
+                            <>
+                                <Check size={16} />
+                                Save Settings
+                            </>
+                        )}
                     </button>
                 </div>
-            </Card>
+            )}
         </div>
     );
 };
