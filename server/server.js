@@ -185,6 +185,7 @@ app.use((req, res, next) => {
 // Routes
 app.use("/api/auth", require("./src/features/auth/auth.routes"));
 app.use("/api/admin", require("./middleware/auth"), require("./src/features/admin/admin.routes"));
+app.use("/api/admin", require("./middleware/auth"), require("./src/features/onboarding/onboarding.routes")); // Employee onboarding
 app.use("/api/admin-dashboard", require("./src/features/admin/admin-dashboard.routes"));
 app.use("/api/owner-dashboard", require("./src/features/admin/owner-dashboard.routes"));
 app.use("/api/manager-dashboard", require("./src/features/admin/manager-dashboard.routes")); // Old pattern

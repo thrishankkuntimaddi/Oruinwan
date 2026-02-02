@@ -181,7 +181,7 @@ async function registerCompany(params) {
         passwordHash,
         userType: 'company',
         companyId: company._id,
-        companyRole: role || 'owner',
+        companyRole: (role || 'owner').toLowerCase(), // Convert to lowercase to match enum
         phone: phone || null,
         phoneCode: params.phoneCode || '+91',
         profile: {

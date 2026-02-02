@@ -96,115 +96,168 @@ const CompanySetup = () => {
     };
 
     return (
-        <div className="h-screen w-full bg-white relative overflow-hidden font-sans selection:bg-indigo-100 selection:text-indigo-900 flex flex-col">
-            {/* Styles & Animations */}
+        <div className="min-h-screen w-full bg-[#f8fafc] flex items-center justify-center p-4 relative overflow-hidden selection:bg-indigo-500 selection:text-white font-sans">
+
+            {/* Global Styles for custom scrollbar and animations */}
             <style>{`
-                @keyframes float { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(0, -20px); } }
-                @keyframes float-delayed { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(0, 20px); } }
-                .animate-float { animation: float 10s ease-in-out infinite; }
-                .animate-float-delayed { animation: float-delayed 12s ease-in-out infinite; }
-                .custom-scrollbar::-webkit-scrollbar { width: 6px; }
-                .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-                .custom-scrollbar::-webkit-scrollbar-thumb { background-color: rgba(99, 102, 241, 0.2); border-radius: 20px; }
-                .custom-scrollbar::-webkit-scrollbar-thumb:hover { background-color: rgba(99, 102, 241, 0.4); }
+                @keyframes float-slow { 0%, 100% { transform: translate(0, 0) rotate(0deg); } 50% { transform: translate(10px, -20px) rotate(2deg); } }
+                @keyframes float-reverse { 0%, 100% { transform: translate(0, 0) rotate(0deg); } 50% { transform: translate(-15px, 15px) rotate(-1deg); } }
+                @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+                .animate-float-slow { animation: float-slow 15s ease-in-out infinite; }
+                .animate-float-reverse { animation: float-reverse 18s ease-in-out infinite; }
+                .animate-fadeIn { animation: fadeIn 0.4s ease-out forwards; }
+                
+                .glass-input {
+                    background: rgba(255, 255, 255, 0.5);
+                    backdrop-filter: blur(10px);
+                    border: 1px solid rgba(226, 232, 240, 0.8);
+                    transition: all 0.3s ease;
+                }
+                .glass-input:focus {
+                    background: rgba(255, 255, 255, 0.9);
+                    border-color: #6366f1;
+                    box-shadow: 0 4px 20px rgba(99, 102, 241, 0.1);
+                    transform: translateY(-1px);
+                }
             `}</style>
 
-            {/* Premium Background */}
-            <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
-                <div className="absolute -top-[10%] -left-[10%] w-[60%] h-[60%] rounded-full bg-gradient-to-br from-indigo-100/40 via-purple-50/40 to-transparent blur-[100px] animate-float"></div>
-                <div className="absolute top-[20%] -right-[10%] w-[50%] h-[50%] rounded-full bg-gradient-to-bl from-blue-100/40 via-teal-50/40 to-transparent blur-[100px] animate-float-delayed"></div>
+            {/* Ambient Background Elements */}
+            <div className="absolute inset-0 pointer-events-none overflow-hidden">
+                <div className="absolute -top-[20%] -left-[10%] w-[70vw] h-[70vw] rounded-full bg-gradient-to-br from-indigo-200/30 via-purple-200/30 to-transparent blur-[120px] animate-float-slow mix-blend-multiply"></div>
+                <div className="absolute top-[30%] -right-[10%] w-[60vw] h-[60vw] rounded-full bg-gradient-to-bl from-blue-200/30 via-teal-100/30 to-transparent blur-[100px] animate-float-reverse mix-blend-multiply"></div>
+                <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-indigo-200 to-transparent opacity-50"></div>
             </div>
 
-            {/* Navbar */}
-            <nav className="relative z-50 px-8 py-6 flex justify-between items-center max-w-7xl mx-auto w-full shrink-0">
-                <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-white/80 backdrop-blur rounded-xl shadow-lg shadow-indigo-100/50 border border-white overflow-hidden">
-                        <img src="/chttrix-logo.jpg" alt="Chttrix" className="w-full h-full object-cover" />
-                    </div>
-                </div>
-                <div className="flex gap-2">
-                    {[1, 2, 3, 4].map(s => (
-                        <div key={s} className={`h-1.5 rounded-full transition-all duration-500 ${step >= s ? "w-8 bg-indigo-600" : "w-2 bg-gray-200"}`} />
-                    ))}
-                </div>
-            </nav>
+            {/* Main Glass Card */}
+            <div className="relative z-10 w-full max-w-6xl h-[85vh] bg-white/70 backdrop-blur-2xl rounded-[2.5rem] shadow-[0_20px_60px_-15px_rgba(0,0,0,0.05)] border border-white/60 flex overflow-hidden ring-1 ring-white/50">
 
-            {/* Main Content Card */}
-            <div className="relative z-10 flex-1 flex flex-col items-center justify-center p-4 md:p-6 overflow-hidden">
-                <div className="w-full max-w-5xl h-[80vh] bg-white/70 backdrop-blur-2xl rounded-[2.5rem] shadow-2xl shadow-indigo-100/50 border border-white/60 flex overflow-hidden">
+                {/* Left Sidebar - Navigation */}
+                <div className="w-80 bg-slate-900/95 text-white p-8 flex flex-col justify-between relative overflow-hidden hidden md:flex backdrop-blur-3xl shrink-0">
+                    {/* Subtle grain/noise texture overlay if we had one, using gradient instead */}
+                    <div className="absolute inset-0 bg-gradient-to-b from-indigo-500/10 to-transparent pointer-events-none"></div>
 
-                    {/* Left Panel: Context & Info */}
-                    <div className="w-1/3 bg-white/40 border-r border-white/50 p-10 flex flex-col hidden md:flex">
-                        <div className="mb-10">
-                            <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 text-indigo-600 text-xs font-bold uppercase tracking-wider mb-4 border border-indigo-100">
-                                <Sparkles size={12} /> Setup Wizard
-                            </span>
-                            <h1 className="text-3xl font-black text-gray-900 mb-2 tracking-tight">{currentStepTitle()}</h1>
-                            <p className="text-gray-500 leading-relaxed">{currentStepDesc()}</p>
+                    {/* Logo Area */}
+                    <div className="relative z-10 flex items-center gap-3 mb-12">
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-900/50 text-white font-bold">
+                            <Sparkles size={20} className="fill-white/20" />
                         </div>
+                        <span className="font-bold text-xl tracking-tight text-white">Chttrix</span>
+                    </div>
 
-                        {/* Progress Steps Details */}
-                        <div className="space-y-6 mt-8">
-                            {[
-                                { id: 1, title: "Identity", icon: Target },
-                                { id: 2, title: "Structure", icon: Users },
-                                { id: 3, title: "People", icon: Mail },
-                                { id: 4, title: "Launch", icon: Zap },
-                            ].map((item) => (
-                                <div key={item.id} className={`flex items-center gap-4 transition-opacity duration-300 ${step === item.id ? 'opacity-100' : 'opacity-40'}`}>
-                                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center border transition-all ${step === item.id ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg shadow-indigo-200' : step > item.id ? 'bg-green-500 border-green-500 text-white' : 'bg-white border-gray-200 text-gray-400'}`}>
-                                        {step > item.id ? <CheckCircle size={18} /> : <item.icon size={18} />}
+                    {/* Navigation Steps */}
+                    <div className="relative z-10 space-y-7 flex-1">
+                        {[
+                            { id: 1, title: "Identity", icon: Target, desc: "Brand & Regional" },
+                            { id: 2, title: "Structure", icon: Users, desc: "Departments" },
+                            { id: 3, title: "People", icon: Mail, desc: "Team Invites" },
+                            { id: 4, title: "Launch", icon: Zap, desc: "Ready to go" },
+                        ].map((item) => {
+                            const isActive = step === item.id;
+                            const isCompleted = step > item.id;
+
+                            return (
+                                <div key={item.id} className={`group flex items-start gap-4 transition-all duration-500 ${isActive ? 'opacity-100 translate-x-1' : 'opacity-40 hover:opacity-70'}`}>
+                                    <div className={`
+                                        w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-all duration-500
+                                        ${isActive ? 'bg-white text-indigo-600 shadow-xl shadow-indigo-900/20 scale-110' :
+                                            isCompleted ? 'bg-indigo-500/20 text-indigo-400 ring-1 ring-indigo-500/40' :
+                                                'bg-slate-800 text-slate-500'}
+                                    `}>
+                                        {isCompleted ? <CheckCircle size={20} /> : <item.icon size={20} />}
                                     </div>
-                                    <span className={`font-bold ${step === item.id ? 'text-gray-900' : 'text-gray-400'}`}>{item.title}</span>
+                                    <div className="pt-1">
+                                        <h3 className={`font-bold text-sm leading-none mb-1.5 transition-colors ${isActive ? 'text-white' : 'text-slate-300'}`}>
+                                            {item.title}
+                                        </h3>
+                                        <p className="text-xs text-slate-500 font-medium">{item.desc}</p>
+                                    </div>
                                 </div>
-                            ))}
+                            );
+                        })}
+                    </div>
+
+                    {/* Bottom Status */}
+                    <div className="relative z-10 pt-8 border-t border-white/10">
+                        <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full bg-indigo-500/20 flex items-center justify-center text-indigo-400">
+                                <Clock size={14} />
+                            </div>
+                            <div>
+                                <p className="text-[10px] uppercase tracking-wider text-slate-500 font-bold mb-0.5">Estimated Time</p>
+                                <p className="text-xs font-medium text-slate-300">~2 mins remaining</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Right Content Area */}
+                <div className="flex-1 flex flex-col relative bg-white/40">
+                    {/* Mobile Header (Visible only on small screens) */}
+                    <div className="md:hidden px-6 py-4 flex items-center justify-between border-b border-gray-100 bg-white/50 backdrop-blur-md sticky top-0 z-20">
+                        <div className="flex items-center gap-2">
+                            <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white">
+                                <span className="font-bold text-xs">{step}/4</span>
+                            </div>
+                            <span className="font-bold text-gray-900">{currentStepTitle()}</span>
                         </div>
                     </div>
 
-                    {/* Right Panel: Form Area */}
-                    <div className="flex-1 flex flex-col relative bg-white/20">
-                        <div className="flex-1 overflow-y-auto custom-scrollbar p-6 md:p-8">
+                    {/* Scrolable Form Area */}
+                    <div className="flex-1 overflow-y-auto px-8 md:px-16 py-12 scroll-smooth">
+                        <div className="max-w-2xl mx-auto">
+
+                            {/* Header Text */}
+                            <div className="mb-10 animate-fadeIn">
+                                <h1 className="text-4xl font-black text-slate-900 mb-3 tracking-tight">{currentStepTitle()}</h1>
+                                <p className="text-lg text-slate-500 font-medium leading-relaxed max-w-lg">{currentStepDesc()}</p>
+                            </div>
 
                             {/* STEP 1: IDENTITY */}
                             {step === 1 && (
-                                <div className="max-w-md mx-auto space-y-8 animate-fadeIn">
-                                    <div className="space-y-4">
-                                        <label className="text-sm font-bold text-gray-700 ml-1">Company Display Name</label>
-                                        <input
-                                            type="text"
-                                            value={profile.displayName}
-                                            onChange={(e) => setProfile({ ...profile, displayName: e.target.value })}
-                                            className="w-full px-5 py-4 theme-input border border-gray-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50/50 rounded-2xl outline-none transition-all shadow-sm text-lg"
-                                            placeholder="e.g. Acme Corp"
-                                        />
-                                    </div>
+                                <div className="space-y-8 animate-fadeIn">
+                                    <div className="space-y-6">
+                                        <div className="space-y-3">
+                                            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Company Name</label>
+                                            <input
+                                                type="text"
+                                                value={profile.displayName}
+                                                onChange={(e) => setProfile({ ...profile, displayName: e.target.value })}
+                                                className="w-full px-6 py-5 glass-input rounded-2xl outline-none text-xl font-bold text-slate-800 placeholder:text-slate-300 font-sans"
+                                                placeholder="e.g. Acme Industries"
+                                                autoFocus
+                                            />
+                                        </div>
 
-                                    <div className="space-y-4">
-                                        <label className="text-sm font-bold text-gray-700 ml-1">Timezone</label>
-                                        <div className="relative group">
-                                            <Clock className="absolute left-5 top-4 text-gray-400 group-focus-within:text-indigo-500 transition-colors" size={20} />
-                                            <select
-                                                value={profile.timezone}
-                                                onChange={(e) => setProfile({ ...profile, timezone: e.target.value })}
-                                                className="w-full pl-12 pr-5 py-4 theme-input border border-gray-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50/50 rounded-2xl outline-none appearance-none transition-all shadow-sm font-medium cursor-pointer"
-                                            >
-                                                <option value="UTC">UTC (Universal Time)</option>
-                                                <option value="America/New_York">Eastern Time (US & Canada)</option>
-                                                <option value="America/Los_Angeles">Pacific Time (US & Canada)</option>
-                                                <option value="Europe/London">London (GMT)</option>
-                                                <option value="Asia/Kolkata">India Standard Time</option>
-                                            </select>
+                                        <div className="space-y-3">
+                                            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Timezone</label>
+                                            <div className="relative group">
+                                                <Clock className="absolute left-6 top-5 text-slate-400 group-focus-within:text-indigo-500 transition-colors pointer-events-none" size={20} />
+                                                <select
+                                                    value={profile.timezone}
+                                                    onChange={(e) => setProfile({ ...profile, timezone: e.target.value })}
+                                                    className="w-full pl-14 pr-6 py-5 glass-input rounded-2xl outline-none appearance-none font-medium text-slate-700 cursor-pointer text-lg"
+                                                >
+                                                    <option value="UTC">UTC (Universal Time)</option>
+                                                    <option value="America/New_York">Eastern Time (US & Canada)</option>
+                                                    <option value="America/Los_Angeles">Pacific Time (US & Canada)</option>
+                                                    <option value="Europe/London">London (GMT)</option>
+                                                    <option value="Asia/Kolkata">India Standard Time</option>
+                                                </select>
+                                                <div className="absolute right-6 top-5 text-slate-400 pointer-events-none">
+                                                    <ArrowRight size={20} className="rotate-90" />
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
 
                                     <div className="pt-4">
-                                        <label className="text-sm font-bold text-gray-700 ml-1 mb-2 block">Brand Logo</label>
-                                        <div className="border-2 border-dashed border-gray-200 rounded-3xl p-8 flex flex-col items-center justify-center text-center hover:bg-indigo-50/50 hover:border-indigo-300 transition-all cursor-pointer group bg-white/50">
-                                            <div className="w-16 h-16 bg-white shadow-md rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform text-indigo-500">
-                                                <Upload size={24} />
+                                        <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1 mb-3 block">Brand Logo</label>
+                                        <div className="border border-dashed border-slate-300 rounded-3xl p-10 flex flex-col items-center justify-center text-center hover:bg-white/60 hover:border-indigo-400 hover:shadow-lg hover:shadow-indigo-100/50 transition-all cursor-pointer group bg-white/20">
+                                            <div className="w-20 h-20 bg-white rounded-2xl shadow-sm flex items-center justify-center mb-5 group-hover:scale-110 transition-transform duration-300 border border-slate-100">
+                                                <Upload size={28} className="text-indigo-500" />
                                             </div>
-                                            <p className="font-bold text-gray-900">Upload Logo</p>
-                                            <p className="text-xs text-gray-500 mt-1">SVG, PNG, JPG (max 2MB)</p>
+                                            <p className="font-bold text-slate-800 text-lg">Click to upload brand logo</p>
+                                            <p className="text-sm text-slate-500 mt-2 font-medium">SVG, PNG, JPG (max 2MB)</p>
                                         </div>
                                     </div>
                                 </div>
@@ -212,39 +265,45 @@ const CompanySetup = () => {
 
                             {/* STEP 2: STRUCTURE */}
                             {step === 2 && (
-                                <div className="max-w-lg mx-auto space-y-6 animate-fadeIn">
-                                    <div className="space-y-3">
+                                <div className="space-y-8 animate-fadeIn">
+                                    <div className="grid grid-cols-1 gap-4">
                                         {departments.map((dept, idx) => (
-                                            <div key={idx} className="flex items-center gap-3 group animate-slideIn" style={{ animationDelay: `${idx * 0.1}s` }}>
-                                                <div className="flex-1 px-6 py-4 bg-white dark:bg-slate-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm flex items-center justify-between group-hover:border-indigo-300 group-hover:shadow-md transition-all">
-                                                    <span className="font-bold text-gray-700 dark:text-gray-200">{dept}</span>
-                                                    <button
-                                                        onClick={() => {
-                                                            if (departments.length > 1) {
-                                                                setDepartments(departments.filter((_, i) => i !== idx));
-                                                            }
-                                                        }}
-                                                        disabled={departments.length === 1}
-                                                        title={departments.length === 1 ? "At least one department is required" : "Remove department"}
-                                                        className={`w-8 h-8 flex items-center justify-center rounded-lg transition-colors ${departments.length === 1
-                                                            ? "text-gray-200 cursor-not-allowed"
-                                                            : "text-gray-300 hover:text-red-500 hover:bg-red-50"
-                                                            }`}
-                                                    >
-                                                        <X size={18} />
-                                                    </button>
+                                            <div
+                                                key={idx}
+                                                className="group flex items-center justify-between p-5 bg-white border border-slate-100 rounded-2xl shadow-sm hover:shadow-md hover:border-indigo-100 transition-all duration-300 animate-fadeIn"
+                                                style={{ animationDelay: `${idx * 0.05}s` }}
+                                            >
+                                                <div className="flex items-center gap-4">
+                                                    <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                                                        <Users size={20} />
+                                                    </div>
+                                                    <span className="font-bold text-lg text-slate-800">{dept}</span>
                                                 </div>
+                                                <button
+                                                    onClick={() => {
+                                                        if (departments.length > 1) {
+                                                            setDepartments(departments.filter((_, i) => i !== idx));
+                                                        }
+                                                    }}
+                                                    disabled={departments.length === 1}
+                                                    className={`w-10 h-10 flex items-center justify-center rounded-xl transition-all
+                                                        ${departments.length === 1
+                                                            ? "text-slate-200 cursor-not-allowed"
+                                                            : "text-slate-400 hover:text-red-500 hover:bg-red-50"}`}
+                                                >
+                                                    <X size={20} />
+                                                </button>
                                             </div>
                                         ))}
 
-                                        <div className="relative group pt-4">
-                                            <div className="absolute left-5 top-8 text-gray-400">
-                                                <Plus size={20} />
+                                        <div className="relative group mt-2">
+                                            <div className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors">
+                                                <Plus size={22} />
                                             </div>
                                             <input
                                                 type="text"
-                                                placeholder="Add new department..."
-                                                className="w-full pl-12 pr-6 py-4 theme-input border-2 border-dashed border-gray-300 dark:border-gray-600 focus:border-indigo-500 focus:bg-white dark:focus:bg-slate-800 focus:ring-4 focus:ring-indigo-50/50 rounded-2xl outline-none placeholder:text-gray-400 font-medium transition-all"
+                                                placeholder="Add another department..."
+                                                className="w-full pl-16 pr-6 py-5 border-2 border-dashed border-slate-300 bg-white/30 rounded-2xl outline-none focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-50/50 transition-all font-medium text-lg placeholder:text-slate-400"
                                                 onKeyDown={(e) => {
                                                     if (e.key === 'Enter' && e.target.value.trim()) {
                                                         setDepartments([...departments, e.target.value.trim()]);
@@ -259,199 +318,202 @@ const CompanySetup = () => {
 
                             {/* STEP 3: INVITES */}
                             {step === 3 && (
-                                <div className="max-w-lg mx-auto space-y-6 animate-fadeIn">
+                                <div className="space-y-8 animate-fadeIn">
                                     {/* Bulk Upload Section */}
-                                    <div className="p-6 bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl border-2 border-dashed border-purple-200">
-                                        <h3 className="text-sm font-bold text-purple-900 uppercase tracking-wider mb-3 flex items-center gap-2">
-                                            <Upload size={16} /> Bulk Upload (Optional)
-                                        </h3>
-                                        <p className="text-xs text-gray-600 mb-4">Upload an Excel/CSV file with employee data to auto-create accounts.</p>
-                                        <label className="block">
-                                            <input
-                                                type="file"
-                                                accept=".xlsx,.xls,.csv"
-                                                className="hidden"
-                                                onChange={(e) => {
-
-                                                }}
-                                            />
-                                            <div className="cursor-pointer py-3 px-4 bg-white border-2 border-purple-300 rounded-xl text-center hover:bg-purple-50 transition-all flex items-center justify-center gap-2 font-bold text-purple-700">
-                                                <Upload size={18} />
-                                                <span>Choose Excel/CSV File</span>
+                                    <div className="p-6 bg-gradient-to-r from-violet-50 to-indigo-50 rounded-2xl border border-indigo-100 hover:shadow-lg hover:shadow-indigo-100/50 transition-all cursor-pointer group">
+                                        <div className="flex items-center gap-5">
+                                            <div className="w-16 h-16 bg-white rounded-xl shadow-sm flex items-center justify-center text-indigo-600 shrink-0 group-hover:scale-105 transition-transform">
+                                                <Upload size={24} />
                                             </div>
-                                        </label>
-                                        <p className="text-xs text-gray-500 mt-2 italic">
-                                            💡 Future: Automatic account creation with domain validation
-                                        </p>
+                                            <div className="flex-1">
+                                                <h3 className="font-bold text-slate-800 text-lg mb-1">Bulk Upload Team</h3>
+                                                <p className="text-sm text-slate-500 font-medium">Upload an Excel/CSV file to auto-invite everyone at once.</p>
+                                            </div>
+                                            <div className="w-10 h-10 rounded-full bg-indigo-200/20 flex items-center justify-center text-indigo-600">
+                                                <ArrowRight size={20} />
+                                            </div>
+                                        </div>
                                     </div>
 
-                                    <div className="flex items-center gap-3 my-6">
-                                        <div className="flex-1 h-px bg-gray-200"></div>
-                                        <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Or Add Manually</span>
-                                        <div className="flex-1 h-px bg-gray-200"></div>
+                                    <div className="relative flex py-2 items-center">
+                                        <div className="flex-grow border-t border-slate-200"></div>
+                                        <span className="flex-shrink-0 mx-4 text-xs font-bold text-slate-400 uppercase tracking-widest">Or Add Manually</span>
+                                        <div className="flex-grow border-t border-slate-200"></div>
                                     </div>
 
-                                    <div className="space-y-4 max-h-[400px]">
+                                    <div className="space-y-4">
                                         {invites.map((invite, idx) => (
-                                            <div key={idx} className="flex flex-col gap-3 animate-slideIn p-4 bg-gray-50 rounded-2xl border border-gray-100 relative">
+                                            <div key={idx} className="p-5 bg-white border border-slate-100 rounded-2xl shadow-sm hover:shadow-md transition-all relative group animate-fadeIn">
                                                 {invites.length > 1 && (
                                                     <button
                                                         onClick={() => setInvites(invites.filter((_, i) => i !== idx))}
-                                                        className="absolute right-2 top-2 p-1.5 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors z-10"
+                                                        className="absolute -right-2 -top-2 w-8 h-8 flex items-center justify-center bg-white shadow-md rounded-full text-slate-400 hover:text-red-500 hover:scale-110 transition-all border border-slate-100 opacity-0 group-hover:opacity-100"
                                                     >
-                                                        <X size={16} />
+                                                        <X size={14} />
                                                     </button>
                                                 )}
 
-                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                                    {/* Name */}
-                                                    <div className="relative group">
-                                                        <Users className="absolute left-4 top-4 text-gray-400 group-focus-within:text-indigo-500 transition-colors" size={18} />
-                                                        <input
-                                                            type="text"
-                                                            value={invite.name}
-                                                            onChange={(e) => {
-                                                                const newInvites = [...invites];
-                                                                newInvites[idx].name = e.target.value;
-                                                                setInvites(newInvites);
-                                                            }}
-                                                            placeholder="Full Name"
-                                                            className="w-full pl-11 pr-4 py-3.5 bg-white border border-gray-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 rounded-xl outline-none transition-all shadow-sm text-gray-900"
-                                                        />
-                                                    </div>
-
-                                                    {/* Email */}
-                                                    <div className="relative group">
-                                                        <Mail className="absolute left-4 top-4 text-gray-400 group-focus-within:text-indigo-500 transition-colors" size={18} />
-                                                        <input
-                                                            type="email"
-                                                            value={invite.email}
-                                                            onChange={(e) => {
-                                                                const newInvites = [...invites];
-                                                                newInvites[idx].email = e.target.value;
-                                                                setInvites(newInvites);
-                                                            }}
-                                                            placeholder={`colleague@${user?.company?.domain || 'company.com'}`}
-                                                            className="w-full pl-11 pr-4 py-3.5 bg-white border border-gray-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 rounded-xl outline-none transition-all shadow-sm text-gray-900"
-                                                        />
-                                                    </div>
-                                                </div>
-
-                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                                    {/* Role */}
-                                                    <select
-                                                        className="w-full py-3.5 px-4 rounded-xl border border-gray-200 bg-white text-sm font-bold text-gray-700 outline-none focus:border-indigo-500"
-                                                        value={invite.role}
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                                                    <input
+                                                        type="text"
+                                                        value={invite.name}
                                                         onChange={(e) => {
                                                             const newInvites = [...invites];
-                                                            newInvites[idx].role = e.target.value;
+                                                            newInvites[idx].name = e.target.value;
                                                             setInvites(newInvites);
                                                         }}
-                                                    >
-                                                        <option value="member">Member</option>
-                                                        <option value="manager">Manager</option>
-                                                        <option value="admin">Admin</option>
-                                                    </select>
-
-                                                    {/* Department */}
-                                                    <select
-                                                        className="w-full py-3.5 px-4 rounded-xl border border-gray-200 bg-white text-sm font-bold text-gray-700 outline-none focus:border-indigo-500"
-                                                        value={invite.department}
+                                                        placeholder="Full Name"
+                                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all font-medium"
+                                                    />
+                                                    <input
+                                                        type="email"
+                                                        value={invite.email}
                                                         onChange={(e) => {
                                                             const newInvites = [...invites];
-                                                            newInvites[idx].department = e.target.value;
+                                                            newInvites[idx].email = e.target.value;
                                                             setInvites(newInvites);
                                                         }}
-                                                    >
-                                                        <option value="">Select Department</option>
-                                                        {departments.map((dept, i) => (
-                                                            <option key={i} value={dept}>{dept}</option>
-                                                        ))}
-                                                    </select>
+                                                        placeholder={`email@${user?.company?.domain || 'company.com'}`}
+                                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all font-medium"
+                                                    />
                                                 </div>
 
-                                                {invite.email && user?.company?.domain && !invite.email.endsWith(`@${user.company.domain}`) && (
-                                                    <p className="text-xs text-red-500 mt-1 ml-2">⚠️ Email must match company domain (@{user.company.domain})</p>
-                                                )}
+                                                <div className="grid grid-cols-2 gap-4">
+                                                    <div className="relative">
+                                                        <select
+                                                            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all font-bold text-sm text-slate-700 appearance-none cursor-pointer"
+                                                            value={invite.role}
+                                                            onChange={(e) => {
+                                                                const newInvites = [...invites];
+                                                                newInvites[idx].role = e.target.value;
+                                                                setInvites(newInvites);
+                                                            }}
+                                                        >
+                                                            <option value="member">Member</option>
+                                                            <option value="manager">Manager</option>
+                                                            <option value="admin">Admin</option>
+                                                        </select>
+                                                        <div className="absolute right-3 top-3.5 text-slate-400 pointer-events-none">
+                                                            <ArrowRight size={14} className="rotate-90" />
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="relative">
+                                                        <select
+                                                            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all font-bold text-sm text-slate-700 appearance-none cursor-pointer"
+                                                            value={invite.department}
+                                                            onChange={(e) => {
+                                                                const newInvites = [...invites];
+                                                                newInvites[idx].department = e.target.value;
+                                                                setInvites(newInvites);
+                                                            }}
+                                                        >
+                                                            <option value="">Select Dept</option>
+                                                            {departments.map((dept, i) => (
+                                                                <option key={i} value={dept}>{dept}</option>
+                                                            ))}
+                                                        </select>
+                                                        <div className="absolute right-3 top-3.5 text-slate-400 pointer-events-none">
+                                                            <ArrowRight size={14} className="rotate-90" />
+                                                        </div>
+                                                    </div>
+                                                </div>
                                             </div>
                                         ))}
                                     </div>
 
                                     <button
                                         onClick={() => setInvites([...invites, { name: "", email: "", role: "member", department: "" }])}
-                                        className="w-full py-4 border-2 border-dashed border-gray-300 text-gray-500 font-bold rounded-2xl hover:border-indigo-400 hover:text-indigo-600 hover:bg-indigo-50/50 transition-all flex items-center justify-center gap-2"
+                                        className="w-full py-4 bg-white/50 border-2 border-dashed border-slate-300 text-slate-500 font-bold rounded-2xl hover:border-indigo-400 hover:text-indigo-600 hover:bg-white transition-all flex items-center justify-center gap-2 group"
                                     >
-                                        <Plus size={20} /> Add Another Member
+                                        <div className="w-6 h-6 rounded-full bg-slate-200 text-slate-500 flex items-center justify-center group-hover:bg-indigo-100 group-hover:text-indigo-600 transition-colors">
+                                            <Plus size={14} />
+                                        </div>
+                                        <span>Add Another Member</span>
                                     </button>
                                 </div>
                             )}
 
                             {/* STEP 4: COMPLETION */}
                             {step === 4 && (
-                                <div className="max-w-md mx-auto text-center py-10 animate-fadeIn">
-                                    <div className="w-24 h-24 bg-green-100 text-green-600 rounded-[2rem] flex items-center justify-center mx-auto mb-8 shadow-xl shadow-green-100/50 animate-bounce">
-                                        <CheckCircle size={48} />
+                                <div className="text-center py-12 animate-fadeIn">
+                                    <div className="relative w-32 h-32 mx-auto mb-10">
+                                        <div className="absolute inset-0 rounded-full bg-green-100 animate-ping opacity-20"></div>
+                                        <div className="relative w-full h-full bg-gradient-to-br from-green-50 to-emerald-100 rounded-full flex items-center justify-center shadow-xl shadow-green-100 border border-white">
+                                            <CheckCircle size={56} className="text-green-500 drop-shadow-sm" />
+                                        </div>
                                     </div>
-                                    <h2 className="text-3xl font-black text-gray-900 mb-4 tracking-tight">Ready to Blast Off!</h2>
-                                    <p className="text-gray-500 mb-10 text-lg">
-                                        Your workspace has been successfully configured.
+
+                                    <h2 className="text-4xl font-black text-slate-900 mb-4 tracking-tight">Configuration Complete!</h2>
+                                    <p className="text-lg text-slate-500 mb-12 max-w-md mx-auto leading-relaxed">
+                                        Your workspace is ready. We've set up your departments and sent out the invites.
                                     </p>
 
-                                    <div className="bg-white rounded-3xl p-8 shadow-lg border border-gray-100 text-left">
-                                        <h4 className="font-bold text-gray-900 mb-4 text-xs uppercase tracking-wider">Configuration Summary</h4>
+                                    <div className="bg-white/80 rounded-3xl p-8 shadow-sm border border-white max-w-md mx-auto text-left relative overflow-hidden">
+                                        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 to-purple-600"></div>
+                                        <h4 className="font-bold text-slate-900 mb-6 text-xs uppercase tracking-wider flex items-center gap-2">
+                                            <Sparkles size={12} className="text-indigo-500" /> Summary
+                                        </h4>
                                         <ul className="space-y-4">
-                                            <li className="flex items-center gap-3 text-gray-600">
-                                                <div className="w-6 h-6 rounded-full bg-green-50 text-green-600 flex items-center justify-center"><CheckCircle size={14} /></div>
-                                                <span className="font-medium">Profile & Branding Set</span>
-                                            </li>
-                                            <li className="flex items-center gap-3 text-gray-600">
-                                                <div className="w-6 h-6 rounded-full bg-green-50 text-green-600 flex items-center justify-center"><CheckCircle size={14} /></div>
-                                                <span className="font-medium">{departments.length} Departments Created</span>
-                                            </li>
-                                            <li className="flex items-center gap-3 text-gray-600">
-                                                <div className="w-6 h-6 rounded-full bg-green-50 text-green-600 flex items-center justify-center"><CheckCircle size={14} /></div>
-                                                <span className="font-medium">{invites.filter(i => i.email).length} Team Invites Sent</span>
-                                            </li>
+                                            {[
+                                                { label: "Profile Configured", val: "Done" },
+                                                { label: "Departments Created", val: departments.length },
+                                                { label: "Invites Queued", val: invites.filter(i => i.email).length }
+                                            ].map((item, i) => (
+                                                <li key={i} className="flex items-center justify-between py-2 border-b border-slate-50 last:border-0">
+                                                    <span className="text-slate-500 font-medium">{item.label}</span>
+                                                    <span className="font-bold text-slate-900 bg-slate-50 px-3 py-1 rounded-full text-sm">{item.val}</span>
+                                                </li>
+                                            ))}
                                         </ul>
                                     </div>
                                 </div>
                             )}
 
                         </div>
+                    </div>
 
-                        {/* Footer (Navigation) */}
-                        <div className="shrink-0 px-10 py-8 border-t border-white/40 flex items-center justify-between bg-white/30 backdrop-blur-sm">
-                            {step > 1 && step < 4 ? (
+                    {/* Footer Controls */}
+                    <div className="shrink-0 px-8 md:px-16 py-8 border-t border-white/40 flex items-center justify-between bg-white/40 backdrop-blur-md sticky bottom-0 z-20">
+                        <div>
+                            {step > 1 && step < 4 && (
                                 <button
                                     onClick={() => setStep(step - 1)}
-                                    className="text-gray-500 hover:text-gray-900 font-bold flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-white/50 transition-colors"
+                                    className="group text-slate-500 hover:text-slate-900 font-bold flex items-center gap-2 px-5 py-3 rounded-xl hover:bg-white/50 transition-all"
                                 >
-                                    <ArrowLeft size={18} /> Back
+                                    <ArrowLeft size={18} className="group-hover:-translate-x-1 transition-transform" />
+                                    <span>Back</span>
                                 </button>
-                            ) : <div></div>}
+                            )}
+                        </div>
 
-                            <button
-                                onClick={handleNext}
-                                disabled={isLoading}
-                                className={`
-                                    relative px-8 py-3.5 bg-gray-900 text-white font-bold rounded-2xl shadow-xl shadow-gray-200 
-                                    hover:shadow-2xl hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 flex items-center gap-3
-                                    ${step === 4 ? "bg-gradient-to-r from-indigo-600 to-purple-600 shadow-indigo-200 hover:shadow-indigo-300" : ""}
-                                `}
-                            >
+                        <button
+                            onClick={handleNext}
+                            disabled={isLoading}
+                            className={`
+                                relative px-10 py-4 bg-slate-900 text-white font-bold rounded-2xl shadow-xl shadow-slate-200 
+                                hover:shadow-2xl hover:-translate-y-1 active:scale-[0.98] transition-all duration-300 flex items-center gap-3 overflow-hidden group
+                                ${step === 4 ? "bg-gradient-to-r from-indigo-600 to-purple-600 shadow-indigo-200 hover:shadow-indigo-300 border border-white/20" : ""}
+                            `}
+                        >
+                            <span className="relative z-10 flex items-center gap-3">
                                 {isLoading ? (
                                     <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                                 ) : (
                                     <>
-                                        {step === 4 ? "Finish Setup" : "Continue"}
-                                        {step !== 4 && <ArrowRight size={18} />}
+                                        {step === 4 ? "Launch Workspace" : "Continue"}
+                                        {step !== 4 && <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />}
                                     </>
                                 )}
-                            </button>
-                        </div>
+                            </span>
+                            {/* Subtle shine effect on hover */}
+                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
+                        </button>
                     </div>
                 </div>
             </div>
+
+            <p className="fixed bottom-4 text-slate-400 text-xs font-medium opacity-50">© 2026 Chttrix Inc.</p>
         </div>
     );
 };

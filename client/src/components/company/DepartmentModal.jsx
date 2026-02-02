@@ -38,7 +38,8 @@ const DepartmentModal = ({ isOpen, onClose, companyId, department, onSuccess }) 
                 resetForm();
             }
         }
-    }, [department, isOpen, setMultipleValues, resetForm]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [department, isOpen]);
 
     if (!isOpen) return null;
 

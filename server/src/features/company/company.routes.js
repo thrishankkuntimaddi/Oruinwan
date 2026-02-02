@@ -1,8 +1,7 @@
-// src/features/company/company.routes.js
-
 const express = require("express");
 const router = express.Router();
 const companyController = require("./company.controller");
+const otpController = require("../../shared/controllers/otp.controller");
 const requireAuth = require("../../shared/middleware/auth");
 
 // ============================================================================
@@ -36,6 +35,20 @@ router.post("/check-email", companyController.checkEmail);
  * @access  Public
  */
 router.post("/check-phone", companyController.checkPhone);
+
+/**
+ * @route   POST /api/companies/otp/send
+ * @desc    Send OTP for company registration verification
+ * @access  Public
+ */
+router.post("/otp/send", otpController.sendOtp);
+
+/**
+ * @route   POST /api/companies/otp/verify
+ * @desc    Verify OTP for company registration
+ * @access  Public
+ */
+router.post("/otp/verify", otpController.verifyOtp);
 
 // ============================================================================
 // AUTHENTICATED ROUTES

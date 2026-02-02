@@ -54,7 +54,16 @@ const OnboardingWizard = ({ onComplete }) => {
     // Load data
     useEffect(() => {
         if (company?._id) {
-            getDepartments(company?._id).then(res => setDepartments(res.departments || []));
+            console.log('🔍 [ONBOARDING] Fetching departments for company:', company._id);
+            getDepartments(company._id)
+                .then(res => {
+                    console.log('✅ [ONBOARDING] Departments response:', res);
+                    setDepartments(res.departments || []);
+                })
+                .catch(err => {
+                    console.error('❌ [ONBOARDING] Failed to fetch departments:', err);
+                    setDepartments([]);
+                });
         }
     }, [company?._id]);
 
@@ -121,7 +130,8 @@ const OnboardingWizard = ({ onComplete }) => {
 
         if (step === 2) {
             if (!formData.companyEmail) return false;
-            if (formData.assignedDepartments.length === 0) return false;
+            // Only require department selection if departments exist
+            if (departments.length > 0 && formData.assignedDepartments.length === 0) return false;
         }
         return true;
     };
@@ -132,6 +142,7 @@ const OnboardingWizard = ({ onComplete }) => {
         try {
             await api.post('/api/admin/onboard-employee', {
                 ...formData,
+                companyEmail: `${formData.companyEmail}@${company?.domain}`, // Concatenate username with domain
                 phone: `${formData.countryCode} ${formData.phone}`,
                 jobTitle: formData.jobTitle === 'Custom' ? formData.customJobTitle : formData.jobTitle,
                 departments: formData.assignedDepartments,
@@ -330,42 +341,53 @@ const OnboardingWizard = ({ onComplete }) => {
                             {/* Dept & Workspace */}
                             <div className="border-t border-slate-100 dark:border-slate-800 pt-6">
                                 <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-4">Department Access</h3>
-                                <div className="grid grid-cols-1 gap-3 max-h-[250px] overflow-y-auto custom-scrollbar pr-2">
-                                    {departments.map(dept => {
-                                        const isSelected = formData.assignedDepartments.includes(dept._id);
-                                        return (
-                                            <div key={dept._id} className={`rounded-xl border transition-all overflow-hidden ${isSelected ? 'border-indigo-500 bg-indigo-50/50 dark:bg-indigo-500/10' : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-[#1e293b]'}`}>
-                                                <label className="flex items-center gap-3 p-3.5 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={isSelected}
-                                                        onChange={() => toggleSelection('assignedDepartments', dept._id)}
-                                                        className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
-                                                    />
-                                                    <span className="font-semibold text-sm text-slate-700 dark:text-slate-200">{dept.name}</span>
-                                                </label>
+                                {departments.length === 0 ? (
+                                    <div className="text-center py-8 px-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700/50">
+                                        <p className="text-sm text-slate-500 dark:text-slate-400 mb-2">
+                                            No departments found
+                                        </p>
+                                        <p className="text-xs text-slate-400 dark:text-slate-500">
+                                            Departments can be assigned later from the People page
+                                        </p>
+                                    </div>
+                                ) : (
+                                    <div className="grid grid-cols-1 gap-3 max-h-[250px] overflow-y-auto custom-scrollbar pr-2">
+                                        {departments.map(dept => {
+                                            const isSelected = formData.assignedDepartments.includes(dept._id);
+                                            return (
+                                                <div key={dept._id} className={`rounded-xl border transition-all overflow-hidden ${isSelected ? 'border-indigo-500 bg-indigo-50/50 dark:bg-indigo-500/10' : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-[#1e293b]'}`}>
+                                                    <label className="flex items-center gap-3 p-3.5 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={isSelected}
+                                                            onChange={() => toggleSelection('assignedDepartments', dept._id)}
+                                                            className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                                                        />
+                                                        <span className="font-semibold text-sm text-slate-700 dark:text-slate-200">{dept.name}</span>
+                                                    </label>
 
-                                                {isSelected && (
-                                                    <div className="px-3.5 pb-3.5 pl-10 space-y-2 animate-fadeIn">
-                                                        {workspacesByDept[dept._id]?.length > 0 ? workspacesByDept[dept._id].map(ws => (
-                                                            <label key={ws._id} className="flex items-center gap-2 cursor-pointer group">
-                                                                <input
-                                                                    type="checkbox"
-                                                                    checked={formData.assignedWorkspaces.includes(ws._id)}
-                                                                    onChange={() => toggleSelection('assignedWorkspaces', ws._id)}
-                                                                    className="w-3.5 h-3.5 rounded border-slate-300 text-indigo-500 focus:ring-indigo-500"
-                                                                />
-                                                                <span className="text-xs text-slate-500 dark:text-slate-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">{ws.name}</span>
-                                                            </label>
-                                                        )) : (
-                                                            <p className="text-xs text-slate-400 italic">No workspaces</p>
-                                                        )}
-                                                    </div>
-                                                )}
-                                            </div>
-                                        );
-                                    })}
-                                </div>
+                                                    {isSelected && (
+                                                        <div className="px-3.5 pb-3.5 pl-10 space-y-2 animate-fadeIn">
+                                                            {workspacesByDept[dept._id]?.length > 0 ? workspacesByDept[dept._id].map(ws => (
+                                                                <label key={ws._id} className="flex items-center gap-2 cursor-pointer group">
+                                                                    <input
+                                                                        type="checkbox"
+                                                                        checked={formData.assignedWorkspaces.includes(ws._id)}
+                                                                        onChange={() => toggleSelection('assignedWorkspaces', ws._id)}
+                                                                        className="w-3.5 h-3.5 rounded border-slate-300 text-indigo-500 focus:ring-indigo-500"
+                                                                    />
+                                                                    <span className="text-xs text-slate-500 dark:text-slate-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">{ws.name}</span>
+                                                                </label>
+                                                            )) : (
+                                                                <p className="text-xs text-slate-400 italic">No workspaces</p>
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
                             </div>
                         </div>
                     )}
