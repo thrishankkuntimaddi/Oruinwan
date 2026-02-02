@@ -265,8 +265,13 @@ async function getUserDMSessions(userId, workspaceId) {
                 .populate('sender', 'username');
 
             // Find the other user
+            // After populate, each participant IS a User object (not nested)
             const otherUser = session.participants.find(
-                (p) => String(p._id) !== String(userId)
+                (p) => {
+                    // Handle both populated (User object) and unpopulated (ObjectId) cases
+                    const participantId = p?._id || p;
+                    return String(participantId) !== String(userId);
+                }
             );
 
             // Count unread messages
@@ -279,7 +284,7 @@ async function getUserDMSessions(userId, workspaceId) {
             return {
                 id: session._id,
                 otherUser: otherUser || { username: 'Self' },
-                otherUserId: otherUser?._id,
+                otherUserId: otherUser?._id || otherUser,
                 lastMessage: lastMsg?.payload?.text || 'No messages yet',
                 lastMessageAt: lastMsg?.createdAt || session.createdAt,
                 unreadCount

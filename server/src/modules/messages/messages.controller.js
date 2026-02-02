@@ -215,7 +215,19 @@ exports.getDMs = async (req, res) => {
             }
         );
 
-        return res.json(result);
+        // ✅ CRITICAL: Tell frontend if we auto-created/resolved a different session
+        // This allows frontend to redirect to the correct URL
+        const wasAutoResolved = String(sessionId) !== String(dmSession._id);
+
+        return res.json({
+            ...result,
+            // Include session metadata for frontend
+            dmSessionId: dmSession._id,
+            redirectRequired: wasAutoResolved,
+            ...(wasAutoResolved && {
+                notice: 'DM session was resolved from user ID to session ID'
+            })
+        });
     } catch (err) {
         return handleError(res, err, 'GET DMs ERROR');
     }

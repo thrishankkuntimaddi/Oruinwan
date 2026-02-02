@@ -86,47 +86,42 @@ const Home = () => {
 
             let resolvedDMSessionId = null;
             let otherUserId = null;
+            let isAlreadySessionId = false;
 
+            // First check if targetId is already a valid DM session ID
             try {
-              // First, try to resolve as user ID → DM session ID
-              console.log('[Home] Calling resolve endpoint for user:', targetId);
-              const resolveRes = await api.get(
-                `/api/messages/workspace/${workspaceId}/dm/resolve/${targetId}`
-              );
+              const dmRes = await api.get(`/api/messages/workspace/${workspaceId}/dms`);
+              const dmSessions = dmRes.data.sessions || [];
+              const existingSession = dmSessions.find(s => String(s.id) === String(targetId));
 
-              if (resolveRes.data.success) {
-                console.log('[Home] ✅ Resolved to DM session:', resolveRes.data.dmSessionId);
-                resolvedDMSessionId = resolveRes.data.dmSessionId;
-                otherUserId = resolveRes.data.otherUserId;
+              if (existingSession) {
+                console.log('[Home] ✅ targetId is already a valid DM session ID');
+                resolvedDMSessionId = existingSession.id;
+                otherUserId = existingSession.otherUserId;
+                isAlreadySessionId = true;
               }
-            } catch (resolveErr) {
-              // If resolve fails, targetId might already be a DM session ID
-              // Try to fetch it directly
-              console.log('[Home] Resolve failed, checking if targetId is DM session ID:', resolveErr.response?.status);
+            } catch (err) {
+              console.log('[Home] Could not fetch DM sessions for validation:', err);
+            }
 
-              if (resolveErr.response?.status === 404) {
-                // User not found - targetId might be DM session ID
-                try {
-                  const dmRes = await api.get(`/api/messages/workspace/${workspaceId}/dms`);
-                  const dmSessions = dmRes.data.sessions || [];
-                  const existingSession = dmSessions.find(s => String(s.id) === String(targetId));
+            // Only try to resolve if it's not already a session ID
+            if (!isAlreadySessionId) {
+              try {
+                // Try to resolve as user ID → DM session ID
+                console.log('[Home] Calling resolve endpoint for user:', targetId);
+                const resolveRes = await api.get(
+                  `/api/messages/workspace/${workspaceId}/dm/resolve/${targetId}`
+                );
 
-                  if (existingSession) {
-                    console.log('[Home] ✅ Found existing DM session');
-                    resolvedDMSessionId = existingSession.id;
-                    otherUserId = existingSession.otherUserId;
-                  } else {
-                    console.error('[Home] ❌ Could not resolve DM - neither user ID nor valid session ID');
-                    setActiveChat(null);
-                    return;
-                  }
-                } catch (dmErr) {
-                  console.error('[Home] ❌ Failed to fetch DM sessions:', dmErr);
-                  setActiveChat(null);
-                  return;
+                if (resolveRes.data.success) {
+                  console.log('[Home] ✅ Resolved to DM session:', resolveRes.data.dmSessionId);
+                  resolvedDMSessionId = resolveRes.data.dmSessionId;
+                  otherUserId = resolveRes.data.otherUserId;
                 }
-              } else {
-                console.error('[Home] ❌ Unexpected resolve error:', resolveErr);
+              } catch (resolveErr) {
+                // If resolve fails, targetId might be an invalid ID
+                console.log('[Home] Resolve failed:', resolveErr.response?.status);
+                console.error('[Home] ❌ Could not resolve DM');
                 setActiveChat(null);
                 return;
               }
@@ -177,6 +172,34 @@ const Home = () => {
 
             console.log('[Home] Setting activeChat to:', chatObject);
             setActiveChat(chatObject);
+
+            // ✅ CRITICAL: ALWAYS prefetch encryption key for DMs
+            // This prevents 404 errors when opening any DM (new or existing)
+            console.log('[Home] 🔐 Prefetching encryption key for DM session:', resolvedDMSessionId);
+            try {
+              // Small delay to allow backend to commit encryption keys (for new DMs)
+              if (!isAlreadySessionId) {
+                await new Promise(resolve => setTimeout(resolve, 500));
+              }
+
+              const conversationKeyService = (await import('../../services/conversationKeyService')).default;
+              await conversationKeyService.getConversationKey(resolvedDMSessionId, 'dm');
+              console.log('[Home] ✅ Encryption key prefetched and cached');
+            } catch (keyErr) {
+              console.warn('[Home] ⚠️  Key prefetch failed - key may not exist yet:', keyErr);
+              // Don't block - ChatWindow will handle retry/creation
+            }
+
+            // ✅ CRITICAL FIX: Redirect URL ONLY if we resolved a user ID to a session ID
+            // Don't redirect if targetId was already a valid session ID
+            if (!isAlreadySessionId && targetId !== resolvedDMSessionId) {
+              console.log('[Home] 🔄 Redirecting from user ID to session ID:', {
+                from: targetId,
+                to: resolvedDMSessionId
+              });
+              navigate(`/workspace/${workspaceId}/dm/${resolvedDMSessionId}`, { replace: true });
+              return; // Exit early to prevent setting activeChat with old data
+            }
           }
           return;
         }
