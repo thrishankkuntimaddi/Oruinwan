@@ -2,6 +2,7 @@
 // Manage conversation state, pagination, and optimistic updates
 
 import { useState, useCallback, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom'; // Added for redirect handling
 import { useAuth } from '../contexts/AuthContext'; // ✅ FIX 4: Import useAuth
 import api from '../services/api';
 import { batchDecryptMessages } from '../services/messageEncryptionService';
@@ -16,6 +17,7 @@ import { batchDecryptMessages } from '../services/messageEncryptionService';
 export function useConversation(conversationId, conversationType, workspaceId) {
     // eslint-disable-next-line no-unused-vars
     const { encryptionReady } = useAuth(); // ✅ FIX 4: Get encryption ready flag (prepared for guarded prefetch)
+    const navigate = useNavigate(); // For handling session ID redirects
     const [events, setEvents] = useState([]);
     const [loading, setLoading] = useState(false);
     const [hasMore, setHasMore] = useState(false);
@@ -44,6 +46,44 @@ export function useConversation(conversationId, conversationType, workspaceId) {
                 response = await api.get(`/api/v2/messages/workspace/${workspaceId}/dm/${conversationId}`, {
                     params: { limit: 50 } // Cursor-based, no offset
                 });
+
+                // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+                // CRITICAL: Handle DM session ID mismatch (backend auto-resolution)
+                // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+                // Backend may create a new session if user navigates with user ID instead of session ID
+                // If redirectRequired is true, update URL to use the correct session ID
+                if (response.data?.redirectRequired && response.data?.dmSessionId) {
+                    const correctSessionId = response.data.dmSessionId;
+                    console.log(`🔄 [useConversation] Backend created new DM session, redirecting:`, {
+                        oldId: conversationId,
+                        newId: correctSessionId
+                    });
+
+                    // Determine the correct URL path based on current location
+                    // Preserve whether we're in /home/dm or /messages/dm context
+                    const currentPath = window.location.pathname;
+                    let newPath;
+
+                    if (currentPath.includes('/home/dm/')) {
+                        // Stay in Home view
+                        newPath = `/workspace/${workspaceId}/home/dm/${correctSessionId}`;
+                    } else if (currentPath.includes('/messages/dm/')) {
+                        // Stay in Messages view
+                        newPath = `/workspace/${workspaceId}/messages/dm/${correctSessionId}`;
+                    } else if (currentPath.includes('/dm/')) {
+                        // Fallback for any other /dm/ route
+                        newPath = currentPath.replace(
+                            `/dm/${conversationId}`,
+                            `/dm/${correctSessionId}`
+                        );
+                    }
+
+                    if (newPath) {
+                        console.log(`✅ [useConversation] Redirecting to correct session ID:`, newPath);
+                        navigate(newPath, { replace: true }); // replace: true prevents back button issues
+                        return; // Exit early - component will remount with correct ID
+                    }
+                }
             }
 
             const messages = response?.data?.messages || [];

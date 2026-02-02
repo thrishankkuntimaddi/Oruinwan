@@ -198,9 +198,10 @@ const MessagesPanel = ({ title }) => {
                 setSelectedItems(newSelected);
             } else {
                 // ✅ CORRECT: Use React Router navigation only
+                // Keep sidebar context: DMs from Messages panel should stay in Messages view
                 const targetPath = isBroadcast
                     ? `/workspace/${workspaceId}/messages/broadcast/${item.id}`
-                    : `/workspace/${workspaceId}/dm/${item.id}`;
+                    : `/workspace/${workspaceId}/messages/dm/${item.id}`;
 
                 navigate(targetPath);
             }
