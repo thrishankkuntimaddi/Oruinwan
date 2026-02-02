@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useToast } from "../../contexts/ToastContext";
+import { useAuth } from "../../contexts/AuthContext";
 import CreateChannelModal from "../messagesComp/CreateChannelModal";
 
 const SidePanel = ({ title = "Workspace", children }) => {
@@ -32,14 +33,73 @@ const SidePanel = ({ title = "Workspace", children }) => {
 
 export const ChannelList = () => {
     const { } = useToast();
+    const { user } = useAuth();
     const navigate = useNavigate();
-    const { workspaceId } = useParams(); // Get workspaceId from URL
+    const { workspaceId } = useParams();
     const [showCreateChannelModal, setShowCreateChannelModal] = useState(false);
+    const [channels, setChannels] = useState([]);
+    const [loading, setLoading] = useState(true);
     const [expanded, setExpanded] = useState({
         favorites: true,
         channels: true,
         dms: true,
     });
+
+    // Fetch channels from API
+    React.useEffect(() => {
+        const fetchChannels = async () => {
+            if (!workspaceId) return;
+
+            try {
+                setLoading(true);
+                const res = await fetch(`/api/workspaces/${workspaceId}/channels`, {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    }
+                });
+                const data = await res.json();
+
+                if (data.channels) {
+                    setChannels(data.channels);
+                }
+            } catch (err) {
+                console.error('Failed to fetch channels:', err);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchChannels();
+    }, [workspaceId]);
+
+    // Filter channels based on rules
+    const filterChannels = () => {
+        const userId = user?.id || user?._id; // Get userId from AuthContext
+
+        if (!userId) return []; // No user, no channels
+
+        return channels.filter(channel => {
+            // Rule 1: Always show default channels (general, announcements)
+            if (channel.isDefault) {
+                return true;
+            }
+
+            // Rule 2: Show public discoverable channels to everyone
+            if (!channel.isPrivate && channel.isDiscoverable) {
+                return true;
+            }
+
+            // Rule 3: Show private channels OR public non-discoverable channels ONLY if user is a member
+            const isMember = channel.members?.some(m => {
+                const memberId = m.user?._id || m.user || m._id || m;
+                return String(memberId) === String(userId);
+            });
+
+            return isMember;
+        });
+    };
+
+    const filteredChannels = filterChannels();
 
     const toggle = (section) => {
         setExpanded((prev) => ({ ...prev, [section]: !prev[section] }));
@@ -77,17 +137,6 @@ export const ChannelList = () => {
 
     return (
         <div className="space-y-6">
-            {/* Favorites */}
-            <div>
-                <SectionHeader label="Favorites" isOpen={expanded.favorites} onClick={() => toggle("favorites")} />
-                {expanded.favorites && (
-                    <div className="mt-1 space-y-0.5">
-                        <Item icon="#" label="general" channelPath="/channel/general" />
-                        <Item icon="#" label="announcements" channelPath="/channel/announcements" hasUnread />
-                    </div>
-                )}
-            </div>
-
             {/* Channels */}
             <div>
                 <SectionHeader
@@ -98,10 +147,20 @@ export const ChannelList = () => {
                 />
                 {expanded.channels && (
                     <div className="mt-1 space-y-0.5">
-                        <Item icon="#" label="engineering" channelPath="/channel/engineering" />
-                        <Item icon="#" label="design" channelPath="/channel/design" />
-                        <Item icon="#" label="marketing" channelPath="/channel/marketing" />
-                        <Item icon="#" label="leadership" channelPath="/channel/leadership" />
+                        {loading ? (
+                            <div className="px-4 py-2 text-xs text-gray-400">Loading channels...</div>
+                        ) : filteredChannels.length > 0 ? (
+                            filteredChannels.map(channel => (
+                                <Item
+                                    key={channel._id}
+                                    icon={channel.isDefault ? "📢" : "#"}
+                                    label={channel.name}
+                                    channelPath={`/channel/${channel._id}`}
+                                />
+                            ))
+                        ) : (
+                            <div className="px-4 py-2 text-xs text-gray-400">No channels available</div>
+                        )}
                     </div>
                 )}
             </div>
@@ -129,8 +188,9 @@ export const ChannelList = () => {
                     workspaceId={workspaceId}
                     onClose={() => setShowCreateChannelModal(false)}
                     onCreated={(channel) => {
-                        // Navigate to new channel with workspace context
-                        navigate(`/workspace/${workspaceId}/channel/${channel.name}`);
+                        // Refresh channel list after creation
+                        setChannels(prev => [...prev, channel]);
+                        navigate(`/workspace/${workspaceId}/channel/${channel._id}`);
                     }}
                 />
             )}

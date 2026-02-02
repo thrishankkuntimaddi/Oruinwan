@@ -17,7 +17,7 @@ exports.createChannel = async (req, res) => {
   console.log('🔄 [CHANNEL:MODULAR] Function invoked: createChannel');
   try {
     const userId = req.user.sub;
-    const { name, description = "", isPrivate = false, memberIds = [], workspaceId } = req.body;
+    const { name, description = "", isPrivate = false, isDiscoverable = true, memberIds = [], workspaceId } = req.body;
 
     if (!workspaceId) {
       return res.status(400).json({ message: "Workspace ID is required" });
@@ -48,6 +48,7 @@ exports.createChannel = async (req, res) => {
       members,
       createdBy: userId,
       isPrivate,
+      isDiscoverable: isPrivate ? false : isDiscoverable, // Private channels cannot be discoverable
     });
 
     // 🔐 PHASE 5: Generate conversation key immediately at channel birth
@@ -119,6 +120,11 @@ exports.createChannel = async (req, res) => {
 /**
  * Get channels for a specific workspace that the user is a member of
  * Query param: workspaceId (required)
+ * 
+ * Returns:
+ * 1. Default channels (always visible)
+ * 2. Public + discoverable channels (visible to all)
+ * 3. Channels where user is a member (private or public non-discoverable)
  */
 exports.getMyChannels = async (req, res) => {
   try {
@@ -129,14 +135,16 @@ exports.getMyChannels = async (req, res) => {
       return res.status(400).json({ message: "Workspace ID is required" });
     }
 
-    // Find channels:
-    // 1. Belong to workspace
-    // 2. AND (is NOT private OR user is a member)
+    // Find channels that meet ANY of these criteria:
+    // 1. Is a default channel (general, announcements)
+    // 2. Is public AND discoverable
+    // 3. User is a member
     const channels = await Channel.find({
       workspace: workspaceId,
       $or: [
-        { isPrivate: false },
-        { 'members.user': userId } // Query using the populated user field
+        { isDefault: true },                                    // Rule 1: Default channels
+        { isPrivate: false, isDiscoverable: true },            // Rule 2: Public + discoverable
+        { 'members.user': userId }                              // Rule 3: User is member
       ]
     })
       .select("-__v")
@@ -1522,13 +1530,6 @@ exports.joinDiscoverableChannel = async (req, res) => {
     channel.members.push({
       user: new mongoose.Types.ObjectId(userId),
       joinedAt: new Date()
-    });
-
-    // Add system event for join
-    channel.systemEvents.push({
-      type: 'user_joined',
-      userId: new mongoose.Types.ObjectId(userId),
-      timestamp: new Date()
     });
 
     await saveWithRetry(channel);

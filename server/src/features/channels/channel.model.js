@@ -10,6 +10,7 @@ const ChannelSchema = new mongoose.Schema({
 
   // Channel type
   isPrivate: { type: Boolean, default: false },
+  isDiscoverable: { type: Boolean, default: true }, // Public channels can be discovered and joined by workspace members
   isDefault: { type: Boolean, default: false }, // auto-join for all workspace members
   isArchived: { type: Boolean, default: false },
 
