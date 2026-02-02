@@ -17,6 +17,7 @@ const {
   updateMe,
   updatePassword,
   setPassword,
+  skipPassword,
   googleLogin,
   googleAuth,
   getSessions,
@@ -46,6 +47,8 @@ router.get("/me", requireAuth, getMe);
 router.put("/me", requireAuth, updateMe);
 router.put("/me/password", requireAuth, updatePassword);
 router.post("/me/set-password", requireAuth, setPassword); // For OAuth users
+router.post("/oauth/set-password", requireAuth, setPassword); // Alias for backward compatibility
+router.post("/oauth/skip-password", requireAuth, skipPassword); // Skip password setup for OAuth users
 
 // EMAIL MANAGEMENT ROUTES
 router.post("/me/emails", requireAuth, addEmail);

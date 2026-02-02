@@ -57,7 +57,7 @@ const {
   getThread,
   postThreadReply,
   getThreadCount
-} = require("../../../controllers/threadController");
+} = require("../../modules/threads/threads.controller");
 
 router.get("/thread/:messageId", requireAuth, getThread);
 router.post("/thread/:messageId", requireAuth, postThreadReply);

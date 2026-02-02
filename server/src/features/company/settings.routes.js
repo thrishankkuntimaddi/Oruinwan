@@ -3,7 +3,7 @@
 const express = require("express");
 const router = express.Router();
 const settingsController = require("./settings.controller");
-const requireAuth = require("../../../middleware/auth");
+const requireAuth = require("../../shared/middleware/auth");
 
 /**
  * @route   PUT /api/companies/:id/settings/profile

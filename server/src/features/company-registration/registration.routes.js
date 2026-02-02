@@ -3,7 +3,7 @@
 const express = require("express");
 const router = express.Router();
 const registrationController = require("./registration.controller");
-const requireAuth = require("../../../middleware/auth");
+const requireAuth = require("../../shared/middleware/auth");
 
 /**
  * @route   POST /api/companies/register

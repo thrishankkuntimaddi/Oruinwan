@@ -3,7 +3,7 @@
 const express = require("express");
 const router = express.Router();
 const metricsController = require("./metrics.controller");
-const requireAuth = require("../../../middleware/auth");
+const requireAuth = require("../../shared/middleware/auth");
 
 /**
  * @route   GET /api/companies/:id/metrics

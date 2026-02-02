@@ -1,12 +1,12 @@
 // server/controllers/messagesController.js
-const Message = require("../models/Message");
-const Channel = require("../models/Channel");
-const User = require("../models/User");
-const DMSession = require("../models/DMSession");
-const Workspace = require("../models/Workspace");
-const Task = require("../models/Task");
-const { handleError } = require("../utils/responseHelpers");
-const { isMember } = require("../utils/memberHelpers");
+const Message = require("../../../models/Message");
+const Channel = require("../../../models/Channel");
+const User = require("../../../models/User");
+const DMSession = require("../../../models/DMSession");
+const Workspace = require("../../../models/Workspace");
+const Task = require("../../../models/Task");
+const { handleError } = require("../../../utils/responseHelpers");
+const { isMember } = require("../../../utils/memberHelpers");
 
 // -----------------------------------------------------
 // SEND DIRECT MESSAGE (user → user)
@@ -245,7 +245,7 @@ exports.getChannelMessages = async (req, res) => {
     // Populate member usernames
     const populatedMembers = await Promise.all(
       channelMembers.map(async (member) => {
-        const user = await require("../models/User").findById(member.userId).select("username");
+        const user = await require("../../../models/User").findById(member.userId).select("username");
         return {
           ...member,
           username: user?.username || "Unknown"

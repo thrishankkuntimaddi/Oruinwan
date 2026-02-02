@@ -183,18 +183,17 @@ app.use((req, res, next) => {
 });
 
 // Routes
-app.use("/api/auth", require("./routes/auth"));
-app.use("/api/admin", require("./middleware/auth"), require("./routes/admin"));
-app.use("/api/admin-dashboard", require("./routes/adminDashboard"));
-app.use("/api/owner-dashboard", require("./routes/ownerDashboard"));
-app.use("/api/manager-dashboard", require("./routes/managerDashboard")); // Old pattern
-app.use("/api/manager", require("./routes/managerDashboard")); // New pattern - supports /api/manager/dashboard/*
-app.use("/api/messages", require("./routes/messages"));
-app.use("/api/polls", require("./routes/polls")); // Poll routes
-app.use("/api/chat", require("./routes/chatList"));
-app.use("/api/channels", require("./routes/channels"));
-// DEPRECATED: Legacy company controller - being replaced by modular routes (Phase 2)
-// app.use("/api/companies", require("./routes/companies"));
+app.use("/api/auth", require("./src/features/auth/auth.routes"));
+app.use("/api/admin", require("./middleware/auth"), require("./src/features/admin/admin.routes"));
+app.use("/api/admin-dashboard", require("./src/features/admin/admin-dashboard.routes"));
+app.use("/api/owner-dashboard", require("./src/features/admin/owner-dashboard.routes"));
+app.use("/api/manager-dashboard", require("./src/features/admin/manager-dashboard.routes")); // Old pattern
+app.use("/api/manager", require("./src/features/admin/manager-dashboard.routes")); // New pattern - supports /api/manager/dashboard/*
+app.use("/api/messages", require("./src/features/messages/messages.routes"));
+app.use("/api/polls", require("./src/features/polls/poll.routes"));
+app.use("/api/chat", require("./src/features/chatlist/chatlist.routes"));
+app.use("/api/channels", require("./src/features/channels/channel.routes"));
+
 
 // ============================================================================
 // MODULAR ROUTES (Phase 2: Domain Separation Complete)
@@ -208,19 +207,21 @@ app.use("/api/companies", require("./src/features/company/metrics.routes"));
 app.use("/api/companies", require("./src/features/company-registration/registration.routes"));
 app.use("/api/companies", require("./src/features/employees/employee.routes"));
 app.use("/api/companies", require("./src/features/domain-verification/domain.routes"));
-app.use("/api/departments", require("./routes/departments"));
-app.use("/api/workspaces", require("./routes/workspaces"));
-app.use("/api/platform/support", require("./routes/platformSupport"));
-app.use("/api/internal", require("./routes/internalMessaging"));
-app.use("/api/upload", require("./routes/upload")); // File upload routes
-app.use("/api/updates", require("./routes/updates"));
-app.use("/api/dashboard", require("./routes/dashboard"));
-app.use("/api/users", require("./routes/user"));
-app.use("/api/search", require("./routes/search"));
-app.use("/api/support", require("./routes/support"));
-app.use("/api/managers", require("./routes/managers"));
-app.use("/api/analytics", require("./routes/analytics"));
-app.use("/api/ai", require("./routes/aiRoutes"));
+app.use("/api/departments", require("./src/features/departments/departments.routes"));
+app.use("/api/workspaces", require("./src/features/workspaces/workspaces.routes"));
+app.use("/api/platform/support", require("./src/features/support/platform-support.routes"));
+app.use("/api/internal", require("./src/features/internal-messaging/messaging.routes"));
+// V1 COMPATIBILITY LAYER - Proxies v1 calls to v2 controllers (DELETE after client migration)
+app.use("/api", require("./routes/v1-to-v2-proxy"));
+app.use("/api/upload", require("./src/shared/upload/upload.routes")); // File upload routes
+app.use("/api/updates", require("./src/features/updates/updates.routes"));
+app.use("/api/dashboard", require("./src/features/dashboard/dashboard.routes"));
+app.use("/api/users", require("./src/features/users/user.routes"));
+app.use("/api/search", require("./src/features/search/search.routes"));
+app.use("/api/support", require("./src/features/support/support.routes"));
+app.use("/api/managers", require("./src/features/managers/managers.routes"));
+app.use("/api/analytics", require("./src/features/analytics/analytics.routes"));
+app.use("/api/ai", require("./src/features/ai/ai.routes"));
 
 
 // =============================================================

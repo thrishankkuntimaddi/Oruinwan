@@ -1,6 +1,6 @@
 // server/middleware/permissionMiddleware.js
-const Company = require('../models/Company');
-const User = require('../models/User');
+const Company = require('../../../models/Company');
+const User = require('../../../models/User');
 
 /**
  * Generic middleware to check if user has one of the required roles

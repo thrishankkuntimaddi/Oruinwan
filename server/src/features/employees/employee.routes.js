@@ -3,7 +3,7 @@
 const express = require("express");
 const router = express.Router();
 const employeeController = require("./employee.controller");
-const requireAuth = require("../../../middleware/auth");
+const requireAuth = require("../../shared/middleware/auth");
 
 /**
  * @route   POST /api/companies/:id/invite
