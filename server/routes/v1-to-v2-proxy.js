@@ -21,13 +21,10 @@ const requireAuth = require('../middleware/auth');
 // TASKS PROXY - /api/tasks → /api/v2/tasks
 // ============================================================================
 
-router.get('/tasks', requireAuth, tasksController.getAllTasks);
+router.get('/tasks', requireAuth, tasksController.getTasks);
 router.post('/tasks', requireAuth, tasksController.createTask);
 router.put('/tasks/:id', requireAuth, tasksController.updateTask);
 router.delete('/tasks/:id', requireAuth, tasksController.deleteTask);
-router.post('/tasks/:id/assign', requireAuth, tasksController.assignTask);
-router.post('/tasks/:id/archive', requireAuth, tasksController.archiveTask);
-router.post('/tasks/:id/unarchive', requireAuth, tasksController.unarchiveTask);
 
 // ============================================================================
 // NOTES PROXY - /api/notes → /api/v2/notes
