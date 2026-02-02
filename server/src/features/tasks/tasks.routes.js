@@ -56,8 +56,14 @@ router.post('/:id/revoke', tasksController.revokeTask);
 // POST /api/v2/tasks/:id/transfer/request - Request transfer
 router.post('/:id/transfer/request', tasksController.requestTransfer);
 
+// POST /api/v2/tasks/:id/transfer-request - Request transfer (alternative path for frontend)
+router.post('/:id/transfer-request', tasksController.requestTransfer);
+
 // POST /api/v2/tasks/:id/transfer/:action - Handle transfer (approve/reject)
 router.post('/:id/transfer/:action', tasksController.handleTransferRequest);
+
+// POST /api/v2/tasks/:id/transfer-request/:action - Handle transfer (alternative path for frontend)
+router.post('/:id/transfer-request/:action', tasksController.handleTransferRequest);
 
 // POST /api/v2/tasks/:id/subtasks - Create subtask
 router.post('/:id/subtasks', tasksController.createSubtask);
