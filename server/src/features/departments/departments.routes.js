@@ -6,6 +6,7 @@ const Department = require('../../../models/Department');
 const Workspace = require('../../../models/Workspace');
 const Channel = require("../channels/channel.model.js");
 const requireAuth = require('../../../middleware/auth'); // Fixed: single default export
+const { requireAdmin } = require('../../../middleware/permissionMiddleware');
 
 // GET /api/departments/:companyId - Get all departments for a company
 router.get('/:companyId', requireAuth, async (req, res) => {
@@ -143,8 +144,8 @@ router.post('/', requireAuth, async (req, res) => {
     }
 });
 
-// PUT /api/departments/:id - Update a department
-router.put('/:id', requireAuth, async (req, res) => {
+// PUT /api/departments/:id - Update a department (Admin/Owner only)
+router.put('/:id', requireAuth, requireAdmin, async (req, res) => {
     try {
         const { id } = req.params;
         const updates = req.body;
@@ -166,8 +167,8 @@ router.put('/:id', requireAuth, async (req, res) => {
     }
 });
 
-// DELETE /api/departments/:id - Delete a department
-router.delete('/:id', requireAuth, async (req, res) => {
+// DELETE /api/departments/:id - Delete a department (Admin/Owner only)
+router.delete('/:id', requireAuth, requireAdmin, async (req, res) => {
     try {
         const { id } = req.params;
 
@@ -223,8 +224,8 @@ router.get('/:id/members', requireAuth, async (req, res) => {
     }
 });
 
-// POST /api/departments/:id/members - Add member to department
-router.post('/:id/members', requireAuth, async (req, res) => {
+// POST /api/departments/:id/members - Add member to department (Admin/Owner only)
+router.post('/:id/members', requireAuth, requireAdmin, async (req, res) => {
     try {
         const { id } = req.params;
         const { userId } = req.body;
@@ -253,8 +254,8 @@ router.post('/:id/members', requireAuth, async (req, res) => {
     }
 });
 
-// DELETE /api/departments/:departmentId/members/:userId - Remove member from department
-router.delete('/:departmentId/members/:userId', requireAuth, async (req, res) => {
+// DELETE /api/departments/:departmentId/members/:userId - Remove member from department (Admin/Owner only)
+router.delete('/:departmentId/members/:userId', requireAuth, requireAdmin, async (req, res) => {
     try {
         const { departmentId, userId } = req.params;
 
@@ -283,8 +284,8 @@ router.delete('/:departmentId/members/:userId', requireAuth, async (req, res) =>
     }
 });
 
-// POST /api/departments/:id/workspaces - Add workspace to department
-router.post('/:id/workspaces', requireAuth, async (req, res) => {
+// POST /api/departments/:id/workspaces - Add workspace to department (Admin/Owner only)
+router.post('/:id/workspaces', requireAuth, requireAdmin, async (req, res) => {
     try {
         const { id } = req.params;
         const { workspaceId } = req.body;
@@ -301,8 +302,8 @@ router.post('/:id/workspaces', requireAuth, async (req, res) => {
     }
 });
 
-// DELETE /api/departments/:id/workspaces/:wsId - Remove workspace
-router.delete('/:id/workspaces/:wsId', requireAuth, async (req, res) => {
+// DELETE /api/departments/:id/workspaces/:wsId - Remove workspace (Admin/Owner only)
+router.delete('/:id/workspaces/:wsId', requireAuth, requireAdmin, async (req, res) => {
     try {
         const { id, wsId } = req.params;
         const department = await Department.findById(id);

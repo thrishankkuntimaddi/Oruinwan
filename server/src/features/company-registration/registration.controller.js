@@ -224,9 +224,22 @@ exports.updateCompanySetup = async (req, res) => {
 
             // Create departments from setup wizard
             const departmentsToCreate = company.metadata?.finalDepartments || [];
+
+            // ✅ Check for existing departments to prevent duplication
+            const existingDepartments = await Department.find({
+                company: company._id,
+                name: { $in: departmentsToCreate }
+            });
+
+            const existingDeptNames = existingDepartments.map(d => d.name);
+            const newDepartmentNames = departmentsToCreate.filter(
+                name => !existingDeptNames.includes(name)
+            );
+
             const createdDepartmentIds = [];
 
-            for (const deptName of departmentsToCreate) {
+            // Only create departments that don't exist
+            for (const deptName of newDepartmentNames) {
                 const dept = new Department({
                     name: deptName,
                     company: company._id,
@@ -236,15 +249,31 @@ exports.updateCompanySetup = async (req, res) => {
                 });
                 await dept.save();
                 createdDepartmentIds.push(dept._id);
-                console.log(`✅ Created department: ${deptName}`);
+                console.log(`✅ Created new department: ${deptName}`);
             }
 
-            // Update owner's departments
+            // Add existing department IDs to the list for owner linkage
+            const allDepartmentIds = [
+                ...createdDepartmentIds,
+                ...existingDepartments.map(d => d._id)
+            ];
+
+            // Update owner's departments (with all departments, not just new ones)
             const ownerUser = await User.findById(userId);
             if (ownerUser) {
-                ownerUser.departments = createdDepartmentIds;
+                // Use Set to avoid duplicates
+                const existingUserDeptIds = ownerUser.departments.map(id => id.toString());
+                const newDeptIds = allDepartmentIds.map(id => id.toString());
+                const uniqueDeptIds = [...new Set([...existingUserDeptIds, ...newDeptIds])];
+
+                ownerUser.departments = uniqueDeptIds;
                 await ownerUser.save();
-                console.log(`✅ Updated owner's departments: ${createdDepartmentIds.length} departments`);
+                console.log(`✅ Updated owner's departments: ${uniqueDeptIds.length} total departments`);
+            }
+
+            // Log what happened
+            if (existingDeptNames.length > 0) {
+                console.log(`ℹ️ Skipped ${existingDeptNames.length} existing departments:`, existingDeptNames);
             }
 
             company.isSetupComplete = true;
@@ -257,7 +286,9 @@ exports.updateCompanySetup = async (req, res) => {
                 message: "Setup complete",
                 isSetupComplete: true,
                 redirectTo: "/owner/dashboard",
-                departmentsCreated: createdDepartmentIds.length
+                departmentsCreated: newDepartmentNames.length,
+                departmentsExisting: existingDeptNames.length,
+                departmentsTotal: allDepartmentIds.length
             });
         }
 
