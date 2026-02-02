@@ -26,6 +26,8 @@ import {
     VolumeX
 } from "lucide-react";
 
+import LoadingScreen from "../shared/components/ui/LoadingScreen";
+
 // Video Assets
 const VIDEO_HERO_LOGO = "/hover-animation.mp4";
 const VIDEO_AI = "/ChttrixAI-animation.mp4";
@@ -52,6 +54,7 @@ const FeatureShowcase = () => {
     const navigate = useNavigate();
     const { user } = useAuth();
     const { theme, toggleTheme } = useTheme();
+    const [isLoading, setIsLoading] = useState(true);
 
     const scrollToSection = (id) => {
         const element = document.getElementById(id);
@@ -132,6 +135,10 @@ const FeatureShowcase = () => {
     }, []);
 
     if (user) return null;
+
+    if (isLoading) {
+        return <LoadingScreen onComplete={() => setIsLoading(false)} />;
+    }
 
     return (
         <div className="min-h-screen w-full bg-white dark:bg-[#030712] text-slate-900 dark:text-white transition-colors duration-500">

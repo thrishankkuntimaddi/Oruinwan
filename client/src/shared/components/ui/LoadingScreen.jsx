@@ -1,41 +1,70 @@
-// client/src/components/ui/LoadingScreen.jsx
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 
-const LoadingScreen = () => {
+const LoadingScreen = ({ onComplete }) => {
+    const [text, setText] = useState('');
+    const fullText = 'Chttrix';
+    const [isTyping, setIsTyping] = useState(false);
+    const [showCursor, setShowCursor] = useState(true);
+    const [opacity, setOpacity] = useState(1);
+
+    useEffect(() => {
+        let timeout;
+
+        // Sequence:
+        // 1. Initial delay (cursor blinks)
+        // 2. Typing starts
+        // 3. Typing ends
+        // 4. Hold
+        // 5. Fade out
+        // 6. onComplete
+
+        const runSequence = async () => {
+            // 1. Initial Delay (500ms)
+            await new Promise(r => setTimeout(r, 500));
+            setIsTyping(true);
+
+            // 2. Typing Loop
+            for (let i = 0; i <= fullText.length; i++) {
+                setText(fullText.slice(0, i));
+                // Random typing speed for "human" feel (50ms - 150ms)
+                await new Promise(r => setTimeout(r, Math.random() * 100 + 50));
+            }
+
+            setIsTyping(false);
+
+            // 3. Hold (1.5s as requested)
+            await new Promise(r => setTimeout(r, 1500));
+
+            // 4. Fade Out
+            setOpacity(0);
+
+            // 5. Wait for transition (700ms matches duration-700)
+            await new Promise(r => setTimeout(r, 700));
+
+            // 6. Complete
+            if (onComplete) onComplete();
+        };
+
+        runSequence();
+
+        return () => { }; // Cleanup not strictly necessary for this linear sequence but good practice
+    }, []); // Run once
+
     return (
-        <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-slate-50 dark:bg-[#030712] transition-colors duration-500">
-            {/* Background Effects */}
-            <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-purple-600/10 rounded-full blur-[120px] -translate-y-1/2 translate-x-1/2 animate-pulse"></div>
-                <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-indigo-600/10 rounded-full blur-[120px] translate-y-1/2 -translate-x-1/2 animate-pulse" style={{ animationDelay: '1s' }}></div>
-            </div>
-
-            <div className="relative flex flex-col items-center justify-center z-10">
-                <div className="relative w-24 h-24 mb-8">
-                    {/* Outer Ring */}
-                    <div className="absolute inset-0 rounded-full border-4 border-indigo-100 dark:border-white/10"></div>
-                    {/* Spinning Ring */}
-                    <div className="absolute inset-0 rounded-full border-4 border-indigo-600 dark:border-indigo-500 border-t-transparent animate-spin"></div>
-
-                    {/* Inner Pulsing Dot */}
-                    <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="w-8 h-8 bg-indigo-600 dark:bg-indigo-500 rounded-full animate-ping opacity-20"></div>
-                        <div className="absolute w-4 h-4 bg-indigo-600 dark:bg-indigo-500 rounded-full shadow-lg shadow-indigo-500/50"></div>
-                    </div>
-                </div>
-
-                <div className="flex flex-col items-center gap-2">
-                    <h3 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">Chttrix</h3>
-                    <div className="flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 rounded-full bg-indigo-600 dark:bg-indigo-400 animate-bounce" style={{ animationDelay: '0ms' }}></span>
-                        <span className="w-1.5 h-1.5 rounded-full bg-indigo-600 dark:bg-indigo-400 animate-bounce" style={{ animationDelay: '150ms' }}></span>
-                        <span className="w-1.5 h-1.5 rounded-full bg-indigo-600 dark:bg-indigo-400 animate-bounce" style={{ animationDelay: '300ms' }}></span>
-                    </div>
-                </div>
+        <div
+            className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-white dark:bg-[#030712] transition-opacity duration-700 ease-in-out"
+            style={{ opacity: opacity }}
+        >
+            <div className="flex items-end select-none">
+                <span className="text-5xl md:text-7xl font-sans font-black text-gray-900 dark:text-white tracking-tighter leading-none">
+                    {text}
+                </span>
+                <span
+                    className={`ml-1 md:ml-3 w-[8px] md:w-[12px] h-10 md:h-16 bg-indigo-600 dark:bg-indigo-400 align-baseline ${isTyping ? 'opacity-100' : 'animate-[blink_1s_infinite]'}`}
+                ></span>
             </div>
         </div>
     );
 };
 
 export default LoadingScreen;
-

@@ -127,7 +127,13 @@ body,
 /* Standard Shadows restored for Premium UI */
 /* .shadow-2xl, .shadow-xl, .shadow-lg overrides removed to allow for depth */
 
+
 /* Compact utility classes */
 .compact-scroll {
   scrollbar-width: thin;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
 }
