@@ -32,10 +32,10 @@ const NotesPanel = () => {
     };
 
     const sortedNotes = [...notes].sort((a, b) => {
-        if (sortOrder === "newest") return new Date(a.updatedAt) - new Date(b.updatedAt);
-        if (sortOrder === "oldest") return new Date(b.updatedAt) - new Date(a.updatedAt);
-        if (sortOrder === "a-z") return (b.title || "").localeCompare(a.title || "");
-        if (sortOrder === "z-a") return (a.title || "").localeCompare(b.title || "");
+        if (sortOrder === "newest") return new Date(b.updatedAt) - new Date(a.updatedAt); // ✅ Fixed: b - a for descending
+        if (sortOrder === "oldest") return new Date(a.updatedAt) - new Date(b.updatedAt); // ✅ Fixed: a - b for ascending
+        if (sortOrder === "a-z") return (a.title || "").localeCompare(b.title || "");
+        if (sortOrder === "z-a") return (b.title || "").localeCompare(a.title || "");
         return 0;
     });
 

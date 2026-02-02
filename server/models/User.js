@@ -29,7 +29,20 @@ const ProfileSchema = new mongoose.Schema(
 );
 
 const PreferencesSchema = new mongoose.Schema({
-  theme: { type: String, enum: ['light', 'dark', 'auto'], default: 'light' }
+  theme: { type: String, enum: ['light', 'dark', 'auto'], default: 'light' },
+  // Privacy Settings
+  privacy: {
+    readReceipts: { type: Boolean, default: true },
+    typingIndicators: { type: Boolean, default: true },
+    allowDiscovery: { type: Boolean, default: true },
+    dataSharing: { type: Boolean, default: false }
+  },
+  // Region Settings
+  region: {
+    language: { type: String, default: 'en' },
+    timezone: { type: String, default: 'UTC' },
+    dateFormat: { type: String, default: 'MM/DD/YYYY' }
+  }
 }, { _id: false });
 
 const UserSchema = new mongoose.Schema(

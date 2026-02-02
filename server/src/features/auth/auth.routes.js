@@ -57,6 +57,115 @@ router.post("/me/emails/:id/resend", requireAuth, resendVerification);
 router.put("/me/emails/:id/primary", requireAuth, setPrimaryEmail);
 router.delete("/me/emails/:id", requireAuth, deleteEmail);
 
+// USER PREFERENCES ROUTES
+router.get("/me/preferences/privacy", requireAuth, async (req, res) => {
+  try {
+    const User = require("../../../models/User");
+    const user = await User.findById(req.user.sub).select("preferences");
+
+    const privacy = user?.preferences?.privacy || {
+      readReceipts: true,
+      typingIndicators: true,
+      allowDiscovery: true,
+      dataSharing: false
+    };
+
+    res.json(privacy);
+  } catch (error) {
+    console.error("GET PRIVACY PREFERENCES ERROR:", error);
+    res.status(500).json({ message: "Failed to load privacy preferences" });
+  }
+});
+
+router.put("/me/preferences/privacy", requireAuth, async (req, res) => {
+  try {
+    const User = require("../../../models/User");
+    const { readReceipts, typingIndicators, allowDiscovery, dataSharing } = req.body;
+
+    await User.findByIdAndUpdate(req.user.sub, {
+      "preferences.privacy": {
+        readReceipts: readReceipts !== undefined ? readReceipts : true,
+        typingIndicators: typingIndicators !== undefined ? typingIndicators : true,
+        allowDiscovery: allowDiscovery !== undefined ? allowDiscovery : true,
+        dataSharing: dataSharing !== undefined ? dataSharing : false
+      }
+    });
+
+    res.json({ message: "Privacy preferences updated successfully" });
+  } catch (error) {
+    console.error("UPDATE PRIVACY PREFERENCES ERROR:", error);
+    res.status(500).json({ message: "Failed to update privacy preferences" });
+  }
+});
+
+router.get("/me/preferences/region", requireAuth, async (req, res) => {
+  try {
+    const User = require("../../../models/User");
+    const user = await User.findById(req.user.sub).select("preferences");
+
+    const region = user?.preferences?.region || {
+      language: 'en',
+      timezone: 'UTC',
+      dateFormat: 'MM/DD/YYYY'
+    };
+
+    res.json(region);
+  } catch (error) {
+    console.error("GET REGION PREFERENCES ERROR:", error);
+    res.status(500).json({ message: "Failed to load region preferences" });
+  }
+});
+
+router.put("/me/preferences/region", requireAuth, async (req, res) => {
+  try {
+    const User = require("../../../models/User");
+    const { language, timezone, dateFormat } = req.body;
+
+    await User.findByIdAndUpdate(req.user.sub, {
+      "preferences.region": {
+        language: language || 'en',
+        timezone: timezone || 'UTC',
+        dateFormat: dateFormat || 'MM/DD/YYYY'
+      }
+    });
+
+    res.json({ message: "Region preferences updated successfully" });
+  } catch (error) {
+    console.error("UPDATE REGION PREFERENCES ERROR:", error);
+    res.status(500).json({ message: "Failed to update region preferences" });
+  }
+});
+
+router.get("/me/blocked-users", requireAuth, async (req, res) => {
+  try {
+    const User = require("../../../models/User");
+    const user = await User.findById(req.user.sub)
+      .populate("blockedUsers", "_id username email profilePicture")
+      .select("blockedUsers");
+
+    res.json(user?.blockedUsers || []);
+  } catch (error) {
+    console.error("GET BLOCKED USERS ERROR:", error);
+    res.status(500).json({ message: "Failed to load blocked users" });
+  }
+});
+
+router.delete("/me/blocked-users/:userId", requireAuth, async (req, res) => {
+  try {
+    const User = require("../../../models/User");
+    const { userId } = req.params;
+
+    await User.findByIdAndUpdate(req.user.sub, {
+      $pull: { blockedUsers: userId }
+    });
+
+    res.json({ message: "User unblocked successfully" });
+  } catch (error) {
+    console.error("UNBLOCK USER ERROR:", error);
+    res.status(500).json({ message: "Failed to unblock user" });
+  }
+});
+
 // SESSION ROUTES
 router.get("/sessions", requireAuth, getSessions);
 router.delete("/sessions/others", requireAuth, revokeOtherSessions);

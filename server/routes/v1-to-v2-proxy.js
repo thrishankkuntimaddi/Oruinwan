@@ -20,24 +20,28 @@ const requireAuth = require('../middleware/auth');
 // ============================================================================
 // TASKS PROXY - /api/tasks → /api/v2/tasks
 // ============================================================================
+// DEPRECATED: Tasks now have direct route registration in server.js
+// Remove this section after confirming direct routes work correctly
 
-router.get('/tasks', requireAuth, tasksController.getTasks);
-router.post('/tasks', requireAuth, tasksController.createTask);
-router.put('/tasks/:id', requireAuth, tasksController.updateTask);
-router.delete('/tasks/:id', requireAuth, tasksController.deleteTask);
+// router.get('/tasks', requireAuth, tasksController.getTasks);
+// router.post('/tasks', requireAuth, tasksController.createTask);
+// router.put('/tasks/:id', requireAuth, tasksController.updateTask);
+// router.delete('/tasks/:id', requireAuth, tasksController.deleteTask);
 
 // ============================================================================
 // NOTES PROXY - /api/notes → /api/v2/notes
 // ============================================================================
+// DEPRECATED: Notes now have direct route registration in server.js
+// Remove this section after confirming direct routes work correctly
 
-router.get('/notes', requireAuth, notesController.getNotes);
-router.post('/notes', requireAuth, notesController.createNote);
-router.put('/notes/:id', requireAuth, notesController.updateNote);
-router.delete('/notes/:id', requireAuth, notesController.deleteNote);
-router.post('/notes/:id/share', requireAuth, notesController.shareNote);
-router.post('/notes/:id/attachments', requireAuth, notesController.addAttachment);
-router.delete('/notes/:id/attachments/:attachmentId', requireAuth, notesController.removeAttachment);
-router.get('/notes/:id/attachments/:attachmentId/download', requireAuth, notesController.downloadAttachment);
+// router.get('/notes', requireAuth, notesController.getNotes);
+// router.post('/notes', requireAuth, notesController.createNote);
+// router.put('/notes/:id', requireAuth, notesController.updateNote);
+// router.delete('/notes/:id', requireAuth, notesController.deleteNote);
+// router.post('/notes/:id/share', requireAuth, notesController.shareNote);
+// router.post('/notes/:id/attachments', requireAuth, notesController.addAttachment);
+// router.delete('/notes/:id/attachments/:attachmentId', requireAuth, notesController.removeAttachment);
+// router.get('/notes/:id/attachments/:attachmentId/download', requireAuth, notesController.downloadAttachment);
 
 // ============================================================================
 // FAVORITES PROXY - /api/favorites → /api/v2/favorites
