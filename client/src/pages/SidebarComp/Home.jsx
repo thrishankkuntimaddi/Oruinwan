@@ -183,7 +183,7 @@ const Home = () => {
     };
 
     detectChat();
-  }, [location.pathname, id, dmId, workspaceId, activeWorkspace?.role]);
+  }, [location.pathname, id, dmId, workspaceId, activeWorkspace?.role, navigate]);
 
   // Handle real-time status updates for the active chat header
   useEffect(() => {
