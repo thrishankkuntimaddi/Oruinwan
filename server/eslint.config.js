@@ -37,15 +37,14 @@ export default [
             }
         },
         rules: {
-            // Warn on console usage (except warn/error)
-            'no-console': ['warn', {
-                allow: ['warn', 'error']
-            }],
+            // Allow all console methods in server (logging is essential)
+            'no-console': 'off',
 
             // Warn on unused variables (ignore those starting with _)
             'no-unused-vars': ['warn', {
                 argsIgnorePattern: '^_',
-                varsIgnorePattern: '^_'
+                varsIgnorePattern: '^_',
+                caughtErrorsIgnorePattern: '^_'
             }],
 
             // Prevent legacy controller imports

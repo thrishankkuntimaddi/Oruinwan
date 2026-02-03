@@ -21,7 +21,6 @@ import {
     arrayBufferToBase64,
     base64ToArrayBuffer,
     isCryptoSupported,
-    isSecureContext,
     validateCryptoSetup
 } from '../utils/crypto';
 

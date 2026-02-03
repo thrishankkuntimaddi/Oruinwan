@@ -14,15 +14,6 @@ const LogLevel = {
     ERROR: 'ERROR'
 };
 
-// Color codes for different log levels
-const colors = {
-    DEBUG: '\x1b[36m', // Cyan
-    INFO: '\x1b[32m',  // Green
-    WARN: '\x1b[33m',  // Yellow
-    ERROR: '\x1b[31m', // Red
-    RESET: '\x1b[0m'
-};
-
 /**
  * Format timestamp for logs
  */

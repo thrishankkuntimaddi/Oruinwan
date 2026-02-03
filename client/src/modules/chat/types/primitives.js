@@ -345,10 +345,12 @@ export function getConversationRoom(conversation) {
 // EXPORTS
 // ============================================================
 
-export default {
+const primitives = {
   createConversation,
   createMessage,
   createRealtimeEvent,
   needsDecryption,
   getConversationRoom
 };
+
+export default primitives;

@@ -226,6 +226,7 @@ export async function refreshWorkspaceKeys(password, workspaceId = null) {
 
 const keyManagementService = {
     enrollUserKeys,
+    getWorkspaceKey,
     hasWorkspaceKey,
     getEnrolledWorkspaces,
     clearAllKeys,

@@ -10,7 +10,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import axios from 'axios';
 import { useSocket } from '../../../contexts/SocketContext';
-import { createConversation, createMessage, getConversationRoom } from '../types/primitives';
+import { createConversation, createMessage } from '../types/primitives';
 import chatEncryption from '../encryption/chatEncryption';
 
 /**
@@ -140,8 +140,6 @@ export function useConversation({ conversationId, type, workspaceId, currentUser
     useEffect(() => {
         if (!socket || !conversationId || !type) return;
 
-        const room = getConversationRoom({ id: conversationId, type });
-
         // Join room
         socket.emit('conversation:join', {
             conversationId,
@@ -235,8 +233,9 @@ export function useConversation({ conversationId, type, workspaceId, currentUser
 
         return () => {
             socket.off('chat:user_typing', handleTyping);
-            // Clear all timeouts
-            Object.values(typingTimeoutRef.current).forEach(clearTimeout);
+            // Clear all timeouts on unmount
+            const timeouts = typingTimeoutRef.current; // eslint-disable-line react-hooks/exhaustive-deps
+            Object.values(timeouts).forEach(clearTimeout);
         };
     }, [socket, currentUser]);
 
