@@ -1336,7 +1336,7 @@ exports.updateTab = async (req, res) => {
   try {
     const userId = req.user.sub;
     const { id: channelId, tabId } = req.params;
-    const { name, content } = req.body;
+    const { name, content, drawingData } = req.body;
 
     const channel = await Channel.findById(channelId);
     if (!channel) return res.status(404).json({ message: "Channel not found" });
@@ -1356,6 +1356,7 @@ exports.updateTab = async (req, res) => {
 
     if (name) tab.name = name;
     if (content !== undefined) tab.content = content;
+    if (drawingData !== undefined) tab.drawingData = drawingData;
 
     await saveWithRetry(channel);
 
@@ -1366,6 +1367,7 @@ exports.updateTab = async (req, res) => {
         tabId,
         name: tab.name,
         content: tab.content,
+        drawingData: tab.drawingData,
         updatedBy: userId
       });
     }

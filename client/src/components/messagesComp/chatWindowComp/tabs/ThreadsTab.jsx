@@ -20,7 +20,7 @@ export default function ThreadsTab({ channelId, currentUserId, socket }) {
             const res = await api.get(`/api/threads/channels/${channelId}/threads`);
             const activeThreads = res.data.threads || [];
 
-            console.log(`[THREADS_TAB][FETCH] Fetched ${activeThreads.length} real threads for channel ${channelId}`);
+
 
             // Decrypt thread preview messages
             let decryptedThreads = activeThreads;
@@ -32,7 +32,7 @@ export default function ThreadsTab({ channelId, currentUserId, socket }) {
                         'channel',
                         null
                     );
-                    console.log(`[THREADS_TAB][DECRYPT] Decrypted ${decryptedThreads.length} thread previews`);
+
                 } catch (err) {
                     console.error('[THREADS_TAB][DECRYPT] Failed to decrypt threads:', err);
                     // Keep encrypted threads if decryption fails
@@ -60,11 +60,10 @@ export default function ThreadsTab({ channelId, currentUserId, socket }) {
 
         // ✅ Handle when a new thread is created (first reply)
         const handleThreadCreated = async (data) => {
-            console.log('[THREADS_TAB][REALTIME] New thread created:', data);
+
 
             // ✅ Only add if it's for THIS channel (prevent cross-channel pollution)
             if (data.channelId && data.channelId !== channelId) {
-                console.log('[THREADS_TAB][REALTIME] Thread from different channel, ignoring');
                 return;
             }
 
@@ -94,10 +93,7 @@ export default function ThreadsTab({ channelId, currentUserId, socket }) {
             const { messageId, updates } = data;
 
             if (updates?.replyCount !== undefined) {
-                console.log('[THREADS_TAB][REALTIME] Updating reply count:', {
-                    messageId,
-                    newCount: updates.replyCount
-                });
+
 
                 setThreads(prev => prev.map(thread =>
                     thread._id === messageId
@@ -111,16 +107,12 @@ export default function ThreadsTab({ channelId, currentUserId, socket }) {
         const handleThreadReply = (data) => {
             const { parentId, reply } = data;
 
-            console.log('[THREADS_TAB][REALTIME] Thread reply received:', {
-                parentId,
-                replyId: reply?._id
-            });
+
 
             // Move thread to top and update metadata
             setThreads(prev => {
                 const thread = prev.find(t => t._id === parentId);
                 if (!thread) {
-                    console.log('[THREADS_TAB][REALTIME] Thread not in list, ignoring');
                     return prev;
                 }
 

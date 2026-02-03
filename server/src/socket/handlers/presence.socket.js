@@ -52,7 +52,7 @@ function registerPresenceHandlers(io, socket) {
             timestamp: new Date()
         });
 
-        console.log(`👤 User ${socket.user.id} status changed to ${status}`);
+
     });
 
     /**
@@ -75,7 +75,7 @@ function registerPresenceHandlers(io, socket) {
         if (!workspaceId) return;
 
         socket.join(`workspace:${workspaceId}`);
-        console.log(`🏢 User ${socket.user.id} joined workspace:${workspaceId}`);
+
 
         // Notify workspace members
         io.to(`workspace:${workspaceId}`).emit('workspace:member_online', {
@@ -91,7 +91,7 @@ function registerPresenceHandlers(io, socket) {
         if (!workspaceId) return;
 
         socket.leave(`workspace:${workspaceId}`);
-        console.log(`👋 User ${socket.user.id} left workspace:${workspaceId}`);
+
     });
 }
 

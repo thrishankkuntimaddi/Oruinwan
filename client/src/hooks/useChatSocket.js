@@ -19,13 +19,7 @@ export function useChatSocket(conversationId, conversationType, eventHandler) {
     // eslint-disable-next-line no-unused-vars
     const lastEventHashRef = useRef(new Set()); // Track processed event hashes (reserved for deduplication)
 
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    // 🔍 DEBUG LOG: Hook initialization
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    console.log('[DEBUG][useChatSocket][INIT]', {
-        conversationId,
-        conversationType
-    });
+
 
     // Keep callback ref fresh
     useEffect(() => {
@@ -40,12 +34,10 @@ export function useChatSocket(conversationId, conversationType, eventHandler) {
         // DMs use 'join-dm' event (handled in ChatWindowV2.jsx)
         // Channels/threads use 'chat:join' (continue normally below)
         if (conversationType === 'dm') {
-            console.log('🚫 [useChatSocket] Skipping chat:join for DM (using join-dm instead)');
             return; // Exit early - DM join handled elsewhere
         }
 
         if (!conversationId || !conversationType) {
-            console.log('⚠️ [chat:join] Skipped - missing conversation details');
             return;
         }
 
@@ -53,35 +45,13 @@ export function useChatSocket(conversationId, conversationType, eventHandler) {
 
         // Step 1: Check encryption ready
         if (!encryptionReady) {
-            console.log('🛑 [chat:join] BLOCKED - Encryption not ready yet');
-            console.log('   Waiting for identity keys to load...');
             return;
         }
 
         // Step 2: Check socket connected
         if (!socket?.connected) {
-            console.log('🛑 [chat:join] BLOCKED - Socket not connected yet');
-            console.log('   Waiting for socket connection...');
             return;
         }
-
-        // Step 3: Emit join only after all prerequisites met
-        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        console.log('📤 [chat:join] All checks passed:');
-        console.log('   ✅ Encryption ready');
-        console.log('   ✅ Socket connected');
-        console.log('   🎯 Joining:', conversationType, conversationId);
-        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-
-        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-        // 🔍 DEBUG LOG: What event is being emitted
-        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-        console.log('[DEBUG][JOIN][EMIT]', {
-            conversationId,
-            conversationType,
-            event: 'chat:join',
-            payload: conversationId // What's being sent as first parameter
-        });
 
         // ✅ CRITICAL FIX: Server expects conversationId as first param, NOT an object
         socket.emit('chat:join', conversationId, (response) => {
@@ -101,16 +71,14 @@ export function useChatSocket(conversationId, conversationType, eventHandler) {
                     });
                 }
             } else if (response?.success) {
-                console.log(`✅[chat: join] Successfully joined ${conversationType}: `, conversationId);
+                // Successfully joined
             }
         });
     }, [socket, conversationId, conversationType, encryptionReady]); // ✅ FIX 5: Add encryptionReady
 
     // Leave conversation room
     const leaveConversation = useCallback(() => {
-        // 🚫 DM GUARD: Skip chat:leave for Direct Messages
         if (conversationType === 'dm') {
-            console.log('🚫 [useChatSocket] Skipping chat:leave for DM (handled separately)');
             return;
         }
 
@@ -119,7 +87,6 @@ export function useChatSocket(conversationId, conversationType, eventHandler) {
         // The `joinedRef` is removed, so we just emit leave if socket is connected
         if (socket.connected) {
             socket.emit('chat:leave', { conversationId });
-            console.log(`👋 Left ${conversationType}: `, conversationId);
         }
     }, [socket, conversationId, conversationType]);
 
@@ -127,19 +94,11 @@ export function useChatSocket(conversationId, conversationType, eventHandler) {
     useEffect(() => {
         // ✅ FIX 5: Join only when encryption ready AND socket connected
         if (encryptionReady && socket?.connected && conversationId) {
-            console.log('✅ [useChatSocket] Prerequisites met, joining conversation');
             joinConversation();
-        } else {
-            console.log('⏳ [useChatSocket] Waiting for prerequisites:', {
-                encryptionReady,
-                socketConnected: socket?.connected,
-                hasConversationId: !!conversationId
-            });
         }
 
         return () => {
             if (socket?.connected && conversationId) {
-                console.log(`📌 [chat:leave] Leaving ${conversationType}:`, conversationId);
                 socket.emit('chat:leave', conversationId);
             }
         };
@@ -175,7 +134,6 @@ export function useChatSocket(conversationId, conversationType, eventHandler) {
 
         // Re-join room when socket connects/reconnects
         const handleConnect = () => {
-            console.log(`🔌 Socket connected, re-joining ${conversationType}: ${conversationId}`);
             joinConversation();
         };
 
@@ -194,37 +152,18 @@ export function useChatSocket(conversationId, conversationType, eventHandler) {
             // Determine which conversationId to compare against
             const messageConversationId = conversationType === 'dm' ? messageDmId : messageChannelId;
 
-            console.log(`📨 [useChatSocket][new-message] Received`, {
-                conversationType,
-                activeConversationId: conversationId,
-                messageConversationId,
-                messageChannelId,
-                messageDmId,
-                willProcess: messageConversationId === conversationId
-            });
+
 
             // ✅ CRITICAL FIX: Only process if message belongs to active conversation
             // Prevents cross-channel contamination when user is in multiple rooms
             // Also rejects messages with missing/invalid conversationId
             if (messageConversationId !== conversationId) {
-                console.log(`⏭️ [useChatSocket] Message from different conversation IGNORED:`, {
-                    activeConversationId: conversationId,
-                    receivedMessageConversationId: messageConversationId || 'MISSING',
-                    action: 'IGNORED'
-                });
                 return; // Ignore messages from other conversations
             }
 
             // ✅ THREAD FIX: Route thread replies separately
             // Thread replies should NOT appear in main chat message list
             if (message.parentId) {
-                console.log(`[THREAD][SOCKET][RECEIVE] Thread reply detected:`, {
-                    messageId: message._id,
-                    parentId: message.parentId,
-                    conversationId: messageConversationId,
-                    action: 'ROUTING_TO_THREAD_HANDLER'
-                });
-
                 eventHandlerRef.current?.({
                     type: 'thread-reply',
                     payload: data
@@ -232,7 +171,7 @@ export function useChatSocket(conversationId, conversationType, eventHandler) {
                 return; // Do NOT emit as regular message
             }
 
-            console.log(`✅ [useChatSocket][new-message] Processing message ${message._id} for ${conversationType}`);
+
 
             eventHandlerRef.current?.({
                 type: 'new-message',
@@ -249,11 +188,6 @@ export function useChatSocket(conversationId, conversationType, eventHandler) {
 
         // ✅ THREAD FIX: Listen for dedicated thread-reply events from backend
         const handleThreadReply = (data) => {
-            console.log(`[SOCKET][THREAD - REPLY] Received thread reply event: `, {
-                parentId: data.parentId,
-                replyId: data.reply?._id,
-                hasReply: !!data.reply
-            });
 
             // Route to conversation handler as thread-reply event
             eventHandlerRef.current?.({
@@ -264,10 +198,6 @@ export function useChatSocket(conversationId, conversationType, eventHandler) {
 
         // ✅ THREAD AWARENESS: Listen for thread:created when first reply is added
         const handleThreadCreated = (data) => {
-            console.log('🧵 [THREAD][REALTIME] Thread created:', {
-                parentMessageId: data.parentMessageId,
-                replyCount: data.replyCount
-            });
 
             // Route to conversation handler to update parent message
             eventHandlerRef.current?.({

@@ -1,53 +1,156 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { Plus, CheckCircle, User, Trash2, Edit2, Layout, CheckSquare, Calendar } from 'lucide-react';
+import axios from 'axios';
 
-export default function TasksTab({ channelId, channelName, currentUserId, socket }) {
+export default function TasksTab({ channelId, channelName, workspaceId, currentUserId, socket }) {
     const [tasks, setTasks] = useState([]);
     const [newTaskTitle, setNewTaskTitle] = useState('');
+    const [loading, setLoading] = useState(true);
     // eslint-disable-next-line no-unused-vars
     const [editingTask, setEditingTask] = useState(null);
 
-    const activeTasks = useMemo(() => tasks.filter(t => !t.completed), [tasks]);
-    const completedTasks = useMemo(() => tasks.filter(t => t.completed), [tasks]);
+    const activeTasks = useMemo(() => tasks.filter(t => t.status !== 'done'), [tasks]);
+    const completedTasks = useMemo(() => tasks.filter(t => t.status === 'done'), [tasks]);
 
     const completedCount = completedTasks.length;
 
-    const handleAddTask = (e) => {
-        e.preventDefault();
-        if (!newTaskTitle.trim()) return;
 
-        const newTask = {
-            id: Date.now(),
-            title: newTaskTitle.trim(),
-            completed: false,
-            createdBy: currentUserId,
-            createdAt: new Date().toISOString(),
-            assignedTo: null,
-            dueDate: null
+
+    // Load tasks for this channel
+    const loadTasks = useCallback(async () => {
+        if (!channelId || !workspaceId) return;
+
+        try {
+            setLoading(true);
+            const res = await axios.get('/api/v2/tasks', {
+                params: { workspaceId }
+            });
+
+            // Filter to only show channel tasks for this channel
+            const channelTasks = res.data.tasks.filter(t =>
+                t.channel && t.channel._id === channelId
+            );
+            setTasks(channelTasks);
+        } catch (error) {
+            console.error('Failed to load tasks:', error);
+        } finally {
+            setLoading(false);
+        }
+    }, [channelId, workspaceId]);
+
+    useEffect(() => {
+        loadTasks();
+    }, [loadTasks]);
+
+    // Socket listeners for real-time updates
+    useEffect(() => {
+        if (!socket || !channelId) return;
+
+        const handleTaskCreated = (task) => {
+            // Only add if it's for this channel
+            if (task.channel && (task.channel._id === channelId || task.channel === channelId)) {
+                setTasks(prev => {
+                    // Avoid duplicates
+                    if (prev.find(t => t._id === task._id)) return prev;
+                    return [...prev, task];
+                });
+            }
         };
 
-        setTasks([...tasks, newTask]);
-        setNewTaskTitle('');
+        const handleTaskUpdated = (task) => {
+            // Only update if it's for this channel
+            if (task.channel && (task.channel._id === channelId || task.channel === channelId)) {
+                setTasks(prev => prev.map(t =>
+                    t._id === task._id ? task : t
+                ));
+            }
+        };
 
-        // TODO: Emit socket event
-        // socket?.emit('task:create', { channelId, task: newTask });
+        const handleTaskDeleted = ({ taskId }) => {
+            setTasks(prev => prev.filter(t => t._id !== taskId));
+        };
+
+        socket.on('task-created', handleTaskCreated);
+        socket.on('task-updated', handleTaskUpdated);
+        socket.on('task-deleted', handleTaskDeleted);
+
+        return () => {
+            socket.off('task-created', handleTaskCreated);
+            socket.off('task-updated', handleTaskUpdated);
+            socket.off('task-deleted', handleTaskDeleted);
+        };
+    }, [socket, channelId]);
+
+    const handleAddTask = async (e) => {
+        e.preventDefault();
+        if (!newTaskTitle.trim() || !workspaceId) return;
+
+        try {
+            const res = await axios.post('/api/v2/tasks', {
+                title: newTaskTitle.trim(),
+                workspace: workspaceId,
+                channel: channelId,
+                visibility: 'channel',
+                status: 'todo',
+                type: 'task',
+                priority: 'medium'
+            });
+
+            // Task will be added via socket event, but add optimistically for responsiveness
+            if (res.data.tasks && res.data.tasks.length > 0) {
+                const newTask = res.data.tasks[0];
+                setTasks(prev => {
+                    if (prev.find(t => t._id === newTask._id)) return prev;
+                    return [...prev, newTask];
+                });
+            }
+
+            setNewTaskTitle('');
+        } catch (error) {
+            console.error('Failed to create task:', error);
+        }
     };
 
-    const toggleTask = (taskId) => {
-        setTasks(tasks.map(t =>
-            t.id === taskId ? { ...t, completed: !t.completed } : t
-        ));
+    const toggleTask = async (taskId) => {
+        const task = tasks.find(t => t._id === taskId);
+        if (!task) return;
 
-        // TODO: Emit socket event
-        // socket?.emit('task:toggle', { channelId, taskId });
+        const newStatus = task.status === 'done' ? 'todo' : 'done';
+
+        try {
+            await axios.put(`/api/v2/tasks/${taskId}`, { status: newStatus });
+
+            // Optimistically update UI
+            setTasks(prev => prev.map(t =>
+                t._id === taskId ? { ...t, status: newStatus } : t
+            ));
+        } catch (error) {
+            console.error('Failed to toggle task:', error);
+            // Revert on error
+            loadTasks();
+        }
     };
 
-    const deleteTask = (taskId) => {
-        setTasks(tasks.filter(t => t.id !== taskId));
+    const deleteTask = async (taskId) => {
+        try {
+            await axios.delete(`/api/v2/tasks/${taskId}`);
 
-        // TODO: Emit socket event
-        // socket?.emit('task:delete', { channelId, taskId });
+            // Optimistically remove
+            setTasks(prev => prev.filter(t => t._id !== taskId));
+        } catch (error) {
+            console.error('Failed to delete task:', error);
+            // Reload on error
+            loadTasks();
+        }
     };
+
+    if (loading) {
+        return (
+            <div className="flex items-center justify-center h-full">
+                <div className="text-gray-500 dark:text-gray-400">Loading tasks...</div>
+            </div>
+        );
+    }
 
     return (
         <div className="flex flex-col h-full w-full bg-gray-50/50 dark:bg-gray-900 overflow-hidden">
@@ -124,12 +227,12 @@ export default function TasksTab({ channelId, channelName, currentUserId, socket
                             ) : (
                                 activeTasks.map(task => (
                                     <div
-                                        key={task.id}
+                                        key={task._id}
                                         className="group relative bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-transparent hover:border-indigo-200 dark:hover:border-indigo-800 hover:shadow-md transition-all duration-200"
                                     >
                                         <div className="flex items-start gap-3">
                                             <button
-                                                onClick={() => toggleTask(task.id)}
+                                                onClick={() => toggleTask(task._id)}
                                                 className="mt-0.5 w-5 h-5 rounded-md border-2 border-gray-300 dark:border-gray-600 hover:border-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-all"
                                             />
 
@@ -150,10 +253,10 @@ export default function TasksTab({ channelId, channelName, currentUserId, socket
                                                         </button>
                                                     )}
 
-                                                    {task.assignedTo ? (
+                                                    {task.assignedTo && task.assignedTo.length > 0 ? (
                                                         <div className="flex items-center gap-1 text-xs text-indigo-600 bg-indigo-50 dark:bg-indigo-900/20 px-2 py-0.5 rounded-md">
                                                             <User size={12} />
-                                                            {task.assignedTo}
+                                                            {task.assignedTo[0].username || 'Assigned'}
                                                         </div>
                                                     ) : (
                                                         <button className="text-xs text-gray-400 hover:text-gray-600 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -171,7 +274,7 @@ export default function TasksTab({ channelId, channelName, currentUserId, socket
                                                     <Edit2 size={14} />
                                                 </button>
                                                 <button
-                                                    onClick={() => deleteTask(task.id)}
+                                                    onClick={() => deleteTask(task._id)}
                                                     className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
                                                 >
                                                     <Trash2 size={14} />
@@ -205,12 +308,12 @@ export default function TasksTab({ channelId, channelName, currentUserId, socket
                             ) : (
                                 completedTasks.map(task => (
                                     <div
-                                        key={task.id}
+                                        key={task._id}
                                         className="group relative bg-gray-50 dark:bg-gray-800/50 rounded-xl p-4 border border-transparent hover:border-gray-200 dark:hover:border-gray-700 transition-all duration-200"
                                     >
                                         <div className="flex items-start gap-3 opacity-60 hover:opacity-100 transition-opacity">
                                             <button
-                                                onClick={() => toggleTask(task.id)}
+                                                onClick={() => toggleTask(task._id)}
                                                 className="mt-0.5 w-5 h-5 rounded-md bg-emerald-500 border-emerald-500 flex items-center justify-center text-white shadow-sm hover:bg-emerald-600 transition-colors"
                                             >
                                                 <CheckCircle size={14} strokeWidth={3} />
@@ -223,7 +326,7 @@ export default function TasksTab({ channelId, channelName, currentUserId, socket
                                             </div>
 
                                             <button
-                                                onClick={() => deleteTask(task.id)}
+                                                onClick={() => deleteTask(task._id)}
                                                 className="opacity-0 group-hover:opacity-100 p-1.5 text-gray-400 hover:text-red-600 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
                                             >
                                                 <Trash2 size={14} />

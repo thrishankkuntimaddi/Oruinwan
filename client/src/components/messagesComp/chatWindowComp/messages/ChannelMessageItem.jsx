@@ -324,8 +324,6 @@ function ChannelMessageItem({
     );
 }
 
-// Optimize with React.memo to prevent unnecessary re-renders
-// ⚠️ TEMPORARILY DISABLED FOR DEBUGGING - Testing if memo blocks real-time updates
 export default ChannelMessageItem;
 /* export default React.memo(ChannelMessageItem, (prevProps, nextProps) => {
     // Re-render only if these specific props change

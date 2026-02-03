@@ -35,8 +35,9 @@ const ChannelSchema = new mongoose.Schema({
   // Generic Tabs (Canvas, etc.)
   tabs: [{
     name: { type: String, required: true },
-    type: { type: String, enum: ['canvas'], default: 'canvas' },
-    content: { type: String, default: "" }, // HTML content
+    type: { type: String, enum: ['canvas', 'tasks'], default: 'canvas' },
+    content: { type: String, default: "" }, // HTML content for text mode
+    drawingData: { type: Array, default: [] }, // For canvas: array of stroke objects
     createdAt: { type: Date, default: Date.now },
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" }
   }],

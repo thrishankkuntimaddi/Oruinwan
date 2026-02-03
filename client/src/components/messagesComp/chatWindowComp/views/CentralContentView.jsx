@@ -132,6 +132,7 @@ const CentralContentView = ({
                 <TasksTab
                     channelId={chat.id}
                     channelName={chat.name}
+                    workspaceId={chat.workspaceId}
                     currentUserId={currentUserId}
                     socket={rawSocket}
                 />

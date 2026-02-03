@@ -25,7 +25,7 @@ function registerPollHandlers(io, socket) {
             return;
         }
 
-        console.log(`📊 New poll created in channel:${channelId} by user:${socket.user.id}`);
+
 
         // Broadcast to channel
         io.to(`channel:${channelId}`).emit('poll:new', poll);
@@ -39,7 +39,7 @@ function registerPollHandlers(io, socket) {
 
         if (!channelId || !poll) return;
 
-        console.log(`✅ Poll ${poll._id} voted by user:${socket.user.id}`);
+
 
         // Broadcast updated poll to channel
         io.to(`channel:${channelId}`).emit('poll:update', poll);
@@ -53,7 +53,7 @@ function registerPollHandlers(io, socket) {
 
         if (!channelId || !poll) return;
 
-        console.log(`🔒 Poll ${poll._id} closed in channel:${channelId}`);
+
 
         // Broadcast updated poll
         io.to(`channel:${channelId}`).emit('poll:update', poll);
@@ -67,7 +67,7 @@ function registerPollHandlers(io, socket) {
 
         if (!channelId || !pollId) return;
 
-        console.log(`🗑️ Poll ${pollId} deleted from channel:${channelId}`);
+
 
         // Broadcast removal
         io.to(`channel:${channelId}`).emit('poll:removed', { pollId });

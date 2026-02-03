@@ -54,10 +54,7 @@ export function useConversation(conversationId, conversationType, workspaceId) {
                 // If redirectRequired is true, update URL to use the correct session ID
                 if (response.data?.redirectRequired && response.data?.dmSessionId) {
                     const correctSessionId = response.data.dmSessionId;
-                    console.log(`🔄 [useConversation] Backend created new DM session, redirecting:`, {
-                        oldId: conversationId,
-                        newId: correctSessionId
-                    });
+
 
                     // Determine the correct URL path based on current location
                     // Preserve whether we're in /home/dm or /messages/dm context
@@ -79,7 +76,7 @@ export function useConversation(conversationId, conversationType, workspaceId) {
                     }
 
                     if (newPath) {
-                        console.log(`✅ [useConversation] Redirecting to correct session ID:`, newPath);
+
                         navigate(newPath, { replace: true }); // replace: true prevents back button issues
                         return; // Exit early - component will remount with correct ID
                     }
@@ -114,7 +111,7 @@ export function useConversation(conversationId, conversationType, workspaceId) {
             if (normalized.length > 0) {
                 decrypted = await batchDecryptMessages(normalized, conversationId, conversationType, null);
             } else {
-                console.log('ℹ️ [PHASE 3] No messages to decrypt - channel UNINITIALIZED');
+
             }
 
             // Populate Map for deduplication
@@ -246,18 +243,11 @@ export function useConversation(conversationId, conversationType, workspaceId) {
 
     // Add real-time event (from socket)
     const addRealtimeEvent = useCallback(async (event, currentUserId = null) => {
-        console.log(`🔄 [useConversation] Processing realtime event:`, {
-            eventId: event.id,
-            eventType: event.type,
-            sender: event.sender?._id,
-            currentUser: currentUserId,
-            hasExisting: eventsMapRef.current.has(event.id),
-            currentEventCount: eventsMapRef.current.size
-        });
+
 
         // Deduplicate by ID
         if (eventsMapRef.current.has(event.id)) {
-            console.log(`⚠️ [useConversation] Event ${event.id} already exists, updating instead`);
+
             // Update instead of add (might have new data like reactions)
             updateEvent(event.id, event);
             return;
@@ -268,23 +258,14 @@ export function useConversation(conversationId, conversationType, workspaceId) {
         const isThreadReply = event.payload?.parentId || event.payload?.message?.parentId;
 
         if (isThreadReply) {
-            console.log(`[THREAD][REALTIME][DECRYPT] Thread reply received, bypassing main message list:`, {
-                messageId: event.id || event.payload?._id,
-                parentId: event.payload?.parentId || event.payload?.message?.parentId,
-                channelId: event.payload?.channelId || event.payload?.channel
-            });
-
             // Decrypt thread reply using message's channel context
             const messageChannelId = event.payload?.channelId
                 || event.payload?.channel?._id
                 || event.payload?.channel
                 || conversationId;
 
-            console.log(`[THREAD][REALTIME][DECRYPT] Decrypting thread reply with channel context: ${messageChannelId}`);
-
             try {
                 await batchDecryptMessages([event], messageChannelId, conversationType, null);
-                console.log(`✅ [THREAD][REALTIME][DECRYPT] Thread reply decrypted successfully`);
 
                 // Thread replies are handled by ThreadPanel listeners, not main conversation
                 // Exit early to prevent insertion into main message list
@@ -298,13 +279,6 @@ export function useConversation(conversationId, conversationType, workspaceId) {
         // 🔐 Decrypt message if it's encrypted (ALL messages are encrypted now)
         let processedEvent = event;
         if (event.type === 'message') {
-            console.log(`🔐 [useConversation] Decrypting realtime message ${event.id}:`, {
-                hasPayload: !!event.payload,
-                hasCiphertext: !!event.payload?.ciphertext,
-                hasNestedPayload: !!event.payload?.payload,
-                hasNestedCiphertext: !!event.payload?.payload?.ciphertext,
-                isEncrypted: event.payload?.isEncrypted || event.payload?.payload?.isEncrypted
-            });
 
             // ✅ CRITICAL FIX: Extract channelId from MESSAGE, not from hook closure
             // This prevents using stale/wrong conversationId for decryption
@@ -321,28 +295,19 @@ export function useConversation(conversationId, conversationType, workspaceId) {
                 || event.payload?.message?.channel
                 || conversationId; // Fallback for DMs or legacy messages
 
-            console.log(`🔐 [useConversation] Decryption context:`, {
-                eventId: event.id,
-                extractedMessageChannelId: messageChannelId,
-                activeConversationId: conversationId,
-                isMatch: messageChannelId === conversationId
-            });
+
 
             // Server-sent realtime messages are already valid for this user
             // No need for client-side filtering
             const decrypted = await batchDecryptMessages([event], messageChannelId, conversationType, null);
             processedEvent = decrypted[0] || event;
 
-            console.log(`✅ [useConversation] Decrypted realtime message:`, {
-                id: processedEvent.id,
-                hasDecryptedContent: !!processedEvent.decryptedContent,
-                decryptedText: processedEvent.decryptedContent?.substring(0, 20)
-            });
+
         }
 
         // Check if this is the sender's own message (replace optimistic message)
         if (currentUserId && processedEvent.sender?._id === currentUserId) {
-            console.log(`🔍 [useConversation] Message is from current user, checking for optimistic match...`);
+
 
             // First try to match by clientTempId (most reliable)
             if (processedEvent.payload?.clientTempId || processedEvent.clientTempId) {
@@ -352,11 +317,7 @@ export function useConversation(conversationId, conversationType, workspaceId) {
                 );
 
                 if (optimisticMessage) {
-                    console.log(`✅ [useConversation] Found optimistic message by clientTempId:`, {
-                        optimisticId: optimisticMessage.id,
-                        realId: processedEvent.id,
-                        clientTempId
-                    });
+
                     // Remove optimistic from map
                     eventsMapRef.current.delete(optimisticMessage.id);
                     // Add real message
@@ -374,10 +335,7 @@ export function useConversation(conversationId, conversationType, workspaceId) {
             );
 
             if (optimisticMessage) {
-                console.log(`✅ [useConversation] Found optimistic message by status:`, {
-                    optimisticId: optimisticMessage.id,
-                    realId: processedEvent.id
-                });
+
                 eventsMapRef.current.delete(optimisticMessage.id);
                 eventsMapRef.current.set(processedEvent.id, processedEvent);
                 setEvents(prev => prev.map(e => e.id === optimisticMessage.id ? processedEvent : e));
@@ -387,21 +345,14 @@ export function useConversation(conversationId, conversationType, workspaceId) {
             }
         }
 
-        console.log(`✅ [useConversation] Adding new realtime event ${processedEvent.id} to conversation`);
         eventsMapRef.current.set(processedEvent.id, processedEvent);
         setEvents(prev => {
             // Ensure the new event isn't already in the array (extra safety)
             const exists = prev.some(e => e.id === processedEvent.id);
             if (exists) {
-                console.warn(`⚠️ [useConversation] Event ${processedEvent.id} already in state array, skipping add`);
                 return prev;
             }
-            const newEvents = [...prev, processedEvent];
-            console.log(`📊 [useConversation] Events count: ${prev.length} -> ${newEvents.length}`, {
-                newEventId: processedEvent.id,
-                newEventText: processedEvent.decryptedContent?.substring(0, 30) || processedEvent.payload?.text?.substring(0, 30)
-            });
-            return newEvents;
+            return [...prev, processedEvent];
         });
     }, [conversationId, conversationType, updateEvent]);
 

@@ -19,13 +19,7 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
     const [sending, setSending] = useState(false);
     const repliesEndRef = useRef(null);
 
-    // ✅ REQUIRED: channelId MUST be passed as a prop from ChatWindowV2
-    // Do NOT derive from parentMessage - it's unreliable
-    console.log('[THREAD][CTX] Thread context from props:', {
-        channelId,
-        conversationType,
-        parentMessageId: parentMessage?._id
-    });
+
 
     const formatTime = (iso) => fmtTime(iso);
 

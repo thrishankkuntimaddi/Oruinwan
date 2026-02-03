@@ -35,10 +35,7 @@ const generateCompanyEmail = (firstName, lastName, companyDomain) => {
  */
 exports.createEmployee = async (req, res) => {
     try {
-        // DEBUG: Log entire req.user object
-        console.log('🔍 DEBUG req.user:', JSON.stringify(req.user, null, 2));
-        console.log('🔍 DEBUG req.user.sub:', req.user?.sub);
-        console.log('🔍 DEBUG req.user._id:', req.user?._id);
+
 
         const adminId = req.user?.sub || req.user?._id; // Try both for compatibility
         const {

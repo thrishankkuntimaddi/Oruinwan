@@ -30,7 +30,7 @@ function registerAdminHandlers(io, socket) {
 
             if (user && user.roles.includes('chttrix_admin')) {
                 socket.join('chttrix_admins');
-                console.log(`👑 Admin ${socket.user.id} joined admin room`);
+
 
                 socket.emit('admin:joined', {
                     message: 'Successfully joined admin room'
@@ -74,7 +74,7 @@ function registerAdminHandlers(io, socket) {
                 description: 'Admin sent direct message to company'
             });
 
-            console.log(`📨 Admin ${socket.user.id} sent DM to company:${companyId}`);
+
         } catch (err) {
             console.error('Error sending admin DM:', err);
             socket.emit('error', { message: 'Failed to send DM' });
@@ -88,7 +88,7 @@ function registerAdminHandlers(io, socket) {
         if (!companyId) return;
 
         socket.join(`company:${companyId}`);
-        console.log(`🏢 User ${socket.user.id} joined company:${companyId}`);
+
     });
 
     /**
@@ -110,7 +110,7 @@ function registerAdminHandlers(io, socket) {
      */
     socket.on('ticket:created', (ticketData) => {
         io.to('chttrix_admins').emit('ticket:new', ticketData);
-        console.log(`🎫 New ticket created: ${ticketData._id}`);
+
     });
 
     /**
@@ -132,7 +132,7 @@ function registerAdminHandlers(io, socket) {
      */
     socket.on('company:registered', (companyData) => {
         io.to('chttrix_admins').emit('company:pending', companyData);
-        console.log(`🏢 New company registered: ${companyData.name}`);
+
     });
 }
 

@@ -18,12 +18,7 @@ const Home = () => {
 
   useEffect(() => {
     const detectChat = async () => {
-      console.log('[Home] ═══════════════════════════════════════');
-      console.log('[Home] detectChat triggered');
-      console.log('[Home] location.pathname:', location.pathname);
-      console.log('[Home] id:', id, 'dmId:', dmId);
-      console.log('[Home] workspaceId:', workspaceId);
-      console.log('[Home] ═══════════════════════════════════════');
+
 
       // Reset activeChat when route changes to prevent stale data
       setActiveChat(null);
@@ -71,11 +66,7 @@ const Home = () => {
           const targetId = dmId || id; // Use dmId for new DMs, id for existing DMs
 
           if (targetId) {
-            console.log('[Home] ═══════════════════════════════════════');
-            console.log('[Home] Processing DM with targetId:', targetId);
-            console.log('[Home] URL:', location.pathname);
-            console.log('[Home] id param:', id, 'dmId param:', dmId);
-            console.log('[Home] ═══════════════════════════════════════');
+
 
             // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
             // DM E2EE FIX: Always resolve to DM session ID before opening ChatWindow
@@ -95,32 +86,28 @@ const Home = () => {
               const existingSession = dmSessions.find(s => String(s.id) === String(targetId));
 
               if (existingSession) {
-                console.log('[Home] ✅ targetId is already a valid DM session ID');
                 resolvedDMSessionId = existingSession.id;
                 otherUserId = existingSession.otherUserId;
                 isAlreadySessionId = true;
               }
             } catch (err) {
-              console.log('[Home] Could not fetch DM sessions for validation:', err);
+              // Could not fetch DM sessions for validation
             }
 
             // Only try to resolve if it's not already a session ID
             if (!isAlreadySessionId) {
               try {
                 // Try to resolve as user ID → DM session ID
-                console.log('[Home] Calling resolve endpoint for user:', targetId);
                 const resolveRes = await api.get(
                   `/api/messages/workspace/${workspaceId}/dm/resolve/${targetId}`
                 );
 
                 if (resolveRes.data.success) {
-                  console.log('[Home] ✅ Resolved to DM session:', resolveRes.data.dmSessionId);
                   resolvedDMSessionId = resolveRes.data.dmSessionId;
                   otherUserId = resolveRes.data.otherUserId;
                 }
               } catch (resolveErr) {
                 // If resolve fails, targetId might be an invalid ID
-                console.log('[Home] Resolve failed:', resolveErr.response?.status);
                 console.error('[Home] ❌ Could not resolve DM');
                 setActiveChat(null);
                 return;
@@ -128,28 +115,18 @@ const Home = () => {
             }
 
             // Now fetch member info for display
-            console.log('[Home] Fetching workspace members, otherUserId:', otherUserId);
             const res = await api.get(`/api/workspaces/${workspaceId}/members`);
             const members = res.data.members || [];
-            console.log('[Home] Total members fetched:', members.length);
 
             let member = members.find(m =>
               String(m._id || m.id) === String(otherUserId) ||
               String(m.user?._id || m.user?.id) === String(otherUserId)
             );
 
-            console.log('[Home] Found member:', member);
-
             // Extract user data from nested structure if needed
             const userData = member?.user || member;
             const memberName = userData?.username || userData?.name || userData?.email?.split('@')[0];
             const memberPicture = userData?.profilePicture || userData?.avatar;
-
-            console.log('[Home] Extracted member data:', {
-              memberName,
-              memberPicture,
-              userData
-            });
 
             // Determine status
             let status = "offline";
@@ -170,12 +147,11 @@ const Home = () => {
               workspaceRole: activeWorkspace?.role
             };
 
-            console.log('[Home] Setting activeChat to:', chatObject);
+
             setActiveChat(chatObject);
 
             // ✅ CRITICAL: ALWAYS prefetch encryption key for DMs
             // This prevents 404 errors when opening any DM (new or existing)
-            console.log('[Home] 🔐 Prefetching encryption key for DM session:', resolvedDMSessionId);
             try {
               // Small delay to allow backend to commit encryption keys (for new DMs)
               if (!isAlreadySessionId) {
@@ -184,19 +160,13 @@ const Home = () => {
 
               const conversationKeyService = (await import('../../services/conversationKeyService')).default;
               await conversationKeyService.getConversationKey(resolvedDMSessionId, 'dm');
-              console.log('[Home] ✅ Encryption key prefetched and cached');
             } catch (keyErr) {
-              console.warn('[Home] ⚠️  Key prefetch failed - key may not exist yet:', keyErr);
               // Don't block - ChatWindow will handle retry/creation
             }
 
             // ✅ CRITICAL FIX: Redirect URL ONLY if we resolved a user ID to a session ID
             // Don't redirect if targetId was already a valid session ID
             if (!isAlreadySessionId && targetId !== resolvedDMSessionId) {
-              console.log('[Home] 🔄 Redirecting from user ID to session ID:', {
-                from: targetId,
-                to: resolvedDMSessionId
-              });
               navigate(`/workspace/${workspaceId}/dm/${resolvedDMSessionId}`, { replace: true });
               return; // Exit early to prevent setting activeChat with old data
             }

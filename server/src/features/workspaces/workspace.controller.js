@@ -810,13 +810,6 @@ exports.getWorkspaceChannels = async (req, res) => {
       }
     });
 
-    // 🔍 DEBUG: Log each channel's visibility
-
-    allChannels.forEach((ch, idx) => {
-      const isVisible = visibleChannels.some(vc => vc._id.toString() === ch._id.toString());
-
-    });
-
     // Add isMember flag to each visible channel
     const channelsWithMembershipInfo = visibleChannels.map(channel => {
       const isMember = channel.members.some(m => {

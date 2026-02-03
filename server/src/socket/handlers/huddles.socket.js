@@ -37,7 +37,7 @@ function registerHuddleHandlers(io, socket) {
             timestamp: new Date()
         });
 
-        console.log(`🎙️ Huddle ${huddleId} started in channel:${channelId}`);
+
     });
 
     /**
@@ -53,7 +53,7 @@ function registerHuddleHandlers(io, socket) {
 
         // Join huddle room
         socket.join(`huddle:${huddleId}`);
-        console.log(`🎙️ User ${socket.user.id} joined huddle:${huddleId}`);
+
 
         // Broadcast to huddle participants
         io.to(`huddle:${huddleId}`).emit('huddle:joined', {
@@ -83,7 +83,7 @@ function registerHuddleHandlers(io, socket) {
 
         // Leave huddle room
         socket.leave(`huddle:${huddleId}`);
-        console.log(`👋 User ${socket.user.id} left huddle:${huddleId}`);
+
 
         // Broadcast to remaining participants
         io.to(`huddle:${huddleId}`).emit('huddle:left', {
@@ -124,7 +124,7 @@ function registerHuddleHandlers(io, socket) {
             });
         }
 
-        console.log(`🔇 Huddle ${huddleId} ended`);
+
     });
 
     /**

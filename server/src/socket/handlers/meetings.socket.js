@@ -29,7 +29,7 @@ function registerMeetingHandlers(io, socket) {
 
         // Join meeting room
         socket.join(`meeting:${meetingId}`);
-        console.log(`📹 User ${socket.user.id} joined meeting:${meetingId}`);
+
 
         // Broadcast to all meeting participants
         io.to(`meeting:${meetingId}`).emit('meeting:joined', {
@@ -58,7 +58,7 @@ function registerMeetingHandlers(io, socket) {
 
         // Leave meeting room
         socket.leave(`meeting:${meetingId}`);
-        console.log(`👋 User ${socket.user.id} left meeting:${meetingId}`);
+
 
         // Broadcast to remaining participants
         io.to(`meeting:${meetingId}`).emit('meeting:left', {
@@ -102,7 +102,7 @@ function registerMeetingHandlers(io, socket) {
             });
         }
 
-        console.log(`🔒 Meeting ${meetingId} ended by ${socket.user.id}`);
+
     });
 }
 

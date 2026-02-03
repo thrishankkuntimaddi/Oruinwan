@@ -607,7 +607,6 @@ exports.bulkDeleteInvites = async (req, res) => {
 
         const Invite = require("../../../models/Invite");
 
-        // 🔍 DEBUG: Check what invitations we're trying to delete
         const invitesToDelete = await Invite.find({
             _id: { $in: inviteIds },
             workspace: workspaceId

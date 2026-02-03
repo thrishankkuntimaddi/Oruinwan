@@ -215,7 +215,7 @@ export default function CanvasTab({ tab, onSave, connected, socket, channelId, c
         };
 
         saveTimeoutRef.current = setTimeout(() => {
-            onSave(tab._id, payload);
+            onSave(payload);  // Parent already has tabId via closure
             setSaving(false);
         }, 1500); // 1.5s debounce
     };
