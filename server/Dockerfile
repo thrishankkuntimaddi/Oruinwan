@@ -1,20 +1,26 @@
-# Use an official Node.js runtime as a parent image
-FROM node:18-alpine
+# Dockerfile for Cloud Run Deployment
+# Hardened for production - copies ONLY src/ directory
 
-# Set the working directory to /app
+FROM node:18-slim
+
+# Set working directory
 WORKDIR /app
 
-# Copy the package.json and yarn.lock files to the working directory
+# Copy package files
 COPY package*.json ./
 
-# Install any dependencies
-RUN npm install
+# Install production dependencies only
+RUN npm ci --only=production && npm cache clean --force
 
-# Copy the rest of the application code to the working directory
-COPY . .
+# Copy ONLY modern architecture (src/)
+COPY src ./src
 
-# Expose port 3000
-EXPOSE 3000
+# Expose port (Cloud Run uses PORT env var, defaults to 5000)
+EXPOSE 5000
 
-# Define the command to run the application
-CMD ["npm", "start"]
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
+  CMD node -e "require('http').get('http://localhost:5000/api/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"
+
+# Start server using modern entrypoint
+CMD ["node", "src/index.js"]

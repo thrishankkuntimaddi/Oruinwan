@@ -1,20 +1,42 @@
 // eslint.config.js - ESLint v9 Flat Config
-// Migration from .eslintrc.json
+// Pre-deployment hardening: Lint ONLY modern architecture (src/**)
 
 export default [
     {
-        // Global ignores
+        // Global ignores - exclude legacy and non-runtime files
         ignores: [
+            // Dependencies and build artifacts
             'node_modules/**',
             'uploads/**',
             'build/**',
             'dist/**',
-            '*.min.js'
+            '*.min.js',
+
+            // Legacy root files (behavior-preserving - kept as fallback)
+            'server.js',
+            'socket.js',
+
+            // Utility and migration scripts
+            'scripts/**',
+            'migrations/**',
+            'fix-*.js',
+            'init*.js',
+            'clear*.js',
+            '*.sh',
+
+            // Legacy architecture (pre-src/ refactor)
+            'config/**',
+            'constants/**',
+            'middleware/**',
+            'models/**',
+            'routes/**',
+            'socket/**',
+            'utils/**'
         ]
     },
     {
-        // Base configuration for all JS files
-        files: ['**/*.js'],
+        // Lint ONLY modern architecture
+        files: ['src/**/*.js'],
         languageOptions: {
             ecmaVersion: 2021,
             sourceType: 'module',
