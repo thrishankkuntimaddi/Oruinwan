@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Search, Hash, User, MessageSquare, Lock, CheckSquare, FileText } from 'lucide-react';
 import axios from 'axios';
 
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000/api';
+const API_BASE_URL = `${process.env.REACT_APP_BACKEND_URL || 'http://localhost:8080'}/api`;
 
 export default function UniversalSearch({ workspaceId, onClose, results, loading, query }) {
     const navigate = useNavigate();
@@ -310,7 +310,7 @@ export default function UniversalSearch({ workspaceId, onClose, results, loading
                                         <span className="font-medium text-sm text-gray-900 dark:text-gray-100 truncate">
                                             {task.title}
                                         </span>
-                                        <span className={`px-1.5 py-0.5 text-xs rounded-full ${task.priority === 'urgent' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
+                                        <span className={`px-1.5 py-0.5 text-xs rounded-full ${task.priority === 'highest' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
                                             task.priority === 'high' ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400' :
                                                 task.priority === 'medium' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' :
                                                     'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400'

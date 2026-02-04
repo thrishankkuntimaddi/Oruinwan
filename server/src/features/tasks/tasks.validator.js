@@ -72,7 +72,7 @@ function validateCreateTask(data) {
 
     // Priority validation
     if (data.priority) {
-        const validPriorities = ['low', 'medium', 'high', 'urgent'];
+        const validPriorities = ['lowest', 'low', 'medium', 'high', 'highest'];
         if (!validPriorities.includes(data.priority)) {
             errors.push(`Invalid priority. Must be one of: ${validPriorities.join(', ')}`);
         }
@@ -133,7 +133,7 @@ function validateUpdateTask(data) {
 
     // Priority validation (if provided)
     if (data.priority) {
-        const validPriorities = ['low', 'medium', 'high', 'urgent'];
+        const validPriorities = ['lowest', 'low', 'medium', 'high', 'highest'];
         if (!validPriorities.includes(data.priority)) {
             errors.push(`Invalid priority. Must be one of: ${validPriorities.join(', ')}`);
         }
@@ -203,7 +203,7 @@ function validateCreateSubtask(data) {
 
     // Priority validation (if provided)
     if (data.priority) {
-        const validPriorities = ['low', 'medium', 'high', 'urgent'];
+        const validPriorities = ['lowest', 'low', 'medium', 'high', 'highest'];
         if (!validPriorities.includes(data.priority)) {
             errors.push(`Invalid priority. Must be one of: ${validPriorities.join(', ')}`);
         }

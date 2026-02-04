@@ -88,7 +88,7 @@ const ManagerTasks = () => {
                         <div key={task._id} className="bg-white dark:bg-gray-700 p-4 rounded-lg shadow-sm border border-gray-100 dark:border-gray-600 hover:shadow-md transition-shadow group">
                             <div className="flex justify-between items-start mb-2">
                                 <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide
-                  ${task.priority === 'urgent' ? 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400' :
+                  ${task.priority === 'highest' ? 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400' :
                                         task.priority === 'high' ? 'bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400' :
                                             task.priority === 'medium' ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400' :
                                                 'bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-300'
@@ -235,10 +235,11 @@ const ManagerTasks = () => {
                                         onChange={(e) => setNewTask({ ...newTask, priority: e.target.value })}
                                         className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                                     >
+                                        <option value="lowest">Lowest</option>
                                         <option value="low">Low</option>
                                         <option value="medium">Medium</option>
                                         <option value="high">High</option>
-                                        <option value="urgent">Urgent</option>
+                                        <option value="highest">Highest</option>
                                     </select>
                                 </div>
                                 <div>

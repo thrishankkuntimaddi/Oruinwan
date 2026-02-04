@@ -130,7 +130,7 @@ const MyTasks = () => {
 
   const handleTransferRequest = async (newAssigneeId, note) => {
     try {
-      const response = await fetch(`http://localhost:5000/api/tasks/${transferRequestTask.id}/transfer-request`, {
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/tasks/${transferRequestTask.id}/transfer-request`, {
         method: 'POST',
         credentials: 'include',
         headers: {

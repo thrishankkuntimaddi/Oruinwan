@@ -50,10 +50,11 @@ export const TasksProvider = ({ children }) => {
     // Map backend priority to frontend format
     const mapBackendPriority = useCallback((priority) => {
         const priorityMap = {
+            'lowest': 'Lowest',
             'low': 'Low',
             'medium': 'Medium',
             'high': 'High',
-            'urgent': 'Emergency'
+            'highest': 'Highest'
         };
         return priorityMap[priority] || 'Medium';
     }, []);
@@ -61,10 +62,11 @@ export const TasksProvider = ({ children }) => {
     // Map frontend priority to backend format
     const mapFrontendPriority = useCallback((priority) => {
         const priorityMap = {
+            'Lowest': 'lowest',
             'Low': 'low',
             'Medium': 'medium',
             'High': 'high',
-            'Emergency': 'urgent'
+            'Highest': 'highest'
         };
         return priorityMap[priority] || 'medium';
     }, []);

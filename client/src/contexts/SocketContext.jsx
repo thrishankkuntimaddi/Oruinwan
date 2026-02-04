@@ -33,7 +33,7 @@ export const SocketProvider = ({ children }) => {
             return;
         }
 
-        const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000';
+        const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8080';
 
         // Create socket instance without auto-connecting
         const socketInstance = io(API_BASE, {
