@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Card from './Card';
 import axios from 'axios';
 import { Loader, Check, Globe2 } from 'lucide-react';
@@ -12,12 +12,7 @@ const RegionTab = ({ region, setRegion }) => {
     const [hasChanges, setHasChanges] = useState(false);
     const [detectedTimezone, setDetectedTimezone] = useState('');
 
-    useEffect(() => {
-        loadPreferences();
-        detectTimezone();
-    }, []);
-
-    const detectTimezone = () => {
+    const detectTimezone = useCallback(() => {
         try {
             const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
             setDetectedTimezone(timezone);
@@ -27,9 +22,9 @@ const RegionTab = ({ region, setRegion }) => {
         } catch (error) {
             console.error('Failed to detect timezone:', error);
         }
-    };
+    }, [region, setRegion]);
 
-    const loadPreferences = async () => {
+    const loadPreferences = useCallback(async () => {
         setLoading(true);
         try {
             const response = await axios.get('/api/auth/me/preferences/region', { withCredentials: true });
@@ -41,7 +36,12 @@ const RegionTab = ({ region, setRegion }) => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [setRegion]);
+
+    useEffect(() => {
+        loadPreferences();
+        detectTimezone();
+    }, [loadPreferences, detectTimezone]);
 
     const handleSave = async () => {
         setSaving(true);

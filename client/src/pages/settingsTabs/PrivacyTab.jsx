@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Card from './Card';
 import axios from 'axios';
 import { Loader, Check } from 'lucide-react';
@@ -30,12 +30,7 @@ const PrivacyTab = ({ privacy, setPrivacy }) => {
     const [hasChanges, setHasChanges] = useState(false);
     const [blockedUsers, setBlockedUsers] = useState([]);
 
-    useEffect(() => {
-        loadPreferences();
-        loadBlockedUsers();
-    }, []);
-
-    const loadPreferences = async () => {
+    const loadPreferences = useCallback(async () => {
         setLoading(true);
         try {
             const response = await axios.get('/api/auth/me/preferences/privacy', { withCredentials: true });
@@ -47,7 +42,12 @@ const PrivacyTab = ({ privacy, setPrivacy }) => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [setPrivacy]);
+
+    useEffect(() => {
+        loadPreferences();
+        loadBlockedUsers();
+    }, [loadPreferences]);
 
     const loadBlockedUsers = async () => {
         try {

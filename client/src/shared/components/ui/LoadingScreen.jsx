@@ -4,12 +4,9 @@ const LoadingScreen = ({ onComplete }) => {
     const [text, setText] = useState('');
     const fullText = 'Chttrix';
     const [isTyping, setIsTyping] = useState(false);
-    const [showCursor, setShowCursor] = useState(true);
     const [opacity, setOpacity] = useState(1);
 
     useEffect(() => {
-        let timeout;
-
         // Sequence:
         // 1. Initial delay (cursor blinks)
         // 2. Typing starts
@@ -48,7 +45,8 @@ const LoadingScreen = ({ onComplete }) => {
         runSequence();
 
         return () => { }; // Cleanup not strictly necessary for this linear sequence but good practice
-    }, []); // Run once
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []); // Run once - onComplete is stable and called at the end
 
     return (
         <div

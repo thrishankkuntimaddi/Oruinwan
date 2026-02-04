@@ -8,7 +8,7 @@ const HelpCenter = () => {
     const [expandedArticles, setExpandedArticles] = useState({});
 
     // Comprehensive help articles organized by category
-    const helpCategories = [
+    const helpCategories = useMemo(() => [
         {
             id: 'getting-started',
             title: 'Getting Started with Chttrix',
@@ -371,7 +371,7 @@ We're here to help you get the best experience with Chttrix.`
                 }
             ]
         }
-    ];
+    ], []);
 
     // Toggle article expansion
     const toggleArticle = (articleId) => {

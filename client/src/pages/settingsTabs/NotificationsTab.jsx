@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Card from './Card';
 import axios from 'axios';
 import { Loader, Check } from 'lucide-react';
@@ -32,11 +32,7 @@ const NotificationsTab = ({ notifications, setNotifications }) => {
     const [hasChanges, setHasChanges] = useState(false);
 
     // Load notification preferences from backend
-    useEffect(() => {
-        loadPreferences();
-    }, []);
-
-    const loadPreferences = async () => {
+    const loadPreferences = useCallback(async () => {
         setLoading(true);
         try {
             const response = await axios.get('/api/auth/me/preferences/notifications', { withCredentials: true });
@@ -49,7 +45,11 @@ const NotificationsTab = ({ notifications, setNotifications }) => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [setNotifications]);
+
+    useEffect(() => {
+        loadPreferences();
+    }, [loadPreferences]);
 
     // Save notification preferences
     const handleSave = async () => {
