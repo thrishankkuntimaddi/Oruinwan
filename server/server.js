@@ -248,6 +248,15 @@ app.use("/api/v2/identity", require("./src/modules/identity/identity.routes"));
 // Conversation Keys (E2EE-specific)
 app.use("/api/v2/conversations", require("./src/modules/conversations/conversationKeys.routes"));
 
+// Crypto Identity (UMEK-based recovery)
+app.use("/api/v2/crypto", require("./src/features/crypto/identity.routes"));
+
+// Device Sessions (Phase 3: device awareness and revocation)
+app.use("/api/v2/devices", require("./src/features/devices/devices.routes"));
+
+// Security Audit Log (Phase 4A: observability)
+app.use("/api/v2/security", require("./src/features/security/security.routes"));
+
 // Tasks (Migrated from legacy)
 app.use("/api/v2/tasks", require("./src/features/tasks/tasks.routes"));
 

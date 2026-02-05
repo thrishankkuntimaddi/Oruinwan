@@ -21,6 +21,40 @@ module.exports = async function requireAuth(req, res, next) {
       try {
         const payload = jwt.verify(accessToken, process.env.ACCESS_TOKEN_SECRET);
         req.user = payload;
+
+        // ⚠️ PHASE 3: Check device session revocation
+        const deviceId = req.headers['x-device-id'];
+        if (deviceId) {
+          const deviceSessionService = require('../../services/deviceSession.service');
+          const isRevoked = await deviceSessionService.isSessionRevoked(payload.sub, deviceId);
+
+          if (isRevoked) {
+            // PHASE 4A: Log blocked access attempt (best-effort, non-blocking)
+            try {
+              const securityAudit = require('../../services/securityAudit.service');
+              securityAudit.logSecurityEvent({
+                userId: payload.sub,
+                eventType: 'DEVICE_REVOKED_ACCESS_BLOCKED',
+                req,
+                metadata: { deviceId }
+              });
+            } catch (auditError) {
+              // Silent fail (non-critical)
+            }
+
+            return res.status(403).json({
+              message: 'Device has been revoked',
+              code: 'DEVICE_REVOKED'
+            });
+          }
+
+          // Update last active (non-blocking)
+          deviceSessionService.updateSessionActivity(payload.sub, deviceId);
+
+          // Attach deviceId to request
+          req.deviceId = deviceId;
+        }
+
         return next();
       } catch (err) {
         // access token expired → fall through to cookie

@@ -2,6 +2,8 @@
 
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { setOnTokenRefreshed } from "../services/api";
+import axios from 'axios';
+import { getDeviceMetadata, clearDeviceId } from '../utils/deviceId';
 
 export const AuthContext = createContext(null);
 
@@ -10,6 +12,8 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   // ✅ FIX 1: Add encryption ready state
   const [encryptionReady, setEncryptionReady] = useState(false);
+  // ✅ Password unlock state
+  const [requiresPassword, setRequiresPassword] = useState(false);
   // Initialize from localStorage immediately
   const [accessToken, setAccessToken] = useState(() => {
     return localStorage.getItem("accessToken") || null;
@@ -78,7 +82,7 @@ export const AuthProvider = ({ children }) => {
       const res = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/auth/me`, {
         credentials: "include",
         headers: {
-          Authorization: `Bearer ${token}`
+          Authorization: `Bearer ${token} `
         },
       });
 
@@ -103,29 +107,32 @@ export const AuthProvider = ({ children }) => {
               return;
             }
 
-
             // Dynamically import to avoid circular dependencies
             const identityKeyService = (await import('../services/identityKeyService')).default;
 
-            const result = await identityKeyService.initializeIdentityKeys(userId);
+            // PHASE 1: Pass null for password (will use cache if available)
+            const result = await identityKeyService.initializeIdentityKeys(userId, null);
 
-            if (!result.existed) {
-              // New keypair generated - upload public key to server
-              await identityKeyService.uploadPublicKeyToServer();
-            } else {
+            // Handle password-protected identity ONLY if cache is missing
+            if (result?.status === 'PASSWORD_REQUIRED') {
+              console.log('🔐 [PHASE 1] Password-protected identity - cache missing, encryption deferred');
+              setEncryptionReady(false);
+              setRequiresPassword(true);
+              return;
             }
 
-
-            // ✅ FIX 1: Signal encryption is ready
-            setEncryptionReady(true);
+            // Success - encryption ready
+            if (result?.status === 'READY') {
+              console.log('✅ [PHASE 1] Identity keys ready (from cache or newly generated)');
+              setEncryptionReady(true);
+              setRequiresPassword(false);
+            }
           } catch (err) {
             console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-            console.error('❌ [PHASE 1] FAILED — Identity initialization error:', err);
-            console.error('❌ [REHYDRATION] Encryption NOT ready - keys failed to load');
+            console.error('❌ [PHASE 1] HARD crypto failure:', err);
             console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
-            // ⚠️ GUARDRAIL: Do NOT auto-regenerate keys - could be corruption
-            // User must explicitly reset if keys are corrupted
+            // Only real crypto failures block encryption
             setEncryptionReady(false);
 
             // ❌ NO alert()
@@ -166,76 +173,117 @@ export const AuthProvider = ({ children }) => {
   // ------------------------------------------------------------
   // Login (normal email/password)
   // ------------------------------------------------------------
-  const login = async ({ email, password }) => {
-    const res = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/auth/login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify({ email, password }),
-    });
+  const login = async (email, password) => {
+    try {
+      // PHASE 3: Get device metadata
+      const deviceMetadata = getDeviceMetadata();
 
-    const data = await res.json();
-
-    if (!res.ok) throw new Error(data.message || "Login failed");
-
-    // CRITICAL FIX: Save to localStorage FIRST to ensure immediate availability
-    localStorage.setItem("accessToken", data.accessToken);
-    sessionStorage.setItem("lastLoginAttempt", Date.now().toString());
-
-
-    // Then update state (this triggers re-renders)
-    setAccessToken(data.accessToken);
-
-    // Merge company data into user object for consistency with /me endpoint
-    const userWithCompany = { ...data.user };
-    if (data.company) {
-      userWithCompany.company = data.company;
-    }
-    setUser(userWithCompany);
-
-    // ============================================================
-    // 🔐 PHASE 1: IDENTITY KEY INITIALIZATION (Silent & Non-Blocking)
-    // Email/password authentication = user is finalized
-    // ============================================================
-    (async () => {
-      try {
-        const userId = data.user._id || data.user.id;
-
-        // Dynamically import to avoid circular dependencies
-        const identityKeyService = (await import('../services/identityKeyService')).default;
-
-        const result = await identityKeyService.initializeIdentityKeys(userId);
-
-        if (!result.existed) {
-          // New keypair generated - upload public key to server
-          await identityKeyService.uploadPublicKeyToServer();
-        } else {
+      const response = await axios.post(
+        `${process.env.REACT_APP_BACKEND_URL}/api/auth/login`,
+        {
+          email,
+          password,
+          ...deviceMetadata  // Include device info
+        },
+        {
+          headers: { "Content-Type": "application/json" },
+          withCredentials: true,
         }
+      );
 
-      } catch (err) {
-        console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        console.error('❌ [PHASE 1] FAILED — Identity initialization error:', err);
-        console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        // ❌ NO alert()
-        // ❌ NO throw
-        // Non-blocking: User can still access app, encryption will initialize lazily
+      const { data } = response;
+
+      // Save access token
+      if (data.accessToken) {
+        localStorage.setItem("accessToken", data.accessToken);
+        setAccessToken(data.accessToken);
       }
-    })();
-    // ============================================================
-    // END PHASE 1
-    // ============================================================
 
-    return data;
+      console.log("User data before validation:", data.user);
+      // Ensure data.user exists and is valid
+      if (!data || !data.user || typeof data.user !== 'object') {
+        throw new Error('Invalid user data received from login');
+      }
+      sessionStorage.setItem("lastLoginAttempt", Date.now().toString());
+
+
+      // Then update state (this triggers re-renders)
+      setAccessToken(data.accessToken);
+
+      // Merge company data into user object for consistency with /me endpoint
+      const userWithCompany = { ...data.user };
+      if (data.company) {
+        userWithCompany.company = data.company;
+      }
+      setUser(userWithCompany);
+
+      // ============================================================
+      // 🔐 PHASE 1: IDENTITY KEY INITIALIZATION (Silent & Non-Blocking)
+      // Email/password authentication = user is finalized
+      // ============================================================
+      (async () => {
+        try {
+          const userId = data.user._id || data.user.id;
+
+          // Dynamically import to avoid circular dependencies
+          const identityKeyService = (await import('../services/identityKeyService')).default;
+
+          // PHASE 1: Pass password for UMEK derivation
+          const result = await identityKeyService.initializeIdentityKeys(userId, password);
+
+          // Handle password-protected identity (defensive, shouldn't happen here)
+          if (result?.status === 'PASSWORD_REQUIRED') {
+            console.warn('🔐 [PHASE 1] Password required during login (unusual)');
+            setEncryptionReady(false);
+            return;
+          }
+
+          // Success - encryption ready
+          if (result?.status === 'READY') {
+            console.log('✅ [PHASE 1] Identity keys initialized successfully');
+            setEncryptionReady(true);
+            setRequiresPassword(false);
+          }
+        } catch (err) {
+          console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+          console.error('❌ [PHASE 1] HARD crypto failure:', err);
+          console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+
+          // Only real crypto failures block encryption
+          setEncryptionReady(false);
+
+          // ❌ NO alert()
+          // ❌ NO throw
+          // Non-blocking: User can still access app, encryption will initialize lazily
+        }
+      })();
+      // ============================================================
+      // END PHASE 1
+      // ============================================================
+
+
+      return data;
+    } catch (error) {
+      throw new Error(error.response?.data?.message || error.message || "Login failed");
+    }
   };
 
   // ------------------------------------------------------------
   // Logout
   // ------------------------------------------------------------
   const logout = async () => {
-    await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/auth/logout`, {
-      method: "POST",
-      credentials: "include",
-    });
+    try {
+      await axios.post(
+        `${process.env.REACT_APP_BACKEND_URL}/api/auth/logout`,
+        {},
+        {
+          headers: { "Content-Type": "application/json" },
+          withCredentials: true,
+        }
+      );
+    } catch (err) {
+      console.error("Logout error:", err);
+    }
 
     setUser(null);
     setAccessToken(null);
@@ -244,6 +292,9 @@ export const AuthProvider = ({ children }) => {
 
     // ✅ FIX 1: Reset encryption ready state
     setEncryptionReady(false);
+
+    // PHASE 3: Clear device ID on logout
+    clearDeviceId();
 
     // E2EE: Clear encryption keys from IndexedDB
     // This will be handled by service cleanup listeners
@@ -259,7 +310,7 @@ export const AuthProvider = ({ children }) => {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${accessToken}`,
+        Authorization: `Bearer ${accessToken} `,
       },
       credentials: "include",
       body: JSON.stringify(updates),
@@ -281,7 +332,7 @@ export const AuthProvider = ({ children }) => {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${accessToken}`,
+        Authorization: `Bearer ${accessToken} `,
       },
       credentials: "include",
       body: JSON.stringify({ oldPassword, newPassword }),
@@ -293,6 +344,39 @@ export const AuthProvider = ({ children }) => {
     return data;
   };
 
+  // ============================================================
+  // 🔐 UNLOCK ENCRYPTION (Password Unlock Modal)
+  // Retries identity key initialization with provided password
+  // ============================================================
+  const unlockEncryption = async (password) => {
+    if (!user) {
+      throw new Error('No user logged in');
+    }
+
+    const userId = user._id || user.id || user.sub;
+    if (!userId) {
+      throw new Error('Invalid user ID');
+    }
+
+    // Dynamically import to avoid circular dependencies
+    const identityKeyService = (await import('../services/identityKeyService')).default;
+
+    // Retry with password
+    const result = await identityKeyService.initializeIdentityKeys(userId, password);
+
+    // Check if password was incorrect (still returns PASSWORD_REQUIRED)
+    if (result?.status === 'PASSWORD_REQUIRED') {
+      throw new Error('Incorrect password');
+    }
+
+    // Success - encryption unlocked
+    if (result?.status === 'READY') {
+      setRequiresPassword(false);
+      setEncryptionReady(true);
+      console.log('✅ [UNLOCK] Encryption unlocked successfully');
+    }
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -301,6 +385,8 @@ export const AuthProvider = ({ children }) => {
         loading,
         accessToken,
         encryptionReady, // ✅ FIX 1: Export encryption ready state
+        requiresPassword, // ✅ Password unlock state
+        unlockEncryption, // ✅ Password unlock function
         login,
         logout,
         loadUser,

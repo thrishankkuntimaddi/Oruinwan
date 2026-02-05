@@ -479,6 +479,7 @@ const MainLayout = ({ children, sidePanel }) => {
                 </main>
             </div>
 
+
             {/* Overlays */}
             {showProfile && <ProfileMenu onClose={() => setShowProfile(false)} />}
         </div >

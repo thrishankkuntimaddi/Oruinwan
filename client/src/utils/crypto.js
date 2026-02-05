@@ -122,6 +122,106 @@ export async function deriveKeyFromPassword(password, salt, iterations = CRYPTO_
     }
 }
 
+// ==================== UMEK (User Master Encryption Key) ====================
+
+/**
+ * Generate UMEK (User Master Encryption Key)
+ * 256-bit random symmetric key used to encrypt identity private key
+ * 
+ * @returns {Promise<CryptoKey>} 256-bit AES-GCM UMEK
+ */
+export async function generateUMEK() {
+    try {
+        const umek = await crypto.subtle.generateKey(
+            {
+                name: CRYPTO_CONFIG.algorithm,
+                length: CRYPTO_CONFIG.keyLength
+            },
+            true, // extractable (needed for wrapping with server KEK)
+            ['encrypt', 'decrypt']
+        );
+        return umek;
+    } catch (error) {
+        console.error('Failed to generate UMEK:', error);
+        throw new Error('UMEK generation failed');
+    }
+}
+
+/**
+ * Derive UMEK from password (for password users)
+ * Same as deriveKeyFromPassword but semantically named for UMEK
+ * 
+ * @param {string} password - User's password
+ * @param {Uint8Array} salt - Random salt
+ * @returns {Promise<CryptoKey>} Derived UMEK
+ */
+export async function deriveUMEKFromPassword(password, salt) {
+    return deriveKeyFromPassword(password, salt);
+}
+
+/**
+ * Encrypt identity private key with UMEK
+ * 
+ * @param {string} privateKeyJWK - Identity private key in JWK format (JSON string)
+ * @param {CryptoKey} umek - UMEK
+ * @returns {Promise<{encryptedPrivateKey: string, iv: string}>} Base64-encoded encrypted key + IV
+ */
+export async function encryptIdentityPrivateKey(privateKeyJWK, umek) {
+    try {
+        const iv = generateIV();
+        const privateKeyBytes = new TextEncoder().encode(privateKeyJWK);
+
+        const ciphertext = await crypto.subtle.encrypt(
+            {
+                name: CRYPTO_CONFIG.algorithm,
+                iv: iv,
+                tagLength: CRYPTO_CONFIG.tagLength
+            },
+            umek,
+            privateKeyBytes
+        );
+
+        return {
+            encryptedPrivateKey: arrayBufferToBase64(ciphertext),
+            iv: arrayBufferToBase64(iv)
+        };
+    } catch (error) {
+        console.error('Failed to encrypt identity private key:', error);
+        throw new Error('Identity private key encryption failed');
+    }
+}
+
+/**
+ * Decrypt identity private key with UMEK
+ * 
+ * @param {string} encryptedPrivateKeyBase64 - Base64-encoded encrypted private key
+ * @param {string} ivBase64 - Base64-encoded IV
+ * @param {CryptoKey} umek - UMEK
+ * @returns {Promise<string>} Decrypted private key JWK (JSON string)
+ */
+export async function decryptIdentityPrivateKey(encryptedPrivateKeyBase64, ivBase64, umek) {
+    try {
+        const encryptedPrivateKey = base64ToArrayBuffer(encryptedPrivateKeyBase64);
+        const iv = base64ToArrayBuffer(ivBase64);
+
+        const decryptedBytes = await crypto.subtle.decrypt(
+            {
+                name: CRYPTO_CONFIG.algorithm,
+                iv: iv,
+                tagLength: CRYPTO_CONFIG.tagLength
+            },
+            umek,
+            encryptedPrivateKey
+        );
+
+        return new TextDecoder().decode(decryptedBytes);
+    } catch (error) {
+        console.error('Failed to decrypt identity private key:', error);
+        throw new Error('Identity private key decryption failed');
+    }
+}
+
+
 // ==================== THREAD KEY DERIVATION (HKDF) ====================
 
 /**
@@ -501,6 +601,13 @@ const cryptoUtils = {
     // Key derivation
     deriveKeyFromPassword,
     deriveThreadKey,
+
+    // UMEK
+    generateUMEK,
+    deriveUMEKFromPassword,
+    encryptIdentityPrivateKey,
+    decryptIdentityPrivateKey,
+
 
     // Encryption/Decryption
     encryptAESGCM,

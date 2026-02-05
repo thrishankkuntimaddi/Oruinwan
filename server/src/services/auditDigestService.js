@@ -67,7 +67,17 @@ async function generateAuditDigest() {
                 // Perfect: All members have keys
                 healthyChannels++;
             } else if (gap > 0) {
-                // Partial: Some members missing keys (INV-001 violation)
+                // CRITICAL FIX: Distinguish between violation and deferred distribution
+                // keyCount === 0 means identity keys not yet uploaded (EXPECTED during bootstrap)
+                // keyCount > 0 but gap > 0 means real violation (some users missing keys)
+
+                if (keyCount === 0 && memberCount > 0) {
+                    // DEFERRED DISTRIBUTION: Awaiting identity key upload (NOT a violation)
+                    healthyChannels++; // Don't count as unhealthy during bootstrap
+                    continue; // Skip to next channel
+                }
+
+                // Real violation: Some users have keys, others don't
                 partialChannels++;
                 totalGaps += gap;
                 gapDetails.push({

@@ -55,7 +55,7 @@ const LoginForm = ({ onSwitch, initialEmail = "" }) => {
     if (!isFormValid) return;
 
     try {
-      const response = await login(formData);
+      const response = await login(formData.email, formData.password);
 
 
       showToast("Login successful!", "success");

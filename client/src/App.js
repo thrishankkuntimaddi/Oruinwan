@@ -114,6 +114,10 @@ import RequireDepartmentManager from "./components/RequireDepartmentManager"; //
 import VerifiedOnlyRoute from "./components/VerifiedOnlyRoute"; // Block pending users
 import ScrollToTop from "./components/ScrollToTop"; // Fix scroll position on route change
 
+// E2EE Password Unlock
+import PasswordUnlockModal from "./components/security/PasswordUnlockModal";
+import { useAuth } from "./contexts/AuthContext";
+
 
 function App() {
 
@@ -585,6 +589,9 @@ function App() {
                           />
 
                         </Routes>
+
+                        {/* 🔐 Global Password Unlock Modal (E2EE) - Renders across all routes */}
+                        <GlobalPasswordUnlockModal />
                       </BlogsProvider>
                     </TasksProvider>
                   </NotesProvider>
@@ -596,6 +603,15 @@ function App() {
       </ThemeProvider>
     </ToastProvider>
   );
+}
+
+// Global Password Unlock Component
+function GlobalPasswordUnlockModal() {
+  const { requiresPassword, unlockEncryption } = useAuth();
+
+  if (!requiresPassword) return null;
+
+  return <PasswordUnlockModal onSubmit={unlockEncryption} />;
 }
 
 export default App;
