@@ -136,12 +136,10 @@ const FeatureShowcase = () => {
 
     if (user) return null;
 
-    if (isLoading) {
-        return <LoadingScreen onComplete={() => setIsLoading(false)} />;
-    }
-
     return (
-        <div className="min-h-screen w-full bg-white dark:bg-[#030712] text-slate-900 dark:text-white transition-colors duration-500">
+        <div className="min-h-screen w-full bg-white dark:bg-[#030712] text-slate-900 dark:text-white transition-colors duration-500 relative">
+            {isLoading && <LoadingScreen onComplete={() => setIsLoading(false)} />}
+
 
             <style>{`
                 @keyframes float-slow {

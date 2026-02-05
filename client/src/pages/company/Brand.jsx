@@ -104,8 +104,8 @@ const Brand = () => {
                     <p className="text-indigo-200 mb-8">
                         For media inquiries, interviews, or press materials:
                     </p>
-                    <a href="mailto:kthrishank.9@gmail.com" className="inline-block px-8 py-4 bg-white text-indigo-900 font-bold rounded-xl hover:bg-indigo-50 transition-colors">
-                        kthrishank.9@gmail.com
+                    <a href="mailto:chttrixchat@gmail.com" className="inline-block px-8 py-4 bg-white text-indigo-900 font-bold rounded-xl hover:bg-indigo-50 transition-colors">
+                        chttrixchat@gmail.com
                     </a>
                 </div>
             </section>

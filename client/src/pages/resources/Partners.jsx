@@ -220,8 +220,8 @@ const Partners = () => {
 
                     <div className="bg-white/10 backdrop-blur-md rounded-2xl p-8 border border-white/20 mb-8">
                         <p className="text-sm font-bold uppercase tracking-widest text-indigo-300 mb-4">Send Requests To</p>
-                        <a href="mailto:kthrishank.9@gmail.com" className="text-3xl md:text-5xl font-black hover:text-indigo-300 transition-colors break-all">
-                            kthrishank.9@gmail.com
+                        <a href="mailto:chttrixchat@gmail.com" className="text-3xl md:text-5xl font-black hover:text-indigo-300 transition-colors break-all">
+                            chttrixchat@gmail.com
                         </a>
                         <p className="mt-4 text-sm text-indigo-300">All partnership requests are reviewed manually.</p>
                     </div>

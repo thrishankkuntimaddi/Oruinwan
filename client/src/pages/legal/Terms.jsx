@@ -341,8 +341,8 @@ const ContactSection = () => (
                     <h3 className="text-2xl font-bold mb-2">Legal Questions?</h3>
                     <p className="opacity-90 mb-6">Contact our Legal Team.</p>
                 </div>
-                <a href="mailto:kthrishank.9@gmail.com" className="bg-white text-slate-900 px-6 py-3 rounded-xl font-bold text-center hover:bg-slate-100 transition-colors">
-                    kthrishank.9@gmail.com
+                <a href="mailto:chttrixchat@gmail.com" className="bg-white text-slate-900 px-6 py-3 rounded-xl font-bold text-center hover:bg-slate-100 transition-colors">
+                    chttrixchat@gmail.com
                 </a>
             </div>
         </div>

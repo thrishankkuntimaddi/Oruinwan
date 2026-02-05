@@ -114,7 +114,7 @@ const Security = () => {
                 <div className="p-6 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-[#0f172a]/50">
                     <div className="text-xs text-slate-400 leading-relaxed">
                         Need tailored security advice?<br />
-                        <a href="mailto:kthrishank.9@gmail.com" className="text-indigo-600 dark:text-indigo-400 hover:underline">Contact our dedicated team</a>
+                        <a href="mailto:chttrixchat@gmail.com" className="text-indigo-600 dark:text-indigo-400 hover:underline">Contact our dedicated team</a>
                     </div>
                 </div>
             </aside>
@@ -391,7 +391,7 @@ const ComplianceSection = () => (
         </div>
 
         <div className="flex flex-col md:flex-row gap-6">
-            <a href="mailto:kthrishank.9@gmail.com" className="flex-1 p-6 bg-white dark:bg-[#111827] rounded-3xl border border-slate-200 dark:border-slate-800 hover:border-indigo-500 transition-colors group">
+            <a href="mailto:chttrixchat@gmail.com" className="flex-1 p-6 bg-white dark:bg-[#111827] rounded-3xl border border-slate-200 dark:border-slate-800 hover:border-indigo-500 transition-colors group">
                 <Mail className="text-indigo-500 mb-4 group-hover:scale-110 transition-transform" size={28} />
                 <h3 className="font-bold text-slate-900 dark:text-white mb-2">Report a Vulnerability</h3>
                 <p className="text-sm text-slate-500">Contact our security team securely.</p>

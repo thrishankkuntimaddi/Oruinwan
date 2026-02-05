@@ -193,7 +193,7 @@ const ApplicationReview = () => {
                     <div className="text-center">
                         <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">Need assistance?</p>
                         <a
-                            href="mailto:kthrishank.9@gmail.com"
+                            href="mailto:chttrixchat@gmail.com"
                             className="inline-flex items-center gap-2 text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 font-semibold"
                         >
                             <Mail size={16} />

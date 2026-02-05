@@ -378,8 +378,8 @@ const ContactSection = () => (
                     <h3 className="text-2xl font-bold mb-2">Privacy Questions?</h3>
                     <p className="opacity-90 mb-6">Contact our Data Protection Officer.</p>
                 </div>
-                <a href="mailto:kthrishank.9@gmail.com" className="bg-white text-indigo-700 px-6 py-3 rounded-xl font-bold text-center hover:bg-indigo-50 transition-colors">
-                    kthrishank.9@gmail.com
+                <a href="mailto:chttrixchat@gmail.com" className="bg-white text-indigo-700 px-6 py-3 rounded-xl font-bold text-center hover:bg-indigo-50 transition-colors">
+                    chttrixchat@gmail.com
                 </a>
             </div>
         </div>

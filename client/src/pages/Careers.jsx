@@ -73,8 +73,8 @@ const Careers = () => {
                         <p className="font-medium text-indigo-900 dark:text-indigo-200 mb-4">
                             If you're interested in working with us in the future, reach out with a short introduction:
                         </p>
-                        <a href="mailto:kthrishank.9@gmail.com" className="inline-flex items-center gap-2 text-xl font-black text-indigo-600 dark:text-indigo-400 hover:underline">
-                            <Mail size={20} /> kthrishank.9@gmail.com
+                        <a href="mailto:chttrixchat@gmail.com" className="inline-flex items-center gap-2 text-xl font-black text-indigo-600 dark:text-indigo-400 hover:underline">
+                            <Mail size={20} /> chttrixchat@gmail.com
                         </a>
                     </div>
                 </div>
