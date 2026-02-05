@@ -305,12 +305,12 @@ const ChannelsPanel = ({ title }) => {
             <div
                 onClick={handleClick}
                 className={`px-3 py-2 mx-2 transition-all duration-200 rounded-lg cursor-pointer flex items-center justify-between group relative ${isSelectionMode && isSelected
-                        ? "bg-blue-50/80 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800"
-                        : isActive
-                            ? "bg-gradient-to-r from-blue-50 to-white dark:from-blue-900/30 dark:to-gray-900/50 text-blue-600 dark:text-blue-400"
-                            : !item.isMember && item.isDiscoverable
-                                ? "opacity-60 hover:opacity-100 hover:bg-gray-100 dark:hover:bg-gray-800/60 text-gray-500 dark:text-gray-400"
-                                : "hover:bg-gray-100 dark:hover:bg-gray-800/60 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
+                    ? "bg-blue-50/80 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800"
+                    : isActive
+                        ? "bg-gradient-to-r from-blue-50 to-white dark:from-blue-900/30 dark:to-gray-900/50 text-blue-600 dark:text-blue-400"
+                        : !item.isMember && item.isDiscoverable
+                            ? "opacity-60 hover:opacity-100 hover:bg-gray-100 dark:hover:bg-gray-800/60 text-gray-500 dark:text-gray-400"
+                            : "hover:bg-gray-100 dark:hover:bg-gray-800/60 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
                     }`}
             >
                 {/* Active Accent Bar */}
@@ -363,9 +363,12 @@ const ChannelsPanel = ({ title }) => {
         <div className="flex flex-col h-full bg-gray-50/50 dark:bg-gray-900">
             {/* Header */}
             <div className="h-16 flex items-center justify-between px-5 bg-white dark:bg-gray-900 shrink-0 border-b border-gray-200 dark:border-gray-800">
-                <h2 className="font-bold text-lg text-gray-800 dark:text-gray-100 tracking-tight">
-                    Channels
-                </h2>
+                <div className="flex flex-col">
+                    <h2 className="font-bold text-lg text-gray-800 dark:text-gray-100 tracking-tight leading-tight">
+                        {activeWorkspace?.name || 'Channels'}
+                    </h2>
+                    <span className="text-xs text-gray-500 font-medium">Channels</span>
+                </div>
                 <div className="flex items-center gap-1">
                     <button
                         onClick={() => setIsSelectionMode(!isSelectionMode)}

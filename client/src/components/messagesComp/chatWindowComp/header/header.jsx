@@ -111,7 +111,7 @@ export default function Header({
           {chat.type === 'channel' ? (
             // Channel Icon Logic
             chat.image ? (
-              <img src={chat.image} alt={chat.name} className="w-8 h-8 rounded object-cover shadow-sm bg-gray-50" />
+              <img src={chat.image} alt={chat.name} className="w-8 h-8 rounded object-cover shadow-sm bg-gray-50 dark:bg-gray-800" />
             ) : (
               <div
                 className={`w-8 h-8 rounded flex items-center justify-center font-medium text-sm ${chat.name?.toLowerCase().replace(/^#/, '') === 'announcements'
@@ -135,7 +135,7 @@ export default function Header({
             // DM Avatar with Online Indicator
             <div className="relative">
               {chat.image ? (
-                <img src={chat.image} alt={chat.name} className="w-8 h-8 rounded object-cover shadow-sm bg-gray-50" />
+                <img src={chat.image} alt={chat.name} className="w-8 h-8 rounded object-cover shadow-sm bg-gray-50 dark:bg-gray-800" />
               ) : (
                 <div className="w-8 h-8 rounded bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold text-sm">
                   {(chat.name || chat.username || '?').charAt(0).toUpperCase()}
@@ -178,7 +178,7 @@ export default function Header({
           {/* Selection Mode Actions */}
           {selectMode && (
             <div className="flex items-center gap-2 animate-fade-in">
-              <span className="text-sm font-medium text-blue-600 bg-blue-50 px-3 py-1 rounded-full">
+              <span className="text-sm font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-3 py-1 rounded-full">
                 {selectedCount} selected
               </span>
               <button
@@ -240,7 +240,7 @@ export default function Header({
                     setShowSearch((s) => !s);
                     setShowMenu(false);
                   }}
-                  className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded transition-colors"
+                  className="p-1.5 text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded transition-colors"
                   title="Search"
                 >
                   <Search size={16} />

@@ -81,7 +81,7 @@ const IconSidebar = ({ onProfileClick }) => {
     ];
 
     return (
-        <div className="w-[70px] bg-white dark:bg-gray-900 flex flex-col items-center py-4 border-r border-gray-200 dark:border-gray-800 z-20 shadow-sm">
+        <div className="w-[70px] bg-white dark:bg-gray-900 flex flex-col items-center py-4 border-r border-gray-200 dark:border-gray-800 z-50 shadow-sm relative shrink-0">
             {/* Top Space */}
             <div className="h-2"></div>
 
@@ -111,8 +111,8 @@ const IconSidebar = ({ onProfileClick }) => {
                         const icon = activeWorkspace?.icon || 'rocket';
                         return iconMap[icon] || iconMap['rocket'];
                     })()}
-                    <div className="absolute -bottom-1 -right-1 bg-white rounded-full p-0.5 border border-gray-200">
-                        <svg className="w-2 h-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M19 9l-7 7-7-7" /></svg>
+                    <div className="absolute -bottom-1 -right-1 bg-white dark:bg-gray-800 rounded-full p-0.5 border border-gray-200 dark:border-gray-700">
+                        <svg className="w-2 h-2 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M19 9l-7 7-7-7" /></svg>
                     </div>
                 </button>
 
@@ -191,7 +191,7 @@ const IconSidebar = ({ onProfileClick }) => {
                                 {item.icon}
                             </button>
                             {/* Tooltip */}
-                            <div className="absolute left-14 top-1/2 -translate-y-1/2 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50 shadow-lg">
+                            <div className="absolute left-14 top-1/2 -translate-y-1/2 bg-gray-800 dark:bg-gray-700 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50 shadow-lg">
                                 {item.label}
                             </div>
                         </div>
@@ -210,7 +210,7 @@ const IconSidebar = ({ onProfileClick }) => {
                         <Settings size={20} strokeWidth={2} />
                     </button>
                     {/* Tooltip */}
-                    <div className="absolute left-14 top-1/2 -translate-y-1/2 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50 shadow-lg">
+                    <div className="absolute left-14 top-1/2 -translate-y-1/2 bg-gray-800 dark:bg-gray-700 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50 shadow-lg">
                         Settings
                     </div>
                 </div>

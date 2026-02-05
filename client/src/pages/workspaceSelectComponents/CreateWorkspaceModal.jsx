@@ -40,11 +40,11 @@ const CreateWorkspaceModal = ({
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-fadeIn">
-            <div className="bg-white dark:bg-slate-900 w-full max-w-5xl h-[80vh] min-h-[600px] rounded-3xl shadow-2xl overflow-hidden animate-scaleIn flex flex-col md:flex-row border border-slate-200 dark:border-slate-800">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-0 md:p-4 bg-slate-900/60 backdrop-blur-md animate-fadeIn">
+            <div className="bg-white dark:bg-slate-900 w-full h-full md:h-[80vh] md:max-w-5xl md:min-h-[600px] md:rounded-3xl shadow-2xl overflow-hidden animate-scaleIn flex flex-col md:flex-row border-none md:border border-slate-200 dark:border-slate-800">
 
-                {/* Sidebar Steps (Left) */}
-                <div className="w-full md:w-64 bg-slate-50/80 dark:bg-slate-950/50 border-b md:border-b-0 md:border-r border-slate-200 dark:border-slate-800 p-6 flex flex-col justify-between backdrop-blur-sm">
+                {/* Sidebar Steps (Left) - Hidden on Mobile, Visible on Desktop */}
+                <div className="hidden md:flex w-64 bg-slate-50/80 dark:bg-slate-950/50 border-r border-slate-200 dark:border-slate-800 p-6 flex-col justify-between backdrop-blur-sm">
                     <div>
                         <h3 className="font-bold text-xl text-slate-800 dark:text-white mb-8 px-2 flex items-center gap-2">
                             <Rocket className="text-indigo-600" />
@@ -63,17 +63,17 @@ const CreateWorkspaceModal = ({
                                     onClick={() => createStep > s.step && setCreateStep(s.step)}
                                     disabled={createStep < s.step}
                                     className={`w-full flex items-center gap-3 p-3 rounded-xl text-left transition-all ${createStep === s.step
-                                            ? 'bg-white dark:bg-slate-800 shadow-lg shadow-indigo-500/5 border border-indigo-100 dark:border-indigo-900'
-                                            : createStep > s.step
-                                                ? 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
-                                                : 'opacity-50 cursor-not-allowed text-slate-400'
+                                        ? 'bg-white dark:bg-slate-800 shadow-lg shadow-indigo-500/5 border border-indigo-100 dark:border-indigo-900'
+                                        : createStep > s.step
+                                            ? 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                                            : 'opacity-50 cursor-not-allowed text-slate-400'
                                         }`}
                                 >
                                     <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm transition-all ${createStep === s.step
-                                            ? 'bg-indigo-600 text-white'
-                                            : createStep > s.step
-                                                ? 'bg-green-500 text-white'
-                                                : 'bg-slate-200 dark:bg-slate-800 text-slate-500'
+                                        ? 'bg-indigo-600 text-white'
+                                        : createStep > s.step
+                                            ? 'bg-green-500 text-white'
+                                            : 'bg-slate-200 dark:bg-slate-800 text-slate-500'
                                         }`}>
                                         {createStep > s.step ? <CheckCircle2 size={16} /> : s.step}
                                     </div>
@@ -103,15 +103,22 @@ const CreateWorkspaceModal = ({
                 {/* Content Area (Right) */}
                 <div className="flex-1 flex flex-col bg-white dark:bg-slate-900 relative">
                     {/* Close button for mobile */}
-                    <button
-                        onClick={onClose}
-                        className="absolute top-4 right-4 md:hidden p-2 bg-slate-100 dark:bg-slate-800 rounded-lg text-slate-500"
-                    >
-                        <X size={20} />
-                    </button>
+                    {/* Mobile Header (Visible only on Mobile) */}
+                    <div className="md:hidden flex items-center justify-between p-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50">
+                        <div className="flex items-center gap-2">
+                            <Rocket className="text-indigo-600" size={20} />
+                            <span className="font-bold text-slate-900 dark:text-white">Step {createStep}/4</span>
+                        </div>
+                        <button
+                            onClick={onClose}
+                            className="p-2 bg-slate-100 dark:bg-slate-800 rounded-full text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors"
+                        >
+                            <X size={18} />
+                        </button>
+                    </div>
 
-                    <div className="flex-1 overflow-y-auto custom-scrollbar p-6 lg:p-10">
-                        <form id="create-workspace-form" onSubmit={onSubmit} className="max-w-3xl mx-auto h-full flex flex-col justify-center">
+                    <div className="flex-1 overflow-y-auto custom-scrollbar p-4 md:p-6 lg:p-10">
+                        <form id="create-workspace-form" onSubmit={onSubmit} className="max-w-3xl mx-auto min-h-0 md:h-full flex flex-col justify-start md:justify-center pb-2 md:pb-0">
 
                             {/* Step 1: Basics */}
                             {createStep === 1 && (
@@ -135,8 +142,8 @@ const CreateWorkspaceModal = ({
                                                         setNameError("");
                                                     }}
                                                     className={`w-full px-5 py-4 bg-slate-50 dark:bg-slate-950/50 border ${nameError
-                                                            ? 'border-red-300 focus:border-red-500 ring-4 ring-red-500/10'
-                                                            : 'border-slate-200 dark:border-slate-800 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10'
+                                                        ? 'border-red-300 focus:border-red-500 ring-4 ring-red-500/10'
+                                                        : 'border-slate-200 dark:border-slate-800 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10'
                                                         } rounded-2xl focus:outline-none transition-all text-lg font-medium text-slate-900 dark:text-white`}
                                                 />
                                                 {nameError && <p className="mt-2 text-xs font-bold text-red-500 animate-pulse flex items-center gap-1"><AlertCircle size={12} /> {nameError}</p>}
@@ -164,8 +171,8 @@ const CreateWorkspaceModal = ({
                                                             type="button"
                                                             onClick={() => setCreateData({ ...createData, icon: iconName })}
                                                             className={`aspect-square rounded-2xl border-2 transition-all flex items-center justify-center ${createData.icon === iconName
-                                                                    ? 'border-indigo-600 bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400 shadow-md ring-4 ring-indigo-500/10'
-                                                                    : 'border-slate-100 dark:border-slate-800 text-slate-400 hover:border-indigo-200 hover:bg-slate-50 dark:hover:bg-slate-800'
+                                                                ? 'border-indigo-600 bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400 shadow-md ring-4 ring-indigo-500/10'
+                                                                : 'border-slate-100 dark:border-slate-800 text-slate-400 hover:border-indigo-200 hover:bg-slate-50 dark:hover:bg-slate-800'
                                                                 }`}
                                                         >
                                                             <IconCmp size={24} />
@@ -309,8 +316,8 @@ const CreateWorkspaceModal = ({
                                                 <div className="pt-6 border-t border-slate-200 dark:border-slate-800 mt-auto">
                                                     <label className="flex items-start gap-3 cursor-pointer group">
                                                         <div className={`mt-0.5 w-5 h-5 rounded border flex items-center justify-center transition-all shrink-0 ${termsAccepted
-                                                                ? 'bg-indigo-600 border-indigo-600 text-white'
-                                                                : 'bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-600 group-hover:border-indigo-400'
+                                                            ? 'bg-indigo-600 border-indigo-600 text-white'
+                                                            : 'bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-600 group-hover:border-indigo-400'
                                                             }`}>
                                                             {termsAccepted && <Check size={14} strokeWidth={3} />}
                                                         </div>
@@ -405,8 +412,8 @@ const CreateWorkspaceModal = ({
                                 }}
                                 disabled={createStep === 3 && !termsAccepted}
                                 className={`px-8 py-3 bg-indigo-600 text-white font-bold rounded-xl transition-all shadow-lg shadow-indigo-500/20 flex items-center gap-2 ${createStep === 3 && !termsAccepted
-                                        ? 'opacity-50 cursor-not-allowed bg-slate-400 shadow-none'
-                                        : 'hover:bg-indigo-700 hover:shadow-indigo-500/30 hover:-translate-y-0.5'
+                                    ? 'opacity-50 cursor-not-allowed bg-slate-400 shadow-none'
+                                    : 'hover:bg-indigo-700 hover:shadow-indigo-500/30 hover:-translate-y-0.5'
                                     }`}
                             >
                                 Next Step <ArrowRight size={18} />

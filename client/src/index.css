@@ -19,26 +19,46 @@
   --input-placeholder: #9ca3af;
   --input-ring: rgba(0, 123, 255, 0.25);
   --bg-card: #ffffff;
+
+  --text-muted: #6b7280;
+  /* Gray-500 */
+  --highlight-bg-strong: rgba(254, 243, 199, 0.8);
+  --highlight-bg-weak: rgba(254, 243, 199, 0.3);
 }
 
 /* Dark Mode Overrides */
 .dark {
-  --bg-primary: #0f172a; /* Slate-900 */
-  --bg-secondary: #1e293b; /* Slate-800 */
-  --bg-card: #1e293b; /* Slate-800 */
-  
-  --border-color: #334155; /* Slate-700 */
-  --text-primary: #f8fafc; /* Slate-50 */
-  --text-secondary: #94a3b8; /* Slate-400 */
-  
+  --bg-primary: #0f172a;
+  /* Slate-900 */
+  --bg-secondary: #1e293b;
+  /* Slate-800 */
+  --bg-card: #1e293b;
+  /* Slate-800 */
+
+  --border-color: #334155;
+  /* Slate-700 */
+  --text-primary: #f8fafc;
+  /* Slate-50 */
+  --text-secondary: #94a3b8;
+  /* Slate-400 */
+
   --shadow-minimal: 0 1px 3px rgba(0, 0, 0, 0.5);
 
   /* Input Dark Mode */
-  --input-bg: #1e293b; /* Slate-800 */
-  --input-text: #f8fafc; /* Slate-50 */
-  --input-border: #334155; /* Slate-700 */
-  --input-placeholder: #64748b; /* Slate-500 */
+  --input-bg: #1e293b;
+  /* Slate-800 */
+  --input-text: #f8fafc;
+  /* Slate-50 */
+  --input-border: #334155;
+  /* Slate-700 */
+  --input-placeholder: #64748b;
+  /* Slate-500 */
   --input-ring: rgba(56, 189, 248, 0.25);
+
+  --text-muted: #94a3b8;
+  /* Slate-400 */
+  --highlight-bg-strong: rgba(254, 243, 199, 0.2);
+  --highlight-bg-weak: rgba(254, 243, 199, 0.05);
 }
 
 /* Standard Theme Utilities */
@@ -134,6 +154,13 @@ body,
 }
 
 @keyframes blink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0; }
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0;
+  }
 }

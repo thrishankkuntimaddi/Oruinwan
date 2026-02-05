@@ -250,14 +250,14 @@ function ChannelMessageItem({
                                         key={i}
                                         src={url}
                                         alt="Replier"
-                                        className="w-5 h-5 rounded hover:z-10 relative bg-white border border-white object-cover"
+                                        className="w-5 h-5 rounded hover:z-10 relative bg-white dark:bg-gray-800 border border-white dark:border-gray-900 object-cover"
                                     />
                                 ))
                             ) : (
                                 /* Fallback if no avatars (e.g. backend not updated yet) */
                                 <div className="flex -space-x-1">
-                                    <div className="w-5 h-5 rounded bg-gray-200 border border-white"></div>
-                                    <div className="w-5 h-5 rounded bg-gray-300 border border-white"></div>
+                                    <div className="w-5 h-5 rounded bg-gray-200 dark:bg-gray-600 border border-white dark:border-gray-900"></div>
+                                    <div className="w-5 h-5 rounded bg-gray-300 dark:bg-gray-500 border border-white dark:border-gray-900"></div>
                                 </div>
                             )}
                         </div>

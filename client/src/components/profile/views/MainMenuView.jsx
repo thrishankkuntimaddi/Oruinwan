@@ -7,7 +7,7 @@ import { Settings, HelpCircle, LogOut, ChevronRight } from 'lucide-react';
  */
 const MainMenuView = ({ user, status, onStatusChange, onNavigate, onLogout }) => {
     return (
-        <div className="w-72 bg-white dark:bg-gray-900 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col animate-fade-in">
+        <div className="w-full md:w-72 max-w-xs bg-white dark:bg-gray-900 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col animate-fade-in">
             {/* Header */}
             <div className="p-4 bg-gray-50/50 dark:bg-gray-800/50">
                 <div

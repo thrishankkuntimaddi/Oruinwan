@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
     User, Lock, Palette, Bell, Globe, Shield, Laptop, Settings as SettingsIcon,
-    ChevronRight, Search, ArrowLeft
+    ChevronRight, Search, ArrowLeft, Menu
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
@@ -26,8 +26,17 @@ const Settings = () => {
     const { showToast } = useToast();
     const { theme, toggleTheme } = useTheme();
 
+    // Mobile Menu State
+    const [showMobileMenu, setShowMobileMenu] = useState(true);
+
     // Smart back navigation - return to previous page if from workspace, else /workspaces
     const handleBackNavigation = () => {
+        // Mobile specific: If viewing content, go back to menu
+        if (window.innerWidth < 768 && !showMobileMenu) {
+            setShowMobileMenu(true);
+            return;
+        }
+
         const from = location.state?.from;
         if (from && from.startsWith('/workspace/')) {
             navigate(from);
@@ -191,7 +200,9 @@ const Settings = () => {
     return (
         <div className="min-h-screen bg-slate-50 dark:bg-[#030712] transition-colors duration-300 flex text-slate-900 dark:text-slate-100 font-sans">
             {/* Sidebar Navigation */}
-            <aside className="w-64 bg-white dark:bg-[#0B0F19] border-r border-slate-200 dark:border-white/5 flex flex-col fixed inset-y-0 z-20">
+            <aside className={`fixed inset-y-0 z-20 flex flex-col bg-white dark:bg-[#0B0F19] border-r border-slate-200 dark:border-white/5 transition-all duration-300 
+                ${showMobileMenu ? 'translate-x-0' : '-translate-x-full md:translate-x-0'} 
+                w-full md:w-64`}>
                 <div className="h-20 flex items-center px-6 border-b border-slate-200 dark:border-white/5">
                     <div className="flex items-center gap-3 cursor-pointer" onClick={handleBackNavigation}>
                         <img src="/chttrix-logo.jpg" alt="Logo" className="w-8 h-8 rounded-lg shadow-sm" />
@@ -206,7 +217,10 @@ const Settings = () => {
                         return (
                             <button
                                 key={section.id}
-                                onClick={() => setActiveSection(section.id)}
+                                onClick={() => {
+                                    setActiveSection(section.id);
+                                    setShowMobileMenu(false); // Close menu on mobile selection
+                                }}
                                 className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all duration-300 group ${isActive
                                     ? 'bg-indigo-600 text-white font-bold shadow-lg shadow-indigo-500/30 scale-[1.02]'
                                     : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 font-medium hover:pl-5'
@@ -236,12 +250,21 @@ const Settings = () => {
             </aside>
 
             {/* Main Content */}
-            <main className="flex-1 ml-64 overflow-hidden h-screen flex flex-col relative bg-slate-50 dark:bg-[#030712]">
+            <main className={`flex-1 h-screen flex flex-col relative bg-slate-50 dark:bg-[#030712] transition-all duration-300
+                ${showMobileMenu ? 'hidden md:flex' : 'flex'}
+                md:ml-64 w-full`}>
                 {/* Top Header */}
                 <header className="h-20 px-8 lg:px-12 flex items-center justify-between border-b border-slate-200/60 dark:border-white/5 bg-white/70 dark:bg-[#030712]/70 backdrop-blur-2xl z-10 sticky top-0 transition-all duration-300">
                     {/* Left: Title */}
                     <div className="flex items-center gap-3">
-                        <div className="p-2 bg-indigo-50 dark:bg-white/5 rounded-xl text-indigo-600 dark:text-white shadow-sm ring-1 ring-black/5 dark:ring-white/10">
+                        <button
+                            className="md:hidden p-2 -ml-2 mr-1 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5 rounded-lg transition-colors"
+                            onClick={() => setShowMobileMenu(true)}
+                        >
+                            <Menu size={24} />
+                        </button>
+
+                        <div className="hidden md:block p-2 bg-indigo-50 dark:bg-white/5 rounded-xl text-indigo-600 dark:text-white shadow-sm ring-1 ring-black/5 dark:ring-white/10">
                             <SettingsIcon size={24} />
                         </div>
                         <div>
@@ -273,7 +296,7 @@ const Settings = () => {
                     </button>
                 </header>
 
-                <div className="flex-1 overflow-y-auto p-8 lg:p-12 custom-scrollbar">
+                <div className="flex-1 overflow-y-auto p-4 md:p-8 lg:p-12 custom-scrollbar">
                     <div className="max-w-4xl mx-auto space-y-10 pb-32">
                         {/* Content Area - No Redundant Header */
                         }
