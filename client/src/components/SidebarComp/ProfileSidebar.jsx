@@ -307,10 +307,10 @@ const ProfileMenu = ({ onClose }) => {
       />
 
       {/* Backdrop to close */}
-      <div className="fixed inset-0 z-40" onClick={onClose}></div>
+      <div className="fixed inset-0 z-[90]" onClick={onClose}></div>
 
       {/* Popover Positioned Bottom-Left */}
-      <div className="fixed bottom-16 left-16 z-50 animate-fade-in-up">
+      <div className="fixed bottom-16 left-16 z-[100] animate-fade-in-up">
         {view === "menu" && (
           <MainMenuView
             user={user}
