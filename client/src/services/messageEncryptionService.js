@@ -35,6 +35,13 @@ export async function encryptMessageForSending(plaintext, conversationId, conver
             encryptionKey = await deriveThreadKey(encryptionKey, parentMessageId);
         }
 
+        // 🔴 FIX 1 — MANDATORY: Validate encryption key before using Web Crypto API
+        // Return status instead of throwing to prevent React crashes
+        if (!(encryptionKey instanceof CryptoKey)) {
+            console.warn('⚠️ [Encryption Guard] Key not ready, blocking send');
+            return { status: 'ENCRYPTION_NOT_READY' };
+        }
+
         // Generate random IV
         const iv = generateIV();
 

@@ -611,9 +611,15 @@ async function generateConversationKeyServerSide(conversationId, conversationTyp
             }
         }
 
-        // HARD FAIL if creator has no E2EE key
+        // 🔴 FIX 3 — Accept deferred channel encryption
+        // ⚠️ WARN if creator has no E2EE key, but allow creation
+        // Channel will be read-only until automatic repair distributes keys
         if (!creatorHasKey) {
-            throw new Error('IDENTITY_KEY_REQUIRED: Creator must have E2EE public key to create encrypted channel');
+            console.warn(`⚠️ [PHASE 5] Creator ${creatorId} has no E2EE key - channel will be encrypted when identity is available`);
+            console.warn(`   Channel created with workspace wrapping only`);
+            console.warn(`   Keys will be distributed via automatic repair when creator's identity is uploaded`);
+            console.warn(`   ⚠️ INVARIANT: Channel will be READ-ONLY until repair completes (enforced by client-side guards)`);
+            // ✅ DO NOT THROW - allow creation, repair will fix this later
         }
 
         // WARN if some members missing keys, but allow creation
@@ -893,7 +899,70 @@ async function repairConversationKeyForUser(channelId, userId) {
         };
     }
 
-    
+
+
+}
+
+// ==================== PHASE 2: AUTOMATIC REPAIR ====================
+
+/**
+ * PHASE 2: Repair ALL channels where user is member but missing encryption key
+ * Automatically called when user identity becomes available
+ * 
+ * @param {String} userId - User ID to repair
+ * @returns {Promise<RepairSummary>} Summary of repairs performed
+ */
+async function repairUserConversationAccess(userId) {
+    console.log(`🔧 [AUTO-REPAIR] Starting automatic repair for user ${userId}...`);
+
+    const Channel = require("../../features/channels/channel.model.js");
+
+    try {
+        // Find all channels where user is a member
+        const userChannels = await Channel.find({
+            'members.user': userId
+        }).select('_id name workspace');
+
+        console.log(`📊 [AUTO-REPAIR] Found ${userChannels.length} channels for user ${userId}`);
+
+        const results = {
+            total: userChannels.length,
+            repaired: 0,
+            alreadyHasKey: 0,
+            failed: 0,
+            details: []
+        };
+
+        for (const channel of userChannels) {
+            const result = await repairConversationKeyForUser(channel._id.toString(), userId);
+
+            if (result.result === 'REPAIR_SUCCESS') {
+                results.repaired++;
+                results.details.push({
+                    channelId: channel._id,
+                    channelName: channel.name,
+                    status: 'repaired'
+                });
+            } else if (result.result === 'NO_REPAIR_NEEDED') {
+                results.alreadyHasKey++;
+            } else {
+                results.failed++;
+                results.details.push({
+                    channelId: channel._id,
+                    channelName: channel.name,
+                    status: 'failed',
+                    reason: result.reason
+                });
+            }
+        }
+
+        console.log(`✅ [AUTO-REPAIR] Completed for user ${userId}: ${results.repaired} repaired, ${results.alreadyHasKey} already had keys, ${results.failed} failed`);
+        return results;
+
+    } catch (error) {
+        console.error(`❌ [AUTO-REPAIR] Failed for user ${userId}:`, error);
+        throw error;
+    }
 }
 
 // ==================== EXPORTS ====================
@@ -909,5 +978,6 @@ module.exports = {
     distributeKeyToNewMember,
     bootstrapConversationKey,  // Server-side key generation for default channels
     generateConversationKeyServerSide,  // PHASE 5: Server-side key generation for new channels
-    repairConversationKeyForUser  // PHASE 2: Repair INV-001 violations
+    repairConversationKeyForUser,  // PHASE 2: Repair INV-001 violations (single channel)
+    repairUserConversationAccess  // PHASE 2: Automatic repair for all user channels
 };

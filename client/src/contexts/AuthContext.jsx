@@ -126,6 +126,20 @@ export const AuthProvider = ({ children }) => {
               console.log('✅ [PHASE 1] Identity keys ready (from cache or newly generated)');
               setEncryptionReady(true);
               setRequiresPassword(false);
+
+              // 🔴 FIX 2 — MANDATORY: Fire-and-forget repair (NEVER await, NEVER block UI)
+              // 🆕 PHASE 2: Trigger automatic repair in background
+              fetch(`${process.env.REACT_APP_BACKEND_URL}/api/v2/conversations/repair-access`, {
+                method: 'POST',
+                credentials: 'include',
+                headers: {
+                  Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
+                  'Content-Type': 'application/json'
+                }
+              })
+                .then(res => res.json())
+                .then(data => console.log('✅ [AUTO-REPAIR] Completed:', data))
+                .catch(() => { }); // ✅ IMPORTANT: Silent failure, no UI impact, no retries
             }
           } catch (err) {
             console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
@@ -243,6 +257,19 @@ export const AuthProvider = ({ children }) => {
             console.log('✅ [PHASE 1] Identity keys initialized successfully');
             setEncryptionReady(true);
             setRequiresPassword(false);
+
+            // 🔴 FIX 2 — Fire-and-forget repair after login
+            fetch(`${process.env.REACT_APP_BACKEND_URL}/api/v2/conversations/repair-access`, {
+              method: 'POST',
+              credentials: 'include',
+              headers: {
+                Authorization: `Bearer ${data.accessToken}`,
+                'Content-Type': 'application/json'
+              }
+            })
+              .then(res => res.json())
+              .then(repairData => console.log('✅ [AUTO-REPAIR] Completed:', repairData))
+              .catch(() => { }); // Silent failure
           }
         } catch (err) {
           console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');

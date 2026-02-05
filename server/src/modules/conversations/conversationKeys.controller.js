@@ -378,3 +378,36 @@ exports.checkKeysExist = async (req, res) => {
         return handleError(res, err, 'CHECK KEYS EXIST ERROR');
     }
 };
+
+// ==================== PHASE 2: AUTOMATIC REPAIR ====================
+
+/**
+ * Trigger automatic repair for all user's channels
+ * POST /api/v2/conversations/repair-access
+ * 
+ * Called by client after identity initialization to repair any missing keys
+ */
+exports.repairUserAccess = async (req, res) => {
+    try {
+        const userId = req.user.sub;
+
+        console.log(`🔧 [Controller] Repair access request from user ${userId}`);
+
+        const results = await conversationKeysService.repairUserConversationAccess(userId);
+
+        return res.json({
+            success: true,
+            message: 'Automatic repair completed',
+            ...results
+        });
+    } catch (err) {
+        console.error('❌ [Controller] Repair access failed:', err);
+        // 🔴 FIX 2: Even on error, return 200 to keep client flow non-blocking
+        // Client should treat this as fire-and-forget
+        return res.status(200).json({
+            success: false,
+            message: 'Repair failed (non-critical)',
+            error: err.message
+        });
+    }
+};

@@ -36,4 +36,10 @@ router.delete('/:id/keys/user/:userId', conversationKeysController.removePartici
 // Check if conversation has encryption keys
 router.get('/:id/keys/exists', conversationKeysController.checkKeysExist);
 
+// ==================== PHASE 2: AUTOMATIC REPAIR ====================
+
+// Trigger automatic repair for all user's channels
+// Called by client after identity initialization
+router.post('/repair-access', conversationKeysController.repairUserAccess);
+
 module.exports = router;
