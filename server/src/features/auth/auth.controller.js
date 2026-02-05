@@ -1785,7 +1785,7 @@ exports.setOAuthPassword = exports.setPassword;
 // ----------------------------------------------------
 // Extracted from routes/auth.js to centralize OAuth logic
 
-const _passport = require("../../../config/_passport");
+const _passport = require("../../config/passport");
 
 // Helper to generate token (used by OAuth callbacks)
 exports.generateToken = (user) => {

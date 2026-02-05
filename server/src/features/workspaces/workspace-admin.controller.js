@@ -1,5 +1,5 @@
 const Workspace = require("../../../models/Workspace");
-const _User = require("../../../models/_User");
+const _User = require("../../../models/User");
 const Channel = require("../channels/channel.model.js");
 
 /**

@@ -316,7 +316,7 @@ function registerMessageHandlers(io, socket) {
 
             // Load required models and controllers (USING MODULAR ARCHITECTURE)
             const messagesController = require('../../modules/messages/messages.controller');
-            const _DMSession = require('../../../models/_DMSession');
+            const _DMSession = require('../../../models/DMSession');
 
             // Create mock request/response objects for controller
             const mockReq = {

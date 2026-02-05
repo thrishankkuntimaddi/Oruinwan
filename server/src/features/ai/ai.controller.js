@@ -1,5 +1,5 @@
 const { GoogleGenerativeAI } = require("@google/generative-ai");
-const _User = require("../../../models/_User");
+const _User = require("../../../models/User");
 const {
     sendMessageToChannel,
     sendToAllGeneralChannels,

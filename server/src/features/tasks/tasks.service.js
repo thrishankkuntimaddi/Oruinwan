@@ -31,7 +31,7 @@ const User = require('../../../models/User');
 const Workspace = require('../../../models/Workspace');
 const Channel = require("../channels/channel.model.js");
 const Message = require("../messages/message.model.js");
-const _DMSession = require('../../../models/_DMSession');
+const _DMSession = require('../../../models/DMSession');
 
 // Shared Services (from other modules)
 const messagesService = require('../../modules/messages/messages.service');
@@ -42,7 +42,7 @@ const { isValidTransition, getAllowedTransitions, validateBlocked } = require('.
 
 // Feature layers
 const policy = require('./tasks.policy');
-const _validator = require('./tasks._validator');
+const _validator = require('./tasks.validator');
 
 // ============================================================================
 // SERVICE METHODS

@@ -3,7 +3,7 @@
 
 const InternalMessage = require('../../../models/InternalMessage');
 const User = require('../../../models/User');
-const _Department = require('../../../models/_Department');
+const _Department = require('../../../models/Department');
 
 /**
  * Send a message (manager to admin or admin to manager)

@@ -1,6 +1,6 @@
 const Poll = require("./poll.model.js");
 const Channel = require("../channels/channel.model.js");
-const _User = require("../../../models/_User");
+const _User = require("../../../models/User");
 
 /**
  * Create a new poll in a channel

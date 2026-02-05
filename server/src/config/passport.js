@@ -1,7 +1,7 @@
 const passport = require("passport");
 const GitHubStrategy = require("passport-github2").Strategy;
 const _LinkedInStrategy = require("passport-linkedin-oauth2").Strategy;
-const User = require("../models/User");
+const User = require("../../models/User");
 
 // Serialize user for the session
 passport.serializeUser((user, done) => {

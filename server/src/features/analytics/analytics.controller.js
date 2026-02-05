@@ -1,10 +1,10 @@
 // server/controllers/analyticsController.js
 const User = require('../../../models/User');
 const Workspace = require('../../../models/Workspace');
-const _Department = require('../../../models/_Department');
+const _Department = require('../../../models/Department');
 const Message = require("../messages/message.model.js");
 const Channel = require("../channels/channel.model.js");
-const _DMSession = require('../../../models/_DMSession');
+const _DMSession = require('../../../models/DMSession');
 
 /**
  * GET /api/analytics/company/:companyId

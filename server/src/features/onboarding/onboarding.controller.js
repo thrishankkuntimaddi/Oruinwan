@@ -1,6 +1,6 @@
 // server/controllers/onboardEmployeeController.js
 const User = require('../../../models/User');
-const _Company = require('../../../models/_Company');
+const _Company = require('../../../models/Company');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const sendEmail = require('../../../utils/sendEmail');

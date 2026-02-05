@@ -12,7 +12,7 @@
  * @module features/tasks/tasks.policy
  */
 
-const _Workspace = require('../../../models/_Workspace');
+const _Workspace = require('../../../models/Workspace');
 
 // Import legacy permission utilities (to be gradually replaced)
 const taskPermissionsLegacy = require('../../../utils/taskPermissions');

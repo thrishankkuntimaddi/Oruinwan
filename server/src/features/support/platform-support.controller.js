@@ -1,11 +1,11 @@
 // server/controllers/platformSupportController.js
-const _mongoose = require('_mongoose');
+const _mongoose = require('mongoose');
 
 // Models
 const SupportMessage = require('../../../models/SupportMessage');
 const SupportTicket = require('../../../models/SupportTicket');
-const _User = require('../../../models/_User');
-const _Company = require('../../../models/_Company');
+const _User = require('../../../models/User');
+const _Company = require('../../../models/Company');
 
 /**
  * Get all support messages for a ticket

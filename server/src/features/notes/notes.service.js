@@ -10,11 +10,11 @@
  * @module features/notes/notes.service
  */
 
-const _mongoose = require('_mongoose');
+const _mongoose = require('mongoose');
 
 // Models
 const Note = require('../../../models/Note');
-const _User = require('../../../models/_User');
+const _User = require('../../../models/User');
 const Workspace = require('../../../models/Workspace');
 
 // Shared Utils

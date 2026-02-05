@@ -16,7 +16,7 @@ const Company = require('../../../models/Company');
 const Workspace = require('../../../models/Workspace');
 const Department = require('../../../models/Department');
 const Channel = require("../channels/channel.model.js");
-const _sendEmail = require('../../../utils/_sendEmail');
+const _sendEmail = require('../../../utils/sendEmail');
 const { logAction } = require('../../../utils/historyLogger');
 const conversationKeysService = require('../../modules/conversations/conversationKeys.service');
 
