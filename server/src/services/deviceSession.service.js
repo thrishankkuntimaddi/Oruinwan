@@ -65,7 +65,7 @@ exports.createOrUpdateSession = async ({
                     }
                 });
             }
-        } catch (auditError) {
+        } catch (_auditError) {
             // Silent fail (non-critical)
         }
 
@@ -90,13 +90,13 @@ exports.createOrUpdateSession = async ({
                         }
                     });
                 }
-            } catch (notificationError) {
+            } catch (_notificationError) {
                 // Silent fail (non-critical)
             }
         }
 
         return session;
-    } catch (error) {
+    } catch (_error) {
         console.error('Error creating/updating device session:', error);
         throw error;
     }
@@ -122,7 +122,7 @@ exports.getDeviceSessions = async (userId, includeRevoked = false) => {
             .lean();
 
         return sessions;
-    } catch (error) {
+    } catch (_error) {
         console.error('Error fetching device sessions:', error);
         throw error;
     }
@@ -165,7 +165,7 @@ exports.revokeDeviceSession = async (userId, deviceId) => {
             session,
             tokensRevoked: deletedTokens.deletedCount
         };
-    } catch (error) {
+    } catch (_error) {
         console.error('Error revoking device session:', error);
         throw error;
     }
@@ -201,7 +201,7 @@ exports.revokeAllOtherSessions = async (userId, currentDeviceId) => {
         console.log(`🔒 [PHASE 3] Revoked ${result.modifiedCount} other device(s) for user ${userId}`);
 
         return result.modifiedCount;
-    } catch (error) {
+    } catch (_error) {
         console.error('Error revoking other sessions:', error);
         throw error;
     }
@@ -221,7 +221,7 @@ exports.updateSessionActivity = async (userId, deviceId) => {
             { userId, deviceId },
             { $set: { lastActiveAt: new Date() } }
         ).exec();
-    } catch (error) {
+    } catch (_error) {
         // Silently fail (non-critical)
         console.warn('Failed to update session activity:', error.message);
     }
@@ -243,7 +243,7 @@ exports.isSessionRevoked = async (userId, deviceId) => {
         }
 
         return session.isRevoked();
-    } catch (error) {
+    } catch (_error) {
         console.error('Error checking session revocation:', error);
         return false;
     }

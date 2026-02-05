@@ -1,11 +1,11 @@
 // server/controllers/platformSupportController.js
-const mongoose = require('mongoose');
+const _mongoose = require('_mongoose');
 
 // Models
 const SupportMessage = require('../../../models/SupportMessage');
 const SupportTicket = require('../../../models/SupportTicket');
-const User = require('../../../models/User');
-const Company = require('../../../models/Company');
+const _User = require('../../../models/_User');
+const _Company = require('../../../models/_Company');
 
 /**
  * Get all support messages for a ticket
@@ -33,7 +33,7 @@ exports.getTicketMessages = async (req, res) => {
             messages,
             hasMore: messages.length === parseInt(limit)
         });
-    } catch (error) {
+    } catch (_error) {
         console.error('GET TICKET MESSAGES ERROR:', error);
         return res.status(500).json({ message: 'Server error' });
     }
@@ -59,7 +59,7 @@ exports.getMessages = async (req, res) => {
             .limit(parseInt(limit));
 
         return res.json({ messages });
-    } catch (error) {
+    } catch (_error) {
         console.error('GET MESSAGES ERROR:', error);
         return res.status(500).json({ message: 'Server error' });
     }
@@ -140,7 +140,7 @@ exports.sendTicketMessage = async (req, res) => {
         }
 
         return res.status(201).json({ message });
-    } catch (error) {
+    } catch (_error) {
         console.error('SEND TICKET MESSAGE ERROR:', error);
         return res.status(500).json({
             message: 'Failed to send message',
@@ -220,7 +220,7 @@ exports.sendMessage = async (req, res) => {
         }
 
         return res.status(201).json({ message });
-    } catch (error) {
+    } catch (_error) {
         console.error('SEND MESSAGE ERROR:', error);
         return res.status(500).json({
             message: 'Failed to send message',
@@ -241,13 +241,13 @@ exports.markMessageAsRead = async (req, res) => {
             return res.status(401).json({ message: 'Authentication required' });
         }
 
-        const message = await SupportMessage.markAsRead(messageId, req.user.sub);
+        const _message = await SupportMessage.markAsRead(messageId, req.user.sub);
 
         return res.json({
             success: true,
             message: 'Message marked as read'
         });
-    } catch (error) {
+    } catch (_error) {
         console.error('MARK MESSAGE AS READ ERROR:', error);
         if (error.message === 'Message not found') {
             return res.status(404).json({ message: error.message });
@@ -288,7 +288,7 @@ exports.getTickets = async (req, res) => {
             total,
             hasMore: (parseInt(skip) + tickets.length) < total
         });
-    } catch (error) {
+    } catch (_error) {
         console.error('GET TICKETS ERROR:', error);
         return res.status(500).json({ message: 'Server error' });
     }
@@ -300,7 +300,7 @@ exports.getTickets = async (req, res) => {
  */
 exports.createTicket = async (req, res) => {
     try {
-        const { companyId, subject, category, priority, description } = req.body;
+        const { companyId, subject, _category, priority, description } = req.body;
 
         if (!subject || !description) {
             return res.status(400).json({ message: 'Subject and description are required' });
@@ -339,7 +339,7 @@ exports.createTicket = async (req, res) => {
         }
 
         return res.status(201).json({ ticket });
-    } catch (error) {
+    } catch (_error) {
         console.error('CREATE TICKET ERROR:', error);
         return res.status(500).json({ message: 'Server error' });
     }
@@ -382,7 +382,7 @@ exports.updateTicket = async (req, res) => {
         await ticket.populate('creatorId', 'username email profilePicture');
 
         return res.json({ ticket });
-    } catch (error) {
+    } catch (_error) {
         console.error('UPDATE TICKET ERROR:', error);
         return res.status(500).json({ message: 'Server error' });
     }

@@ -21,7 +21,7 @@ exports.updateCompanyProfile = async (req, res) => {
             message: "Company profile updated successfully",
             company
         });
-    } catch (err) {
+    } catch (_err) {
         console.error("UPDATE COMPANY PROFILE ERROR:", err);
         return res.status(500).json({ message: "Server error" });
     }
@@ -46,7 +46,7 @@ exports.updateSecuritySettings = async (req, res) => {
             message: "Security settings updated successfully",
             settings
         });
-    } catch (err) {
+    } catch (_err) {
         console.error("UPDATE SECURITY SETTINGS ERROR:", err);
         return res.status(500).json({ message: "Server error" });
     }
@@ -71,7 +71,7 @@ exports.updateDomainSettings = async (req, res) => {
             message: "Domain & SSO settings updated successfully",
             settings
         });
-    } catch (err) {
+    } catch (_err) {
         console.error("UPDATE DOMAIN SETTINGS ERROR:", err);
         return res.status(500).json({ message: "Server error" });
     }

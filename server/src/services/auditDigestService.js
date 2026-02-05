@@ -166,7 +166,7 @@ async function generateAuditDigest() {
             console.log(`   🚨 Critical. Major key distribution issues detected.`);
         }
 
-    } catch (error) {
+    } catch (_error) {
         console.error(`❌ [AUDIT][PHASE1][DIGEST] Failed to generate report:`, error);
         console.error(`   Error message: ${error.message}`);
         console.error(`   Stack trace: ${error.stack}`);

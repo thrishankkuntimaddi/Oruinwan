@@ -74,7 +74,7 @@ async function rotateUserKEK(cryptoState, fromVersion, toVersion) {
         console.log(`✅ Rotated KEK for user ${userId} (v${fromVersion} → v${toVersion})`);
 
         return true;
-    } catch (error) {
+    } catch (_error) {
         console.error(`❌ Failed to rotate KEK for user ${cryptoState.userId}:`, error.message);
         return false;
     }
@@ -121,7 +121,7 @@ async function rotateServerKEK(options = {}) {
                 dryRun
             }
         });
-    } catch (auditError) {
+    } catch (_auditError) {
         console.warn('⚠️ Failed to log audit event (non-critical)');
     }
 
@@ -191,7 +191,7 @@ async function rotateServerKEK(options = {}) {
                 failed
             }
         });
-    } catch (auditError) {
+    } catch (_auditError) {
         console.warn('⚠️ Failed to log audit event (non-critical)');
     }
 
@@ -231,7 +231,7 @@ if (require.main === module) {
         try {
             const result = await rotateServerKEK(options);
             process.exit(result.success ? 0 : 1);
-        } catch (error) {
+        } catch (_error) {
             console.error('❌ Rotation failed:', error);
 
             // Log failure audit event
@@ -244,7 +244,7 @@ if (require.main === module) {
                         ...options
                     }
                 });
-            } catch (auditError) {
+            } catch (_auditError) {
                 // Silent fail
             }
 

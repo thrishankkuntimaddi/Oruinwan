@@ -16,7 +16,7 @@ const Company = require('../../../models/Company');
 const Workspace = require('../../../models/Workspace');
 const Department = require('../../../models/Department');
 const Channel = require("../channels/channel.model.js");
-const sendEmail = require('../../../utils/sendEmail');
+const _sendEmail = require('../../../utils/_sendEmail');
 const { logAction } = require('../../../utils/historyLogger');
 const conversationKeysService = require('../../modules/conversations/conversationKeys.service');
 
@@ -64,7 +64,7 @@ async function processDocuments(documents) {
                     url: `/uploads/verification_docs/${uniqueName}`,
                     uploadedAt: new Date()
                 });
-            } catch (err) {
+            } catch (_err) {
                 console.warn(`Failed to process document ${doc.name}:`, err.message);
             }
         }
@@ -197,7 +197,7 @@ async function registerCompany(params) {
 
     try {
         await adminUser.save();
-    } catch (err) {
+    } catch (_err) {
         // Cleanup company if user creation fails
         await Company.findByIdAndDelete(company._id);
         throw new Error(`Failed to create admin user: ${err.message}`);
@@ -296,7 +296,7 @@ async function provisionCompanyResources({ company, adminUser }) {
     const {
         requestedDepartments = [],
         requestedWorkspaceName,
-        requestedChannels = ['general', 'announcements']
+        _requestedChannels = ['general', 'announcements']
     } = metadata;
 
     const createdDepartmentIds = [];

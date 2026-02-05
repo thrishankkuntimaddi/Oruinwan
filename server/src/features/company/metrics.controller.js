@@ -29,7 +29,7 @@ exports.getCompanyMetrics = async (req, res) => {
 
         return res.json({ metrics });
 
-    } catch (err) {
+    } catch (_err) {
         console.error("GET COMPANY METRICS ERROR:", err);
         return res.status(500).json({ message: "Server error" });
     }
@@ -47,7 +47,7 @@ exports.getCompanyAnalytics = async (req, res) => {
         const analytics = await metricsService.getCompanyAnalytics(id);
 
         return res.json(analytics);
-    } catch (err) {
+    } catch (_err) {
         console.error("GET COMPANY ANALYTICS ERROR:", err);
         return res.status(500).json({ message: "Server error" });
     }

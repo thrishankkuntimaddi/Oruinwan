@@ -3,9 +3,9 @@ const Channel = require("./channel.model.js");
 const User = require("../../../models/User");
 const Message = require("../messages/message.model.js");
 const { saveWithRetry } = require("../../../utils/mongooseRetry");
-const { handleError, notFound, badRequest, forbidden } = require("../../../utils/responseHelpers");
-const { extractMemberId, isMember, normalizeMemberFormat } = require("../../../utils/memberHelpers");
-const { emitToWorkspace, emitToChannel, emitToUser, emitToUsers } = require("../../../utils/socketHelpers");
+const { handleError, _notFound, badRequest, forbidden } = require("../../../utils/responseHelpers");
+const { _extractMemberId, isMember, normalizeMemberFormat } = require("../../../utils/memberHelpers");
+const { _emitToWorkspace, _emitToChannel, _emitToUser, _emitToUsers } = require("../../../utils/socketHelpers");
 const conversationKeysService = require("../../modules/conversations/conversationKeys.service");
 
 /**
@@ -112,7 +112,7 @@ exports.createChannel = async (req, res) => {
     }
 
     return res.status(201).json({ channel: payload });
-  } catch (err) {
+  } catch (_err) {
     return handleError(res, err, "CREATE CHANNEL ERROR");
   }
 };
@@ -151,7 +151,7 @@ exports.getMyChannels = async (req, res) => {
       .lean();
 
     return res.json({ channels });
-  } catch (err) {
+  } catch (_err) {
     return handleError(res, err, "GET MY CHANNELS ERROR");
   }
 };
@@ -168,7 +168,7 @@ exports.getPublicChannels = async (req, res) => {
       .lean();
 
     return res.json({ channels });
-  } catch (err) {
+  } catch (_err) {
     return handleError(res, err, "GET PUBLIC CHANNELS ERROR");
   }
 };
@@ -262,7 +262,7 @@ exports.inviteToChannel = async (req, res) => {
     }
 
     return res.json({ channelId, userId: inviteeId });
-  } catch (err) {
+  } catch (_err) {
     return handleError(res, err, "INVITE ERROR");
   }
 };
@@ -296,7 +296,7 @@ exports.removeChannelMember = async (req, res) => {
     }
 
     return res.json({ channelId, userId: victimId });
-  } catch (err) {
+  } catch (_err) {
     console.error("REMOVE MEMBER ERROR:", err);
     return res.status(500).json({ message: "Server error" });
   }
@@ -361,7 +361,7 @@ exports.joinChannel = async (req, res) => {
     }
 
     return res.json({ channelId, joined: true });
-  } catch (err) {
+  } catch (_err) {
     return handleError(res, err, "JOIN CHANNEL ERROR");
   }
 };
@@ -397,7 +397,7 @@ exports.updateChannel = async (req, res) => {
     if (io) io.emit("channel-updated", payload);
 
     return res.json({ channel: payload });
-  } catch (err) {
+  } catch (_err) {
     return handleError(res, err, "UPDATE CHANNEL ERROR");
   }
 };
@@ -430,7 +430,7 @@ exports.getChannelMembers = async (req, res) => {
     });
 
     return res.json({ members: formattedMembers });
-  } catch (err) {
+  } catch (_err) {
     return handleError(res, err, "GET CHANNEL MEMBERS ERROR");
   }
 };
@@ -549,7 +549,7 @@ exports.exitChannel = async (req, res) => {
       message: "Successfully exited channel",
       systemMessage
     });
-  } catch (err) {
+  } catch (_err) {
     return handleError(res, err, "EXIT CHANNEL ERROR");
   }
 };
@@ -581,7 +581,7 @@ exports.assignAdmin = async (req, res) => {
     }
 
     // Check if target user is a channel member
-    const isTargetMember = isMember(channel.members, targetUserId);
+    const _isTargetMember = isMember(channel.members, targetUserId);
 
     if (!isMember) {
       return res.status(400).json({ message: "User is not a member of this channel" });
@@ -640,7 +640,7 @@ exports.assignAdmin = async (req, res) => {
       message: "Admin assigned successfully",
       systemMessage
     });
-  } catch (err) {
+  } catch (_err) {
     return handleError(res, err, "ASSIGN ADMIN ERROR");
   }
 };
@@ -696,7 +696,7 @@ exports.deleteChannel = async (req, res) => {
       message: "Channel deleted successfully",
       deletedMessages: deletedMessages.deletedCount
     });
-  } catch (err) {
+  } catch (_err) {
     return handleError(res, err, "DELETE CHANNEL ERROR");
   }
 };
@@ -747,7 +747,7 @@ exports.getChannelDetails = async (req, res) => {
     };
 
     return res.json({ channel: response });
-  } catch (err) {
+  } catch (_err) {
     return handleError(res, err, "GET CHANNEL DETAILS ERROR");
   }
 };
@@ -779,7 +779,7 @@ exports.updateChannelInfo = async (req, res) => {
     }
 
     const oldName = channel.name;
-    const oldDesc = channel.description;
+    const _oldDesc = channel.description;
 
     // Update fields
     if (name && name.trim()) {
@@ -827,7 +827,7 @@ exports.updateChannelInfo = async (req, res) => {
         description: channel.description
       }
     });
-  } catch (err) {
+  } catch (_err) {
     return handleError(res, err, "UPDATE CHANNEL INFO ERROR");
   }
 };
@@ -920,7 +920,7 @@ exports.demoteAdmin = async (req, res) => {
       message: "Admin demoted successfully",
       systemMessage
     });
-  } catch (err) {
+  } catch (_err) {
     console.error("DEMOTE ADMIN ERROR:", err);
     return res.status(500).json({ message: "Server error" });
   }
@@ -1029,7 +1029,7 @@ exports.removeMember = async (req, res) => {
       message: "Member removed successfully",
       systemMessage
     });
-  } catch (err) {
+  } catch (_err) {
     console.error("REMOVE MEMBER ERROR:", err);
     return res.status(500).json({ message: "Server error" });
   }
@@ -1066,7 +1066,7 @@ exports.toggleChannelPrivacy = async (req, res) => {
     await saveWithRetry(channel);
 
     // Create system message
-    const user = await User.findById(userId).select('username');
+    const _user = await User.findById(userId).select('username');
     await Message.create({
       channel: channelId,
       workspace: channel.workspace,
@@ -1098,7 +1098,7 @@ exports.toggleChannelPrivacy = async (req, res) => {
         isPrivate: channel.isPrivate
       }
     });
-  } catch (err) {
+  } catch (_err) {
     console.error("TOGGLE PRIVACY ERROR:", err);
     return res.status(500).json({ message: "Server error" });
   }
@@ -1156,7 +1156,7 @@ exports.clearChannelMessages = async (req, res) => {
       message: "All messages cleared successfully",
       deletedCount: result.deletedCount
     });
-  } catch (err) {
+  } catch (_err) {
     console.error("CLEAR MESSAGES ERROR:", err);
     return res.status(500).json({ message: "Server error" });
   }
@@ -1262,7 +1262,7 @@ exports.joinChannelViaLink = async (req, res) => {
         workspaceId: workspace._id
       }
     });
-  } catch (err) {
+  } catch (_err) {
     console.error("JOIN CHANNEL VIA LINK ERROR:", err);
     return res.status(500).json({ message: "Server error" });
   }
@@ -1321,7 +1321,7 @@ exports.addTab = async (req, res) => {
     }
 
     return res.status(201).json({ tab: createdTab });
-  } catch (err) {
+  } catch (_err) {
     console.error("ADD TAB ERROR:", err);
     return res.status(500).json({ message: "Server error" });
   }
@@ -1373,7 +1373,7 @@ exports.updateTab = async (req, res) => {
     }
 
     return res.json({ tab });
-  } catch (err) {
+  } catch (_err) {
     console.error("UPDATE TAB ERROR:", err);
     return res.status(500).json({ message: "Server error" });
   }
@@ -1415,7 +1415,7 @@ exports.deleteTab = async (req, res) => {
     }
 
     return res.json({ message: "Tab deleted", tabId });
-  } catch (err) {
+  } catch (_err) {
     console.error("DELETE TAB ERROR:", err);
     return res.status(500).json({ message: "Server error" });
   }
@@ -1444,7 +1444,7 @@ exports.getTabs = async (req, res) => {
     }
 
     return res.json({ tabs: channel.tabs || [] });
-  } catch (err) {
+  } catch (_err) {
     console.error("GET TABS ERROR:", err);
     return res.status(500).json({ message: "Server error" });
   }
@@ -1559,7 +1559,7 @@ exports.joinDiscoverableChannel = async (req, res) => {
       channelName: channel.name
     });
 
-  } catch (err) {
+  } catch (_err) {
     console.error("JOIN DISCOVERABLE CHANNEL ERROR:", err);
     return res.status(500).json({ message: "Server error" });
   }

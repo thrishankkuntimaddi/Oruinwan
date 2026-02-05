@@ -10,11 +10,11 @@
  * @module features/notes/notes.service
  */
 
-const mongoose = require('mongoose');
+const _mongoose = require('_mongoose');
 
 // Models
 const Note = require('../../../models/Note');
-const User = require('../../../models/User');
+const _User = require('../../../models/_User');
 const Workspace = require('../../../models/Workspace');
 
 // Shared Utils
@@ -218,7 +218,7 @@ async function createNote(userId, noteData, io, req) {
  * @param {Object} req - Express request
  * @returns {Promise<Object>} { message: string, note: Note }
  */
-async function updateNote(userId, noteId, updates, io, req) {
+async function updateNote(userId, noteId, updates, io, _req) {
     const note = await Note.findById(noteId);
     if (!note) {
         const error = new Error('Note not found');
@@ -293,7 +293,7 @@ async function updateNote(userId, noteId, updates, io, req) {
  * @param {Object} req - Express request
  * @returns {Promise<Object>} { message: string }
  */
-async function deleteNote(userId, noteId, permanent, io, req) {
+async function deleteNote(userId, noteId, permanent, io, _req) {
     const note = await Note.findById(noteId);
     if (!note) {
         const error = new Error('Note not found');
@@ -442,7 +442,7 @@ async function shareNote(userId, noteId, userIds, io, req) {
  * @param {Object} req - Express request
  * @returns {Promise<Object>} { message: string, attachment: Object }
  */
-async function addAttachment(userId, noteId, attachmentData, io, req) {
+async function addAttachment(userId, noteId, attachmentData, io, _req) {
     const note = await Note.findById(noteId);
     if (!note) {
         const error = new Error('Note not found');
@@ -502,7 +502,7 @@ async function addAttachment(userId, noteId, attachmentData, io, req) {
  * @param {Object} req - Express request
  * @returns {Promise<Object>} { message: string }
  */
-async function removeAttachment(userId, noteId, attachmentId, req) {
+async function removeAttachment(userId, noteId, attachmentId, _req) {
     const note = await Note.findById(noteId);
     if (!note) {
         const error = new Error('Note not found');

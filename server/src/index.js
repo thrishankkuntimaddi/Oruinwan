@@ -147,7 +147,7 @@ app.get('/api/health', async (req, res) => {
             environment: process.env.NODE_ENV || 'development',
             timestamp: new Date().toISOString()
         });
-    } catch (err) {
+    } catch (_err) {
         logger.error('Health check failed:', err);
         res.status(503).json({
             status: 'unhealthy',
@@ -304,7 +304,7 @@ io.use(async (socket, next) => {
         console.log('✅ Socket auth: Token valid for user:', decoded.sub);
         socket.user = { id: decoded.sub };
         next();
-    } catch (err) {
+    } catch (_err) {
         console.error('❌ Socket auth error:', err.name, '-', err.message);
         if (err.name === 'TokenExpiredError') {
             console.log('⏰ Token expired at:', err.expiredAt);
@@ -328,7 +328,7 @@ io.on("connection", async (socket) => {
             userId: socket.user.id,
             status: "active"
         });
-    } catch (err) {
+    } catch (_err) {
         logger.error("Error setting user online:", err);
     }
 
@@ -355,7 +355,7 @@ app.use((req, res) => {
 });
 
 // Global Error Handler - catches all unhandled errors
-app.use((err, req, res, next) => {
+app.use((err, req, res, _next) => {
     // Log error with context for debugging
     logger.error('Global error handler:', {
         error: err.message,

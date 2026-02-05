@@ -115,7 +115,7 @@ async function sendOTPByType({ target, type, otp, options = {} }) {
         } else {
             throw new Error(`Invalid OTP type: ${type}`);
         }
-    } catch (error) {
+    } catch (_error) {
         // Fallback: Log to console for development
         console.log('\n' + '='.repeat(44));
         console.log(`🔐 [DEV OTP] Verification Code for ${type} (${target})`);

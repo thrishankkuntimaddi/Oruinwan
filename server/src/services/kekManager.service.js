@@ -85,7 +85,7 @@ exports.kekVersionExists = (version) => {
     try {
         getKEKByVersion(version);
         return true;
-    } catch (error) {
+    } catch (_error) {
         return false;
     }
 };

@@ -21,7 +21,7 @@ const Task = require('../../../models/Task');
  */
 async function getCompanyAnalytics(companyId) {
     // Get basic counts (parallel for speed)
-    const [totalUsers, workspaces, departments, messages, tasks] = await Promise.all([
+    const [totalUsers, workspaces, departments, _messages, tasks] = await Promise.all([
         User.countDocuments({ companyId }),
         Workspace.countDocuments({ company: companyId }),
         Department.countDocuments({ company: companyId }),

@@ -62,7 +62,7 @@ exports.sendDirectMessage = async (req, res) => {
     }
 
     return res.status(201).json({ message });
-  } catch (err) {
+  } catch (_err) {
     return handleError(res, err, "SEND DM ERROR");
   }
 };
@@ -102,7 +102,7 @@ exports.sendChannelMessage = async (req, res) => {
     }
 
     return res.status(201).json({ message });
-  } catch (err) {
+  } catch (_err) {
     return handleError(res, err, "SEND CHANNEL ERROR");
   }
 };
@@ -114,7 +114,7 @@ exports.sendChannelMessage = async (req, res) => {
 exports.getDMs = async (req, res) => {
   try {
     const userId = req.user.sub;
-    const { workspaceId, dmSessionId } = req.params;
+    const { _workspaceId, dmSessionId } = req.params;
 
     // Pagination parameters
     const limit = parseInt(req.query.limit) || 50;
@@ -162,7 +162,7 @@ exports.getDMs = async (req, res) => {
       hasMore,
       total: totalCount
     });
-  } catch (err) {
+  } catch (_err) {
     return handleError(res, err, "GET DMs ERROR");
   }
 };
@@ -288,7 +288,7 @@ exports.getChannelMessages = async (req, res) => {
               if (replyAvatars.length >= 3) break;
             }
           }
-        } catch (err) {
+        } catch (_err) {
           console.error("Error fetching reply avatars:", err);
         }
       }
@@ -307,7 +307,7 @@ exports.getChannelMessages = async (req, res) => {
       hasMore,
       total: totalCount
     });
-  } catch (err) {
+  } catch (_err) {
     return handleError(res, err, "GET CHANNEL ERROR");
   }
 };
@@ -354,7 +354,7 @@ exports.getWorkspaceDMList = async (req, res) => {
     }));
 
     return res.json({ sessions: sessionList });
-  } catch (err) {
+  } catch (_err) {
     return handleError(res, err, "GET WORKSPACE DM LIST ERROR");
   }
 };
@@ -440,7 +440,7 @@ async function processAICommand(message, sender, contextType, req) {
     const assigneeStr = assigneeNames.map(n => `@${n}`).join(", ");
     sendAIReply(message, `🤖 **Task Created:** ${title}\n👤 Assigned to: ${assigneeStr}\n📅 Due: ${dueDate ? dueDate.toDateString() : "No Date"}`, io);
 
-  } catch (err) {
+  } catch (_err) {
     console.error("AI PROCESS ERROR:", err);
   }
 }

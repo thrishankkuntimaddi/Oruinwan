@@ -31,7 +31,7 @@ async function getCompanyAuditLogs(req, res) {
 
         const result = await auditService.getCompanyAuditLogs(companyId, filters);
         return res.json(result);
-    } catch (error) {
+    } catch (_error) {
         console.error('Get Audit Logs Error:', error);
         return res.status(500).json({ message: 'Server error fetching audit logs' });
     }
@@ -57,7 +57,7 @@ async function exportAuditLogs(req, res) {
 
         // Handle JSON export
         return res.json(result.logs);
-    } catch (error) {
+    } catch (_error) {
         console.error('Export Audit Logs Error:', error);
         return res.status(500).json({ message: 'Server error exporting logs' });
     }

@@ -21,7 +21,7 @@ async function getSystemHealth(req, res) {
     try {
         const result = await statusService.getSystemHealth();
         return res.json(result);
-    } catch (error) {
+    } catch (_error) {
         console.error('Status health check error:', error);
         return res.status(500).json({
             status: 'outage',

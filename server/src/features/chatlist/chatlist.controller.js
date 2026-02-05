@@ -124,7 +124,7 @@ exports.getChatList = async (req, res) => {
       .sort((a, b) => new Date(b.lastMessageAt || 0) - new Date(a.lastMessageAt || 0));
 
     res.json({ chats: finalList });
-  } catch (err) {
+  } catch (_err) {
     console.error("CHAT LIST ERROR:", err);
     res.status(500).json({ message: "Server error" });
   }
@@ -159,7 +159,7 @@ exports.resetUnread = async (req, res) => {
     }
 
     res.json({ success: true });
-  } catch (err) {
+  } catch (_err) {
     console.error("RESET UNREAD ERROR:", err);
     res.status(500).json({ message: "Server error" });
   }

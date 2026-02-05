@@ -40,7 +40,7 @@ async function getAnalyticsStats(companyId) {
         usersCount,
         departmentsCount,
         workspacesCount,
-        totalChannels // Optional placeholder
+        _totalChannels // Optional placeholder
     ] = await Promise.all([
         User.countDocuments({ companyId: companyId }),
         Department.countDocuments({ company: companyId }),

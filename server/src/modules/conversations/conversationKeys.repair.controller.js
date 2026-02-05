@@ -83,7 +83,7 @@ async function repairConversationKey(req, res) {
             });
         }
 
-    } catch (error) {
+    } catch (_error) {
         console.error(`❌ [AUDIT][PHASE2][TRIGGER] Endpoint exception:`, error);
         return res.status(500).json({
             success: false,

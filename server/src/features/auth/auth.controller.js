@@ -11,8 +11,8 @@ const axios = require("axios");
 
 // Production hardening utilities
 const { saveWithRetry } = require("../../../utils/mongooseRetry");
-const { setRefreshTokenCookie, clearRefreshTokenCookie } = require("../../../utils/cookieHelper");
-const { TIME } = require("../../../constants");
+const { setRefreshTokenCookie, _clearRefreshTokenCookie } = require("../../../utils/cookieHelper");
+const { _TIME } = require("../../../constants");
 const { sha256 } = require("../../../utils/hashUtils");
 const { handleError } = require("../../../utils/responseHelpers");
 
@@ -315,7 +315,7 @@ exports.signup = async (req, res) => {
         `
       });
       console.log(`✅ Verification email sent successfully to ${email}`);
-    } catch (emailError) {
+    } catch (_emailError) {
       // Log the actual error
       console.error("❌ SMTP Error:", emailError.message);
 
@@ -334,7 +334,7 @@ exports.signup = async (req, res) => {
       companyId: companyId || null
     });
 
-  } catch (err) {
+  } catch (_err) {
     return handleError(res, err, "SIGNUP ERROR");
   }
 };
@@ -370,7 +370,7 @@ exports.verifyEmail = async (req, res) => {
     await saveWithRetry(user);
 
     return res.json({ message: "Email verified" });
-  } catch (err) {
+  } catch (_err) {
     console.error("❌ [VERIFY EMAIL] ERROR:", err);
     res.status(500).json({ message: "Server error" });
   }
@@ -531,7 +531,7 @@ exports.login = async (req, res) => {
     await saveWithRetry(user);
     setRefreshTokenCookie(res, refreshToken);
 
-    const firstLogin = user.lastLoginAt === null; // Note: we just set it to Date(), so this logic might need check, 
+    const _firstLogin = user.lastLoginAt === null; // Note: we just set it to Date(), so this logic might need check, 
     // actually we set it just above. Original code logic: "const firstLogin = user.lastLoginAt === null" BEFORE setting it. 
     // But here I set it before. Let's fix that order if strict first login check is needed.
     // For now assuming existing users aren't first login.
@@ -579,7 +579,7 @@ exports.login = async (req, res) => {
 
     return res.json(response);
 
-  } catch (err) {
+  } catch (_err) {
     return handleError(res, err, "LOGIN ERROR");
   }
 };
@@ -612,7 +612,7 @@ exports.refresh = async (req, res) => {
       // Verify JWT signature
       try {
         jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET);
-      } catch (err) {
+      } catch (_err) {
         return res.status(403).json({ message: "Invalid refresh token signature" });
       }
 
@@ -649,7 +649,7 @@ exports.refresh = async (req, res) => {
 
       return res.json({ accessToken: newAccess });
 
-    } catch (err) {
+    } catch (_err) {
       if (err.name === 'VersionError' && attempts < MAX_RETRIES - 1) {
         console.warn(`Refresh token VersionError (attempt ${attempts + 1}/${MAX_RETRIES}), retrying...`);
         attempts++;
@@ -685,7 +685,7 @@ exports.logout = async (req, res) => {
     res.clearCookie("jwt");
 
     return res.json({ message: "Logged out" });
-  } catch (err) {
+  } catch (_err) {
     return handleError(res, err, "LOGOUT ERROR");
   }
 };
@@ -712,7 +712,7 @@ exports.logoutAll = async (req, res) => {
 
     return res.json({ message: "Logged out from all devices" });
 
-  } catch (err) {
+  } catch (_err) {
     return handleError(res, err, "LOGOUT ALL ERROR");
   }
 };
@@ -751,7 +751,7 @@ exports.forgotPassword = async (req, res) => {
         text: template.text
       });
       console.log(`✅ Password reset email sent to ${email}`);
-    } catch (emailError) {
+    } catch (_emailError) {
       // If SMTP not configured, log the link to console (for development)
       console.log("\n" + "=".repeat(80));
       console.log("🔐 PASSWORD RESET LINK (SMTP not configured)");
@@ -762,7 +762,7 @@ exports.forgotPassword = async (req, res) => {
     }
 
     return res.json({ message: "Reset link sent if account exists" });
-  } catch (err) {
+  } catch (_err) {
     console.error("FORGOT ERROR:", err);
     return res.status(500).json({ message: "Server error" });
   }
@@ -794,7 +794,7 @@ exports.resetPassword = async (req, res) => {
 
     return res.json({ message: "Password reset successful" });
 
-  } catch (err) {
+  } catch (_err) {
     console.error("RESET ERROR:", err);
     return res.status(500).json({ message: "Server error" });
   }
@@ -925,7 +925,7 @@ exports.getMe = async (req, res) => {
     }
 
     return res.json(userObject);
-  } catch (err) {
+  } catch (_err) {
     console.error("GET ME ERROR:", err);
     return res.status(500).json({ message: "Server error" });
   }
@@ -1025,7 +1025,7 @@ exports.updateMe = async (req, res) => {
       }
     });
 
-  } catch (err) {
+  } catch (_err) {
     console.error("UPDATE PROFILE ERROR:", err);
     console.error("Error details:", {
       name: err.name,
@@ -1073,7 +1073,7 @@ exports.updatePassword = async (req, res) => {
 
     return res.json({ message: "Password updated" });
 
-  } catch (err) {
+  } catch (_err) {
     console.error("PASSWORD ERROR:", err);
     return res.status(500).json({ message: "Server error" });
   }
@@ -1149,7 +1149,7 @@ exports.setPassword = async (req, res) => {
       message: "Password set successfully! You can now login with email + password"
     });
 
-  } catch (err) {
+  } catch (_err) {
     console.error("SET PASSWORD ERROR:", err);
     return res.status(500).json({ message: "Server error" });
   }
@@ -1251,7 +1251,7 @@ exports.googleLogin = async (req, res) => {
       },
     });
 
-  } catch (err) {
+  } catch (_err) {
     console.error("GOOGLE LOGIN ERROR:", err);
     return res.status(500).json({ message: "Google login failed" });
   }
@@ -1352,7 +1352,7 @@ exports.getSessions = async (req, res) => {
     });
 
     res.json(sessions);
-  } catch (err) {
+  } catch (_err) {
     console.error("GET SESSIONS ERROR:", err);
     res.status(500).json({ message: "Server error" });
   }
@@ -1372,7 +1372,7 @@ exports.revokeSession = async (req, res) => {
     await saveWithRetry(user);
 
     res.json({ message: "Session revoked" });
-  } catch (err) {
+  } catch (_err) {
     console.error("REVOKE SESSION ERROR:", err);
     res.status(500).json({ message: "Server error" });
   }
@@ -1404,7 +1404,7 @@ exports.revokeOtherSessions = async (req, res) => {
     await saveWithRetry(user);
 
     res.json({ message: "All other sessions revoked" });
-  } catch (err) {
+  } catch (_err) {
     console.error("REVOKE OTHERS ERROR:", err);
     res.status(500).json({ message: "Server error" });
   }
@@ -1517,7 +1517,7 @@ exports.addEmail = async (req, res) => {
 
     res.json(response);
 
-  } catch (err) {
+  } catch (_err) {
     console.error("ADD EMAIL ERROR:", err);
     res.status(500).json({ message: "Server error" });
   }
@@ -1574,7 +1574,7 @@ exports.verifyEmailCode = async (req, res) => {
       }))
     });
 
-  } catch (err) {
+  } catch (_err) {
     console.error("VERIFY EMAIL ERROR:", err);
     res.status(500).json({ message: "Server error" });
   }
@@ -1636,7 +1636,7 @@ exports.resendVerification = async (req, res) => {
       res.json({ message: `Verification code: ${code} (Check server console)` });
     }
 
-  } catch (err) {
+  } catch (_err) {
     console.error("RESEND VERIFICATION ERROR:", err);
     res.status(500).json({ message: "Server error" });
   }
@@ -1683,7 +1683,7 @@ exports.setPrimaryEmail = async (req, res) => {
       }))
     });
 
-  } catch (err) {
+  } catch (_err) {
     console.error("SET PRIMARY EMAIL ERROR:", err);
     res.status(500).json({ message: "Server error" });
   }
@@ -1727,7 +1727,7 @@ exports.deleteEmail = async (req, res) => {
       }))
     });
 
-  } catch (err) {
+  } catch (_err) {
     console.error("DELETE EMAIL ERROR:", err);
     res.status(500).json({ message: "Server error" });
   }
@@ -1768,7 +1768,7 @@ exports.skipPassword = async (req, res) => {
       passwordSkipped: true
     });
 
-  } catch (err) {
+  } catch (_err) {
     console.error("SKIP PASSWORD ERROR:", err);
     return res.status(500).json({ message: "Server error" });
   }
@@ -1785,7 +1785,7 @@ exports.setOAuthPassword = exports.setPassword;
 // ----------------------------------------------------
 // Extracted from routes/auth.js to centralize OAuth logic
 
-const passport = require("../../../config/passport");
+const _passport = require("../../../config/_passport");
 
 // Helper to generate token (used by OAuth callbacks)
 exports.generateToken = (user) => {
@@ -1808,7 +1808,7 @@ exports.getUsersList = async (req, res) => {
       .lean();
 
     res.json({ users });
-  } catch (err) {
+  } catch (_err) {
     console.error("GET USERS ERROR:", err);
     res.status(500).json({ message: "Server error" });
   }
@@ -1924,7 +1924,7 @@ exports.linkedinCallback = async (req, res) => {
     });
 
     res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/oauth-success?${params.toString()}`);
-  } catch (err) {
+  } catch (_err) {
     console.error('LinkedIn OAuth callback error:', err.response?.data || err.message);
     res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/login?error=linkedin_failed`);
   }

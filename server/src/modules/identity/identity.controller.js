@@ -122,7 +122,7 @@ exports.uploadPublicKey = async (req, res) => {
             algorithm: keyDoc.algorithm,
             version: keyDoc.version
         });
-    } catch (err) {
+    } catch (_err) {
         console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
         console.error('❌ [PHASE 1] Upload public key error:', err);
         console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
@@ -155,7 +155,7 @@ exports.getUserPublicKey = async (req, res) => {
             algorithm: keyDoc.algorithm,
             version: keyDoc.version
         });
-    } catch (err) {
+    } catch (_err) {
         return handleError(res, err, 'GET PUBLIC KEY ERROR');
     }
 };
@@ -202,7 +202,7 @@ exports.batchGetPublicKeys = async (req, res) => {
             publicKeys,
             count: publicKeys.length
         });
-    } catch (err) {
+    } catch (_err) {
         return handleError(res, err, 'BATCH GET PUBLIC KEYS ERROR');
     }
 };
@@ -222,7 +222,7 @@ exports.checkHasPublicKey = async (req, res) => {
         return res.json({
             hasKey
         });
-    } catch (err) {
+    } catch (_err) {
         return handleError(res, err, 'CHECK PUBLIC KEY ERROR');
     }
 };
@@ -250,7 +250,7 @@ exports.deletePublicKey = async (req, res) => {
                 message: 'No public key found to delete'
             });
         }
-    } catch (err) {
+    } catch (_err) {
         return handleError(res, err, 'DELETE PUBLIC KEY ERROR');
     }
 };

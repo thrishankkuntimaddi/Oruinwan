@@ -1,6 +1,6 @@
 const passport = require("passport");
 const GitHubStrategy = require("passport-github2").Strategy;
-const LinkedInStrategy = require("passport-linkedin-oauth2").Strategy;
+const _LinkedInStrategy = require("passport-linkedin-oauth2").Strategy;
 const User = require("../models/User");
 
 // Serialize user for the session
@@ -13,7 +13,7 @@ passport.deserializeUser(async (id, done) => {
     try {
         const user = await User.findById(id);
         done(null, user);
-    } catch (err) {
+    } catch (_err) {
         done(err, null);
     }
 });
@@ -61,7 +61,7 @@ passport.use(
                 });
 
                 done(null, user);
-            } catch (err) {
+            } catch (_err) {
                 done(err, null);
             }
         }
@@ -112,7 +112,7 @@ passport.use(
                 });
 
                 done(null, user);
-            } catch (err) {
+            } catch (_err) {
                 console.error('LinkedIn OAuth error:', err);
                 done(err, null);
             }

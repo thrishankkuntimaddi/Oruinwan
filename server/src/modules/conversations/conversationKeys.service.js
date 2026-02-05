@@ -60,7 +60,7 @@ async function storeConversationKeys(params) {
         console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
         return conversationKey;
-    } catch (error) {
+    } catch (_error) {
         console.error('Failed to store conversation keys:', error);
         throw error;
     }
@@ -107,7 +107,7 @@ async function getUserConversationKey(conversationId, conversationType, userId) 
             algorithm: encryptedKeyData.algorithm,
             version: conversationKey.version
         };
-    } catch (error) {
+    } catch (_error) {
         console.error('Failed to get user conversation key:', error);
         throw error;
     }
@@ -135,7 +135,7 @@ async function getUserWorkspaceConversationKeys(userId, workspaceId) {
                 version: ck.version
             };
         });
-    } catch (error) {
+    } catch (_error) {
         console.error('Failed to get user workspace conversation keys:', error);
         throw error;
     }
@@ -182,7 +182,7 @@ async function addParticipant(conversationId, conversationType, userId, encrypte
 
         console.log(`✅ Added participant ${userId} to ${conversationType}:${conversationId}`);
         return conversationKey;
-    } catch (error) {
+    } catch (_error) {
         console.error('Failed to add participant:', error);
         throw error;
     }
@@ -220,7 +220,7 @@ async function removeParticipant(conversationId, conversationType, userId) {
 
         console.log(`🗑️ Removed participant ${userId} from ${conversationType}:${conversationId}`);
         return true;
-    } catch (error) {
+    } catch (_error) {
         console.error('Failed to remove participant:', error);
         throw error;
     }
@@ -264,7 +264,7 @@ async function addEncryptedKeyForUser(conversationId, conversationType, userId, 
 
         console.log(`✅ Added encrypted key for user ${userId} in ${conversationType}:${conversationId}`);
         return true;
-    } catch (error) {
+    } catch (_error) {
         console.error('Failed to add encrypted key for user:', error);
         throw error;
     }
@@ -403,7 +403,7 @@ async function distributeKeyToNewMember(conversationId, conversationType, newUse
         return true;
 
 
-    } catch (error) {
+    } catch (_error) {
         console.error(`❌ [Server Distribution] Failed to distribute key:`, error);
         // PHASE 1 AUDIT: Log exception details
         console.error(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
@@ -433,7 +433,7 @@ async function hasConversationKeys(conversationId, conversationType) {
     try {
         const conversationKey = await ConversationKey.findByConversation(conversationId, conversationType);
         return conversationKey !== null;
-    } catch (error) {
+    } catch (_error) {
         console.error('Failed to check conversation keys:', error);
         return false;
     }
@@ -525,7 +525,7 @@ async function bootstrapConversationKey({ conversationId, conversationType, work
         console.log(`✅ [Bootstrap] Conversation key created for ${conversationType}:${conversationId} (${encryptedKeys.length} users)`);
         return conversationKeyDoc;
 
-    } catch (error) {
+    } catch (_error) {
         console.error(`❌ [Bootstrap] Failed to create conversation key:`, error);
         throw error;
     }
@@ -664,7 +664,7 @@ async function generateConversationKeyServerSide(conversationId, conversationTyp
         console.log(`✅ [PHASE 5] Conversation key created and stored at channel birth for ${conversationId} (${encryptedKeys.length} users)`);
         return true;
 
-    } catch (error) {
+    } catch (_error) {
         console.error(`❌ [PHASE 5] Failed to generate conversation key:`, error);
         throw error;
     }
@@ -883,7 +883,7 @@ async function repairConversationKeyForUser(channelId, userId) {
             algorithm: wrapped.algorithm
         };
 
-    } catch (error) {
+    } catch (_error) {
         console.error(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
         console.error(`❌ [PHASE2][REPAIR] EXCEPTION during repair`);
         console.error(`   ├─ User: ${userId}`);
@@ -959,7 +959,7 @@ async function repairUserConversationAccess(userId) {
         console.log(`✅ [AUTO-REPAIR] Completed for user ${userId}: ${results.repaired} repaired, ${results.alreadyHasKey} already had keys, ${results.failed} failed`);
         return results;
 
-    } catch (error) {
+    } catch (_error) {
         console.error(`❌ [AUTO-REPAIR] Failed for user ${userId}:`, error);
         throw error;
     }

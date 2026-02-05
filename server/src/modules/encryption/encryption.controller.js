@@ -19,7 +19,7 @@ exports.getUserKeys = async (req, res) => {
         const keys = await encryptionService.getUserWorkspaceKeys(userId);
 
         return res.json({ keys });
-    } catch (err) {
+    } catch (_err) {
         return handleError(res, err, 'GET USER KEYS ERROR');
     }
 };
@@ -63,7 +63,7 @@ exports.enrollUser = async (req, res) => {
             message: 'User enrolled successfully',
             keyId: userKey._id
         });
-    } catch (err) {
+    } catch (_err) {
         return handleError(res, err, 'ENROLL USER ERROR');
     }
 };
@@ -80,7 +80,7 @@ exports.enrollUser = async (req, res) => {
 exports.revokeAccess = async (req, res) => {
     try {
         const { userId, workspaceId } = req.body;
-        const requesterId = req.user.sub;
+        const _requesterId = req.user.sub;
 
         // TODO: Add authorization check (only workspace admins can revoke)
 
@@ -103,7 +103,7 @@ exports.revokeAccess = async (req, res) => {
             userId,
             workspaceId
         });
-    } catch (err) {
+    } catch (_err) {
         return handleError(res, err, 'REVOKE ACCESS ERROR');
     }
 };
@@ -120,7 +120,7 @@ exports.checkAccess = async (req, res) => {
         const hasAccess = await encryptionService.userHasWorkspaceAccess(userId, workspaceId);
 
         return res.json({ hasAccess });
-    } catch (err) {
+    } catch (_err) {
         return handleError(res, err, 'CHECK ACCESS ERROR');
     }
 };
@@ -168,7 +168,7 @@ exports.storePersonalKeys = async (req, res) => {
             message: 'Personal encryption keys stored successfully',
             keyVersion: 1
         });
-    } catch (err) {
+    } catch (_err) {
         return handleError(res, err, 'STORE PERSONAL KEYS ERROR');
     }
 };
@@ -197,7 +197,7 @@ exports.getMyPersonalKeys = async (req, res) => {
             encryptedPrivateKey: user.encryption.encryptedPrivateKey,
             keyVersion: user.encryption.keyVersion
         });
-    } catch (err) {
+    } catch (_err) {
         return handleError(res, err, 'GET PERSONAL KEYS ERROR');
     }
 };
@@ -225,7 +225,7 @@ exports.getUserPublicKey = async (req, res) => {
             publicKey: user.encryption.publicKey,
             username: user.username
         });
-    } catch (err) {
+    } catch (_err) {
         return handleError(res, err, 'GET USER PUBLIC KEY ERROR');
     }
 };

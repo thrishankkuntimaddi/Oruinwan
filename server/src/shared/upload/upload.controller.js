@@ -130,7 +130,7 @@ exports.uploadNoteAttachment = async (req, res) => {
             });
         });
 
-    } catch (err) {
+    } catch (_err) {
         console.error('UPLOAD ATTACHMENT ERROR:', err);
         return res.status(500).json({ message: 'Server error' });
     }
@@ -181,7 +181,7 @@ exports.deleteAttachment = async (req, res) => {
 
         return res.json({ message: 'File deleted successfully' });
 
-    } catch (err) {
+    } catch (_err) {
         console.error('DELETE ATTACHMENT ERROR:', err);
         return res.status(500).json({ message: 'Server error' });
     }

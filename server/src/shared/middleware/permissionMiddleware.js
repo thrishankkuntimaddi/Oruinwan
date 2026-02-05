@@ -54,7 +54,7 @@ const requireOwner = async (req, res, next) => {
                 currentRole: req.user.companyRole
             });
         }
-    } catch (error) {
+    } catch (_error) {
         console.error("RequireOwner Middleware Error:", error);
         res.status(500).json({ message: "Server error during permission check" });
     }
@@ -84,7 +84,7 @@ const requireAdmin = async (req, res, next) => {
         } else {
             res.status(403).json({ message: "Access denied: Admin privileges required" });
         }
-    } catch (error) {
+    } catch (_error) {
         console.error("RequireAdmin Middleware Error:", error);
         res.status(500).json({ message: "Server error during permission check" });
     }
@@ -117,7 +117,7 @@ const requireDepartmentManager = async (req, res, next) => {
         } else {
             res.status(403).json({ message: "Access denied: You do not manage this department" });
         }
-    } catch (error) {
+    } catch (_error) {
         console.error("Permission Check Error:", error);
         res.status(500).json({ message: "Permission check failed" });
     }
@@ -151,7 +151,7 @@ const canCreateWorkspace = async (req, res, next) => {
             message: "Access denied: Workspace creation requires approval. Please contact your admin."
         });
 
-    } catch (error) {
+    } catch (_error) {
         console.error("Permission Check Error:", error);
         res.status(500).json({ message: "Permission check failed" });
     }
@@ -180,7 +180,7 @@ const requireManager = async (req, res, next) => {
         } else {
             res.status(403).json({ message: "Access denied: Manager privileges required" });
         }
-    } catch (error) {
+    } catch (_error) {
         console.error("RequireManager Middleware Error:", error);
         res.status(500).json({ message: "Server error during permission check" });
     }

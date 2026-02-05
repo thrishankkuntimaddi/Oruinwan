@@ -29,7 +29,7 @@ exports.getDevices = async (req, res) => {
             totalCount: devices.length
         });
 
-    } catch (error) {
+    } catch (_error) {
         console.error('❌ [getDevices] Error:', error);
         return res.status(500).json({
             message: 'Failed to fetch devices'
@@ -75,7 +75,7 @@ exports.revokeDevice = async (req, res) => {
                     isCurrentDevice
                 }
             });
-        } catch (auditError) {
+        } catch (_auditError) {
             // Silent fail (non-critical)
         }
 
@@ -86,7 +86,7 @@ exports.revokeDevice = async (req, res) => {
             tokensRevoked: result.tokensRevoked
         });
 
-    } catch (error) {
+    } catch (_error) {
         console.error('❌ [revokeDevice] Error:', error);
 
         if (error.message === 'Device session not found') {
@@ -134,7 +134,7 @@ exports.revokeOtherDevices = async (req, res) => {
                     currentDeviceId
                 }
             });
-        } catch (auditError) {
+        } catch (_auditError) {
             // Silent fail (non-critical)
         }
 
@@ -159,7 +159,7 @@ exports.revokeOtherDevices = async (req, res) => {
                     }
                 });
             }
-        } catch (notificationError) {
+        } catch (_notificationError) {
             // Silent fail (non-critical)
         }
 
@@ -168,7 +168,7 @@ exports.revokeOtherDevices = async (req, res) => {
             revokedCount
         });
 
-    } catch (error) {
+    } catch (_error) {
         console.error('❌ [revokeOtherDevices] Error:', error);
         return res.status(500).json({
             message: 'Failed to revoke other devices'

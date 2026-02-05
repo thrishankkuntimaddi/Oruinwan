@@ -9,10 +9,10 @@ const Note = require("../../../models/Note");
 const Update = require("../../../models/Update");
 const Favorite = require("../../../models/Favorite");
 const Invite = require("../../../models/Invite");
-const { createInvite } = require("../../../utils/invite");
+const { _createInvite } = require("../../../utils/invite");
 const sendEmail = require("../../../utils/sendEmail");
-const { handleError, notFound, badRequest, forbidden } = require("../../../utils/responseHelpers");
-const { isMember, normalizeMemberFormat } = require("../../../utils/memberHelpers");
+const { handleError, _notFound, _badRequest, _forbidden } = require("../../../utils/responseHelpers");
+const { _isMember, normalizeMemberFormat } = require("../../../utils/memberHelpers");
 const conversationKeysService = require("../../modules/conversations/conversationKeys.service");
 
 /**
@@ -191,7 +191,7 @@ exports.createWorkspace = async (req, res) => {
         defaultChannels: workspace.defaultChannels
       }
     });
-  } catch (err) {
+  } catch (_err) {
     return handleError(res, err, "CREATE WORKSPACE ERROR");
   }
 };
@@ -241,7 +241,7 @@ exports.listMyWorkspaces = async (req, res) => {
     );
 
     return res.json({ workspaces: workspacesWithOwner });
-  } catch (err) {
+  } catch (_err) {
     return handleError(res, err, "LIST MY WORKSPACES ERROR");
   }
 };
@@ -256,7 +256,7 @@ exports.listWorkspaces = async (req, res) => {
 
     const workspaces = await Workspace.find({ company: companyId }).select("-__v").lean();
     return res.json({ workspaces });
-  } catch (err) {
+  } catch (_err) {
     return handleError(res, err, "LIST WORKSPACES ERROR");
   }
 };
@@ -297,7 +297,7 @@ exports.getWorkspaceMembers = async (req, res) => {
     }));
 
     return res.json({ members: formattedMembers });
-  } catch (err) {
+  } catch (_err) {
     return handleError(res, err, "GET WORKSPACE MEMBERS ERROR");
   }
 };
@@ -323,28 +323,28 @@ exports.deleteWorkspace = async (req, res) => {
     }
 
     // Delete all channels in this workspace
-    const deletedChannels = await Channel.deleteMany({ workspace: workspaceId });
+    const _deletedChannels = await Channel.deleteMany({ workspace: workspaceId });
 
     // Delete all messages in this workspace
-    const deletedMessages = await Message.deleteMany({ workspace: workspaceId });
+    const _deletedMessages = await Message.deleteMany({ workspace: workspaceId });
 
     // Delete all DM sessions in this workspace
-    const deletedDMSessions = await DMSession.deleteMany({ workspace: workspaceId });
+    const _deletedDMSessions = await DMSession.deleteMany({ workspace: workspaceId });
 
     // Delete all tasks in this workspace
-    const deletedTasks = await Task.deleteMany({ workspace: workspaceId });
+    const _deletedTasks = await Task.deleteMany({ workspace: workspaceId });
 
     // Delete all notes in this workspace
-    const deletedNotes = await Note.deleteMany({ workspace: workspaceId });
+    const _deletedNotes = await Note.deleteMany({ workspace: workspaceId });
 
     // Delete all updates in this workspace
-    const deletedUpdates = await Update.deleteMany({ workspace: workspaceId });
+    const _deletedUpdates = await Update.deleteMany({ workspace: workspaceId });
 
     // Delete all favorites in this workspace
-    const deletedFavorites = await Favorite.deleteMany({ workspace: workspaceId });
+    const _deletedFavorites = await Favorite.deleteMany({ workspace: workspaceId });
 
     // Delete all pending invites for this workspace
-    const deletedInvites = await Invite.deleteMany({ workspace: workspaceId });
+    const _deletedInvites = await Invite.deleteMany({ workspace: workspaceId });
 
     // Remove workspace from all users
     await User.updateMany(
@@ -368,7 +368,7 @@ exports.deleteWorkspace = async (req, res) => {
     await Workspace.findByIdAndDelete(workspaceId);
 
     return res.json({ message: "Workspace deleted successfully" });
-  } catch (err) {
+  } catch (_err) {
     return handleError(res, err, "DELETE WORKSPACE ERROR");
   }
 };
@@ -409,7 +409,7 @@ exports.inviteToWorkspace = async (req, res) => {
         const tokenHash = sha256(raw);
         const expiresAt = new Date(Date.now() + daysValid * 24 * 60 * 60 * 1000);
 
-        const invite = await Invite.create({
+        const _invite = await Invite.create({
           email,
           tokenHash,
           workspace: workspace._id,
@@ -444,7 +444,7 @@ exports.inviteToWorkspace = async (req, res) => {
             text: template.text
           });
 
-        } catch (e) {
+        } catch (_e) {
           console.warn("⚠️ SMTP not configured — Email not sent");
 
         }
@@ -462,7 +462,7 @@ exports.inviteToWorkspace = async (req, res) => {
       const tokenHash = sha256(raw);
       const expiresAt = new Date(Date.now() + daysValid * 24 * 60 * 60 * 1000);
 
-      const invite = await Invite.create({
+      const _invite = await Invite.create({
         tokenHash,
         workspace: workspace._id,
         company: workspace.company,
@@ -480,7 +480,7 @@ exports.inviteToWorkspace = async (req, res) => {
         expiresAt
       });
     }
-  } catch (err) {
+  } catch (_err) {
     console.error("INVITE TO WORKSPACE ERROR:", err);
     return res.status(500).json({ message: "Server error" });
   }
@@ -526,7 +526,7 @@ exports.getInviteDetails = async (req, res) => {
       memberCount,
       role: invite.role
     });
-  } catch (err) {
+  } catch (_err) {
     return handleError(res, err, "GET INVITE DETAILS ERROR");
   }
 };
@@ -681,7 +681,7 @@ exports.joinWorkspace = async (req, res) => {
         color: workspace.color || "#2563eb"
       }
     });
-  } catch (err) {
+  } catch (_err) {
     console.error("JOIN WORKSPACE ERROR:", err);
     return res.status(500).json({ message: "Server error" });
   }
@@ -728,7 +728,7 @@ exports.getWorkspaceMembers = async (req, res) => {
       }));
 
     return res.json({ members });
-  } catch (err) {
+  } catch (_err) {
     console.error("GET WORKSPACE MEMBERS ERROR:", err);
     return res.status(500).json({ message: "Server error" });
   }
@@ -824,7 +824,7 @@ exports.getWorkspaceChannels = async (req, res) => {
     });
 
     return res.json({ channels: channelsWithMembershipInfo });
-  } catch (err) {
+  } catch (_err) {
     console.error("GET WORKSPACE CHANNELS ERROR:", err);
     return res.status(500).json({ message: "Server error" });
   }
@@ -977,7 +977,7 @@ exports.createWorkspaceChannel = async (req, res) => {
         members: channel.members
       }
     });
-  } catch (err) {
+  } catch (_err) {
     console.error("CREATE WORKSPACE CHANNEL ERROR:", err);
     return res.status(500).json({ message: "Server error" });
   }
@@ -1030,7 +1030,7 @@ exports.getAllWorkspaceMembers = async (req, res) => {
       });
 
     return res.json({ members });
-  } catch (err) {
+  } catch (_err) {
     console.error("GET ALL WORKSPACE MEMBERS ERROR:", err);
     return res.status(500).json({ message: "Server error" });
   }
@@ -1093,7 +1093,7 @@ exports.renameWorkspace = async (req, res) => {
         name: workspace.name
       }
     });
-  } catch (err) {
+  } catch (_err) {
     console.error("RENAME WORKSPACE ERROR:", err);
     return res.status(500).json({ message: "Server error" });
   }
@@ -1163,7 +1163,7 @@ exports.updateWorkspace = async (req, res) => {
         settings: workspace.settings
       }
     });
-  } catch (err) {
+  } catch (_err) {
     console.error("UPDATE WORKSPACE ERROR:", err);
     return res.status(500).json({ message: "Server error" });
   }
@@ -1207,7 +1207,7 @@ exports.getWorkspaceStats = async (req, res) => {
       description: workspace.description,
       settings: workspace.settings
     });
-  } catch (err) {
+  } catch (_err) {
     console.error("GET WORKSPACE STATS ERROR:", err);
     return res.status(500).json({ message: "Server error" });
   }

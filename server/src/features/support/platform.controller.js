@@ -69,7 +69,7 @@ exports.getAuditLogs = async (req, res) => {
             currentPage: page,
             total
         });
-    } catch (err) {
+    } catch (_err) {
         console.error("AUDIT LOG ERROR:", err);
         res.status(500).json({ message: "Server error" });
     }
@@ -87,7 +87,7 @@ exports.getActiveCompanies = async (req, res) => {
             .sort({ createdAt: -1 });
 
         res.json(companies);
-    } catch (err) {
+    } catch (_err) {
         console.error("ACTIVE COMPANIES ERROR:", err);
         res.status(500).json({ message: "Server error" });
     }
@@ -106,7 +106,7 @@ exports.getAllTickets = async (req, res) => {
             .sort({ updatedAt: -1 });
 
         res.json(tickets);
-    } catch (err) {
+    } catch (_err) {
         console.error("GET TICKETS ERROR:", err);
         res.status(500).json({ message: "Server error" });
     }
@@ -138,7 +138,7 @@ exports.createTicket = async (req, res) => {
         });
 
         res.status(201).json(ticket);
-    } catch (err) {
+    } catch (_err) {
         console.error("CREATE TICKET ERROR:", err);
         res.status(500).json({ message: "Server error" });
     }
@@ -177,7 +177,7 @@ exports.updateTicket = async (req, res) => {
             .populate('messages.sender', 'username email profilePicture');
 
         res.json(updatedTicket);
-    } catch (err) {
+    } catch (_err) {
         console.error("UPDATE TICKET ERROR:", err);
         res.status(500).json({ message: "Server error" });
     }
@@ -231,7 +231,7 @@ exports.getPlatformSession = async (req, res) => {
 
         res.json(session);
 
-    } catch (err) {
+    } catch (_err) {
         console.error("GET SESSION ERROR:", err);
         res.status(500).json({ message: "Server error" });
     }
@@ -245,7 +245,7 @@ exports.getSessionMessages = async (req, res) => {
             .sort({ createdAt: 1 });
 
         res.json(messages);
-    } catch (err) {
+    } catch (_err) {
         console.error("GET MESSAGES ERROR:", err);
         res.status(500).json({ message: "Server error" });
     }
@@ -276,7 +276,7 @@ exports.sendSessionMessage = async (req, res) => {
         // req.io.to(`platform_session_${sessionId}`).emit('param_message', fullMessage);
 
         res.json(fullMessage);
-    } catch (err) {
+    } catch (_err) {
         console.error("SEND MESSAGE ERROR:", err);
         res.status(500).json({ message: "Server error" });
     }

@@ -71,7 +71,7 @@ describe('Messages Service', () => {
 
             Message.create = jest.fn().mockResolvedValue(mockMessage);
 
-            const result = await messagesService.createMessage({
+            const _result = await messagesService.createMessage({
                 type: 'message',
                 sender: 'user123',
                 ciphertext: 'encrypted-data',

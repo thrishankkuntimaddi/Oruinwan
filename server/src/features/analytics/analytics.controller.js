@@ -1,10 +1,10 @@
 // server/controllers/analyticsController.js
 const User = require('../../../models/User');
 const Workspace = require('../../../models/Workspace');
-const Department = require('../../../models/Department');
+const _Department = require('../../../models/_Department');
 const Message = require("../messages/message.model.js");
 const Channel = require("../channels/channel.model.js");
-const DMSession = require('../../../models/DMSession');
+const _DMSession = require('../../../models/_DMSession');
 
 /**
  * GET /api/analytics/company/:companyId
@@ -207,7 +207,7 @@ exports.getCompanyAnalytics = async (req, res) => {
             }
         });
 
-    } catch (err) {
+    } catch (_err) {
         console.error('GET COMPANY ANALYTICS ERROR:', err);
         return res.status(500).json({ message: 'Server error' });
     }

@@ -55,7 +55,7 @@ router.get('/overview', requireAuth, requireOwner, async (req, res) => {
                 workspaces: newWorkspacesLast30Days
             }
         });
-    } catch (error) {
+    } catch (_error) {
         console.error('Owner Dashboard Overview Error:', error);
         res.status(500).json({ message: 'Server error', error: error.message });
     }
@@ -110,7 +110,7 @@ router.get('/activity-health', requireAuth, requireOwner, async (req, res) => {
             dormantWorkspaces,
             engagementScore
         });
-    } catch (error) {
+    } catch (_error) {
         console.error('Owner Dashboard Activity Health Error:', error);
         res.status(500).json({ message: 'Server error' });
     }
@@ -142,7 +142,7 @@ router.get('/billing-summary', requireAuth, requireOwner, async (req, res) => {
             monthlyCost: company.billing?.amount || 0,
             renewalDate: company.billing?.renewalDate || null
         });
-    } catch (error) {
+    } catch (_error) {
         console.error('Owner Dashboard Billing Summary Error:', error);
         res.status(500).json({ message: 'Server error' });
     }
@@ -191,7 +191,7 @@ router.get('/security-risk', requireAuth, requireOwner, async (req, res) => {
             },
             complianceScore: 95 // Placeholder
         });
-    } catch (error) {
+    } catch (_error) {
         console.error('Owner Dashboard Security Risk Error:', error);
         res.status(500).json({ message: 'Server error' });
     }
@@ -237,7 +237,7 @@ router.get('/active-sessions', requireAuth, requireOwner, async (req, res) => {
         }));
 
         res.json({ sessions: formattedSessions });
-    } catch (error) {
+    } catch (_error) {
         console.error('Active Sessions Error:', error);
         res.status(500).json({ message: 'Server error', error: error.message });
     }
@@ -324,7 +324,7 @@ router.get('/security-events', requireAuth, requireOwner, async (req, res) => {
         });
 
         res.json({ events: formattedEvents });
-    } catch (error) {
+    } catch (_error) {
         console.error('Security Events Error:', error);
         res.status(500).json({ message: 'Server error', error: error.message });
     }
@@ -353,7 +353,7 @@ router.get('/invoices', requireAuth, requireOwner, async (req, res) => {
             .lean();
 
         res.json({ invoices });
-    } catch (error) {
+    } catch (_error) {
         console.error('Invoices Error:', error);
         res.status(500).json({ message: 'Server error', error: error.message });
     }
@@ -388,7 +388,7 @@ router.get('/payment-methods', requireAuth, requireOwner, async (req, res) => {
                 expiryYear: 2027
             }
         });
-    } catch (error) {
+    } catch (_error) {
         console.error('Payment Methods Error:', error);
         res.status(500).json({ message: 'Server error', error: error.message });
     }

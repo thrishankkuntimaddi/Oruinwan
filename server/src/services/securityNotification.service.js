@@ -63,7 +63,7 @@ exports.sendSecurityNotification = async ({
 
         console.log(`✅ [NOTIFICATION] Sent ${eventType} notification to ${user.email}`);
 
-    } catch (error) {
+    } catch (_error) {
         // CRITICAL: Never throw, never block
         console.warn(`⚠️ [NOTIFICATION] Failed to send ${eventType} notification (non-critical):`, error.message);
         // Continue silently
@@ -226,7 +226,7 @@ function buildAllDevicesRevokedEmail(auditEvent, formattedTime, user) {
  * Send email via email provider
  * @private
  */
-async function sendEmail({ to, subject, html }) {
+async function sendEmail({ to, subject, _html }) {
     try {
         // TODO: Replace with actual email provider (SendGrid, AWS SES, etc.)
         // For now, log to console in development
@@ -257,7 +257,7 @@ async function sendEmail({ to, subject, html }) {
         });
         */
 
-    } catch (error) {
+    } catch (_error) {
         // Log but don't throw
         console.warn('⚠️ [EMAIL] Failed to send email:', error.message);
     }

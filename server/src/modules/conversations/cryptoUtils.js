@@ -34,7 +34,7 @@ function unwrapWithServerKEK(encryptedKey, iv, authTag) {
  * @param {String} workspaceKeyAuthTag - Auth tag for workspace key  
  * @returns {Object} { ciphertext, iv, authTag } all base64
  */
-function encryptWithWorkspaceKey(conversationKeyBytes, workspaceId) {
+function encryptWithWorkspaceKey(conversationKeyBytes, _workspaceId) {
     // For default channels, we use SERVER_KEK directly as the workspace key wrapper
     // This is acceptable ONLY for server-side bootstrap of default channels
     const serverKEK = Buffer.from(process.env.SERVER_KEK, 'hex');
@@ -84,7 +84,7 @@ function wrapForUser(conversationKeyBytes, userPublicKeyPem) {
             encryptedKey: encryptedKey.toString('base64'),
             algorithm: 'RSA-2048'  // Must match ConversationKey schema enum
         };
-    } catch (error) {
+    } catch (_error) {
         console.error('Failed to wrap key for user:', error);
         throw new Error('Key wrapping failed');
     }

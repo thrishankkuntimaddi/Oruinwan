@@ -37,7 +37,7 @@ function unwrapConversationKeyWithWorkspaceKey(encryptedKey, iv, authTag, worksp
 
         console.log('✅ Unwrapped conversation key with workspace key');
         return decrypted;
-    } catch (error) {
+    } catch (_error) {
         console.error('Failed to unwrap conversation key:', error);
         throw new Error('Conversation key decryption failed');
     }
@@ -63,7 +63,7 @@ async function wrapConversationKeyForUser(conversationKeyBytes, userPublicKey, a
         } else {
             throw new Error(`Unsupported algorithm: ${algorithm}`);
         }
-    } catch (error) {
+    } catch (_error) {
         console.error('Failed to wrap conversation key for user:', error);
         throw error;
     }
@@ -92,7 +92,7 @@ async function wrapWithRSA(keyBytes, publicKeyPem) {
         return {
             encryptedKey: encrypted.toString('base64')
         };
-    } catch (error) {
+    } catch (_error) {
         console.error('RSA encryption failed:', error);
         throw error;
     }
@@ -150,7 +150,7 @@ async function wrapWithX25519(keyBytes, publicKeyBase64) {
             encryptedKey: combined.toString('base64'),
             ephemeralPublicKey: ephemeralPublicExport.toString('base64')
         };
-    } catch (error) {
+    } catch (_error) {
         console.error('X25519 encryption failed:', error);
         throw error;
     }
@@ -176,7 +176,7 @@ async function getUserPublicKey(userId) {
             publicKey: identityKey.publicKey,
             algorithm: identityKey.algorithm
         };
-    } catch (error) {
+    } catch (_error) {
         console.error('Failed to fetch user public key:', error);
         throw error;
     }

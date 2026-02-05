@@ -91,7 +91,7 @@ exports.getChatList = async (req, res) => {
     });
 
     return res.json({ chats: combined });
-  } catch (err) {
+  } catch (_err) {
     console.error("GET CHAT LIST ERROR:", err);
     return res.status(500).json({ message: "Server error" });
   }
@@ -129,7 +129,7 @@ exports.resetUnread = async (req, res) => {
     } else {
       return res.status(400).json({ message: "Invalid type" });
     }
-  } catch (err) {
+  } catch (_err) {
     console.error("RESET UNREAD ERROR:", err);
     return res.status(500).json({ message: "Server error" });
   }

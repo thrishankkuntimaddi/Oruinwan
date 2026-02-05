@@ -41,7 +41,7 @@ exports.getUpdates = async (req, res) => {
 
         return res.json({ updates });
 
-    } catch (err) {
+    } catch (_err) {
         console.error("GET UPDATES ERROR:", err);
         return res.status(500).json({ message: "Server error" });
     }
@@ -128,7 +128,7 @@ exports.postUpdate = async (req, res) => {
             update: populatedUpdate
         });
 
-    } catch (err) {
+    } catch (_err) {
         console.error("POST UPDATE ERROR:", err);
         return res.status(500).json({ message: "Server error" });
     }
@@ -186,7 +186,7 @@ exports.updateUpdate = async (req, res) => {
             update: populatedUpdate
         });
 
-    } catch (err) {
+    } catch (_err) {
         console.error("UPDATE UPDATE ERROR:", err);
         return res.status(500).json({ message: "Server error" });
     }
@@ -229,7 +229,7 @@ exports.deleteUpdate = async (req, res) => {
 
         return res.json({ message: "Update deleted successfully" });
 
-    } catch (err) {
+    } catch (_err) {
         console.error("DELETE UPDATE ERROR:", err);
         return res.status(500).json({ message: "Server error" });
     }
@@ -285,7 +285,7 @@ exports.addReaction = async (req, res) => {
             reactions: update.reactions
         });
 
-    } catch (err) {
+    } catch (_err) {
         console.error("ADD REACTION ERROR:", err);
         return res.status(500).json({ message: "Server error" });
     }
@@ -312,7 +312,7 @@ exports.markAsRead = async (req, res) => {
 
         return res.json({ message: "Marked as read" });
 
-    } catch (err) {
+    } catch (_err) {
         console.error("MARK AS READ ERROR:", err);
         return res.status(500).json({ message: "Server error" });
     }
@@ -352,7 +352,7 @@ exports.getCompanyUpdates = async (req, res) => {
 
         return res.json({ updates });
 
-    } catch (err) {
+    } catch (_err) {
         console.error("GET COMPANY UPDATES ERROR:", err);
         return res.status(500).json({ message: "Server error" });
     }

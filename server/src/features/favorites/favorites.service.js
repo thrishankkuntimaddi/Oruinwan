@@ -11,8 +11,8 @@
  */
 
 const Favorite = require('../../../models/Favorite');
-const Channel = require("../channels/channel.model.js");
-const DMSession = require('../../../models/DMSession');
+const _Channel = require("../channels/channel.model.js");
+const _DMSession = require('../../../models/_DMSession');
 
 // ============================================================================
 // SERVICE METHODS

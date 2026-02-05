@@ -1,5 +1,5 @@
 const Workspace = require("../../../models/Workspace");
-const User = require("../../../models/User");
+const _User = require("../../../models/_User");
 const Channel = require("../channels/channel.model.js");
 
 /**
@@ -63,7 +63,7 @@ exports.revokeInvite = async (req, res) => {
                 revokedAt: invite.revokedAt
             }
         });
-    } catch (err) {
+    } catch (_err) {
         console.error("REVOKE INVITE ERROR:", err);
         return res.status(500).json({ message: "Server error" });
     }
@@ -160,7 +160,7 @@ exports.getWorkspaceInvites = async (req, res) => {
             duplicateEmails,
             duplicateCount: duplicateEmails.length
         });
-    } catch (err) {
+    } catch (_err) {
         console.error("GET WORKSPACE INVITES ERROR:", err);
         return res.status(500).json({ message: "Server error" });
     }
@@ -202,7 +202,7 @@ exports.resendInvite = async (req, res) => {
 
         // Can only resend pending or expired invites
         const now = new Date();
-        const isExpired = invite.expiresAt < now;
+        const _isExpired = invite.expiresAt < now;
 
         if (invite.status === "accepted") {
             return res.status(400).json({ message: "Cannot resend an already accepted invite" });
@@ -241,7 +241,7 @@ exports.resendInvite = async (req, res) => {
                 `
             });
 
-        } catch (e) {
+        } catch (_e) {
             console.warn("⚠️ SMTP not configured — Email not sent");
 
         }
@@ -255,7 +255,7 @@ exports.resendInvite = async (req, res) => {
                 inviteLink
             }
         });
-    } catch (err) {
+    } catch (_err) {
         console.error("RESEND INVITE ERROR:", err);
         return res.status(500).json({ message: "Server error" });
     }
@@ -313,7 +313,7 @@ exports.suspendMember = async (req, res) => {
             message: "Member suspended successfully",
             userId: targetUserId
         });
-    } catch (err) {
+    } catch (_err) {
         console.error("SUSPEND MEMBER ERROR:", err);
         return res.status(500).json({ message: "Server error" });
     }
@@ -361,7 +361,7 @@ exports.restoreMember = async (req, res) => {
             message: "Member restored successfully",
             userId: targetUserId
         });
-    } catch (err) {
+    } catch (_err) {
         console.error("RESTORE MEMBER ERROR:", err);
         return res.status(500).json({ message: "Server error" });
     }
@@ -424,7 +424,7 @@ exports.changeRole = async (req, res) => {
             userId: targetUserId,
             newRole
         });
-    } catch (err) {
+    } catch (_err) {
         console.error("CHANGE ROLE ERROR:", err);
         return res.status(500).json({ message: "Server error" });
     }
@@ -498,7 +498,7 @@ exports.removeMember = async (req, res) => {
             message: "Member removed successfully",
             removedUserId: targetUserId
         });
-    } catch (err) {
+    } catch (_err) {
         console.error("REMOVE MEMBER ERROR:", err);
         return res.status(500).json({ message: "Server error" });
     }
@@ -572,7 +572,7 @@ exports.bulkRevokeInvites = async (req, res) => {
             totalRequested: inviteIds.length,
             errors: errors.length > 0 ? errors : undefined
         });
-    } catch (err) {
+    } catch (_err) {
         console.error("BULK REVOKE INVITES ERROR:", err);
         return res.status(500).json({ message: "Server error" });
     }
@@ -607,7 +607,7 @@ exports.bulkDeleteInvites = async (req, res) => {
 
         const Invite = require("../../../models/Invite");
 
-        const invitesToDelete = await Invite.find({
+        const _invitesToDelete = await Invite.find({
             _id: { $in: inviteIds },
             workspace: workspaceId
         }).lean();
@@ -638,7 +638,7 @@ exports.bulkDeleteInvites = async (req, res) => {
             deletedCount: result.deletedCount,
             totalRequested: inviteIds.length
         });
-    } catch (err) {
+    } catch (_err) {
         console.error("BULK DELETE INVITES ERROR:", err);
         return res.status(500).json({ message: "Server error" });
     }
@@ -679,7 +679,7 @@ exports.cleanupExpiredInvites = async (req, res) => {
             message: `Successfully cleaned up ${result.deletedCount} expired invitation(s)`,
             deletedCount: result.deletedCount
         });
-    } catch (err) {
+    } catch (_err) {
         console.error("CLEANUP EXPIRED INVITES ERROR:", err);
         return res.status(500).json({ message: "Server error" });
     }

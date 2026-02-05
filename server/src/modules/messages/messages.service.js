@@ -8,9 +8,9 @@
 
 const Message = require("../../features/messages/message.model.js");
 const DMSession = require('../../../models/DMSession');
-const Channel = require("../../features/channels/channel.model.js");
+const _Channel = require("../../features/channels/channel.model.js");
 const Workspace = require('../../../models/Workspace');
-const { isMember } = require('../../../utils/memberHelpers');
+const { _isMember } = require('../../../utils/memberHelpers');
 const conversationKeysService = require('../conversations/conversationKeys.service');
 
 // ==================== MESSAGE CREATION ====================
@@ -35,7 +35,7 @@ async function createMessage(messageData, io = null) {
         parentId = null,
         ciphertext,
         messageIv,
-        isEncrypted
+        _isEncrypted
     } = messageData;
 
     // ============================================================

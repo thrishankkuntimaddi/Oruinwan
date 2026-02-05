@@ -38,7 +38,7 @@ function registerAdminHandlers(io, socket) {
             } else {
                 socket.emit('error', { message: 'Unauthorized: Admin access required' });
             }
-        } catch (err) {
+        } catch (_err) {
             console.error('Error joining admin room:', err);
             socket.emit('error', { message: 'Failed to join admin room' });
         }
@@ -75,7 +75,7 @@ function registerAdminHandlers(io, socket) {
             });
 
 
-        } catch (err) {
+        } catch (_err) {
             console.error('Error sending admin DM:', err);
             socket.emit('error', { message: 'Failed to send DM' });
         }

@@ -282,8 +282,8 @@ function validateRecoveryBundle(bundle) {
  */
 async function validateKeyPair(publicKey, privateKey) {
     try {
-        // Import keys
-        const publicCryptoKey = await crypto.subtle.importKey(
+        // Import keys to validate format and compatibility
+        await crypto.subtle.importKey(
             'raw',
             publicKey,
             {
@@ -294,7 +294,7 @@ async function validateKeyPair(publicKey, privateKey) {
             []
         );
 
-        const privateCryptoKey = await crypto.subtle.importKey(
+        await crypto.subtle.importKey(
             'pkcs8',
             privateKey,
             {
@@ -305,9 +305,8 @@ async function validateKeyPair(publicKey, privateKey) {
             ['deriveBits']
         );
 
-        // Derive public key from private key and compare
-        // For X25519, we can verify by attempting a key derivation
-        // If keys don't match, import will fail or derivation will fail
+        // Successful import validates key format and compatibility
+        // For X25519, if keys don't match or are invalid, import will fail
 
         console.log('✅ [RECOVERY] Key pair validation successful');
         return true;

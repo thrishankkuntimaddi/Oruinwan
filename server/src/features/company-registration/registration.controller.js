@@ -14,7 +14,7 @@ exports.registerCompany = async (req, res) => {
         console.log("🚀 Starting company registration...");
 
         // Use registration service
-        const { company, adminUser } = await registrationService.registerCompany({
+        const { company, _adminUser } = await registrationService.registerCompany({
             ...req.body,
             req
         });
@@ -31,7 +31,7 @@ exports.registerCompany = async (req, res) => {
             }
         });
 
-    } catch (err) {
+    } catch (_err) {
         console.error("❌ REGISTER COMPANY ERROR:", err.message);
 
         // Handle specific errors with appropriate status codes
@@ -126,7 +126,7 @@ exports.verifyCompany = async (req, res) => {
             return res.status(400).json({ message: "Invalid decision. Use 'approve' or 'reject'." });
         }
 
-    } catch (err) {
+    } catch (_err) {
         console.error("VERIFY COMPANY ERROR:", err);
         return res.status(500).json({ message: "Server error" });
     }
@@ -169,7 +169,7 @@ exports.startSetup = async (req, res) => {
             step: company.setupStep
         });
 
-    } catch (err) {
+    } catch (_err) {
         console.error("START SETUP ERROR:", err);
         return res.status(500).json({ message: "Server error" });
     }
@@ -300,7 +300,7 @@ exports.updateCompanySetup = async (req, res) => {
             isSetupComplete: company.isSetupComplete
         });
 
-    } catch (err) {
+    } catch (_err) {
         console.error("SETUP ERROR:", err);
         return res.status(500).json({ message: "Server error" });
     }

@@ -1,6 +1,6 @@
 const Poll = require("./poll.model.js");
 const Channel = require("../channels/channel.model.js");
-const User = require("../../../models/User");
+const _User = require("../../../models/_User");
 
 /**
  * Create a new poll in a channel
@@ -54,7 +54,7 @@ exports.createPoll = async (req, res) => {
         await poll.populate('createdBy', 'username email profilePicture');
 
         res.status(201).json({ poll });
-    } catch (err) {
+    } catch (_err) {
         console.error("Error creating poll:", err);
         res.status(500).json({ error: "Failed to create poll" });
     }
@@ -84,7 +84,7 @@ exports.getPollById = async (req, res) => {
         }
 
         res.json({ poll });
-    } catch (err) {
+    } catch (_err) {
         console.error("Error fetching poll:", err);
         res.status(500).json({ error: "Failed to fetch poll" });
     }
@@ -115,7 +115,7 @@ exports.getPollsByChannel = async (req, res) => {
             .sort({ createdAt: -1 });
 
         res.json({ polls });
-    } catch (err) {
+    } catch (_err) {
         console.error("Error fetching polls:", err);
         res.status(500).json({ error: "Failed to fetch polls" });
     }
@@ -184,7 +184,7 @@ exports.vote = async (req, res) => {
         await poll.populate('createdBy', 'username email profilePicture');
 
         res.json({ poll });
-    } catch (err) {
+    } catch (_err) {
         console.error("Error voting on poll:", err);
         res.status(500).json({ error: "Failed to vote" });
     }
@@ -217,7 +217,7 @@ exports.deletePoll = async (req, res) => {
         await Poll.findByIdAndDelete(pollId);
 
         res.json({ message: "Poll deleted successfully", pollId });
-    } catch (err) {
+    } catch (_err) {
         console.error("Error deleting poll:", err);
         res.status(500).json({ error: "Failed to delete poll" });
     }
@@ -252,7 +252,7 @@ exports.closePoll = async (req, res) => {
         await poll.populate('createdBy', 'username email profilePicture');
 
         res.json({ poll });
-    } catch (err) {
+    } catch (_err) {
         console.error("Error closing poll:", err);
         res.status(500).json({ error: "Failed to close poll" });
     }

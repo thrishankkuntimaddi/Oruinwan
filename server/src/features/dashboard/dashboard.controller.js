@@ -2,7 +2,7 @@
 const User = require('../../../models/User');
 const Workspace = require('../../../models/Workspace');
 const Message = require("../messages/message.model.js");
-const Channel = require("../channels/channel.model.js");
+const _Channel = require("../channels/channel.model.js");
 
 /**
  * GET /api/dashboard/metrics/:companyId
@@ -146,7 +146,7 @@ exports.getDashboardMetrics = async (req, res) => {
             }
         });
 
-    } catch (err) {
+    } catch (_err) {
         return res.status(500).json({
             message: 'Server error',
             error: process.env.NODE_ENV === 'development' ? err.message : undefined

@@ -31,7 +31,7 @@ const User = require('../../../models/User');
 const Workspace = require('../../../models/Workspace');
 const Channel = require("../channels/channel.model.js");
 const Message = require("../messages/message.model.js");
-const DMSession = require('../../../models/DMSession');
+const _DMSession = require('../../../models/_DMSession');
 
 // Shared Services (from other modules)
 const messagesService = require('../../modules/messages/messages.service');
@@ -42,7 +42,7 @@ const { isValidTransition, getAllowedTransitions, validateBlocked } = require('.
 
 // Feature layers
 const policy = require('./tasks.policy');
-const validator = require('./tasks.validator');
+const _validator = require('./tasks._validator');
 
 // ============================================================================
 // SERVICE METHODS
@@ -69,7 +69,7 @@ const validator = require('./tasks.validator');
  * @returns {Promise<Object>} { tasks: Task[] }
  */
 async function getTasks(userId, filters) {
-    const { workspaceId, status, assignedTo, priority, includeDeleted } = filters;
+    const { workspaceId, status, _assignedTo, priority, includeDeleted } = filters;
 
     // Validation
     if (!workspaceId) {
@@ -87,7 +87,7 @@ async function getTasks(userId, filters) {
     }
 
     // Validate workspace membership
-    const workspace = await _validateWorkspaceMember(userId, workspaceId);
+    const _workspace = await _validateWorkspaceMember(userId, workspaceId);
 
     // Get user's channel memberships for visibility check
     const userChannels = await _getUserChannels(userId, workspaceId);

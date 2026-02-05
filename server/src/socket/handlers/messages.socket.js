@@ -29,7 +29,7 @@ function registerMessageHandlers(io, socket) {
      * IDEMPOTENT: Safe to call multiple times
      */
     socket.on('conversation:join', (data) => {
-        const { conversationId, type, workspaceId } = data;
+        const { conversationId, type, _workspaceId } = data;
 
 
 
@@ -185,7 +185,7 @@ function registerMessageHandlers(io, socket) {
                     io.to(room).emit('message:deleted', event.payload);
                     break;
             }
-        } catch (err) {
+        } catch (_err) {
             console.error('Error handling conversation event:', err);
             socket.emit('error', { message: 'Failed to process event' });
         }
@@ -273,7 +273,7 @@ function registerMessageHandlers(io, socket) {
             socket.join(room);
             logger.socket(`💬 User ${socket.user.id} joined ${room}`);
 
-        } catch (error) {
+        } catch (_error) {
             console.error('Error joining DM room:', error);
             socket.emit('error', { message: 'Failed to join DM' });
         }
@@ -316,7 +316,7 @@ function registerMessageHandlers(io, socket) {
 
             // Load required models and controllers (USING MODULAR ARCHITECTURE)
             const messagesController = require('../../modules/messages/messages.controller');
-            const DMSession = require('../../../models/DMSession');
+            const _DMSession = require('../../../models/_DMSession');
 
             // Create mock request/response objects for controller
             const mockReq = {
@@ -396,7 +396,7 @@ function registerMessageHandlers(io, socket) {
                 logger.warn(`⚠️ DM send failed for user ${socket.user.id}: ${errorMessage}`);
             }
 
-        } catch (error) {
+        } catch (_error) {
             console.error('Error sending DM message via socket:', error);
             socket.emit('send-error', {
                 clientTempId: data.clientTempId,

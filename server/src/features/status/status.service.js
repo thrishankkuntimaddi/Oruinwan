@@ -30,7 +30,7 @@ async function checkDatabaseHealth() {
             return { status: 'operational', responseTime: 10 };
         }
         return { status: 'outage', responseTime: 0 };
-    } catch (error) {
+    } catch (_error) {
         return { status: 'outage', responseTime: 0 };
     }
 }

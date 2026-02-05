@@ -24,7 +24,7 @@ exports.blockUser = async (req, res) => {
             message: "User blocked successfully",
             blockedUser: { _id: blockedUser._id, username: blockedUser.username, email: blockedUser.email, profilePicture: blockedUser.profilePicture }
         });
-    } catch (err) {
+    } catch (_err) {
         console.error("BLOCK USER ERROR:", err);
         return res.status(500).json({ message: "Server error" });
     }
@@ -44,7 +44,7 @@ exports.unblockUser = async (req, res) => {
         await user.save();
 
         return res.json({ message: "User unblocked successfully" });
-    } catch (err) {
+    } catch (_err) {
         console.error("UNBLOCK USER ERROR:", err);
         return res.status(500).json({ message: "Server error" });
     }
@@ -63,7 +63,7 @@ exports.getBlockedUsers = async (req, res) => {
                 profilePicture: b.userId.profilePicture, blockedAt: b.blockedAt
             }))
         });
-    } catch (err) {
+    } catch (_err) {
         console.error("GET BLOCKED USERS ERROR:", err);
         return res.status(500).json({ message: "Server error" });
     }
@@ -89,7 +89,7 @@ exports.muteDM = async (req, res) => {
 
         await user.save();
         return res.json({ message: muted ? "DM muted successfully" : "DM unmuted successfully", muted });
-    } catch (err) {
+    } catch (_err) {
         console.error("MUTE DM ERROR:", err);
         return res.status(500).json({ message: "Server error" });
     }
@@ -113,7 +113,7 @@ exports.deleteDM = async (req, res) => {
         }
 
         return res.json({ message: "DM deleted successfully" });
-    } catch (err) {
+    } catch (_err) {
         console.error("DELETE DM ERROR:", err);
         return res.status(500).json({ message: "Server error" });
     }
@@ -158,7 +158,7 @@ exports.updateStatus = async (req, res) => {
             message: "Status updated successfully",
             status: user.userStatus
         });
-    } catch (err) {
+    } catch (_err) {
         console.error("UPDATE STATUS ERROR:", err);
         return res.status(500).json({ message: "Server error" });
     }
@@ -184,7 +184,7 @@ exports.checkUsername = async (req, res) => {
             exists: !!exists,
             available: !exists
         });
-    } catch (err) {
+    } catch (_err) {
         console.error("CHECK USERNAME ERROR:", err);
         return res.status(500).json({ message: "Server error" });
     }
@@ -210,7 +210,7 @@ exports.checkEmail = async (req, res) => {
             exists: !!exists,
             available: !exists
         });
-    } catch (err) {
+    } catch (_err) {
         console.error("CHECK EMAIL ERROR:", err);
         return res.status(500).json({ message: "Server error" });
     }
@@ -241,7 +241,7 @@ exports.checkPhone = async (req, res) => {
             exists: !!exists,
             available: !exists
         });
-    } catch (err) {
+    } catch (_err) {
         console.error("CHECK PHONE ERROR:", err);
         return res.status(500).json({ message: "Server error" });
     }
@@ -329,7 +329,7 @@ exports.deleteAccount = async (req, res) => {
             message: "Account deleted successfully",
             deleted: true
         });
-    } catch (err) {
+    } catch (_err) {
         console.error("DELETE ACCOUNT ERROR:", err);
         return res.status(500).json({ message: "Server error" });
     }

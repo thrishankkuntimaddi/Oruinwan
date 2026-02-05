@@ -38,7 +38,7 @@ module.exports = async function requireAuth(req, res, next) {
                 req,
                 metadata: { deviceId }
               });
-            } catch (auditError) {
+            } catch (_auditError) {
               // Silent fail (non-critical)
             }
 
@@ -56,7 +56,7 @@ module.exports = async function requireAuth(req, res, next) {
         }
 
         return next();
-      } catch (err) {
+      } catch (_err) {
         // access token expired → fall through to cookie
       }
     }
@@ -64,7 +64,7 @@ module.exports = async function requireAuth(req, res, next) {
     // CASE 2: NO access token but refresh cookie exists → auto refresh
     if (refreshToken) {
       try {
-        const decoded = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET);
+        const _decoded = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET);
 
         // Hash refresh token to find user
         const refreshHash = crypto
@@ -101,14 +101,14 @@ module.exports = async function requireAuth(req, res, next) {
 
         return next();
 
-      } catch (err) {
+      } catch (_err) {
         return res.status(401).json({ message: "Token expired, please login again" });
       }
     }
 
     return res.status(401).json({ message: "No token" });
 
-  } catch (err) {
+  } catch (_err) {
     console.error("AUTH MIDDLEWARE ERROR:", err);
     return res.status(500).json({ message: "Server error" });
   }

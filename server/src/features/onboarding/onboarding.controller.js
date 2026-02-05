@@ -1,6 +1,6 @@
 // server/controllers/onboardEmployeeController.js
 const User = require('../../../models/User');
-const Company = require('../../../models/Company');
+const _Company = require('../../../models/_Company');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const sendEmail = require('../../../utils/sendEmail');
@@ -23,7 +23,7 @@ const generatePassword = () => {
 /**
  * Generate company email from name
  */
-const generateCompanyEmail = (firstName, lastName, companyDomain) => {
+const _generateCompanyEmail = (firstName, lastName, companyDomain) => {
     const cleanFirst = firstName.toLowerCase().trim().replace(/[^a-z]/g, '');
     const cleanLast = lastName.toLowerCase().trim().replace(/[^a-z]/g, '');
     return `${cleanFirst}.${cleanLast}@${companyDomain}`;
@@ -168,7 +168,7 @@ exports.createEmployee = async (req, res) => {
                 html: emailTemplate.html,
                 text: emailTemplate.text
             });
-        } catch (emailError) {
+        } catch (_emailError) {
             console.error('Failed to send credentials email:', emailError);
             // Don't fail the request if email fails, but notify admin
             return res.status(201).json({
@@ -202,7 +202,7 @@ exports.createEmployee = async (req, res) => {
             }
         });
 
-    } catch (error) {
+    } catch (_error) {
         console.error('Error creating employee:', error);
         res.status(500).json({ message: 'Failed to create employee', error: error.message });
     }

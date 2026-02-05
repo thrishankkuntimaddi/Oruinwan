@@ -25,7 +25,7 @@ exports.generateDomainVerification = async (req, res) => {
             instructions: result.instructions
         });
 
-    } catch (err) {
+    } catch (_err) {
         console.error("GENERATE DOMAIN VERIFICATION ERROR:", err);
 
         if (err.message === 'Company not found') {
@@ -63,7 +63,7 @@ exports.verifyDomain = async (req, res) => {
             verified: true
         });
 
-    } catch (err) {
+    } catch (_err) {
         console.error("VERIFY DOMAIN ERROR:", err);
 
         if (err.message === 'Company not found') {
@@ -102,7 +102,7 @@ exports.setAutoJoinPolicy = async (req, res) => {
             autoJoinByDomain: result.autoJoin
         });
 
-    } catch (err) {
+    } catch (_err) {
         console.error("SET AUTO-JOIN POLICY ERROR:", err);
 
         if (err.message === 'Company not found') {
