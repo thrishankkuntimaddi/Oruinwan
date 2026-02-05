@@ -31,7 +31,7 @@ const WorkspaceGrid = ({
                     <button
                         key={ws.id}
                         onClick={() => onWorkspaceClick(ws.id)}
-                        className="group relative flex flex-col h-64 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-8 hover:shadow-xl hover:shadow-indigo-100/50 dark:hover:shadow-indigo-900/50 hover:border-indigo-200 dark:hover:border-indigo-700 hover:-translate-y-1 transition-all duration-300 text-left overflow-hidden"
+                        className="group relative flex flex-col h-56 md:h-64 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-6 md:p-8 hover:shadow-xl hover:shadow-indigo-100/50 dark:hover:shadow-indigo-900/50 hover:border-indigo-200 dark:hover:border-indigo-700 hover:-translate-y-1 transition-all duration-300 text-left overflow-hidden"
                     >
                         {/* Decorative gradient blob */}
                         <div className="absolute -top-10 -right-10 w-32 h-32 bg-gradient-to-br from-indigo-50 to-purple-50 rounded-full blur-2xl group-hover:from-indigo-100 group-hover:to-purple-100 transition-colors"></div>
@@ -70,25 +70,25 @@ const WorkspaceGrid = ({
                 }}
                 disabled={isLimitReached}
                 className={`group relative flex flex-col items-center justify-center h-64 border-2 border-dashed rounded-2xl transition-all duration-300 ${isLimitReached
-                        ? 'border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 cursor-not-allowed opacity-70'
-                        : 'border-slate-300 dark:border-slate-600 hover:border-indigo-400 dark:hover:border-indigo-600 hover:bg-indigo-50/50 dark:hover:bg-indigo-900/20'
+                    ? 'border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 cursor-not-allowed opacity-70'
+                    : 'border-slate-300 dark:border-slate-600 hover:border-indigo-400 dark:hover:border-indigo-600 hover:bg-indigo-50/50 dark:hover:bg-indigo-900/20'
                     }`}
             >
                 <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-4 transition-colors ${isLimitReached
-                        ? 'bg-slate-100 dark:bg-slate-800 text-slate-400'
-                        : 'bg-slate-100 text-slate-400 group-hover:bg-indigo-100 group-hover:text-indigo-600'
+                    ? 'bg-slate-100 dark:bg-slate-800 text-slate-400'
+                    : 'bg-slate-100 text-slate-400 group-hover:bg-indigo-100 group-hover:text-indigo-600'
                     }`}>
                     {isLimitReached ? <Shield size={32} /> : <Plus size={32} />}
                 </div>
                 <span className={`font-bold text-lg ${isLimitReached
-                        ? 'text-slate-400 dark:text-slate-500'
-                        : 'text-slate-600 dark:text-slate-300 group-hover:text-indigo-700 dark:group-hover:text-indigo-400'
+                    ? 'text-slate-400 dark:text-slate-500'
+                    : 'text-slate-600 dark:text-slate-300 group-hover:text-indigo-700 dark:group-hover:text-indigo-400'
                     }`}>
                     {isLimitReached ? 'Plan Limit Reached' : 'Create New Workspace'}
                 </span>
                 <span className={`text-sm mt-1 px-4 text-center ${isLimitReached
-                        ? 'text-slate-400 dark:text-slate-600'
-                        : 'text-slate-400 dark:text-slate-500 group-hover:text-indigo-500 dark:group-hover:text-indigo-400'
+                    ? 'text-slate-400 dark:text-slate-600'
+                    : 'text-slate-400 dark:text-slate-500 group-hover:text-indigo-500 dark:group-hover:text-indigo-400'
                     }`}>
                     {isLimitReached
                         ? 'You have reached the limit of 3 workspaces on the personal plan.'

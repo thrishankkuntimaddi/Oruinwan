@@ -208,7 +208,7 @@ const WorkspaceSelect = () => {
             />
 
             {/* Main Content */}
-            <main className="pt-32 pb-20 px-6 max-w-7xl mx-auto">
+            <main className="pt-24 md:pt-32 pb-20 px-4 md:px-6 max-w-7xl mx-auto">
                 <div className="mb-12 text-center max-w-2xl mx-auto">
                     <h1 className="text-4xl font-black text-slate-900 dark:text-slate-100 mb-4 tracking-tight">
                         Welcome back, {user?.username?.split(' ')[0]}

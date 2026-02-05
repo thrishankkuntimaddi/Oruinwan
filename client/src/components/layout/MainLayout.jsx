@@ -409,14 +409,14 @@ const MainLayout = ({ children, sidePanel }) => {
                 {/* Mobile Menu Backdrop */}
                 {mobileMenuOpen && (
                     <div
-                        className="fixed inset-0 bg-black/50 z-40 md:hidden backdrop-blur-sm"
+                        className="fixed inset-0 bg-black/50 z-[65] md:hidden backdrop-blur-sm"
                         onClick={() => setMobileMenuOpen(false)}
                     />
                 )}
 
                 {/* A. Far Left: Icon Sidebar */}
                 <div className={`
-                    fixed md:static inset-y-0 left-0 z-50 h-full
+                    fixed md:static inset-y-0 left-0 z-[70] h-full
                     transform transition-transform duration-300 ease-in-out md:transform-none
                     ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
                     md:flex
@@ -463,7 +463,7 @@ const MainLayout = ({ children, sidePanel }) => {
                             <div
                                 style={{ width: window.innerWidth < 768 ? '100%' : aiWidth }}
                                 className={`
-                                    fixed md:static inset-y-0 right-0 z-30
+                                    fixed md:static inset-y-0 right-0 z-[70]
                                     bg-white dark:bg-gray-900 flex flex-col shadow-xl md:shadow-none
                                     ${window.innerWidth < 768 ? (showAI ? 'translate-x-0' : 'translate-x-full') : ''}
                                 `}

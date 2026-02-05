@@ -29,7 +29,7 @@ const Header = ({
     onManagerConsoleClick
 }) => {
     return (
-        <header className="fixed top-0 w-full bg-white/80 dark:bg-slate-800/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-700 z-50 px-8 h-16 flex items-center justify-between">
+        <header className="fixed top-0 w-full bg-white/80 dark:bg-slate-800/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-700 z-50 px-4 md:px-8 h-16 flex items-center justify-between">
             {/* Logo */}
             <div className="flex items-center gap-2">
                 <img
@@ -161,7 +161,7 @@ const Header = ({
                 <div className="h-6 w-px bg-slate-200 hidden md:block"></div>
 
                 <div className="flex items-center gap-3">
-                    {/* Profile Button */}
+                    {/* Profile Button - Desktop (Full) */}
                     <button
                         onClick={onProfileClick}
                         className="text-right hidden sm:block hover:bg-slate-50 px-3 py-2 rounded-lg transition-colors"
@@ -169,6 +169,15 @@ const Header = ({
                     >
                         <div className="text-sm font-bold text-slate-800 dark:text-slate-200">{user?.username || 'User'}</div>
                         <div className="text-xs text-slate-500">{user?.email}</div>
+                    </button>
+
+                    {/* Profile Button - Mobile (Avatar/Initials) */}
+                    <button
+                        onClick={onProfileClick}
+                        className="sm:hidden w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center text-indigo-700 dark:text-indigo-300 font-bold text-xs border border-indigo-200 dark:border-indigo-800"
+                        title="View Profile"
+                    >
+                        {user?.username?.charAt(0).toUpperCase() || 'U'}
                     </button>
 
                     {/* Settings Button */}
