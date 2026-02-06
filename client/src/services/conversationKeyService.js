@@ -9,6 +9,10 @@ import { generateWorkspaceKey, exportKey, importKey } from '../utils/crypto';
 import { wrapKeyWithRSA, wrapKeyWithX25519, unwrapKeyWithRSA, unwrapKeyWithX25519 } from '../utils/cryptoIdentity';
 import identityKeyService from './identityKeyService';
 
+// ==================== API CONFIGURATION ====================
+// Use backend URL for production (Vercel frontend + separate backend)
+const API_BASE = process.env.REACT_APP_BACKEND_URL || '';
+
 // ==================== CONVERSATION KEY SERVICE ====================
 
 class ConversationKeyService {
@@ -241,7 +245,7 @@ class ConversationKeyService {
     async storeConversationKeysOnServer(conversationId, conversationType, workspaceId, encryptedKeys, workspaceEncryptedKey, workspaceKeyIv, workspaceKeyAuthTag) {
         try {
             const token = localStorage.getItem('accessToken');
-            const response = await fetch(`/api/v2/conversations/${conversationId}/keys`, {
+            const response = await fetch(`${API_BASE}/api/v2/conversations/${conversationId}/keys`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -293,7 +297,7 @@ class ConversationKeyService {
 
             // Fetch encrypted key from server
             const token = localStorage.getItem('accessToken');
-            const response = await fetch(`/api/v2/conversations/${conversationId}/keys?type=${conversationType}`, {
+            const response = await fetch(`${API_BASE}/api/v2/conversations/${conversationId}/keys?type=${conversationType}`, {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 },
@@ -322,7 +326,7 @@ class ConversationKeyService {
                     // Re-fetch channel membership to verify current state
                     try {
                         const token = localStorage.getItem('accessToken');
-                        const channelResponse = await fetch(`/api/v2/channels/${conversationId}`, {
+                        const channelResponse = await fetch(`${API_BASE}/api/v2/channels/${conversationId}`, {
                             headers: {
                                 'Authorization': `Bearer ${token}`
                             },
@@ -447,7 +451,7 @@ class ConversationKeyService {
     async fetchWorkspaceConversationKeys(workspaceId) {
         try {
             const token = localStorage.getItem('accessToken');
-            const response = await fetch(`/api/v2/conversations/workspace/${workspaceId}/keys`, {
+            const response = await fetch(`${API_BASE}/api/v2/conversations/workspace/${workspaceId}/keys`, {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 },
@@ -553,7 +557,7 @@ class ConversationKeyService {
 
             // Send to server
             const token = localStorage.getItem('accessToken');
-            const response = await fetch(`/api/v2/conversations/${conversationId}/keys/add-user`, {
+            const response = await fetch(`${API_BASE}/api/v2/conversations/${conversationId}/keys/add-user`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -592,7 +596,7 @@ class ConversationKeyService {
     async fetchConversationKeys(conversationId, conversationType) {
         try {
             const token = localStorage.getItem('accessToken');
-            const response = await fetch(`/api/v2/conversations/${conversationId}/keys?type=${conversationType}`, {
+            const response = await fetch(`${API_BASE}/api/v2/conversations/${conversationId}/keys?type=${conversationType}`, {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 },

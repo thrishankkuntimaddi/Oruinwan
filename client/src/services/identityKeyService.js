@@ -881,7 +881,7 @@ class IdentityKeyService {
 
         try {
             // Fetch from server
-            const response = await fetch(`/api/v2/identity/users/${userId}/public-key`, {
+            const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/v2/identity/users/${userId}/public-key`, {
                 credentials: 'include'
             });
 
@@ -928,7 +928,7 @@ class IdentityKeyService {
 
         try {
             // Fetch from server
-            const response = await fetch('/api/v2/identity/public-keys', {
+            const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/v2/identity/public-keys`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -976,7 +976,7 @@ class IdentityKeyService {
         const { publicKey, algorithm, version } = await this.getMyPublicKey();
 
         try {
-            const response = await fetch('/api/v2/identity/public-key', {
+            const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/v2/identity/public-key`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
