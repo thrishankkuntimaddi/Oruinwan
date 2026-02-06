@@ -317,7 +317,7 @@ exports.signup = async (req, res) => {
       console.log(`✅ Verification email sent successfully to ${email}`);
     } catch (_emailError) {
       // Log the actual error
-      console.error("❌ SMTP Error:", emailError.message);
+      console.error("❌ SMTP Error:", _emailError.message);
 
       // If SMTP not configured, log the link to console (for development)
       console.log("\n" + "=".repeat(80));
@@ -335,7 +335,7 @@ exports.signup = async (req, res) => {
     });
 
   } catch (_err) {
-    return handleError(res, err, "SIGNUP ERROR");
+    return handleError(res, _err, "SIGNUP ERROR");
   }
 };
 
@@ -371,7 +371,7 @@ exports.verifyEmail = async (req, res) => {
 
     return res.json({ message: "Email verified" });
   } catch (_err) {
-    console.error("❌ [VERIFY EMAIL] ERROR:", err);
+    console.error("❌ [VERIFY EMAIL] ERROR:", _err);
     res.status(500).json({ message: "Server error" });
   }
 };
@@ -580,7 +580,7 @@ exports.login = async (req, res) => {
     return res.json(response);
 
   } catch (_err) {
-    return handleError(res, err, "LOGIN ERROR");
+    return handleError(res, _err, "LOGIN ERROR");
   }
 };
 
@@ -650,7 +650,7 @@ exports.refresh = async (req, res) => {
       return res.json({ accessToken: newAccess });
 
     } catch (_err) {
-      if (err.name === 'VersionError' && attempts < MAX_RETRIES - 1) {
+      if (_err.name === 'VersionError' && attempts < MAX_RETRIES - 1) {
         console.warn(`Refresh token VersionError (attempt ${attempts + 1}/${MAX_RETRIES}), retrying...`);
         attempts++;
         // Small delay to reduce contention
@@ -658,7 +658,7 @@ exports.refresh = async (req, res) => {
         continue;
       }
 
-      console.error("REFRESH ERROR:", err);
+      console.error("REFRESH ERROR:", _err);
       // Only return 500 if we exhausted retries or hit another error
       return res.status(500).json({ message: "Server error" });
     }
@@ -686,7 +686,7 @@ exports.logout = async (req, res) => {
 
     return res.json({ message: "Logged out" });
   } catch (_err) {
-    return handleError(res, err, "LOGOUT ERROR");
+    return handleError(res, _err, "LOGOUT ERROR");
   }
 };
 
@@ -713,7 +713,7 @@ exports.logoutAll = async (req, res) => {
     return res.json({ message: "Logged out from all devices" });
 
   } catch (_err) {
-    return handleError(res, err, "LOGOUT ALL ERROR");
+    return handleError(res, _err, "LOGOUT ALL ERROR");
   }
 };
 
@@ -763,7 +763,7 @@ exports.forgotPassword = async (req, res) => {
 
     return res.json({ message: "Reset link sent if account exists" });
   } catch (_err) {
-    console.error("FORGOT ERROR:", err);
+    console.error("FORGOT ERROR:", _err);
     return res.status(500).json({ message: "Server error" });
   }
 };
@@ -795,7 +795,7 @@ exports.resetPassword = async (req, res) => {
     return res.json({ message: "Password reset successful" });
 
   } catch (_err) {
-    console.error("RESET ERROR:", err);
+    console.error("RESET ERROR:", _err);
     return res.status(500).json({ message: "Server error" });
   }
 };
