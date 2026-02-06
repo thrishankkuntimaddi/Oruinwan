@@ -4,6 +4,9 @@ import { useToast } from "../../contexts/ToastContext";
 import { useAuth } from "../../contexts/AuthContext";
 import CreateChannelModal from "../messagesComp/CreateChannelModal";
 
+// Use backend URL for production (Vercel frontend + separate backend)
+const API_BASE = process.env.REACT_APP_BACKEND_URL || '';
+
 const SidePanel = ({ title = "Workspace", children }) => {
     return (
         <div className="w-full h-full bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 flex flex-col text-gray-700 dark:text-gray-300">
@@ -52,7 +55,7 @@ export const ChannelList = () => {
 
             try {
                 setLoading(true);
-                const res = await fetch(`/api/workspaces/${workspaceId}/channels`, {
+                const res = await fetch(`${API_BASE}/api/workspaces/${workspaceId}/channels`, {
                     headers: {
                         'Authorization': `Bearer ${localStorage.getItem('token')}`
                     }

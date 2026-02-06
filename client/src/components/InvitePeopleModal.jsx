@@ -2,6 +2,9 @@ import React, { useState, useEffect } from "react";
 import { X, Link as LinkIcon, Mail, Copy, Check, Send, AlertCircle } from "lucide-react";
 import { useToast } from "../contexts/ToastContext";
 
+// Use backend URL for production (Vercel frontend + separate backend)
+const API_BASE = process.env.REACT_APP_BACKEND_URL || '';
+
 /**
  * InvitePeopleModal - Complete Admin Invite Management
  * 
@@ -40,7 +43,7 @@ const InvitePeopleModal = ({ isOpen, onClose, workspaceId, workspaceName }) => {
             // Loading state removed
             try {
                 const token = localStorage.getItem('accessToken');
-                const response = await fetch(`/api/workspaces/${workspaceId}/invites`, {
+                const response = await fetch(`${API_BASE}/api/workspaces/${workspaceId}/invites`, {
                     headers: {
                         'Authorization': `Bearer ${token}`
                     }
@@ -64,7 +67,7 @@ const InvitePeopleModal = ({ isOpen, onClose, workspaceId, workspaceName }) => {
         setLoading(true);
         try {
             const token = localStorage.getItem('accessToken');
-            const response = await fetch(`/api/workspaces/${workspaceId}/invite`, {
+            const response = await fetch(`${API_BASE}/api/workspaces/${workspaceId}/invite`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${token}`,
@@ -106,7 +109,7 @@ const InvitePeopleModal = ({ isOpen, onClose, workspaceId, workspaceName }) => {
         setLoading(true);
         try {
             const token = localStorage.getItem('accessToken');
-            const response = await fetch(`/api/workspaces/${workspaceId}/invite`, {
+            const response = await fetch(`${API_BASE}/api/workspaces/${workspaceId}/invite`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${token}`,
@@ -128,7 +131,7 @@ const InvitePeopleModal = ({ isOpen, onClose, workspaceId, workspaceName }) => {
             showToast('Invitations sent successfully!', 'success');
 
             // Refresh pending invites
-            const refreshResponse = await fetch(`/api/workspaces/${workspaceId}/invites`, {
+            const refreshResponse = await fetch(`${API_BASE}/api/workspaces/${workspaceId}/invites`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             if (refreshResponse.ok) {
@@ -154,7 +157,7 @@ const InvitePeopleModal = ({ isOpen, onClose, workspaceId, workspaceName }) => {
         try {
             const token = localStorage.getItem('accessToken');
             const response = await fetch(
-                `/api/workspaces/${workspaceId}/invites/${inviteId}/revoke`,
+                `${API_BASE}/api/workspaces/${workspaceId}/invites/${inviteId}/revoke`,
                 {
                     method: 'POST',
                     headers: {
