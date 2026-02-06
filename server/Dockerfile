@@ -16,6 +16,7 @@ RUN npm ci --only=production && npm cache clean --force
 COPY server.js ./
 COPY socket.js ./
 COPY socket ./socket
+COPY src ./src
 COPY config ./config
 COPY constants ./constants
 COPY middleware ./middleware
