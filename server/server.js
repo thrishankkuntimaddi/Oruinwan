@@ -1,4 +1,5 @@
 // server/server.js
+// Production entrypoint for Node.js backend (Cloud Run, Railway, or any platform)
 // CRITICAL: Validate environment variables FIRST before loading anything else
 require("dotenv").config();
 
@@ -18,7 +19,7 @@ const missing = requiredEnvVars.filter(varName => !process.env[varName]);
 if (missing.length > 0) {
   console.error('❌ FATAL: Missing required environment variables:');
   missing.forEach(varName => console.error(`   - ${varName}`));
-  console.error('\n💡 Check your .env file or Railway environment settings');
+  console.error('\n💡 Check your .env file or deployment environment settings');
   console.error('   Required variables:', requiredEnvVars.join(', '));
   process.exit(1);
 }
@@ -51,7 +52,7 @@ const app = express();
 
 app.set("trust proxy", 1);
 
-// Force HTTPS in production (for Railway proxy)
+// Force HTTPS in production (for reverse proxy environments)
 // This ensures sameSite:'none' cookies work properly
 if (process.env.NODE_ENV === 'production') {
   app.use((req, res, next) => {
