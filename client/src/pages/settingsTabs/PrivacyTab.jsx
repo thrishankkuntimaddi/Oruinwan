@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState } from 'react';
 import Card from './Card';
 import axios from 'axios';
 import { Loader, Check } from 'lucide-react';
@@ -25,40 +25,8 @@ const Toggle = ({ label, description, checked, onChange }) => (
  * PrivacyTab - Privacy and safety settings with backend integration
  */
 const PrivacyTab = ({ privacy, setPrivacy }) => {
-    const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
     const [hasChanges, setHasChanges] = useState(false);
-    const [blockedUsers, setBlockedUsers] = useState([]);
-
-    const loadPreferences = useCallback(async () => {
-        setLoading(true);
-        try {
-            const response = await axios.get('/api/auth/me/preferences/privacy', { withCredentials: true });
-            if (response.data) {
-                setPrivacy(response.data);
-            }
-        } catch (error) {
-            console.log('Privacy preferences not available yet');
-        } finally {
-            setLoading(false);
-        }
-    }, [setPrivacy]);
-
-    useEffect(() => {
-        loadPreferences();
-        loadBlockedUsers();
-    }, [loadPreferences]);
-
-    const loadBlockedUsers = async () => {
-        try {
-            const response = await axios.get('/api/auth/me/blocked-users', { withCredentials: true });
-            if (response.data) {
-                setBlockedUsers(response.data);
-            }
-        } catch (error) {
-            console.log('Blocked users list not available yet');
-        }
-    };
 
     const handleSave = async () => {
         setSaving(true);
@@ -81,24 +49,6 @@ const PrivacyTab = ({ privacy, setPrivacy }) => {
         setHasChanges(true);
     };
 
-    const handleUnblockUser = async (userId) => {
-        try {
-            await axios.delete(`/api/auth/me/blocked-users/${userId}`, { withCredentials: true });
-            setBlockedUsers(blockedUsers.filter(u => u._id !== userId));
-            const event = new CustomEvent('show-toast', { detail: { message: 'User unblocked', type: 'success' } });
-            window.dispatchEvent(event);
-        } catch (error) {
-            console.error('Failed to unblock user:', error);
-        }
-    };
-
-    if (loading) {
-        return (
-            <div className="flex items-center justify-center py-12">
-                <Loader className="animate-spin text-indigo-600" size={32} />
-            </div>
-        );
-    }
 
     return (
         <div className="space-y-6 animate-fade-in-up">
@@ -137,32 +87,6 @@ const PrivacyTab = ({ privacy, setPrivacy }) => {
                     onChange={(v) => updatePrivacy('dataSharing', v)}
                 />
             </Card>
-
-            {blockedUsers.length > 0 && (
-                <Card title="Blocked Users" subtitle="Manage your blocked users list">
-                    <div className="space-y-3">
-                        {blockedUsers.map(user => (
-                            <div key={user._id} className="flex items-center justify-between p-3 bg-slate-50 dark:bg-white/5 rounded-lg">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-slate-400 to-slate-600 flex items-center justify-center text-white font-bold">
-                                        {user.username?.charAt(0)?.toUpperCase()}
-                                    </div>
-                                    <div>
-                                        <div className="font-bold text-slate-900 dark:text-white text-sm">{user.username}</div>
-                                        <div className="text-xs text-slate-500">{user.email}</div>
-                                    </div>
-                                </div>
-                                <button
-                                    onClick={() => handleUnblockUser(user._id)}
-                                    className="px-4 py-2 text-sm font-bold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-                                >
-                                    Unblock
-                                </button>
-                            </div>
-                        ))}
-                    </div>
-                </Card>
-            )}
 
             {hasChanges && (
                 <div className="flex justify-end">

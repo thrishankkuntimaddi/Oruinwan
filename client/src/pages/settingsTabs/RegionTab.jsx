@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import Card from './Card';
 import axios from 'axios';
 import { Loader, Check, Globe2 } from 'lucide-react';
@@ -7,41 +7,18 @@ import { Loader, Check, Globe2 } from 'lucide-react';
  * RegionTab - Language and region settings with backend integration
  */
 const RegionTab = ({ region, setRegion }) => {
-    const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
     const [hasChanges, setHasChanges] = useState(false);
     const [detectedTimezone, setDetectedTimezone] = useState('');
 
-    const detectTimezone = useCallback(() => {
+    useEffect(() => {
         try {
             const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
             setDetectedTimezone(timezone);
-            if (region.timezone === 'auto') {
-                setRegion({ ...region, timezone });
-            }
         } catch (error) {
             console.error('Failed to detect timezone:', error);
         }
-    }, [region, setRegion]);
-
-    const loadPreferences = useCallback(async () => {
-        setLoading(true);
-        try {
-            const response = await axios.get('/api/auth/me/preferences/region', { withCredentials: true });
-            if (response.data) {
-                setRegion(response.data);
-            }
-        } catch (error) {
-            console.log('Region preferences not available yet');
-        } finally {
-            setLoading(false);
-        }
-    }, [setRegion]);
-
-    useEffect(() => {
-        loadPreferences();
-        detectTimezone();
-    }, [loadPreferences, detectTimezone]);
+    }, []);
 
     const handleSave = async () => {
         setSaving(true);
@@ -63,14 +40,6 @@ const RegionTab = ({ region, setRegion }) => {
         setRegion({ ...region, [key]: value });
         setHasChanges(true);
     };
-
-    if (loading) {
-        return (
-            <div className="flex items-center justify-center py-12">
-                <Loader className="animate-spin text-indigo-600" size={32} />
-            </div>
-        );
-    }
 
     return (
         <div className="space-y-6 animate-fade-in-up">

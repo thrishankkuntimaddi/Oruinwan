@@ -298,8 +298,7 @@ const Settings = () => {
 
                 <div className="flex-1 overflow-y-auto p-4 md:p-8 lg:p-12 custom-scrollbar">
                     <div className="max-w-4xl mx-auto space-y-10 pb-32">
-                        {/* Content Area - No Redundant Header */
-                        }
+                        {/* Content Area */}
                         <div className="pt-2">
 
                             {activeSection === 'profile' && (
@@ -355,6 +354,13 @@ const Settings = () => {
                             )}
                             {activeSection === 'advanced' && (
                                 <AdvancedTab />
+                            )}
+
+                            {/* Fallback for debugging */}
+                            {!['profile', 'notifications', 'privacy', 'region', 'appearance', 'security', 'sessions', 'advanced'].includes(activeSection) && (
+                                <div className="p-8 text-center text-slate-500">
+                                    <p>Invalid section: {activeSection}</p>
+                                </div>
                             )}
                         </div>
                     </div>

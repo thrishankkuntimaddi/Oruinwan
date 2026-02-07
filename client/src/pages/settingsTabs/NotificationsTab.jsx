@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState } from 'react';
 import Card from './Card';
 import axios from 'axios';
 import { Loader, Check } from 'lucide-react';
@@ -27,29 +27,8 @@ const Toggle = ({ label, description, checked, onChange, disabled }) => (
  * NotificationsTab - Notification preferences with backend integration
  */
 const NotificationsTab = ({ notifications, setNotifications }) => {
-    const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
     const [hasChanges, setHasChanges] = useState(false);
-
-    // Load notification preferences from backend
-    const loadPreferences = useCallback(async () => {
-        setLoading(true);
-        try {
-            const response = await axios.get('/api/auth/me/preferences/notifications', { withCredentials: true });
-            if (response.data) {
-                setNotifications(response.data);
-            }
-        } catch (error) {
-            // If endpoint doesn't exist yet, silently use default state
-            console.log('Notification preferences not available yet');
-        } finally {
-            setLoading(false);
-        }
-    }, [setNotifications]);
-
-    useEffect(() => {
-        loadPreferences();
-    }, [loadPreferences]);
 
     // Save notification preferences
     const handleSave = async () => {
@@ -73,14 +52,6 @@ const NotificationsTab = ({ notifications, setNotifications }) => {
         setNotifications({ ...notifications, [key]: value });
         setHasChanges(true);
     };
-
-    if (loading) {
-        return (
-            <div className="flex items-center justify-center py-12">
-                <Loader className="animate-spin text-indigo-600" size={32} />
-            </div>
-        );
-    }
 
     return (
         <div className="space-y-6 animate-fade-in-up">
