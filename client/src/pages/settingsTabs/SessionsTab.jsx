@@ -14,7 +14,7 @@ const SessionsTab = ({ sessions, handleLogoutSession, handleLogoutOthers }) => {
         <div className="space-y-6 animate-fade-in-up">
             <Card title="Active Sessions" subtitle="Devices currently logged into your account">
                 <div className="space-y-4">
-                    {sessions.map((session) => (
+                    {Array.isArray(sessions) && sessions.map((session) => (
                         <div key={session._id} className="flex items-center justify-between p-4 border border-slate-100 dark:border-white/5 rounded-xl hover:bg-slate-50 dark:hover:bg-white/5 transition-colors group">
                             <div className="flex items-center gap-4">
                                 <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${session.isCurrent ? 'bg-green-100 text-green-600 dark:bg-green-900/20 dark:text-green-400' : 'bg-slate-100 text-slate-500 dark:bg-[#111827] dark:text-slate-400'}`}>
@@ -42,11 +42,11 @@ const SessionsTab = ({ sessions, handleLogoutSession, handleLogoutOthers }) => {
                             )}
                         </div>
                     ))}
-                    {sessions.length === 0 && (
+                    {(!sessions || sessions.length === 0) && (
                         <div className="text-center py-12 text-slate-400">No active sessions found</div>
                     )}
                 </div>
-                {sessions.length > 1 && (
+                {sessions && sessions.length > 1 && (
                     <div className="mt-6 pt-4 border-t border-slate-100 dark:border-white/5 flex justify-end">
                         <button
                             onClick={handleLogoutOthers}

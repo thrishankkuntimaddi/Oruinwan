@@ -113,9 +113,11 @@ const Settings = () => {
     const loadSessions = async () => {
         try {
             const response = await axios.get('/api/auth/sessions', { withCredentials: true });
-            setSessions(response.data);
+            setSessions(Array.isArray(response.data) ? response.data : []);
         } catch (error) {
             console.error('Failed to load sessions:', error);
+            // Keep sessions as empty array on error
+            setSessions([]);
         }
     };
 
