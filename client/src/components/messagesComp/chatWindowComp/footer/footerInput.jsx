@@ -4,6 +4,7 @@ import EmojiPicker from "./emojiPicker";
 import AttachMenu from "./attachMenu";
 import ContentEditable from "react-contenteditable";
 import TurndownService from "turndown";
+import { Button } from "../../../../shared/components/ui";
 
 const turndownService = new TurndownService({
   headingStyle: "atx",
@@ -177,7 +178,12 @@ export default function FooterInput({
 
   return (
     <div className="px-4 py-4 bg-white dark:bg-gray-900 relative">
-      <div className="border border-gray-100 dark:border-gray-700 rounded-2xl transition-all bg-white dark:bg-gray-800 relative shadow-md hover:shadow-lg focus-within:ring-2 focus-within:ring-indigo-100 dark:focus-within:ring-indigo-900/30">
+      <div className={`
+        border rounded-2xl transition-all transition-colors duration-200 relative shadow-sm
+        bg-white dark:bg-secondary-800 
+        border-secondary-200 dark:border-secondary-700
+        focus-within:border-primary-500 focus-within:ring-1 focus-within:ring-primary-500
+      `}>
 
         {/* Rich Text Input */}
         <div className="w-full px-3 py-2 text-sm max-h-[60vh] overflow-y-auto custom-scrollbar resize-y min-h-[4rem]">
@@ -309,17 +315,16 @@ export default function FooterInput({
             )}
 
             {/* Send */}
-            <button
+            <Button
               onClick={handleSend}
               disabled={!hasText || blocked || disabled}
-              className={`ml-2 p-2 rounded-full transition-all duration-200 flex items-center justify-center ${hasText && !blocked && !disabled
-                ? "bg-blue-600 text-white hover:bg-blue-700 shadow-md hover:shadow-lg"
-                : "bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed"
-                }`}
+              variant="primary"
+              size="icon"
+              className={`ml-2 rounded-full h-9 w-9 shadow-sm ${(!hasText || blocked || disabled) ? "opacity-50" : ""}`}
               title={disabled ? "Cannot send - channel encryption unavailable" : "Send message"}
             >
               <SendHorizontal size={18} strokeWidth={2.5} />
-            </button>
+            </Button>
           </div>
         </div>
       </div>

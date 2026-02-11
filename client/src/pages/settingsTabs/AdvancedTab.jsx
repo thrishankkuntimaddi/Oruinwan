@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import Card from './Card';
-import { Download, Trash2, PauseCircle, AlertTriangle, Loader } from 'lucide-react';
+import { Download, Trash2, PauseCircle, AlertTriangle } from 'lucide-react';
 import axios from 'axios';
 import { useAuth } from '../../contexts/AuthContext';
+import Button from '../../shared/components/ui/Button';
 
 /**
  * AdvancedTab - Account management and data controls
@@ -131,23 +132,15 @@ const AdvancedTab = () => {
                             <li>Channel subscriptions</li>
                         </ul>
                     </div>
-                    <button
+                    <Button
                         onClick={handleExportData}
                         disabled={exporting}
-                        className="ml-4 px-5 py-2.5 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 flex items-center gap-2 shadow-lg shadow-indigo-500/20"
+                        isLoading={exporting}
+                        variant="primary"
+                        icon={<Download size={16} />}
                     >
-                        {exporting ? (
-                            <>
-                                <Loader size={16} className="animate-spin" />
-                                Exporting...
-                            </>
-                        ) : (
-                            <>
-                                <Download size={16} />
-                                Export Data
-                            </>
-                        )}
-                    </button>
+                        Export Data
+                    </Button>
                 </div>
             </Card>
 
@@ -161,13 +154,13 @@ const AdvancedTab = () => {
                             You can reactivate anytime by logging back in.
                         </p>
                     </div>
-                    <button
+                    <Button
                         onClick={() => setShowDeactivateModal(true)}
-                        className="ml-4 px-5 py-2.5 bg-orange-600 text-white font-bold rounded-lg hover:bg-orange-700 transition-colors flex items-center gap-2 shadow-lg shadow-orange-500/20"
+                        variant="warning"
+                        icon={<PauseCircle size={16} />}
                     >
-                        <PauseCircle size={16} />
                         Deactivate
-                    </button>
+                    </Button>
                 </div>
             </Card>
 
@@ -189,13 +182,13 @@ const AdvancedTab = () => {
                             </div>
                         </div>
                     </div>
-                    <button
+                    <Button
                         onClick={() => setShowDeleteModal(true)}
-                        className="ml-4 px-5 py-2.5 bg-red-600 text-white font-bold rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2 shadow-lg shadow-red-500/20"
+                        variant="danger"
+                        icon={<Trash2 size={16} />}
                     >
-                        <Trash2 size={16} />
                         Delete Account
-                    </button>
+                    </Button>
                 </div>
             </Card>
 
@@ -208,18 +201,20 @@ const AdvancedTab = () => {
                             Your profile will be hidden and you won't receive notifications. You can reactivate anytime by logging back in.
                         </p>
                         <div className="flex gap-3">
-                            <button
+                            <Button
+                                variant="secondary"
                                 onClick={() => setShowDeactivateModal(false)}
-                                className="flex-1 px-4 py-2.5 border border-slate-300 dark:border-white/20 rounded-lg font-bold text-slate-700 dark:text-white hover:bg-slate-50 dark:hover:bg-white/5 transition-colors"
+                                className="flex-1"
                             >
                                 Cancel
-                            </button>
-                            <button
+                            </Button>
+                            <Button
                                 onClick={handleDeactivateAccount}
-                                className="flex-1 px-4 py-2.5 bg-orange-600 text-white font-bold rounded-lg hover:bg-orange-700 transition-colors"
+                                className="flex-1"
+                                variant="warning"
                             >
                                 Deactivate
-                            </button>
+                            </Button>
                         </div>
                     </div>
                 </div>
@@ -253,27 +248,23 @@ const AdvancedTab = () => {
                             </p>
                         </div>
                         <div className="flex gap-3">
-                            <button
+                            <Button
+                                variant="secondary"
                                 onClick={() => setShowDeleteModal(false)}
-                                className="flex-1 px-4 py-2.5 border border-slate-300 dark:border-white/20 rounded-lg font-bold text-slate-700 dark:text-white hover:bg-slate-50 dark:hover:bg-white/5 transition-colors"
                                 disabled={deleting}
+                                className="flex-1"
                             >
                                 Cancel
-                            </button>
-                            <button
+                            </Button>
+                            <Button
                                 onClick={handleDeleteAccount}
                                 disabled={deleting}
-                                className="flex-1 px-4 py-2.5 bg-red-600 text-white font-bold rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                                isLoading={deleting}
+                                variant="danger"
+                                className="flex-1"
                             >
-                                {deleting ? (
-                                    <>
-                                        <Loader size={16} className="animate-spin" />
-                                        Deleting...
-                                    </>
-                                ) : (
-                                    'Delete Forever'
-                                )}
-                            </button>
+                                Delete Forever
+                            </Button>
                         </div>
                     </div>
                 </div>

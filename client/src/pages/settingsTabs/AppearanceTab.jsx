@@ -21,18 +21,21 @@ const AppearanceTab = ({ theme, toggleTheme }) => {
                         <button
                             key={mode.id}
                             onClick={() => toggleTheme(mode.id)}
-                            className={`p-6 border-2 rounded-2xl flex flex-col items-center gap-4 transition-all relative overflow-hidden group ${theme === mode.id
-                                ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-600/10 dark:border-indigo-500'
-                                : 'border-slate-200 dark:border-white/10 hover:border-indigo-300 dark:hover:border-white/30 bg-white dark:bg-[#0B0F19]'
+                            className={`p-6 border rounded-2xl flex flex-col items-center gap-4 transition-all relative overflow-hidden group ${theme === mode.id
+                                ? 'border-primary-600 bg-primary-50 dark:bg-primary-900/10 dark:border-primary-500 ring-1 ring-primary-600 dark:ring-primary-500'
+                                : 'border-secondary-200 dark:border-secondary-800 hover:border-primary-300 dark:hover:border-secondary-600 bg-white dark:bg-secondary-900/50'
                                 }`}
                         >
-                            <div className={`p-4 rounded-full ${theme === mode.id ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-600 dark:text-white shadow-lg' : 'bg-slate-100 text-slate-500 dark:bg-white/5 dark:text-slate-400 group-hover:scale-110 transition-transform'}`}>
+                            <div className={`p-4 rounded-full transition-colors ${theme === mode.id
+                                ? 'bg-primary-100 text-primary-600 dark:bg-primary-600 dark:text-white shadow-sm'
+                                : 'bg-secondary-100 text-secondary-500 dark:bg-secondary-800 dark:text-secondary-400 group-hover:scale-110 transition-transform'
+                                }`}>
                                 <mode.icon size={24} />
                             </div>
                             <div className="text-center z-10">
-                                <h4 className={`font-bold ${theme === mode.id ? 'text-indigo-900 dark:text-white' : 'text-slate-700 dark:text-slate-300'}`}>{mode.label}</h4>
+                                <h4 className={`font-bold ${theme === mode.id ? 'text-primary-900 dark:text-white' : 'text-secondary-700 dark:text-secondary-300'}`}>{mode.label}</h4>
                             </div>
-                            {theme === mode.id && <div className="absolute top-3 right-3 text-indigo-600 dark:text-indigo-400"><CheckCircle2 size={18} /></div>}
+                            {theme === mode.id && <div className="absolute top-3 right-3 text-primary-600 dark:text-primary-400"><CheckCircle2 size={18} /></div>}
                         </button>
                     ))}
                 </div>

@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import Card from './Card';
 import axios from 'axios';
-import { Loader, Check } from 'lucide-react';
+import Button from '../../shared/components/ui/Button';
+import { Check } from 'lucide-react';
 
 // Toggle Component
 const Toggle = ({ label, description, checked, onChange }) => (
@@ -90,23 +91,16 @@ const PrivacyTab = ({ privacy, setPrivacy }) => {
 
             {hasChanges && (
                 <div className="flex justify-end">
-                    <button
-                        onClick={handleSave}
-                        disabled={saving}
-                        className="px-6 py-2.5 bg-indigo-600 text-white font-bold rounded-lg shadow-lg shadow-indigo-500/20 hover:bg-indigo-700 hover:shadow-xl hover:-translate-y-0.5 transition-all disabled:opacity-70 flex items-center gap-2"
-                    >
-                        {saving ? (
-                            <>
-                                <Loader size={16} className="animate-spin" />
-                                Saving...
-                            </>
-                        ) : (
-                            <>
-                                <Check size={16} />
-                                Save Settings
-                            </>
-                        )}
-                    </button>
+                    <div className="flex justify-end">
+                        <Button
+                            onClick={handleSave}
+                            disabled={saving}
+                            isLoading={saving}
+                            icon={<Check size={16} />}
+                        >
+                            Save Settings
+                        </Button>
+                    </div>
                 </div>
             )}
         </div>

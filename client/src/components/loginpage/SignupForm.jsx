@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useToast } from "../../contexts/ToastContext";
 import { Eye, EyeOff, ChevronDown, AlertCircle, Info, CheckCircle2 } from "lucide-react";
+import { Button, Input } from "../../shared/components/ui";
 
 const SignupForm = ({ onSwitch }) => {
   const [formData, setFormData] = useState({
@@ -207,78 +208,60 @@ const SignupForm = ({ onSwitch }) => {
       <form onSubmit={handleSubmit} className="space-y-3">
         {/* Username */}
         <div className="space-y-1">
-          <label className="block text-sm font-bold text-slate-700 dark:text-slate-300">Username</label>
-          <div className="relative">
-            <input
-              name="username"
-              value={formData.username}
-              onChange={handleChange}
-              onBlur={handleBlur}
-              placeholder="Choose a username"
-              className="w-full px-4 py-3 pr-10 border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 text-slate-900 dark:text-white placeholder:text-slate-400 border rounded-lg outline-none transition-all"
-            />
-            {validationStatus.username === 'checking' && (
-              <div className="absolute right-3 top-3.5">
-                <div className="w-5 h-5 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
-              </div>
-            )}
-            {validationStatus.username === 'available' && (
-              <CheckCircle2 className="absolute right-3 top-3.5 text-green-500" size={20} />
-            )}
-            {validationStatus.username === 'taken' && (
-              <AlertCircle className="absolute right-3 top-3.5 text-red-500" size={20} />
-            )}
-          </div>
-          {errors.username && <p className="text-red-500 text-xs mt-1">{errors.username}</p>}
+          <Input
+            label="Username"
+            name="username"
+            value={formData.username}
+            onChange={handleChange}
+            onBlur={handleBlur}
+            placeholder="Choose a username"
+            error={errors.username}
+            icon={
+              validationStatus.username === 'checking' ? <div className="w-4 h-4 border-2 border-primary-600 border-t-transparent rounded-full animate-spin" /> :
+                validationStatus.username === 'available' ? <CheckCircle2 className="text-success-500" size={18} /> :
+                  validationStatus.username === 'taken' ? <AlertCircle className="text-danger-500" size={18} /> : null
+            }
+          />
         </div>
 
         {/* Email */}
         <div className="space-y-1">
-          <label className="block text-sm font-bold text-slate-700 dark:text-slate-300">Email</label>
-          <div className="relative">
-            <input
-              name="email"
-              type="email"
-              value={formData.email}
-              onChange={handleChange}
-              onBlur={handleBlur}
-              placeholder="Enter your email"
-              className="w-full px-4 py-3 pr-10 border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 text-slate-900 dark:text-white placeholder:text-slate-400 border rounded-lg outline-none transition-all"
-            />
-            {validationStatus.email === 'checking' && (
-              <div className="absolute right-3 top-3.5">
-                <div className="w-5 h-5 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
-              </div>
-            )}
-            {validationStatus.email === 'available' && (
-              <CheckCircle2 className="absolute right-3 top-3.5 text-green-500" size={20} />
-            )}
-            {validationStatus.email === 'taken' && (
-              <AlertCircle className="absolute right-3 top-3.5 text-red-500" size={20} />
-            )}
-          </div>
-          {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
+          <Input
+            label="Email"
+            name="email"
+            type="email"
+            value={formData.email}
+            onChange={handleChange}
+            onBlur={handleBlur}
+            placeholder="Enter your email"
+            error={errors.email}
+            icon={
+              validationStatus.email === 'checking' ? <div className="w-4 h-4 border-2 border-primary-600 border-t-transparent rounded-full animate-spin" /> :
+                validationStatus.email === 'available' ? <CheckCircle2 className="text-success-500" size={18} /> :
+                  validationStatus.email === 'taken' ? <AlertCircle className="text-danger-500" size={18} /> : null
+            }
+          />
         </div>
 
         {/* Phone */}
         <div className="space-y-1">
-          <label className="block text-sm font-bold text-slate-700 dark:text-slate-300">Phone Number</label>
+          <label className="block text-sm font-medium text-secondary-700 dark:text-secondary-300">Phone Number</label>
           <div className="flex gap-2">
-            {/* Country Selector */}
+            {/* Country Selector - Updating logic to match Input styles */}
             <div className="relative w-32">
               <button
                 type="button"
                 onClick={() => setShowCountryDropdown(!showCountryDropdown)}
-                className="w-full flex items-center justify-between px-3 py-3 border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 text-slate-900 dark:text-white border rounded-lg outline-none"
+                className="w-full flex items-center justify-between px-3 py-2 h-10 border border-secondary-300 dark:border-secondary-700 bg-white dark:bg-secondary-800 text-secondary-900 dark:text-white rounded-lg outline-none focus:ring-2 focus:ring-primary-500 transition-shadow"
               >
                 <span className="flex items-center gap-2 text-sm">
                   <span>{selectedCountry.flag}</span>
                   <span>{selectedCountry.dial_code}</span>
                 </span>
-                <ChevronDown size={14} className={`transition-transform ${showCountryDropdown ? 'rotate-180' : ''}`} />
+                <ChevronDown size={14} className={`transition-transform text-secondary-500 ${showCountryDropdown ? 'rotate-180' : ''}`} />
               </button>
               {showCountryDropdown && (
-                <div className="absolute z-50 w-48 mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-xl max-h-60 overflow-y-auto">
+                <div className="absolute z-50 w-48 mt-1 bg-white dark:bg-secondary-800 border border-secondary-200 dark:border-secondary-700 rounded-lg shadow-xl max-h-60 overflow-y-auto">
                   {countries.map((country) => (
                     <button
                       key={country.code}
@@ -287,11 +270,11 @@ const SignupForm = ({ onSwitch }) => {
                         setSelectedCountry(country);
                         setShowCountryDropdown(false);
                       }}
-                      className="w-full flex items-center gap-2 px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-700 text-left text-sm"
+                      className="w-full flex items-center gap-2 px-3 py-2 hover:bg-secondary-50 dark:hover:bg-secondary-700 text-left text-sm text-secondary-900 dark:text-secondary-100"
                     >
                       <span>{country.flag}</span>
                       <span className="flex-1">{country.name}</span>
-                      <span className="text-slate-500">{country.dial_code}</span>
+                      <span className="text-secondary-500">{country.dial_code}</span>
                     </button>
                   ))}
                 </div>
@@ -306,23 +289,32 @@ const SignupForm = ({ onSwitch }) => {
                 onChange={handleChange}
                 onBlur={handleBlur}
                 placeholder={`${selectedCountry.length} digits`}
-                className="w-full px-4 py-3 pr-10 border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 text-slate-900 dark:text-white placeholder:text-slate-400 border rounded-lg outline-none transition-all"
+                className={`
+                    block w-full rounded-lg border-secondary-300 bg-white
+                    text-secondary-900 shadow-sm
+                    focus:border-primary-500 focus:ring-primary-500
+                    disabled:cursor-not-allowed disabled:bg-secondary-50 disabled:text-secondary-500
+                    dark:bg-secondary-800 dark:border-secondary-700 dark:text-white dark:placeholder-secondary-500
+                    dark:focus:border-primary-500 dark:focus:ring-primary-500
+                    transition-colors duration-200
+                    pl-3 py-2 sm:text-sm h-10
+                `}
               />
               {validationStatus.phone === 'checking' && (
-                <div className="absolute right-3 top-3.5">
-                  <div className="w-5 h-5 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+                <div className="absolute right-3 top-2.5">
+                  <div className="w-4 h-4 border-2 border-primary-600 border-t-transparent rounded-full animate-spin" />
                 </div>
               )}
               {validationStatus.phone === 'available' && (
-                <CheckCircle2 className="absolute right-3 top-3.5 text-green-500" size={20} />
+                <CheckCircle2 className="absolute right-3 top-2.5 text-success-500" size={18} />
               )}
               {validationStatus.phone === 'taken' && (
-                <AlertCircle className="absolute right-3 top-3.5 text-red-500" size={20} />
+                <AlertCircle className="absolute right-3 top-2.5 text-danger-500" size={18} />
               )}
             </div>
 
           </div>
-          {errors.phone && <p className="text-red-500 text-xs mt-1">{errors.phone}</p>}
+          {errors.phone && <p className="text-danger-500 text-xs mt-1">{errors.phone}</p>}
         </div>
 
         {/* Password with Hover Tooltip */}
@@ -395,13 +387,15 @@ const SignupForm = ({ onSwitch }) => {
         </div>
 
         {/* Submit Button */}
-        <button
+        <Button
           type="submit"
           disabled={!isFormValid}
-          className="w-full py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 disabled:from-slate-300 disabled:to-slate-400 dark:disabled:from-slate-700 dark:disabled:to-slate-800 text-white font-bold rounded-lg transition-all disabled:cursor-not-allowed mt-4"
+          className="w-full p-3 font-bold mt-4"
+          variant="primary"
+          size="lg"
         >
           Create Account
-        </button>
+        </Button>
 
         {/* Already have account */}
         <div className="mt-6 text-center">

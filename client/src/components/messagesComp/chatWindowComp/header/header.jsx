@@ -21,6 +21,7 @@ import {
   Megaphone
 } from "lucide-react";
 import ConfirmationModal from "../../../../shared/components/ui/ConfirmationModal";
+import { Avatar, Input } from "../../../../shared/components/ui";
 
 
 
@@ -133,21 +134,13 @@ export default function Header({
             )
           ) : (
             // DM Avatar with Online Indicator
-            <div className="relative">
-              {chat.image ? (
-                <img src={chat.image} alt={chat.name} className="w-8 h-8 rounded object-cover shadow-sm bg-gray-50 dark:bg-gray-800" />
-              ) : (
-                <div className="w-8 h-8 rounded bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold text-sm">
-                  {(chat.name || chat.username || '?').charAt(0).toUpperCase()}
-                </div>
-              )}
-              {/* Online/Offline Indicator */}
-              <div
-                className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white dark:border-gray-900 ${chat.isOnline || chat.status === 'online' ? 'bg-green-500' : 'bg-gray-400'
-                  }`}
-                title={chat.isOnline || chat.status === 'online' ? 'Online' : 'Offline'}
-              ></div>
-            </div>
+            <Avatar
+              src={chat.image}
+              fallback={chat.name || chat.username}
+              alt={chat.name || chat.username}
+              status={chat.isOnline || chat.status === 'online' ? 'online' : 'offline'}
+              size="sm"
+            />
           )}
 
           <div className="min-w-0">
@@ -247,17 +240,16 @@ export default function Header({
                 </button>
 
                 {showSearch && (
-                  <div onClick={(e) => e.stopPropagation()} className="absolute right-0 mt-2 w-64 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-md rounded-lg p-2 z-50 animate-fade-in">
+                  <div onClick={(e) => e.stopPropagation()} className="absolute right-0 mt-2 w-64 bg-white dark:bg-gray-800 border border-secondary-200 dark:border-secondary-700 shadow-xl rounded-lg p-2 z-50 animate-fade-in">
                     <div className="relative">
-                      <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400">
-                        <Search size={12} />
-                      </span>
-                      <input
-                        className="w-full pl-8 pr-2 py-1.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded text-xs text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      <Input
                         placeholder="Search..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         autoFocus
+                        icon={<Search size={14} />}
+                        className="text-xs py-1.5 h-8"
+                        fullWidth
                       />
                     </div>
                   </div>

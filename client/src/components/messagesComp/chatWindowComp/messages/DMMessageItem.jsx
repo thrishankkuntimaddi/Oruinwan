@@ -5,6 +5,7 @@ import ReactionPicker from "./reactionPicker";
 import ReactMarkdown from "react-markdown";
 import remarkBreaks from "remark-breaks";
 import EncryptedMessage from "../../EncryptedMessage";
+import { Avatar } from "../../../../shared/components/ui";
 
 /* ---------------------------------------------------------
    DM MessageItem Component (Matches Channel/Slack Style Exactly)
@@ -115,17 +116,13 @@ function DMMessageItem({
 
             {/* Avatar - with blue ring for current user */}
             <div className="flex-shrink-0 pt-0.5">
-                {avatarUrl ? (
-                    <img
-                        src={avatarUrl}
-                        alt={msg.senderName}
-                        className={`w-7 h-7 rounded object-cover ${isMe ? "ring-2 ring-blue-500" : ""}`}
-                    />
-                ) : (
-                    <div className={`w-7 h-7 rounded flex items-center justify-center text-[10px] font-medium text-white ${isMe ? "bg-blue-500/80" : "bg-gray-400/80 dark:bg-gray-600"}`}>
-                        {initial}
-                    </div>
-                )}
+                <Avatar
+                    src={avatarUrl}
+                    fallback={initial}
+                    alt={msg.senderName}
+                    size="sm"
+                    className={isMe ? "ring-2 ring-blue-500" : ""}
+                />
             </div>
 
             {/* Content */}

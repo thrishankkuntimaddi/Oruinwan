@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import { useWorkspace } from "../../contexts/WorkspaceContext";
 import { Home, MessageSquare, CheckSquare, FileText, Newspaper, Hash, Rocket, Briefcase, Zap, Palette, Microscope, Globe, Shield, TrendingUp, Lightbulb, Flame, Target, Trophy, Video, Settings } from "lucide-react";
+import { Avatar } from "../../shared/components/ui";
 
 const IconSidebar = ({ onProfileClick }) => {
     const navigate = useNavigate();
@@ -216,18 +217,16 @@ const IconSidebar = ({ onProfileClick }) => {
                 </div>
 
                 {/* Profile Icon */}
-                <button onClick={onProfileClick} className="relative group">
-                    <div
-                        className="w-10 h-10 rounded-full bg-cover bg-center border-2 border-gray-100 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-500 transition-all shadow-sm"
-                        style={{
-                            backgroundImage: `url(${user?.profilePicture || "https://ui-avatars.com/api/?name=" + (user?.username || "User")})`,
-                        }}
+                <div onClick={onProfileClick} className="cursor-pointer">
+                    <Avatar
+                        src={user?.profilePicture}
+                        fallback={user?.username || "User"}
+                        alt={user?.username}
+                        status={user?.userStatus === "dnd" ? "busy" : user?.userStatus === "away" ? "away" : "online"}
+                        size="md"
+                        className="hover:ring-2 hover:ring-gray-300 dark:hover:ring-gray-500 transition-all border-2 border-transparent"
                     />
-                    <div className={`absolute w-3 h-3 rounded-full bottom-0 right-0 border-2 border-white dark:border-gray-900 ${user?.userStatus === "away" ? "bg-yellow-500" :
-                        user?.userStatus === "dnd" ? "bg-red-500" :
-                            "bg-green-500"
-                        }`}></div>
-                </button>
+                </div>
             </div>
         </div>
     );

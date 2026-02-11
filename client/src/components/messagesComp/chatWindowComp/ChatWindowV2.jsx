@@ -337,8 +337,32 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
                 break;
 
             case 'thread-reply':
-                // Handle thread reply events - this is primarily for ThreadPanel
-                // The count update is handled by 'message-updated' event which has the authoritative count
+                // Handle thread reply events - Update thread count
+                const reply = event.payload.reply || event.payload.message || event.payload;
+                const replyParentId = reply.parentId || event.payload.parentId || reply.replyTo || reply.threadParent;
+
+                if (replyParentId) {
+                    setThreadCounts(prev => {
+                        const newCount = (prev[replyParentId] || 0) + 1;
+
+                        // Update conversation event with new count for persistence
+                        if (conversationRef.current) {
+                            conversationRef.current.updateEvent(replyParentId, {
+                                replyCount: newCount,
+                                lastReplyAt: reply.createdAt || new Date().toISOString(),
+                                payload: {
+                                    replyCount: newCount,
+                                    lastReplyAt: reply.createdAt || new Date().toISOString()
+                                }
+                            });
+                        }
+
+                        return {
+                            ...prev,
+                            [replyParentId]: newCount
+                        };
+                    });
+                }
                 break;
 
             case 'thread:created':

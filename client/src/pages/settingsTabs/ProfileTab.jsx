@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
-import { Mail, Loader, Upload, X, Camera } from 'lucide-react';
+import { Mail, Upload, X, Camera } from 'lucide-react';
 import Card from './Card';
+import Input from '../../shared/components/ui/Input';
+import Button from '../../shared/components/ui/Button';
+import Avatar from '../../shared/components/ui/Avatar';
 import axios from 'axios';
 
 /**
@@ -96,17 +99,13 @@ const ProfileTab = ({ user, profileData, setProfileData, loading, handleProfileU
                     {/* Avatar Side */}
                     <div className="flex flex-col items-center space-y-4">
                         <div className="relative group">
-                            <div className="w-32 h-32 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-4xl font-black shadow-lg ring-4 ring-white dark:ring-[#0B0F19] overflow-hidden">
-                                {currentProfilePicture ? (
-                                    <img
-                                        src={currentProfilePicture}
-                                        alt="Profile"
-                                        className="w-full h-full object-cover"
-                                    />
-                                ) : (
-                                    <span>{user?.username?.charAt(0)?.toUpperCase()}</span>
-                                )}
-                            </div>
+                            <Avatar
+                                src={currentProfilePicture}
+                                alt={user?.username}
+                                fallback={user?.username}
+                                size="xl3"
+                                className="w-32 h-32 text-4xl shadow-lg ring-4 ring-white dark:ring-[#0B0F19]"
+                            />
 
                             {/* Hover overlay for change picture */}
                             <label
@@ -134,30 +133,24 @@ const ProfileTab = ({ user, profileData, setProfileData, loading, handleProfileU
                         {/* Image action buttons */}
                         {previewUrl && selectedFile && (
                             <div className="flex gap-2 w-full">
-                                <button
+                                <Button
                                     onClick={handleUploadProfilePicture}
                                     disabled={uploadingImage}
-                                    className="flex-1 px-4 py-2 bg-indigo-600 text-white text-sm font-bold rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                                    isLoading={uploadingImage}
+                                    className="flex-1"
+                                    size="sm"
+                                    icon={<Upload size={14} />}
                                 >
-                                    {uploadingImage ? (
-                                        <>
-                                            <Loader size={14} className="animate-spin" />
-                                            Uploading...
-                                        </>
-                                    ) : (
-                                        <>
-                                            <Upload size={14} />
-                                            Save
-                                        </>
-                                    )}
-                                </button>
-                                <button
+                                    Save
+                                </Button>
+                                <Button
+                                    variant="secondary"
                                     onClick={handleCancelSelection}
                                     disabled={uploadingImage}
-                                    className="px-3 py-2 border border-slate-300 dark:border-white/20 text-slate-700 dark:text-white text-sm font-bold rounded-lg hover:bg-slate-50 dark:hover:bg-white/5 transition-colors disabled:opacity-50"
+                                    size="sm"
                                 >
                                     <X size={14} />
-                                </button>
+                                </Button>
                             </div>
                         )}
 
@@ -176,20 +169,20 @@ const ProfileTab = ({ user, profileData, setProfileData, loading, handleProfileU
                     <div className="flex-1 space-y-5 w-full">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                             <div>
-                                <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wide mb-2">Display Name</label>
-                                <input
+                                <Input
+                                    label="Display Name"
                                     type="text"
                                     value={profileData.username}
                                     onChange={(e) => setProfileData({ ...profileData, username: e.target.value })}
-                                    className="w-full px-4 py-2.5 bg-white dark:bg-[#111827] border border-slate-200 dark:border-white/10 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all dark:text-white"
                                 />
                             </div>
                             <div>
-                                <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wide mb-2">Email Address</label>
-                                <div className="px-4 py-2.5 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/5 rounded-lg text-sm text-slate-500 dark:text-slate-400 cursor-not-allowed flex items-center gap-2">
-                                    <Mail size={14} />
-                                    {user?.email}
-                                </div>
+                                <Input
+                                    label="Email Address"
+                                    value={user?.email}
+                                    disabled
+                                    icon={<Mail size={14} />}
+                                />
                             </div>
                         </div>
 
@@ -229,14 +222,14 @@ const ProfileTab = ({ user, profileData, setProfileData, loading, handleProfileU
                         </div>
 
                         <div className="pt-4 flex justify-end">
-                            <button
+                            <Button
                                 onClick={handleProfileUpdate}
                                 disabled={loading}
-                                className="px-6 py-2.5 bg-indigo-600 text-white font-bold rounded-lg shadow-lg shadow-indigo-500/20 hover:bg-indigo-700 hover:shadow-xl hover:-translate-y-0.5 transition-all disabled:opacity-70 flex items-center gap-2"
+                                isLoading={loading}
+                                size="lg"
                             >
-                                {loading && <Loader size={16} className="animate-spin" />}
                                 Save Changes
-                            </button>
+                            </Button>
                         </div>
                     </div>
                 </div>

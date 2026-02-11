@@ -7,6 +7,7 @@ import { useToast } from "../../contexts/ToastContext";
 import { useGoogleLogin } from "@react-oauth/google";
 import axios from "axios";
 import { Eye, EyeOff } from "lucide-react";
+import { Button, Input } from "../../shared/components/ui";
 
 
 
@@ -206,40 +207,43 @@ const LoginForm = ({ onSwitch, initialEmail = "" }) => {
       <form onSubmit={handleSubmit} className="space-y-5">
         {/* Email */}
         <div className="space-y-1.5">
-          <label className="block text-sm font-bold text-slate-700 dark:text-slate-300">Email</label>
-          <input
+          <Input
+            label="Email"
             name="email"
             type="email"
             placeholder="Enter your email"
             required
             value={formData.email}
             onChange={handleChange}
-            className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 text-slate-900 dark:text-white placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all duration-200"
+            autoComplete="email"
           />
         </div>
 
         {/* Password */}
         <div className="space-y-1.5">
-          <div className="flex justify-between items-center">
-            <label className="block text-sm font-bold text-slate-700 dark:text-slate-300">Password</label>
-            <Link to="/forgot-password" className="text-sm font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 hover:underline">
-              Forgot password?
-            </Link>
+          <div className="flex justify-between items-center mb-1.5">
+            {/* Label handled by Input but we need custom layout for forgot password link */}
           </div>
-          <div className="relative group">
-            <input
+          <div className="relative">
+            <div className="flex justify-between items-center mb-1.5">
+              <label className="block text-sm font-medium text-secondary-700 dark:text-secondary-300">Password</label>
+              <Link to="/forgot-password" className="text-sm font-bold text-primary-600 hover:text-primary-500 hover:underline">
+                Forgot password?
+              </Link>
+            </div>
+            <Input
               name="password"
               type={showPassword ? "text" : "password"}
               placeholder="Enter your password"
               required
               value={formData.password}
               onChange={handleChange}
-              className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 text-slate-900 dark:text-white placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all duration-200"
+              autoComplete="current-password"
             />
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-4 top-3.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+              className="absolute right-3 top-9 text-secondary-400 hover:text-secondary-600 dark:hover:text-secondary-200 transition-colors"
             >
               {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
             </button>
@@ -247,16 +251,16 @@ const LoginForm = ({ onSwitch, initialEmail = "" }) => {
         </div>
 
         {/* Login Button */}
-        <button
+        {/* Login Button */}
+        <Button
           type="submit"
           disabled={!isFormValid}
-          className={`w-full py-3.5 rounded-xl text-white font-bold text-lg shadow-lg shadow-indigo-500/20 transition-all transform hover:-translate-y-1 hover:shadow-indigo-500/40 active:translate-y-0 ${isFormValid
-            ? "bg-indigo-600 hover:bg-indigo-700"
-            : "bg-slate-300 dark:bg-slate-700 cursor-not-allowed"
-            }`}
+          className="w-full text-lg shadow-lg shadow-primary-500/20 py-3.5"
+          variant="primary"
+          isLoading={false} // Add loading state if available from context
         >
           Sign In
-        </button>
+        </Button>
       </form>
 
       {/* Divider */}
@@ -271,29 +275,32 @@ const LoginForm = ({ onSwitch, initialEmail = "" }) => {
 
       {/* Social Login Buttons */}
       <div className="grid grid-cols-3 gap-3 mb-4">
-        <button
+        <Button
           type="button"
           onClick={googleLogin}
-          className="flex items-center justify-center gap-2 h-12 border border-slate-200 dark:border-slate-700 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-all"
+          variant="outline"
+          className="h-12 w-full"
         >
           <GoogleIcon />
-        </button>
+        </Button>
 
-        <button
+        <Button
           type="button"
           onClick={() => window.location.href = `${process.env.REACT_APP_BACKEND_URL}/api/auth/github`}
-          className="flex items-center justify-center gap-2 h-12 border border-slate-200 dark:border-slate-700 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-all"
+          variant="outline"
+          className="h-12 w-full"
         >
           <GitHubIcon />
-        </button>
+        </Button>
 
-        <button
+        <Button
           type="button"
           onClick={() => window.location.href = `${process.env.REACT_APP_BACKEND_URL}/api/auth/linkedin`}
-          className="flex items-center justify-center gap-2 h-12 border border-slate-200 dark:border-slate-700 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-all"
+          variant="outline"
+          className="h-12 w-full"
         >
           <LinkedInIcon />
-        </button>
+        </Button>
       </div>
 
       {/* Footer */}

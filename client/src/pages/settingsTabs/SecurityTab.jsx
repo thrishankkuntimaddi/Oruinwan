@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
-import { Eye, EyeOff, Shield, Loader, Check, X, AlertCircle } from 'lucide-react';
+import { Eye, EyeOff, Shield, Check, X, AlertCircle } from 'lucide-react';
+
 import Card from './Card';
+import Input from '../../shared/components/ui/Input';
+import Button from '../../shared/components/ui/Button';
 
 // Password strength calculator
 const calculatePasswordStrength = (password) => {
@@ -63,63 +66,60 @@ const SecurityTab = ({
             <Card title="Password" subtitle="Manage your password and authentication">
                 <div className="max-w-xl space-y-5">
                     <div>
-                        <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wide mb-2">Current Password</label>
-                        <div className="relative">
-                            <input
-                                type={showCurrentPassword ? "text" : "password"}
-                                value={passwordData.currentPassword}
-                                onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
-                                className="w-full px-4 py-2.5 bg-white dark:bg-[#111827] border border-slate-200 dark:border-white/10 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none dark:text-white"
-                                placeholder="Enter current password"
-                            />
-                            <button
-                                onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                                type="button"
-                            >
-                                {showCurrentPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                            </button>
-                        </div>
+                        <Input
+                            label="Current Password"
+                            type={showCurrentPassword ? "text" : "password"}
+                            value={passwordData.currentPassword}
+                            onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
+                            placeholder="Enter current password"
+                            icon={
+                                <button
+                                    onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                                    type="button"
+                                    className="text-slate-400 hover:text-slate-600 focus:outline-none"
+                                >
+                                    {showCurrentPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                                </button>
+                            }
+                        />
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                         <div>
-                            <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wide mb-2">New Password</label>
-                            <div className="relative">
-                                <input
-                                    type={showNewPasswordField ? "text" : "password"}
-                                    value={passwordData.newPassword}
-                                    onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
-                                    className="w-full px-4 py-2.5 bg-white dark:bg-[#111827] border border-slate-200 dark:border-white/10 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none dark:text-white"
-                                    placeholder="New password"
-                                />
-                                <button
-                                    onClick={() => setShowNewPasswordField(!showNewPasswordField)}
-                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                                    type="button"
-                                >
-                                    {showNewPasswordField ? <EyeOff size={16} /> : <Eye size={16} />}
-                                </button>
-                            </div>
+                            <Input
+                                label="New Password"
+                                type={showNewPasswordField ? "text" : "password"}
+                                value={passwordData.newPassword}
+                                onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
+                                placeholder="New password"
+                                icon={
+                                    <button
+                                        onClick={() => setShowNewPasswordField(!showNewPasswordField)}
+                                        type="button"
+                                        className="text-slate-400 hover:text-slate-600 focus:outline-none"
+                                    >
+                                        {showNewPasswordField ? <EyeOff size={16} /> : <Eye size={16} />}
+                                    </button>
+                                }
+                            />
                         </div>
                         <div>
-                            <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wide mb-2">Confirm New Password</label>
-                            <div className="relative">
-                                <input
-                                    type={showConfirmPassword ? "text" : "password"}
-                                    value={passwordData.confirmPassword}
-                                    onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
-                                    className="w-full px-4 py-2.5 bg-white dark:bg-[#111827] border border-slate-200 dark:border-white/10 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none dark:text-white"
-                                    placeholder="Confirm password"
-                                />
-                                <button
-                                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                                    type="button"
-                                >
-                                    {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                                </button>
-                            </div>
+                            <Input
+                                label="Confirm New Password"
+                                type={showConfirmPassword ? "text" : "password"}
+                                value={passwordData.confirmPassword}
+                                onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
+                                placeholder="Confirm password"
+                                icon={
+                                    <button
+                                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                        type="button"
+                                        className="text-slate-400 hover:text-slate-600 focus:outline-none"
+                                    >
+                                        {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                                    </button>
+                                }
+                            />
                         </div>
                     </div>
 
@@ -129,9 +129,9 @@ const SecurityTab = ({
                             <div className="flex items-center justify-between">
                                 <span className="text-xs font-bold text-slate-600 dark:text-slate-400">Password Strength</span>
                                 <span className={`text-xs font-bold ${passwordStrength.score < 40 ? 'text-red-600' :
-                                        passwordStrength.score < 60 ? 'text-orange-600' :
-                                            passwordStrength.score < 80 ? 'text-yellow-600' :
-                                                'text-green-600'
+                                    passwordStrength.score < 60 ? 'text-orange-600' :
+                                        passwordStrength.score < 80 ? 'text-yellow-600' :
+                                            'text-green-600'
                                     }`}>
                                     {passwordStrength.label}
                                 </span>
@@ -180,14 +180,14 @@ const SecurityTab = ({
                     )}
 
                     <div className="pt-2">
-                        <button
+                        <Button
                             onClick={handlePasswordChange}
                             disabled={loading || !passwordData.currentPassword || !passwordData.newPassword || passwordData.newPassword !== passwordData.confirmPassword}
-                            className="px-6 py-2.5 bg-slate-900 dark:bg-white text-white dark:text-black font-bold rounded-lg hover:opacity-90 transition-all disabled:opacity-50 flex items-center gap-2 shadow-lg shadow-black/20"
+                            isLoading={loading}
+                            variant="primary" // Changed to primary/indigo to match other tabs, or keep dark if intended. Assuming primary is better.
                         >
-                            {loading && <Loader size={16} className="animate-spin" />}
                             Update Password
-                        </button>
+                        </Button>
                     </div>
                 </div>
             </Card>
@@ -204,12 +204,13 @@ const SecurityTab = ({
                             <p className="text-xs text-slate-400 dark:text-slate-500 mt-2">Coming soon: Setup 2FA for enhanced security</p>
                         </div>
                     </div>
-                    <button
-                        className="px-5 py-2.5 border border-slate-300 dark:border-white/20 rounded-lg text-sm font-bold text-slate-700 dark:text-white hover:bg-slate-50 dark:hover:bg-white/5 transition-colors opacity-50 cursor-not-allowed"
+                    <Button
+                        variant="secondary"
                         disabled
+                        className="opacity-50 cursor-not-allowed"
                     >
                         Enable 2FA
-                    </button>
+                    </Button>
                 </div>
             </Card>
         </div>

@@ -4,60 +4,93 @@
 
 /* Professional Minimalist Theme */
 :root {
+  /* Base Colors - mapped to Tailwind Slate/Sky */
   --bg-primary: #ffffff;
-  --bg-secondary: #f8f9fa;
-  --border-color: #e9ecef;
-  --text-primary: #1a1d21;
-  --text-secondary: #616061;
-  --accent-blue: #007bff;
-  --accent-blue-hover: #0056b3;
+  --bg-secondary: #f8fafc;
+  /* Slate 50 */
+  --bg-tertiary: #f1f5f9;
+  /* Slate 100 */
 
-  /* Input Theme Variables */
+  --text-primary: #0f172a;
+  /* Slate 900 */
+  --text-secondary: #475569;
+  /* Slate 600 */
+  --text-muted: #94a3b8;
+  /* Slate 400 */
+
+  --border-color: #e2e8f0;
+  /* Slate 200 */
+  --border-hover: #cbd5e1;
+  /* Slate 300 */
+
+  /* Brand Colors */
+  --color-primary: #0ea5e9;
+  /* Sky 500 */
+  --color-primary-hover: #0284c7;
+  /* Sky 600 */
+  --color-primary-light: #e0f2fe;
+  /* Sky 100 */
+
+  /* Status Colors */
+  --color-success: #22c55e;
+  --color-warning: #f59e0b;
+  --color-danger: #ef4444;
+
+  /* Component specifics */
   --input-bg: #ffffff;
-  --input-text: #1a1d21;
-  --input-border: #e9ecef;
-  --input-placeholder: #9ca3af;
-  --input-ring: rgba(0, 123, 255, 0.25);
-  --bg-card: #ffffff;
+  --input-border: #e2e8f0;
+  --input-text: #0f172a;
+  --input-placeholder: #94a3b8;
+  --input-ring: rgba(14, 165, 233, 0.25);
 
-  --text-muted: #6b7280;
-  /* Gray-500 */
+  --card-bg: #ffffff;
+  --card-border: #e2e8f0;
+  --card-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+
   --highlight-bg-strong: rgba(254, 243, 199, 0.8);
   --highlight-bg-weak: rgba(254, 243, 199, 0.3);
 }
 
-/* Dark Mode Overrides */
 .dark {
+  /* Dark Mode Mappings */
   --bg-primary: #0f172a;
-  /* Slate-900 */
+  /* Slate 900 */
   --bg-secondary: #1e293b;
-  /* Slate-800 */
-  --bg-card: #1e293b;
-  /* Slate-800 */
+  /* Slate 800 */
+  --bg-tertiary: #334155;
+  /* Slate 700 */
+
+  --text-primary: #f8fafc;
+  /* Slate 50 */
+  --text-secondary: #cbd5e1;
+  /* Slate 300 */
+  --text-muted: #64748b;
+  /* Slate 500 */
 
   --border-color: #334155;
-  /* Slate-700 */
-  --text-primary: #f8fafc;
-  /* Slate-50 */
-  --text-secondary: #94a3b8;
-  /* Slate-400 */
+  /* Slate 700 */
+  --border-hover: #475569;
+  /* Slate 600 */
 
-  --shadow-minimal: 0 1px 3px rgba(0, 0, 0, 0.5);
+  /* Brand remains consistent but adapted if needed */
+  --color-primary: #38bdf8;
+  /* Sky 400 */
+  --color-primary-hover: #7dd3fc;
+  /* Sky 300 */
+  --color-primary-light: rgba(14, 165, 233, 0.15);
 
-  /* Input Dark Mode */
+  /* Component specifics */
   --input-bg: #1e293b;
-  /* Slate-800 */
-  --input-text: #f8fafc;
-  /* Slate-50 */
   --input-border: #334155;
-  /* Slate-700 */
+  --input-text: #f8fafc;
   --input-placeholder: #64748b;
-  /* Slate-500 */
   --input-ring: rgba(56, 189, 248, 0.25);
 
-  --text-muted: #94a3b8;
-  /* Slate-400 */
-  --highlight-bg-strong: rgba(254, 243, 199, 0.2);
+  --card-bg: #1e293b;
+  --card-border: #334155;
+  --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+
+  --highlight-bg-strong: rgba(254, 243, 199, 0.15);
   --highlight-bg-weak: rgba(254, 243, 199, 0.05);
 }
 
@@ -65,7 +98,9 @@
 .theme-input {
   background-color: var(--input-bg);
   color: var(--input-text);
-  border-color: var(--input-border);
+  border: 1px solid var(--input-border);
+  border-radius: 0.375rem;
+  /* Tailwind rounded-md */
   transition: all 0.2s ease-in-out;
 }
 
@@ -75,14 +110,17 @@
 
 .theme-input:focus {
   outline: none;
-  border-color: var(--accent-blue);
-  box-shadow: 0 0 0 4px var(--input-ring);
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--input-ring);
 }
 
 .theme-card {
-  background-color: var(--bg-card);
-  border: 1px solid var(--border-color);
+  background-color: var(--card-bg);
+  border: 1px solid var(--card-border);
   color: var(--text-primary);
+  border-radius: 0.5rem;
+  /* Tailwind rounded-lg */
+  box-shadow: var(--card-shadow);
 }
 
 html,

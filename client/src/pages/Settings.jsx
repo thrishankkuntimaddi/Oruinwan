@@ -8,6 +8,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { useTheme } from '../contexts/ThemeContext';
 import axios from 'axios';
+import Input from '../shared/components/ui/Input';
+import Button from '../shared/components/ui/Button';
 
 // Import tab components
 import ProfileTab from './settingsTabs/ProfileTab';
@@ -325,26 +327,24 @@ const Settings = () => {
 
                     {/* Middle: Search Bar */}
                     <div className="flex-1 max-w-lg mx-12">
-                        <div className="relative group">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors duration-300" size={16} />
-                            <input
-                                type="text"
-                                placeholder="Search settings..."
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                className="w-full pl-10 pr-4 py-2.5 bg-white/50 dark:bg-[#111827]/50 border border-slate-200/60 dark:border-white/10 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 outline-none dark:text-white transition-all duration-300 shadow-sm focus:shadow-lg focus:bg-white dark:focus:bg-[#111827]"
-                            />
-                        </div>
+                        <Input
+                            type="text"
+                            placeholder="Search settings..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            icon={<Search size={16} />}
+                        />
                     </div>
 
                     {/* Right: Back Button */}
-                    <button
+                    <Button
                         onClick={handleBackNavigation}
-                        className="px-4 py-2 bg-white dark:bg-[#111827] border border-slate-200/60 dark:border-white/10 rounded-xl shadow-sm hover:shadow-lg hover:border-indigo-200 dark:hover:border-indigo-500/30 text-slate-600 dark:text-slate-300 font-bold text-sm flex items-center gap-2 transition-all duration-300 group hover:-translate-y-0.5 active:translate-y-0 active:scale-95"
+                        variant="secondary"
+                        icon={<ArrowLeft size={16} />}
+                        className="font-bold"
                     >
-                        <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform duration-300" />
                         Back
-                    </button>
+                    </Button>
                 </header>
 
                 <div className="flex-1 overflow-y-auto p-4 md:p-8 lg:p-12 custom-scrollbar">

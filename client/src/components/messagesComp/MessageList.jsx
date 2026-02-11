@@ -12,6 +12,8 @@ import { SocketContext } from "../../contexts/SocketContext";
 import { API_BASE } from "../../services/api";
 
 
+import { Button, Input, Avatar, Badge } from "../../shared/components/ui";
+
 const Tabs = ["All", "Direct Messages", "Channels"];
 
 export default function MessageList({ onSelectChat }) {
@@ -294,42 +296,41 @@ export default function MessageList({ onSelectChat }) {
 
       {/* Search */}
       <div className="px-4 py-3">
-        <div className="flex w-full rounded-lg h-12 bg-[#f0f2f4]">
-          <div className="flex items-center justify-center pl-4">
-            🔍
-          </div>
-          <input
-            type="text"
-            placeholder="Search"
-            className="flex-1 bg-[#f0f2f4] px-4 text-sm focus:outline-none"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </div>
+        <Input
+          placeholder="Search"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          icon={<Search size={18} />}
+          className="bg-secondary-50 border-secondary-200"
+          fullWidth
+        />
       </div>
 
       {/* Channel Actions */}
       <div className="flex items-center justify-end gap-2 px-4 py-2">
-
-        <button
-          className="px-3 py-1 bg-green-500 text-white text-sm rounded hover:bg-green-600"
+        <Button
+          size="xs"
+          variant="secondary"
           onClick={() => setShowNewChat(true)}
+          icon={<Plus size={14} />}
         >
-          New Message
-        </button>
+          New
+        </Button>
 
-        <button
+        <Button
           onClick={() => setShowJoin(true)}
-          className="px-3 py-1 bg-green-500 text-white text-sm rounded hover:bg-green-600"
+          size="xs"
+          variant="secondary"
         >
-          Join Channel
-        </button>
-        <button
+          Join
+        </Button>
+        <Button
           onClick={() => setShowCreate(true)}
-          className="px-3 py-1 bg-blue-500 text-white text-sm rounded hover:bg-blue-600"
+          size="xs"
+          variant="primary"
         >
-          Create Channel
-        </button>
+          Create
+        </Button>
       </div>
 
       {/* Modals */}
@@ -486,16 +487,15 @@ export default function MessageList({ onSelectChat }) {
       >
         {/* Avatar */}
         {item.type === "dm" ? (
-          <div
-            className="h-12 w-12 bg-gray-300 rounded-full"
-            style={{
-              backgroundImage: `url(${item.profilePicture || "/default-avatar.svg"})`,
-              backgroundSize: "cover",
-            }}
+          <Avatar
+            src={item.profilePicture}
+            alt={item.name}
+            fallback={item.name}
+            size="md"
           />
         ) : (
-          <div className="h-12 w-12 bg-gray-200 rounded-lg flex items-center justify-center">
-            #
+          <div className="h-10 w-10 bg-secondary-200 dark:bg-secondary-700 rounded-lg flex items-center justify-center text-secondary-600 dark:text-secondary-300">
+            <Hash size={20} />
           </div>
         )}
 
@@ -514,9 +514,9 @@ export default function MessageList({ onSelectChat }) {
             </p>
 
             {item.unreadCount > 0 && (
-              <div className="bg-blue-600 text-white text-xs rounded-full px-2 py-0.5">
+              <Badge variant="primary" size="sm" className="rounded-full px-1.5 min-w-[1.25rem] justify-center">
                 {item.unreadCount}
-              </div>
+              </Badge>
             )}
           </div>
         </div>
