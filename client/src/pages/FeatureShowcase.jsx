@@ -55,6 +55,7 @@ const FeatureShowcase = () => {
     const { user } = useAuth();
     const { theme, toggleTheme } = useTheme();
     const [isLoading, setIsLoading] = useState(true);
+    const [isFirstVisit, setIsFirstVisit] = useState(false);
 
     const scrollToSection = (id) => {
         const element = document.getElementById(id);
@@ -87,6 +88,18 @@ const FeatureShowcase = () => {
     };
 
     useEffect(() => {
+        // Check if this is the first visit
+        const hasVisitedBefore = localStorage.getItem('chttrix_visited');
+        
+        if (!hasVisitedBefore) {
+            // First time visiting - show full loading screen
+            setIsFirstVisit(true);
+            localStorage.setItem('chttrix_visited', 'true');
+        } else {
+            // Not first time - show quick loading
+            setTimeout(() => setIsLoading(false), 500);
+        }
+        
         if (user) {
             navigate("/workspaces");
         }
@@ -138,7 +151,18 @@ const FeatureShowcase = () => {
 
     return (
         <div className="min-h-screen w-full bg-white dark:bg-[#030712] text-slate-900 dark:text-white transition-colors duration-500 relative">
-            {isLoading && <LoadingScreen onComplete={() => setIsLoading(false)} />}
+            {/* Full Loading Screen - Only on first visit */}
+            {isLoading && isFirstVisit && <LoadingScreen onComplete={() => setIsLoading(false)} />}
+            
+            {/* Simple Loading Spinner - Subsequent visits */}
+            {isLoading && !isFirstVisit && (
+                <div className="fixed inset-0 z-[9999] bg-white dark:bg-[#030712] flex items-center justify-center">
+                    <div className="flex flex-col items-center gap-4">
+                        <div className="w-12 h-12 border-4 border-indigo-200 dark:border-indigo-900 border-t-indigo-600 dark:border-t-indigo-400 rounded-full animate-spin"></div>
+                        <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Loading...</p>
+                    </div>
+                </div>
+            )}
 
 
             <style>{`

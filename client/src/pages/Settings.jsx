@@ -22,7 +22,7 @@ import AdvancedTab from './settingsTabs/AdvancedTab';
 const Settings = () => {
     const navigate = useNavigate();
     const location = useLocation();
-    const { user, refreshUser } = useAuth();
+    const { user, refreshUser, logout } = useAuth();
     const { showToast } = useToast();
     const { theme, toggleTheme } = useTheme();
 
@@ -175,6 +175,17 @@ const Settings = () => {
             loadSessions();
         } catch (error) {
             showToast('Failed to logout other sessions', 'error');
+        }
+    };
+
+    const handleLogout = async () => {
+        try {
+            showToast('Logging out...', 'info');
+            await logout(); // This calls the AuthContext logout which handles everything
+            navigate('/login');
+        } catch (error) {
+            console.error('Logout error:', error);
+            showToast('Failed to logout', 'error');
         }
     };
 
@@ -352,6 +363,7 @@ const Settings = () => {
                                     sessions={sessions}
                                     handleLogoutSession={handleLogoutSession}
                                     handleLogoutOthers={handleLogoutOthers}
+                                    handleLogout={handleLogout}
                                 />
                             )}
                             {activeSection === 'advanced' && (

@@ -926,7 +926,7 @@ exports.getMe = async (req, res) => {
 
     return res.json(userObject);
   } catch (_err) {
-    console.error("GET ME ERROR:", err);
+    console.error("GET ME ERROR:", _err);
     return res.status(500).json({ message: "Server error" });
   }
 };
@@ -1026,22 +1026,22 @@ exports.updateMe = async (req, res) => {
     });
 
   } catch (_err) {
-    console.error("UPDATE PROFILE ERROR:", err);
+    console.error("UPDATE PROFILE ERROR:", _err);
     console.error("Error details:", {
-      name: err.name,
-      code: err.code,
-      message: err.message
+      name: _err.name,
+      code: _err.code,
+      message: _err.message
     });
 
     // Handle MongoDB duplicate key errors
-    if (err.code === 11000) {
-      const field = Object.keys(err.keyPattern || {})[0];
+    if (_err.code === 11000) {
+      const field = Object.keys(_err.keyPattern || {})[0];
       return res.status(409).json({
         message: `That ${field} is already in use by another account`
       });
     }
 
-    return res.status(500).json({ message: err.message || "Server error" });
+    return res.status(500).json({ message: _err.message || "Server error" });
   }
 };
 
@@ -1050,11 +1050,13 @@ exports.updateMe = async (req, res) => {
 // ----------------------------------------------------
 exports.updatePassword = async (req, res) => {
   try {
-    const { oldPassword, newPassword } = req.body;
+    // Support both currentPassword (from client) and oldPassword (legacy)
+    const { currentPassword, oldPassword, newPassword } = req.body;
+    const passwordToCheck = currentPassword || oldPassword;
 
     const user = await User.findById(req.user.sub);
 
-    const match = await bcrypt.compare(oldPassword, user.passwordHash);
+    const match = await bcrypt.compare(passwordToCheck, user.passwordHash);
     if (!match)
       return res.status(400).json({ message: "Old password incorrect" });
 
@@ -1074,7 +1076,7 @@ exports.updatePassword = async (req, res) => {
     return res.json({ message: "Password updated" });
 
   } catch (_err) {
-    console.error("PASSWORD ERROR:", err);
+    console.error("PASSWORD ERROR:", _err);
     return res.status(500).json({ message: "Server error" });
   }
 };
@@ -1150,7 +1152,7 @@ exports.setPassword = async (req, res) => {
     });
 
   } catch (_err) {
-    console.error("SET PASSWORD ERROR:", err);
+    console.error("SET PASSWORD ERROR:", _err);
     return res.status(500).json({ message: "Server error" });
   }
 };
@@ -1252,7 +1254,7 @@ exports.googleLogin = async (req, res) => {
     });
 
   } catch (_err) {
-    console.error("GOOGLE LOGIN ERROR:", err);
+    console.error("GOOGLE LOGIN ERROR:", _err);
     return res.status(500).json({ message: "Google login failed" });
   }
 };
@@ -1353,7 +1355,7 @@ exports.getSessions = async (req, res) => {
 
     res.json(sessions);
   } catch (_err) {
-    console.error("GET SESSIONS ERROR:", err);
+    console.error("GET SESSIONS ERROR:", _err);
     res.status(500).json({ message: "Server error" });
   }
 };
@@ -1373,7 +1375,7 @@ exports.revokeSession = async (req, res) => {
 
     res.json({ message: "Session revoked" });
   } catch (_err) {
-    console.error("REVOKE SESSION ERROR:", err);
+    console.error("REVOKE SESSION ERROR:", _err);
     res.status(500).json({ message: "Server error" });
   }
 };
@@ -1405,7 +1407,7 @@ exports.revokeOtherSessions = async (req, res) => {
 
     res.json({ message: "All other sessions revoked" });
   } catch (_err) {
-    console.error("REVOKE OTHERS ERROR:", err);
+    console.error("REVOKE OTHERS ERROR:", _err);
     res.status(500).json({ message: "Server error" });
   }
 };
@@ -1518,7 +1520,7 @@ exports.addEmail = async (req, res) => {
     res.json(response);
 
   } catch (_err) {
-    console.error("ADD EMAIL ERROR:", err);
+    console.error("ADD EMAIL ERROR:", _err);
     res.status(500).json({ message: "Server error" });
   }
 };
@@ -1575,7 +1577,7 @@ exports.verifyEmailCode = async (req, res) => {
     });
 
   } catch (_err) {
-    console.error("VERIFY EMAIL ERROR:", err);
+    console.error("VERIFY EMAIL ERROR:", _err);
     res.status(500).json({ message: "Server error" });
   }
 };
@@ -1637,7 +1639,7 @@ exports.resendVerification = async (req, res) => {
     }
 
   } catch (_err) {
-    console.error("RESEND VERIFICATION ERROR:", err);
+    console.error("RESEND VERIFICATION ERROR:", _err);
     res.status(500).json({ message: "Server error" });
   }
 };
@@ -1684,7 +1686,7 @@ exports.setPrimaryEmail = async (req, res) => {
     });
 
   } catch (_err) {
-    console.error("SET PRIMARY EMAIL ERROR:", err);
+    console.error("SET PRIMARY EMAIL ERROR:", _err);
     res.status(500).json({ message: "Server error" });
   }
 };
@@ -1728,7 +1730,7 @@ exports.deleteEmail = async (req, res) => {
     });
 
   } catch (_err) {
-    console.error("DELETE EMAIL ERROR:", err);
+    console.error("DELETE EMAIL ERROR:", _err);
     res.status(500).json({ message: "Server error" });
   }
 };
@@ -1769,7 +1771,7 @@ exports.skipPassword = async (req, res) => {
     });
 
   } catch (_err) {
-    console.error("SKIP PASSWORD ERROR:", err);
+    console.error("SKIP PASSWORD ERROR:", _err);
     return res.status(500).json({ message: "Server error" });
   }
 };
@@ -1809,7 +1811,7 @@ exports.getUsersList = async (req, res) => {
 
     res.json({ users });
   } catch (_err) {
-    console.error("GET USERS ERROR:", err);
+    console.error("GET USERS ERROR:", _err);
     res.status(500).json({ message: "Server error" });
   }
 };

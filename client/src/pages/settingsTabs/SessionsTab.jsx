@@ -1,5 +1,5 @@
 import React from 'react';
-import { Smartphone, Monitor } from 'lucide-react';
+import { Smartphone, Monitor, LogOut } from 'lucide-react';
 import Card from './Card';
 
 /**
@@ -8,33 +8,42 @@ import Card from './Card';
  * @param {Array} props.sessions - Array of active sessions
  * @param {function} props.handleLogoutSession - Logout single session handler
  * @param {function} props.handleLogoutOthers - Logout all other sessions handler
+ * @param {function} props.handleLogout - Logout current session handler
  */
-const SessionsTab = ({ sessions, handleLogoutSession, handleLogoutOthers }) => {
+const SessionsTab = ({ sessions, handleLogoutSession, handleLogoutOthers, handleLogout }) => {
     return (
         <div className="space-y-6 animate-fade-in-up">
             <Card title="Active Sessions" subtitle="Devices currently logged into your account">
                 <div className="space-y-4">
                     {Array.isArray(sessions) && sessions.map((session) => (
-                        <div key={session._id} className="flex items-center justify-between p-4 border border-slate-100 dark:border-white/5 rounded-xl hover:bg-slate-50 dark:hover:bg-white/5 transition-colors group">
+                        <div key={session.id} className="flex items-center justify-between p-4 border border-slate-100 dark:border-white/5 rounded-xl hover:bg-slate-50 dark:hover:bg-white/5 transition-colors group">
                             <div className="flex items-center gap-4">
-                                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${session.isCurrent ? 'bg-green-100 text-green-600 dark:bg-green-900/20 dark:text-green-400' : 'bg-slate-100 text-slate-500 dark:bg-[#111827] dark:text-slate-400'}`}>
-                                    {session.deviceType === 'mobile' ? <Smartphone size={22} /> : <Monitor size={22} />}
+                                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${session.current ? 'bg-green-100 text-green-600 dark:bg-green-900/20 dark:text-green-400' : 'bg-slate-100 text-slate-500 dark:bg-[#111827] dark:text-slate-400'}`}>
+                                    {session.os === 'mobile' ? <Smartphone size={22} /> : <Monitor size={22} />}
                                 </div>
                                 <div>
                                     <h4 className="font-bold text-slate-800 dark:text-white flex items-center gap-2 text-sm">
-                                        {session.deviceInfo || 'Unknown Device'}
-                                        {session.isCurrent && (
+                                        {session.device || 'Unknown Device'}{session.browser && ` - ${session.browser}`}
+                                        {session.current && (
                                             <span className="px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded-full dark:bg-green-500/20 dark:text-green-400 font-bold">Current</span>
                                         )}
                                     </h4>
                                     <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                                        {new Date(session.lastActive).toLocaleString()} · {session.ipAddress}
+                                        {new Date(session.lastActive).toLocaleString()} · {session.location}
                                     </p>
                                 </div>
                             </div>
-                            {!session.isCurrent && (
+                            {session.current ? (
                                 <button
-                                    onClick={() => handleLogoutSession(session._id)}
+                                    onClick={handleLogout}
+                                    className="text-xs font-bold text-red-500 hover:text-white px-3 py-1.5 hover:bg-red-500 rounded-lg transition-colors border border-red-100 dark:border-transparent bg-red-50 dark:bg-red-900/20 flex items-center gap-1.5"
+                                >
+                                    <LogOut size={14} />
+                                    Logout
+                                </button>
+                            ) : (
+                                <button
+                                    onClick={() => handleLogoutSession(session.id)}
                                     className="text-xs font-bold text-red-500 hover:text-white px-3 py-1.5 hover:bg-red-500 rounded-lg transition-colors border border-red-100 dark:border-transparent bg-red-50 dark:bg-red-900/20 opacity-0 group-hover:opacity-100"
                                 >
                                     Revoke
