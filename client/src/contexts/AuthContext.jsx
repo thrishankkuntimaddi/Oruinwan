@@ -291,7 +291,12 @@ export const AuthProvider = ({ children }) => {
 
       return data;
     } catch (error) {
-      throw new Error(error.response?.data?.message || error.message || "Login failed");
+      // Preserve response data for special cases (e.g., deactivation with requiresReactivation flag)
+      const err = new Error(error.response?.data?.message || error.message || "Login failed");
+      if (error.response) {
+        err.response = error.response;  // Preserve the full response object
+      }
+      throw err;
     }
   };
 

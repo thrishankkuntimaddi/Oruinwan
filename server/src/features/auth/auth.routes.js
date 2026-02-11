@@ -27,7 +27,9 @@ const {
   verifyEmailCode,
   resendVerification,
   setPrimaryEmail,
-  deleteEmail
+  deleteEmail,
+  deactivateAccount,
+  verifyReactivationOTP
 } = require("./auth.controller");
 
 const requireAuth = require("../../shared/middleware/auth");
@@ -56,6 +58,10 @@ router.post("/me/emails/:id/verify", requireAuth, verifyEmailCode);
 router.post("/me/emails/:id/resend", requireAuth, resendVerification);
 router.put("/me/emails/:id/primary", requireAuth, setPrimaryEmail);
 router.delete("/me/emails/:id", requireAuth, deleteEmail);
+
+// ACCOUNT MANAGEMENT ROUTES
+router.post("/me/deactivate", requireAuth, deactivateAccount);
+router.post("/reactivate/verify-otp", verifyReactivationOTP);
 
 // USER PREFERENCES ROUTES
 router.get("/me/preferences/privacy", requireAuth, async (req, res) => {

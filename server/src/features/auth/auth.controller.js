@@ -435,6 +435,77 @@ exports.login = async (req, res) => {
       });
     }
 
+    // 🔒 CHECK IF ACCOUNT IS DEACTIVATED
+    if (user.deactivatedAt) {
+      // Generate OTP for reactivation
+      const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+
+      // Initialize otpCodes array if it doesn't exist
+      if (!user.otpCodes) {
+        user.otpCodes = [];
+      }
+
+      // Save OTP to user record
+      user.otpCodes.push({
+        code: otpCode,
+        type: 'reactivation',
+        expiresAt: new Date(Date.now() + 10 * 60 * 1000), // 10 minutes
+        used: false
+      });
+
+      await user.save();
+      console.log(`✅ OTP saved for deactivated user ${email}: ${otpCode}`);
+
+      // Send OTP email
+      try {
+        await sendEmail({
+          to: user.email,
+          subject: "Reactivate Your Chttrix Account",
+          html: `
+            <!DOCTYPE html>
+            <html>
+            <head>
+              <style>
+                body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; }
+                .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; border-radius: 10px 10px 0 0; text-align: center; }
+                .content { background: white; padding: 30px; border-radius: 0 0 10px 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+                .otp { font-size: 32px; font-weight: bold; color: #667eea; text-align: center; padding: 20px; background: #f7f7f7; border-radius: 10px; letter-spacing: 5px; }
+                .footer { text-align: center; margin-top: 20px; color: #666; font-size: 12px; }
+              </style>
+            </head>
+            <body>
+              <div class="container">
+                <div class="header">
+                  <h1>🔓 Reactivate Your Account</h1>
+                </div>
+                <div class="content">
+                  <p>Hello ${user.username},</p>
+                  <p>We received a login attempt for your deactivated Chttrix account. To reactivate your account, please use the verification code below:</p>
+                  <div class="otp">${otpCode}</div>
+                  <p style="text-align: center; color: #666; margin-top: 15px;">This code expires in <strong>10 minutes</strong></p>
+                  <p>After entering this code, you'll need to enter your password to complete reactivation.</p>
+                  <p>If you didn't try to log in, you can safely ignore this email.</p>
+                </div>
+                <div class="footer">
+                  <p>© ${new Date().getFullYear()} Chttrix. All rights reserved.</p>
+                </div>
+              </div>
+            </body>
+            </html>
+          `
+        });
+      } catch (emailErr) {
+        console.error("Failed to send reactivation OTP email:", emailErr);
+      }
+
+      return res.status(403).json({
+        message: "Account is deactivated",
+        requiresReactivation: true,
+        email: user.email
+      });
+    }
+
     if (!user.verified)
       return res.status(403).json({ message: "Please verify your email first" });
 
@@ -1929,5 +2000,152 @@ exports.linkedinCallback = async (req, res) => {
   } catch (_err) {
     console.error('LinkedIn OAuth callback error:', err.response?.data || err.message);
     res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/login?error=linkedin_failed`);
+  }
+};
+
+// ============================================================
+// ACCOUNT DEACTIVATION & REACTIVATION
+// ============================================================
+
+/**
+ * Deactivate user account (temporary)
+ * POST /api/auth/me/deactivate
+ */
+exports.deactivateAccount = async (req, res) => {
+  try {
+    const userId = req.user.sub;
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Set deactivation timestamp
+    user.deactivatedAt = new Date();
+
+    // Clear all refresh tokens (logout from all sessions)
+    user.refreshTokens = [];
+
+    await user.save();
+
+    console.log(`🔒 Account deactivated for user: ${user.username} (${userId})`);
+
+    return res.json({
+      message: "Account deactivated successfully",
+      deactivated: true
+    });
+  } catch (_err) {
+    console.error("DEACTIVATE ACCOUNT ERROR:", _err);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+
+/**
+ * Verify reactivation OTP and reactivate account
+ * POST /api/auth/reactivate/verify-otp
+ * Body: { email, otpCode, password }
+ */
+exports.verifyReactivationOTP = async (req, res) => {
+  try {
+    const { email, otpCode, password } = req.body;
+
+    if (!email || !otpCode || !password) {
+      return res.status(400).json({ message: "Email, OTP code, and password required" });
+    }
+
+    // Find user by email
+    const user = await User.findOne({ email: email.toLowerCase() });
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Check if account is actually deactivated
+    if (!user.deactivatedAt) {
+      return res.status(400).json({ message: "Account is not deactivated" });
+    }
+
+    // Verify OTP
+    if (!user.otpCodes || user.otpCodes.length === 0) {
+      console.log('❌ No OTP codes found for user:', email);
+      return res.status(400).json({ message: "No OTP found. Please try logging in again." });
+    }
+
+    console.log(`🔍 Checking OTP codes for user ${email}:`, user.otpCodes.map(otp => ({
+      code: otp.code,
+      type: otp.type,
+      used: otp.used,
+      expiresAt: otp.expiresAt
+    })));
+    console.log(`🔍 Looking for OTP code: ${otpCode}`);
+
+    const otpRecord = user.otpCodes.find(
+      otp => otp.code === otpCode && otp.type === 'reactivation' && !otp.used
+    );
+
+    if (!otpRecord || otpRecord.expiresAt < new Date()) {
+      return res.status(400).json({ message: "Invalid or expired OTP" });
+    }
+
+    // Verify password
+    const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
+    if (!isPasswordValid) {
+      return res.status(401).json({ message: "Invalid password" });
+    }
+
+    // Mark OTP as used
+    otpRecord.used = true;
+    otpRecord.usedAt = new Date();
+
+    // Reactivate account
+    user.deactivatedAt = null;
+
+    // Generate new tokens
+    const accessToken = jwt.sign(
+      { sub: user._id, username: user.username, role: user.roles?.[0] || 'user' },
+      process.env.ACCESS_TOKEN_SECRET,
+      { expiresIn: '15m' }
+    );
+
+    const refreshToken = jwt.sign(
+      { sub: user._id },
+      process.env.REFRESH_TOKEN_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    const hashedRefreshToken = await bcrypt.hash(refreshToken, 10);
+
+    // Add new refresh token
+    user.refreshTokens.push({
+      tokenHash: hashedRefreshToken,
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+      deviceInfo: req.get('user-agent') || 'Unknown',
+      createdAt: new Date()
+    });
+
+    await user.save();
+
+    // Set refresh token cookie
+    res.cookie('refreshToken', refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+    });
+
+    console.log(`✅ Account reactivated for user: ${user.username} (${user._id})`);
+
+    return res.json({
+      message: "Account reactivated successfully",
+      accessToken,
+      user: {
+        _id: user._id,
+        username: user.username,
+        email: user.email,
+        profilePicture: user.profilePicture
+      }
+    });
+  } catch (_err) {
+    console.error("VERIFY REACTIVATION OTP ERROR:", _err);
+    return res.status(500).json({ message: "Server error" });
   }
 };

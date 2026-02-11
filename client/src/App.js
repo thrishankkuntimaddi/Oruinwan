@@ -42,6 +42,7 @@ import OAuthPasswordSetup from "./pages/LoginPageComp/OAuthPasswordSetup";
 import VerifyEmail from "./pages/VerifyEmail";
 import OAuthSuccess from "./pages/LoginPageComp/OAuthSuccess";
 import SetPassword from "./pages/SetPassword";
+import ReactivationFlow from "./pages/ReactivationFlow";
 import Settings from "./pages/Settings";
 import AcceptInvite from "./pages/AcceptInvite";
 import JoinWorkspace from "./pages/JoinWorkspace";
@@ -459,6 +460,7 @@ function App() {
                           <Route path="/setup-password" element={<OAuthPasswordSetup />} />
                           <Route path="/verify-email" element={<VerifyEmail />} />
                           <Route path="/oauth-success" element={<OAuthSuccess />} />
+                          <Route path="/reactivate" element={<ReactivationFlow />} />
                           <Route path="/accept-invite" element={<AcceptInvite />} />
                           <Route
                             path="/set-password"

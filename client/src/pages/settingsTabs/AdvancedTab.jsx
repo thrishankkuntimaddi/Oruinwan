@@ -2,11 +2,13 @@ import React, { useState } from 'react';
 import Card from './Card';
 import { Download, Trash2, PauseCircle, AlertTriangle, Loader } from 'lucide-react';
 import axios from 'axios';
+import { useAuth } from '../../contexts/AuthContext';
 
 /**
  * AdvancedTab - Account management and data controls
  */
 const AdvancedTab = () => {
+    const { logout } = useAuth();
     const [exporting, setExporting] = useState(false);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [showDeactivateModal, setShowDeactivateModal] = useState(false);
@@ -44,24 +46,52 @@ const AdvancedTab = () => {
     // Deactivate account (temporary)
     const handleDeactivateAccount = async () => {
         try {
-            await axios.post('/api/auth/me/deactivate', {}, { withCredentials: true });
-            window.location.href = '/login';
+            // Get access token
+            const token = localStorage.getItem('accessToken');
+
+            // Call backend to deactivate account
+            await axios.post(
+                `${process.env.REACT_APP_BACKEND_URL}/api/auth/me/deactivate`,
+                {},
+                {
+                    withCredentials: true,
+                    headers: { Authorization: `Bearer ${token}` }
+                }
+            );
+
+            // Clear frontend auth state (don't let logout errors block deactivation)
+            try {
+                await logout();
+            } catch (logoutErr) {
+                console.error('Logout error (non-critical):', logoutErr);
+                // Continue anyway - backend deactivation succeeded
+            }
+
+            // Redirect to login with deactivated flag
+            window.location.href = '/login?deactivated=true';
         } catch (error) {
             console.error('Deactivate failed:', error);
-            alert('Deactivation failed. Please contact support.');
+            const errorMsg = error.response?.data?.message || 'Deactivation failed. Please try again.';
+            alert(errorMsg);
+        } finally {
+            setShowDeactivateModal(false);
         }
-        setShowDeactivateModal(false);
     };
 
     // Delete account permanently
     const handleDeleteAccount = async () => {
-        if (!window.confirm('Are you sure you want to permanently delete your account? This action cannot be undone!')) {
-            return;
-        }
-
         setDeleting(true);
         try {
-            await axios.delete('/api/users/me', { withCredentials: true });
+            // Get access token
+            const token = localStorage.getItem('accessToken');
+
+            await axios.delete(
+                `${process.env.REACT_APP_BACKEND_URL}/api/users/me`,
+                {
+                    withCredentials: true,
+                    headers: { Authorization: `Bearer ${token}` }
+                }
+            );
 
             // Show success message and logout
             const event = new CustomEvent('show-toast', {

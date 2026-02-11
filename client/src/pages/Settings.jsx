@@ -112,7 +112,14 @@ const Settings = () => {
 
     const loadSessions = async () => {
         try {
-            const response = await axios.get('/api/auth/sessions', { withCredentials: true });
+            const token = localStorage.getItem('accessToken');
+            const response = await axios.get(
+                `${process.env.REACT_APP_BACKEND_URL}/api/auth/sessions`,
+                {
+                    withCredentials: true,
+                    headers: { Authorization: `Bearer ${token}` }
+                }
+            );
             setSessions(Array.isArray(response.data) ? response.data : []);
         } catch (error) {
             console.error('Failed to load sessions:', error);
@@ -121,10 +128,19 @@ const Settings = () => {
         }
     };
 
+
     const handleProfileUpdate = async () => {
         setLoading(true);
         try {
-            await axios.put('/api/auth/me', profileData, { withCredentials: true });
+            const token = localStorage.getItem('accessToken');
+            await axios.put(
+                `${process.env.REACT_APP_BACKEND_URL}/api/auth/me`,
+                profileData,
+                {
+                    withCredentials: true,
+                    headers: { Authorization: `Bearer ${token}` }
+                }
+            );
             showToast('Profile updated successfully', 'success');
             await refreshUser();
         } catch (error) {
@@ -145,10 +161,18 @@ const Settings = () => {
         }
         setLoading(true);
         try {
-            await axios.put('/api/auth/me/password', {
-                currentPassword: passwordData.currentPassword,
-                newPassword: passwordData.newPassword
-            }, { withCredentials: true });
+            const token = localStorage.getItem('accessToken');
+            await axios.put(
+                `${process.env.REACT_APP_BACKEND_URL}/api/auth/me/password`,
+                {
+                    currentPassword: passwordData.currentPassword,
+                    newPassword: passwordData.newPassword
+                },
+                {
+                    withCredentials: true,
+                    headers: { Authorization: `Bearer ${token}` }
+                }
+            );
             showToast('Password changed successfully', 'success');
             setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
         } catch (error) {
@@ -160,7 +184,14 @@ const Settings = () => {
 
     const handleLogoutSession = async (sessionId) => {
         try {
-            await axios.delete(`/api/auth/sessions/${sessionId}`, { withCredentials: true });
+            const token = localStorage.getItem('accessToken');
+            await axios.delete(
+                `${process.env.REACT_APP_BACKEND_URL}/api/auth/sessions/${sessionId}`,
+                {
+                    withCredentials: true,
+                    headers: { Authorization: `Bearer ${token}` }
+                }
+            );
             showToast('Session logged out', 'success');
             loadSessions();
         } catch (error) {
@@ -170,7 +201,14 @@ const Settings = () => {
 
     const handleLogoutOthers = async () => {
         try {
-            await axios.delete('/api/auth/sessions/others', { withCredentials: true });
+            const token = localStorage.getItem('accessToken');
+            await axios.delete(
+                `${process.env.REACT_APP_BACKEND_URL}/api/auth/sessions/others`,
+                {
+                    withCredentials: true,
+                    headers: { Authorization: `Bearer ${token}` }
+                }
+            );
             showToast('All other sessions logged out', 'success');
             loadSessions();
         } catch (error) {

@@ -127,6 +127,15 @@ const LoginForm = ({ onSwitch, initialEmail = "" }) => {
 
     } catch (err) {
       console.error("🔴 Login Error:", err);
+
+      // Check if account is deactivated
+      if (err.response?.data?.requiresReactivation) {
+        showToast("Account deactivated. Check your email for reactivation code.", "info");
+        // Navigate to reactivation page with email
+        navigate(`/reactivate?email=${encodeURIComponent(formData.email)}`);
+        return;
+      }
+
       showToast(err.message || "Login failed", "error");
     }
   };
