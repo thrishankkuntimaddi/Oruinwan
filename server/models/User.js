@@ -246,6 +246,15 @@ const UserSchema = new mongoose.Schema(
     isActive: { type: Boolean, default: true },
     deactivatedAt: { type: Date, default: null },
 
+    // OTP Codes for various operations (password reset, reactivation, etc.)
+    otpCodes: [{
+      code: { type: String, required: true },
+      type: { type: String, required: true }, // 'reactivation', 'password_reset', etc.
+      expiresAt: { type: Date, required: true },
+      used: { type: Boolean, default: false },
+      createdAt: { type: Date, default: Date.now }
+    }],
+
     // Timestamps
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now }
