@@ -5,6 +5,7 @@ const Input = React.forwardRef(({
     label,
     error,
     icon,
+    iconPosition = "left", // 'left' or 'right'
     helperText,
     className = "",
     containerClassName = "",
@@ -26,7 +27,7 @@ const Input = React.forwardRef(({
             )}
 
             <div className="relative">
-                {icon && (
+                {icon && iconPosition === "left" && (
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-secondary-400">
                         {icon}
                     </div>
@@ -44,13 +45,20 @@ const Input = React.forwardRef(({
             dark:bg-secondary-800 dark:border-secondary-700 dark:text-white dark:placeholder-secondary-500
             dark:focus:border-primary-500 dark:focus:ring-primary-500
             transition-colors duration-200
-            ${icon ? "pl-10" : "pl-3"}
+            ${icon && iconPosition === "left" ? "pl-10" : "pl-3"}
+            ${icon && iconPosition === "right" ? "pr-10" : ""}
             ${error ? "border-danger-500 focus:border-danger-500 focus:ring-danger-500" : ""}
             ${className}
             py-2 sm:text-sm
           `}
                     {...props}
                 />
+
+                {icon && iconPosition === "right" && (
+                    <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-secondary-400">
+                        {icon}
+                    </div>
+                )}
             </div>
 
             {helperText && !error && (

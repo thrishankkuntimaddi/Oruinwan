@@ -216,6 +216,7 @@ const SignupForm = ({ onSwitch }) => {
             onBlur={handleBlur}
             placeholder="Choose a username"
             error={errors.username}
+            iconPosition="right"
             icon={
               validationStatus.username === 'checking' ? <div className="w-4 h-4 border-2 border-primary-600 border-t-transparent rounded-full animate-spin" /> :
                 validationStatus.username === 'available' ? <CheckCircle2 className="text-success-500" size={18} /> :
@@ -235,6 +236,7 @@ const SignupForm = ({ onSwitch }) => {
             onBlur={handleBlur}
             placeholder="Enter your email"
             error={errors.email}
+            iconPosition="right"
             icon={
               validationStatus.email === 'checking' ? <div className="w-4 h-4 border-2 border-primary-600 border-t-transparent rounded-full animate-spin" /> :
                 validationStatus.email === 'available' ? <CheckCircle2 className="text-success-500" size={18} /> :
