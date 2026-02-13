@@ -15,7 +15,7 @@ async function sendEmail({ to, subject, text, html }) {
       {
         sender: {
           name: "Chttrix",
-          email: process.env.EMAIL_FROM || "no-reply@chttrix.com",
+          email: process.env.EMAIL_FROM || "chttrixchat@gmail.com",
         },
         to: [{ email: to }],
         subject,
