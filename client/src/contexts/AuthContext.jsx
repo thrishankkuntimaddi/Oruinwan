@@ -189,7 +189,7 @@ export const AuthProvider = ({ children }) => {
   // Refresh access token before it expires (every 13 minutes)
   // ------------------------------------------------------------
   useEffect(() => {
-    if (!user || !accessToken) {
+    if (!user) {
       return; // Don't set up refresh if not logged in
     }
 
@@ -227,12 +227,12 @@ export const AuthProvider = ({ children }) => {
       }
     }, REFRESH_INTERVAL);
 
-    // Cleanup interval on unmount or when user/token changes
+    // Cleanup interval on unmount or when user logs out
     return () => {
       console.log('🛑 [TOKEN REFRESH] Clearing automatic refresh interval');
       clearInterval(refreshInterval);
     };
-  }, [user, accessToken]); // Re-setup when user or token changes
+  }, [user]); // CRITICAL: Only depend on user, NOT accessToken (prevents loop)
 
   // ------------------------------------------------------------
   // Login (normal email/password)
