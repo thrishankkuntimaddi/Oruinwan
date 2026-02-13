@@ -185,6 +185,56 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   // ------------------------------------------------------------
+  // 🔄 AUTOMATIC TOKEN REFRESH
+  // Refresh access token before it expires (every 13 minutes)
+  // ------------------------------------------------------------
+  useEffect(() => {
+    if (!user || !accessToken) {
+      return; // Don't set up refresh if not logged in
+    }
+
+    // Refresh 2 minutes before expiry (15m - 2m = 13m = 780000ms)
+    const REFRESH_INTERVAL = 13 * 60 * 1000; // 13 minutes
+
+    console.log('⏰ [TOKEN REFRESH] Setting up automatic refresh every 13 minutes');
+
+    const refreshInterval = setInterval(async () => {
+      try {
+        console.log('🔄 [TOKEN REFRESH] Attempting automatic token refresh...');
+
+        const refreshRes = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/auth/refresh`, {
+          method: "POST",
+          credentials: "include",
+        });
+
+        if (refreshRes.ok) {
+          const refreshData = await refreshRes.json();
+          if (refreshData.accessToken) {
+            setAccessToken(refreshData.accessToken);
+            localStorage.setItem("accessToken", refreshData.accessToken);
+            console.log('✅ [TOKEN REFRESH] Access token refreshed successfully');
+          }
+        } else {
+          console.error('❌ [TOKEN REFRESH] Failed:', refreshRes.status);
+          // If refresh fails, user might need to re-login
+          if (refreshRes.status === 401 || refreshRes.status === 403) {
+            console.warn('⚠️ [TOKEN REFRESH] Refresh token expired, logging out...');
+            logout();
+          }
+        }
+      } catch (error) {
+        console.error('❌ [TOKEN REFRESH] Error:', error);
+      }
+    }, REFRESH_INTERVAL);
+
+    // Cleanup interval on unmount or when user/token changes
+    return () => {
+      console.log('🛑 [TOKEN REFRESH] Clearing automatic refresh interval');
+      clearInterval(refreshInterval);
+    };
+  }, [user, accessToken]); // Re-setup when user or token changes
+
+  // ------------------------------------------------------------
   // Login (normal email/password)
   // ------------------------------------------------------------
   const login = async (email, password) => {

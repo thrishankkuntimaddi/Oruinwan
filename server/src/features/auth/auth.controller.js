@@ -669,8 +669,11 @@ exports.refresh = async (req, res) => {
 
       if (!refreshToken) {
         // This is normal for unauthenticated users - don't spam logs
+        console.log('⚠️ [REFRESH] No refresh token cookie found');
         return res.status(401).json({ message: "No refresh token" });
       }
+
+      console.log('🔍 [REFRESH] Refresh token cookie found, verifying...');
 
       const refreshHash = sha256(refreshToken);
 
@@ -678,17 +681,26 @@ exports.refresh = async (req, res) => {
         "refreshTokens.tokenHash": refreshHash
       });
 
-      if (!user) return res.status(403).json({ message: "Invalid refresh token" });
+      if (!user) {
+        console.error('❌ [REFRESH] Invalid refresh token - no user found');
+        return res.status(403).json({ message: "Invalid refresh token" });
+      }
+
+      console.log(`✅ [REFRESH] User found: ${user.email}`);
 
       // Verify JWT signature
       try {
         jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET);
+        console.log('✅ [REFRESH] JWT signature valid');
       } catch (_err) {
+        console.error('❌ [REFRESH] Invalid JWT signature:', _err.message);
         return res.status(403).json({ message: "Invalid refresh token signature" });
       }
 
       const newAccess = generateAccessToken(user);
       const newRefresh = generateRefreshToken(user);
+
+      console.log('✅ [REFRESH] Generated new tokens');
 
       // CRITICAL FIX: Don't remove old token immediately!
       // Instead, mark it with a grace period to handle race conditions
@@ -698,6 +710,7 @@ exports.refresh = async (req, res) => {
       if (oldTokenIndex !== -1) {
         // Keep old token but mark it as expiring soon (10 second grace period)
         user.refreshTokens[oldTokenIndex].expiresAt = new Date(Date.now() + 10000);
+        console.log('🕐 [REFRESH] Old token marked for grace period expiry (10s)');
       }
 
       // Add new refresh token
@@ -707,29 +720,38 @@ exports.refresh = async (req, res) => {
         deviceInfo: req.get("User-Agent") || "Unknown"
       });
 
+      console.log(`📝 [REFRESH] User has ${user.refreshTokens.length} active tokens`);
+
       // Clean up truly expired tokens
+      const beforeCleanup = user.refreshTokens.length;
       user.refreshTokens = user.refreshTokens.filter(
         t => t.expiresAt > new Date()
       );
 
+      if (beforeCleanup !== user.refreshTokens.length) {
+        console.log(`🗑️ [REFRESH] Cleaned up ${beforeCleanup - user.refreshTokens.length} expired tokens`);
+      }
+
       // ✅ CRITICAL: Save user to persist new refresh token!
       await user.save();
+      console.log('💾 [REFRESH] User tokens saved to database');
 
       // Set new refresh token cookie
       setRefreshTokenCookie(res, newRefresh);
 
+      console.log('✅ [REFRESH] Token refresh completed successfully');
       return res.json({ accessToken: newAccess });
 
     } catch (_err) {
       if (_err.name === 'VersionError' && attempts < MAX_RETRIES - 1) {
-        console.warn(`Refresh token VersionError (attempt ${attempts + 1}/${MAX_RETRIES}), retrying...`);
+        console.warn(`⚠️ [REFRESH] VersionError (attempt ${attempts + 1}/${MAX_RETRIES}), retrying...`);
         attempts++;
         // Small delay to reduce contention
         await new Promise(resolve => setTimeout(resolve, 50));
         continue;
       }
 
-      console.error("REFRESH ERROR:", _err);
+      console.error("❌ [REFRESH] ERROR:", _err);
       // Only return 500 if we exhausted retries or hit another error
       return res.status(500).json({ message: "Server error" });
     }
