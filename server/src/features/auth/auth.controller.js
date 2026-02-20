@@ -592,6 +592,9 @@ exports.login = async (req, res) => {
       deviceInfo: req.get("User-Agent") || "Unknown",
     });
 
+    // Capture first-login BEFORE overwriting lastLoginAt
+    const isFirstLogin = user.lastLoginAt === null || user.lastLoginAt === undefined;
+
     user.lastLoginAt = new Date();
     user.isOnline = true;
 
@@ -601,11 +604,6 @@ exports.login = async (req, res) => {
 
     await saveWithRetry(user);
     setRefreshTokenCookie(res, refreshToken);
-
-    const _firstLogin = user.lastLoginAt === null; // Note: we just set it to Date(), so this logic might need check, 
-    // actually we set it just above. Original code logic: "const firstLogin = user.lastLoginAt === null" BEFORE setting it. 
-    // But here I set it before. Let's fix that order if strict first login check is needed.
-    // For now assuming existing users aren't first login.
 
     // Prepare User Object for Response
     const responseUser = {

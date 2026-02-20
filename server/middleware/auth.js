@@ -23,7 +23,12 @@ module.exports = async function requireAuth(req, res, next) {
         req.user = payload;
         return next();
       } catch (err) {
-        // access token expired → fall through to cookie
+        // Only fall through to refresh cookie on token expiry
+        // All other JWT errors (invalid signature, tampered) should reject immediately
+        if (err.name !== 'TokenExpiredError') {
+          return res.status(401).json({ message: 'Invalid access token' });
+        }
+        // TokenExpiredError: fall through to refresh cookie
       }
     }
 

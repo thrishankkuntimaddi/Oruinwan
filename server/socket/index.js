@@ -31,36 +31,19 @@ module.exports = async function registerChatHandlers(io, socket) {
   ---------------------------------------------------- */
   socket.on("join-dm", ({ dmSessionId }) => {
     try {
-      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-      // 🔍 DEBUG LOG: What did join-dm handler receive?
-      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-      console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
-      console.log(`🔷 [JOIN-DM] Event received`);
-      console.log(`🔷 [JOIN-DM] dmSessionId:`, dmSessionId);
-      console.log(`🔷 [JOIN-DM] User ID:`, socket.user?.id);
-      console.log(`🔷 [JOIN-DM] Socket ID:`, socket.id);
-
-      logger.socket('[DEBUG][JOIN][RECEIVE]', {
+      logger.socket('[JOIN][RECEIVE]', {
         event: 'join-dm',
         receivedIdOrPayload: { dmSessionId },
         userId: socket.user?.id
       });
 
       if (!dmSessionId) {
-        console.log(`❌ [JOIN-DM] Missing dmSessionId!`);
         logger.error("join-dm: missing dmSessionId");
         return;
       }
-      // CRITICAL FIX: Use dm: format (colon) to match createMessage broadcasts
-      // BEFORE: `dm_${dmSessionId}` (underscore) - WRONG!
-      // AFTER: `dm:${dmSessionId}` (colon) - matches io.to(`dm:${dm}`)
+
       const room = `dm:${dmSessionId}`;
       socket.join(room);
-
-      console.log(`✅ [JOIN-DM] User ${socket.user?.id} joined room: ${room}`);
-      console.log(`✅ [JOIN-DM] Socket rooms:`, Array.from(socket.rooms));
-      console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
-
       logger.info(`✅ [join-dm] User ${socket.user?.id} joined ${room}`);
     } catch (err) {
       logger.error("Error joining DM room:", err);
@@ -89,35 +72,21 @@ module.exports = async function registerChatHandlers(io, socket) {
   ---------------------------------------------------- */
   socket.on("chat:join", async (channelId, callback) => {
     try {
-      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-      // 🔍 DEBUG LOG: What did chat:join handler receive?
-      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
       logger.socket('[DEBUG][JOIN][RECEIVE]', {
         event: 'chat:join',
         receivedIdOrPayload: channelId,
         userId: socket.user?.id
       });
 
-      // Validation: channelId required
       if (!channelId) {
         logger.error("chat:join: missing channelId");
         if (callback) callback({ error: 'Channel ID is required', code: 'MISSING_CHANNEL_ID' });
         return;
       }
 
-      console.log(`📥 [chat:join] Received for channel: ${channelId}`);
-      console.log(`👤 [chat:join] User: ${userId}, Socket: ${socket.id}`);
-
-      // ============================================================
-      // FIX 3: AUTHORIZATION CHECK
-      // Verify user is a member before allowing socket.join()
-      // ============================================================
-
-      // Step 1: Verify channel exists
       const channel = await Channel.findById(channelId);
 
       if (!channel) {
-        console.log(`❌ [chat:join] Channel ${channelId} not found`);
         if (callback) callback({
           error: 'Channel not found',
           code: 'CHANNEL_NOT_FOUND',
@@ -126,12 +95,6 @@ module.exports = async function registerChatHandlers(io, socket) {
         return;
       }
 
-      // ============================================================
-      // Step 2: Verify user is a member
-      // Defensive check handles ALL possible formats:
-      // - { user: populatedUser } where user._id exists
-      // - { user: ObjectId } unpopulated
-      // - ObjectId (legacy bare format)
       const isMember = channel.members.some(m => {
         const memberId =
           m?.user?._id?.toString() ??
@@ -141,7 +104,6 @@ module.exports = async function registerChatHandlers(io, socket) {
       });
 
       if (!isMember) {
-        console.log(`🚫 [chat:join] User ${userId} is NOT a member of channel ${channelId}`);
         if (callback) callback({
           error: 'Not a member of this channel',
           code: 'UNAUTHORIZED',
@@ -150,18 +112,10 @@ module.exports = async function registerChatHandlers(io, socket) {
         return;
       }
 
-      // ============================================================
-      // AUTHORIZATION PASSED - Proceed with room join
-      // ============================================================
-
-      // CRITICAL: Use colon format (channel:id) to match new message service broadcasts
       const room = `channel:${channelId}`;
       socket.join(room);
+      logger.info(`✅ [chat:join] User ${userId} joined ${room}`);
 
-      console.log(`✅ [chat:join] User ${userId} joined ${room} (authorized member)`);
-
-
-      // Send success callback
       if (callback) callback({ success: true });
 
     } catch (err) {
@@ -310,10 +264,7 @@ module.exports = async function registerChatHandlers(io, socket) {
           });
         }
       } else if (channelId) {
-        console.log("📢 [SOCKET] Broadcasting to channel room:", `channel_${channelId}`);
-        const roomSockets = io.sockets.adapter.rooms.get(`channel_${channelId}`);
-        console.log(`📊 [SOCKET] Room has ${roomSockets?.size || 0} sockets:`, Array.from(roomSockets || []));
-        io.to(`channel_${channelId}`).emit(eventName, payload);
+        io.to(`channel:${channelId}`).emit(eventName, payload);
       }
 
       // ---------------- ack to sender ----------------
@@ -428,7 +379,7 @@ module.exports = async function registerChatHandlers(io, socket) {
       if (dmSessionId) {
         io.to(`dm:${dmSessionId}`).emit("typing", { from: userId, fromName });
       } else if (channelId) {
-        io.to(`channel_${channelId}`).emit("typing", { from: userId, fromName });
+        io.to(`channel:${channelId}`).emit("typing", { from: userId, fromName });
       }
     } catch (err) {
       logger.error("TYPING ERROR:", err);

@@ -129,10 +129,7 @@ export function useChatSocket(conversationId, conversationType, eventHandler) {
     useEffect(() => {
         if (!socket || !conversationId) return;
 
-        // Join room on mount (if already connected)
-        joinConversation();
-
-        // Re-join room when socket connects/reconnects
+        // Re-join room when socket connects/reconnects (auto-join effect handles initial join)
         const handleConnect = () => {
             joinConversation();
         };

@@ -24,9 +24,9 @@ function validate(req, res, next) {
         return res.status(400).json({
             error: 'Validation Error',
             details: errors.array().map(err => ({
-                field: err.param,
-                message: err.msg,
-                value: err.value
+                field: err.path || err.param, // express-validator v7 uses 'path', v6 uses 'param'
+                message: err.msg
+                // ⚠️ SECURITY: Never return raw 'value' - may contain user passwords
             }))
         });
     }

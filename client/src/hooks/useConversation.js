@@ -371,7 +371,7 @@ export function useConversation(conversationId, conversationType, workspaceId) {
             reset();
             loadMessages();
         }
-    }, [conversationId, conversationType, workspaceId]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [conversationId, conversationType, workspaceId, reset, loadMessages]); // eslint-disable-line react-hooks/exhaustive-deps
 
     return {
         events,

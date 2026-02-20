@@ -1,6 +1,6 @@
 // client/src/contexts/AuthContext.jsx
 
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
 import { setOnTokenRefreshed } from "../services/api";
 import axios from 'axios';
 import { getDeviceMetadata, clearDeviceId } from '../utils/deviceId';
@@ -82,7 +82,7 @@ export const AuthProvider = ({ children }) => {
       const res = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/auth/me`, {
         credentials: "include",
         headers: {
-          Authorization: `Bearer ${token} `
+          Authorization: `Bearer ${token}`
         },
       });
 
@@ -219,7 +219,7 @@ export const AuthProvider = ({ children }) => {
           // If refresh fails, user might need to re-login
           if (refreshRes.status === 401 || refreshRes.status === 403) {
             console.warn('⚠️ [TOKEN REFRESH] Refresh token expired, logging out...');
-            logout();
+            logoutRef.current(); // ✅ Always calls latest logout via ref (no stale closure)
           }
         }
       } catch (error) {
@@ -263,16 +263,11 @@ export const AuthProvider = ({ children }) => {
         setAccessToken(data.accessToken);
       }
 
-      console.log("User data before validation:", data.user);
       // Ensure data.user exists and is valid
       if (!data || !data.user || typeof data.user !== 'object') {
         throw new Error('Invalid user data received from login');
       }
       sessionStorage.setItem("lastLoginAttempt", Date.now().toString());
-
-
-      // Then update state (this triggers re-renders)
-      setAccessToken(data.accessToken);
 
       // Merge company data into user object for consistency with /me endpoint
       const userWithCompany = { ...data.user };
@@ -353,7 +348,7 @@ export const AuthProvider = ({ children }) => {
   // ------------------------------------------------------------
   // Logout
   // ------------------------------------------------------------
-  const logout = async () => {
+  const logout = useCallback(async () => {
     try {
       await axios.post(
         `${process.env.REACT_APP_BACKEND_URL}/api/auth/logout`,
@@ -382,7 +377,13 @@ export const AuthProvider = ({ children }) => {
     // This will be handled by service cleanup listeners
     // Trigger event for encryption cleanup
     window.dispatchEvent(new Event('auth:logout'));
-  };
+  }, []); // Stable logout reference - prevents stale closures in intervals
+
+  // Keep a stable ref to logout so the interval never captures a stale closure
+  const logoutRef = useRef(logout);
+  useEffect(() => {
+    logoutRef.current = logout;
+  }, [logout]);
 
   // ------------------------------------------------------------
   // Update profile
@@ -392,7 +393,7 @@ export const AuthProvider = ({ children }) => {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${accessToken} `,
+        Authorization: `Bearer ${accessToken}`,
       },
       credentials: "include",
       body: JSON.stringify(updates),
@@ -414,7 +415,7 @@ export const AuthProvider = ({ children }) => {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${accessToken} `,
+        Authorization: `Bearer ${accessToken}`,
       },
       credentials: "include",
       body: JSON.stringify({ oldPassword, newPassword }),

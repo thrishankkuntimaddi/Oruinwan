@@ -104,9 +104,10 @@ const limiter = rateLimit({
   legacyHeaders: false,
   // Skip rate limiting for frequently-called endpoints
   skip: (req) => {
-    const path = req.path;
+    const p = req.path;
     // Don't rate limit /me, /refresh, /users (used on every page load)
-    return path === '/me' || path === '/refresh' || path === '/users';
+    // req.path here is relative to the router mount point (/api/auth)
+    return p === '/me' || p === '/refresh' || p.startsWith('/users');
   },
   // Return JSON instead of plain text
   handler: (req, res) => {
@@ -360,7 +361,7 @@ app.use((err, req, res, next) => {
     path: req.path,
     method: req.method,
     user: req.user?.sub,
-    body: req.body,
+    // ⚠️ SECURITY: Never log req.body - may contain passwords or tokens
     timestamp: new Date().toISOString()
   });
 
@@ -378,7 +379,7 @@ app.use((err, req, res, next) => {
   // Add stack trace in development only
   if (!isProduction) {
     errorResponse.stack = err.stack;
-    errorResponse.details = err;
+    // NOTE: err.details may expose internals - omit sensitive fields in non-prod too
   }
 
   res.status(statusCode).json(errorResponse);
@@ -429,3 +430,26 @@ mongoose
     process.exit(1);
   });
 
+// ---------------------------------------------------------
+// PROCESS-LEVEL CRASH GUARDS
+// Prevent silent crashes from unhandled promise rejections
+// ---------------------------------------------------------
+process.on('unhandledRejection', (reason, promise) => {
+  logger.error('❌ [PROCESS] Unhandled Promise Rejection:', {
+    reason: reason instanceof Error ? reason.message : reason,
+    stack: reason instanceof Error ? reason.stack : undefined
+  });
+  // Don't exit in development; do exit in production after logging
+  if (isProduction) {
+    process.exit(1);
+  }
+});
+
+process.on('uncaughtException', (err) => {
+  logger.error('❌ [PROCESS] Uncaught Exception - shutting down:', {
+    error: err.message,
+    stack: err.stack
+  });
+  // Always exit on uncaught exceptions - state is undefined
+  process.exit(1);
+});

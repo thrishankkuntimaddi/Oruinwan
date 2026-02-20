@@ -141,17 +141,13 @@ export const apiFetch = async (url, options = {}) => {
     const headers = options.headers || {};
     const data = options.body;
 
-    try {
-        const response = await api({
-            url,
-            method,
-            headers,
-            data
-        });
-        return response;
-    } catch (error) {
-        throw error;
-    }
+    const response = await api({
+        url,
+        method,
+        headers,
+        data
+    });
+    return response;
 };
 
 // ============================================
