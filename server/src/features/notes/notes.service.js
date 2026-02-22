@@ -586,6 +586,66 @@ async function downloadAttachment(userId, noteId, attachmentId) {
     };
 }
 
+/**
+ * Get version history for a note
+ * @param {string} userId
+ * @param {string} noteId
+ */
+async function getVersions(userId, noteId) {
+    const note = await Note.findById(noteId).select('owner sharedWith versions');
+    if (!note) {
+        const error = new Error('Note not found');
+        error.statusCode = 404;
+        throw error;
+    }
+    if (!note.canView(userId)) {
+        const error = new Error('Access denied');
+        error.statusCode = 403;
+        throw error;
+    }
+    // Return oldest → newest
+    return { versions: note.versions || [] };
+}
+
+/**
+ * Save a version snapshot for a note (capped at 50)
+ * @param {string} userId
+ * @param {string} noteId
+ * @param {{ title: string, content: string }} snapshot
+ */
+async function saveVersion(userId, noteId, snapshot) {
+    const note = await Note.findById(noteId).select('owner');
+    if (!note) {
+        const error = new Error('Note not found');
+        error.statusCode = 404;
+        throw error;
+    }
+    // Only the owner can save versions
+    if (note.owner.toString() !== userId.toString()) {
+        const error = new Error('Access denied');
+        error.statusCode = 403;
+        throw error;
+    }
+
+    const entry = {
+        title: snapshot.title || '',
+        content: snapshot.content || '',
+        savedAt: new Date(),
+    };
+
+    // Push and keep only the last 50 (MongoDB $slice on $push)
+    await Note.findByIdAndUpdate(noteId, {
+        $push: {
+            versions: {
+                $each: [entry],
+                $slice: -50,  // keep the last 50
+            },
+        },
+    });
+
+    return { version: entry };
+}
+
 // ============================================================================
 // EXPORTS
 // ============================================================================
@@ -598,5 +658,7 @@ module.exports = {
     shareNote,
     addAttachment,
     removeAttachment,
-    downloadAttachment
+    downloadAttachment,
+    getVersions,
+    saveVersion,
 };

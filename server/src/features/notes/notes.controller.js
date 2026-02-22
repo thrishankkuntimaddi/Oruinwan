@@ -219,6 +219,39 @@ async function downloadAttachment(req, res) {
     }
 }
 
+/**
+ * GET /api/v2/notes/:id/versions
+ * Get version history for a note
+ */
+async function getVersions(req, res) {
+    try {
+        const userId = req.user.sub;
+        const { id: noteId } = req.params;
+        const result = await notesService.getVersions(userId, noteId);
+        return res.json(result);
+    } catch (error) {
+        console.error('GET_VERSIONS ERROR:', error);
+        return handleError(res, error);
+    }
+}
+
+/**
+ * POST /api/v2/notes/:id/versions
+ * Save a version snapshot
+ */
+async function saveVersion(req, res) {
+    try {
+        const userId = req.user.sub;
+        const { id: noteId } = req.params;
+        const { title, content } = req.body;
+        const result = await notesService.saveVersion(userId, noteId, { title, content });
+        return res.status(201).json(result);
+    } catch (error) {
+        console.error('SAVE_VERSION ERROR:', error);
+        return handleError(res, error);
+    }
+}
+
 // ============================================================================
 // EXPORTS
 // ============================================================================
@@ -231,5 +264,7 @@ module.exports = {
     shareNote,
     addAttachment,
     removeAttachment,
-    downloadAttachment
+    downloadAttachment,
+    getVersions,
+    saveVersion,
 };

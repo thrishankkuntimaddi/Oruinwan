@@ -46,7 +46,7 @@ const Notes = () => {
     const { workspaceId, id } = useParams();
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
-    const { notes, updateNote, deleteNote, addNote, shareNote, loading, noteVersions, addVersion } = useNotes();
+    const { notes, updateNote, deleteNote, addNote, shareNote, loading, noteVersions, addVersion, loadVersions } = useNotes();
     const { showToast } = useToast();
 
     // Navigate from universal search
@@ -104,6 +104,11 @@ const Notes = () => {
             }
         }
     }, [note?.id]);
+
+    // Load version history from DB whenever note changes
+    useEffect(() => {
+        if (id && loadVersions) loadVersions(id);
+    }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // ── Click outside menu ────────────────────────────────────────────────────
     useEffect(() => {

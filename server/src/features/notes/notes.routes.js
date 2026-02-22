@@ -47,6 +47,12 @@ router.post('/:id/attachments', notesController.addAttachment);
 // DELETE /api/v2/notes/:id/attachments/:attachmentId - Remove attachment
 router.delete('/:id/attachments/:attachmentId', notesController.removeAttachment);
 
+// GET /api/v2/notes/:id/versions - Get version history
+router.get('/:id/versions', notesController.getVersions);
+
+// POST /api/v2/notes/:id/versions - Save a version snapshot
+router.post('/:id/versions', notesController.saveVersion);
+
 // GET /api/v2/notes/:id/attachments/:attachmentId/download - Download attachment
 router.get('/:id/attachments/:attachmentId/download', notesController.downloadAttachment);
 

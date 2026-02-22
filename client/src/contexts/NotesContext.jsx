@@ -23,30 +23,54 @@ export const NotesProvider = ({ children }) => {
     // Debounce timer for auto-save
     const saveTimerRef = useRef({});
 
-    // Client-side version history: { [noteId]: [{ title, content, timestamp }] }
-    // Persisted in localStorage so it survives page refresh
-    const LS_KEY = workspaceId ? `chttrix_versions_${workspaceId}` : null;
+    // Version history — stored in MongoDB, loaded per-note on demand
+    const [noteVersions, setNoteVersions] = useState({});  // { [noteId]: [{ title, content, savedAt }] }
+    const versionSaveTimer = useRef({});  // debounce timers per noteId
 
-    const [noteVersions, setNoteVersions] = useState(() => {
-        if (!LS_KEY) return {};
-        try { return JSON.parse(localStorage.getItem(LS_KEY) || '{}'); } catch { return {}; }
-    });
+    /**
+     * Load versions for a specific note from the DB.
+     * Called by Notes.jsx whenever the active note ID changes.
+     */
+    const loadVersions = useCallback(async (noteId) => {
+        if (!noteId) return;
+        try {
+            const res = await api.get(`/api/notes/${noteId}/versions`);
+            const versions = res.data.versions || [];
+            setNoteVersions(prev => ({ ...prev, [noteId]: versions }));
+        } catch (e) {
+            // Silently ignore — versions are non-critical
+            console.warn('Failed to load versions for', noteId, e?.message);
+        }
+    }, []);
 
-    // Sync to localStorage whenever versions change
-    useEffect(() => {
-        if (!LS_KEY) return;
-        try { localStorage.setItem(LS_KEY, JSON.stringify(noteVersions)); } catch { }
-    }, [noteVersions, LS_KEY]);
-
+    /**
+     * Persist a new version snapshot to MongoDB.
+     * Debounced: won't call API more than once per 10 seconds for the same note.
+     * Deduplication: skips identical content.
+     */
     const addVersion = useCallback((noteId, snapshot) => {
+        // Optimistic local update
         setNoteVersions(prev => {
             const existing = prev[noteId] || [];
-            // Avoid spamming identical snapshots within 10s
             const last = existing[existing.length - 1];
-            if (last && snapshot.timestamp - last.timestamp < 10000 && last.content === snapshot.content) return prev;
-            const updated = [...existing, snapshot].slice(-20);
-            return { ...prev, [noteId]: updated };
+            if (last && last.content === snapshot.content) return prev; // identical — skip
+            return { ...prev, [noteId]: [...existing, { ...snapshot, savedAt: new Date().toISOString() }].slice(-50) };
         });
+
+        // Debounced DB write (10s)
+        if (versionSaveTimer.current[noteId]) clearTimeout(versionSaveTimer.current[noteId]);
+        versionSaveTimer.current[noteId] = setTimeout(async () => {
+            try {
+                await api.post(`/api/notes/${noteId}/versions`, {
+                    title: snapshot.title || '',
+                    content: snapshot.content || '',
+                });
+            } catch (e) {
+                console.warn('Failed to persist version for', noteId, e?.message);
+            } finally {
+                delete versionSaveTimer.current[noteId];
+            }
+        }, 10000);
     }, []);
 
     // Helper to extract workspaceId from current location
@@ -303,6 +327,7 @@ export const NotesProvider = ({ children }) => {
             setActiveTagFilter,
             noteVersions,
             addVersion,
+            loadVersions,
         }}>
             {children}
         </NotesContext.Provider>

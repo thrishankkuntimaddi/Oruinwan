@@ -64,14 +64,15 @@ const VersionHistoryPanel = ({ versions, currentContent, currentTitle, onRestore
                     </div>
                 ) : (
                     [...versions].reverse().map((v, idx) => (
-                        <div key={v.timestamp} className="group p-3 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                        <div key={v._id || v.savedAt || idx} className="group p-3 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
                             <div className="flex items-start justify-between gap-2">
                                 <div className="min-w-0 flex-1">
                                     <div className="flex items-center gap-1.5 mb-1">
                                         <div className="w-1.5 h-1.5 bg-gray-400 dark:bg-gray-500 rounded-full flex-shrink-0" />
                                         <p className="text-xs font-semibold text-gray-600 dark:text-gray-300 truncate">{v.title || 'Untitled'}</p>
                                     </div>
-                                    <p className="text-[10px] text-gray-400 mb-1.5 ml-3">{formatTime(v.timestamp)}</p>
+                                    {/* Use savedAt (DB field) with timestamp as fallback */}
+                                    <p className="text-[10px] text-gray-400 mb-1.5 ml-3">{formatTime(v.savedAt || v.timestamp)}</p>
                                     <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-3 line-clamp-2 leading-relaxed">
                                         {getPreview(v.content)}
                                     </p>
@@ -90,7 +91,7 @@ const VersionHistoryPanel = ({ versions, currentContent, currentTitle, onRestore
             </div>
 
             <div className="px-4 py-3 border-t border-gray-100 dark:border-gray-800">
-                <p className="text-[10px] text-gray-400 text-center">Last 20 auto-saves preserved</p>
+                <p className="text-[10px] text-gray-400 text-center">Last 50 auto-saves · Stored in database</p>
             </div>
         </div>
     );

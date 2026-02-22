@@ -62,6 +62,13 @@ const NoteSchema = new mongoose.Schema({
     // Tags for organization
     tags: [{ type: String }],
 
+    // Version history snapshots (auto-saved, max 50)
+    versions: [{
+        title: { type: String, default: '' },
+        content: { type: String, default: '' },
+        savedAt: { type: Date, default: Date.now },
+    }],
+
     // Pin to top
     isPinned: { type: Boolean, default: false },
 
