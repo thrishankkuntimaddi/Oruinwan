@@ -131,8 +131,8 @@ function ChannelMessageItem({
                 />
             </div>
 
-            {/* Content (Tightened) */}
-            <div className="flex-1 min-w-0 group-hover:pr-24 relative">
+            {/* Content — always has right padding so toolbar never overlaps text */}
+            <div className="flex-1 min-w-0 pr-24 relative">
                 {/* Header: Name + Pin Info */}
                 <div className="flex flex-col gap-0.5 mb-0">
                     <div className="flex items-center gap-2">
@@ -179,8 +179,8 @@ function ChannelMessageItem({
                     </div>
                 )}
 
-                {/* Message Text (More compact line height) */}
-                <div className="text-gray-800 dark:text-gray-200 text-[14px] leading-snug whitespace-pre-wrap break-words message-content">
+                {/* Message Text */}
+                <div className="text-gray-800 dark:text-gray-200 text-[14px] leading-relaxed whitespace-pre-wrap break-words max-w-[70%] message-content">
                     {/* Display decrypted text if available, otherwise show encrypted fallback */}
                     {msg.text ? (
                         <ReactMarkdown
