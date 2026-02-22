@@ -71,6 +71,28 @@ const DMSessionSchema = new mongoose.Schema(
       }
     ],
 
+    /**
+     * Per-user read state for this DM session.
+     * Separate from participants[] so the 2-participant validator and
+     * unique compound index on { workspace, participants } are not affected.
+     * Old documents without this field default to [] — client treats
+     * all messages as unread when no entry exists for a user.
+     */
+    lastSeen: [
+      {
+        userId: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "User",
+          required: true
+        },
+        lastSeenMessageId: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Message",
+          default: null
+        }
+      }
+    ],
+
     metadata: mongoose.Schema.Types.Mixed
   },
   { timestamps: true }
