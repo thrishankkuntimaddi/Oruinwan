@@ -122,59 +122,83 @@ const Notes = () => {
         updateNote(id, { content });
     }, [id, title, updateNote, addVersion]);
 
-    const updateBlocks = (newBlocks) => {
+    // updateBlocks: save + take version snapshot on every meaningful change
+    const updateBlocks = useCallback((newBlocks) => {
         setBlocks(newBlocks);
-        updateNote(id, { content: JSON.stringify(newBlocks) });
-    };
+        const content = JSON.stringify(newBlocks);
+        // Snapshot for version history (addVersion is stable via useCallback)
+        if (addVersion && id) addVersion(id, { title, content, timestamp: Date.now() });
+        updateNote(id, { content });
+    }, [id, title, updateNote, addVersion]);
 
     const handleTitleChange = (e) => {
         setTitle(e.target.value);
         updateNote(id, { title: e.target.value });
     };
 
-    const handleBlockChange = (blockId, newContent, newMeta) => {
-        const newBlocks = blocks.map(b =>
-            b.id === blockId ? { ...b, content: newContent, meta: newMeta !== undefined ? newMeta : b.meta } : b
-        );
-        updateBlocks(newBlocks);
-    };
+    const handleBlockChange = useCallback((blockId, newContent, newMeta) => {
+        setBlocks(prev => {
+            const newBlocks = prev.map(b =>
+                b.id === blockId ? { ...b, content: newContent, meta: newMeta !== undefined ? newMeta : b.meta } : b
+            );
+            // Debounced save — updateNote handles its own debounce
+            updateNote(id, { content: JSON.stringify(newBlocks) });
+            return newBlocks;
+        });
+    }, [id, updateNote]);
 
-    const addBlock = (type, content = "", meta = {}) => {
+    const addBlock = useCallback((type, content = '', meta = {}) => {
         const newBlock = { id: Date.now(), type, content, meta };
-        const newBlocks = [...blocks, newBlock];
-        updateBlocks(newBlocks);
+        setBlocks(prev => {
+            const newBlocks = [...prev, newBlock];
+            if (addVersion && id) addVersion(id, { title, content: JSON.stringify(newBlocks), timestamp: Date.now() });
+            updateNote(id, { content: JSON.stringify(newBlocks) });
+            return newBlocks;
+        });
         return newBlock;
-    };
+    }, [id, title, updateNote, addVersion]);
 
-    const insertBlockAfter = (afterId, type, content = "", meta = {}) => {
-        const idx = blocks.findIndex(b => b.id === afterId);
+    // insertBlockAfter — uses functional setState so never stale
+    const insertBlockAfter = useCallback((afterId, type, content = '', meta = {}) => {
         const newBlock = { id: Date.now(), type, content, meta };
-        const newBlocks = [...blocks.slice(0, idx + 1), newBlock, ...blocks.slice(idx + 1)];
-        updateBlocks(newBlocks);
-        // Auto-focus the new block's editor in next tick
-        setTimeout(() => {
-            const node = blockRefsMap.current[newBlock.id];
-            if (node) {
-                node.focus();
-                // Place cursor at end
-                const range = document.createRange();
-                const sel = window.getSelection();
-                range.selectNodeContents(node);
-                range.collapse(false);
-                sel.removeAllRanges();
-                sel.addRange(range);
-            }
-        }, 50);
+        setBlocks(prev => {
+            const idx = prev.findIndex(b => b.id === afterId);
+            const newBlocks = idx === -1
+                ? [...prev, newBlock]
+                : [...prev.slice(0, idx + 1), newBlock, ...prev.slice(idx + 1)];
+            if (addVersion && id) addVersion(id, { title, content: JSON.stringify(newBlocks), timestamp: Date.now() });
+            updateNote(id, { content: JSON.stringify(newBlocks) });
+            // Auto-focus in next tick
+            setTimeout(() => {
+                const node = blockRefsMap.current[newBlock.id];
+                if (node) {
+                    node.focus();
+                    try {
+                        const range = document.createRange();
+                        const sel = window.getSelection();
+                        range.selectNodeContents(node);
+                        range.collapse(false);
+                        sel.removeAllRanges();
+                        sel.addRange(range);
+                    } catch { /* input elements don't use range API */ }
+                }
+            }, 50);
+            return newBlocks;
+        });
         return newBlock;
-    };
+    }, [id, title, updateNote, addVersion, blockRefsMap]);
 
     const handleAddBlockAfter = useCallback((afterId) => {
         insertBlockAfter(afterId, 'text', '', {});
-    }, [blocks]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [insertBlockAfter]);
 
-    const removeBlock = (blockId) => {
-        updateBlocks(blocks.filter(b => b.id !== blockId));
-    };
+    const removeBlock = useCallback((blockId) => {
+        setBlocks(prev => {
+            const newBlocks = prev.filter(b => b.id !== blockId);
+            updateNote(id, { content: JSON.stringify(newBlocks) });
+            return newBlocks;
+        });
+    }, [id, updateNote]);
 
     // ── Slash command ─────────────────────────────────────────────────────────
     const openSlashMenu = (blockId, query, position) => {
@@ -183,22 +207,35 @@ const Notes = () => {
 
     const closeSlashMenu = () => setSlashMenu(prev => ({ ...prev, open: false, query: '' }));
 
-    const handleSlashSelect = ({ type, meta }) => {
+    const handleSlashSelect = useCallback(({ type, meta }) => {
+        const defaultContent = type === 'checklist'
+            ? JSON.stringify([{ id: Date.now(), text: '', done: false }])
+            : '';
+
         if (slashMenu.blockId) {
-            // Replace the current empty block or insert after
-            const currentBlock = blocks.find(b => b.id === slashMenu.blockId);
-            if (currentBlock && currentBlock.content === '') {
-                // Replace the block with the new type
-                const newBlock = { ...currentBlock, type, content: '', meta: meta || {} };
-                updateBlocks(blocks.map(b => b.id === slashMenu.blockId ? newBlock : b));
+            // Check if the triggering block is truly empty (strip HTML tags for TextBlock)
+            const domNode = blockRefsMap.current[slashMenu.blockId];
+            const isBlocking = domNode ? (domNode.innerText || '').trim() === '' : false;
+
+            if (isBlocking) {
+                // Replace the empty block with the selected type
+                setBlocks(prev => {
+                    const newBlocks = prev.map(b =>
+                        b.id === slashMenu.blockId
+                            ? { ...b, type, content: defaultContent, meta: meta || {} }
+                            : b
+                    );
+                    updateNote(id, { content: JSON.stringify(newBlocks) });
+                    return newBlocks;
+                });
             } else {
-                insertBlockAfter(slashMenu.blockId, type, '', meta || {});
+                insertBlockAfter(slashMenu.blockId, type, defaultContent, meta || {});
             }
         } else {
-            addBlock(type, '', meta || {});
+            addBlock(type, defaultContent, meta || {});
         }
         closeSlashMenu();
-    };
+    }, [slashMenu.blockId, id, updateNote, insertBlockAfter, addBlock, blockRefsMap]);
 
     // ── Tags ──────────────────────────────────────────────────────────────────
     const addTag = () => {
@@ -267,28 +304,33 @@ const Notes = () => {
     };
 
     // ── Drag-to-reorder ───────────────────────────────────────────────────────
-    const handleDragStart = (e, blockId) => {
+    const handleDragStart = useCallback((e, blockId) => {
         dragBlockId.current = blockId;
         e.dataTransfer.effectAllowed = 'move';
-    };
-    const handleDragOver = (e, blockId) => {
+    }, []);
+
+    const handleDragOver = useCallback((e, blockId) => {
         e.preventDefault();
         setDragOverId(blockId);
-    };
-    const handleDrop = (e, targetId) => {
+    }, []);
+
+    const handleDrop = useCallback((e, targetId) => {
         e.preventDefault();
         const fromId = dragBlockId.current;
         if (!fromId || fromId === targetId) { setDragOverId(null); return; }
-        const fromIdx = blocks.findIndex(b => b.id === fromId);
-        const toIdx = blocks.findIndex(b => b.id === targetId);
-        if (fromIdx === -1 || toIdx === -1) return;
-        const arr = [...blocks];
-        const [moved] = arr.splice(fromIdx, 1);
-        arr.splice(toIdx, 0, moved);
-        updateBlocks(arr);
+        setBlocks(prev => {
+            const fromIdx = prev.findIndex(b => b.id === fromId);
+            const toIdx = prev.findIndex(b => b.id === targetId);
+            if (fromIdx === -1 || toIdx === -1) return prev;
+            const arr = [...prev];
+            const [moved] = arr.splice(fromIdx, 1);
+            arr.splice(toIdx, 0, moved);
+            updateNote(id, { content: JSON.stringify(arr) });
+            return arr;
+        });
         setDragOverId(null);
         dragBlockId.current = null;
-    };
+    }, [id, updateNote]);
 
     // ── Insert AI result ──────────────────────────────────────────────────────
     const handleAIInsertBlock = (type, content, meta) => {
@@ -471,16 +513,16 @@ const Notes = () => {
                                 { type: 'text', label: 'Text', emoji: 'T' },
                                 { type: 'heading', label: 'H1', emoji: 'H1', meta: { level: 1 } },
                                 { type: 'code', label: 'Code', emoji: '</>' },
-                                { type: 'checklist', label: 'Check', emoji: '☑' },
+                                { type: 'checklist', label: 'Check', emoji: '☑', content: JSON.stringify([{ id: Date.now(), text: '', done: false }]) },
                                 { type: 'toggle', label: 'Toggle', emoji: '▶' },
                                 { type: 'callout', label: 'Callout', emoji: '💡' },
                                 { type: 'divider', label: 'Divider', emoji: '—' },
                                 { type: 'table', label: 'Table', emoji: '⊞' },
                                 { type: 'image', label: 'Image', emoji: '🖼' },
-                            ].map(({ type, label, emoji, meta }) => (
+                            ].map(({ type, label, emoji, meta, content }) => (
                                 <button
                                     key={`${type}-${label}`}
-                                    onClick={() => addBlock(type, type === 'checklist' ? JSON.stringify([{ id: Date.now(), text: '', done: false }]) : '', meta || {})}
+                                    onClick={() => addBlock(type, content ?? '', meta || {})}
                                     className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400 text-xs font-medium transition-colors"
                                 >
                                     <span className="text-[11px]">{emoji}</span> {label}
