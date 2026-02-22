@@ -91,9 +91,9 @@ async function enrollUserInWorkspace(userId, workspaceId, workspaceKey, userKEK,
 
         console.log(`🔐 Enrolled user ${userId} in workspace ${workspaceId}`);
         return userKey;
-    } catch (_error) {
-        console.error('User enrollment failed:', error);
-        throw error;
+    } catch (err) {
+        console.error('User enrollment failed:', err);
+        throw err;
     }
 }
 
@@ -124,9 +124,9 @@ async function bulkEnrollUsers(workspaceId, userEnrollments, workspaceKey) {
         const result = await UserWorkspaceKey.insertMany(enrollments);
         console.log(`🔐 Bulk enrolled ${result.length} users in workspace ${workspaceId}`);
         return result.length;
-    } catch (_error) {
-        console.error('Bulk enrollment failed:', error);
-        throw error;
+    } catch (err) {
+        console.error('Bulk enrollment failed:', err);
+        throw err;
     }
 }
 
@@ -145,9 +145,9 @@ async function revokeUserAccess(userId, workspaceId) {
         const result = await UserWorkspaceKey.deleteOne({ userId, workspaceId });
         console.log(`🔐 Revoked access for user ${userId} in workspace ${workspaceId}`);
         return result.deletedCount > 0;
-    } catch (_error) {
-        console.error('Access revocation failed:', error);
-        throw error;
+    } catch (err) {
+        console.error('Access revocation failed:', err);
+        throw err;
     }
 }
 
@@ -165,9 +165,9 @@ async function bulkRevokeAccess(userIds, workspaceId) {
             workspaceId
         });
         return result.deletedCount;
-    } catch (_error) {
-        console.error('Bulk revocation failed:', error);
-        throw error;
+    } catch (err) {
+        console.error('Bulk revocation failed:', err);
+        throw err;
     }
 }
 
@@ -185,9 +185,9 @@ async function getUserWorkspaceKeys(userId) {
             .populate('workspaceId', 'name icon')
             .lean();
         return keys;
-    } catch (_error) {
-        console.error('Failed to fetch user keys:', error);
-        throw error;
+    } catch (err) {
+        console.error('Failed to fetch user keys:', err);
+        throw err;
     }
 }
 
@@ -201,9 +201,9 @@ async function getWorkspaceMasterKey(workspaceId) {
     try {
         const key = await WorkspaceKey.findOne({ workspaceId, isActive: true }).lean();
         return key;
-    } catch (_error) {
-        console.error('Failed to fetch workspace master key:', error);
-        throw error;
+    } catch (err) {
+        console.error('Failed to fetch workspace master key:', err);
+        throw err;
     }
 }
 
@@ -237,9 +237,9 @@ async function createWorkspaceKey(workspaceId, creatorId, creatorKEK) {
 
         console.log(`🔐 Created workspace key for ${workspaceId}`);
         return { workspaceKey, workspaceKeyDoc };
-    } catch (_error) {
-        console.error('Workspace key creation failed:', error);
-        throw error;
+    } catch (err) {
+        console.error('Workspace key creation failed:', err);
+        throw err;
     }
 }
 
@@ -256,8 +256,8 @@ async function userHasWorkspaceAccess(userId, workspaceId) {
     try {
         const key = await UserWorkspaceKey.findOne({ userId, workspaceId });
         return key !== null;
-    } catch (_error) {
-        console.error('Access check failed:', error);
+    } catch (err) {
+        console.error('Access check failed:', err);
         return false;
     }
 }

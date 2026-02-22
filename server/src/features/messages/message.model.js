@@ -57,5 +57,10 @@ MessageSchema.index({ workspace: 1, createdAt: -1 }); // For dashboard activity 
 MessageSchema.index({ platformSession: 1, createdAt: -1 });
 MessageSchema.index({ parentId: 1 }); // For thread lookups
 MessageSchema.index({ createdAt: -1 });
+// Compound indexes for GET /api/messages/missed range queries (_id > lastSeenMessageId).
+// ObjectId is monotonically ordered so { channel|dm, _id } covers both membership filter
+// and the "created after" range in a single index scan — no separate createdAt needed.
+MessageSchema.index({ channel: 1, _id: 1 });
+MessageSchema.index({ dm: 1, _id: 1 });
 
 module.exports = mongoose.model("Message", MessageSchema);

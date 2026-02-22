@@ -19,7 +19,10 @@ const ChannelSchema = new mongoose.Schema({
   // Members with join tracking
   members: [{
     user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
-    joinedAt: { type: Date, default: Date.now }
+    joinedAt: { type: Date, default: Date.now },
+    // Per-user read state: tracks the last message this member has seen
+    // null = member has never opened the channel (treat all messages as unread)
+    lastSeenMessageId: { type: mongoose.Schema.Types.ObjectId, ref: "Message", default: null }
   }],
 
   // Channel admins (can manage members, settings, and delete channel)

@@ -1,8 +1,7 @@
-import React, { useRef, useEffect, useState } from "react";
+import React, { useRef, useEffect, useState, useCallback } from "react";
 import { Bold, Italic, Link, List, Smile, Mic, SendHorizontal, Paperclip } from "lucide-react";
 import EmojiPicker from "./emojiPicker";
 import AttachMenu from "./attachMenu";
-import ContentEditable from "react-contenteditable";
 import TurndownService from "turndown";
 import { Button } from "../../../../shared/components/ui";
 
@@ -11,8 +10,12 @@ const turndownService = new TurndownService({
   bulletListMarker: "-",
 });
 
-// Configure turndown to avoid escaping
-// turndownService.keep(['div', 'br']); // Removed to fix raw HTML tags in output
+// Helper to strip HTML tags
+const stripTags = (html) => {
+  const tmp = document.createElement("DIV");
+  tmp.innerHTML = html;
+  return tmp.textContent || tmp.innerText || "";
+};
 
 export default function FooterInput({
   newMessage,
@@ -30,40 +33,47 @@ export default function FooterInput({
   setNewMessage,
   showAI = true,
   showVoice = true,
-  disabled = false, // ✅ PHASE 0: Support for broken channels
+  disabled = false,
 }) {
   const emojiRef = useRef(null);
   const attachRef = useRef(null);
   const editableRef = useRef(null);
 
-  // We need local state to handle the HTML content sync properly
-  // newMessage from props will be HTML now
+  // Track whether the input has content for the Send button
+  const [hasText, setHasText] = useState(false);
+
+  // ─── KEY FIX: track content in a ref, NOT in state ───────────────────────────
+  // We NEVER set editableRef.current.innerHTML from parent state while the user
+  // is typing. We only reset the DOM when the parent clears the message (send).
+  const prevMessageRef = useRef(newMessage);
+
+  useEffect(() => {
+    // Only push value into the DOM when the parent explicitly clears the message
+    // (i.e. newMessage goes from something → ""). This handles post-send clear.
+    if (newMessage === "" && prevMessageRef.current !== "") {
+      if (editableRef.current) {
+        editableRef.current.innerHTML = "";
+        setHasText(false);
+      }
+    }
+    prevMessageRef.current = newMessage;
+  }, [newMessage]);
+  // ─────────────────────────────────────────────────────────────────────────────
 
   /* ---------------------------------------------------------
       OUTSIDE CLICK HANDLER
   --------------------------------------------------------- */
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (
-        emojiRef.current &&
-        !emojiRef.current.contains(event.target) &&
-        showEmoji
-      ) {
+      if (emojiRef.current && !emojiRef.current.contains(event.target) && showEmoji) {
         setShowEmoji(false);
       }
-      if (
-        attachRef.current &&
-        !attachRef.current.contains(event.target) &&
-        showAttach
-      ) {
+      if (attachRef.current && !attachRef.current.contains(event.target) && showAttach) {
         setShowAttach(false);
       }
     };
-
     document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [showEmoji, showAttach, setShowEmoji, setShowAttach]);
 
   /* ---------------------------------------------------------
@@ -74,12 +84,10 @@ export default function FooterInput({
 
   const applyLink = () => {
     if (linkUrl) {
-      // If text is selected, apply link to it. 
-      // If no text selected, we might want to insert the url as text? 
-      // standard execCommand 'createLink' works on selection.
-      execFormat('createLink', linkUrl);
+      document.execCommand("createLink", false, linkUrl);
       setShowLinkInput(false);
       setLinkUrl("");
+      editableRef.current?.focus();
     }
   };
 
@@ -87,94 +95,79 @@ export default function FooterInput({
       WYSIWYG FORMATTING
   --------------------------------------------------------- */
   const execFormat = (command, value = null) => {
+    editableRef.current?.focus();
     document.execCommand(command, false, value);
-    // Force focus back to ensure changes stick
-    if (editableRef.current) {
-      editableRef.current.focus();
-    }
   };
 
   const insertFormat = (type) => {
-    if (blocked || disabled) return; // ✅ PHASE 0: Also block when channel broken
-
-    // Ensure focus before executing
-    if (editableRef.current) editableRef.current.focus();
-
+    if (blocked || disabled) return;
+    editableRef.current?.focus();
     switch (type) {
-      case 'bold':
-        execFormat('bold');
-        break;
-      case 'italic':
-        execFormat('italic');
-        break;
-      case 'link':
-        // Toggle Link Input visibility
-        // If we have a selection, we want to keep it while showing the input?
-        // Actually, clicking the button usually loses focus or selection if not careful.
-        // We might need to save selection range? 
-        // For now, let's just toggle the input UI.
+      case "bold": execFormat("bold"); break;
+      case "italic": execFormat("italic"); break;
+      case "link":
         setShowLinkInput(!showLinkInput);
-        setTimeout(() => document.getElementById('link-url-input')?.focus(), 100);
+        setTimeout(() => document.getElementById("link-url-input")?.focus(), 100);
         break;
-      case 'list':
-        execFormat('insertUnorderedList');
-        break;
-      case 'ai':
-        execFormat('insertText', '@CI ');
-        break;
-      default:
-        return;
+      case "list": execFormat("insertUnorderedList"); break;
+      case "ai": execFormat("insertText", "@CI "); break;
+      default: break;
     }
   };
 
   /* ---------------------------------------------------------
-      HANDLING SEND
+      INPUT HANDLER — reads directly from DOM, no state loop
   --------------------------------------------------------- */
-  const handleSend = React.useCallback(() => {
-    // Use stripTags to check if there's actual text content (not just HTML tags)
-    const textContent = stripTags(newMessage).trim();
-    if (!textContent || blocked || disabled) return; // ✅ PHASE 0: Block send when channel broken
+  const handleInput = useCallback((e) => {
+    const html = e.currentTarget.innerHTML;
+    const text = stripTags(html).trim();
+    setHasText(text.length > 0);
+    // Sync upward for parent state (used for send button, not for re-rendering input)
+    onChange({ target: { value: html } });
+  }, [onChange]);
 
-    // Convert HTML to Markdown
-    let markdown = turndownService.turndown(newMessage);
+  /* ---------------------------------------------------------
+      SEND
+  --------------------------------------------------------- */
+  const handleSend = useCallback(() => {
+    const html = editableRef.current?.innerHTML || "";
+    const textContent = stripTags(html).trim();
+    if (!textContent || blocked || disabled) return;
 
-    // Clean up excessive newlines if any
+    let markdown = turndownService.turndown(html);
     markdown = markdown.trim();
 
-    // Call parent onSend with the Markdown
     onSend(markdown);
 
-    // Clear the input immediately after sending
+    // Clear DOM directly (do NOT rely on React to re-render the input)
+    if (editableRef.current) {
+      editableRef.current.innerHTML = "";
+    }
+    setHasText(false);
     setNewMessage("");
-  }, [newMessage, blocked, disabled, onSend, setNewMessage]); // ✅ PHASE 0: Add disabled to deps
+  }, [blocked, disabled, onSend, setNewMessage]);
 
-  // CRITICAL FIX: react-contenteditable doesn't properly support onKeyDown prop
-  // We need to use a native event listener instead
-  useEffect(() => {
-    const editable = editableRef.current;
-    if (!editable) return;
+  /* ---------------------------------------------------------
+      KEYBOARD — Enter to send, Shift+Enter for newline
+  --------------------------------------------------------- */
+  const handleKeyDown = useCallback((e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
+  }, [handleSend]);
 
-    const handleNativeKeyDown = (e) => {
-      if (e.key === "Enter" && !e.shiftKey) {
-        e.preventDefault();
-        handleSend();
-      }
-    };
-
-    editable.addEventListener('keydown', handleNativeKeyDown);
-    return () => {
-      editable.removeEventListener('keydown', handleNativeKeyDown);
-    };
-  }, [newMessage, blocked, handleSend]); // Re-attach when message changes to capture latest state
-
-  // Helper to strip tags for "is empty" check
-  const stripTags = (html) => {
-    let tmp = document.createElement("DIV");
-    tmp.innerHTML = html;
-    return tmp.textContent || tmp.innerText || "";
-  };
-
-  const hasText = stripTags(newMessage).trim().length > 0;
+  /* ---------------------------------------------------------
+      EMOJI PICK — insert at cursor position
+  --------------------------------------------------------- */
+  const handlePickEmoji = useCallback((emoji) => {
+    editableRef.current?.focus();
+    document.execCommand("insertText", false, emoji);
+    const html = editableRef.current?.innerHTML || "";
+    setHasText(stripTags(html).trim().length > 0);
+    onChange({ target: { value: html } });
+    if (onPickEmoji) onPickEmoji(emoji);
+  }, [onChange, onPickEmoji]);
 
   return (
     <div className="px-4 py-4 bg-white dark:bg-gray-900 relative">
@@ -185,22 +178,19 @@ export default function FooterInput({
         focus-within:border-primary-500 focus-within:ring-1 focus-within:ring-primary-500
       `}>
 
-        {/* Rich Text Input */}
-        <div className="w-full px-3 py-2 text-sm max-h-[60vh] overflow-y-auto custom-scrollbar resize-y min-h-[4rem]">
-          <ContentEditable
-            innerRef={editableRef}
-            html={newMessage} // innerHTML of the editable div
-            disabled={blocked || disabled}       // ✅ PHASE 0: Disable when channel broken
-            onChange={(evt) => {
-              // react-contenteditable provides the new HTML in evt.target.value
-              onChange({ target: { value: evt.target.value } });
-            }}
-            className={`focus:outline-none min-h-[40px] whitespace-pre-wrap break-words text-gray-800 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 ${(blocked || disabled) ? "cursor-not-allowed opacity-50" : ""}`}
-            placeholder={disabled ? "Channel encryption unavailable" : "Message..."}
+        {/* Rich Text Input — uncontrolled div, no html= binding */}
+        <div className="w-full px-3 py-2 text-sm max-h-[60vh] overflow-y-auto custom-scrollbar resize-y min-h-[4rem] relative">
+          <div
+            ref={editableRef}
+            contentEditable={!blocked && !disabled}
+            suppressContentEditableWarning
+            onInput={handleInput}
+            onKeyDown={handleKeyDown}
+            className={`focus:outline-none min-h-[40px] whitespace-pre-wrap break-words text-gray-800 dark:text-gray-100 ${(blocked || disabled) ? "cursor-not-allowed opacity-50" : ""}`}
           />
-          {!newMessage && !blocked && (
-            <div className="absolute top-2 left-3 text-gray-400 pointer-events-none text-sm">
-              Message...
+          {!hasText && !blocked && (
+            <div className="absolute top-2 left-3 text-gray-400 dark:text-gray-500 pointer-events-none text-sm select-none">
+              {disabled ? "Channel encryption unavailable" : "Message..."}
             </div>
           )}
         </div>
@@ -215,47 +205,31 @@ export default function FooterInput({
               onChange={(e) => setLinkUrl(e.target.value)}
               placeholder="paste link here..."
               className="text-sm px-2 py-1.5 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg focus:outline-none focus:border-blue-500 w-64"
-              onKeyDown={(e) => { if (e.key === 'Enter') applyLink(); }}
+              onKeyDown={(e) => { if (e.key === "Enter") applyLink(); }}
             />
-            <button
-              onClick={applyLink}
-              className="p-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-            >
+            <button onClick={applyLink} className="p-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
               <Link size={14} />
             </button>
           </div>
         )}
 
-        {/* Toolbar (Slim) */}
+        {/* Toolbar */}
         <div className="flex items-center justify-between px-2 pb-1 bg-white dark:bg-gray-800 rounded-b-2xl">
 
           {/* Left: Formatting Tools */}
           <div className="flex items-center gap-1">
             {showAI && (
               <>
-                <button onMouseDown={(e) => e.preventDefault()} onClick={() => insertFormat('ai')} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors group" title="AI">
+                <button onMouseDown={(e) => e.preventDefault()} onClick={() => insertFormat("ai")} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors group" title="AI">
                   <img src="/assets/ChttrixAI-logo.png" alt="AI" className="w-4 h-4 object-contain opacity-70 group-hover:opacity-100 group-hover:scale-110 transition-all" />
                 </button>
-                <div className="h-4 w-px bg-gray-200 dark:bg-gray-700 mx-1"></div>
+                <div className="h-4 w-px bg-gray-200 dark:bg-gray-700 mx-1" />
               </>
             )}
-            <button onMouseDown={(e) => e.preventDefault()} onClick={() => insertFormat('bold')} className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-all" title="Bold">
-              <Bold size={15} />
-            </button>
-            <button onMouseDown={(e) => e.preventDefault()} onClick={() => insertFormat('italic')} className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-all" title="Italic">
-              <Italic size={15} />
-            </button>
-            <button
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={() => insertFormat('link')}
-              className={`p-1.5 rounded-lg transition-all ${showLinkInput ? "text-blue-600 bg-blue-50 dark:bg-blue-900/30" : "text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"}`}
-              title="Link"
-            >
-              <Link size={15} />
-            </button>
-            <button onMouseDown={(e) => e.preventDefault()} onClick={() => insertFormat('list')} className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-all" title="List">
-              <List size={15} />
-            </button>
+            <button onMouseDown={(e) => e.preventDefault()} onClick={() => insertFormat("bold")} className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-all" title="Bold"><Bold size={15} /></button>
+            <button onMouseDown={(e) => e.preventDefault()} onClick={() => insertFormat("italic")} className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-all" title="Italic"><Italic size={15} /></button>
+            <button onMouseDown={(e) => e.preventDefault()} onClick={() => insertFormat("link")} className={`p-1.5 rounded-lg transition-all ${showLinkInput ? "text-blue-600 bg-blue-50 dark:bg-blue-900/30" : "text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"}`} title="Link"><Link size={15} /></button>
+            <button onMouseDown={(e) => e.preventDefault()} onClick={() => insertFormat("list")} className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-all" title="List"><List size={15} /></button>
           </div>
 
           {/* Right: Actions */}
@@ -264,11 +238,7 @@ export default function FooterInput({
             {/* Emoji */}
             <div className="relative" ref={emojiRef}>
               <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setShowEmoji(!showEmoji);
-                  setShowAttach(false);
-                }}
+                onClick={(e) => { e.stopPropagation(); setShowEmoji(!showEmoji); setShowAttach(false); }}
                 className={`p-1.5 rounded-lg transition-all ${showEmoji ? "text-blue-600 bg-blue-50 dark:bg-blue-900/30" : "text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"}`}
                 title="Emoji"
               >
@@ -276,7 +246,7 @@ export default function FooterInput({
               </button>
               {showEmoji && (
                 <div className="absolute bottom-full right-0 mb-2 z-50">
-                  <EmojiPicker onPick={onPickEmoji} />
+                  <EmojiPicker onPick={handlePickEmoji} />
                 </div>
               )}
             </div>
@@ -284,11 +254,7 @@ export default function FooterInput({
             {/* Attachments */}
             <div className="relative" ref={attachRef}>
               <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setShowAttach(!showAttach);
-                  setShowEmoji(false);
-                }}
+                onClick={(e) => { e.stopPropagation(); setShowAttach(!showAttach); setShowEmoji(false); }}
                 className={`p-1.5 rounded-lg transition-all ${showAttach ? "text-blue-600 bg-blue-50 dark:bg-blue-900/30" : "text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"}`}
                 title="Attach"
               >
@@ -304,9 +270,7 @@ export default function FooterInput({
             {/* Voice */}
             {showVoice && (
               <button
-                onClick={() => {
-                  if (!blocked) setRecording(!recording);
-                }}
+                onClick={() => { if (!blocked) setRecording(!recording); }}
                 className={`p-1.5 rounded-lg transition-all ${recording ? "text-red-500 bg-red-50 dark:bg-red-900/30 animate-pulse" : "text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"}`}
                 title="Voice"
               >

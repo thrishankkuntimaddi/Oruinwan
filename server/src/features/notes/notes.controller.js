@@ -50,7 +50,7 @@ async function getNotes(req, res) {
 
         const result = await notesService.getNotes(userId, filters);
         return res.json(result);
-    } catch (_error) {
+    } catch (error) {
         console.error('GET_NOTES ERROR:', error);
         return handleError(res, error);
     }
@@ -76,7 +76,7 @@ async function createNote(req, res) {
 
         const result = await notesService.createNote(userId, noteData, req.io, req);
         return res.status(201).json(result);
-    } catch (_error) {
+    } catch (error) {
         console.error('CREATE_NOTE ERROR:', error);
         return handleError(res, error);
     }
@@ -103,7 +103,7 @@ async function updateNote(req, res) {
 
         const result = await notesService.updateNote(userId, noteId, updates, req.io, req);
         return res.json(result);
-    } catch (_error) {
+    } catch (error) {
         console.error('UPDATE_NOTE ERROR:', error);
         return handleError(res, error);
     }
@@ -121,7 +121,7 @@ async function deleteNote(req, res) {
 
         const result = await notesService.deleteNote(userId, noteId, permanent, req.io, req);
         return res.json(result);
-    } catch (_error) {
+    } catch (error) {
         console.error('DELETE_NOTE ERROR:', error);
         return handleError(res, error);
     }
@@ -148,7 +148,7 @@ async function shareNote(req, res) {
 
         const result = await notesService.shareNote(userId, noteId, userIds, req.io, req);
         return res.json(result);
-    } catch (_error) {
+    } catch (error) {
         console.error('SHARE_NOTE ERROR:', error);
         return handleError(res, error);
     }
@@ -175,7 +175,7 @@ async function addAttachment(req, res) {
 
         const result = await notesService.addAttachment(userId, noteId, attachmentData, req.io, req);
         return res.json(result);
-    } catch (_error) {
+    } catch (error) {
         console.error('ADD_ATTACHMENT ERROR:', error);
         return handleError(res, error);
     }
@@ -192,7 +192,7 @@ async function removeAttachment(req, res) {
 
         const result = await notesService.removeAttachment(userId, noteId, attachmentId, req);
         return res.json(result);
-    } catch (_error) {
+    } catch (error) {
         console.error('REMOVE_ATTACHMENT ERROR:', error);
         return handleError(res, error);
     }
@@ -213,7 +213,7 @@ async function downloadAttachment(req, res) {
 
         // Send file download (not JSON)
         res.download(filePath, fileName);
-    } catch (_error) {
+    } catch (error) {
         console.error('DOWNLOAD_ATTACHMENT ERROR:', error);
         return handleError(res, error);
     }

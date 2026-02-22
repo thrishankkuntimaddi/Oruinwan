@@ -185,7 +185,7 @@ function registerMessageHandlers(io, socket) {
                     io.to(room).emit('message:deleted', event.payload);
                     break;
             }
-        } catch (_err) {
+        } catch (err) {
             console.error('Error handling conversation event:', err);
             socket.emit('error', { message: 'Failed to process event' });
         }
@@ -273,7 +273,7 @@ function registerMessageHandlers(io, socket) {
             socket.join(room);
             logger.socket(`💬 User ${socket.user.id} joined ${room}`);
 
-        } catch (_error) {
+        } catch (error) {
             console.error('Error joining DM room:', error);
             socket.emit('error', { message: 'Failed to join DM' });
         }
@@ -396,7 +396,7 @@ function registerMessageHandlers(io, socket) {
                 logger.warn(`⚠️ DM send failed for user ${socket.user.id}: ${errorMessage}`);
             }
 
-        } catch (_error) {
+        } catch (error) {
             console.error('Error sending DM message via socket:', error);
             socket.emit('send-error', {
                 clientTempId: data.clientTempId,

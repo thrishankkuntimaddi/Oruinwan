@@ -176,6 +176,43 @@ const io = new Server(httpServer, {
   },
 });
 
+// ---------------------------------------------------------
+// SOCKET.IO REDIS ADAPTER (horizontal scaling)
+// Only activates when REDIS_URL is set.
+// Falls back to default in-memory adapter if Redis is unavailable.
+// ---------------------------------------------------------
+if (process.env.REDIS_URL) {
+  (async () => {
+    try {
+      const { createAdapter } = require('@socket.io/redis-adapter');
+      const { default: Redis } = require('ioredis');
+
+      const pubClient = new Redis(process.env.REDIS_URL, {
+        maxRetriesPerRequest: null,     // Required for blocking commands
+        enableReadyCheck: false,
+        lazyConnect: true
+      });
+      const subClient = pubClient.duplicate();
+
+      // Connect both clients before handing to adapter
+      await pubClient.connect();
+      await subClient.connect();
+
+      io.adapter(createAdapter(pubClient, subClient));
+      logger.success('✅ [REDIS] Socket.IO Redis adapter connected — horizontal scaling enabled');
+
+      // Propagate Redis errors without crashing the process
+      pubClient.on('error', (err) => logger.error('❌ [REDIS] pub client error:', err.message));
+      subClient.on('error', (err) => logger.error('❌ [REDIS] sub client error:', err.message));
+    } catch (err) {
+      logger.error('⚠️  [REDIS] Adapter init failed — falling back to in-memory adapter (single-instance only):', err.message);
+      // Server continues normally; only cross-instance event routing is unavailable
+    }
+  })();
+} else {
+  logger.info('ℹ️  [REDIS] REDIS_URL not set — running with in-memory adapter (single-instance mode)');
+}
+
 app.set("io", io);
 
 // ✅ CRITICAL: Middleware to attach Socket.io to request object for controllers
@@ -429,6 +466,49 @@ mongoose
     logger.error("MongoDB Connection Failed ❌", err);
     process.exit(1);
   });
+
+// ---------------------------------------------------------
+// GRACEFUL SHUTDOWN
+// Handles SIGTERM (Railway/Docker deploy) and SIGINT (Ctrl+C)
+// Order: stop accepting → close Socket.IO → drain HTTP → disconnect Mongo
+// ---------------------------------------------------------
+async function shutdown(signal) {
+  logger.info(`📴 [SHUTDOWN] ${signal} received — starting graceful shutdown`);
+
+  // Force-exit if drain takes longer than 30 seconds
+  const forceExit = setTimeout(() => {
+    logger.error('❌ [SHUTDOWN] Drain timeout exceeded (30s) — forcing exit');
+    process.exit(1);
+  }, 30000);
+  forceExit.unref(); // Don't let this timer keep the process alive on its own
+
+  try {
+    // 1. Stop Socket.IO from accepting new connections and close all sockets
+    logger.info('🔌 [SHUTDOWN] Closing Socket.IO...');
+    await new Promise((resolve) => io.close(resolve));
+    logger.info('✅ [SHUTDOWN] Socket.IO closed');
+
+    // 2. Stop HTTP server from accepting new requests; wait for in-flight to finish
+    logger.info('🌐 [SHUTDOWN] Draining HTTP connections...');
+    await new Promise((resolve, reject) => httpServer.close((err) => err ? reject(err) : resolve()));
+    logger.info('✅ [SHUTDOWN] HTTP server drained');
+
+    // 3. Disconnect MongoDB cleanly
+    logger.info('🗄️  [SHUTDOWN] Disconnecting MongoDB...');
+    await mongoose.disconnect();
+    logger.info('✅ [SHUTDOWN] MongoDB disconnected');
+
+    clearTimeout(forceExit);
+    logger.info('✅ [SHUTDOWN] Graceful shutdown complete');
+    process.exit(0);
+  } catch (err) {
+    logger.error('❌ [SHUTDOWN] Error during shutdown:', err);
+    process.exit(1);
+  }
+}
+
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));
 
 // ---------------------------------------------------------
 // PROCESS-LEVEL CRASH GUARDS

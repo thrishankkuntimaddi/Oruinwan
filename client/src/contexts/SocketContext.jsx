@@ -249,43 +249,41 @@ export const SocketProvider = ({ children }) => {
         if (!socket) return;
 
         socket.on('new-message', (data) => {
-
             messageListenersRef.current.forEach(cb => cb('new-message', data));
         });
 
         socket.on('new-dm-session', (data) => {
-
             messageListenersRef.current.forEach(cb => cb('new-dm-session', data));
         });
 
         socket.on('message-deleted', (data) => {
-
             messageListenersRef.current.forEach(cb => cb('message-deleted', data));
         });
 
         socket.on('message-pinned', (data) => {
-
             messageListenersRef.current.forEach(cb => cb('message-pinned', data));
         });
 
         socket.on('message-unpinned', (data) => {
-
             messageListenersRef.current.forEach(cb => cb('message-unpinned', data));
         });
 
         socket.on('read-update', (data) => {
-
             messageListenersRef.current.forEach(cb => cb('read-update', data));
         });
 
         socket.on('reaction-added', (data) => {
-
             messageListenersRef.current.forEach(cb => cb('reaction-added', data));
         });
 
         socket.on('reaction-removed', (data) => {
-
             messageListenersRef.current.forEach(cb => cb('reaction-removed', data));
+        });
+
+        // ✅ OFFLINE RECOVERY: Server emits 'reconnected' after restoring all socket rooms.
+        // Routed through messageListenersRef — identical pattern to every other event.
+        socket.on('reconnected', (data) => {
+            messageListenersRef.current.forEach(cb => cb('reconnected', data));
         });
 
         return () => {
@@ -297,6 +295,7 @@ export const SocketProvider = ({ children }) => {
             socket.off('read-update');
             socket.off('reaction-added');
             socket.off('reaction-removed');
+            socket.off('reconnected');
         };
     }, [socket]);
 

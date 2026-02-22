@@ -1,12 +1,20 @@
 {
   "name": "chttrix-collab",
   "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "client",
+    "server",
+    "desktop"
+  ],
   "scripts": {
     "start": "npm run dev",
     "dev": "npm run server & npm run client",
     "client": "cd client && npm start",
     "server": "cd server && npm run dev",
-    "install-all": "npm install && cd client && npm install && cd ../server && npm install"
+    "desktop": "cd desktop && npm run dev",
+    "desktop:build": "cd desktop && npm run build",
+    "install-all": "npm install && cd client && npm install && cd ../server && npm install && cd ../desktop && npm install"
   },
   "dependencies": {
     "dotenv": "^17.2.3",

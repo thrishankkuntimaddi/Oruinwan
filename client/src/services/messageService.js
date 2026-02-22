@@ -58,6 +58,13 @@ export const messageService = {
     getThread: (messageId) => api.get(`/api/messages/thread/${messageId}`),
 
     // Get thread count (still using v1 - no v2 endpoint yet)
-    getThreadCount: (messageId) => api.get(`/api/messages/${messageId}/thread-count`)
+    getThreadCount: (messageId) => api.get(`/api/messages/${messageId}/thread-count`),
+
+    // Offline recovery: fetch messages sent after lastSeenMessageId (or latest 50 if null)
+    getMissedMessages: (conversationId, type, lastSeenMessageId = null) => {
+        const params = { conversationId, type };
+        if (lastSeenMessageId) params.lastSeenMessageId = lastSeenMessageId;
+        return api.get('/api/messages/missed', { params });
+    }
 };
 

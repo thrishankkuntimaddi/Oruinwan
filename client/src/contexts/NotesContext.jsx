@@ -18,9 +18,21 @@ export const NotesProvider = ({ children }) => {
     const [notes, setNotes] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState("");
+    const [activeTagFilter, setActiveTagFilter] = useState(null);
 
     // Debounce timer for auto-save
     const saveTimerRef = useRef({});
+
+    // Client-side version history: { [noteId]: [{ title, content, timestamp }] }
+    const [noteVersions, setNoteVersions] = useState({});
+
+    const addVersion = useCallback((noteId, snapshot) => {
+        setNoteVersions(prev => {
+            const existing = prev[noteId] || [];
+            const updated = [...existing, snapshot].slice(-20);
+            return { ...prev, [noteId]: updated };
+        });
+    }, []);
 
     // Helper to extract workspaceId from current location
     const getWorkspaceId = useCallback(() => {
@@ -146,7 +158,7 @@ export const NotesProvider = ({ children }) => {
     }, [socket, getWorkspaceId, showToast]);
 
     // Create new note
-    const addNote = useCallback(async () => {
+    const addNote = useCallback(async (noteTitle = "Untitled Note", noteType = "note") => {
         try {
             const wsId = getWorkspaceId();
             if (!wsId) {
@@ -155,10 +167,10 @@ export const NotesProvider = ({ children }) => {
             }
 
             const response = await api.post("/api/notes", {
-                title: "Untitled Note",
+                title: noteTitle,
                 content: "",
                 workspaceId: wsId,
-                type: "note"
+                type: noteType
             });
 
             const newNote = {
@@ -252,11 +264,13 @@ export const NotesProvider = ({ children }) => {
         }
     }, [loadNotes, showToast]);
 
-    // Filter notes by search query
-    const filteredNotes = notes.filter(note =>
-        note.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        note.content.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    // Filter notes by search query and active tag
+    const filteredNotes = notes.filter(note => {
+        const matchesSearch = note.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            note.content.toLowerCase().includes(searchQuery.toLowerCase());
+        const matchesTag = !activeTagFilter || (note.tags && note.tags.includes(activeTagFilter));
+        return matchesSearch && matchesTag;
+    });
 
     return (
         <NotesContext.Provider value={{
@@ -269,9 +283,14 @@ export const NotesProvider = ({ children }) => {
             shareNote,
             searchQuery,
             setSearchQuery,
-            refreshNotes: loadNotes
+            refreshNotes: loadNotes,
+            activeTagFilter,
+            setActiveTagFilter,
+            noteVersions,
+            addVersion,
         }}>
             {children}
         </NotesContext.Provider>
     );
 };
+
