@@ -24,11 +24,26 @@ export const NotesProvider = ({ children }) => {
     const saveTimerRef = useRef({});
 
     // Client-side version history: { [noteId]: [{ title, content, timestamp }] }
-    const [noteVersions, setNoteVersions] = useState({});
+    // Persisted in localStorage so it survives page refresh
+    const LS_KEY = workspaceId ? `chttrix_versions_${workspaceId}` : null;
+
+    const [noteVersions, setNoteVersions] = useState(() => {
+        if (!LS_KEY) return {};
+        try { return JSON.parse(localStorage.getItem(LS_KEY) || '{}'); } catch { return {}; }
+    });
+
+    // Sync to localStorage whenever versions change
+    useEffect(() => {
+        if (!LS_KEY) return;
+        try { localStorage.setItem(LS_KEY, JSON.stringify(noteVersions)); } catch { }
+    }, [noteVersions, LS_KEY]);
 
     const addVersion = useCallback((noteId, snapshot) => {
         setNoteVersions(prev => {
             const existing = prev[noteId] || [];
+            // Avoid spamming identical snapshots within 10s
+            const last = existing[existing.length - 1];
+            if (last && snapshot.timestamp - last.timestamp < 10000 && last.content === snapshot.content) return prev;
             const updated = [...existing, snapshot].slice(-20);
             return { ...prev, [noteId]: updated };
         });

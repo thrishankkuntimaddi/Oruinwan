@@ -23,7 +23,7 @@ const NoteSchema = new mongoose.Schema({
     // Note type (helps with organization)
     type: {
         type: String,
-        enum: ["note", "meeting", "documentation"],
+        enum: ["note", "meeting", "documentation", "brainstorm", "sop", "projectspec", "techdesign", "announcement"],
         default: "note"
     },
 

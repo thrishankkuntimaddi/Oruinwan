@@ -20,6 +20,7 @@ import TableBlock from "./notesComponents/blocks/TableBlock";
 // UI components
 import EmptyState from "./notesComponents/ui/EmptyState";
 import NoteInfoModal from "./notesComponents/ui/NoteInfoModal";
+import ShareNoteModal from "./notesComponents/ui/ShareNoteModal";
 import SlashCommandMenu from "./notesComponents/ui/SlashCommandMenu";
 import AIPanel from "./notesComponents/ui/AIPanel";
 import VersionHistoryPanel from "./notesComponents/ui/VersionHistoryPanel";
@@ -27,7 +28,7 @@ import VersionHistoryPanel from "./notesComponents/ui/VersionHistoryPanel";
 // Icons
 import {
     Sparkles, Share2, Check, Trash2, MoreHorizontal, Copy, Download,
-    Info, Clock, Tag, X, Plus, ChevronDown, History, GripVertical
+    Info, Clock, Tag, X, Plus, ChevronDown, History, GripVertical, Users
 } from "lucide-react";
 
 const NOTE_TYPE_CONFIG = {
@@ -45,7 +46,7 @@ const Notes = () => {
     const { workspaceId, id } = useParams();
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
-    const { notes, updateNote, deleteNote, addNote, loading, noteVersions, addVersion } = useNotes();
+    const { notes, updateNote, deleteNote, addNote, shareNote, loading, noteVersions, addVersion } = useNotes();
     const { showToast } = useToast();
 
     // Navigate from universal search
@@ -65,6 +66,7 @@ const Notes = () => {
 
     // ── UI State ──────────────────────────────────────────────────────────────
     const [showMenu, setShowMenu] = useState(false);
+    const [showShareModal, setShowShareModal] = useState(false);
     const [showShareTooltip, setShowShareTooltip] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [showInfoModal, setShowInfoModal] = useState(false);
@@ -256,11 +258,18 @@ const Notes = () => {
     };
 
     // ── Share ─────────────────────────────────────────────────────────────────
-    const handleShare = () => {
+    const handleShareModalSave = async (userIds, isPublic) => {
+        if (shareNote) await shareNote(id, userIds);
+        await updateNote(id, { isPublic, sharedWith: userIds });
+        showToast(isPublic ? 'Note visible to entire workspace' : `Shared with ${userIds.length} member${userIds.length !== 1 ? 's' : ''}`, 'success');
+    };
+
+    // Copy link to clipboard
+    const handleCopyLink = () => {
         navigator.clipboard.writeText(`${window.location.origin}/workspace/${workspaceId}/notes/${id}`);
         setShowShareTooltip(true);
         setTimeout(() => setShowShareTooltip(false), 2000);
-        showToast("Link copied to clipboard", "success");
+        showToast('Link copied to clipboard', 'success');
     };
 
     // ── Duplicate ─────────────────────────────────────────────────────────────
@@ -414,8 +423,12 @@ const Notes = () => {
                         <div className="w-px h-4 bg-gray-200 dark:bg-gray-700 mx-1" />
 
                         {/* Share */}
-                        <button onClick={handleShare} className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors" title="Copy link">
-                            {showShareTooltip ? <Check size={16} className="text-green-500" /> : <Share2 size={16} />}
+                        <button
+                            onClick={() => setShowShareModal(true)}
+                            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors border border-gray-200 dark:border-gray-700"
+                            title="Share note"
+                        >
+                            <Users size={13} /> Share
                         </button>
 
                         {/* History */}
@@ -438,9 +451,12 @@ const Notes = () => {
                                 <MoreHorizontal size={16} />
                             </button>
                             {showMenu && (
-                                <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-100 dark:border-gray-700 py-1 z-20 animate-in fade-in zoom-in-95 duration-100 origin-top-right">
+                                <div className="absolute right-0 mt-2 w-52 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-100 dark:border-gray-700 py-1 z-20 animate-in fade-in zoom-in-95 duration-100 origin-top-right">
                                     <button onClick={handleDuplicate} className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50 flex items-center gap-2 transition-colors"><Copy size={14} className="text-gray-400" /> Duplicate</button>
                                     <button onClick={handleDownloadPDF} className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50 flex items-center gap-2 transition-colors"><Download size={14} className="text-gray-400" /> Download PDF</button>
+                                    <button onClick={() => { handleCopyLink(); setShowMenu(false); }} className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50 flex items-center gap-2 transition-colors">
+                                        {showShareTooltip ? <Check size={14} className="text-green-500" /> : <Share2 size={14} className="text-gray-400" />} Copy link
+                                    </button>
                                     <div className="h-px bg-gray-100 dark:bg-gray-700 my-1" />
                                     <button onClick={() => { setShowInfoModal(true); setShowMenu(false); }} className="w-full text-left px-4 py-2 text-sm text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50 flex items-center gap-2 transition-colors"><Info size={14} className="text-gray-400" /> Note Info</button>
                                 </div>
@@ -566,6 +582,14 @@ const Notes = () => {
 
             {/* ── Modals ── */}
             <NoteInfoModal note={note} blocks={blocks} showInfoModal={showInfoModal} setShowInfoModal={setShowInfoModal} />
+            {showShareModal && (
+                <ShareNoteModal
+                    note={note}
+                    workspaceId={workspaceId}
+                    onClose={() => setShowShareModal(false)}
+                    onShare={handleShareModalSave}
+                />
+            )}
             <ConfirmationModal
                 isOpen={isDeleteModalOpen}
                 onClose={() => setIsDeleteModalOpen(false)}
