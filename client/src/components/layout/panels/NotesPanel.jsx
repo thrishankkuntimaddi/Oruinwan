@@ -168,71 +168,84 @@ const NotesPanel = () => {
                 )}
 
                 {/* Notes list */}
-                <div className="flex-1 overflow-y-auto custom-scrollbar px-3 pb-3 space-y-2">
+                <div className="flex-1 overflow-y-auto custom-scrollbar px-3 pb-3">
                     {sortedNotes.length === 0 ? (
-                        <div className="text-center py-10 text-gray-400 dark:text-gray-500">
-                            <FileText size={48} className="mx-auto mb-3 opacity-20" />
+                        <div className="text-center py-12 text-gray-400 dark:text-gray-600">
+                            <FileText size={40} className="mx-auto mb-3 opacity-20" />
                             <p className="text-sm font-medium">{activeTagFilter ? `No notes tagged #${activeTagFilter}` : 'No notes found'}</p>
                             {activeTagFilter && (
                                 <button onClick={() => setActiveTagFilter(null)} className="mt-2 text-xs text-blue-500 hover:underline">Clear filter</button>
                             )}
                         </div>
                     ) : (
-                        sortedNotes.map(note => {
-                            const tc = typeConf(note.type);
-                            const isActive = activeId === note.id;
-                            return (
-                                <div
-                                    key={note.id}
-                                    onClick={() => navigate(`/workspace/${workspaceId}/notes/${note.id}`)}
-                                    className={`group cursor-pointer border rounded-xl transition-all duration-200 relative overflow-hidden ${isActive
-                                        ? "bg-white dark:bg-gray-800 border-blue-200 dark:border-blue-700/50 shadow-md shadow-blue-500/5 ring-1 ring-blue-500/20 pb-2"
-                                        : "bg-white dark:bg-gray-800 border-transparent hover:border-gray-200 dark:hover:border-gray-700 hover:shadow-sm"
-                                        }`}
-                                >
-                                    {/* Active indicator bar */}
-                                    {isActive && <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-500 rounded-l-xl" />}
+                        <div className="space-y-1 pt-1">
+                            {sortedNotes.map(note => {
+                                const tc = typeConf(note.type);
+                                const isActive = activeId === note.id;
+                                const previewText = getPreviewText(note.content);
 
-                                    {/* Always-visible row: type badge + title */}
-                                    <div className="flex items-center gap-2 px-3.5 py-2.5">
-                                        <span className="text-base leading-none flex-shrink-0">{tc.emoji}</span>
-                                        <h3 className={`text-sm font-semibold truncate flex-1 leading-tight ${isActive ? "text-blue-700 dark:text-blue-400" : "text-gray-800 dark:text-gray-100"}`}>
-                                            {note.title || "Untitled Note"}
-                                        </h3>
-                                    </div>
+                                return (
+                                    <div
+                                        key={note.id}
+                                        onClick={() => navigate(`/workspace/${workspaceId}/notes/${note.id}`)}
+                                        className={`group relative cursor-pointer rounded-xl transition-all duration-150 ${isActive
+                                                ? 'bg-blue-50 dark:bg-blue-950/30 ring-1 ring-blue-200 dark:ring-blue-800/60'
+                                                : 'hover:bg-gray-100/80 dark:hover:bg-gray-800/60'
+                                            }`}
+                                    >
+                                        {/* Active left accent */}
+                                        {isActive && (
+                                            <div className="absolute left-0 top-2 bottom-2 w-[3px] bg-blue-500 rounded-full" />
+                                        )}
 
-                                    {/* Hover / active expand: preview + tags + date */}
-                                    <div className={`overflow-hidden transition-all duration-200 ease-out ${isActive ? 'max-h-40 opacity-100' : 'max-h-0 opacity-0 group-hover:max-h-40 group-hover:opacity-100'}`}>
-                                        <div className="px-3.5 pb-2.5">
-                                            {/* Preview */}
-                                            <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2 leading-relaxed mb-1.5">
-                                                {getPreviewText(note.content)}
-                                            </p>
+                                        {/* Main row — always visible */}
+                                        <div className={`flex items-center gap-2.5 px-4 py-2.5 ${isActive ? 'pl-5' : ''}`}>
+                                            <span className="text-[15px] leading-none flex-shrink-0 select-none">{tc.emoji}</span>
+                                            <span className={`flex-1 text-[13px] font-semibold truncate leading-tight ${isActive ? 'text-blue-700 dark:text-blue-400' : 'text-gray-800 dark:text-gray-100'
+                                                }`}>
+                                                {note.title || 'Untitled Note'}
+                                            </span>
+                                            <span className="flex-shrink-0 text-[10px] text-gray-400 dark:text-gray-600 font-medium tabular-nums">
+                                                {formatDate(note.updatedAt)}
+                                            </span>
+                                        </div>
 
-                                            {/* Tags */}
-                                            {note.tags && note.tags.length > 0 && (
-                                                <div className="flex flex-wrap gap-1 mb-1.5">
-                                                    {note.tags.slice(0, 3).map(tag => (
-                                                        <span key={tag} className="px-1.5 py-0.5 bg-blue-50 dark:bg-blue-900/20 text-blue-500 dark:text-blue-400 rounded-full text-[10px] font-medium">
-                                                            #{tag}
-                                                        </span>
-                                                    ))}
-                                                    {note.tags.length > 3 && (
-                                                        <span className="text-[10px] text-gray-400">+{note.tags.length - 3}</span>
+                                        {/* Expandable detail — hover or active */}
+                                        <div className={`grid transition-all duration-200 ease-out ${isActive
+                                                ? 'grid-rows-[1fr] opacity-100'
+                                                : 'grid-rows-[0fr] opacity-0 group-hover:grid-rows-[1fr] group-hover:opacity-100'
+                                            }`}>
+                                            <div className="overflow-hidden">
+                                                <div className={`px-4 pb-3 space-y-2 ${isActive ? 'pl-5' : ''}`}>
+                                                    {/* Preview text */}
+                                                    {previewText && previewText !== 'No content' && previewText !== 'No text content' && (
+                                                        <p className="text-[11.5px] text-gray-500 dark:text-gray-400 line-clamp-2 leading-relaxed">
+                                                            {previewText}
+                                                        </p>
+                                                    )}
+                                                    {/* Tags */}
+                                                    {note.tags && note.tags.length > 0 && (
+                                                        <div className="flex flex-wrap gap-1">
+                                                            {note.tags.slice(0, 4).map(tag => (
+                                                                <span
+                                                                    key={tag}
+                                                                    className="px-2 py-0.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full text-[10px] font-medium text-gray-500 dark:text-gray-400"
+                                                                >
+                                                                    #{tag}
+                                                                </span>
+                                                            ))}
+                                                            {note.tags.length > 4 && (
+                                                                <span className="text-[10px] text-gray-400 dark:text-gray-600 self-center">+{note.tags.length - 4} more</span>
+                                                            )}
+                                                        </div>
                                                     )}
                                                 </div>
-                                            )}
-
-                                            {/* Date */}
-                                            <div className="flex items-center gap-1 text-[10px] font-medium text-gray-400 dark:text-gray-500">
-                                                <Clock size={9} />
-                                                {formatDate(note.updatedAt)}
                                             </div>
                                         </div>
                                     </div>
-                                </div>
-                            );
-                        })
+                                );
+                            })}
+                        </div>
                     )}
                 </div>
             </div>
