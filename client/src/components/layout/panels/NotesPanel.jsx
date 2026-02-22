@@ -185,49 +185,50 @@ const NotesPanel = () => {
                                 <div
                                     key={note.id}
                                     onClick={() => navigate(`/workspace/${workspaceId}/notes/${note.id}`)}
-                                    className={`group p-4 rounded-xl cursor-pointer border transition-all duration-200 relative overflow-hidden ${isActive
-                                        ? "bg-white dark:bg-gray-800 border-blue-200 dark:border-blue-700/50 shadow-md shadow-blue-500/5 dark:shadow-blue-900/20 ring-1 ring-blue-500/20"
+                                    className={`group cursor-pointer border rounded-xl transition-all duration-200 relative overflow-hidden ${isActive
+                                        ? "bg-white dark:bg-gray-800 border-blue-200 dark:border-blue-700/50 shadow-md shadow-blue-500/5 ring-1 ring-blue-500/20 pb-2"
                                         : "bg-white dark:bg-gray-800 border-transparent hover:border-gray-200 dark:hover:border-gray-700 hover:shadow-sm"
                                         }`}
                                 >
-                                    {/* Active indicator */}
+                                    {/* Active indicator bar */}
                                     {isActive && <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-500 rounded-l-xl" />}
 
-                                    {/* Note type badge */}
-                                    <div className="flex items-center justify-between mb-1.5">
-                                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-gray-400 dark:text-gray-500">
-                                            {tc.emoji} <span>{tc.label}</span>
-                                        </span>
+                                    {/* Always-visible row: type badge + title */}
+                                    <div className="flex items-center gap-2 px-3.5 py-2.5">
+                                        <span className="text-base leading-none flex-shrink-0">{tc.emoji}</span>
+                                        <h3 className={`text-sm font-semibold truncate flex-1 leading-tight ${isActive ? "text-blue-700 dark:text-blue-400" : "text-gray-800 dark:text-gray-100"}`}>
+                                            {note.title || "Untitled Note"}
+                                        </h3>
                                     </div>
 
-                                    {/* Title */}
-                                    <h3 className={`text-sm font-bold mb-1 truncate leading-tight ${isActive ? "text-blue-700 dark:text-blue-400" : "text-gray-800 dark:text-gray-100"}`}>
-                                        {note.title || "Untitled Note"}
-                                    </h3>
+                                    {/* Hover / active expand: preview + tags + date */}
+                                    <div className={`overflow-hidden transition-all duration-200 ease-out ${isActive ? 'max-h-40 opacity-100' : 'max-h-0 opacity-0 group-hover:max-h-40 group-hover:opacity-100'}`}>
+                                        <div className="px-3.5 pb-2.5">
+                                            {/* Preview */}
+                                            <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2 leading-relaxed mb-1.5">
+                                                {getPreviewText(note.content)}
+                                            </p>
 
-                                    {/* Preview */}
-                                    <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2 mb-2.5 leading-relaxed min-h-[2em]">
-                                        {getPreviewText(note.content)}
-                                    </p>
-
-                                    {/* Tags */}
-                                    {note.tags && note.tags.length > 0 && (
-                                        <div className="flex flex-wrap gap-1 mb-2">
-                                            {note.tags.slice(0, 3).map(tag => (
-                                                <span key={tag} className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-blue-50 dark:bg-blue-900/20 text-blue-500 dark:text-blue-400 rounded-full text-[10px] font-medium">
-                                                    #{tag}
-                                                </span>
-                                            ))}
-                                            {note.tags.length > 3 && (
-                                                <span className="text-[10px] text-gray-400">+{note.tags.length - 3}</span>
+                                            {/* Tags */}
+                                            {note.tags && note.tags.length > 0 && (
+                                                <div className="flex flex-wrap gap-1 mb-1.5">
+                                                    {note.tags.slice(0, 3).map(tag => (
+                                                        <span key={tag} className="px-1.5 py-0.5 bg-blue-50 dark:bg-blue-900/20 text-blue-500 dark:text-blue-400 rounded-full text-[10px] font-medium">
+                                                            #{tag}
+                                                        </span>
+                                                    ))}
+                                                    {note.tags.length > 3 && (
+                                                        <span className="text-[10px] text-gray-400">+{note.tags.length - 3}</span>
+                                                    )}
+                                                </div>
                                             )}
-                                        </div>
-                                    )}
 
-                                    {/* Date */}
-                                    <div className="flex items-center gap-1 text-[10px] font-medium text-gray-400 dark:text-gray-500">
-                                        <Clock size={10} />
-                                        {formatDate(note.updatedAt)}
+                                            {/* Date */}
+                                            <div className="flex items-center gap-1 text-[10px] font-medium text-gray-400 dark:text-gray-500">
+                                                <Clock size={9} />
+                                                {formatDate(note.updatedAt)}
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             );
