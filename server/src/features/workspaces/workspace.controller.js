@@ -150,14 +150,12 @@ exports.createWorkspace = async (req, res) => {
         });
         console.log(`✅ [PHASE 5] Bootstrapped conversation key for #${name}`);
       } catch (keyError) {
-        console.error(`❌ [PHASE 5] Failed to bootstrap key for #${name}:`, keyError);
-        // CRITICAL: Rollback workspace and channels to maintain invariant
-        await Channel.deleteMany({ workspace: workspace._id });
-        await Workspace.findByIdAndDelete(workspace._id);
-        return res.status(500).json({
-          message: 'Failed to initialize workspace encryption. Please ensure E2EE is properly configured.',
-          error: 'KEY_GENERATION_FAILED'
-        });
+        // NON-FATAL: Log the error but do NOT rollback workspace creation.
+        // Keys can be distributed later via the automatic repair mechanism.
+        // This prevents a single crypto service failure from blocking workspace creation.
+        console.error(`⚠️ [PHASE 5] Failed to bootstrap key for #${name} (non-fatal):`, keyError.message);
+        console.warn(`   Workspace will be created without E2EE keys for #${name}.`);
+        console.warn(`   Keys will be distributed via repair when E2EE is configured.`);
       }
     }
 

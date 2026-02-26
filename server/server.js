@@ -25,6 +25,15 @@ if (missing.length > 0) {
 }
 
 console.log('✅ All required environment variables present');
+
+// Validate SERVER_KEK is a valid 256-bit (32-byte / 64-char hex) key
+const serverKekHex = process.env.SERVER_KEK || '';
+if (serverKekHex.length !== 64) {
+  console.error(`❌ FATAL: SERVER_KEK must be exactly 64 hex characters / 32 bytes for AES-256 (got ${serverKekHex.length})`);
+  console.error('   Generate a valid key with: node -e "require(\'crypto\').randomBytes(32).toString(\'hex\')"');
+  process.exit(1);
+}
+console.log(`✅ SERVER_KEK validated (64 hex chars = 32 bytes, AES-256 ready)`);
 console.log(`📦 Environment: ${process.env.NODE_ENV || 'development'}`);
 
 // Now safe to load modules
