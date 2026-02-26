@@ -33,7 +33,7 @@ exports.getTicketMessages = async (req, res) => {
             messages,
             hasMore: messages.length === parseInt(limit)
         });
-    } catch (_error) {
+    } catch (error) {
         console.error('GET TICKET MESSAGES ERROR:', error);
         return res.status(500).json({ message: 'Server error' });
     }
@@ -59,7 +59,7 @@ exports.getMessages = async (req, res) => {
             .limit(parseInt(limit));
 
         return res.json({ messages });
-    } catch (_error) {
+    } catch (error) {
         console.error('GET MESSAGES ERROR:', error);
         return res.status(500).json({ message: 'Server error' });
     }
@@ -140,7 +140,7 @@ exports.sendTicketMessage = async (req, res) => {
         }
 
         return res.status(201).json({ message });
-    } catch (_error) {
+    } catch (error) {
         console.error('SEND TICKET MESSAGE ERROR:', error);
         return res.status(500).json({
             message: 'Failed to send message',
@@ -220,7 +220,7 @@ exports.sendMessage = async (req, res) => {
         }
 
         return res.status(201).json({ message });
-    } catch (_error) {
+    } catch (error) {
         console.error('SEND MESSAGE ERROR:', error);
         return res.status(500).json({
             message: 'Failed to send message',
@@ -247,7 +247,7 @@ exports.markMessageAsRead = async (req, res) => {
             success: true,
             message: 'Message marked as read'
         });
-    } catch (_error) {
+    } catch (error) {
         console.error('MARK MESSAGE AS READ ERROR:', error);
         if (error.message === 'Message not found') {
             return res.status(404).json({ message: error.message });
@@ -288,7 +288,7 @@ exports.getTickets = async (req, res) => {
             total,
             hasMore: (parseInt(skip) + tickets.length) < total
         });
-    } catch (_error) {
+    } catch (error) {
         console.error('GET TICKETS ERROR:', error);
         return res.status(500).json({ message: 'Server error' });
     }
@@ -339,7 +339,7 @@ exports.createTicket = async (req, res) => {
         }
 
         return res.status(201).json({ ticket });
-    } catch (_error) {
+    } catch (error) {
         console.error('CREATE TICKET ERROR:', error);
         return res.status(500).json({ message: 'Server error' });
     }
@@ -382,7 +382,7 @@ exports.updateTicket = async (req, res) => {
         await ticket.populate('creatorId', 'username email profilePicture');
 
         return res.json({ ticket });
-    } catch (_error) {
+    } catch (error) {
         console.error('UPDATE TICKET ERROR:', error);
         return res.status(500).json({ message: 'Server error' });
     }

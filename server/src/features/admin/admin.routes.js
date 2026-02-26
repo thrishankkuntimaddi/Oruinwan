@@ -32,7 +32,7 @@ const requireSuperAdmin = async (req, res, next) => {
     } else {
       res.status(403).json({ message: "Access denied: Super Admin only" });
     }
-  } catch (_err) {
+  } catch (err) {
     res.status(500).json({ message: "Auth Error" });
   }
 };
@@ -83,7 +83,7 @@ router.get('/overview/stats', requireSuperAdmin, async (req, res) => {
       usersGrowth: 0,
       revenueGrowth: 0
     });
-  } catch (_err) {
+  } catch (err) {
     console.error('Error fetching overview stats:', err);
     res.status(500).json({ message: 'Server Error' });
   }
@@ -105,7 +105,7 @@ router.get('/overview/activities', requireSuperAdmin, async (req, res) => {
     }));
 
     res.json(formattedActivities);
-  } catch (_err) {
+  } catch (err) {
     console.error('Error fetching activities:', err);
     res.status(500).json({ message: 'Server Error' });
   }
@@ -122,7 +122,7 @@ router.get('/pending-companies', requireSuperAdmin, async (req, res) => {
       .sort({ createdAt: -1 });
 
     res.json(companies);
-  } catch (_err) {
+  } catch (err) {
     console.error("❌ Error fetching pending companies:", err);
     res.status(500).json({ message: "Server Error" });
   }
@@ -179,7 +179,7 @@ router.post('/approve-company/:id', requireSuperAdmin, async (req, res) => {
 
 
     res.json({ message: "Company Approved", company });
-  } catch (_err) {
+  } catch (err) {
 
     res.status(500).json({ message: "Server Error" });
   }
@@ -234,7 +234,7 @@ router.post('/reject-company/:id', requireSuperAdmin, async (req, res) => {
     });
 
     res.json({ message: "Company Rejected", company });
-  } catch (_err) {
+  } catch (err) {
 
     res.status(500).json({ message: "Server Error" });
   }
@@ -281,7 +281,7 @@ router.get('/tickets', requireSuperAdmin, async (req, res) => {
       .sort({ createdAt: -1 });
 
     res.json(tickets);
-  } catch (_err) {
+  } catch (err) {
     console.error('Error fetching tickets:', err);
     res.status(500).json({ message: 'Server Error' });
   }
@@ -300,7 +300,7 @@ router.get('/tickets/:id', requireSuperAdmin, async (req, res) => {
     }
 
     res.json(ticket);
-  } catch (_err) {
+  } catch (err) {
     console.error('Error fetching ticket:', err);
     res.status(500).json({ message: 'Server Error' });
   }
@@ -356,7 +356,7 @@ router.put('/tickets/:id', requireSuperAdmin, async (req, res) => {
       .populate('messages.sender', 'username roles');
 
     res.json(updatedTicket);
-  } catch (_err) {
+  } catch (err) {
     console.error('Error updating ticket:', err);
     res.status(500).json({ message: 'Server Error' });
   }
@@ -419,7 +419,7 @@ router.post('/broadcast/send', requireSuperAdmin, async (req, res) => {
       message: `Broadcast sent to ${companies.length} companies`,
       broadcast
     });
-  } catch (_err) {
+  } catch (err) {
     console.error('Error sending broadcast:', err);
     res.status(500).json({ message: 'Server Error' });
   }
@@ -434,7 +434,7 @@ router.get('/broadcast/history', requireSuperAdmin, async (req, res) => {
       .limit(50);
 
     res.json(broadcasts);
-  } catch (_err) {
+  } catch (err) {
     console.error('Error fetching broadcast history:', err);
     res.status(500).json({ message: 'Server Error' });
   }
@@ -451,7 +451,7 @@ router.get('/dm/:companyId', requireSuperAdmin, async (req, res) => {
     // For now, return empty array
     // In production, create a Message model for admin-company DMs
     res.json([]);
-  } catch (_err) {
+  } catch (err) {
     console.error('Error fetching DM messages:', err);
     res.status(500).json({ message: 'Server Error' });
   }
@@ -482,7 +482,7 @@ router.post('/dm/:companyId', requireSuperAdmin, async (req, res) => {
     });
 
     res.json(newMessage);
-  } catch (_err) {
+  } catch (err) {
     console.error('Error sending DM:', err);
     res.status(500).json({ message: 'Server Error' });
   }
@@ -515,7 +515,7 @@ router.get('/billing/overview', requireSuperAdmin, async (req, res) => {
       growthRate: 0, // TODO: Calculate from historical data
       projectedRevenue
     });
-  } catch (_err) {
+  } catch (err) {
     console.error('Error fetching billing overview:', err);
     res.status(500).json({ message: 'Server Error' });
   }
@@ -540,7 +540,7 @@ router.get('/billing/companies', requireSuperAdmin, async (req, res) => {
     }));
 
     res.json(formattedBillings);
-  } catch (_err) {
+  } catch (err) {
     console.error('Error fetching company billing:', err);
     res.status(500).json({ message: 'Server Error' });
   }
@@ -639,7 +639,7 @@ router.get('/health/metrics', requireSuperAdmin, async (req, res) => {
       },
       errors: [] // Would pull from error logging system
     });
-  } catch (_err) {
+  } catch (err) {
     console.error('Error fetching system health:', err);
     res.status(500).json({ message: 'Server Error' });
   }
@@ -685,7 +685,7 @@ router.get('/employees', requireAuth, requireAdmin, async (req, res) => {
       .sort({ createdAt: -1 });
 
     res.json(employees);
-  } catch (_error) {
+  } catch (error) {
     console.error('Error fetching employees:', error);
     res.status(500).json({ message: 'Server error' });
   }
@@ -715,7 +715,7 @@ router.put('/employees/:id/suspend', requireAuth, requireAdmin, async (req, res)
     await employee.save();
 
     res.json({ message: 'Employee suspended successfully', employee });
-  } catch (_error) {
+  } catch (error) {
     console.error('Error suspending employee:', error);
     res.status(500).json({ message: 'Server error' });
   }
@@ -737,7 +737,7 @@ router.put('/employees/:id/activate', requireAuth, requireAdmin, async (req, res
     await employee.save();
 
     res.json({ message: 'Employee activated successfully', employee });
-  } catch (_error) {
+  } catch (error) {
     console.error('Error activating employee:', error);
     res.status(500).json({ message: 'Server error' });
   }
@@ -762,7 +762,7 @@ router.delete('/employees/:id', requireAuth, requireAdmin, async (req, res) => {
     await employee.save();
 
     res.json({ message: 'Employee removed successfully' });
-  } catch (_error) {
+  } catch (error) {
     console.error('Error removing employee:', error);
     res.status(500).json({ message: 'Server error' });
   }
@@ -786,7 +786,7 @@ router.put('/employees/:id/assign-department', requireAuth, requireAdmin, async 
     await employee.save();
 
     res.json({ message: 'Department assignment updated', employee });
-  } catch (_error) {
+  } catch (error) {
     console.error('Error assigning department:', error);
     res.status(500).json({ message: 'Server error' });
   }
@@ -823,7 +823,7 @@ router.put('/employees/:id/change-role', requireAuth, requireAdmin, async (req, 
     await employee.save();
 
     res.json({ message: 'Employee role updated', employee });
-  } catch (_error) {
+  } catch (error) {
     console.error('Error changing role:', error);
     res.status(500).json({ message: 'Server error' });
   }
@@ -845,7 +845,7 @@ router.get('/departments/:id/workspaces', requireAuth, requireAdmin, async (req,
       .select('name description members createdAt');
 
     res.json(workspaces);
-  } catch (_error) {
+  } catch (error) {
     console.error('Error fetching workspaces:', error);
     res.status(500).json({ message: 'Server error' });
   }
@@ -869,7 +869,7 @@ router.post('/employees/:id/assign-workspace', requireAuth, requireAdmin, async 
     await employee.save();
 
     res.json({ message: 'Workspace assignment updated', employee });
-  } catch (_error) {
+  } catch (error) {
     console.error('Error assigning workspace:', error);
     res.status(500).json({ message: 'Server error' });
   }

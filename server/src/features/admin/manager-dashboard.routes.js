@@ -53,7 +53,7 @@ router.get('/my-workspaces', requireAuth, requireManager, async (req, res) => {
         }
 
         res.json({ workspaces });
-    } catch (_error) {
+    } catch (error) {
         console.error('Manager Dashboard My Workspaces Error:', error);
         res.status(500).json({ message: 'Server error' });
     }
@@ -113,7 +113,7 @@ router.get('/team-load', requireAuth, requireManager, async (req, res) => {
             overloaded,
             idle
         });
-    } catch (_error) {
+    } catch (error) {
         console.error('Manager Dashboard Team Load Error:', error);
         res.status(500).json({ message: 'Server error' });
     }
@@ -155,7 +155,7 @@ router.get('/unassigned-employees', requireAuth, requireManager, async (req, res
             .lean();
 
         res.json({ unassigned });
-    } catch (_error) {
+    } catch (error) {
         console.error('Manager Dashboard Unassigned Employees Error:', error);
         res.status(500).json({ message: 'Server error' });
     }
@@ -235,7 +235,7 @@ router.get('/dashboard/metrics/:departmentId', requireAuth, requireManager, asyn
         };
 
         res.json(response);
-    } catch (_error) {
+    } catch (error) {
         console.error('Manager Dashboard Metrics Error:', error);
         res.status(500).json({ message: 'Server error', error: error.message });
     }
@@ -290,7 +290,7 @@ router.get('/dashboard/team-load/:departmentId', requireAuth, requireManager, as
             overloaded,
             idle
         });
-    } catch (_error) {
+    } catch (error) {
         console.error('Manager Dashboard Team Load Error:', error);
         res.status(500).json({ message: 'Server error', error: error.message });
     }
@@ -329,7 +329,7 @@ router.get('/dashboard/unassigned/:departmentId', requireAuth, requireManager, a
             .lean();
 
         res.json({ unassigned });
-    } catch (_error) {
+    } catch (error) {
         console.error('Manager Dashboard Unassigned Error:', error);
         res.status(500).json({ message: 'Server error', error: error.message });
     }
@@ -376,7 +376,7 @@ router.get('/dashboard/reports/:departmentId', requireAuth, requireManager, asyn
             taskVolumeOverTime: [],
             teamWorkload: []
         });
-    } catch (_error) {
+    } catch (error) {
         console.error('Manager Dashboard Reports Error:', error);
         res.status(500).json({ message: 'Server error', error: error.message });
     }

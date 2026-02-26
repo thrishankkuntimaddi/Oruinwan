@@ -24,7 +24,7 @@ router.get('/:companyId', requireAuth, async (req, res) => {
 
 
         res.json({ departments });
-    } catch (_error) {
+    } catch (error) {
 
         res.status(500).json({ message: 'Failed to fetch departments', error: error.message });
     }
@@ -138,7 +138,7 @@ router.post('/', requireAuth, async (req, res) => {
 
 
         res.status(201).json({ department });
-    } catch (_error) {
+    } catch (error) {
 
         res.status(500).json({ message: 'Failed to create department', error: error.message });
     }
@@ -161,7 +161,7 @@ router.put('/:id', requireAuth, requireAdmin, async (req, res) => {
         }
 
         res.json({ department });
-    } catch (_error) {
+    } catch (error) {
 
         res.status(500).json({ message: 'Failed to update department', error: error.message });
     }
@@ -199,7 +199,7 @@ router.delete('/:id', requireAuth, requireAdmin, async (req, res) => {
 
 
         res.json({ message: 'Department deleted successfully' });
-    } catch (_error) {
+    } catch (error) {
 
         res.status(500).json({ message: 'Failed to delete department', error: error.message });
     }
@@ -218,7 +218,7 @@ router.get('/:id/members', requireAuth, async (req, res) => {
         }
 
         res.json({ members: department.members || [] });
-    } catch (_error) {
+    } catch (error) {
 
         res.status(500).json({ message: 'Failed to fetch members', error: error.message });
     }
@@ -248,7 +248,7 @@ router.post('/:id/members', requireAuth, requireAdmin, async (req, res) => {
         }
 
         res.json({ department });
-    } catch (_error) {
+    } catch (error) {
 
         res.status(500).json({ message: 'Failed to add member', error: error.message });
     }
@@ -278,7 +278,7 @@ router.delete('/:departmentId/members/:userId', requireAuth, requireAdmin, async
         });
 
         res.json({ department });
-    } catch (_error) {
+    } catch (error) {
 
         res.status(500).json({ message: 'Failed to remove member', error: error.message });
     }
@@ -297,7 +297,7 @@ router.post('/:id/workspaces', requireAuth, requireAdmin, async (req, res) => {
             await department.save();
         }
         res.json({ department });
-    } catch (_error) {
+    } catch (error) {
         res.status(500).json({ message: 'Failed to add workspace', error: error.message });
     }
 });
@@ -312,7 +312,7 @@ router.delete('/:id/workspaces/:wsId', requireAuth, requireAdmin, async (req, re
         department.workspaces = department.workspaces.filter(wId => wId.toString() !== wsId);
         await department.save();
         res.json({ department });
-    } catch (_error) {
+    } catch (error) {
         res.status(500).json({ message: 'Failed to remove workspace', error: error.message });
     }
 });

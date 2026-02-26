@@ -146,7 +146,7 @@ exports.getDashboardMetrics = async (req, res) => {
             }
         });
 
-    } catch (_err) {
+    } catch (err) {
         return res.status(500).json({
             message: 'Server error',
             error: process.env.NODE_ENV === 'development' ? err.message : undefined

@@ -120,7 +120,7 @@ exports.sendDirectMessage = async (req, res) => {
         );
 
         return res.status(201).json({ message });
-    } catch (_err) {
+    } catch (err) {
         return handleError(res, err, 'SEND DM ERROR');
     }
 };
@@ -228,7 +228,7 @@ exports.getDMs = async (req, res) => {
                 notice: 'DM session was resolved from user ID to session ID'
             })
         });
-    } catch (_err) {
+    } catch (err) {
         return handleError(res, err, 'GET DMs ERROR');
     }
 };
@@ -246,7 +246,7 @@ exports.getWorkspaceDMList = async (req, res) => {
         const sessions = await messagesService.getUserDMSessions(userId, workspaceId);
 
         return res.json({ sessions });
-    } catch (_err) {
+    } catch (err) {
         return handleError(res, err, 'GET WORKSPACE DM LIST ERROR');
     }
 };
@@ -302,7 +302,7 @@ exports.resolveDMSession = async (req, res) => {
             workspaceId: dmSession.workspace,
             participants: dmSession.participants
         });
-    } catch (_err) {
+    } catch (err) {
         console.error('[MESSAGES:MODULAR][RESOLVE_DM] ERROR:', err);
         return handleError(res, err, 'RESOLVE DM SESSION ERROR');
     }
@@ -372,7 +372,7 @@ exports.sendChannelMessage = async (req, res) => {
         );
 
         return res.status(201).json({ message });
-    } catch (_err) {
+    } catch (err) {
         return handleError(res, err, 'SEND CHANNEL ERROR');
     }
 };
@@ -436,7 +436,7 @@ exports.getChannelMessages = async (req, res) => {
             userJoinedAt,
             channelMembers: populatedMembers
         });
-    } catch (_err) {
+    } catch (err) {
         return handleError(res, err, 'GET CHANNEL ERROR');
     }
 };
@@ -561,7 +561,7 @@ exports.forwardMessage = async (req, res) => {
             errors: errors.length > 0 ? errors : undefined
         });
 
-    } catch (_err) {
+    } catch (err) {
         return handleError(res, err, 'FORWARD MESSAGE ERROR');
     }
 };

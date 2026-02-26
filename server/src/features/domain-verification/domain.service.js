@@ -43,7 +43,7 @@ async function verifyDomainTXT(domain, expectedToken) {
         }
 
         return false;
-    } catch (_err) {
+    } catch (err) {
         console.error(`DNS lookup failed for ${domain}:`, err.message);
         return false;
     }

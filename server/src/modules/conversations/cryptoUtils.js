@@ -84,7 +84,7 @@ function wrapForUser(conversationKeyBytes, userPublicKeyPem) {
             encryptedKey: encryptedKey.toString('base64'),
             algorithm: 'RSA-2048'  // Must match ConversationKey schema enum
         };
-    } catch (_error) {
+    } catch (error) {
         console.error('Failed to wrap key for user:', error);
         throw new Error('Key wrapping failed');
     }

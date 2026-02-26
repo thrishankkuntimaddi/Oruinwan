@@ -134,7 +134,7 @@ async function executeFunction(functionCall, userId, workspaceId, req) {
             default:
                 return { success: false, error: `Unknown function: ${name}` };
         }
-    } catch (_error) {
+    } catch (error) {
         console.error(`❌ Error executing ${name}:`, error);
         return { success: false, error: error.message };
     }
@@ -207,7 +207,7 @@ exports.chat = async (req, res) => {
         // No function call, just return text response
         res.status(200).json({ text: response.text() });
 
-    } catch (_error) {
+    } catch (error) {
         console.error("❌ AI Chat Error Full Object:", JSON.stringify(error, Object.getOwnPropertyNames(error)));
         console.error("❌ AI Chat Error:", error);
         res.status(500).json({
@@ -231,7 +231,7 @@ exports.summarize = async (req, res) => {
         const summary = response.text();
 
         res.status(200).json({ summary });
-    } catch (_error) {
+    } catch (error) {
         console.error("AI Summarize Error:", error);
         res.status(500).json({ message: "Summarization Failed", error: error.message });
     }
@@ -264,7 +264,7 @@ exports.generateTask = async (req, res) => {
                 priority: "medium"
             });
         }
-    } catch (_error) {
+    } catch (error) {
         console.error("AI Task Gen Error:", error);
         res.status(500).json({ message: "Task Generation Failed", error: error.message });
     }

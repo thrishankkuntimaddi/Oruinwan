@@ -22,7 +22,7 @@ exports.sendOtp = async (req, res) => {
             message: "OTP sent successfully",
             ...(result.devMode ? { devNote: "Check server terminal for code" } : {})
         });
-    } catch (_err) {
+    } catch (err) {
         return handleError(res, err, "SEND OTP ERROR");
     }
 };
@@ -49,7 +49,7 @@ exports.verifyOtp = async (req, res) => {
 
         return res.json({ message: "Verified successfully", verified: true });
 
-    } catch (_err) {
+    } catch (err) {
         return handleError(res, err, "VERIFY OTP ERROR");
     }
 };
@@ -94,7 +94,7 @@ exports.sendPhoneOtp = async (req, res) => {
             message: "OTP sent successfully",
             devNote: process.env.NODE_ENV !== "production" ? "Check server terminal for code" : undefined
         });
-    } catch (_err) {
+    } catch (err) {
         return handleError(res, err, "SEND PHONE OTP ERROR");
     }
 };
@@ -146,7 +146,7 @@ exports.verifyPhoneOtp = async (req, res) => {
             verified: true
         });
 
-    } catch (_err) {
+    } catch (err) {
         return handleError(res, err, "VERIFY PHONE OTP ERROR");
     }
 };

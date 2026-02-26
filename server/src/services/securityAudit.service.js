@@ -75,7 +75,7 @@ exports.logSecurityEvent = async ({
 
         console.log(`✅ [AUDIT] ${eventType} logged for user ${userId.substring(0, 8)}...`);
 
-    } catch (_error) {
+    } catch (error) {
         // CRITICAL: Never throw, never block execution
         console.warn('⚠️ [AUDIT] Failed to log security event (non-critical):', error.message);
         // Continue silently
@@ -110,7 +110,7 @@ exports.getSecurityEvents = async (userId, options = {}) => {
 
         return events;
 
-    } catch (_error) {
+    } catch (error) {
         console.error('❌ [AUDIT] Failed to fetch security events:', error);
         throw error;
     }

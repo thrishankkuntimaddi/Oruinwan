@@ -92,7 +92,7 @@ exports.sendMessage = async (req, res) => {
         console.log('[INTERNAL MESSAGE] Created successfully:', message._id);
 
         return res.status(201).json({ message });
-    } catch (_error) {
+    } catch (error) {
         console.error('SEND INTERNAL MESSAGE ERROR:', error);
         return res.status(500).json({
             message: 'Failed to send message',
@@ -132,7 +132,7 @@ exports.getConversation = async (req, res) => {
         }
 
         return res.json({ messages });
-    } catch (_error) {
+    } catch (error) {
         console.error('GET CONVERSATION ERROR:', error);
         return res.status(500).json({ message: 'Failed to load conversation' });
     }
@@ -164,7 +164,7 @@ exports.getAdminInbox = async (req, res) => {
         );
 
         return res.json({ conversations });
-    } catch (_error) {
+    } catch (error) {
         console.error('GET ADMIN INBOX ERROR:', error);
         return res.status(500).json({ message: 'Failed to load inbox' });
     }
@@ -194,7 +194,7 @@ exports.getManagerInbox = async (req, res) => {
         const unreadCount = await InternalMessage.getUnreadCount(currentUserId);
 
         return res.json({ messages, unreadCount });
-    } catch (_error) {
+    } catch (error) {
         console.error('GET MANAGER INBOX ERROR:', error);
         return res.status(500).json({ message: 'Failed to load inbox' });
     }
@@ -227,7 +227,7 @@ exports.markAsRead = async (req, res) => {
         await message.markAsRead();
 
         return res.json({ message });
-    } catch (_error) {
+    } catch (error) {
         console.error('MARK AS READ ERROR:', error);
         return res.status(500).json({ message: 'Failed to mark as read' });
     }
@@ -247,7 +247,7 @@ exports.getUnreadCount = async (req, res) => {
         const count = await InternalMessage.getUnreadCount(currentUserId);
 
         return res.json({ count });
-    } catch (_error) {
+    } catch (error) {
         console.error('GET UNREAD COUNT ERROR:', error);
         return res.status(500).json({ message: 'Failed to get unread count' });
     }

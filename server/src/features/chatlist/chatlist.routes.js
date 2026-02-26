@@ -32,7 +32,7 @@ router.get("/contacts", requireAuth, async (req, res) => {
             .lean();
 
         res.json({ contacts: users });
-    } catch (_err) {
+    } catch (err) {
         console.error("GET CONTACTS ERROR:", err);
         res.status(500).json({ message: "Server error" });
     }

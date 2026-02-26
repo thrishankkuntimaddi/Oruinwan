@@ -36,7 +36,7 @@ router.post('/tickets', async (req, res) => {
         logger.info(`Support Ticket Created: ${ticket._id} by ${userId}`);
 
         res.status(201).json({ message: "Ticket created successfully", ticket });
-    } catch (_err) {
+    } catch (err) {
         console.error("CREATE TICKET ERROR:", err);
         res.status(500).json({ message: "Server error" });
     }
@@ -55,7 +55,7 @@ router.get('/tickets', async (req, res) => {
             .populate('creatorId', 'username email');
 
         res.json({ tickets });
-    } catch (_err) {
+    } catch (err) {
         console.error("GET TICKETS ERROR:", err);
         res.status(500).json({ message: "Server error" });
     }
@@ -78,7 +78,7 @@ router.get('/tickets/:id', async (req, res) => {
         }
 
         res.json({ ticket });
-    } catch (_err) {
+    } catch (err) {
         console.error("GET TICKET ERROR:", err);
         res.status(500).json({ message: "Server error" });
     }
@@ -118,7 +118,7 @@ router.post('/tickets/:id/message', async (req, res) => {
         await ticket.save();
         res.json({ message: "Message added", ticket });
 
-    } catch (_err) {
+    } catch (err) {
         console.error("ADD TICKET MESSAGE ERROR:", err);
         res.status(500).json({ message: "Server error" });
     }

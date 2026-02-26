@@ -32,7 +32,7 @@ async function getAnalyticsStats(req, res) {
         const companyId = req.user.companyId;
         const result = await adminService.getAnalyticsStats(companyId);
         return res.json(result);
-    } catch (_error) {
+    } catch (error) {
         console.error('STATS ERROR:', error);
         return handleError(res, error);
     }
@@ -47,7 +47,7 @@ async function getDepartments(req, res) {
         const companyId = req.user.companyId;
         const result = await adminService.getDepartments(companyId);
         return res.json(result);
-    } catch (_error) {
+    } catch (error) {
         console.error('DEPT ERROR:', error);
         return handleError(res, error);
     }

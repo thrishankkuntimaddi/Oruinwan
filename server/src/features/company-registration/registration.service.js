@@ -64,7 +64,7 @@ async function processDocuments(documents) {
                     url: `/uploads/verification_docs/${uniqueName}`,
                     uploadedAt: new Date()
                 });
-            } catch (_err) {
+            } catch (err) {
                 console.warn(`Failed to process document ${doc.name}:`, err.message);
             }
         }
@@ -197,7 +197,7 @@ async function registerCompany(params) {
 
     try {
         await adminUser.save();
-    } catch (_err) {
+    } catch (err) {
         // Cleanup company if user creation fails
         await Company.findByIdAndDelete(company._id);
         throw new Error(`Failed to create admin user: ${err.message}`);

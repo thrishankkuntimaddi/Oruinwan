@@ -41,7 +41,7 @@ async function getFavorites(req, res) {
 
         const result = await favoritesService.getFavorites(userId, workspaceId);
         return res.json(result);
-    } catch (_error) {
+    } catch (error) {
         console.error('GET_FAVORITES ERROR:', error);
         return handleError(res, error);
     }
@@ -67,7 +67,7 @@ async function addFavorite(req, res) {
 
         const result = await favoritesService.addFavorite(userId, favoriteData);
         return res.status(201).json(result);
-    } catch (_error) {
+    } catch (error) {
         console.error('ADD_FAVORITE ERROR:', error);
         return handleError(res, error);
     }
@@ -84,7 +84,7 @@ async function removeFavorite(req, res) {
 
         const result = await favoritesService.removeFavorite(userId, id);
         return res.json(result);
-    } catch (_error) {
+    } catch (error) {
         console.error('REMOVE_FAVORITE ERROR:', error);
         return handleError(res, error);
     }

@@ -53,7 +53,7 @@ exports.getManagerScope = async (req, res) => {
             chatWorkspaceId
         });
 
-    } catch (_error) {
+    } catch (error) {
         console.error("GET MANAGER SCOPE ERROR:", error);
         res.status(500).json({ message: "Server error fetching scope" });
     }
@@ -113,7 +113,7 @@ exports.getManagerMetrics = async (req, res) => {
             overdueTasks
         });
 
-    } catch (_error) {
+    } catch (error) {
         console.error("GET MANAGER METRICS ERROR:", error);
         res.status(500).json({ message: "Server error fetching metrics" });
     }
@@ -144,7 +144,7 @@ exports.getManagerTasks = async (req, res) => {
 
         res.json(tasks);
 
-    } catch (_error) {
+    } catch (error) {
         console.error("GET MANAGER TASKS ERROR:", error);
         res.status(500).json({ message: "Server error fetching tasks" });
     }
@@ -174,7 +174,7 @@ exports.getActivitySummary = async (req, res) => {
             totalChannels: channels.length
         });
 
-    } catch (_error) {
+    } catch (error) {
         console.error("GET ACTIVITY ERROR:", error);
         res.status(500).json({ message: "Server error fetching activity" });
     }
@@ -246,7 +246,7 @@ exports.getAllocations = async (req, res) => {
             allocations: allocationMatrix
         });
 
-    } catch (_error) {
+    } catch (error) {
         console.error("GET ALLOCATIONS ERROR:", error);
         res.status(500).json({ message: "Server error fetching allocations" });
     }
@@ -303,7 +303,7 @@ exports.updateWorkspaceAllocation = async (req, res) => {
         await workspace.save();
         res.json({ success: true, message: `User ${action}ed successfully` });
 
-    } catch (_error) {
+    } catch (error) {
         console.error("UPDATE ALLOCATION ERROR:", error);
         res.status(500).json({ message: "Server error updating allocation" });
     }
@@ -340,7 +340,7 @@ exports.addMemberToDepartment = async (req, res) => {
 
         res.json({ success: true, user: userToAdd });
 
-    } catch (_error) {
+    } catch (error) {
         console.error("ADD TO DEPT ERROR:", error);
         res.status(500).json({ message: "Server error addding to department" });
     }
@@ -386,7 +386,7 @@ exports.createTask = async (req, res) => {
 
         res.status(201).json(task);
 
-    } catch (_error) {
+    } catch (error) {
         console.error("CREATE MANAGER TASK ERROR:", error);
         res.status(500).json({ message: "Server error creating task" });
     }

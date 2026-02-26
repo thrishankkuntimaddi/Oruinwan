@@ -63,7 +63,7 @@ exports.sendSecurityNotification = async ({
 
         console.log(`✅ [NOTIFICATION] Sent ${eventType} notification to ${user.email}`);
 
-    } catch (_error) {
+    } catch (error) {
         // CRITICAL: Never throw, never block
         console.warn(`⚠️ [NOTIFICATION] Failed to send ${eventType} notification (non-critical):`, error.message);
         // Continue silently
@@ -257,7 +257,7 @@ async function sendEmail({ to, subject, _html }) {
         });
         */
 
-    } catch (_error) {
+    } catch (error) {
         // Log but don't throw
         console.warn('⚠️ [EMAIL] Failed to send email:', error.message);
     }

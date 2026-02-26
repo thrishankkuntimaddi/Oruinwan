@@ -63,7 +63,7 @@ exports.revokeInvite = async (req, res) => {
                 revokedAt: invite.revokedAt
             }
         });
-    } catch (_err) {
+    } catch (err) {
         console.error("REVOKE INVITE ERROR:", err);
         return res.status(500).json({ message: "Server error" });
     }
@@ -160,7 +160,7 @@ exports.getWorkspaceInvites = async (req, res) => {
             duplicateEmails,
             duplicateCount: duplicateEmails.length
         });
-    } catch (_err) {
+    } catch (err) {
         console.error("GET WORKSPACE INVITES ERROR:", err);
         return res.status(500).json({ message: "Server error" });
     }
@@ -255,7 +255,7 @@ exports.resendInvite = async (req, res) => {
                 inviteLink
             }
         });
-    } catch (_err) {
+    } catch (err) {
         console.error("RESEND INVITE ERROR:", err);
         return res.status(500).json({ message: "Server error" });
     }
@@ -313,7 +313,7 @@ exports.suspendMember = async (req, res) => {
             message: "Member suspended successfully",
             userId: targetUserId
         });
-    } catch (_err) {
+    } catch (err) {
         console.error("SUSPEND MEMBER ERROR:", err);
         return res.status(500).json({ message: "Server error" });
     }
@@ -361,7 +361,7 @@ exports.restoreMember = async (req, res) => {
             message: "Member restored successfully",
             userId: targetUserId
         });
-    } catch (_err) {
+    } catch (err) {
         console.error("RESTORE MEMBER ERROR:", err);
         return res.status(500).json({ message: "Server error" });
     }
@@ -424,7 +424,7 @@ exports.changeRole = async (req, res) => {
             userId: targetUserId,
             newRole
         });
-    } catch (_err) {
+    } catch (err) {
         console.error("CHANGE ROLE ERROR:", err);
         return res.status(500).json({ message: "Server error" });
     }
@@ -498,7 +498,7 @@ exports.removeMember = async (req, res) => {
             message: "Member removed successfully",
             removedUserId: targetUserId
         });
-    } catch (_err) {
+    } catch (err) {
         console.error("REMOVE MEMBER ERROR:", err);
         return res.status(500).json({ message: "Server error" });
     }
@@ -572,7 +572,7 @@ exports.bulkRevokeInvites = async (req, res) => {
             totalRequested: inviteIds.length,
             errors: errors.length > 0 ? errors : undefined
         });
-    } catch (_err) {
+    } catch (err) {
         console.error("BULK REVOKE INVITES ERROR:", err);
         return res.status(500).json({ message: "Server error" });
     }
@@ -638,7 +638,7 @@ exports.bulkDeleteInvites = async (req, res) => {
             deletedCount: result.deletedCount,
             totalRequested: inviteIds.length
         });
-    } catch (_err) {
+    } catch (err) {
         console.error("BULK DELETE INVITES ERROR:", err);
         return res.status(500).json({ message: "Server error" });
     }
@@ -679,7 +679,7 @@ exports.cleanupExpiredInvites = async (req, res) => {
             message: `Successfully cleaned up ${result.deletedCount} expired invitation(s)`,
             deletedCount: result.deletedCount
         });
-    } catch (_err) {
+    } catch (err) {
         console.error("CLEANUP EXPIRED INVITES ERROR:", err);
         return res.status(500).json({ message: "Server error" });
     }

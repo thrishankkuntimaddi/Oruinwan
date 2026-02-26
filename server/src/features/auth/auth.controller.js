@@ -334,7 +334,7 @@ exports.signup = async (req, res) => {
       companyId: companyId || null
     });
 
-  } catch (_err) {
+  } catch (err) {
     return handleError(res, _err, "SIGNUP ERROR");
   }
 };
@@ -370,7 +370,7 @@ exports.verifyEmail = async (req, res) => {
     await saveWithRetry(user);
 
     return res.json({ message: "Email verified" });
-  } catch (_err) {
+  } catch (err) {
     console.error("❌ [VERIFY EMAIL] ERROR:", _err);
     res.status(500).json({ message: "Server error" });
   }
@@ -648,7 +648,7 @@ exports.login = async (req, res) => {
 
     return res.json(response);
 
-  } catch (_err) {
+  } catch (err) {
     return handleError(res, _err, "LOGIN ERROR");
   }
 };
@@ -690,7 +690,7 @@ exports.refresh = async (req, res) => {
       try {
         jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET);
         console.log('✅ [REFRESH] JWT signature valid');
-      } catch (_err) {
+      } catch (err) {
         console.error('❌ [REFRESH] Invalid JWT signature:', _err.message);
         return res.status(403).json({ message: "Invalid refresh token signature" });
       }
@@ -740,7 +740,7 @@ exports.refresh = async (req, res) => {
       console.log('✅ [REFRESH] Token refresh completed successfully');
       return res.json({ accessToken: newAccess });
 
-    } catch (_err) {
+    } catch (err) {
       if (_err.name === 'VersionError' && attempts < MAX_RETRIES - 1) {
         console.warn(`⚠️ [REFRESH] VersionError (attempt ${attempts + 1}/${MAX_RETRIES}), retrying...`);
         attempts++;
@@ -776,7 +776,7 @@ exports.logout = async (req, res) => {
     res.clearCookie("jwt");
 
     return res.json({ message: "Logged out" });
-  } catch (_err) {
+  } catch (err) {
     return handleError(res, _err, "LOGOUT ERROR");
   }
 };
@@ -803,7 +803,7 @@ exports.logoutAll = async (req, res) => {
 
     return res.json({ message: "Logged out from all devices" });
 
-  } catch (_err) {
+  } catch (err) {
     return handleError(res, _err, "LOGOUT ALL ERROR");
   }
 };
@@ -853,7 +853,7 @@ exports.forgotPassword = async (req, res) => {
     }
 
     return res.json({ message: "Reset link sent if account exists" });
-  } catch (_err) {
+  } catch (err) {
     console.error("FORGOT ERROR:", _err);
     return res.status(500).json({ message: "Server error" });
   }
@@ -885,7 +885,7 @@ exports.resetPassword = async (req, res) => {
 
     return res.json({ message: "Password reset successful" });
 
-  } catch (_err) {
+  } catch (err) {
     console.error("RESET ERROR:", _err);
     return res.status(500).json({ message: "Server error" });
   }
@@ -1016,7 +1016,7 @@ exports.getMe = async (req, res) => {
     }
 
     return res.json(userObject);
-  } catch (_err) {
+  } catch (err) {
     console.error("GET ME ERROR:", _err);
     return res.status(500).json({ message: "Server error" });
   }
@@ -1116,7 +1116,7 @@ exports.updateMe = async (req, res) => {
       }
     });
 
-  } catch (_err) {
+  } catch (err) {
     console.error("UPDATE PROFILE ERROR:", _err);
     console.error("Error details:", {
       name: _err.name,
@@ -1166,7 +1166,7 @@ exports.updatePassword = async (req, res) => {
 
     return res.json({ message: "Password updated" });
 
-  } catch (_err) {
+  } catch (err) {
     console.error("PASSWORD ERROR:", _err);
     return res.status(500).json({ message: "Server error" });
   }
@@ -1242,7 +1242,7 @@ exports.setPassword = async (req, res) => {
       message: "Password set successfully! You can now login with email + password"
     });
 
-  } catch (_err) {
+  } catch (err) {
     console.error("SET PASSWORD ERROR:", _err);
     return res.status(500).json({ message: "Server error" });
   }
@@ -1344,7 +1344,7 @@ exports.googleLogin = async (req, res) => {
       },
     });
 
-  } catch (_err) {
+  } catch (err) {
     console.error("GOOGLE LOGIN ERROR:", _err);
     return res.status(500).json({ message: "Google login failed" });
   }
@@ -1445,7 +1445,7 @@ exports.getSessions = async (req, res) => {
     });
 
     res.json(sessions);
-  } catch (_err) {
+  } catch (err) {
     console.error("GET SESSIONS ERROR:", _err);
     res.status(500).json({ message: "Server error" });
   }
@@ -1465,7 +1465,7 @@ exports.revokeSession = async (req, res) => {
     await saveWithRetry(user);
 
     res.json({ message: "Session revoked" });
-  } catch (_err) {
+  } catch (err) {
     console.error("REVOKE SESSION ERROR:", _err);
     res.status(500).json({ message: "Server error" });
   }
@@ -1497,7 +1497,7 @@ exports.revokeOtherSessions = async (req, res) => {
     await saveWithRetry(user);
 
     res.json({ message: "All other sessions revoked" });
-  } catch (_err) {
+  } catch (err) {
     console.error("REVOKE OTHERS ERROR:", _err);
     res.status(500).json({ message: "Server error" });
   }
@@ -1610,7 +1610,7 @@ exports.addEmail = async (req, res) => {
 
     res.json(response);
 
-  } catch (_err) {
+  } catch (err) {
     console.error("ADD EMAIL ERROR:", _err);
     res.status(500).json({ message: "Server error" });
   }
@@ -1667,7 +1667,7 @@ exports.verifyEmailCode = async (req, res) => {
       }))
     });
 
-  } catch (_err) {
+  } catch (err) {
     console.error("VERIFY EMAIL ERROR:", _err);
     res.status(500).json({ message: "Server error" });
   }
@@ -1729,7 +1729,7 @@ exports.resendVerification = async (req, res) => {
       res.json({ message: `Verification code: ${code} (Check server console)` });
     }
 
-  } catch (_err) {
+  } catch (err) {
     console.error("RESEND VERIFICATION ERROR:", _err);
     res.status(500).json({ message: "Server error" });
   }
@@ -1776,7 +1776,7 @@ exports.setPrimaryEmail = async (req, res) => {
       }))
     });
 
-  } catch (_err) {
+  } catch (err) {
     console.error("SET PRIMARY EMAIL ERROR:", _err);
     res.status(500).json({ message: "Server error" });
   }
@@ -1820,7 +1820,7 @@ exports.deleteEmail = async (req, res) => {
       }))
     });
 
-  } catch (_err) {
+  } catch (err) {
     console.error("DELETE EMAIL ERROR:", _err);
     res.status(500).json({ message: "Server error" });
   }
@@ -1861,7 +1861,7 @@ exports.skipPassword = async (req, res) => {
       passwordSkipped: true
     });
 
-  } catch (_err) {
+  } catch (err) {
     console.error("SKIP PASSWORD ERROR:", _err);
     return res.status(500).json({ message: "Server error" });
   }
@@ -1901,7 +1901,7 @@ exports.getUsersList = async (req, res) => {
       .lean();
 
     res.json({ users });
-  } catch (_err) {
+  } catch (err) {
     console.error("GET USERS ERROR:", _err);
     res.status(500).json({ message: "Server error" });
   }
@@ -2017,7 +2017,7 @@ exports.linkedinCallback = async (req, res) => {
     });
 
     res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/oauth-success?${params.toString()}`);
-  } catch (_err) {
+  } catch (err) {
     console.error('LinkedIn OAuth callback error:', err.response?.data || err.message);
     res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/login?error=linkedin_failed`);
   }
@@ -2054,7 +2054,7 @@ exports.deactivateAccount = async (req, res) => {
       message: "Account deactivated successfully",
       deactivated: true
     });
-  } catch (_err) {
+  } catch (err) {
     console.error("DEACTIVATE ACCOUNT ERROR:", _err);
     return res.status(500).json({ message: "Server error" });
   }
@@ -2164,7 +2164,7 @@ exports.verifyReactivationOTP = async (req, res) => {
         profilePicture: user.profilePicture
       }
     });
-  } catch (_err) {
+  } catch (err) {
     console.error("VERIFY REACTIVATION OTP ERROR:", _err);
     return res.status(500).json({ message: "Server error" });
   }

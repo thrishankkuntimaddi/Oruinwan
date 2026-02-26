@@ -70,7 +70,7 @@ exports.storeConversationKeys = async (req, res) => {
             conversationId: conversationKey.conversationId,
             participantCount: conversationKey.encryptedKeys.length
         });
-    } catch (_err) {
+    } catch (err) {
         // 🔒 SAFEGUARD #1: Return 409 for duplicate key attempts
         if (err.message === 'Conversation keys already exist. Use addParticipant to add new users.') {
             return res.status(409).json({
@@ -185,7 +185,7 @@ exports.getConversationKey = async (req, res) => {
 
 
         return res.json(encryptedKeyData);
-    } catch (_err) {
+    } catch (err) {
         return handleError(res, err, 'GET CONVERSATION KEY ERROR');
     }
 };
@@ -231,7 +231,7 @@ exports.addUserKey = async (req, res) => {
         } else {
             res.status(400).json({ error: 'Failed to add encrypted key' });
         }
-    } catch (_error) {
+    } catch (error) {
         console.error('ADD USER KEY ERROR:', error);
         res.status(500).json({ error: 'Failed to add user key' });
     }
@@ -258,7 +258,7 @@ exports.getUserWorkspaceKeys = async (req, res) => {
             conversationKeys,
             count: conversationKeys.length
         });
-    } catch (_err) {
+    } catch (err) {
         return handleError(res, err, 'GET WORKSPACE KEYS ERROR');
     }
 };
@@ -307,7 +307,7 @@ exports.addParticipant = async (req, res) => {
         return res.status(200).json({
             message: 'Participant added successfully'
         });
-    } catch (_err) {
+    } catch (err) {
         return handleError(res, err, 'ADD PARTICIPANT ERROR');
     }
 };
@@ -344,7 +344,7 @@ exports.removeParticipant = async (req, res) => {
                 message: 'Participant not found in conversation'
             });
         }
-    } catch (_err) {
+    } catch (err) {
         return handleError(res, err, 'REMOVE PARTICIPANT ERROR');
     }
 };
@@ -374,7 +374,7 @@ exports.checkKeysExist = async (req, res) => {
         return res.json({
             exists
         });
-    } catch (_err) {
+    } catch (err) {
         return handleError(res, err, 'CHECK KEYS EXIST ERROR');
     }
 };
@@ -400,7 +400,7 @@ exports.repairUserAccess = async (req, res) => {
             message: 'Automatic repair completed',
             ...results
         });
-    } catch (_err) {
+    } catch (err) {
         console.error('❌ [Controller] Repair access failed:', err);
         // 🔴 FIX 2: Even on error, return 200 to keep client flow non-blocking
         // Client should treat this as fire-and-forget

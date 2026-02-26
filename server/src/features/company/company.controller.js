@@ -26,7 +26,7 @@ exports.getCompany = async (req, res) => {
 
         return res.json({ company });
 
-    } catch (_err) {
+    } catch (err) {
         console.error("GET COMPANY ERROR:", err);
         return res.status(500).json({ message: "Server error" });
     }
@@ -56,7 +56,7 @@ exports.updateCompany = async (req, res) => {
 
         return res.json({ company });
 
-    } catch (_err) {
+    } catch (err) {
         console.error("UPDATE COMPANY ERROR:", err);
         return res.status(500).json({ message: "Server error" });
     }
@@ -89,7 +89,7 @@ exports.getCompanyMembers = async (req, res) => {
         console.log(`[COMPANY] Found ${members.length} members`);
 
         return res.json({ members });
-    } catch (_err) {
+    } catch (err) {
         console.error("GET COMPANY MEMBERS ERROR:", err);
         return res.status(500).json({ message: "Server error" });
     }
@@ -116,7 +116,7 @@ exports.updateMemberRole = async (req, res) => {
 
         return res.json(result);
 
-    } catch (_err) {
+    } catch (err) {
         console.error("UPDATE MEMBER ROLE ERROR:", err);
 
         if (err.message.includes('not found') || err.message.includes('Invalid')) {
@@ -147,7 +147,7 @@ exports.checkCompanyName = async (req, res) => {
             available: !existingCompany,
             message: existingCompany ? "Company name already taken" : "Company name is available"
         });
-    } catch (_err) {
+    } catch (err) {
         console.error("CHECK COMPANY NAME ERROR:", err);
         return res.status(500).json({ message: "Server error" });
     }
@@ -170,7 +170,7 @@ exports.checkCompanyDomain = async (req, res) => {
             available: !existingCompany,
             message: existingCompany ? "Domain already registered" : "Domain is available"
         });
-    } catch (_err) {
+    } catch (err) {
         console.error("CHECK COMPANY DOMAIN ERROR:", err);
         return res.status(500).json({ message: "Server error" });
     }
@@ -194,7 +194,7 @@ exports.checkEmail = async (req, res) => {
             available: !existingUser,
             message: existingUser ? "Email already in use" : "Email is available"
         });
-    } catch (_err) {
+    } catch (err) {
         console.error("CHECK EMAIL ERROR:", err);
         return res.status(500).json({ message: "Server error" });
     }
@@ -219,7 +219,7 @@ exports.checkPhone = async (req, res) => {
             available: !existingUser && !existingCompany,
             message: (existingUser || existingCompany) ? "Phone already registered" : "Phone is available"
         });
-    } catch (_err) {
+    } catch (err) {
         console.error("CHECK PHONE ERROR:", err);
         return res.status(500).json({ message: "Server error" });
     }

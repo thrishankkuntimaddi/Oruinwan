@@ -38,7 +38,7 @@ exports.requireCompany = async (req, res, next) => {
         req.userRole = user.companyRole;
 
         next();
-    } catch (_err) {
+    } catch (err) {
         console.error("requireCompany error:", err);
         return res.status(500).json({ message: "Server error" });
     }
@@ -55,7 +55,7 @@ exports.requireCompanyOwner = async (req, res, next) => {
             }
             next();
         });
-    } catch (_err) {
+    } catch (err) {
         console.error("requireCompanyOwner error:", err);
         return res.status(500).json({ message: "Server error" });
     }
@@ -75,7 +75,7 @@ exports.requireCompanyAdmin = async (req, res, next) => {
 
             next();
         });
-    } catch (_err) {
+    } catch (err) {
         console.error("requireCompanyAdmin error:", err);
         return res.status(500).json({ message: "Server error" });
     }
@@ -113,7 +113,7 @@ exports.requireWorkspaceAccess = async (req, res, next) => {
 
         req.workspace = workspace;
         next();
-    } catch (_err) {
+    } catch (err) {
         console.error("requireWorkspaceAccess error:", err);
         return res.status(500).json({ message: "Server error" });
     }
@@ -130,7 +130,7 @@ exports.requireWorkspaceAdmin = async (req, res, next) => {
             }
             next();
         });
-    } catch (_err) {
+    } catch (err) {
         console.error("requireWorkspaceAdmin error:", err);
         return res.status(500).json({ message: "Server error" });
     }
@@ -167,7 +167,7 @@ exports.requireChannelAccess = async (req, res, next) => {
         req.channel = channel;
         req.workspace = workspace;
         next();
-    } catch (_err) {
+    } catch (err) {
         console.error("requireChannelAccess error:", err);
         return res.status(500).json({ message: "Server error" });
     }
@@ -209,7 +209,7 @@ exports.validateDMAccess = async (req, res, next) => {
 
         req.recipient = recipient;
         next();
-    } catch (_err) {
+    } catch (err) {
         console.error("validateDMAccess error:", err);
         return res.status(500).json({ message: "Server error" });
     }
@@ -227,7 +227,7 @@ exports.tenantIsolation = async (req, res, next) => {
         req.userType = user.userType;
 
         next();
-    } catch (_err) {
+    } catch (err) {
         console.error("tenantIsolation error:", err);
         return res.status(500).json({ message: "Server error" });
     }
@@ -261,7 +261,7 @@ exports.checkPermission = (permission) => {
             }
 
             next();
-        } catch (_err) {
+        } catch (err) {
             console.error("checkPermission error:", err);
             return res.status(500).json({ message: "Server error" });
         }

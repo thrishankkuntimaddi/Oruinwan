@@ -207,7 +207,7 @@ exports.getCompanyAnalytics = async (req, res) => {
             }
         });
 
-    } catch (_err) {
+    } catch (err) {
         console.error('GET COMPANY ANALYTICS ERROR:', err);
         return res.status(500).json({ message: 'Server error' });
     }

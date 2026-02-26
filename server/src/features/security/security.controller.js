@@ -29,7 +29,7 @@ exports.getAuditLog = async (req, res) => {
             limit
         });
 
-    } catch (_error) {
+    } catch (error) {
         console.error('❌ [getAuditLog] Error:', error);
         return res.status(500).json({
             message: 'Failed to fetch audit log'

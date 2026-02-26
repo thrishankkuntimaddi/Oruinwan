@@ -77,7 +77,7 @@ router.get("/me/preferences/privacy", requireAuth, async (req, res) => {
     };
 
     res.json(privacy);
-  } catch (_error) {
+  } catch (error) {
     console.error("GET PRIVACY PREFERENCES ERROR:", error);
     res.status(500).json({ message: "Failed to load privacy preferences" });
   }
@@ -98,7 +98,7 @@ router.put("/me/preferences/privacy", requireAuth, async (req, res) => {
     });
 
     res.json({ message: "Privacy preferences updated successfully" });
-  } catch (_error) {
+  } catch (error) {
     console.error("UPDATE PRIVACY PREFERENCES ERROR:", error);
     res.status(500).json({ message: "Failed to update privacy preferences" });
   }
@@ -116,7 +116,7 @@ router.get("/me/preferences/region", requireAuth, async (req, res) => {
     };
 
     res.json(region);
-  } catch (_error) {
+  } catch (error) {
     console.error("GET REGION PREFERENCES ERROR:", error);
     res.status(500).json({ message: "Failed to load region preferences" });
   }
@@ -136,7 +136,7 @@ router.put("/me/preferences/region", requireAuth, async (req, res) => {
     });
 
     res.json({ message: "Region preferences updated successfully" });
-  } catch (_error) {
+  } catch (error) {
     console.error("UPDATE REGION PREFERENCES ERROR:", error);
     res.status(500).json({ message: "Failed to update region preferences" });
   }
@@ -150,7 +150,7 @@ router.get("/me/blocked-users", requireAuth, async (req, res) => {
       .select("blockedUsers");
 
     res.json(user?.blockedUsers || []);
-  } catch (_error) {
+  } catch (error) {
     console.error("GET BLOCKED USERS ERROR:", error);
     res.status(500).json({ message: "Failed to load blocked users" });
   }
@@ -166,7 +166,7 @@ router.delete("/me/blocked-users/:userId", requireAuth, async (req, res) => {
     });
 
     res.json({ message: "User unblocked successfully" });
-  } catch (_error) {
+  } catch (error) {
     console.error("UNBLOCK USER ERROR:", error);
     res.status(500).json({ message: "Failed to unblock user" });
   }
@@ -190,7 +190,7 @@ router.get("/users", requireAuth, async (req, res) => {
       .lean();
 
     res.json({ users });
-  } catch (_err) {
+  } catch (err) {
     console.error("GET USERS ERROR:", err);
     res.status(500).json({ message: "Server error" });
   }
@@ -316,7 +316,7 @@ router.get("/linkedin/callback", async (req, res) => {
 
     const token = generateToken(user);
     res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/oauth-success?access=${token}`);
-  } catch (_err) {
+  } catch (err) {
     console.error('LinkedIn OAuth callback error:', err.response?.data || err.message);
     res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/login?error=linkedin_failed`);
   }

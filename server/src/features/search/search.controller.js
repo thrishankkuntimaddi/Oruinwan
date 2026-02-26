@@ -65,7 +65,7 @@ exports.universalSearch = async (req, res) => {
             notes,
             query: searchTerm
         });
-    } catch (_err) {
+    } catch (err) {
         logger.error("UNIVERSAL SEARCH ERROR:", err);
         return res.status(500).json({ message: "Server error" });
     }
@@ -89,7 +89,7 @@ exports.searchContactsHandler = async (req, res) => {
 
         const contacts = await searchContacts(workspaceId, userId, searchRegex);
         return res.json({ contacts });
-    } catch (_err) {
+    } catch (err) {
         logger.error("SEARCH CONTACTS ERROR:", err);
         return res.status(500).json({ message: "Server error" });
     }
@@ -145,7 +145,7 @@ async function searchChannels(workspaceId, userId, searchRegex) {
             memberCount: ch.members?.length || 0,
             icon: ch.isPrivate ? "🔒" : "#"
         }));
-    } catch (_err) {
+    } catch (err) {
         logger.error("Search channels error:", err);
         return [];
     }
@@ -186,7 +186,7 @@ async function searchContacts(workspaceId, userId, searchRegex) {
             userStatus: user.userStatus || "active"
         }));
 
-    } catch (_err) {
+    } catch (err) {
         logger.error("Search contacts error:", err);
         return [];
     }
@@ -260,7 +260,7 @@ async function searchMessages(workspaceId, userId, searchRegex) {
                 preview: truncateText(msg.text, 100)
             };
         });
-    } catch (_err) {
+    } catch (err) {
         logger.error("Search messages error:", err);
         return [];
     }
@@ -329,7 +329,7 @@ async function searchTasks(workspaceId, userId, searchRegex) {
             tags: task.tags || [],
             createdAt: task.createdAt
         }));
-    } catch (_err) {
+    } catch (err) {
         logger.error("Search tasks error:", err);
         return [];
     }
@@ -382,7 +382,7 @@ async function searchNotes(workspaceId, userId, searchRegex) {
             tags: note.tags || [],
             createdAt: note.createdAt
         }));
-    } catch (_err) {
+    } catch (err) {
         logger.error("Search notes error:", err);
         return [];
     }

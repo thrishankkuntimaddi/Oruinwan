@@ -56,7 +56,7 @@ module.exports = async function requireAuth(req, res, next) {
         }
 
         return next();
-      } catch (_err) {
+      } catch (err) {
         // access token expired → fall through to cookie
       }
     }
@@ -101,14 +101,14 @@ module.exports = async function requireAuth(req, res, next) {
 
         return next();
 
-      } catch (_err) {
+      } catch (err) {
         return res.status(401).json({ message: "Token expired, please login again" });
       }
     }
 
     return res.status(401).json({ message: "No token" });
 
-  } catch (_err) {
+  } catch (err) {
     console.error("AUTH MIDDLEWARE ERROR:", err);
     return res.status(500).json({ message: "Server error" });
   }

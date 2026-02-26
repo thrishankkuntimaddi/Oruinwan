@@ -99,7 +99,7 @@ exports.initIdentityCryptoState = async (req, res) => {
             version: cryptoState.version
         });
 
-    } catch (_err) {
+    } catch (err) {
         console.error('❌ [initIdentityCryptoState] Error:', err);
         return res.status(500).json({
             message: 'Failed to save identity crypto state'
@@ -152,7 +152,7 @@ exports.getIdentityCryptoState = async (req, res) => {
             version: cryptoState.version
         });
 
-    } catch (_err) {
+    } catch (err) {
         console.error('❌ [getIdentityCryptoState] Error:', err);
         return res.status(500).json({
             message: 'Failed to fetch identity crypto state'
@@ -192,7 +192,7 @@ exports.wrapUmekWithServerKEK = (umekBytes) => {
         const envelope = Buffer.concat([iv, authTag, encrypted]).toString('base64');
 
         return { envelope, kekVersion: version };
-    } catch (_err) {
+    } catch (err) {
         console.error('❌ [wrapUmekWithServerKEK] Error:', err);
         throw new Error('Failed to wrap UMEK');
     }
@@ -242,7 +242,7 @@ exports.unwrapUmekWithServerKEK = async (req, res) => {
         try {
             kekKey = kekManager.getKEKForUnwrap(kekVersion);
             console.log(`🔓 [PHASE 4D] Unwrapping UMEK with KEK version ${kekVersion}`);
-        } catch (_error) {
+        } catch (error) {
             console.error(`❌ [PHASE 4D] KEK version ${kekVersion} not available:`, error);
             return res.status(500).json({
                 message: 'Server encryption key not available',
@@ -307,7 +307,7 @@ exports.unwrapUmekWithServerKEK = async (req, res) => {
             wrappedAuthTag: wrappedAuthTag.toString('base64')
         });
 
-    } catch (_err) {
+    } catch (err) {
         console.error('❌ [unwrapUmekWithServerKEK] Error:', err);
         return res.status(500).json({
             message: 'Failed to unwrap UMEK'
@@ -465,7 +465,7 @@ exports.rotateUMEK = async (req, res) => {
             message: 'UMEK protection rotated successfully'
         });
 
-    } catch (_err) {
+    } catch (err) {
         console.error('❌ [rotateUMEK] Error:', err);
         return res.status(500).json({
             message: 'Failed to rotate UMEK protection'

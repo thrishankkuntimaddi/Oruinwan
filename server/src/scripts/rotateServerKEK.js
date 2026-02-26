@@ -74,7 +74,7 @@ async function rotateUserKEK(cryptoState, fromVersion, toVersion) {
         console.log(`✅ Rotated KEK for user ${userId} (v${fromVersion} → v${toVersion})`);
 
         return true;
-    } catch (_error) {
+    } catch (error) {
         console.error(`❌ Failed to rotate KEK for user ${cryptoState.userId}:`, error.message);
         return false;
     }
@@ -231,7 +231,7 @@ if (require.main === module) {
         try {
             const result = await rotateServerKEK(options);
             process.exit(result.success ? 0 : 1);
-        } catch (_error) {
+        } catch (error) {
             console.error('❌ Rotation failed:', error);
 
             // Log failure audit event

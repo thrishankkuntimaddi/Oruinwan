@@ -55,7 +55,7 @@ router.get('/users-access', requireAuth, requireAdmin, async (req, res) => {
                 assignDepartments: true
             }
         });
-    } catch (_error) {
+    } catch (error) {
         console.error('Admin Dashboard Users Access Error:', error);
         res.status(500).json({ message: 'Server error' });
     }
@@ -84,7 +84,7 @@ router.get('/departments', requireAuth, requireAdmin, async (req, res) => {
         }
 
         res.json({ departments });
-    } catch (_error) {
+    } catch (error) {
         console.error('Admin Dashboard Departments Error:', error);
         res.status(500).json({ message: 'Server error' });
     }
@@ -127,7 +127,7 @@ router.get('/workspaces-access', requireAuth, requireAdmin, async (req, res) => 
         }
 
         res.json({ workspaces });
-    } catch (_error) {
+    } catch (error) {
         console.error('Admin Dashboard Workspaces Access Error:', error);
         res.status(500).json({ message: 'Server error' });
     }
@@ -179,7 +179,7 @@ router.get('/audit-security', requireAuth, requireAdmin, async (req, res) => {
             roleChanges,
             permissionChanges
         });
-    } catch (_error) {
+    } catch (error) {
         console.error('Admin Dashboard Audit Security Error:', error);
         res.status(500).json({ message: 'Server error' });
     }
@@ -244,7 +244,7 @@ router.get('/workspaces', requireAuth, requireAdmin, async (req, res) => {
         }));
 
         res.json({ workspaces: enhancedWorkspaces });
-    } catch (_error) {
+    } catch (error) {
         console.error('Admin Dashboard Workspaces Error:', error);
         res.status(500).json({ message: 'Server error', error: error.message });
     }

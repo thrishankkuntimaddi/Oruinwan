@@ -87,7 +87,7 @@ async function isWorkspaceMember(userId, workspaceId) {
         const workspace = await Workspace.findById(workspaceId);
         if (!workspace) return false;
         return workspace.isMember(userId);
-    } catch (_err) {
+    } catch (err) {
         console.error('Error checking workspace membership:', err);
         return false;
     }

@@ -57,7 +57,7 @@ async function getTasks(req, res) {
 
         const result = await tasksService.getTasks(userId, filters);
         return res.json(result);
-    } catch (_error) {
+    } catch (error) {
         console.error('GET_TASKS ERROR:', error);
         return handleError(res, error);
     }
@@ -77,7 +77,7 @@ async function getMyTasks(req, res) {
 
         const result = await tasksService.getMyTasks(userId, filters);
         return res.json(result);
-    } catch (_error) {
+    } catch (error) {
         console.error('GET_MY_TASKS ERROR:', error);
         return handleError(res, error);
     }
@@ -103,7 +103,7 @@ async function createTask(req, res) {
 
         const result = await tasksService.createTask(userId, taskData, req.io, req);
         return res.status(201).json(result);
-    } catch (_error) {
+    } catch (error) {
         console.error('CREATE_TASK ERROR:', error);
         return handleError(res, error);
     }
@@ -130,7 +130,7 @@ async function updateTask(req, res) {
 
         const result = await tasksService.updateTask(userId, taskId, updates, req.io, req);
         return res.json(result);
-    } catch (_error) {
+    } catch (error) {
         console.error('UPDATE_TASK ERROR:', error);
         return handleError(res, error);
     }
@@ -147,7 +147,7 @@ async function deleteTask(req, res) {
 
         const result = await tasksService.deleteTask(userId, taskId, req.io, req);
         return res.json(result);
-    } catch (_error) {
+    } catch (error) {
         console.error('DELETE_TASK ERROR:', error);
         return handleError(res, error);
     }
@@ -164,7 +164,7 @@ async function restoreTask(req, res) {
 
         const result = await tasksService.restoreTask(userId, taskId, req);
         return res.json(result);
-    } catch (_error) {
+    } catch (error) {
         console.error('RESTORE_TASK ERROR:', error);
         return handleError(res, error);
     }
@@ -181,7 +181,7 @@ async function permanentDeleteTask(req, res) {
 
         const result = await tasksService.permanentDeleteTask(userId, taskId, req);
         return res.json(result);
-    } catch (_error) {
+    } catch (error) {
         console.error('PERMANENT_DELETE_TASK ERROR:', error);
         return handleError(res, error);
     }
@@ -198,7 +198,7 @@ async function revokeTask(req, res) {
 
         const result = await tasksService.revokeTask(userId, taskId, req);
         return res.json(result);
-    } catch (_error) {
+    } catch (error) {
         console.error('REVOKE_TASK ERROR:', error);
         return handleError(res, error);
     }
@@ -225,7 +225,7 @@ async function requestTransfer(req, res) {
 
         const result = await tasksService.requestTransfer(userId, taskId, newAssigneeId, note, req.io, req);
         return res.json(result);
-    } catch (_error) {
+    } catch (error) {
         console.error('REQUEST_TRANSFER ERROR:', error);
         return handleError(res, error);
     }
@@ -243,7 +243,7 @@ async function handleTransferRequest(req, res) {
 
         const result = await tasksService.handleTransferRequest(userId, taskId, action, req.io, req);
         return res.json(result);
-    } catch (_error) {
+    } catch (error) {
         console.error('HANDLE_TRANSFER_REQUEST ERROR:', error);
         return handleError(res, error);
     }
@@ -270,7 +270,7 @@ async function createSubtask(req, res) {
 
         const result = await tasksService.createSubtask(userId, parentId, subtaskData, req.io, req);
         return res.status(201).json(result);
-    } catch (_error) {
+    } catch (error) {
         console.error('CREATE_SUBTASK ERROR:', error);
         return handleError(res, error);
     }
@@ -300,7 +300,7 @@ async function getTaskActivity(req, res) {
 
         const result = await tasksService.getTaskActivity(userId, taskId, pagination);
         return res.json(result);
-    } catch (_error) {
+    } catch (error) {
         console.error('GET_TASK_ACTIVITY ERROR:', error);
         return handleError(res, error);
     }

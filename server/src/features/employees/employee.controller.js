@@ -34,7 +34,7 @@ exports.inviteEmployee = async (req, res) => {
             inviteLink: result.inviteLink
         });
 
-    } catch (_err) {
+    } catch (err) {
         console.error("INVITE EMPLOYEE ERROR:", err);
 
         if (err.message.includes('not found')) {
@@ -77,7 +77,7 @@ exports.bulkInviteEmployees = async (req, res) => {
             results: result.results
         });
 
-    } catch (_err) {
+    } catch (err) {
         console.error("BULK INVITE ERROR:", err);
 
         if (err.message.includes('not found')) {
@@ -125,7 +125,7 @@ exports.directCreateEmployee = async (req, res) => {
             employee: result.employee
         });
 
-    } catch (_err) {
+    } catch (err) {
         console.error("DIRECT CREATE EMPLOYEE ERROR:", err);
 
         if (err.message.includes('not found')) {
@@ -217,7 +217,7 @@ exports.acceptInvite = async (req, res) => {
             redirectTo: "/login"
         });
 
-    } catch (_err) {
+    } catch (err) {
         console.error("ACCEPT INVITE ERROR:", err);
         return res.status(500).json({ message: "Server error" });
     }
@@ -264,7 +264,7 @@ exports.checkEligibility = async (req, res) => {
             message: "No auto-join company found for this email domain"
         });
 
-    } catch (_err) {
+    } catch (err) {
         console.error("CHECK ELIGIBILITY ERROR:", err);
         return res.status(500).json({ message: "Server error" });
     }

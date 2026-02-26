@@ -191,7 +191,7 @@ exports.createWorkspace = async (req, res) => {
         defaultChannels: workspace.defaultChannels
       }
     });
-  } catch (_err) {
+  } catch (err) {
     return handleError(res, err, "CREATE WORKSPACE ERROR");
   }
 };
@@ -241,7 +241,7 @@ exports.listMyWorkspaces = async (req, res) => {
     );
 
     return res.json({ workspaces: workspacesWithOwner });
-  } catch (_err) {
+  } catch (err) {
     return handleError(res, err, "LIST MY WORKSPACES ERROR");
   }
 };
@@ -256,7 +256,7 @@ exports.listWorkspaces = async (req, res) => {
 
     const workspaces = await Workspace.find({ company: companyId }).select("-__v").lean();
     return res.json({ workspaces });
-  } catch (_err) {
+  } catch (err) {
     return handleError(res, err, "LIST WORKSPACES ERROR");
   }
 };
@@ -297,7 +297,7 @@ exports.getWorkspaceMembers = async (req, res) => {
     }));
 
     return res.json({ members: formattedMembers });
-  } catch (_err) {
+  } catch (err) {
     return handleError(res, err, "GET WORKSPACE MEMBERS ERROR");
   }
 };
@@ -368,7 +368,7 @@ exports.deleteWorkspace = async (req, res) => {
     await Workspace.findByIdAndDelete(workspaceId);
 
     return res.json({ message: "Workspace deleted successfully" });
-  } catch (_err) {
+  } catch (err) {
     return handleError(res, err, "DELETE WORKSPACE ERROR");
   }
 };
@@ -480,7 +480,7 @@ exports.inviteToWorkspace = async (req, res) => {
         expiresAt
       });
     }
-  } catch (_err) {
+  } catch (err) {
     console.error("INVITE TO WORKSPACE ERROR:", err);
     return res.status(500).json({ message: "Server error" });
   }
@@ -526,7 +526,7 @@ exports.getInviteDetails = async (req, res) => {
       memberCount,
       role: invite.role
     });
-  } catch (_err) {
+  } catch (err) {
     return handleError(res, err, "GET INVITE DETAILS ERROR");
   }
 };
@@ -681,7 +681,7 @@ exports.joinWorkspace = async (req, res) => {
         color: workspace.color || "#2563eb"
       }
     });
-  } catch (_err) {
+  } catch (err) {
     console.error("JOIN WORKSPACE ERROR:", err);
     return res.status(500).json({ message: "Server error" });
   }
@@ -728,7 +728,7 @@ exports.getWorkspaceMembers = async (req, res) => {
       }));
 
     return res.json({ members });
-  } catch (_err) {
+  } catch (err) {
     console.error("GET WORKSPACE MEMBERS ERROR:", err);
     return res.status(500).json({ message: "Server error" });
   }
@@ -824,7 +824,7 @@ exports.getWorkspaceChannels = async (req, res) => {
     });
 
     return res.json({ channels: channelsWithMembershipInfo });
-  } catch (_err) {
+  } catch (err) {
     console.error("GET WORKSPACE CHANNELS ERROR:", err);
     return res.status(500).json({ message: "Server error" });
   }
@@ -977,7 +977,7 @@ exports.createWorkspaceChannel = async (req, res) => {
         members: channel.members
       }
     });
-  } catch (_err) {
+  } catch (err) {
     console.error("CREATE WORKSPACE CHANNEL ERROR:", err);
     return res.status(500).json({ message: "Server error" });
   }
@@ -1030,7 +1030,7 @@ exports.getAllWorkspaceMembers = async (req, res) => {
       });
 
     return res.json({ members });
-  } catch (_err) {
+  } catch (err) {
     console.error("GET ALL WORKSPACE MEMBERS ERROR:", err);
     return res.status(500).json({ message: "Server error" });
   }
@@ -1093,7 +1093,7 @@ exports.renameWorkspace = async (req, res) => {
         name: workspace.name
       }
     });
-  } catch (_err) {
+  } catch (err) {
     console.error("RENAME WORKSPACE ERROR:", err);
     return res.status(500).json({ message: "Server error" });
   }
@@ -1163,7 +1163,7 @@ exports.updateWorkspace = async (req, res) => {
         settings: workspace.settings
       }
     });
-  } catch (_err) {
+  } catch (err) {
     console.error("UPDATE WORKSPACE ERROR:", err);
     return res.status(500).json({ message: "Server error" });
   }
@@ -1207,7 +1207,7 @@ exports.getWorkspaceStats = async (req, res) => {
       description: workspace.description,
       settings: workspace.settings
     });
-  } catch (_err) {
+  } catch (err) {
     console.error("GET WORKSPACE STATS ERROR:", err);
     return res.status(500).json({ message: "Server error" });
   }

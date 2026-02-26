@@ -45,7 +45,7 @@ exports.getChannelThreads = async (req, res) => {
             count: threads.length,
             channelId
         });
-    } catch (_err) {
+    } catch (err) {
         console.error("[THREADS][GET_CHANNEL_THREADS] Error:", err);
         return res.status(500).json({ message: "Server error fetching threads" });
     }
@@ -103,7 +103,7 @@ exports.getThread = async (req, res) => {
             replies,
             count: replies.length,
         });
-    } catch (_err) {
+    } catch (err) {
         console.error("GET THREAD ERROR:", err);
         return res.status(500).json({ message: "Server error" });
     }
@@ -227,7 +227,7 @@ exports.postThreadReply = async (req, res) => {
             }
         }
         return res.status(201).json({ reply });
-    } catch (_err) {
+    } catch (err) {
         console.error("POST THREAD REPLY ERROR:", err);
         return res.status(500).json({ message: "Server error" });
     }
@@ -244,7 +244,7 @@ exports.getThreadCount = async (req, res) => {
         const count = await Message.countDocuments({ parentId: messageId });
 
         return res.json({ count });
-    } catch (_err) {
+    } catch (err) {
         console.error("GET THREAD COUNT ERROR:", err);
         return res.status(500).json({ message: "Server error" });
     }

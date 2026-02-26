@@ -71,7 +71,7 @@ async function sendInvitationEmail(email, companyName, inviteLink, userName = ''
         <p>This invitation expires in 7 days.</p>
       `
         });
-    } catch (_err) {
+    } catch (err) {
         console.warn('Failed to send invite email:', err.message);
         // Don't throw - invitation created successfully
     }
@@ -189,7 +189,7 @@ async function bulkInviteEmployees({ companyId, employees, userId }) {
 
             results.success.push({ name, email, inviteId: invite._id });
 
-        } catch (_err) {
+        } catch (err) {
             results.failed.push({ email: emp.email, error: err.message });
         }
     }

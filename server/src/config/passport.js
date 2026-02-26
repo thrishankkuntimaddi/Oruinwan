@@ -13,7 +13,7 @@ passport.deserializeUser(async (id, done) => {
     try {
         const user = await User.findById(id);
         done(null, user);
-    } catch (_err) {
+    } catch (err) {
         done(err, null);
     }
 });
@@ -61,7 +61,7 @@ passport.use(
                 });
 
                 done(null, user);
-            } catch (_err) {
+            } catch (err) {
                 done(err, null);
             }
         }
@@ -112,7 +112,7 @@ passport.use(
                 });
 
                 done(null, user);
-            } catch (_err) {
+            } catch (err) {
                 console.error('LinkedIn OAuth error:', err);
                 done(err, null);
             }
