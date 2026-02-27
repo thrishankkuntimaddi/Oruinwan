@@ -2,10 +2,15 @@
 import axios from 'axios';
 
 // Export API_BASE so components can import it instead of redefining
-// In production: REACT_APP_BACKEND_URL should be "" (empty) so requests use
-// relative URLs routed through the Vercel proxy → same-origin cookie handling.
-// In local dev: falls back to localhost:8080.
-export const API_BASE = process.env.REACT_APP_BACKEND_URL || (typeof window !== 'undefined' && window.location.hostname !== 'localhost' ? '' : 'http://localhost:8080');
+// In production (any non-localhost host), always use relative URLs so the
+// Vercel proxy handles routing — this keeps the jwt cookie same-origin.
+// In local dev, fall back to env var or localhost:8080.
+const _isLocalDev = typeof window === 'undefined' ||
+    window.location.hostname === 'localhost' ||
+    window.location.hostname === '127.0.0.1';
+export const API_BASE = _isLocalDev
+    ? (process.env.REACT_APP_BACKEND_URL || 'http://localhost:8080')
+    : '';
 
 const api = axios.create({
     baseURL: API_BASE,
