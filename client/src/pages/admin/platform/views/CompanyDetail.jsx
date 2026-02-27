@@ -25,7 +25,7 @@ const CompanyDetail = ({ companyId, onBack }) => {
             // Let's rely on the parent ActiveCompanies passing the data OR fetch fresh. 
             // I'll assume endpoint GET /api/admin/company/:id needs to be created or I use the existing list approach.
             // Let's try to fetch active-companies and find.
-            const res = await axios.get(`${process.env.REACT_APP_BACKEND_URL}/api/admin/active-companies`, { withCredentials: true });
+            const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/admin/active-companies`, { withCredentials: true });
             const found = res.data.find(c => c._id === companyId);
             if (found) {
                 setCompany(found);

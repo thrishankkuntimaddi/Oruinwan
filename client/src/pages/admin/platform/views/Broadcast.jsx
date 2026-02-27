@@ -28,7 +28,7 @@ const Broadcast = () => {
 
     const fetchCompanies = async () => {
         try {
-            const res = await axios.get(`${process.env.REACT_APP_BACKEND_URL}/api/admin/active-companies`, {
+            const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/admin/active-companies`, {
                 withCredentials: true
             });
             setCompanies(res.data);
@@ -39,7 +39,7 @@ const Broadcast = () => {
 
     const fetchHistory = async () => {
         try {
-            const res = await axios.get(`${process.env.REACT_APP_BACKEND_URL}/api/admin/broadcast/history`, {
+            const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/admin/broadcast/history`, {
                 withCredentials: true
             });
             setBroadcastHistory(res.data);
@@ -70,7 +70,7 @@ const Broadcast = () => {
 
         setSending(true);
         try {
-            await axios.post(`${process.env.REACT_APP_BACKEND_URL}/api/admin/broadcast/send`, formData, {
+            await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/admin/broadcast/send`, formData, {
                 withCredentials: true
             });
             showToast('Broadcast sent successfully!', 'success');

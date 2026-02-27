@@ -16,7 +16,7 @@ const SupportTickets = ({ navigateToChat }) => {
 
     const fetchTickets = async () => {
         try {
-            const res = await axios.get(`${process.env.REACT_APP_BACKEND_URL}/api/admin/tickets`, { withCredentials: true });
+            const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/admin/tickets`, { withCredentials: true });
             setTickets(res.data);
             setLoading(false);
         } catch (err) {
@@ -28,7 +28,7 @@ const SupportTickets = ({ navigateToChat }) => {
     const handleUpdateStatus = async (status) => {
         if (!selectedTicket) return;
         try {
-            const res = await axios.put(`${process.env.REACT_APP_BACKEND_URL}/api/admin/tickets/${selectedTicket._id}`, { status }, { withCredentials: true });
+            const res = await axios.put(`${import.meta.env.VITE_BACKEND_URL}/api/admin/tickets/${selectedTicket._id}`, { status }, { withCredentials: true });
             setTickets(prev => prev.map(t => t._id === selectedTicket._id ? res.data : t));
             setSelectedTicket(res.data);
             showToast(`Status updated to ${status}`, "success");
@@ -40,7 +40,7 @@ const SupportTickets = ({ navigateToChat }) => {
     const handleReply = async () => {
         if (!reply.trim() || !selectedTicket) return;
         try {
-            const res = await axios.put(`${process.env.REACT_APP_BACKEND_URL}/api/admin/tickets/${selectedTicket._id}`, { message: reply }, { withCredentials: true });
+            const res = await axios.put(`${import.meta.env.VITE_BACKEND_URL}/api/admin/tickets/${selectedTicket._id}`, { message: reply }, { withCredentials: true });
             setTickets(prev => prev.map(t => t._id === selectedTicket._id ? res.data : t));
             setSelectedTicket(res.data);
             setReply("");

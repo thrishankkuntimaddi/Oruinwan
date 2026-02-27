@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Search, Hash, User, MessageSquare, Lock, CheckSquare, FileText } from 'lucide-react';
 import axios from 'axios';
 
-const API_BASE_URL = `${process.env.REACT_APP_BACKEND_URL || 'http://localhost:8080'}/api`;
+const API_BASE_URL = `${import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080'}/api`;
 
 export default function UniversalSearch({ workspaceId, onClose, results, loading, query }) {
     const navigate = useNavigate();

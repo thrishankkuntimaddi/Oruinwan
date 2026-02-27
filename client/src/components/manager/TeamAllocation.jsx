@@ -18,7 +18,7 @@ const TeamAllocation = () => {
             try {
                 setLoading(true);
                 const response = await axios.get(
-                    `${process.env.REACT_APP_BACKEND_URL}/api/manager-dashboard/team-load`,
+                    `${import.meta.env.VITE_BACKEND_URL}/api/manager-dashboard/team-load`,
                     { withCredentials: true }
                 );
 

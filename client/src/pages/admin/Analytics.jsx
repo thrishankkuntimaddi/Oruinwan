@@ -34,7 +34,7 @@ const Analytics = () => {
                 : user.companyId;
 
             const response = await axios.get(
-                `${process.env.REACT_APP_BACKEND_URL}/api/companies/${companyId}/analytics`,
+                `${import.meta.env.VITE_BACKEND_URL}/api/companies/${companyId}/analytics`,
                 { withCredentials: true }
             );
 

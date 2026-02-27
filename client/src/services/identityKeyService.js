@@ -406,7 +406,7 @@ class IdentityKeyService {
         const { getDeviceId } = await import('../utils/deviceId.js');
         const deviceId = getDeviceId();
 
-        const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/v2/crypto/identity`, {
+        const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/v2/crypto/identity`, {
             method: 'GET',
             headers: {
                 'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
@@ -452,7 +452,7 @@ class IdentityKeyService {
             const { getDeviceId } = await import('../utils/deviceId.js');
             const deviceId = getDeviceId();
 
-            const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/v2/crypto/identity/init`, {
+            const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/v2/crypto/identity/init`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
@@ -484,7 +484,7 @@ class IdentityKeyService {
      */
     async _uploadPublicKeyToIdentityService(publicKeyPEM, algorithm, version) {
         try {
-            const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/v2/identity/public-key`, {
+            const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/v2/identity/public-key`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
@@ -536,7 +536,7 @@ class IdentityKeyService {
             const clientPublicKeyBase64 = btoa(String.fromCharCode(...new Uint8Array(clientPublicKeyRaw)));
 
             // STEP 2: Request UMEK from server with client ephemeral public key
-            const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/v2/crypto/identity/unwrap-umek`, {
+            const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/v2/crypto/identity/unwrap-umek`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
@@ -810,7 +810,7 @@ class IdentityKeyService {
             const { getDeviceId } = await import('../utils/deviceId.js');
             const deviceId = getDeviceId();
 
-            const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/v2/crypto/identity/rotate-umek`, {
+            const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/v2/crypto/identity/rotate-umek`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
@@ -881,7 +881,7 @@ class IdentityKeyService {
 
         try {
             // Fetch from server
-            const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/v2/identity/users/${userId}/public-key`, {
+            const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/v2/identity/users/${userId}/public-key`, {
                 credentials: 'include'
             });
 
@@ -928,7 +928,7 @@ class IdentityKeyService {
 
         try {
             // Fetch from server
-            const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/v2/identity/public-keys`, {
+            const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/v2/identity/public-keys`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -976,7 +976,7 @@ class IdentityKeyService {
         const { publicKey, algorithm, version } = await this.getMyPublicKey();
 
         try {
-            const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/v2/identity/public-key`, {
+            const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/v2/identity/public-key`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'

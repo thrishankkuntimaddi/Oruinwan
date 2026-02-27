@@ -379,7 +379,7 @@ async function restoreIdentityToServer(identityPublicKey, identityPrivateKey, cu
     }
 
     // Upload to server using existing Phase 1 endpoint
-    const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/v2/crypto/identity/init`, {
+    const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/v2/crypto/identity/init`, {
         method: 'POST',
         headers: {
             'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,

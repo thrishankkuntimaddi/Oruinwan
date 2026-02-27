@@ -1,12 +1,12 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { useLocation } from "react-router-dom";
-import api from "../services/api"; // This already uses REACT_APP_BACKEND_URL
+import api from "../services/api"; // This already uses VITE_BACKEND_URL
 import { useToast } from "./ToastContext";
 import { useAuth } from "./AuthContext";
 import { useSocket } from "./SocketContext";
 
 // NOTE: All API calls use the 'api' instance from '../services/api'
-// which automatically includes the REACT_APP_BACKEND_URL baseURL.
+// which automatically includes the VITE_BACKEND_URL baseURL.
 
 const TasksContext = createContext();
 

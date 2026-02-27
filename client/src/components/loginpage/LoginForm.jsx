@@ -145,7 +145,7 @@ const LoginForm = ({ onSwitch, initialEmail = "" }) => {
     onSuccess: async (tokenResponse) => {
       try {
         const res = await axios.post(
-          `${process.env.REACT_APP_BACKEND_URL}/api/auth/google-login`,
+          `${import.meta.env.VITE_BACKEND_URL}/api/auth/google-login`,
           { accessToken: tokenResponse.access_token },
           { withCredentials: true }
         );
@@ -286,7 +286,7 @@ const LoginForm = ({ onSwitch, initialEmail = "" }) => {
 
         <Button
           type="button"
-          onClick={() => window.location.href = `${process.env.REACT_APP_BACKEND_URL}/api/auth/github`}
+          onClick={() => window.location.href = `${import.meta.env.VITE_BACKEND_URL}/api/auth/github`}
           variant="outline"
           className="h-12 w-full"
         >
@@ -295,7 +295,7 @@ const LoginForm = ({ onSwitch, initialEmail = "" }) => {
 
         <Button
           type="button"
-          onClick={() => window.location.href = `${process.env.REACT_APP_BACKEND_URL}/api/auth/linkedin`}
+          onClick={() => window.location.href = `${import.meta.env.VITE_BACKEND_URL}/api/auth/linkedin`}
           variant="outline"
           className="h-12 w-full"
         >

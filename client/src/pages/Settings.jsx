@@ -116,7 +116,7 @@ const Settings = () => {
         try {
             const token = localStorage.getItem('accessToken');
             const response = await axios.get(
-                `${process.env.REACT_APP_BACKEND_URL}/api/auth/sessions`,
+                `${import.meta.env.VITE_BACKEND_URL}/api/auth/sessions`,
                 {
                     withCredentials: true,
                     headers: { Authorization: `Bearer ${token}` }
@@ -136,7 +136,7 @@ const Settings = () => {
         try {
             const token = localStorage.getItem('accessToken');
             await axios.put(
-                `${process.env.REACT_APP_BACKEND_URL}/api/auth/me`,
+                `${import.meta.env.VITE_BACKEND_URL}/api/auth/me`,
                 profileData,
                 {
                     withCredentials: true,
@@ -165,7 +165,7 @@ const Settings = () => {
         try {
             const token = localStorage.getItem('accessToken');
             await axios.put(
-                `${process.env.REACT_APP_BACKEND_URL}/api/auth/me/password`,
+                `${import.meta.env.VITE_BACKEND_URL}/api/auth/me/password`,
                 {
                     currentPassword: passwordData.currentPassword,
                     newPassword: passwordData.newPassword
@@ -188,7 +188,7 @@ const Settings = () => {
         try {
             const token = localStorage.getItem('accessToken');
             await axios.delete(
-                `${process.env.REACT_APP_BACKEND_URL}/api/auth/sessions/${sessionId}`,
+                `${import.meta.env.VITE_BACKEND_URL}/api/auth/sessions/${sessionId}`,
                 {
                     withCredentials: true,
                     headers: { Authorization: `Bearer ${token}` }
@@ -205,7 +205,7 @@ const Settings = () => {
         try {
             const token = localStorage.getItem('accessToken');
             await axios.delete(
-                `${process.env.REACT_APP_BACKEND_URL}/api/auth/sessions/others`,
+                `${import.meta.env.VITE_BACKEND_URL}/api/auth/sessions/others`,
                 {
                     withCredentials: true,
                     headers: { Authorization: `Bearer ${token}` }

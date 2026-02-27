@@ -166,7 +166,7 @@ app.get('/api/health', async (req, res) => {
 });
 
 // Serve uploaded files as static files (with authentication for uploads)
-app.use(express.static(path.join(__dirname, "../client/build")));
+app.use(express.static(path.join(__dirname, "../client/dist")));
 
 // Serve uploaded files with authentication check
 const requireAuth = require("./middleware/auth");

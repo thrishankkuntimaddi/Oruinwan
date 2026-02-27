@@ -33,7 +33,7 @@ const ContactAdmin = () => {
     // Initialize Socket.io for real-time chat
     useEffect(() => {
         if (user && activeTab === 'chat') {
-            socketRef.current = io(process.env.REACT_APP_BACKEND_URL, {
+            socketRef.current = io(import.meta.env.VITE_BACKEND_URL, {
                 withCredentials: true
             });
 
@@ -54,7 +54,7 @@ const ContactAdmin = () => {
         try {
             setLoadingMessages(true);
             const response = await axios.get(
-                `${process.env.REACT_APP_BACKEND_URL}/api/platform/support/messages/${company._id}`,
+                `${import.meta.env.VITE_BACKEND_URL}/api/platform/support/messages/${company._id}`,
                 { withCredentials: true }
             );
             setMessages(response.data.messages || []);
@@ -71,7 +71,7 @@ const ContactAdmin = () => {
         try {
             setLoadingTickets(true);
             const response = await axios.get(
-                `${process.env.REACT_APP_BACKEND_URL}/api/platform/support/tickets/${company._id}`,
+                `${import.meta.env.VITE_BACKEND_URL}/api/platform/support/tickets/${company._id}`,
                 { withCredentials: true }
             );
             setTickets(response.data.tickets || []);
@@ -108,7 +108,7 @@ const ContactAdmin = () => {
 
         try {
             const response = await axios.post(
-                `${process.env.REACT_APP_BACKEND_URL}/api/platform/support/messages`,
+                `${import.meta.env.VITE_BACKEND_URL}/api/platform/support/messages`,
                 {
                     companyId: company._id,
                     content: newMessage
@@ -129,7 +129,7 @@ const ContactAdmin = () => {
 
         try {
             const response = await axios.post(
-                `${process.env.REACT_APP_BACKEND_URL}/api/platform/support/tickets`,
+                `${import.meta.env.VITE_BACKEND_URL}/api/platform/support/tickets`,
                 {
                     companyId: company._id,
                     ...newTicket

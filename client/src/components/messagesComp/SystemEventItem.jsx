@@ -14,8 +14,6 @@ export default function SystemEventItem({ event, currentUserId, creatorName }) {
         return null;
     }
 
-    if (process.env.NODE_ENV === 'development') {
-    }
 
     // Format date to match ConversationStream separators
     const formatEventDate = (timestamp) => {

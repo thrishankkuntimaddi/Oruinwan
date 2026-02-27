@@ -22,13 +22,13 @@ const Billing = () => {
     const fetchBillingData = async () => {
         try {
             // Fetch overview stats
-            const statsRes = await axios.get(`${process.env.REACT_APP_BACKEND_URL}/api/admin/billing/overview`, {
+            const statsRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/admin/billing/overview`, {
                 withCredentials: true
             });
             setStats(statsRes.data);
 
             // Fetch company billing data
-            const billingRes = await axios.get(`${process.env.REACT_APP_BACKEND_URL}/api/admin/billing/companies`, {
+            const billingRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/admin/billing/companies`, {
                 withCredentials: true
             });
             setBillingData(billingRes.data);

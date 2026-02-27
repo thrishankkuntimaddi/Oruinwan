@@ -17,7 +17,7 @@ const PlatformChat = () => {
     // Define functions before useEffects that use them
     const fetchCompanies = async () => {
         try {
-            const res = await axios.get(`${process.env.REACT_APP_BACKEND_URL}/api/admin/active-companies`, {
+            const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/admin/active-companies`, {
                 withCredentials: true
             });
             setCompanies(res.data);
@@ -28,7 +28,7 @@ const PlatformChat = () => {
 
     const fetchMessages = useCallback(async (compId) => {
         try {
-            const res = await axios.get(`${process.env.REACT_APP_BACKEND_URL}/api/admin/dm/${compId}`, {
+            const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/admin/dm/${compId}`, {
                 withCredentials: true
             });
             setMessages(res.data);
@@ -63,7 +63,7 @@ const PlatformChat = () => {
 
         try {
             const res = await axios.post(
-                `${process.env.REACT_APP_BACKEND_URL}/api/admin/dm/${selectedCompany._id}`,
+                `${import.meta.env.VITE_BACKEND_URL}/api/admin/dm/${selectedCompany._id}`,
                 { message: input },
                 { withCredentials: true }
             );

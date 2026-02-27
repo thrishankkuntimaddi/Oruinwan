@@ -18,7 +18,7 @@ const ManagerReports = () => {
             try {
                 setLoading(true);
                 const response = await axios.get(
-                    `${process.env.REACT_APP_BACKEND_URL}/api/manager/dashboard/metrics/${selectedDepartment._id}`,
+                    `${import.meta.env.VITE_BACKEND_URL}/api/manager/dashboard/metrics/${selectedDepartment._id}`,
                     { withCredentials: true }
                 );
                 setDeptInfo(response.data);

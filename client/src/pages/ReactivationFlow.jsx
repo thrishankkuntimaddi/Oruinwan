@@ -32,7 +32,7 @@ const ReactivationFlow = () => {
 
         try {
             const response = await axios.post(
-                `${process.env.REACT_APP_BACKEND_URL}/api/auth/reactivate/verify-otp`,
+                `${import.meta.env.VITE_BACKEND_URL}/api/auth/reactivate/verify-otp`,
                 { email, otpCode, password },
                 { withCredentials: true }
             );

@@ -27,7 +27,7 @@ export default function PollMessage({ poll: pollProp, msg, onVote, currentUserId
                 }
 
                 const token = localStorage.getItem('token');
-                const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/polls/${pollId}`, {
+                const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/polls/${pollId}`, {
                     headers: {
                         'Authorization': `Bearer ${token}`
                     }

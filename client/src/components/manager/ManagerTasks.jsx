@@ -21,7 +21,7 @@ const ManagerTasks = () => {
         try {
             setLoading(true);
             const response = await axios.get(
-                `${process.env.REACT_APP_BACKEND_URL}/api/manager/tasks/${selectedDepartment._id}`,
+                `${import.meta.env.VITE_BACKEND_URL}/api/manager/tasks/${selectedDepartment._id}`,
                 { withCredentials: true }
             );
             setTasks(response.data.tasks);
@@ -43,7 +43,7 @@ const ManagerTasks = () => {
         e.preventDefault();
         try {
             await axios.post(
-                `${process.env.REACT_APP_BACKEND_URL}/api/manager/tasks/${selectedDepartment._id}`,
+                `${import.meta.env.VITE_BACKEND_URL}/api/manager/tasks/${selectedDepartment._id}`,
                 newTask,
                 { withCredentials: true }
             );
@@ -58,7 +58,7 @@ const ManagerTasks = () => {
     const handleStatusChange = async (taskId, newStatus) => {
         try {
             await axios.patch(
-                `${process.env.REACT_APP_BACKEND_URL}/api/manager/tasks/${taskId}/status`,
+                `${import.meta.env.VITE_BACKEND_URL}/api/manager/tasks/${taskId}/status`,
                 { status: newStatus },
                 { withCredentials: true }
             );

@@ -21,7 +21,7 @@ const ApplicationReview = () => {
         try {
             setRefreshing(true);
             const res = await axios.get(
-                `${process.env.REACT_APP_BACKEND_URL}/api/companies/${user.companyId}`,
+                `${import.meta.env.VITE_BACKEND_URL}/api/companies/${user.companyId}`,
                 {
                     headers: {
                         Authorization: `Bearer ${localStorage.getItem('token')}`

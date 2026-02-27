@@ -26,7 +26,7 @@ const ManagerContactAdmin = () => {
         const fetchAdmin = async () => {
             try {
                 const response = await axios.get(
-                    `${process.env.REACT_APP_BACKEND_URL}/api/companies/${company._id}/members`,
+                    `${import.meta.env.VITE_BACKEND_URL}/api/companies/${company._id}/members`,
                     { withCredentials: true }
                 );
 
@@ -51,7 +51,7 @@ const ManagerContactAdmin = () => {
             try {
                 setLoading(true);
                 const response = await axios.get(
-                    `${process.env.REACT_APP_BACKEND_URL}/api/internal/messages/conversation/${admin._id}`,
+                    `${import.meta.env.VITE_BACKEND_URL}/api/internal/messages/conversation/${admin._id}`,
                     { withCredentials: true }
                 );
                 setMessages(response.data.messages || []);
@@ -72,7 +72,7 @@ const ManagerContactAdmin = () => {
     useEffect(() => {
         if (!user?._id) return;
 
-        socketRef.current = io(process.env.REACT_APP_BACKEND_URL, {
+        socketRef.current = io(import.meta.env.VITE_BACKEND_URL, {
             withCredentials: true
         });
 
@@ -109,7 +109,7 @@ const ManagerContactAdmin = () => {
 
         try {
             const response = await axios.post(
-                `${process.env.REACT_APP_BACKEND_URL}/api/internal/messages`,
+                `${import.meta.env.VITE_BACKEND_URL}/api/internal/messages`,
                 {
                     recipientId: admin._id,
                     content: newMessage.trim()

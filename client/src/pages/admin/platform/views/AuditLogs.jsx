@@ -71,7 +71,7 @@ const AuditLogs = () => {
 
     const fetchLogs = async () => {
         try {
-            const res = await axios.get(`${process.env.REACT_APP_BACKEND_URL}/api/admin/audit-logs`, {
+            const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/admin/audit-logs`, {
                 withCredentials: true
             });
             setLogs(res.data);

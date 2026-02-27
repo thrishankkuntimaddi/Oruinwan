@@ -26,13 +26,13 @@ const Overview = () => {
     const fetchOverviewData = async () => {
         try {
             // Fetch stats
-            const statsRes = await axios.get(`${process.env.REACT_APP_BACKEND_URL}/api/admin/overview/stats`, {
+            const statsRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/admin/overview/stats`, {
                 withCredentials: true
             });
             setStats(statsRes.data);
 
             // Fetch recent activities
-            const activitiesRes = await axios.get(`${process.env.REACT_APP_BACKEND_URL}/api/admin/overview/activities`, {
+            const activitiesRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/admin/overview/activities`, {
                 withCredentials: true
             });
             setActivities(activitiesRes.data);

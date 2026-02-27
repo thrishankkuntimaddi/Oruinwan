@@ -19,7 +19,7 @@ const CompanyConfirmation = () => {
         if (!accepted) return;
         setIsLoading(true);
         try {
-            await axios.post(`${process.env.REACT_APP_BACKEND_URL}/api/companies/${company.id}/start-setup`, {
+            await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/companies/${company.id}/start-setup`, {
                 plan: "free",
                 acceptedTerms: true
             }, { withCredentials: true });

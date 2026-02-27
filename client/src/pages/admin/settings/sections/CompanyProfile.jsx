@@ -48,7 +48,7 @@ const CompanyProfile = () => {
 
         try {
             await axios.put(
-                `${process.env.REACT_APP_BACKEND_URL}/api/companies/${company.id}/settings/profile`,
+                `${import.meta.env.VITE_BACKEND_URL}/api/companies/${company.id}/settings/profile`,
                 formData,
                 { withCredentials: true }
             );

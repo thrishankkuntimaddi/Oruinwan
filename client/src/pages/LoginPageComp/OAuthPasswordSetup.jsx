@@ -51,7 +51,7 @@ const OAuthPasswordSetup = () => {
             const token = localStorage.getItem("accessToken");
 
             await axios.post(
-                `${process.env.REACT_APP_BACKEND_URL}/api/auth/oauth/set-password`,
+                `${import.meta.env.VITE_BACKEND_URL}/api/auth/oauth/set-password`,
                 { password },
                 {
                     headers: {

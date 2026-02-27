@@ -48,7 +48,7 @@ const CompanySetup = () => {
 
         try {
             const response = await axios.put(
-                `${process.env.REACT_APP_BACKEND_URL}/api/companies/${companyId}/setup`,
+                `${import.meta.env.VITE_BACKEND_URL}/api/companies/${companyId}/setup`,
                 {
                     step: step,
                     data: step === 1 ? profile :

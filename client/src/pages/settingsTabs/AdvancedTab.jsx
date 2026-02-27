@@ -52,7 +52,7 @@ const AdvancedTab = () => {
 
             // Call backend to deactivate account
             await axios.post(
-                `${process.env.REACT_APP_BACKEND_URL}/api/auth/me/deactivate`,
+                `${import.meta.env.VITE_BACKEND_URL}/api/auth/me/deactivate`,
                 {},
                 {
                     withCredentials: true,
@@ -87,7 +87,7 @@ const AdvancedTab = () => {
             const token = localStorage.getItem('accessToken');
 
             await axios.delete(
-                `${process.env.REACT_APP_BACKEND_URL}/api/users/me`,
+                `${import.meta.env.VITE_BACKEND_URL}/api/users/me`,
                 {
                     withCredentials: true,
                     headers: { Authorization: `Bearer ${token}` }

@@ -16,7 +16,7 @@ const PendingRequests = () => {
     const fetchPending = async () => {
         try {
 
-            const res = await axios.get(`${process.env.REACT_APP_BACKEND_URL}/api/admin/pending-companies`, { withCredentials: true });
+            const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/admin/pending-companies`, { withCredentials: true });
 
             setCompanies(res.data);
         } catch (err) {
@@ -26,7 +26,7 @@ const PendingRequests = () => {
 
     const handleApprove = async (id) => {
         try {
-            await axios.post(`${process.env.REACT_APP_BACKEND_URL}/api/admin/approve-company/${id}`, { message: reason }, { withCredentials: true });
+            await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/admin/approve-company/${id}`, { message: reason }, { withCredentials: true });
             showToast("Company Approved! Email sent.", "success");
             setCompanies(prev => prev.filter(c => c._id !== id));
             setSelectedCompany(null);
@@ -42,7 +42,7 @@ const PendingRequests = () => {
             return;
         }
         try {
-            await axios.post(`${process.env.REACT_APP_BACKEND_URL}/api/admin/reject-company/${id}`, { message: reason }, { withCredentials: true });
+            await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/admin/reject-company/${id}`, { message: reason }, { withCredentials: true });
             showToast("Company Rejected", "info");
             setCompanies(prev => prev.filter(c => c._id !== id));
             setSelectedCompany(null);

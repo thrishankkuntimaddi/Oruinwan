@@ -42,7 +42,7 @@ const SignupForm = ({ onSwitch }) => {
       if (formData.username && formData.username.trim().length >= 3) {
         setValidationStatus(prev => ({ ...prev, username: 'checking' }));
         try {
-          const res = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/users/check-username`, {
+          const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/users/check-username`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ username: formData.username })
@@ -73,7 +73,7 @@ const SignupForm = ({ onSwitch }) => {
       if (formData.email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
         setValidationStatus(prev => ({ ...prev, email: 'checking' }));
         try {
-          const res = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/users/check-email`, {
+          const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/users/check-email`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email: formData.email })
@@ -105,7 +105,7 @@ const SignupForm = ({ onSwitch }) => {
       if (digits.length === selectedCountry.length) {
         setValidationStatus(prev => ({ ...prev, phone: 'checking' }));
         try {
-          const res = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/users/check-phone`, {
+          const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/users/check-phone`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -174,7 +174,7 @@ const SignupForm = ({ onSwitch }) => {
     }
 
     try {
-      const res = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/auth/signup`, {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/auth/signup`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
