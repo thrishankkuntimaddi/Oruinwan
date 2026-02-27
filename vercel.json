@@ -1,6 +1,6 @@
 {
     "buildCommand": "npm install && npm run build --workspace=client",
-    "outputDirectory": "dist",
+    "outputDirectory": "../dist",
     "rewrites": [
         {
             "source": "/(.*)",
