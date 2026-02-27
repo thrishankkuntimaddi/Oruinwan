@@ -140,28 +140,28 @@ export const BlogsProvider = ({ children }) => {
             isPinned: update.isPinned
         });
 
-        socket.on("update-created", (update) => {
-
-            // ✅ REMOVED WORKSPACE FILTER to allow company-wide updates
+        const handleUpdateCreated = (update) => {
             setPosts(prev => [mapUpdateToFrontend(update), ...prev]);
-        });
+        };
 
-        socket.on("update-updated", (update) => {
-
+        const handleUpdateUpdated = (update) => {
             setPosts(prev => prev.map(p =>
                 p.id === update._id ? mapUpdateToFrontend(update) : p
             ));
-        });
+        };
 
-        socket.on("update-deleted", ({ updateId }) => {
-
+        const handleUpdateDeleted = ({ updateId }) => {
             setPosts(prev => prev.filter(p => p.id !== updateId));
-        });
+        };
+
+        socket.on("update-created", handleUpdateCreated);
+        socket.on("update-updated", handleUpdateUpdated);
+        socket.on("update-deleted", handleUpdateDeleted);
 
         return () => {
-            socket.off("update-created");
-            socket.off("update-updated");
-            socket.off("update-deleted");
+            socket.off("update-created", handleUpdateCreated);
+            socket.off("update-updated", handleUpdateUpdated);
+            socket.off("update-deleted", handleUpdateDeleted);
         };
     }, [socket]);
 

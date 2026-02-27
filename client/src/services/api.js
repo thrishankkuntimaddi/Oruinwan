@@ -65,6 +65,7 @@ api.interceptors.response.use(
         if (originalRequest._retry) {
             console.error('🔴 [API] Token still invalid after refresh — dispatching force-logout');
             localStorage.removeItem('accessToken');
+            localStorage.removeItem('refreshToken');
             window.dispatchEvent(new CustomEvent('auth:force-logout'));
             return Promise.reject(error);
         }
@@ -125,6 +126,7 @@ api.interceptors.response.use(
             isRefreshing = false;
 
             localStorage.removeItem('accessToken');
+            localStorage.removeItem('refreshToken');
             window.dispatchEvent(new CustomEvent('auth:force-logout'));
 
             return Promise.reject(refreshError);

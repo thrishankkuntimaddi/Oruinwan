@@ -26,10 +26,13 @@ export const SocketProvider = ({ children }) => {
     const noteListenersRef = useRef([]);
     const updateListenersRef = useRef([]);
 
-    // Initialize socket connection
+    // Initialize socket connection — re-run when user changes (login/logout)
     useEffect(() => {
         const token = localStorage.getItem('accessToken');
-        if (!token) {
+        if (!token || !user) {
+            // User logged out — clear socket state
+            setSocket(null);
+            setIsConnected(false);
             return;
         }
 
@@ -69,23 +72,30 @@ export const SocketProvider = ({ children }) => {
             // If authentication failed, try to refresh the token
             if (error.message === 'Authentication failed') {
                 try {
-                    // Use fetch instead of axios to avoid import
+                    const storedRefreshToken = localStorage.getItem('refreshToken');
                     const response = await fetch(`${API_BASE}/api/auth/refresh`, {
                         method: 'POST',
-                        credentials: 'include'
+                        credentials: 'include',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: storedRefreshToken ? JSON.stringify({ refreshToken: storedRefreshToken }) : undefined,
                     });
 
                     if (response.ok) {
-                        const { accessToken } = await response.json();
-                        localStorage.setItem('accessToken', accessToken);
-
-                        // Update socket auth and reconnect
-                        socketInstance.auth = { token: accessToken };
-                        socketInstance.connect();
+                        const data = await response.json();
+                        const newAccessToken = data.accessToken;
+                        if (newAccessToken) {
+                            localStorage.setItem('accessToken', newAccessToken);
+                            if (data.refreshToken) {
+                                localStorage.setItem('refreshToken', data.refreshToken);
+                            }
+                            // Update socket auth and reconnect
+                            socketInstance.auth = { token: newAccessToken };
+                            socketInstance.connect();
+                        }
                     } else {
-                        console.error('❌ Token refresh failed, redirecting to login');
-                        localStorage.removeItem('accessToken');
-                        window.location.href = '/login';
+                        console.error('❌ Token refresh failed during socket connect_error');
+                        // Dispatch force-logout so AuthContext can clean up
+                        window.dispatchEvent(new CustomEvent('auth:force-logout'));
                     }
                 } catch (refreshError) {
                     console.error('❌ Token refresh error:', refreshError);
@@ -101,15 +111,14 @@ export const SocketProvider = ({ children }) => {
         // Socket should be connected EXPLICITLY after Phase 1 (identity keys) complete
         // To enable: Call socket.connect() from components AFTER identity initialization
 
-        // REMOVED: socketInstance.connect(); 
-        // This was auto-connecting during login, violating Phase 1 isolation
-
         return () => {
             if (socketInstance.connected) {
                 socketInstance.disconnect();
             }
+            setSocket(null);
+            setIsConnected(false);
         };
-    }, []);
+    }, [user]); // Re-initialize socket when user changes (login/logout)
 
     // ✅ Explicit socket connection function
     // Call this from components AFTER identity keys are loaded
@@ -242,7 +251,7 @@ export const SocketProvider = ({ children }) => {
             socket.off('tab-deleted');
             // socket.off('channel:user-joined'); // Already disabled
         };
-    }, [socket, user]);
+    }, [socket]);
 
     // Broadcast message events
     useEffect(() => {

@@ -1,5 +1,5 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { useSocket } from './SocketContext';
 
@@ -15,6 +15,7 @@ export const useWorkspace = () => {
 
 export const WorkspaceProvider = ({ children }) => {
     const { workspaceId } = useParams();
+    const navigate = useNavigate();
     const [workspaces, setWorkspaces] = useState([]);
     const [activeWorkspace, setActiveWorkspace] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -83,40 +84,28 @@ export const WorkspaceProvider = ({ children }) => {
         if (!socket) return;
 
         const handleWorkspaceUpdated = (data) => {
-
             setWorkspaces(prev => prev.map(ws =>
                 ws.id === data.workspaceId
-                    ? { ...ws, ...data, id: ws.id } // ensuring ID stability and merging updates
+                    ? { ...ws, ...data, id: ws.id }
                     : ws
             ));
-
-            if (activeWorkspace && activeWorkspace.id === data.workspaceId) {
-                setActiveWorkspace(prev => ({ ...prev, ...data }));
-            }
+            // Update active workspace using functional updater to avoid stale closure
+            setActiveWorkspace(prev =>
+                prev && prev.id === data.workspaceId ? { ...prev, ...data } : prev
+            );
         };
 
         const handleWorkspaceDeleted = (data) => {
-
             setWorkspaces(prev => prev.filter(ws => ws.id !== data.workspaceId));
-
-            if (activeWorkspace && activeWorkspace.id === data.workspaceId) {
-                setActiveWorkspace(null);
-                // Redirect handled by component or user interaction usually
-                // But we can clear state.
-                window.location.href = '/'; // Force redirect to home/select
-            }
+            // Use functional updater to read current active workspace without capturing stale state
+            setActiveWorkspace(prev => {
+                if (prev && prev.id === data.workspaceId) {
+                    navigate('/');
+                    return null;
+                }
+                return prev;
+            });
         };
-
-        // workspace-joined is handled by HomePanel? Or should be here?
-        // Usually listMyWorkspaces handles the list. receiving workspace-joined (for ME) means I'm added.
-        // But SocketContext emission for workspace-joined is usually to the ROOM.
-        // If *I* join, I might receive it if I'm already connected?
-        // Actually, joinWorkspace in controller emits to workspace room. 
-        // If I just joined, I might not be in the room yet until client emits join-workspace?
-        // The joinWorkspace API response adds the user.
-        // The socket event is for OTHERS to know I joined.
-        // However, if I am invited and added (e.g. by someone else), I might get an event?
-        // Currently no event for "added to workspace".
 
         socket.on('workspace-updated', handleWorkspaceUpdated);
         socket.on('workspace-deleted', handleWorkspaceDeleted);
@@ -125,7 +114,7 @@ export const WorkspaceProvider = ({ children }) => {
             socket.off('workspace-updated', handleWorkspaceUpdated);
             socket.off('workspace-deleted', handleWorkspaceDeleted);
         };
-    }, [socket, activeWorkspace]);
+    }, [socket, navigate]); // Removed stale `activeWorkspace` dep — use functional updater instead
 
     // Helper: Check if user is member of a workspace
     const isMemberOf = (wsId) => {
