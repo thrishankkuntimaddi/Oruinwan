@@ -1,7 +1,7 @@
 // client/src/contexts/AuthContext.jsx
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
-import { setOnTokenRefreshed } from "../services/api";
+import { setOnTokenRefreshed, API_BASE } from "../services/api";
 import axios from 'axios';
 import { getDeviceMetadata, clearDeviceId } from '../utils/deviceId';
 
@@ -26,7 +26,7 @@ export const AuthProvider = ({ children }) => {
   // Returns the new access token string on success, or null on failure.
   const silentRefresh = async () => {
     try {
-      const refreshRes = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/auth/refresh`, {
+      const refreshRes = await fetch(`${API_BASE}/api/auth/refresh`, {
         method: "POST",
         credentials: "include",
       });
@@ -70,7 +70,7 @@ export const AuthProvider = ({ children }) => {
       }
 
       // Step 2: Fetch user profile with the access token
-      const res = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/auth/me`, {
+      const res = await fetch(`${API_BASE}/api/auth/me`, {
         credentials: "include",
         headers: {
           Authorization: `Bearer ${token}`
@@ -93,7 +93,7 @@ export const AuthProvider = ({ children }) => {
         }
 
         // Retry /me with the fresh token
-        const retryRes = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/auth/me`, {
+        const retryRes = await fetch(`${API_BASE}/api/auth/me`, {
           credentials: "include",
           headers: { Authorization: `Bearer ${newToken}` },
         });
@@ -162,7 +162,7 @@ export const AuthProvider = ({ children }) => {
           setRequiresPassword(false);
 
           // Fire-and-forget repair (NEVER await, NEVER block UI)
-          fetch(`${process.env.REACT_APP_BACKEND_URL}/api/v2/conversations/repair-access`, {
+          fetch(`${API_BASE}/api/v2/conversations/repair-access`, {
             method: 'POST',
             credentials: 'include',
             headers: {
@@ -222,7 +222,7 @@ export const AuthProvider = ({ children }) => {
       try {
         console.log('🔄 [TOKEN REFRESH] Attempting automatic token refresh...');
 
-        const refreshRes = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/auth/refresh`, {
+        const refreshRes = await fetch(`${API_BASE}/api/auth/refresh`, {
           method: "POST",
           credentials: "include",
         });
@@ -263,7 +263,7 @@ export const AuthProvider = ({ children }) => {
       const deviceMetadata = getDeviceMetadata();
 
       const response = await axios.post(
-        `${process.env.REACT_APP_BACKEND_URL}/api/auth/login`,
+        `${API_BASE}/api/auth/login`,
         {
           email,
           password,
@@ -318,7 +318,7 @@ export const AuthProvider = ({ children }) => {
             setEncryptionReady(true);
             setRequiresPassword(false);
 
-            fetch(`${process.env.REACT_APP_BACKEND_URL}/api/v2/conversations/repair-access`, {
+            fetch(`${API_BASE}/api/v2/conversations/repair-access`, {
               method: 'POST',
               credentials: 'include',
               headers: {
@@ -359,7 +359,7 @@ export const AuthProvider = ({ children }) => {
   const logout = useCallback(async () => {
     try {
       await axios.post(
-        `${process.env.REACT_APP_BACKEND_URL}/api/auth/logout`,
+        `${API_BASE}/api/auth/logout`,
         {},
         {
           headers: { "Content-Type": "application/json" },
@@ -397,7 +397,7 @@ export const AuthProvider = ({ children }) => {
   // Update profile
   // ------------------------------------------------------------
   const updateProfile = async (updates) => {
-    const res = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/auth/me`, {
+    const res = await fetch(`${API_BASE}/api/auth/me`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
@@ -419,7 +419,7 @@ export const AuthProvider = ({ children }) => {
   // Update password
   // ------------------------------------------------------------
   const updatePassword = async (oldPassword, newPassword) => {
-    const res = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/auth/me/password`, {
+    const res = await fetch(`${API_BASE}/api/auth/me/password`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",

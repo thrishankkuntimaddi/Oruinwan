@@ -11,7 +11,7 @@ const axios = require("axios");
 
 // Production hardening utilities
 const { saveWithRetry } = require("../../../utils/mongooseRetry");
-const { setRefreshTokenCookie, _clearRefreshTokenCookie } = require("../../../utils/cookieHelper");
+const { setRefreshTokenCookie, clearRefreshTokenCookie } = require("../../../utils/cookieHelper");
 const { _TIME } = require("../../../constants");
 const { sha256 } = require("../../../utils/hashUtils");
 const { handleError } = require("../../../utils/responseHelpers");
@@ -773,7 +773,7 @@ exports.logout = async (req, res) => {
       await saveWithRetry(user);
     }
 
-    res.clearCookie("jwt");
+    clearRefreshTokenCookie(res);
 
     return res.json({ message: "Logged out" });
   } catch (err) {
@@ -793,13 +793,13 @@ exports.logoutAll = async (req, res) => {
     try {
       decoded = jwt.verify(token, process.env.REFRESH_TOKEN_SECRET);
     } catch {
-      res.clearCookie("jwt");
+      clearRefreshTokenCookie(res);
       return res.json({ message: "Logged out" });
     }
 
     await User.findByIdAndUpdate(decoded.sub, { refreshTokens: [] });
 
-    res.clearCookie("jwt");
+    clearRefreshTokenCookie(res);
 
     return res.json({ message: "Logged out from all devices" });
 
