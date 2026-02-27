@@ -214,30 +214,40 @@ export const AuthProvider = ({ children }) => {
 
   // ------------------------------------------------------------
   // 🔄 AUTOMATIC TOKEN REFRESH
-  // Refresh access token before it expires (every 13 minutes)
+  // Refresh access token before it expires (every 10 minutes)
+  // 5-minute safety buffer before the 15-minute expiry avoids race
+  // conditions with the Axios interceptor also trying to refresh.
   // ------------------------------------------------------------
   useEffect(() => {
     if (!user) {
       return; // Don't set up refresh if not logged in
     }
 
-    // Refresh 2 minutes before expiry (15m - 2m = 13m = 780000ms)
-    const REFRESH_INTERVAL = 13 * 60 * 1000; // 13 minutes
+    // Refresh 5 minutes before expiry (15m - 5m = 10m = 600000ms)
+    // Previously 13 minutes — too close to expiry, caused race conditions
+    // with the Axios interceptor on the first expired API call.
+    const REFRESH_INTERVAL = 10 * 60 * 1000; // 10 minutes
 
-    console.log('⏰ [TOKEN REFRESH] Setting up automatic refresh every 13 minutes');
+    console.log('⏰ [TOKEN REFRESH] Setting up automatic refresh every 10 minutes');
 
     const refreshInterval = setInterval(async () => {
       try {
         console.log('🔄 [TOKEN REFRESH] Attempting automatic token refresh...');
 
+        // Guard: skip if no access token exists (already logged out)
+        const existingToken = localStorage.getItem('accessToken');
+        if (!existingToken) {
+          console.log('⏭️ [TOKEN REFRESH] No access token in storage, skipping proactive refresh');
+          return;
+        }
+
+        const storedRefreshToken = localStorage.getItem('refreshToken');
         const refreshRes = await fetch(`${API_BASE}/api/auth/refresh`, {
           method: "POST",
           credentials: "include",
           headers: { 'Content-Type': 'application/json' },
-          body: (() => {
-            const t = localStorage.getItem('refreshToken');
-            return t ? JSON.stringify({ refreshToken: t }) : undefined;
-          })(),
+          // Always send body fallback — cookie may be blocked cross-origin in production
+          body: storedRefreshToken ? JSON.stringify({ refreshToken: storedRefreshToken }) : undefined,
         });
 
         if (refreshRes.ok) {
@@ -251,15 +261,21 @@ export const AuthProvider = ({ children }) => {
             console.log('✅ [TOKEN REFRESH] Access token refreshed successfully');
           }
         } else {
-          console.error('❌ [TOKEN REFRESH] Failed:', refreshRes.status);
-          // If refresh fails, user might need to re-login
-          if (refreshRes.status === 401 || refreshRes.status === 403) {
-            console.warn('⚠️ [TOKEN REFRESH] Refresh token expired, logging out...');
-            logoutRef.current(); // ✅ Always calls latest logout via ref (no stale closure)
-          }
+          // ⚠️ DO NOT logout here on proactive refresh failure.
+          // The Axios interceptor in api.js already handles 401s correctly on every
+          // API call, including retrying with the refresh token. Logging out here
+          // causes a race: if both the proactive timer AND the interceptor fire at
+          // ~15 min, the second one gets a 403 (already-rotated token) and this
+          // handler would wrongly terminate the session.
+          // Let the session expire naturally; the interceptor will handle recovery.
+          console.warn(
+            `⚠️ [TOKEN REFRESH] Proactive refresh failed (status ${refreshRes.status}). ` +
+            'Will retry on next API call via Axios interceptor — NOT logging out.'
+          );
         }
       } catch (error) {
-        console.error('❌ [TOKEN REFRESH] Error:', error);
+        // Network error — silent, do not logout. Interceptor handles recovery.
+        console.error('❌ [TOKEN REFRESH] Network error during proactive refresh (will retry on next API call):', error.message);
       }
     }, REFRESH_INTERVAL);
 

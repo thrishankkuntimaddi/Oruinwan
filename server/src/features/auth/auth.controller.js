@@ -705,8 +705,12 @@ exports.refresh = async (req, res) => {
       const oldTokenIndex = user.refreshTokens.findIndex(t => t.tokenHash === refreshHash);
 
       if (oldTokenIndex !== -1) {
-        user.refreshTokens[oldTokenIndex].expiresAt = new Date(Date.now() + 10000);
-        console.log('🕐 [REFRESH] Old token marked for grace period expiry (10s)');
+        // 30s grace period (was 10s) — production network latency between
+        // Vercel frontend → Cloud Run backend means concurrent refresh calls
+        // (proactive timer + Axios interceptor) can race within a tight window.
+        // 30s gives a second concurrent call enough time to still validate.
+        user.refreshTokens[oldTokenIndex].expiresAt = new Date(Date.now() + 30000);
+        console.log('🕐 [REFRESH] Old token marked for grace period expiry (30s)');
       }
 
       user.refreshTokens.push({
