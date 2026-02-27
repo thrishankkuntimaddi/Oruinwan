@@ -86,8 +86,10 @@ app.use(passport.initialize());
 const isProduction = process.env.NODE_ENV === 'production';
 const allowedOrigins = [
   'http://localhost:3000',
-  'https://chttrix.vercel.app'
-];
+  'http://localhost:5173',         // Vite dev server default port
+  'https://chttrix.vercel.app',   // production frontend
+  process.env.FRONTEND_URL,       // dynamic: covers Vercel preview + staging URLs
+].filter(Boolean); // remove undefined/null if FRONTEND_URL is not set
 
 console.log('🌐 CORS allowed origins:', allowedOrigins);
 

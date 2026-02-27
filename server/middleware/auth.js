@@ -73,7 +73,21 @@ module.exports = async function requireAuth(req, res, next) {
         return next();
 
       } catch (err) {
-        return res.status(401).json({ message: "Token expired, please login again" });
+        // Differentiate error types so the client interceptor doesn't retry
+        // on non-expiry errors (which would create retry loops or mass logouts).
+        if (err.name === 'TokenExpiredError') {
+          // Refresh token itself expired → legitimate re-login
+          return res.status(401).json({ message: 'Refresh token expired' });
+        }
+        if (err.name === 'JsonWebTokenError') {
+          // Tampered token or wrong REFRESH_TOKEN_SECRET (e.g. after redeploy).
+          // Return 403 so Axios interceptor does NOT retry → no retry loop.
+          return res.status(403).json({ message: 'Invalid token signature' });
+        }
+        // DB error, Mongoose error, or unknown — log and return 500.
+        // 500 is not caught by the Axios 401-interceptor → no retry loop.
+        console.error('AUTH MIDDLEWARE CATCH (refresh path):', err);
+        return res.status(500).json({ message: 'Server error during authentication' });
       }
     }
 

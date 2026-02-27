@@ -52,7 +52,18 @@ api.interceptors.request.use((config) => {
 // RESPONSE INTERCEPTOR - Handle token refresh
 // ============================================
 api.interceptors.response.use(
-    (response) => response,
+    (response) => {
+        // Fix 2: Pick up inline-refreshed access token from server middleware.
+        // middleware/auth.js auto-refreshes via cookie and sets x-access-token.
+        // Without reading this header, localStorage stays stale → stale 401 →
+        // concurrent refresh race → force-logout within the 10s rotation window.
+        const newToken = response.headers['x-access-token'];
+        if (newToken) {
+            localStorage.setItem('accessToken', newToken);
+            if (onTokenRefreshed) onTokenRefreshed(newToken);
+        }
+        return response;
+    },
     async (error) => {
         const originalRequest = error.config;
 
@@ -90,6 +101,18 @@ api.interceptors.response.use(
         // 🔄 Start refresh process
         isRefreshing = true;
 
+        // Fix 1: Safety net — reset isRefreshing after 10s if it gets stuck.
+        // This can happen if axios.post throws before the try/catch runs (e.g.,
+        // network timeout, CORS error, malformed JSON response). Without this,
+        // all subsequent 401s queue forever and the app silently hangs / logs out.
+        const refreshTimeout = setTimeout(() => {
+            if (isRefreshing) {
+                console.warn('⚠️ [API] Refresh timeout (10s) — resetting isRefreshing and draining queue');
+                isRefreshing = false;
+                processQueue(new Error('Refresh timeout — server did not respond in 10s'), null);
+            }
+        }, 10000);
+
         try {
 
 
@@ -110,6 +133,7 @@ api.interceptors.response.use(
             originalRequest.headers.Authorization = `Bearer ${accessToken}`;
 
             // Process queue with new token
+            clearTimeout(refreshTimeout);
             processQueue(null, accessToken);
             if (onTokenRefreshed) {
                 onTokenRefreshed(accessToken);
@@ -122,6 +146,7 @@ api.interceptors.response.use(
         } catch (refreshError) {
             // ❌ Refresh failed — session is truly dead
             console.error('🔴 [API] Refresh token expired or invalid — dispatching force-logout');
+            clearTimeout(refreshTimeout);
             processQueue(refreshError, null);
             isRefreshing = false;
 
