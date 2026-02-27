@@ -22,63 +22,54 @@ export const AuthProvider = ({ children }) => {
   // ------------------------------------------------------------
   // Load user on app start
   // ------------------------------------------------------------
+  // Helper: attempt one silent token refresh via the httpOnly cookie.
+  // Returns the new access token string on success, or null on failure.
+  const silentRefresh = async () => {
+    try {
+      const refreshRes = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/auth/refresh`, {
+        method: "POST",
+        credentials: "include",
+      });
+
+      if (refreshRes.ok) {
+        const refreshData = await refreshRes.json();
+        if (refreshData.accessToken) {
+          localStorage.setItem("accessToken", refreshData.accessToken);
+          setAccessToken(refreshData.accessToken);
+          console.log('✅ [SILENT REFRESH] New access token obtained');
+          return refreshData.accessToken;
+        }
+      } else {
+        console.warn(`⚠️ [SILENT REFRESH] Failed with status ${refreshRes.status}`);
+      }
+    } catch (refreshErr) {
+      console.error("❌ [SILENT REFRESH] Network error:", refreshErr);
+    }
+    return null;
+  };
+
   const loadUser = async () => {
     try {
-      // CRITICAL FIX: Load access token from localStorage
-      const storedToken = localStorage.getItem("accessToken");
-      if (storedToken) {
-        setAccessToken(storedToken);
+      // Step 1: Get access token — refresh silently if not in localStorage
+      let token = localStorage.getItem("accessToken");
 
-      } else {
-        // Check if we should even attempt a refresh
-        // Don't spam refresh requests if we've never logged in
-        const lastLoginAttempt = sessionStorage.getItem("lastLoginAttempt");
-        const hasRecentSession = lastLoginAttempt && (Date.now() - parseInt(lastLoginAttempt)) < 3600000; // 1 hour
+      if (!token) {
+        console.log('🔄 [LOAD USER] No access token in storage — attempting silent refresh via cookie...');
+        token = await silentRefresh();
 
-        if (!hasRecentSession) {
-
+        if (!token) {
+          // Refresh cookie absent or expired — genuine logged-out state
+          console.log('ℹ️ [LOAD USER] No valid session — user is logged out');
+          setUser(null);
+          setAccessToken(null);
           setLoading(false);
           return;
         }
-
-
-
-        // Try to get a new access token using refresh token
-        try {
-          const refreshRes = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/auth/refresh`, {
-            method: "POST",  // Use POST for mutations
-            credentials: "include", // Send cookies
-          });
-
-          if (refreshRes.ok) {
-            const refreshData = await refreshRes.json();
-            if (refreshData.accessToken) {
-              setAccessToken(refreshData.accessToken);
-              localStorage.setItem("accessToken", refreshData.accessToken);
-              sessionStorage.setItem("lastLoginAttempt", Date.now().toString());
-
-            }
-          } else {
-
-            // Clear the session marker
-            sessionStorage.removeItem("lastLoginAttempt");
-          }
-        } catch (refreshErr) {
-          console.error("❌ Refresh error:", refreshErr);
-          sessionStorage.removeItem("lastLoginAttempt");
-        }
+      } else {
+        setAccessToken(token);
       }
 
-      // Now try to fetch user data
-      const token = localStorage.getItem("accessToken");
-      if (!token) {
-
-        setUser(null);
-        setAccessToken(null);
-        return;
-      }
-
-      // Fetch user with access token
+      // Step 2: Fetch user profile with the access token
       const res = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/auth/me`, {
         credentials: "include",
         headers: {
@@ -86,80 +77,49 @@ export const AuthProvider = ({ children }) => {
         },
       });
 
+      // Step 3: If token expired mid-session, try one silent refresh then retry
+      if (res.status === 401) {
+        console.log('🔄 [LOAD USER] Access token rejected by /me — attempting silent refresh...');
+        const newToken = await silentRefresh();
 
+        if (!newToken) {
+          // Refresh also failed → genuine session expiry
+          console.warn('⚠️ [LOAD USER] Silent refresh failed after /me 401 — clearing session');
+          setUser(null);
+          setAccessToken(null);
+          localStorage.removeItem("accessToken");
+          setLoading(false);
+          return;
+        }
+
+        // Retry /me with the fresh token
+        const retryRes = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/auth/me`, {
+          credentials: "include",
+          headers: { Authorization: `Bearer ${newToken}` },
+        });
+
+        if (!retryRes.ok) {
+          console.warn('⚠️ [LOAD USER] /me still failed after refresh — clearing session');
+          setUser(null);
+          setAccessToken(null);
+          localStorage.removeItem("accessToken");
+          setLoading(false);
+          return;
+        }
+
+        const data = await retryRes.json();
+        setUser(data);
+        initializeEncryption(data);
+        return;
+      }
 
       if (res.ok) {
         const data = await res.json();
-
-
         setUser(data);
-
-        // ============================================================
-        // 🔐 PHASE 1: IDENTITY KEY INITIALIZATION (Silent & Non-Blocking)
-        // Runs for ALL authenticated users (OAuth, email/password, page refresh)
-        // NOTE: requiresPasswordSetup is UX-only and does NOT block crypto
-        // ============================================================
-        (async () => {
-          try {
-            const userId = data._id || data.id || data.sub;
-            if (!userId) {
-              console.warn('⚠️ [PHASE 1] No user ID found, skipping initialization');
-              return;
-            }
-
-            // Dynamically import to avoid circular dependencies
-            const identityKeyService = (await import('../services/identityKeyService')).default;
-
-            // PHASE 1: Pass null for password (will use cache if available)
-            const result = await identityKeyService.initializeIdentityKeys(userId, null);
-
-            // Handle password-protected identity ONLY if cache is missing
-            if (result?.status === 'PASSWORD_REQUIRED') {
-              console.log('🔐 [PHASE 1] Password-protected identity - cache missing, encryption deferred');
-              setEncryptionReady(false);
-              setRequiresPassword(true);
-              return;
-            }
-
-            // Success - encryption ready
-            if (result?.status === 'READY') {
-              console.log('✅ [PHASE 1] Identity keys ready (from cache or newly generated)');
-              setEncryptionReady(true);
-              setRequiresPassword(false);
-
-              // 🔴 FIX 2 — MANDATORY: Fire-and-forget repair (NEVER await, NEVER block UI)
-              // 🆕 PHASE 2: Trigger automatic repair in background
-              fetch(`${process.env.REACT_APP_BACKEND_URL}/api/v2/conversations/repair-access`, {
-                method: 'POST',
-                credentials: 'include',
-                headers: {
-                  Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
-                  'Content-Type': 'application/json'
-                }
-              })
-                .then(res => res.json())
-                .then(data => console.log('✅ [AUTO-REPAIR] Completed:', data))
-                .catch(() => { }); // ✅ IMPORTANT: Silent failure, no UI impact, no retries
-            }
-          } catch (err) {
-            console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-            console.error('❌ [PHASE 1] HARD crypto failure:', err);
-            console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-
-            // Only real crypto failures block encryption
-            setEncryptionReady(false);
-
-            // ❌ NO alert()
-            // ❌ NO throw
-            // Non-blocking: User can still access app
-          }
-        })();
-        // ============================================================
-
-
+        initializeEncryption(data);
       } else {
-        // Clear invalid tokens
-
+        // Non-401 error (e.g. 500) — clear token but don't blame the refresh cookie
+        console.warn(`⚠️ [LOAD USER] /me returned ${res.status} — clearing access token`);
         setUser(null);
         setAccessToken(null);
         localStorage.removeItem("accessToken");
@@ -174,15 +134,75 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // ============================================================
+  // 🔐 PHASE 1: IDENTITY KEY INITIALIZATION (extracted helper)
+  // ============================================================
+  const initializeEncryption = (data) => {
+    (async () => {
+      try {
+        const userId = data._id || data.id || data.sub;
+        if (!userId) {
+          console.warn('⚠️ [PHASE 1] No user ID found, skipping initialization');
+          return;
+        }
+
+        const identityKeyService = (await import('../services/identityKeyService')).default;
+        const result = await identityKeyService.initializeIdentityKeys(userId, null);
+
+        if (result?.status === 'PASSWORD_REQUIRED') {
+          console.log('🔐 [PHASE 1] Password-protected identity - cache missing, encryption deferred');
+          setEncryptionReady(false);
+          setRequiresPassword(true);
+          return;
+        }
+
+        if (result?.status === 'READY') {
+          console.log('✅ [PHASE 1] Identity keys ready (from cache or newly generated)');
+          setEncryptionReady(true);
+          setRequiresPassword(false);
+
+          // Fire-and-forget repair (NEVER await, NEVER block UI)
+          fetch(`${process.env.REACT_APP_BACKEND_URL}/api/v2/conversations/repair-access`, {
+            method: 'POST',
+            credentials: 'include',
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
+              'Content-Type': 'application/json'
+            }
+          })
+            .then(res => res.json())
+            .then(data => console.log('✅ [AUTO-REPAIR] Completed:', data))
+            .catch(() => { });
+        }
+      } catch (err) {
+        console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        console.error('❌ [PHASE 1] HARD crypto failure:', err);
+        console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        setEncryptionReady(false);
+      }
+    })();
+  };
+
   useEffect(() => {
-    // Set up token refresh callback
+    // Set up token refresh callback for the axios interceptor
     setOnTokenRefreshed((newToken) => {
       setAccessToken(newToken);
-
     });
 
+    // Listen for forced logout events dispatched by the api.js interceptor
+    // (when refresh fails mid-session during an API call)
+    const handleForceLogout = () => {
+      console.warn('🔴 [AUTH] Force logout event received from API interceptor');
+      logoutRef.current();
+    };
+    window.addEventListener('auth:force-logout', handleForceLogout);
+
     loadUser();
-  }, []);
+
+    return () => {
+      window.removeEventListener('auth:force-logout', handleForceLogout);
+    };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ------------------------------------------------------------
   // 🔄 AUTOMATIC TOKEN REFRESH
@@ -277,33 +297,27 @@ export const AuthProvider = ({ children }) => {
       setUser(userWithCompany);
 
       // ============================================================
-      // 🔐 PHASE 1: IDENTITY KEY INITIALIZATION (Silent & Non-Blocking)
+      // 🔐 PHASE 1: IDENTITY KEY INITIALIZATION (via shared helper)
       // Email/password authentication = user is finalized
       // ============================================================
       (async () => {
         try {
           const userId = data.user._id || data.user.id;
-
-          // Dynamically import to avoid circular dependencies
           const identityKeyService = (await import('../services/identityKeyService')).default;
-
-          // PHASE 1: Pass password for UMEK derivation
+          // Pass password for UMEK derivation on login
           const result = await identityKeyService.initializeIdentityKeys(userId, password);
 
-          // Handle password-protected identity (defensive, shouldn't happen here)
           if (result?.status === 'PASSWORD_REQUIRED') {
             console.warn('🔐 [PHASE 1] Password required during login (unusual)');
             setEncryptionReady(false);
             return;
           }
 
-          // Success - encryption ready
           if (result?.status === 'READY') {
             console.log('✅ [PHASE 1] Identity keys initialized successfully');
             setEncryptionReady(true);
             setRequiresPassword(false);
 
-            // 🔴 FIX 2 — Fire-and-forget repair after login
             fetch(`${process.env.REACT_APP_BACKEND_URL}/api/v2/conversations/repair-access`, {
               method: 'POST',
               credentials: 'include',
@@ -314,19 +328,13 @@ export const AuthProvider = ({ children }) => {
             })
               .then(res => res.json())
               .then(repairData => console.log('✅ [AUTO-REPAIR] Completed:', repairData))
-              .catch(() => { }); // Silent failure
+              .catch(() => { });
           }
         } catch (err) {
           console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
           console.error('❌ [PHASE 1] HARD crypto failure:', err);
           console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-
-          // Only real crypto failures block encryption
           setEncryptionReady(false);
-
-          // ❌ NO alert()
-          // ❌ NO throw
-          // Non-blocking: User can still access app, encryption will initialize lazily
         }
       })();
       // ============================================================

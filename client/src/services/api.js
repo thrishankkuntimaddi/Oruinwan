@@ -63,9 +63,9 @@ api.interceptors.response.use(
 
         // ❌ Already retried? Don't loop infinitely
         if (originalRequest._retry) {
-            console.error('🔴 Refresh token expired - logging out');
+            console.error('🔴 [API] Token still invalid after refresh — dispatching force-logout');
             localStorage.removeItem('accessToken');
-            window.location.href = '/login';
+            window.dispatchEvent(new CustomEvent('auth:force-logout'));
             return Promise.reject(error);
         }
 
@@ -115,13 +115,13 @@ api.interceptors.response.use(
             return api(originalRequest);
 
         } catch (refreshError) {
-            // ❌ Refresh failed - session is truly dead
-            console.error('🔴 Refresh token expired or invalid');
+            // ❌ Refresh failed — session is truly dead
+            console.error('🔴 [API] Refresh token expired or invalid — dispatching force-logout');
             processQueue(refreshError, null);
             isRefreshing = false;
 
             localStorage.removeItem('accessToken');
-            window.location.href = '/login';
+            window.dispatchEvent(new CustomEvent('auth:force-logout'));
 
             return Promise.reject(refreshError);
         }
