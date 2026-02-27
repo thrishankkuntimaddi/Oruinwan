@@ -26,9 +26,13 @@ export const AuthProvider = ({ children }) => {
   // Returns the new access token string on success, or null on failure.
   const silentRefresh = async () => {
     try {
+      const storedRefreshToken = localStorage.getItem('refreshToken');
       const refreshRes = await fetch(`${API_BASE}/api/auth/refresh`, {
         method: "POST",
         credentials: "include",
+        headers: { 'Content-Type': 'application/json' },
+        // Send refreshToken in body as cross-origin cookie fallback
+        body: storedRefreshToken ? JSON.stringify({ refreshToken: storedRefreshToken }) : undefined,
       });
 
       if (refreshRes.ok) {
@@ -36,6 +40,10 @@ export const AuthProvider = ({ children }) => {
         if (refreshData.accessToken) {
           localStorage.setItem("accessToken", refreshData.accessToken);
           setAccessToken(refreshData.accessToken);
+          // Rotate the stored refresh token if server returned a new one
+          if (refreshData.refreshToken) {
+            localStorage.setItem('refreshToken', refreshData.refreshToken);
+          }
           console.log('✅ [SILENT REFRESH] New access token obtained');
           return refreshData.accessToken;
         }
@@ -225,6 +233,11 @@ export const AuthProvider = ({ children }) => {
         const refreshRes = await fetch(`${API_BASE}/api/auth/refresh`, {
           method: "POST",
           credentials: "include",
+          headers: { 'Content-Type': 'application/json' },
+          body: (() => {
+            const t = localStorage.getItem('refreshToken');
+            return t ? JSON.stringify({ refreshToken: t }) : undefined;
+          })(),
         });
 
         if (refreshRes.ok) {
@@ -232,6 +245,9 @@ export const AuthProvider = ({ children }) => {
           if (refreshData.accessToken) {
             setAccessToken(refreshData.accessToken);
             localStorage.setItem("accessToken", refreshData.accessToken);
+            if (refreshData.refreshToken) {
+              localStorage.setItem('refreshToken', refreshData.refreshToken);
+            }
             console.log('✅ [TOKEN REFRESH] Access token refreshed successfully');
           }
         } else {
@@ -277,10 +293,13 @@ export const AuthProvider = ({ children }) => {
 
       const { data } = response;
 
-      // Save access token
+      // Save access token and refresh token
       if (data.accessToken) {
         localStorage.setItem("accessToken", data.accessToken);
         setAccessToken(data.accessToken);
+      }
+      if (data.refreshToken) {
+        localStorage.setItem('refreshToken', data.refreshToken);
       }
 
       // Ensure data.user exists and is valid
@@ -373,6 +392,7 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
     setAccessToken(null);
     localStorage.removeItem("accessToken");
+    localStorage.removeItem("refreshToken");
     sessionStorage.removeItem("lastLoginAttempt");
 
     // ✅ FIX 1: Reset encryption ready state

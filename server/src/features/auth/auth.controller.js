@@ -623,6 +623,7 @@ exports.login = async (req, res) => {
     const response = {
       message: "Login successful",
       accessToken,
+      refreshToken, // ✅ Dual-channel: client stores this for cross-origin refresh fallback
       user: responseUser,
       redirectTo: redirectTo,
       isAdmin: isAdmin
@@ -663,15 +664,16 @@ exports.refresh = async (req, res) => {
 
   while (attempts < MAX_RETRIES) {
     try {
-      const refreshToken = req.cookies?.jwt;
+      // Accept refresh token from cookie (same-origin) OR request body (cross-origin fallback)
+      const refreshToken = req.cookies?.jwt || req.body?.refreshToken;
 
       if (!refreshToken) {
-        // This is normal for unauthenticated users - don't spam logs
-        console.log('⚠️ [REFRESH] No refresh token cookie found');
+        console.log('⚠️ [REFRESH] No refresh token found (cookie or body)');
         return res.status(401).json({ message: "No refresh token" });
       }
 
-      console.log('🔍 [REFRESH] Refresh token cookie found, verifying...');
+      const isCookieToken = !!req.cookies?.jwt;
+      console.log(`🔍 [REFRESH] Token source: ${isCookieToken ? 'cookie' : 'request body (cross-origin fallback)'}`);
 
       const refreshHash = sha256(refreshToken);
 
@@ -700,25 +702,18 @@ exports.refresh = async (req, res) => {
 
       console.log('✅ [REFRESH] Generated new tokens');
 
-      // CRITICAL FIX: Don't remove old token immediately!
-      // Instead, mark it with a grace period to handle race conditions
-      // (React StrictMode, double requests, etc.)
       const oldTokenIndex = user.refreshTokens.findIndex(t => t.tokenHash === refreshHash);
 
       if (oldTokenIndex !== -1) {
-        // Keep old token but mark it as expiring soon (10 second grace period)
         user.refreshTokens[oldTokenIndex].expiresAt = new Date(Date.now() + 10000);
         console.log('🕐 [REFRESH] Old token marked for grace period expiry (10s)');
       }
 
-      // Add new refresh token
       user.refreshTokens.push({
         tokenHash: sha256(newRefresh),
         expiresAt: new Date(Date.now() + REFRESH_DAYS * 86400000),
         deviceInfo: req.get("User-Agent") || "Unknown"
       });
-
-      console.log(`📝 [REFRESH] User has ${user.refreshTokens.length} active tokens`);
 
       // Clean up truly expired tokens
       const beforeCleanup = user.refreshTokens.length;
@@ -730,15 +725,15 @@ exports.refresh = async (req, res) => {
         console.log(`🗑️ [REFRESH] Cleaned up ${beforeCleanup - user.refreshTokens.length} expired tokens`);
       }
 
-      // ✅ CRITICAL: Save user to persist new refresh token!
       await user.save();
       console.log('💾 [REFRESH] User tokens saved to database');
 
-      // Set new refresh token cookie
+      // Always set the cookie (works for same-origin)
       setRefreshTokenCookie(res, newRefresh);
 
       console.log('✅ [REFRESH] Token refresh completed successfully');
-      return res.json({ accessToken: newAccess });
+      // Also return new refresh token in body for cross-origin clients
+      return res.json({ accessToken: newAccess, refreshToken: newRefresh });
 
     } catch (_err) {
       if (_err.name === 'VersionError' && attempts < MAX_RETRIES - 1) {

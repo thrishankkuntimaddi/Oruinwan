@@ -3,14 +3,6 @@
     "outputDirectory": "build",
     "rewrites": [
         {
-            "source": "/api/:path*",
-            "destination": "https://chttrix-api-900848971315.us-central1.run.app/api/:path*"
-        },
-        {
-            "source": "/socket.io/:path*",
-            "destination": "https://chttrix-api-900848971315.us-central1.run.app/socket.io/:path*"
-        },
-        {
             "source": "/(.*)",
             "destination": "/index.html"
         }
