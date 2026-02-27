@@ -2,22 +2,30 @@
 ├── DEPLOYMENT.md
 ├── README.md
 ├── client
+│   ├── build
+│   │   ├── ChttrixAI-animation.mp4
+│   │   ├── assets
+│   │   │   ├── ChttrixLogo-dark.svg
+│   │   │   ├── ChttrixLogo-light.svg
+│   │   │   ├── ChttrixLogo.svg
+│   │   │   ├── index-DR-Z-h4t.js
+│   │   │   └── index-QqILg0pO.css
+│   │   ├── default-avatar.svg
+│   │   ├── favicon.ico
+│   │   ├── hover-animation.mp4
+│   │   ├── index.html
+│   │   └── manifest.json
+│   ├── index.html
 │   ├── jsconfig.json
-│   ├── package-lock.json
 │   ├── package.json
 │   ├── public
 │   │   ├── ChttrixAI-animation.mp4
-│   │   ├── Screenshot 2026-01-11 at 3.53.36 PM.png
 │   │   ├── assets
-│   │   │   ├── ChttrixAI-logo.png
-│   │   │   ├── ChttrixFavico.png
 │   │   │   ├── ChttrixLogo-dark.svg
 │   │   │   ├── ChttrixLogo-light.svg
 │   │   │   └── ChttrixLogo.svg
-│   │   ├── chttrix-logo.jpg
 │   │   ├── default-avatar.svg
 │   │   ├── favicon.ico
-│   │   ├── favicon.png
 │   │   ├── hover-animation.mp4
 │   │   ├── index.html
 │   │   └── manifest.json
@@ -262,7 +270,7 @@
 │   │   │   ├── useUniversalSearch.js
 │   │   │   └── useUsers.js
 │   │   ├── index.css
-│   │   ├── index.js
+│   │   ├── main.jsx
 │   │   ├── modules
 │   │   │   └── chat
 │   │   │       ├── README.md
@@ -332,13 +340,25 @@
 │   │   │   │   ├── notesComponents
 │   │   │   │   │   ├── blocks
 │   │   │   │   │   │   ├── AudioBlock.jsx
+│   │   │   │   │   │   ├── CalloutBlock.jsx
+│   │   │   │   │   │   ├── ChecklistBlock.jsx
+│   │   │   │   │   │   ├── CodeBlock.jsx
+│   │   │   │   │   │   ├── DividerBlock.jsx
+│   │   │   │   │   │   ├── HeadingBlock.jsx
 │   │   │   │   │   │   ├── ImageBlock.jsx
+│   │   │   │   │   │   ├── TableBlock.jsx
 │   │   │   │   │   │   ├── TextBlock.jsx
+│   │   │   │   │   │   ├── ToggleBlock.jsx
 │   │   │   │   │   │   └── VideoBlock.jsx
 │   │   │   │   │   └── ui
+│   │   │   │   │       ├── AIPanel.jsx
 │   │   │   │   │       ├── EmptyState.jsx
 │   │   │   │   │       ├── NoteInfoModal.jsx
-│   │   │   │   │       └── NotesToolbar.jsx
+│   │   │   │   │       ├── NoteTemplateModal.jsx
+│   │   │   │   │       ├── NotesToolbar.jsx
+│   │   │   │   │       ├── ShareNoteModal.jsx
+│   │   │   │   │       ├── SlashCommandMenu.jsx
+│   │   │   │   │       └── VersionHistoryPanel.jsx
 │   │   │   │   └── states
 │   │   │   │       └── EmptyState.jsx
 │   │   │   ├── VerifyEmail.jsx
@@ -485,7 +505,7 @@
 │   │       ├── tokenUtils.js
 │   │       └── uploadHelpers.js
 │   ├── tailwind.config.js
-│   └── yarn.lock
+│   └── vite.config.js
 ├── nixpacks.toml
 ├── package-lock.json
 ├── package.json
@@ -790,10 +810,9 @@
 │   │   │       └── socketEmitter.js
 │   │   └── uploads
 │   │       └── verification_docs
-│   │           ├── 1770023102367_WhatsApp_Image_2026-01-27_at_07.55.03_(2).jpeg
-│   │           ├── 1770023275271_WhatsApp_Image_2026-01-27_at_07.55.03.jpeg
-│   │           └── 1770040095495_WhatsApp_Image_2026-01-19_at_11.53.40.jpeg
 │   ├── test-otp-save.js
+│   ├── uploads
+│   │   └── verification_docs
 │   ├── utils
 │   │   ├── aiActions.js
 │   │   ├── analyticsService.js
@@ -828,6 +847,5 @@
 │   ├── system_design_evaluation.md
 │   └── technical_audit.md
 ├── update-structure.sh
+├── vercel.json
 └── verify-security.sh
-
-163 directories, 668 files
