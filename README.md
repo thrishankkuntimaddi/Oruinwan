@@ -1,405 +1,563 @@
-# ChttrixCollab
+# Chttrix — AI-Augmented Collaboration Platform
 
-**AI-Augmented Team Collaboration Platform**
-
-A modern, real-time collaboration platform designed for distributed teams. ChttrixCollab combines messaging, task management, document collaboration, and company administration into a unified workspace with AI assistance.
+> A full-stack, enterprise-grade real-time collaboration platform with end-to-end encryption, AI assistance, role-based access control, and multi-workspace support.
 
 ---
 
-## 🎯 Product Overview
+## Table of Contents
 
-### What is ChttrixCollab?
-
-ChttrixCollab is an all-in-one team collaboration solution that helps companies:
-- Communicate in real-time across channels and direct messages
-- Manage tasks, projects, and team workflows
-- Share and collaborate on notes and documentation
-- Post company-wide updates and announcements
-- Administer teams with role-based access control
-- Onboard employees through invitation and domain verification
-
-### Problem It Solves
-
-Modern teams are fragmented across multiple tools (Slack for chat, Asana for tasks, Notion for docs, etc.). ChttrixCollab unifies these workflows into a single platform, reducing context switching and improving productivity.
-
-### Target Users
-
-- **Companies**: 10-1000 employees
-- **Remote/Hybrid Teams**: Distributed workforce
-- **Roles**: HR, Developers, Testers, Designers, Managers, Executives
+- [Overview](#overview)
+- [Tech Stack](#tech-stack)
+- [Architecture](#architecture)
+- [Features](#features)
+- [Project Structure](#project-structure)
+- [Getting Started](#getting-started)
+  - [Prerequisites](#prerequisites)
+  - [Installation](#installation)
+  - [Environment Variables](#environment-variables)
+  - [Running Locally](#running-locally)
+- [API Overview](#api-overview)
+- [Security](#security)
+- [Deployment](#deployment)
+- [Scripts](#scripts)
 
 ---
 
-## ✨ Features
+## Overview
 
-### Core Features
+Chttrix is a production-ready, real-time collaboration platform built for organizations that need secure internal communication at scale. It supports company workspaces, department-scoped channels, direct messaging with end-to-end encryption, AI-powered features via Google Gemini, rich task and note management, and a full company administration suite.
 
-#### 1. **Real-Time Messaging**
-- **Channels**: Public/private team channels organized by topics
-- **Direct Messages**: 1-on-1 and group conversations
-- **File Sharing**: Upload and share documents, images, code snippets
-- **Notifications**: Desktop and in-app notifications
-- **Search**: Global search across all conversations
-
-**Tech Used**: Socket.io for WebSocket connections, MongoDB for message persistence
-
-#### 2. **Task Management**
-- **Task Board**: Kanban-style task organization
-- **Assignments**: Assign tasks to team members
-- **Due Dates**: Set deadlines and reminders
-- **Status Tracking**: Todo, In Progress, Done
-- **Comments**: Discuss tasks in context
-
-**Tech Used**: React DnD for drag-and-drop, MongoDB for task storage
-
-#### 3. **Notes & Documentation**
-- **Rich Text Editor**: Markdown support with formatting
-- **Collaboration**: Share notes with team members and control editing permissions
-- **Organization**: Folders and tags
-- **Activity Tracking**: Track note creation and sharing events
-- **Sharing**: Share notes with specific teams or company-wide
-
-**Tech Used**: Rich text editor with permission-based sharing and activity logging
-
-#### 4. **Company Updates**
-- **Announcements**: Company-wide broadcasts
-- **Feed**: Chronological update stream
-- **Reactions**: Like, comment on updates
-- **Pinned Posts**: Important announcements stay visible
-
-**Tech Used**: RESTful API with MongoDB, real-time updates via WebSockets
-
-#### 5. **Workspace Management**
-- **Multi-Workspace**: Switch between different projects/teams
-- **Workspace Settings**: Configure per-workspace preferences
-- **Members**: Add/remove team members per workspace
-- **Channels**: Create workspace-specific channels
-
-**Tech Used**: MongoDB subdocuments for workspace hierarchy
-
-#### 6. **Admin Dashboard**
-- **Company Management**: Create and configure company settings
-- **Domain Verification**: Verify company email domain for auto-join
-- **Member Invitations**: Send email invites with role assignment
-- **Role Management**: Assign Owner, Admin, Member roles
-- **Member List**: View, edit, and remove team members
-- **Analytics**: (Planned) Usage statistics and insights
-
-**Tech Used**: React admin UI, RESTful API with role-based middleware
+The platform is structured as a **monorepo** with a `client` (React + Vite) and a `server` (Node.js + Express + Socket.IO), deployed independently to Vercel and Railway respectively.
 
 ---
 
-## 🏗️ Architecture
+## Tech Stack
 
-### System Design
+### Frontend (`/client`)
+| Technology | Version | Purpose |
+|---|---|---|
+| React | 19.1.x | UI framework |
+| Vite | 6.x | Build tool & dev server |
+| React Router DOM | 7.x | Client-side routing |
+| Tailwind CSS | 3.4.x | Utility-first styling |
+| Socket.IO Client | 4.8.x | Real-time WebSocket communication |
+| Axios | 1.x | HTTP client |
+| Recharts | 3.x | Analytics dashboards & charts |
+| Lucide React | 0.525.x | Icon library |
+| React Hot Toast | 2.x | Notifications |
+| React Markdown | 10.x | Markdown rendering |
+| React RnD | 10.x | Draggable/resizable UI panels |
+| `@react-oauth/google` | 0.12.x | Google OAuth integration |
+| `jwt-decode` | 4.x | JWT decoding on the client |
+| `turndown` | 7.x | HTML → Markdown conversion |
+
+### Backend (`/server`)
+| Technology | Version | Purpose |
+|---|---|---|
+| Node.js + Express | 5.x | REST API server |
+| Socket.IO | 4.8.x | Real-time bidirectional events |
+| MongoDB + Mongoose | 8.x | Primary database (ODM) |
+| Redis + ioredis | 5.x | Socket.IO horizontal scaling adapter |
+| `@socket.io/redis-adapter` | 8.x | Multi-instance pub/sub for Socket.IO |
+| JSON Web Tokens | 9.x | Access & refresh token authentication |
+| bcryptjs | 3.x | Password hashing |
+| Passport.js | 0.7.x | OAuth strategy middleware |
+| `passport-github2` | 0.1.x | GitHub OAuth |
+| `passport-linkedin-oauth2` | 2.x | LinkedIn OAuth |
+| `google-auth-library` | 10.x | Google ID token verification |
+| Helmet | 8.x | HTTP security headers |
+| `express-rate-limit` | 8.x | Rate limiting |
+| `express-validator` | 7.x | Input validation |
+| Multer | 2.x | File upload handling |
+| Nodemailer | 7.x | Transactional email |
+| Twilio | 5.x | OTP SMS delivery |
+| `@google/generative-ai` | 0.24.x | Gemini AI integration |
+
+---
+
+## Architecture
 
 ```
-┌─────────────┐      ┌──────────────┐      ┌─────────────┐
-│   Client    │◄────►│    Server    │◄────►│  MongoDB    │
-│  (React)    │      │  (Node.js)   │      │  (Database) │
-└─────────────┘      └──────────────┘      └─────────────┘
-      │                     │
-      │ HTTP/WebSocket      │
-      │                     │
-      ▼                     ▼
-  REST API          Socket.io Events
-  - Auth            - Messages
-  - CRUD ops        - Notifications
-  - File upload     - Presence
+ChttrixCollab/
+├── client/          # React + Vite SPA (deployed to Vercel)
+├── server/          # Node.js + Express + Socket.IO API (deployed to Railway)
+├── dist/            # Built client, served by server in production
+├── vercel.json      # Vercel deployment config (client)
+├── railway.json     # Railway deployment config (server)
+├── nixpacks.toml    # Nixpacks build config (Railway)
+└── package.json     # Root workspace (npm workspaces)
 ```
 
-### Frontend Architecture
+The server serves the built client (`dist/`) in production. In development, the Vite dev server runs on port 5173 and the API server runs on port 8080, with Vite proxying `/api` requests to the backend.
+
+### Real-Time Layer
+Socket.IO powers all real-time features (messaging, presence, typing indicators). When `REDIS_URL` is set, the `@socket.io/redis-adapter` enables horizontal scaling across multiple server instances via Redis pub/sub. Without Redis, the server runs in single-instance in-memory mode.
+
+### End-to-End Encryption (E2EE)
+Chttrix implements a layered E2EE architecture:
+- **User identity keys**: ECDH key pairs generated per user (public key stored server-side, private key encrypted client-side with the user's password).
+- **Conversation keys**: Per-conversation symmetric keys, encrypted with recipients' public keys.
+- **Server KEK (Key Encryption Key)**: A 256-bit (32-byte / 64-char hex) AES-256 key (`SERVER_KEK`) used to wrap/unwrap workspace keys at rest. Validated on every server startup.
+- **UMEK-based recovery**: Crypto identity recovery using User Master Encryption Keys.
+
+---
+
+## Features
+
+### Authentication & Identity
+- **Email/password** registration with email verification
+- **Google OAuth** (one-click sign-in, ID token verification)
+- **GitHub OAuth** via Passport.js
+- **LinkedIn OAuth** via Passport.js
+- **OTP verification** via Twilio SMS for phone-based flows
+- **Refresh token rotation** with device-level session tracking
+- **Account lockout** after failed login attempts
+- **Password reset** via tokenized email links
+- **Multi-email accounts** (multiple verified emails per user)
+
+### Company & Organization Management
+- **Company registration** with multi-step setup wizard (profile → departments → invites → complete)
+- **Domain verification** (DNS TXT record) — verified domain enables auto-join policies
+- **Application review** — admin approval flow for new company registrations
+- **Role hierarchy**: `owner → admin → manager → member → guest`
+- **Co-owner support** for shared top-level admin
+- **Department management** — create, assign members, assign managers per department
+- **Employee management** — employee categories (Full-time, Part-time, Contractor, Intern), job titles, direct reporting lines, and work history
+- **Invite system** — email invites with role pre-assignment; invite acceptance flow
+- **Billing plans**: `free`, `starter`, `professional`, `enterprise` with configurable seat limits, workspace quotas, and data retention policies
+
+### Workspaces & Channels
+- **Multi-workspace support** — company workspaces scoped to departments, plus personal workspaces
+- **Workspace settings**: private/public, member invite permissions, admin approval, auto-archive inactive workspaces
+- **Channels** within workspaces — with member role control (`owner`, `admin`, `member`)
+- **Join workspace / Join channel** flows with invite link support
+
+### Messaging
+- **Real-time direct messages** (DMs) with Socket.IO
+- **Channel messages** with full history
+- **Message threads** — reply chains under messages
+- **Internal messaging** for structured org-level broadcasts
+- **Message polls** — create polls within chats
+- **File uploads** — via Multer, served at `/uploads` behind authentication
+- **Rich text** — Markdown rendering with `react-markdown` + `remark-breaks`
+- **Typing indicators** and **read receipts** (configurable per user)
+- **Favorites** — pin DMs and channels for quick access
+- **Muted chats** — per-chat mute with optional duration
+- **Blocked users** management
+
+### End-to-End Encryption
+- ECDH-based key exchange for DMs
+- Per-conversation symmetric encryption keys
+- Client-side private key storage (password-derived encryption)
+- Server KEK-wrapped workspace keys
+- Key distribution health audit — runs on startup and every 60 minutes
+- Device-level key management and session revocation (`/api/v2/devices`)
+
+### AI Features
+- **Google Gemini** integration (`@google/generative-ai`)
+- AI routes exposed at `/api/ai`
+
+### Tasks
+- Full task lifecycle: create, assign, update status, close
+- Task activity log (`TaskActivity` model)
+- Subtask support
+- Available at `/api/tasks` and `/api/v2/tasks`
+
+### Notes
+- Rich notes with E2EE-ready storage
+- Media attachment support (images/videos/audio as base64, up to 50 MB)
+- Available at `/api/notes` and `/api/v2/notes`
+
+### Analytics & Dashboards
+- **Owner Dashboard** — company-wide metrics, growth charts (Recharts), seat usage
+- **Manager Dashboard** — department-level views and team metrics
+- **Admin Dashboard** — platform administration
+- **Analytics routes** at `/api/analytics`
+- `Analytics.js` model tracks structured platform events
+
+### Search
+- Global search across users, channels, and messages at `/api/search`
+
+### Security & Audit
+- **Helmet** — sets 14+ HTTP security headers
+- **Rate limiting** — 20 req/min in production on auth endpoints (100 in development), excluding `/me`, `/refresh`, and `/users`
+- **MongoDB injection sanitization** — strips `$` operators from all request bodies
+- **Input validation** via `express-validator`
+- **Security audit log** (`AuditLog` model) — recorded per sensitive action
+- **Audit digest service** — generates hourly key distribution health reports
+- **Security routes** at `/api/v2/security` and `/api/v2/audit`
+- **Device session tracking** at `/api/v2/devices`
+- **HTTPS redirect** enforced in production (301 redirect for HTTP requests behind proxy)
+
+### User Profiles & Preferences
+- Avatar / profile picture (via Google or upload)
+- Bio, date of birth, address, resume URL
+- Social links: LinkedIn, Twitter, GitHub, website
+- Theme preference: `light`, `dark`, `auto`
+- Privacy settings: read receipts, typing indicators, discovery, data sharing
+- Region settings: language, timezone, date format
+- Online presence tracking (`isOnline`, `lastLoginAt`, `lastActivityAt`)
+- User status: `active`, `away`, `dnd`
+
+### Platform Support
+- **Support tickets** (`SupportTicket`, `SupportMessage` models)
+- Platform-level support routes at `/api/platform/support`
+- User-facing support at `/api/support`
+
+### Updates & Broadcasts
+- Company-wide update/announcement broadcasts (`Update`, `Broadcast` models)
+- Available at `/api/updates`
+
+### Settings
+- Per-user settings page with tabbed interface (profile, security, privacy, region, notifications)
+- Company-level settings managed by admins/owners
+
+### Legal
+- Legal pages rendered client-side (Terms, Privacy Policy, etc.)
+
+---
+
+## Project Structure
 
 ```
-src/
-├── components/       # Reusable UI components
-├── pages/           # Route pages
-├── contexts/        # React Context (Auth, Notes, etc.)
-├── services/        # API services (axios, socket)
-└── utils/           # Helper functions
-```
+client/src/
+├── App.js                  # Root router — all route definitions
+├── components/             # Reusable UI components
+│   ├── messagesComp/       # Message thread, composer, reactions (74 files)
+│   ├── profile/            # User profile components
+│   ├── tasksComp/          # Task board components
+│   ├── workspace/          # Workspace UI components
+│   ├── layout/             # App shell, sidebar, nav
+│   ├── company/            # Company management components
+│   ├── manager/            # Manager dashboard components
+│   └── ...
+├── pages/                  # Route-level page components
+│   ├── SidebarComp/        # Main chat interface
+│   ├── AdminDashboard/     # Platform admin views
+│   ├── OwnerDashboard/     # Company owner views
+│   ├── ManagerDashboard/   # Department manager views
+│   ├── LoginPageComp/      # Auth pages
+│   ├── settingsTabs/       # Settings tabs (9 tabs)
+│   ├── legal/              # Legal pages
+│   ├── register/           # Multi-step registration
+│   └── ...
+├── contexts/               # React Context providers (auth, theme, socket, etc.)
+├── hooks/                  # Custom React hooks
+├── services/               # Axios API service modules (24 files)
+├── utils/                  # Helper utilities
+└── modules/                # Domain-specific feature modules
 
-### Backend Architecture
-
-```
 server/
-├── controllers/     # Request handlers
-├── models/         # MongoDB schemas
-├── routes/         # API routes
-├── middleware/     # Auth, validation
-└── socket/         # Socket.io handlers
+├── server.js               # App entrypoint: env validation, middleware, routes, Socket.IO
+├── socket.js               # Socket.IO handler registration (top-level)
+├── socket/                 # Modular socket event handlers
+├── src/
+│   ├── features/           # 31 domain feature modules (routes + controllers)
+│   │   ├── auth/           # Login, register, OAuth, refresh, logout
+│   │   ├── admin/          # Platform admin, owner dashboard, manager dashboard
+│   │   ├── company/        # Company CRUD, settings, metrics
+│   │   ├── company-registration/ # Multi-step registration flow
+│   │   ├── employees/      # Employee management
+│   │   ├── departments/    # Department management
+│   │   ├── workspaces/     # Workspace management
+│   │   ├── channels/       # Channel management
+│   │   ├── messages/       # Message CRUD + history
+│   │   ├── tasks/          # Task management
+│   │   ├── notes/          # Notes (E2EE-ready)
+│   │   ├── polls/          # In-chat polls
+│   │   ├── analytics/      # Usage analytics
+│   │   ├── ai/             # Gemini AI endpoints
+│   │   ├── audit/          # Security audit log
+│   │   ├── security/       # Security events
+│   │   ├── devices/        # Device session management
+│   │   ├── crypto/         # UMEK-based identity recovery
+│   │   ├── favorites/      # Pinned chats
+│   │   ├── status/         # User presence status
+│   │   ├── search/         # Global search
+│   │   ├── support/        # Support tickets
+│   │   ├── users/          # User profile and lookup
+│   │   ├── updates/        # Broadcasts and announcements
+│   │   ├── onboarding/     # Employee onboarding
+│   │   ├── internal-messaging/ # Org-level internal messages
+│   │   ├── domain-verification/ # DNS domain verification
+│   │   ├── managers/       # Manager-specific actions
+│   │   ├── dashboard/      # Dashboard aggregations
+│   │   └── chatlist/       # Chat list / conversations list
+│   ├── modules/            # V2 modular architecture
+│   │   ├── messages/       # V2 messages
+│   │   ├── encryption/     # E2EE key operations
+│   │   ├── identity/       # Public key management
+│   │   ├── conversations/  # Conversation key management
+│   │   └── threads/        # Message threads
+│   ├── services/           # Shared services (audit digest, etc.)
+│   └── shared/             # Shared utilities, upload routes, OTP routes
+├── models/                 # 27 Mongoose models
+│   ├── User.js             # Full user schema (auth, E2EE, preferences, presence)
+│   ├── Company.js          # Company schema (billing plans, domain, settings)
+│   ├── Workspace.js        # Workspace (company/personal, members, settings)
+│   ├── Department.js       # Department structure
+│   ├── InternalMessage.js  # Org-wide messaging
+│   ├── ConversationKey.js  # E2EE conversation key storage
+│   ├── UserIdentityKey.js  # User ECDH key storage
+│   ├── UserSession.js      # Device/session tracking
+│   ├── AuditLog.js         # Security audit log
+│   ├── Analytics.js        # Platform analytics events
+│   ├── Task.js             # Task + subtasks
+│   ├── TaskActivity.js     # Task activity history
+│   ├── Note.js             # Notes (E2EE-ready)
+│   ├── SupportTicket.js    # Support tickets
+│   ├── SupportMessage.js   # Support thread messages
+│   ├── DMSession.js        # Direct message sessions
+│   ├── Favorite.js         # Favorited chats
+│   ├── HistoryLog.js       # Action history log
+│   ├── Permission.js       # Granular permission records
+│   ├── Invite.js           # Company/workspace invites
+│   ├── Billing.js          # Billing records
+│   ├── Invoice.js          # Invoice records
+│   ├── Ticket.js           # Generic tickets
+│   ├── Update.js           # Announcements/updates
+│   ├── Broadcast.js        # Broadcast messages
+│   ├── PlatformSession.js  # Platform-level session
+│   └── encryption.js       # Encryption key model
+├── middleware/
+│   ├── auth.js             # JWT access token verification
+│   └── validate.js         # Input sanitization (MongoDB injection prevention)
+├── config/
+│   └── passport.js         # Passport OAuth strategies
+└── utils/
+    └── logger.js           # Structured logger
 ```
 
 ---
 
-## 🛠️ Tech Stack
-
-### Frontend
-
-| Technology | Purpose | Why We Use It |
-|------------|---------|---------------|
-| **React 18** | UI Framework | Component-based architecture, virtual DOM for performance, large ecosystem |
-| **React Router** | Routing | SPA navigation, nested routes, protected routes |
-| **Socket.io Client** | Real-time | WebSocket abstraction, automatic reconnection, fallback to polling |
-| **Axios** | HTTP Client | Promise-based, interceptors for auth, better error handling than fetch |
-| **Lucide Icons** | Icons | Lightweight, consistent design, tree-shakeable |
-| **Tailwind CSS** | Styling | Utility-first, fast development, consistent design system |
-
-### Backend
-
-| Technology | Purpose | Why We Use It |
-|------------|---------|---------------|
-| **Node.js** | Runtime | JavaScript everywhere, non-blocking I/O, large package ecosystem |
-| **Express** | Web Framework | Minimalist, flexible, middleware support, industry standard |
-| **MongoDB** | Database | Document model fits our data, flexible schema, horizontal scaling |
-| **Mongoose** | ODM | Schema validation, middleware hooks, query building |
-| **Socket.io** | WebSockets | Real-time bidirectional communication, room support, namespace isolation |
-| **JWT** | Authentication | Stateless auth, secure token-based sessions, refresh token support |
-| **bcrypt** | Password Hashing | Industry standard, salted hashing, protection against rainbow tables |
-
-### DevOps & Tools
-
-| Technology | Purpose |
-|------------|---------|
-| **Google OAuth** | Social login |
-| **Nodemailer** | Email sending |
-| **Multer** | File uploads |
-| **Helmet** | Security headers |
-| **CORS** | Cross-origin requests |
-
----
-
-## 📋 Setup Instructions
+## Getting Started
 
 ### Prerequisites
 
-- **Node.js**: v16 or higher ([Download](https://nodejs.org/))
-- **MongoDB**: Local or Atlas ([Setup](https://www.mongodb.com/cloud/atlas))
-- **npm** or **yarn**: Package manager
+- **Node.js** ≥ 18.x
+- **npm** ≥ 9.x
+- **MongoDB** — a MongoDB Atlas cluster or local instance
+- **Redis** *(optional)* — only required for multi-instance horizontal scaling
 
 ### Installation
 
 ```bash
-# Clone repository
-git clone https://github.com/yourusername/ChttrixCollab.git
-cd ChttrixCollab
+# 1. Clone the repository
+git clone https://github.com/your-org/chttrix-collab.git
+cd chttrix-collab
 
-# Install server dependencies
-cd server
-npm install
-
-# Install client dependencies
-cd ../client
-npm install
+# 2. Install all dependencies (root + client + server)
+npm run install-all
 ```
 
-### Environment Configuration
+### Environment Variables
 
-#### Server Environment (`server/.env`)
+#### Server (`server/.env`)
 
-```env
-# Server
-PORT=5000
-NODE_ENV=development
-
-# Database
-MONGO_URI=mongodb://localhost:27017/chttrix
-# Or MongoDB Atlas:
-# MONGO_URI=mongodb+srv://username:password@cluster.mongodb.net/dbname
-
-# JWT Secrets (generate with: openssl rand -base64 32)
-JWT_SECRET=your_secret_key_here
-JWT_REFRESH_SECRET=your_refresh_secret_here
-
-# Google OAuth (get from Google Cloud Console)
-GOOGLE_CLIENT_ID=your_google_client_id
-GOOGLE_CLIENT_SECRET=your_google_client_secret
-
-# Email (for invitations)
-EMAIL_USER=your_email@gmail.com
-EMAIL_PASS=your_app_password
-```
-
-#### Client Environment (`client/.env`)
-
-```env
-# Backend API URL
-REACT_APP_BACKEND_URL=http://localhost:5000
-
-# Google OAuth
-REACT_APP_GOOGLE_CLIENT_ID=your_google_client_id
-```
-
-### Database Seeding
-
-Create test data (company, workspaces, users):
+Copy the template and fill in values:
 
 ```bash
-cd server
-node seed.js
+cp server/.env.example server/.env
 ```
 
-**Test Accounts Created:**
+| Variable | Required | Description |
+|---|---|---|
+| `MONGO_URI` | ✅ | MongoDB connection string |
+| `ACCESS_TOKEN_SECRET` | ✅ | JWT access token secret (min 32 chars) |
+| `REFRESH_TOKEN_SECRET` | ✅ | JWT refresh token secret (min 32 chars) |
+| `FRONTEND_URL` | ✅ | Frontend origin URL (e.g. `http://localhost:5173`) |
+| `GOOGLE_CLIENT_ID` | ✅ | Google OAuth client ID |
+| `SERVER_KEK` | ✅ | 64-char hex AES-256 key for E2EE workspace key wrapping |
+| `NODE_ENV` | ✅ | `development` or `production` |
+| `PORT` | — | Server port (default: `8080`) |
+| `GOOGLE_CLIENT_SECRET` | — | Google OAuth client secret |
+| `GITHUB_CLIENT_ID` | — | GitHub OAuth client ID |
+| `GITHUB_CLIENT_SECRET` | — | GitHub OAuth client secret |
+| `LINKEDIN_CLIENT_ID` | — | LinkedIn OAuth client ID |
+| `LINKEDIN_CLIENT_SECRET` | — | LinkedIn OAuth client secret |
+| `SMTP_HOST` | — | SMTP server for email (invites, resets) |
+| `SMTP_PORT` | — | SMTP port |
+| `SMTP_USER` | — | SMTP username |
+| `SMTP_PASS` | — | SMTP password |
+| `EMAIL_FROM` | — | From address for outbound email |
+| `BREVO_API_KEY` | — | Brevo (Sendinblue) API key alternative |
+| `TWILIO_ACCOUNT_SID` | — | Twilio account SID for OTP SMS |
+| `TWILIO_AUTH_TOKEN` | — | Twilio auth token |
+| `TWILIO_PHONE_NUMBER` | — | Twilio sending number |
+| `GEMINI_API_KEY` | — | Google Gemini AI API key |
+| `REDIS_URL` | — | Redis connection URL for Socket.IO horizontal scaling |
+| `CRYPTO_KEK_ACTIVE_VERSION` | — | Active KEK version (e.g., `1`) |
+| `CRYPTO_KEK_V1` | — | KEK version 1 (64-char hex) |
+| `CRYPTO_KEK_V2` | — | KEK version 2 (64-char hex) |
+| `ACCESS_TOKEN_EXPIRES_IN` | — | Access token TTL (default: `15m`) |
+| `REFRESH_TOKEN_EXPIRES_IN` | — | Refresh token TTL (default: `7d`) |
 
-| Email | Password | Role | Access |
-|-------|----------|------|--------|
-| admin@chttrix.com | admin123 | Owner | Full access + Admin Dashboard |
-| jane@chttrix.com | admin456 | Admin | Full access + Admin Dashboard |
-| employee@chttrix.com | employee123 | Member | Standard workspace access |
+> **Generate `SERVER_KEK`:**
+> ```bash
+> node -e "require('crypto').randomBytes(32).toString('hex')"
+> ```
 
-### Running the Application
-
-**Development Mode:**
+#### Client (`client/.env`)
 
 ```bash
-# Terminal 1: Start server
-cd server
-npm start
-# Server runs on http://localhost:5000
-
-# Terminal 2: Start client
-cd client
-npm start
-# Client runs on http://localhost:3000
+cp client/.env.example client/.env
 ```
 
-**Production Mode:**
+| Variable | Description |
+|---|---|
+| `VITE_API_URL` | Backend API base URL (e.g. `http://localhost:8080/api`) |
+| `VITE_BACKEND_URL` | Backend base URL |
+| `VITE_GOOGLE_CLIENT_ID` | Google OAuth client ID |
+| `VITE_APP_NAME` | App name (default: `Chttrix`) |
+| `VITE_ENABLE_ANALYTICS` | Enable client analytics (`true`/`false`) |
+| `VITE_ENABLE_DEBUG` | Enable debug logging |
+| `VITE_GOOGLE_ANALYTICS_ID` | Google Analytics ID |
+| `VITE_SENTRY_DSN` | Sentry error tracking DSN |
+
+### Running Locally
 
 ```bash
-# Build client
-cd client
-npm run build
+# Run both client and server concurrently (from root)
+npm run dev
 
-# Serve static files from server
-cd ../server
-npm run production
+# Or run separately:
+npm run server   # starts server with nodemon on port 8080
+npm run client   # starts Vite dev server on port 5173
+```
+
+**Health check:** Once running, verify the server is up:
+```
+GET http://localhost:8080/api/health
 ```
 
 ---
 
-## 🚀 Usage Guide
+## API Overview
 
-### First-Time Setup
+All routes are prefixed with `/api`. The server exposes both legacy (`v1`) and `v2` modular routes.
 
-1. **Open Application**: Navigate to `http://localhost:3000`
-2. **Login**: Use test account or create new account
-3. **Choose Role**: 
-   - **Admin** → Redirected to `/admin/company`
-   - **Employee** → Redirected to `/app`
-
-### For Admins
-
-#### Access Admin Dashboard
-- Click **profile picture** (bottom left)
-- Select **"Admin Dashboard"**
-- Or navigate to `/admin/company`
-
-#### Verify Company Domain
-1. Go to Admin Dashboard
-2. Click **"Verify Domain"**
-3. Add TXT record to your DNS
-4. Click **"Check Status"**
-
-#### Invite Team Members
-1. Go to Admin Dashboard
-2. Enter **email address**
-3. Select **role** (Member, Admin, Owner)
-4. Choose **workspace** (optional)
-5. Click **"Send Invite"**
-
-#### Manage Members
-- **View**: See all company members
-- **Edit Role**: Click edit icon, change role, save
-- **Remove**: Click remove icon, confirm deletion
-
-### For Employees
-
-#### Join Channels
-1. Navigate to **Channels**
-2. Browse available channels
-3. Click **"Join"**
-
-#### Send Messages
-1. Select channel or DM
-2. Type message
-3. Press **Enter** or click **Send**
-
-#### Create Tasks
-1. Navigate to **Tasks**
-2. Click **"New Task"**
-3. Fill details, assign, set due date
-4. Click **"Create"**
-
-#### Write Notes
-1. Navigate to **Notes**
-2. Click **"New Note"**
-3. Use rich text editor
-4. Click **"Save"**
+| Prefix | Feature |
+|---|---|
+| `/api/auth` | Authentication (login, register, OAuth, refresh, logout) |
+| `/api/otp` | OTP verification |
+| `/api/users` | User profile and search |
+| `/api/companies` | Company CRUD, settings, metrics, registration, employees, domain verification |
+| `/api/departments` | Department management |
+| `/api/workspaces` | Workspace management |
+| `/api/channels` | Channel management |
+| `/api/messages` | Messages (legacy) |
+| `/api/chat` | Chat list / conversation list |
+| `/api/polls` | In-chat polls |
+| `/api/notes` | Notes |
+| `/api/tasks` | Tasks |
+| `/api/search` | Global search |
+| `/api/analytics` | Analytics |
+| `/api/ai` | AI (Gemini) features |
+| `/api/updates` | Announcements and broadcasts |
+| `/api/dashboard` | Dashboard aggregations |
+| `/api/managers` | Manager-specific routes |
+| `/api/admin` | Admin routes |
+| `/api/admin-dashboard` | Admin dashboard |
+| `/api/owner-dashboard` | Owner dashboard |
+| `/api/manager-dashboard` | Manager dashboard |
+| `/api/manager` | Manager (new pattern) |
+| `/api/support` | User support tickets |
+| `/api/platform/support` | Platform-level support |
+| `/api/internal` | Internal org messaging |
+| `/api/upload` | File uploads |
+| `/api/v2/messages` | Messages (V2 modular) |
+| `/api/v2/encryption` | E2EE key operations |
+| `/api/v2/identity` | Public key management |
+| `/api/v2/conversations` | Conversation key management |
+| `/api/threads` | Message threads |
+| `/api/v2/crypto` | UMEK-based identity recovery |
+| `/api/v2/devices` | Device session management |
+| `/api/v2/security` | Security audit routes |
+| `/api/v2/audit` | Audit log routes |
+| `/api/v2/tasks` | Tasks (V2) |
+| `/api/v2/notes` | Notes (V2) |
+| `/api/v2/favorites` | Favorites (V2) |
+| `/api/v2/status` | User presence status |
+| `/api/v2/admin` | Admin (V2) |
+| `/api/health` | Health check (MongoDB status, uptime, env) |
 
 ---
 
-## 🔐 Security Features
+## Security
 
-- **Password Hashing**: bcrypt with 12 salt rounds
-- **JWT Tokens**: Access (15min) + Refresh (7 days)
-- **Role-Based Access**: Owner, Admin, Member roles
-- **Route Protection**: RequireAuth + RequireAdmin components
-- **CORS**: Configured for allowed origins
-- **Helmet**: Security headers enabled
-- **Input Validation**: Server-side validation on all inputs
-
----
-
-## 📊 Project Structure
-
-```
-ChttrixCollab/
-├── client/                 # Frontend React app
-│   ├── public/            # Static files
-│   └── src/
-│       ├── components/    # Reusable components
-│       │   ├── layout/   # Layout components
-│       │   └── ui/       # UI components
-│       ├── contexts/     # React Context providers
-│       ├── pages/        # Route pages
-│       ├── services/     # API services
-│       └── utils/        # Utilities
-│
-├── server/                # Backend Node.js app
-│   ├── controllers/      # Business logic
-│   ├── models/          # Mongoose schemas
-│   ├── routes/          # API routes
-│   ├── middleware/      # Custom middleware
-│   ├── socket/          # Socket.io handlers
-│   └── utils/           # Utilities
-│
-└── README.md            # This file
-```
+| Measure | Implementation |
+|---|---|
+| Access tokens | Short-lived JWT (`15m` default), sent as Bearer token |
+| Refresh tokens | Long-lived JWT (`7d` default), hashed before storage, device-bound |
+| Password hashing | bcryptjs |
+| HTTP headers | Helmet (CSP, HSTS, X-Frame-Options, etc.) |
+| Rate limiting | `express-rate-limit` — 20 req/min on auth in production |
+| Input sanitization | Custom middleware strips MongoDB `$` operators |
+| Input validation | `express-validator` on all mutation endpoints |
+| CORS | Explicit allowlist, `credentials: true` |
+| HTTPS | Enforced in production (301 redirect for HTTP) |
+| E2EE | ECDH key exchange, per-conversation keys, AES-256 KEK |
+| Uploads | Served behind auth middleware (`requireAuth`) |
+| Audit logging | Sensitive actions recorded in `AuditLog`, hourly digest |
+| Account lockout | `failedLoginAttempts` + `lockedUntil` on `User` |
+| Graceful shutdown | SIGTERM/SIGINT handlers drain connections before exit |
 
 ---
 
-## 🤝 Contributing
+## Deployment
 
-1. Fork the repository
-2. Create feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit changes (`git commit -m 'Add AmazingFeature'`)
-4. Push to branch (`git push origin feature/AmazingFeature`)
-5. Open Pull Request
+### Frontend → Vercel
+
+Configured via `vercel.json`:
+- **Build command:** `npm install && npm run build --workspace=client`
+- **Output directory:** `../dist`
+- **SPA rewrite:** all routes → `index.html`
+
+Set environment variables in the Vercel project dashboard (`VITE_API_URL`, `VITE_GOOGLE_CLIENT_ID`, etc.).
+
+### Backend → Railway
+
+Configured via `railway.json` and `nixpacks.toml`:
+- **Build command:** `cd server && npm install`
+- **Start command:** `cd server && node server.js`
+- **Restart policy:** `ON_FAILURE` with up to 10 retries
+
+Set all server-side environment variables in Railway's variable panel before deploying.
+
+### Docker
+
+A `Dockerfile` is available in `server/` for containerized deployments (Cloud Run, ECS, etc.).
 
 ---
 
-## 📝 License
+## Scripts
 
-MIT License - see LICENSE file for details
+### Root
+| Script | Description |
+|---|---|
+| `npm run dev` | Run client and server concurrently |
+| `npm run client` | Start Vite dev server |
+| `npm run server` | Start server with nodemon |
+| `npm run install-all` | Install dependencies for root, client, and server |
+
+### Client (`/client`)
+| Script | Description |
+|---|---|
+| `npm run dev` | Vite dev server |
+| `npm run build` | Production build to `dist/` |
+| `npm run preview` | Preview production build |
+| `npm run lint` | ESLint on `src/` |
+
+### Server (`/server`)
+| Script | Description |
+|---|---|
+| `npm run dev` | nodemon dev server |
+| `npm start` | Production start (`node server.js`) |
+| `npm run lint` | ESLint |
+| `npm run lint:fix` | ESLint with auto-fix |
 
 ---
 
-## 📧 Contact
+## License
 
-- **Website**: [chttrix.com](https://chttrix.com)
-- **Email**: support@chttrix.com
-- **GitHub**: [github.com/yourusername/ChttrixCollab](https://github.com/yourusername/ChttrixCollab)
-
----
-
-**Built with ❤️ by the Chttrix Team**
+ISC
