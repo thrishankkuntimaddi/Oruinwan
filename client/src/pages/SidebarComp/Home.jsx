@@ -81,7 +81,7 @@ const Home = () => {
 
             // First check if targetId is already a valid DM session ID
             try {
-              const dmRes = await api.get(`/api/messages/workspace/${workspaceId}/dms`);
+              const dmRes = await api.get(`/api/v2/messages/workspace/${workspaceId}/dms`);
               const dmSessions = dmRes.data.sessions || [];
               const existingSession = dmSessions.find(s => String(s.id) === String(targetId));
 
@@ -99,7 +99,7 @@ const Home = () => {
               try {
                 // Try to resolve as user ID → DM session ID
                 const resolveRes = await api.get(
-                  `/api/messages/workspace/${workspaceId}/dm/resolve/${targetId}`
+                  `/api/v2/messages/workspace/${workspaceId}/dm/resolve/${targetId}`
                 );
 
                 if (resolveRes.data.success) {

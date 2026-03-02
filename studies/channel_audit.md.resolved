@@ -1,0 +1,270 @@
+# Chttrix Channel System — Full Structural Audit
+
+> **Audit Date:** March 1, 2026  
+> **Scope:** Channel system and all direct dependencies  
+> **Mode:** Read-only diagnostic. No files modified.
+
+---
+
+## 1. CURRENT STATE SUMMARY
+
+The channel system spans three architectural layers:
+
+| Layer | Files | LOC (est.) |
+|---|---|---|
+| Backend Model | [channel.model.js](file:///Users/thrishankkuntimaddi/Documents/Chttrix/ChttrixCollab/server/src/features/channels/channel.model.js), [message.model.js](file:///Users/thrishankkuntimaddi/Documents/Chttrix/ChttrixCollab/server/src/features/messages/message.model.js) | ~160 |
+| Backend Controller | [channel.controller.js](file:///Users/thrishankkuntimaddi/Documents/Chttrix/ChttrixCollab/server/src/features/channels/channel.controller.js) | 1,567 |
+| Backend Routes | [channel.routes.js](file:///Users/thrishankkuntimaddi/Documents/Chttrix/ChttrixCollab/server/src/features/channels/channel.routes.js), [messages.routes.js](file:///Users/thrishankkuntimaddi/Documents/Chttrix/ChttrixCollab/server/src/features/messages/messages.routes.js), `messages.routes (v2)` | ~235 |
+| Socket Layer | [messages.socket.js](file:///Users/thrishankkuntimaddi/Documents/Chttrix/ChttrixCollab/server/src/socket/handlers/messages.socket.js), [socket/index.js](file:///Users/thrishankkuntimaddi/Documents/Chttrix/ChttrixCollab/server/src/socket/index.js) | ~495 |
+| Frontend Service | [channelService.js](file:///Users/thrishankkuntimaddi/Documents/Chttrix/ChttrixCollab/client/src/services/channelService.js), [useChannels.js](file:///Users/thrishankkuntimaddi/Documents/Chttrix/ChttrixCollab/client/src/hooks/useChannels.js) | ~120 |
+| Frontend UI | [ChannelsPanel.jsx](file:///Users/thrishankkuntimaddi/Documents/Chttrix/ChttrixCollab/client/src/components/layout/panels/ChannelsPanel.jsx), [CreateChannelModal.jsx](file:///Users/thrishankkuntimaddi/Documents/Chttrix/ChttrixCollab/client/src/components/messagesComp/CreateChannelModal.jsx), [ChannelManagementModal.jsx](file:///Users/thrishankkuntimaddi/Documents/Chttrix/ChttrixCollab/client/src/components/messagesComp/ChannelManagementModal.jsx), [ChannelMessageItem.jsx](file:///Users/thrishankkuntimaddi/Documents/Chttrix/ChttrixCollab/client/src/components/messagesComp/chatWindowComp/messages/ChannelMessageItem.jsx) | ~600+ |
+
+The system has functional channel CRUD, RBAC guards, E2EE key distribution on join, soft-deletion tracking on messages, thread support, pinning, reactions, and tabs (canvas). However, it carries significant structural debt from an in-progress migration between two parallel architectures (`/api/messages` legacy and `/api/v2/messages` modular).
+
+---
+
+## 2. STRENGTHS
+
+- **Auth-gated routes** — every channel route is behind `requireAuth` (JWT-verified)
+- **Input sanitization** — global [sanitizeInput](file:///Users/thrishankkuntimaddi/Documents/Chttrix/ChttrixCollab/server/middleware/validate.js#37-88) middleware strips `$` MongoDB operators from all request bodies, query strings, and params
+- **E2EE key lifecycle** — channel creation, member invite, join-via-link, and self-join all call `conversationKeysService` to generate/distribute keys; failures roll back or are non-blocking as appropriate
+- **Membership privacy** — [getChannelMessages](file:///Users/thrishankkuntimaddi/Documents/Chttrix/ChttrixCollab/server/src/features/messages/message.controller.js#170-314) filters messages to only post-join content via `userJoinedAt` timestamp
+- **Graceful shutdown** — SIGTERM/SIGINT drain Socket.IO, HTTP, and Mongo in sequence
+- **Schema-level guards** — `isPrivate: true` forces `isDiscoverable: false` at creation time
+- **Thread support** — `threadParent` and `replyCount` exist on the message schema; thread routes are registered
+- **[isMember](file:///Users/thrishankkuntimaddi/Documents/Chttrix/ChttrixCollab/server/src/features/channels/channel.model.js#58-68) schema method** — handles both legacy (bare ObjectId) and new `{ user, joinedAt }` member formats
+- **Compound indexes on Message** — `{ channel, _id }` and `{ dm, _id }` enable efficient missed-message range queries
+- **Idempotent socket room joins** — `conversation:join` checks `socket.rooms.has(room)` before joining
+
+---
+
+## 3. WEAKNESSES
+
+### Backend
+
+- **1,567-line monolithic controller** — [channel.controller.js](file:///Users/thrishankkuntimaddi/Documents/Chttrix/ChttrixCollab/server/src/features/channels/channel.controller.js) handles creation, deletion, membership, admin management, tabs, privacy toggling, and join-via-link with no service layer separation. This makes it untestable as a unit.
+- **Inconsistent error handling style** — some functions use the shared `handleError` / `forbidden` / `badRequest` utilities; others use raw `res.status(500).json({ message: "Server error" })`. The pattern is not enforced.
+- **Duplicate route file** — [messages.routes.js](file:///Users/thrishankkuntimaddi/Documents/Chttrix/ChttrixCollab/server/src/features/messages/messages.routes.js) and `messages.routes (v2)` both exist in the same directory path (`src/features/messages/`). The v2 version ([messages.routes.js](file:///Users/thrishankkuntimaddi/Documents/Chttrix/ChttrixCollab/server/src/features/messages/messages.routes.js) in `src/features/messages/`) and the modular one (`src/modules/messages/messages.routes.js`) are both mounted in [server.js](file:///Users/thrishankkuntimaddi/Documents/Chttrix/ChttrixCollab/server/server.js). Endpoint surface is ambiguous.
+- **[updateChannel](file:///Users/thrishankkuntimaddi/Documents/Chttrix/ChttrixCollab/client/src/services/channelService.js#17-19) and [updateChannelInfo](file:///Users/thrishankkuntimaddi/Documents/Chttrix/ChttrixCollab/server/src/features/channels/channel.controller.js#755-834) overlap** — `PUT /:id` and `PUT /:id/info` + `PATCH /:id/name` + `PATCH /:id/description` all map to overlapping handlers. Three PATCH endpoints (`/name`, `/description`) all route to [updateChannelInfo](file:///Users/thrishankkuntimaddi/Documents/Chttrix/ChttrixCollab/server/src/features/channels/channel.controller.js#755-834), which reads both `name` and `description` from the body — the endpoint semantics (single-field update) are not enforced.
+- **No schema-level name length validation** — `channel.name` has `required: true` but no `maxlength`. A 10,000-character channel name is accepted.
+- **[getPublicChannels](file:///Users/thrishankkuntimaddi/Documents/Chttrix/ChttrixCollab/client/src/services/channelService.js#11-13) has no workspace scope** — returns ALL public channels across ALL workspaces, exposing channel names and member counts of unrelated companies. The function is not registered in [channel.routes.js](file:///Users/thrishankkuntimaddi/Documents/Chttrix/ChttrixCollab/server/src/features/channels/channel.routes.js) but exists in the controller and could be routed in the v1 proxy layer.
+- **N+1 queries in [getChannelMessages](file:///Users/thrishankkuntimaddi/Documents/Chttrix/ChttrixCollab/server/src/features/messages/message.controller.js#170-314)** — for each message, the handler fires two queries (count replies, fetch last 5 reply avatars) plus a `User.findById` per channel member. For a 50-message page in a 30-member channel, this is ~150 additional queries per page load.
+- **No pagination in [getChannelMembers](file:///Users/thrishankkuntimaddi/Documents/Chttrix/ChttrixCollab/client/src/services/channelService.js#29-31)** — returns all members in a single response with no limit. Large channels (thousands of members) will cause memory pressure and slow responses.
+- **[operationRateLimit](file:///Users/thrishankkuntimaddi/Documents/Chttrix/ChttrixCollab/server/middleware/validate.js#95-139) uses in-memory Map** — the custom rate limiter in [validate.js](file:///Users/thrishankkuntimaddi/Documents/Chttrix/ChttrixCollab/server/middleware/validate.js) is not safe across multiple processes or horizontal scaling. It resets on redeploy.
+
+### Frontend
+
+- **Dead API method [leaveChannel](file:///Users/thrishankkuntimaddi/Documents/Chttrix/ChttrixCollab/client/src/services/channelService.js#26-28)** — [channelService.js](file:///Users/thrishankkuntimaddi/Documents/Chttrix/ChttrixCollab/client/src/services/channelService.js) calls `POST /api/channels/:id/leave`, which does not exist on the server. The actual endpoint is `POST /:id/exit`.
+- **Dead API method [addMember](file:///Users/thrishankkuntimaddi/Documents/Chttrix/ChttrixCollab/client/src/services/channelService.js#32-34)** — [channelService.js](file:///Users/thrishankkuntimaddi/Documents/Chttrix/ChttrixCollab/client/src/services/channelService.js) calls `POST /api/channels/:id/members`, which does not exist. The correct endpoint is `POST /:id/invite`.
+- **[getAllChannels](file:///Users/thrishankkuntimaddi/Documents/Chttrix/ChttrixCollab/client/src/services/channelService.js#8-10) and [getPublicChannels](file:///Users/thrishankkuntimaddi/Documents/Chttrix/ChttrixCollab/client/src/services/channelService.js#11-13)** in [channelService.js](file:///Users/thrishankkuntimaddi/Documents/Chttrix/ChttrixCollab/client/src/services/channelService.js) call `/api/chat/channels` and `/api/chat/channels/public` — these are legacy chatlist routes with unknown behavior relative to the current channel architecture.
+- **[useChannels](file:///Users/thrishankkuntimaddi/Documents/Chttrix/ChttrixCollab/client/src/hooks/useChannels.js#5-84) hook has no socket subscription** — channel list updates (creation, deletion, membership changes) are not reflected without a manual `refreshChannels()` call. The hook has no socket listener.
+- **[ChannelsPanel](file:///Users/thrishankkuntimaddi/Documents/Chttrix/ChttrixCollab/client/src/components/layout/panels/ChannelsPanel.jsx#11-516) uses 30-second polling as a fallback** — three separate `useEffect` blocks run polling + visibility-change refetch + socket subscription. The polling duplicates requests every 30 seconds unconditionally, regardless of socket connection status.
+- **Channel fetch endpoint mismatch** — [ChannelsPanel](file:///Users/thrishankkuntimaddi/Documents/Chttrix/ChttrixCollab/client/src/components/layout/panels/ChannelsPanel.jsx#11-516) calls `/api/workspaces/:workspaceId/channels` while [useChannels](file:///Users/thrishankkuntimaddi/Documents/Chttrix/ChttrixCollab/client/src/hooks/useChannels.js#5-84) calls `/api/channels/my?workspaceId=...`. Two different endpoints are used in different components for the same data, returning different shapes.
+- **[ChannelsPanel](file:///Users/thrishankkuntimaddi/Documents/Chttrix/ChttrixCollab/client/src/components/layout/panels/ChannelsPanel.jsx#11-516) [Item](file:///Users/thrishankkuntimaddi/Documents/Chttrix/ChttrixCollab/client/src/components/layout/panels/ChannelsPanel.jsx#277-361) component defined inside parent render** — a new function reference is created every render. This prevents React from memoizing the [Item](file:///Users/thrishankkuntimaddi/Documents/Chttrix/ChttrixCollab/client/src/components/layout/panels/ChannelsPanel.jsx#277-361) component, forcing full re-renders of every list item on any state change.
+
+---
+
+## 4. CRITICAL RISKS
+
+### 🔴 RISK 1 — [assignAdmin](file:///Users/thrishankkuntimaddi/Documents/Chttrix/ChttrixCollab/server/src/features/channels/channel.controller.js#557-647) membership check is a no-op (Logic Bug)
+
+**File:** [channel.controller.js](file:///Users/thrishankkuntimaddi/Documents/Chttrix/ChttrixCollab/server/src/features/channels/channel.controller.js) line 584–588
+
+```js
+const _isTargetMember = isMember(channel.members, targetUserId); // result stored in prefixed var
+
+if (!isMember) {  // ← checking the *function reference* isMember, not the boolean result
+  return res.status(400).json({ message: "User is not a member of this channel" });
+}
+```
+
+The `_isTargetMember` variable (ESLint-prefixed to suppress unused-var warnings) is declared but never evaluated. The condition `!isMember` checks the truthiness of the imported [isMember](file:///Users/thrishankkuntimaddi/Documents/Chttrix/ChttrixCollab/server/src/features/channels/channel.model.js#58-68) *function* (always truthy), so **the membership guard never fires**. Any admin can promote any user ID — even one who is not a channel member — to admin.
+
+---
+
+### 🔴 RISK 2 — [removeChannelMember](file:///Users/thrishankkuntimaddi/Documents/Chttrix/ChttrixCollab/server/src/features/channels/channel.controller.js#270-304) (legacy endpoint) uses wrong member filter format
+
+**File:** [channel.controller.js](file:///Users/thrishankkuntimaddi/Documents/Chttrix/ChttrixCollab/server/src/features/channels/channel.controller.js) line 289
+
+```js
+channel.members = channel.members.filter((m) => String(m) !== String(victimId));
+```
+
+Members are stored as `{ user: ObjectId, joinedAt: Date }` objects. `String(m)` on an object returns `[object Object]`, which will never equal a user ID string. The filter becomes a no-op — **the member is never removed**. The function reports success and emits socket events, but the member remains.
+
+Note: This is in [removeChannelMember](file:///Users/thrishankkuntimaddi/Documents/Chttrix/ChttrixCollab/server/src/features/channels/channel.controller.js#270-304) (DELETE `/member`). The newer [removeMember](file:///Users/thrishankkuntimaddi/Documents/Chttrix/ChttrixCollab/server/src/features/channels/channel.controller.js#929-1037) (POST `/remove-member`) correctly handles the nested format. Both routes are registered, creating a silent failure path.
+
+---
+
+### 🔴 RISK 3 — Dual socket room naming creates guaranteed real-time delivery failures
+
+**Controller emissions** use `channel_${id}` format (underscore):
+```js
+io.to(`channel_${channelId}`).emit(...)   // channel.controller.js — all emissions
+io.to(`channel_${originalMsg.channel}`).emit(...)  // message.controller.js AI reply
+```
+
+**Socket handler room joins** use `channel:${id}` format (colon):
+```js
+socket.join(`channel:${channelId}`)       // messages.socket.js lines 43, 113
+```
+
+These are **different rooms**. Clients join `channel:<id>` rooms. Server emits to `channel_<id>` rooms. **No channel-scoped real-time event (member-added, member-removed, channel-updated, channel-deleted, tab events) is delivered to any connected client.**
+
+The only events that work are those emitted to `workspace_<id>` or direct `user_<id>` rooms.
+
+---
+
+### 🟠 RISK 4 — [getMyChannels](file:///Users/thrishankkuntimaddi/Documents/Chttrix/ChttrixCollab/client/src/services/channelService.js#5-7) returns member arrays for all channels to a non-member
+
+**File:** [channel.controller.js](file:///Users/thrishankkuntimaddi/Documents/Chttrix/ChttrixCollab/server/src/features/channels/channel.controller.js) lines 142–156
+
+The query uses `$or` to return discoverable public channels to everyone. This means a non-member receives the full document including `members[]` array (with user ObjectIds, join dates) for all public channels. The response includes `channel.members` without stripping sensitive sub-fields.
+
+---
+
+### 🟠 RISK 5 — [updateChannel](file:///Users/thrishankkuntimaddi/Documents/Chttrix/ChttrixCollab/client/src/services/channelService.js#17-19) (PUT [/:id](file:///Users/thrishankkuntimaddi/Documents/Chttrix/ChttrixCollab/server/middleware/validate.js#8-36)) emits to `io.emit(...)` — broadcasts globally
+
+**File:** [channel.controller.js](file:///Users/thrishankkuntimaddi/Documents/Chttrix/ChttrixCollab/server/src/features/channels/channel.controller.js) line 397
+
+```js
+if (io) io.emit("channel-updated", payload);
+```
+
+`io.emit` (no room specified) broadcasts to **every connected socket on the server**. Every user on any workspace receives `channel-updated` events for every channel modification.
+
+---
+
+### 🟠 RISK 6 — [joinChannelViaLink](file:///Users/thrishankkuntimaddi/Documents/Chttrix/ChttrixCollab/server/src/features/channels/channel.controller.js#1165-1270) does not validate channel privacy
+
+**File:** [channel.controller.js](file:///Users/thrishankkuntimaddi/Documents/Chttrix/ChttrixCollab/server/src/features/channels/channel.controller.js) lines 1169–1268
+
+[joinChannelViaLink](file:///Users/thrishankkuntimaddi/Documents/Chttrix/ChttrixCollab/server/src/features/channels/channel.controller.js#1165-1270) checks workspace membership but does **not** check `channel.isPrivate`. A user can join a private channel by directly calling `POST /:id/join-via-link` if they are a workspace member. There is no `if (channel.isPrivate) return 403` guard in this path.
+
+---
+
+### 🟠 RISK 7 — Message text is not sanitized before storage
+
+**Files:** [message.controller.js](file:///Users/thrishankkuntimaddi/Documents/Chttrix/ChttrixCollab/server/src/features/messages/message.controller.js) (sendChannelMessage), [messages.routes.js](file:///Users/thrishankkuntimaddi/Documents/Chttrix/ChttrixCollab/server/src/features/messages/messages.routes.js) (sendChannelMessage)
+
+Message `text` is stored as-is. There is no HTML sanitization (e.g., DOMPurify server-side) before persistence. If the frontend renders message text as `innerHTML` anywhere, stored `<script>` tags or event handler attributes constitute a stored XSS vector.
+
+---
+
+## 5. STRUCTURAL GAPS
+
+| Gap | Location |
+|---|---|
+| No service layer between controller and model | [channel.controller.js](file:///Users/thrishankkuntimaddi/Documents/Chttrix/ChttrixCollab/server/src/features/channels/channel.controller.js) handles all business logic inline |
+| Two parallel message route stacks coexist | `/api/messages/*` (legacy) and `/api/v2/messages/*` (modular) both active |
+| [channel.model.js](file:///Users/thrishankkuntimaddi/Documents/Chttrix/ChttrixCollab/server/src/features/channels/channel.model.js) has no soft-delete field | No `deletedAt` or `isDeleted` flag; deletion is permanent and cascades to all messages immediately |
+| [message.model.js](file:///Users/thrishankkuntimaddi/Documents/Chttrix/ChttrixCollab/server/src/features/messages/message.model.js) has duplicate thread parent fields | `threadParent` and `parentId` both exist (line 33–34) and serve the same purpose |
+| Tab canvas content stored as raw string in channel document | Unbounded `content: String` and `drawingData: Array` on embedded tab subdocuments; large collaborations will bloat the channel document |
+| No channel name uniqueness constraint per workspace | `ChannelSchema.index({ workspace: 1, name: 1 })` is defined but `unique: true` is missing; two channels with identical names can coexist in the same workspace |
+| `messageCount` field on channel schema is never incremented | The field exists but no controller ever calls `channel.messageCount++`. It is always 0. |
+| `lastMessageAt` on channel is never updated by channel messages | Only [sendChannelMessage](file:///Users/thrishankkuntimaddi/Documents/Chttrix/ChttrixCollab/server/src/features/messages/message.controller.js#70-109) in the old controller creates messages; it does not update `channel.lastMessageAt`. |
+| File uploads return relative paths | Upload handler returns `url: /uploads/${file.filename}`; no base URL is prepended. This is only resolvable as a relative path on the same origin. |
+| No validation schema on channel routes | [channel.routes.js](file:///Users/thrishankkuntimaddi/Documents/Chttrix/ChttrixCollab/server/src/features/channels/channel.routes.js) uses no `express-validator` chains; the [validate](file:///Users/thrishankkuntimaddi/Documents/Chttrix/ChttrixCollab/server/middleware/validate.js#8-36) middleware from [validate.js](file:///Users/thrishankkuntimaddi/Documents/Chttrix/ChttrixCollab/server/middleware/validate.js) is never applied to any channel endpoint |
+
+---
+
+## 6. SECURITY RISKS
+
+| Severity | Finding |
+|---|---|
+| 🔴 HIGH | [assignAdmin](file:///Users/thrishankkuntimaddi/Documents/Chttrix/ChttrixCollab/server/src/features/channels/channel.controller.js#557-647) membership guard is a no-op (Bug Risk 1) — any admin can promote arbitrary user IDs |
+| 🔴 HIGH | [joinChannelViaLink](file:///Users/thrishankkuntimaddi/Documents/Chttrix/ChttrixCollab/server/src/features/channels/channel.controller.js#1165-1270) does not reject private channels (Risk 6) |
+| 🟠 MEDIUM | [getPublicChannels](file:///Users/thrishankkuntimaddi/Documents/Chttrix/ChttrixCollab/client/src/services/channelService.js#11-13) returns cross-workspace channel data; no workspace scoping |
+| 🟠 MEDIUM | [updateChannel](file:///Users/thrishankkuntimaddi/Documents/Chttrix/ChttrixCollab/client/src/services/channelService.js#17-19) emits to all sockets globally (`io.emit`) leaking channel metadata |
+| 🟠 MEDIUM | Message `text` and `description` fields are not HTML-sanitized before storage; XSS potential if rendered raw |
+| 🟠 MEDIUM | File uploads accept any file type; `upload.array('files', 5)` has no MIME type restriction or virus scanning |
+| 🟡 LOW | [getChannelDetails](file:///Users/thrishankkuntimaddi/Documents/Chttrix/ChttrixCollab/server/src/features/channels/channel.controller.js#703-754) membership check returns `403` but exposes the error message "You are not a member of this channel" — confirms channel existence to non-members |
+| 🟡 LOW | Job: channel name is forced lowercase on update (`name.trim().toLowerCase()`) but NOT on creation — inconsistent normalization could allow duplicate lookups |
+| 🟡 LOW | `socket.user = { id: decoded.sub }` — socket auth stores only user ID; no workspace/role context validated at socket layer |
+| 🟡 LOW | [operationRateLimit](file:///Users/thrishankkuntimaddi/Documents/Chttrix/ChttrixCollab/server/middleware/validate.js#95-139) custom in-memory limiter resets on redeploy and does not work in multi-instance deployments |
+
+---
+
+## 7. SCALABILITY RISKS
+
+| Risk | Detail |
+|---|---|
+| **N+1 queries per message** | [getChannelMessages](file:///Users/thrishankkuntimaddi/Documents/Chttrix/ChttrixCollab/server/src/features/messages/message.controller.js#170-314) fires 2 queries per message (reply count + avatars) + 1 per member. 50 messages in a 30-member channel = ~150 extra queries per page load. |
+| **Unbounded member list in [getChannelMembers](file:///Users/thrishankkuntimaddi/Documents/Chttrix/ChttrixCollab/client/src/services/channelService.js#29-31)** | No pagination; entire members array is populated and returned in one response. Channels with 1,000+ members will be slow. |
+| **Tab content in channel document** | Canvas `drawingData: Array` and `content: String` are embedded subdocuments. A heavily-used canvas tab bloats the channel document, slowing every fetch that includes the channel document. |
+| **30-second unconditional polling in [ChannelsPanel](file:///Users/thrishankkuntimaddi/Documents/Chttrix/ChttrixCollab/client/src/components/layout/panels/ChannelsPanel.jsx#11-516)** | Every active user fires an HTTP GET every 30 seconds regardless of WebSocket state. At scale, this generates constant background load. |
+| **`messageCount` is never maintained** | If used for sorting or display, it will always show 0 and require a full `count()` query to compute correctly. |
+| **No index on `channel.isDiscoverable`** | Discoverable-channel queries (`{ isPrivate: false, isDiscoverable: true }`) in [getMyChannels](file:///Users/thrishankkuntimaddi/Documents/Chttrix/ChttrixCollab/client/src/services/channelService.js#5-7) are not covered by any index beyond the workspace-level compound index. |
+| **Message query uses `createdAt` range without compound index** | [getChannelMessages](file:///Users/thrishankkuntimaddi/Documents/Chttrix/ChttrixCollab/server/src/features/messages/message.controller.js#170-314) filters `{ channel, threadParent: null, createdAt: { $gte } }`. The index `{ channel: 1, _id: 1 }` exists but `threadParent` and `createdAt` filters are not in the indexed fields — COLLSCAN on the filtered sub-set. |
+
+---
+
+## 8. UI/UX GAPS
+
+| Gap | Detail |
+|---|---|
+| **No unread count on channel list items** | [ChannelsPanel](file:///Users/thrishankkuntimaddi/Documents/Chttrix/ChttrixCollab/client/src/components/layout/panels/ChannelsPanel.jsx#11-516) renders channel items with no badge/indicator for unread messages |
+| **No optimistic UI on channel creation** | `useChannels.createChannel` adds the item locally, but [ChannelsPanel](file:///Users/thrishankkuntimaddi/Documents/Chttrix/ChttrixCollab/client/src/components/layout/panels/ChannelsPanel.jsx#11-516) does a full refetch instead, causing a visible flash |
+| **Discoverable channels in sidebar show as joinable but clicking navigates** | Non-member discoverable channels show a `UserPlus` icon but [handleClick](file:///Users/thrishankkuntimaddi/Documents/Chttrix/ChttrixCollab/client/src/components/layout/panels/ChannelsPanel.jsx#280-301) calls `navigate(item.path)` — there is no join prompt on click |
+| **[Item](file:///Users/thrishankkuntimaddi/Documents/Chttrix/ChttrixCollab/client/src/components/layout/panels/ChannelsPanel.jsx#277-361) component defined inside parent** | Re-renders entire list of channel items on any parent state change (search input, selection mode, modal open) |
+| **Channel search is client-side only** — filters already-loaded channels; no server-side search endpoint for channels | |
+| **No loading skeleton** | Loading state shows plain text "Loading channels..." with no skeleton UI |
+| **No empty state guidance** | "No channels found" text has no call-to-action to create or join a channel |
+| **[ChannelsPanel](file:///Users/thrishankkuntimaddi/Documents/Chttrix/ChttrixCollab/client/src/components/layout/panels/ChannelsPanel.jsx#11-516) and [useChannels](file:///Users/thrishankkuntimaddi/Documents/Chttrix/ChttrixCollab/client/src/hooks/useChannels.js#5-84) use different endpoints** | [ChannelsPanel](file:///Users/thrishankkuntimaddi/Documents/Chttrix/ChttrixCollab/client/src/components/layout/panels/ChannelsPanel.jsx#11-516) uses `/api/workspaces/:id/channels`; [useChannels](file:///Users/thrishankkuntimaddi/Documents/Chttrix/ChttrixCollab/client/src/hooks/useChannels.js#5-84) hook uses `/api/channels/my?workspaceId=`. Channel data shape is different between the two, making it impossible to share state |
+
+---
+
+## 9. CLEANUP REQUIRED BEFORE NEW FEATURES
+
+The following must be resolved before any new channel feature is built on top of this system:
+
+1. **Fix [assignAdmin](file:///Users/thrishankkuntimaddi/Documents/Chttrix/ChttrixCollab/server/src/features/channels/channel.controller.js#557-647) membership guard** — change `!isMember` to `!_isTargetMember` (one character fix, critical correctness)
+2. **Fix [removeChannelMember](file:///Users/thrishankkuntimaddi/Documents/Chttrix/ChttrixCollab/server/src/features/channels/channel.controller.js#270-304) filter** — rewrite the member filter to use new format `m.user._id.toString()` instead of `String(m)`
+3. **Resolve dual socket room naming** — standardize on `channel:<id>` throughout (controller emissions must match socket handler room joins)
+4. **Remove or gate [joinChannelViaLink](file:///Users/thrishankkuntimaddi/Documents/Chttrix/ChttrixCollab/server/src/features/channels/channel.controller.js#1165-1270) private channel bypass** — add `if (channel.isPrivate) return 403` guard
+5. **Remove `io.emit()` in [updateChannel](file:///Users/thrishankkuntimaddi/Documents/Chttrix/ChttrixCollab/client/src/services/channelService.js#17-19)** — replace with `io.to(`workspace_${workspaceId}`).emit(...)` 
+6. **Add `unique: true` to workspace+name index** — enforce channel name uniqueness at the DB layer
+7. **Add `maxlength` to `channel.name`** — prevent excessively long names
+8. **Reconcile or delete dead frontend API methods** — [leaveChannel](file:///Users/thrishankkuntimaddi/Documents/Chttrix/ChttrixCollab/client/src/services/channelService.js#26-28), [addMember](file:///Users/thrishankkuntimaddi/Documents/Chttrix/ChttrixCollab/client/src/services/channelService.js#32-34), [getAllChannels](file:///Users/thrishankkuntimaddi/Documents/Chttrix/ChttrixCollab/client/src/services/channelService.js#8-10), [getPublicChannels](file:///Users/thrishankkuntimaddi/Documents/Chttrix/ChttrixCollab/client/src/services/channelService.js#11-13) in [channelService.js](file:///Users/thrishankkuntimaddi/Documents/Chttrix/ChttrixCollab/client/src/services/channelService.js) call non-existent or wrong endpoints
+9. **Split [ChannelsPanel](file:///Users/thrishankkuntimaddi/Documents/Chttrix/ChttrixCollab/client/src/components/layout/panels/ChannelsPanel.jsx#11-516) polling into a proper socket subscription** — remove the 30-second interval; rely on socket events for real-time updates
+10. **Deduplicate `threadParent` vs `parentId`** on the Message schema — pick one and migrate the other
+
+---
+
+## 10. FINAL STABILITY SCORE
+
+```
+╔═══════════════════════════════════════════════════╗
+║   CHANNEL SYSTEM — STABILITY SCORE                ║
+║                                                   ║
+║   Backend Logic (Model + Controller + Routes)     ║
+║   ████████████░░░░░░░  55 / 100                   ║
+║                                                   ║
+║   Real-Time Layer (Socket)                        ║
+║   █████████░░░░░░░░░░  45 / 100                   ║
+║                                                   ║
+║   Frontend (UI + State + Service)                 ║
+║   ████████░░░░░░░░░░░  40 / 100                   ║
+║                                                   ║
+║   Security                                        ║
+║   ███████░░░░░░░░░░░░  35 / 100                   ║
+║                                                   ║
+║   Scalability                                     ║
+║   ████████░░░░░░░░░░░  40 / 100                   ║
+║                                                   ║
+║   ─────────────────────────────────────           ║
+║   COMPOSITE SCORE        42 / 100                 ║
+║                                                   ║
+║   STATUS: NOT PRODUCTION-STABLE                   ║
+╚═══════════════════════════════════════════════════╝
+```
+
+**Primary reasons for low score:**
+
+- Two confirmed logic bugs that silently fail without error (assignAdmin guard noop, removeChannelMember filter noop)
+- The dual room naming convention means **zero channel-scoped real-time events are delivered to clients today**
+- A private channel join bypass exists via `join-via-link`
+- The frontend service layer calls four non-existent API endpoints
+- N+1 queries on every channel message page load
+
+**The core architecture (JWT auth, schema design, E2EE key lifecycle, RBAC pattern, graceful shutdown) is sound.** The debt is concentrated in a small set of fixable bugs and coordination failures between the legacy and new code paths.

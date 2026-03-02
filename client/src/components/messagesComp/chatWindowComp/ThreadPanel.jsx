@@ -42,7 +42,7 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
             // Use _id as primary, id as fallback
             const messageId = parentMessage._id || parentMessage.id;
 
-            const res = await axios.get(`${API_BASE}/api/messages/thread/${messageId}`, { headers });
+            const res = await axios.get(`${API_BASE}/api/v2/messages/thread/${messageId}`, { headers });
 
             // ✅ Use channelId from props
             console.log(`[THREAD][FETCH][DECRYPT] Loaded ${res.data.replies?.length || 0} replies for thread ${messageId}`);
@@ -150,7 +150,7 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
         const handleNewReply = async (data) => {
             // Backend emits 'thread-reply' with { parentId, reply, clientTempId }
             const reply = data.reply || data.message || data;
-            const replyParentId = reply.parentId || data.parentId || reply.replyTo || reply.threadParent;
+            const replyParentId = reply.parentId || data.parentId || reply.replyTo;
             const messageId = parentMessage._id || parentMessage.id;
 
             // ✅ Extract clientTempId from data payload (sent by backend)
@@ -300,14 +300,14 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
                 sender: { _id: currentUserId, username: "You", profilePicture: null },
                 senderId: currentUserId,
                 createdAt: new Date().toISOString(),
-                threadParent: messageId,
+                parentId: messageId,
                 clientTempId: tempId
             };
             setReplies((prev) => [...prev, optimisticReply]);
 
             // Send encrypted payload to backend
             const res = await axios.post(
-                `${API_BASE}/api/messages/thread/${messageId}`,
+                `${API_BASE}/api/v2/messages/thread/${messageId}`,
                 {
                     ciphertext: encryptedPayload.ciphertext,
                     messageIv: encryptedPayload.messageIv,

@@ -97,33 +97,10 @@ const ChannelsPanel = ({ title }) => {
         return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
     }, [workspaceId]);
 
-    // ✅ PERIODIC REFRESH: Poll every 30 seconds as fallback
-    useEffect(() => {
-        if (!workspaceId) return;
+    // NOTE: Polling removed — real-time updates are handled by socket events below
+    // (channel-created, invited-to-channel, removed-from-channel) and the
+    // visibilitychange listener above covers tab-focus recovery.
 
-        const interval = setInterval(async () => {
-            try {
-                const response = await api.get(`/api/workspaces/${workspaceId}/channels`);
-                const mappedChannels = response.data.channels.map(ch => ({
-                    id: ch._id,
-                    type: 'channel',
-                    label: ch.name,
-                    path: `/workspace/${workspaceId}/channel/${ch._id}`,
-                    isFavorite: ch.isDefault || false,
-                    isPrivate: ch.isPrivate || false,
-                    isDefault: ch.isDefault || false,
-                    description: ch.description || '',
-                    canDelete: !ch.isDefault,
-                    workspaceId: ch.workspace
-                }));
-                setChannels(mappedChannels);
-            } catch (err) {
-                console.error('Error auto-refreshing channels:', err);
-            }
-        }, 30000); // Every 30 seconds
-
-        return () => clearInterval(interval);
-    }, [workspaceId]);
 
     // ✅ REAL-TIME UPDATES: Listen for channel events via global socket
     useEffect(() => {

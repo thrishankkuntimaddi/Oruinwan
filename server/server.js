@@ -240,7 +240,7 @@ app.use("/api/admin-dashboard", require("./src/features/admin/admin-dashboard.ro
 app.use("/api/owner-dashboard", require("./src/features/admin/owner-dashboard.routes"));
 app.use("/api/manager-dashboard", require("./src/features/admin/manager-dashboard.routes")); // Old pattern
 app.use("/api/manager", require("./src/features/admin/manager-dashboard.routes")); // New pattern - supports /api/manager/dashboard/*
-app.use("/api/messages", require("./src/features/messages/messages.routes"));
+
 app.use("/api/polls", require("./src/features/polls/poll.routes"));
 app.use("/api/chat", require("./src/features/chatlist/chatlist.routes"));
 app.use("/api/channels", require("./src/features/channels/channel.routes"));
@@ -330,7 +330,7 @@ app.use("/api/v2/audit", require("./src/features/audit/audit.routes"));
 // ============================================================================
 // - These routes should be gradually migrated to /api/v2
 // - New code should use /api/v2/* endpoints
-// - Legacy /api/messages and /api/keys still work
+// - Migration complete: all traffic now served by /api/v2/messages
 // - Gradual migration in progress
 // =============================================================
 

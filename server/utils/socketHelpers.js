@@ -38,7 +38,7 @@ exports.emitToWorkspace = (req, workspaceId, event, data) => {
 exports.emitToChannel = (req, channelId, event, data) => {
     const io = getIO(req);
     if (io && channelId) {
-        io.to(`channel_${channelId}`).emit(event, data);
+        io.to(`channel:${channelId}`).emit(event, data);
     }
 };
 

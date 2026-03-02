@@ -121,11 +121,16 @@ async function fetchMessages(query, options = {}) {
         limit = 50,
         before = null,
         populateReplies = false,
-        userJoinedAt = null
+        userJoinedAt = null,
+        userId = null
     } = options;
 
     // Build query with pagination
-    let finalQuery = { ...query, parentId: null }; // Only top-level messages
+    // Only top-level messages, and exclude messages hidden for this user
+    let finalQuery = { ...query, parentId: null };
+    if (userId) {
+        finalQuery.hiddenFor = { $nin: [userId] };
+    }
 
     // Add join-date filter if provided (for channels)
     if (userJoinedAt) {
@@ -168,21 +173,24 @@ async function fetchMessages(query, options = {}) {
     // Reverse for chronological order (oldest to newest)
     messages.reverse();
 
-    // Populate reply counts if requested
-    let messagesWithCounts = messages;
+    // Pre-aggregate all reply counts in ONE query (no N+1)
+    let messagesWithCounts = messages.map(m => m.toObject ? m.toObject() : m);
     if (populateReplies) {
-        messagesWithCounts = await Promise.all(
-            messages.map(async (msg) => {
-                const replyCount = await Message.countDocuments({
-                    parentId: msg._id,
+        const messageIds = messages.map(m => m._id);
+        const counts = await Message.aggregate([
+            {
+                $match: {
+                    parentId: { $in: messageIds },
                     type: { $ne: 'system' }
-                });
-
-                const msgObj = msg.toObject();
-                msgObj.replyCount = replyCount;
-                return msgObj;
-            })
-        );
+                }
+            },
+            { $group: { _id: '$parentId', replyCount: { $sum: 1 } } }
+        ]);
+        const countMap = new Map(counts.map(c => [c._id.toString(), c.replyCount]));
+        messagesWithCounts = messagesWithCounts.map(msgObj => ({
+            ...msgObj,
+            replyCount: countMap.get(msgObj._id.toString()) || 0
+        }));
     }
 
     return {
@@ -306,11 +314,198 @@ async function getUserDMSessions(userId, workspaceId) {
     return sessionList;
 }
 
+// ==================== MESSAGE MUTATIONS ====================
+
+/**
+ * Edit a message (sender only)
+ * Updates text, sets editedAt, increments version
+ */
+async function editMessage(messageId, userId, newText, io) {
+    const message = await Message.findById(messageId)
+        .populate('sender', 'username email profilePicture');
+    if (!message) throw new Error('Message not found');
+
+    if (message.sender._id.toString() !== userId.toString()) {
+        const err = new Error('Unauthorized: only the sender can edit this message');
+        err.status = 403;
+        throw err;
+    }
+
+    if (message.isDeleted) {
+        const err = new Error('Cannot edit a deleted message');
+        err.status = 400;
+        throw err;
+    }
+
+    // Store new text in payload for E2EE consistency
+    // Note: for encrypted messages, newText IS the new ciphertext/payload blob
+    message.text = newText;
+    message.editedAt = new Date();
+    message.version = (message.version || 1) + 1;
+    await message.save();
+
+    const room = message.channel
+        ? `channel:${message.channel}`
+        : `dm:${message.dm}`;
+
+    if (io) {
+        io.to(room).emit('message:edited', message.toObject());
+    }
+
+    return message;
+}
+
+/**
+ * Delete a message.
+ *
+ * scope === 'me'       → hide message only for the requesting user (hiddenFor[] field).
+ *                         Any channel member may do this to any message.
+ * scope === 'everyone' → universally soft-delete (sender-only, default behaviour).
+ *
+ * @param {string} messageId
+ * @param {string} userId
+ * @param {Object} io        - socket.io server instance
+ * @param {string} [scope]   - 'me' | 'everyone' (default: 'everyone')
+ * @param {string} [socketId] - the requester's individual socket id (for 'me' scope)
+ */
+async function deleteMessage(messageId, userId, io, scope = 'everyone', socketId = null) {
+    const message = await Message.findById(messageId)
+        .populate('sender', 'username email profilePicture');
+    if (!message) throw new Error('Message not found');
+
+    const room = message.channel
+        ? `channel:${message.channel}`
+        : `dm:${message.dm}`;
+
+    // ── Delete For Me ────────────────────────────────────────────
+    if (scope === 'me') {
+        // Any user can hide any message from their own view
+        const alreadyHidden = message.hiddenFor.some(
+            id => id.toString() === userId.toString()
+        );
+        if (!alreadyHidden) {
+            message.hiddenFor.push(userId);
+            await message.save();
+        }
+
+        // Emit ONLY to the requester's socket (personal – not the whole room)
+        if (io && socketId) {
+            io.to(socketId).emit('message:hidden', { messageId });
+        }
+
+        return message;
+    }
+
+    // ── Delete For Everyone ───────────────────────────────────────
+    if (message.sender._id.toString() !== userId.toString()) {
+        const err = new Error('Unauthorized: only the sender can delete this message for everyone');
+        err.status = 403;
+        throw err;
+    }
+
+    message.isDeleted = true;
+    message.isDeletedUniversally = true;
+    message.deletedAt = new Date();
+    message.deletedBy = userId;
+    await message.save();
+
+    if (io) {
+        io.to(room).emit('message:deleted', {
+            messageId,
+            deletedBy: userId,
+            deletedByName: message.sender?.username || null,
+            deletedAt: message.deletedAt
+        });
+    }
+
+    return message;
+}
+
+/**
+ * Add a reaction to a message.
+ * Enforces ONE reaction per user per message:
+ *   – If the user already has the SAME emoji → no-op (idempotent).
+ *   – If the user has a DIFFERENT emoji → remove old one, add new one.
+ */
+async function addReaction(messageId, userId, emoji, io) {
+    const message = await Message.findById(messageId);
+    if (!message) throw new Error('Message not found');
+
+    const existingReaction = message.reactions.find(
+        r => r.userId.toString() === userId.toString()
+    );
+
+    if (existingReaction) {
+        if (existingReaction.emoji === emoji) {
+            // Same emoji clicked again — treat as a no-op (client toggles off via removeReaction)
+            // Nothing to save; still re-emit so the client stays in sync
+        } else {
+            // Different emoji — swap: remove old, add new
+            message.reactions = message.reactions.filter(
+                r => r.userId.toString() !== userId.toString()
+            );
+            message.reactions.push({ userId, emoji });
+            await message.save();
+        }
+    } else {
+        // First reaction from this user
+        message.reactions.push({ userId, emoji });
+        await message.save();
+    }
+
+    const room = message.channel
+        ? `channel:${message.channel}`
+        : `dm:${message.dm}`;
+
+    if (io) {
+        io.to(room).emit('message:reaction_added', {
+            messageId,
+            userId,
+            emoji,
+            reactions: message.reactions
+        });
+    }
+
+    return message;
+}
+
+/**
+ * Remove a reaction from a message
+ */
+async function removeReaction(messageId, userId, emoji, io) {
+    const message = await Message.findById(messageId);
+    if (!message) throw new Error('Message not found');
+
+    message.reactions = message.reactions.filter(
+        r => !(r.userId.toString() === userId.toString() && r.emoji === emoji)
+    );
+    await message.save();
+
+    const room = message.channel
+        ? `channel:${message.channel}`
+        : `dm:${message.dm}`;
+
+    if (io) {
+        io.to(room).emit('message:reaction_removed', {
+            messageId,
+            userId,
+            emoji,
+            reactions: message.reactions
+        });
+    }
+
+    return message;
+}
+
 // ==================== EXPORTS ====================
 
 module.exports = {
     createMessage,
     fetchMessages,
     findOrCreateDMSession,
-    getUserDMSessions
+    getUserDMSessions,
+    editMessage,
+    deleteMessage,
+    addReaction,
+    removeReaction
 };

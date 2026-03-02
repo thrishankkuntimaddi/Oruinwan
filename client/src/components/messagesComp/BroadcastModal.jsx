@@ -20,7 +20,7 @@ export default function BroadcastModal({ workspaceId, onClose, onSendBroadcast }
             try {
                 // Fetch all workspace data in parallel
                 const [dmsRes, channelsRes, membersRes] = await Promise.all([
-                    api.get(`/api/messages/workspace/${workspaceId}/dms`),
+                    api.get(`/api/v2/messages/workspace/${workspaceId}/dms`),
                     api.get(`/api/workspaces/${workspaceId}/channels`),
                     api.get(`/api/workspaces/${workspaceId}/members`)
                 ]);

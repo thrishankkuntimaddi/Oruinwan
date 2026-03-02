@@ -211,7 +211,8 @@ exports.getDMs = async (req, res) => {
             {
                 limit: parseInt(limit) || 50,
                 before,
-                populateReplies: true
+                populateReplies: true,
+                userId   // ← exclude messages hidden by this user
             }
         );
 
@@ -410,7 +411,8 @@ exports.getChannelMessages = async (req, res) => {
                 limit: parseInt(limit) || 50,
                 before,
                 populateReplies: true,
-                userJoinedAt
+                userJoinedAt,
+                userId   // ← exclude messages hidden by this user
             }
         );
 
@@ -563,5 +565,155 @@ exports.forwardMessage = async (req, res) => {
 
     } catch (err) {
         return handleError(res, err, 'FORWARD MESSAGE ERROR');
+    }
+};
+
+// ==================== MESSAGE MUTATIONS ====================
+
+/**
+ * Edit a message
+ * PATCH /api/v2/messages/:messageId
+ * Body: { text } (plaintext) OR { ciphertext, messageIv } (E2EE)
+ */
+exports.editMessage = async (req, res) => {
+    try {
+        const { messageId } = req.params;
+        const userId = req.user.sub;
+        const { text, ciphertext, messageIv } = req.body;
+
+        // Accept either plaintext edit or E2EE payload
+        const newText = text || ciphertext || null;
+        if (!newText) {
+            return res.status(400).json({ message: 'text or ciphertext is required' });
+        }
+
+        const io = req.app?.get('io');
+        const message = await messagesService.editMessage(messageId, userId, newText, io);
+
+        return res.json({ message });
+    } catch (err) {
+        const status = err.status || 500;
+        return res.status(status).json({ message: err.message || 'Server error' });
+    }
+};
+
+/**
+ * Soft-delete a message
+ * DELETE /api/v2/messages/:messageId
+ */
+exports.deleteMessage = async (req, res) => {
+    try {
+        const { messageId } = req.params;
+        const userId = req.user.sub;
+        const { scope = 'everyone' } = req.body;
+        const io = req.app?.get('io');
+        // The requester's socket id (needed for personal 'message:hidden' emit)
+        const socketId = req.headers['x-socket-id'] || null;
+
+        await messagesService.deleteMessage(messageId, userId, io, scope, socketId);
+
+        return res.json({ success: true, messageId, scope });
+    } catch (err) {
+        const status = err.status || 500;
+        return res.status(status).json({ message: err.message || 'Server error' });
+    }
+};
+
+/**
+ * Add a reaction
+ * POST /api/v2/messages/:messageId/react
+ * Body: { emoji }
+ */
+exports.addReaction = async (req, res) => {
+    try {
+        const { messageId } = req.params;
+        const userId = req.user.sub;
+        const { emoji } = req.body;
+
+        console.log(`[REACT] Adding reaction: messageId=${messageId} userId=${userId} emoji=${JSON.stringify(emoji)}`);
+
+        if (!emoji) {
+            return res.status(400).json({ message: 'emoji is required' });
+        }
+
+        // Guard: reject anything that looks like a MongoDB ObjectId (24 hex characters)
+        // This means the client accidentally sent a message/user ID instead of an emoji
+        if (/^[0-9a-f]{24}$/i.test(emoji)) {
+            console.error(`[REACT] ❌ Rejected invalid emoji (looks like ObjectId): ${emoji}`);
+            return res.status(400).json({ message: 'Invalid emoji: received an ID instead of emoji character' });
+        }
+
+        const io = req.app?.get('io');
+        const message = await messagesService.addReaction(messageId, userId, emoji, io);
+
+        return res.json({ message });
+    } catch (err) {
+        const status = err.status || 500;
+        return res.status(status).json({ message: err.message || 'Server error' });
+    }
+};
+
+/**
+ * Remove a reaction
+ * DELETE /api/v2/messages/:messageId/react
+ * Body: { emoji }
+ */
+exports.removeReaction = async (req, res) => {
+    try {
+        const { messageId } = req.params;
+        const userId = req.user.sub;
+        const { emoji } = req.body;
+
+        if (!emoji) {
+            return res.status(400).json({ message: 'emoji is required' });
+        }
+
+        const io = req.app?.get('io');
+        const message = await messagesService.removeReaction(messageId, userId, emoji, io);
+
+        return res.json({ message });
+    } catch (err) {
+        const status = err.status || 500;
+        return res.status(status).json({ message: err.message || 'Server error' });
+    }
+};
+
+/**
+ * Pin or unpin a message
+ * POST /api/v2/messages/:messageId/pin
+ * Body: { pin: true|false }
+ */
+exports.pinMessage = async (req, res) => {
+    try {
+        const { messageId } = req.params;
+        const userId = req.user.sub;
+        const { pin = true } = req.body;
+
+        const Message = require('../../features/messages/message.model');
+        const message = await Message.findById(messageId);
+        if (!message) {
+            return res.status(404).json({ message: 'Message not found' });
+        }
+
+        message.isPinned = pin;
+        message.pinnedBy = pin ? userId : null;
+        message.pinnedAt = pin ? new Date() : null;
+        await message.save();
+
+        const io = req.app?.get('io');
+        if (io) {
+            const room = message.channel
+                ? `channel:${message.channel}`
+                : `dm:${message.dm}`;
+            io.to(room).emit(pin ? 'message-pinned' : 'message-unpinned', {
+                messageId,
+                pinnedBy: userId,
+                pinnedAt: message.pinnedAt
+            });
+        }
+
+        return res.json({ message });
+    } catch (err) {
+        return res.status(500).json({ message: err.message || 'Server error' });
     }
 };

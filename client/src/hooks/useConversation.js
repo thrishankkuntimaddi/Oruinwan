@@ -102,7 +102,7 @@ export function useConversation(conversationId, conversationType, workspaceId) {
                 },
                 sender: msg.sender,
                 createdAt: msg.createdAt,
-                parentId: msg.threadParent
+                parentId: msg.parentId
             }));
 
             // 🔐 Decrypt messages before displaying (ONLY if messages exist)
@@ -162,7 +162,7 @@ export function useConversation(conversationId, conversationType, workspaceId) {
                 payload: msg,
                 sender: msg.sender,
                 createdAt: msg.createdAt,
-                parentId: msg.threadParent
+                parentId: msg.parentId
             }));
 
             // 🔐 Decrypt messages before displaying (ONLY if messages exist)

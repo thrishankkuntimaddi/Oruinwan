@@ -65,7 +65,7 @@ export function useMessages(conversationId, conversationType, workspaceId, isEnc
                 response = await axios.post('/api/v2/messages/direct', payload);
             } else if (conversationType === 'thread') {
                 payload.parentId = conversationId;
-                response = await axios.post('/api/messages/reply', payload);
+                response = await axios.post(`/api/v2/messages/thread/${payload.parentId}`, payload);
             }
 
             setSending(false);
@@ -99,7 +99,7 @@ export function useMessages(conversationId, conversationType, workspaceId, isEnc
                 payload.text = '';
             }
 
-            const response = await axios.patch(`/api/messages/${messageId}`, payload);
+            const response = await axios.patch(`/api/v2/messages/${messageId}`, payload);
             return createMessage(response.data.message);
         } catch (err) {
             console.error('Error editing message:', err);
@@ -114,7 +114,7 @@ export function useMessages(conversationId, conversationType, workspaceId, isEnc
     const deleteMessage = useCallback(async (messageId) => {
         try {
             setError(null);
-            await axios.delete(`/api/messages/${messageId}`);
+            await axios.delete(`/api/v2/messages/${messageId}`);
             return true;
         } catch (err) {
             console.error('Error deleting message:', err);
@@ -129,7 +129,7 @@ export function useMessages(conversationId, conversationType, workspaceId, isEnc
     const reactToMessage = useCallback(async (messageId, emoji) => {
         try {
             setError(null);
-            const response = await axios.post(`/api/messages/${messageId}/react`, { emoji });
+            const response = await axios.post(`/api/v2/messages/${messageId}/react`, { emoji });
             return response.data;
         } catch (err) {
             console.error('Error reacting to message:', err);
@@ -143,7 +143,7 @@ export function useMessages(conversationId, conversationType, workspaceId, isEnc
      */
     const markAsRead = useCallback(async (messageId) => {
         try {
-            await axios.post(`/api/messages/${messageId}/read`);
+            await axios.post(`/api/v2/messages/${messageId}/read`); // TODO: implement /read on v2
             return true;
         } catch (err) {
             console.error('Error marking as read:', err);
@@ -158,7 +158,7 @@ export function useMessages(conversationId, conversationType, workspaceId, isEnc
     const loadThread = useCallback(async (parentMessageId) => {
         try {
             setError(null);
-            const response = await axios.get(`/api/messages/${parentMessageId}/replies`);
+            const response = await axios.get(`/api/v2/messages/thread/${parentMessageId}`);
 
             const messages = response.data.replies.map(msg => createMessage(msg));
 

@@ -1,4 +1,4 @@
-// server/utils/aiActions.js
+    // server/utils/aiActions.js
 // Helper functions for AI-powered actions
 
 const Channel = require('../src/features/channels/channel.model');
@@ -45,7 +45,7 @@ async function sendMessageToChannel(channelId, content, userId, req) {
             const populatedMessage = await Message.findById(message._id)
                 .populate('sender', 'name email avatar');
 
-            io.to(channelId).emit('new_channel_message', populatedMessage);
+            io.to(`channel:${channelId}`).emit('new_channel_message', populatedMessage);
         }
 
         return {

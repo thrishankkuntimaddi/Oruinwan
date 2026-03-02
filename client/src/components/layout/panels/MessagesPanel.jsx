@@ -41,7 +41,7 @@ const MessagesPanel = ({ title }) => {
             if (!workspaceId) return;
             setIsLoading(true);
             try {
-                const res = await api.get(`/api/messages/workspace/${workspaceId}/dms`);
+                const res = await api.get(`/api/v2/messages/workspace/${workspaceId}/dms`);
                 const formatted = (res.data.sessions || []).map(session => {
                     // Determine initial status
                     const user = session.otherUser;
@@ -128,7 +128,7 @@ const MessagesPanel = ({ title }) => {
             // 2. Send to Channels
             if (channelRecipients.length > 0) {
                 const channelPromises = channelRecipients.map(ch =>
-                    api.post('/api/messages/channel/send', {
+                    api.post('/api/v2/messages/channel', {
                         channelId: ch.id,
                         text: message,
                         attachments: []
@@ -143,7 +143,7 @@ const MessagesPanel = ({ title }) => {
             setShowBroadcast(false);
 
             // Optionally refresh DM list to show new conversations
-            const res = await api.get(`/api/messages/workspace/${workspaceId}/dms`);
+            const res = await api.get(`/api/v2/messages/workspace/${workspaceId}/dms`);
             const formatted = (res.data.sessions || []).map(session => {
                 const user = session.otherUser;
                 let initialStatus = "offline";

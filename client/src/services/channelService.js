@@ -3,32 +3,27 @@ import api from './api';
 
 export const channelService = {
     // Get user's channels for a specific workspace
+    // Single canonical fetch — use this everywhere, not /api/workspaces/:id/channels
     getMyChannels: (workspaceId) => api.get(`/api/channels/my?workspaceId=${workspaceId}`),
-
-    // Get all channels (workspace)
-    getAllChannels: () => api.get('/api/chat/channels'),
-
-    // Get public channels
-    getPublicChannels: () => api.get('/api/chat/channels/public'),
 
     // Create new channel
     createChannel: (data) => api.post('/api/channels', data),
 
-    // Update channel
+    // Update channel metadata (legacy — prefer PUT /:id/info for admin updates)
     updateChannel: (id, data) => api.put(`/api/channels/${id}`, data),
 
     // Delete channel
     deleteChannel: (id) => api.delete(`/api/channels/${id}`),
 
-    // Join channel
+    // Join a public channel
     joinChannel: (id) => api.post(`/api/channels/${id}/join`),
 
-    // Leave channel
-    leaveChannel: (id) => api.post(`/api/channels/${id}/leave`),
+    // Exit a channel (was: /leave — corrected to /exit)
+    exitChannel: (id) => api.post(`/api/channels/${id}/exit`),
 
     // Get channel members
     getChannelMembers: (id) => api.get(`/api/channels/${id}/members`),
 
-    // Add member to channel
-    addMember: (id, userId) => api.post(`/api/channels/${id}/members`, { userId })
+    // Invite a user to channel (was: POST /:id/members — corrected to /:id/invite)
+    inviteToChannel: (id, userId) => api.post(`/api/channels/${id}/invite`, { userId })
 };

@@ -65,8 +65,8 @@ export function useConversation({ conversationId, type, workspaceId, currentUser
                 setHasMore(messagesRes.data.hasMore || false);
             } else if (type === 'dm') {
                 // Load DM session
-                const dmRes = await axios.get(`/api/messages/dm-sessions/${conversationId}`);
-                conversationData = createConversation(dmRes.data, 'dm');
+                // DM session metadata — loaded from parent context, not a dedicated endpoint
+                conversationData = createConversation({ _id: conversationId, workspace: workspaceId }, 'dm');
 
                 // Load DM messages
                 const messagesRes = await axios.get(`/api/v2/messages/dm/${conversationId}?limit=50`);
@@ -74,7 +74,7 @@ export function useConversation({ conversationId, type, workspaceId, currentUser
                 setHasMore(messagesRes.data.hasMore || false);
             } else if (type === 'thread') {
                 // For threads, load parent message and replies
-                const threadRes = await axios.get(`/api/messages/${conversationId}/replies`);
+                const threadRes = await axios.get(`/api/v2/messages/thread/${conversationId}`);
                 conversationData = createConversation({
                     _id: conversationId,
                     parentMessage: threadRes.data.parent,
@@ -193,8 +193,73 @@ export function useConversation({ conversationId, type, workspaceId, currentUser
     }, [socket, workspaceId]);
 
     /**
-     * Listen for typing indicators
+     * Listen for message mutations (edit, delete, pin, react)
      */
+    useEffect(() => {
+        if (!socket) return;
+
+        // message:edited — update text + mark as edited
+        const handleEdited = (updated) => {
+            setMessages(prev => prev.map(m =>
+                (m.id === updated._id || m.id === updated.id)
+                    ? { ...m, text: updated.text, editedAt: updated.editedAt }
+                    : m
+            ));
+        };
+
+        // message:deleted — mark soft-deleted
+        const handleDeleted = ({ messageId, deletedBy, deletedByName }) => {
+            setMessages(prev => prev.map(m =>
+                (m.id === messageId)
+                    ? { ...m, isDeleted: true, isDeletedUniversally: true, deletedBy, deletedByName }
+                    : m
+            ));
+        };
+
+        // message:reaction_added / message:reaction_removed — replace reactions array
+        const handleReactionAdded = ({ messageId, reactions }) => {
+            setMessages(prev => prev.map(m =>
+                (m.id === messageId) ? { ...m, reactions } : m
+            ));
+        };
+
+        const handleReactionRemoved = ({ messageId, reactions }) => {
+            setMessages(prev => prev.map(m =>
+                (m.id === messageId) ? { ...m, reactions } : m
+            ));
+        };
+
+        // message-pinned / message-unpinned
+        const handlePinned = ({ messageId, pinnedBy, pinnedAt }) => {
+            setMessages(prev => prev.map(m =>
+                (m.id === messageId) ? { ...m, isPinned: true, pinnedBy, pinnedAt } : m
+            ));
+        };
+
+        const handleUnpinned = ({ messageId }) => {
+            setMessages(prev => prev.map(m =>
+                (m.id === messageId) ? { ...m, isPinned: false, pinnedBy: null, pinnedAt: null } : m
+            ));
+        };
+
+        socket.on('message:edited', handleEdited);
+        socket.on('message:deleted', handleDeleted);
+        socket.on('message:reaction_added', handleReactionAdded);
+        socket.on('message:reaction_removed', handleReactionRemoved);
+        socket.on('message-pinned', handlePinned);
+        socket.on('message-unpinned', handleUnpinned);
+
+        return () => {
+            socket.off('message:edited', handleEdited);
+            socket.off('message:deleted', handleDeleted);
+            socket.off('message:reaction_added', handleReactionAdded);
+            socket.off('message:reaction_removed', handleReactionRemoved);
+            socket.off('message-pinned', handlePinned);
+            socket.off('message-unpinned', handleUnpinned);
+        };
+    }, [socket]);
+
+
     useEffect(() => {
         if (!socket) return;
 
@@ -281,7 +346,7 @@ export function useConversation({ conversationId, type, workspaceId, currentUser
                 response = await axios.post('/api/v2/messages/direct', payload);
             } else if (type === 'thread') {
                 payload.parentId = conversationId;
-                response = await axios.post('/api/messages/reply', payload);
+                response = await axios.post(`/api/v2/messages/thread/${conversationId}`, payload);
             }
 
             // Message will be added via socket event

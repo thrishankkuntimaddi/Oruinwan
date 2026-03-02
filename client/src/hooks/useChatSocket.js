@@ -217,6 +217,30 @@ export function useChatSocket(conversationId, conversationType, eventHandler) {
             });
         };
 
+        const handleMessageHidden = (data) => {
+            // 'message:hidden' is a personal event — message is hidden only for current user
+            eventHandlerRef.current?.({
+                type: 'message-hidden',
+                payload: data
+            });
+        };
+
+        const handleMessageEdited = (data) => {
+            // message:edited from server → same shape as message-updated
+            // data is the full updated message object
+            const msgId = data._id || data.id;
+            eventHandlerRef.current?.({
+                type: 'message-updated',
+                payload: {
+                    messageId: msgId,
+                    updates: {
+                        text: data.text,
+                        editedAt: data.editedAt
+                    }
+                }
+            });
+        };
+
         const handleMessageUpdated = (data) => {
             eventHandlerRef.current?.({
                 type: 'message-updated',
@@ -242,6 +266,7 @@ export function useChatSocket(conversationId, conversationType, eventHandler) {
         // ==================== REACTION EVENTS ====================
 
         const handleReactionAdded = (data) => {
+            // Handles both 'reaction-added' (old) and 'message:reaction_added' (new v2)
             eventHandlerRef.current?.({
                 type: 'reaction-added',
                 payload: data
@@ -249,6 +274,7 @@ export function useChatSocket(conversationId, conversationType, eventHandler) {
         };
 
         const handleReactionRemoved = (data) => {
+            // Handles both 'reaction-removed' (old) and 'message:reaction_removed' (new v2)
             eventHandlerRef.current?.({
                 type: 'reaction-removed',
                 payload: data
@@ -327,12 +353,17 @@ export function useChatSocket(conversationId, conversationType, eventHandler) {
         socket.on('message-sent', handleMessageSent);
         socket.on('send-error', handleSendError);
         socket.on('message-deleted', handleMessageDeleted);
+        socket.on('message:deleted', handleMessageDeleted);   // v2 alias
+        socket.on('message:hidden', handleMessageHidden);     // personal hide
         socket.on('message-updated', handleMessageUpdated);
+        socket.on('message:edited', handleMessageEdited);     // v2 alias
         socket.on('message-pinned', handleMessagePinned);
         socket.on('message-unpinned', handleMessageUnpinned);
 
         socket.on('reaction-added', handleReactionAdded);
         socket.on('reaction-removed', handleReactionRemoved);
+        socket.on('message:reaction_added', handleReactionAdded);   // v2 alias
+        socket.on('message:reaction_removed', handleReactionRemoved); // v2 alias
 
         socket.on('chat:user_typing', handleUserTyping);
 
@@ -354,12 +385,17 @@ export function useChatSocket(conversationId, conversationType, eventHandler) {
             socket.off('message-sent', handleMessageSent);
             socket.off('send-error', handleSendError);
             socket.off('message-deleted', handleMessageDeleted);
+            socket.off('message:deleted', handleMessageDeleted);
+            socket.off('message:hidden', handleMessageHidden);
             socket.off('message-updated', handleMessageUpdated);
+            socket.off('message:edited', handleMessageEdited);
             socket.off('message-pinned', handleMessagePinned);
             socket.off('message-unpinned', handleMessageUnpinned);
 
             socket.off('reaction-added', handleReactionAdded);
             socket.off('reaction-removed', handleReactionRemoved);
+            socket.off('message:reaction_added', handleReactionAdded);
+            socket.off('message:reaction_removed', handleReactionRemoved);
 
             socket.off('chat:user_typing', handleUserTyping);
 

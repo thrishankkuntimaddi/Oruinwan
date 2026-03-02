@@ -254,7 +254,7 @@ exports.inviteToChannel = async (req, res) => {
     // optional: emit socket event to channel room or to invitee
     const io = req.app?.get("io");
     if (io) {
-      io.to(`channel_${channelId}`).emit("channel-member-added", {
+      io.to(`channel:${channelId}`).emit("channel-member-added", {
         channelId,
         userId: inviteeId,
       });
@@ -286,12 +286,14 @@ exports.removeChannelMember = async (req, res) => {
       return res.status(403).json({ message: "Only channel creator can remove members" });
     }
 
-    channel.members = channel.members.filter((m) => String(m) !== String(victimId));
+    channel.members = channel.members.filter(
+      (m) => m.user.toString() !== victimId.toString()
+    );
     await saveWithRetry(channel);
 
     const io = req.app?.get("io");
     if (io) {
-      io.to(`channel_${channelId}`).emit("channel-member-removed", { channelId, userId: victimId });
+      io.to(`channel:${channelId}`).emit("channel-member-removed", { channelId, userId: victimId });
       io.to(`user_${victimId}`).emit("removed-from-channel", { channelId });
     }
 
@@ -357,7 +359,7 @@ exports.joinChannel = async (req, res) => {
     // optional socket: join user to room on server side handled by socket connection when client emits join-channel
     const io = req.app?.get("io");
     if (io) {
-      io.to(`channel_${channelId}`).emit("channel-member-joined", { channelId, userId });
+      io.to(`channel:${channelId}`).emit("channel-member-joined", { channelId, userId });
     }
 
     return res.json({ channelId, joined: true });
@@ -392,9 +394,10 @@ exports.updateChannel = async (req, res) => {
 
     await saveWithRetry(channel);
 
-    const payload = { channelId: channel._id, name: channel.name, description: channel.description, isPrivate: channel.isPrivate };
+    const workspaceId = channel.workspace;
+    const payload = { channelId: channel._id, name: channel.name, description: channel.description, isPrivate: channel.isPrivate, workspaceId };
     const io = req.app?.get("io");
-    if (io) io.emit("channel-updated", payload);
+    if (io) io.to(`workspace_${workspaceId}`).emit("channel-updated", payload);
 
     return res.json({ channel: payload });
   } catch (err) {
@@ -404,11 +407,14 @@ exports.updateChannel = async (req, res) => {
 
 /**
  * Get members of channel
- * GET /channels/:id/members
+ * GET /channels/:id/members?limit=50&offset=0
  */
 exports.getChannelMembers = async (req, res) => {
   try {
     const { id } = req.params;
+    const limit = Math.min(parseInt(req.query.limit) || 50, 200);
+    const offset = parseInt(req.query.offset) || 0;
+
     const channel = await Channel.findById(id)
       .populate('members.user', 'username profilePicture email');
 
@@ -416,8 +422,8 @@ exports.getChannelMembers = async (req, res) => {
       return res.status(404).json({ message: "Channel not found" });
     }
 
-    // Map members to include user data
-    const formattedMembers = channel.members.map(m => {
+    // Map all members to include user data + admin flag
+    const allMembers = channel.members.map(m => {
       const isAdmin = channel.admins.some(adminId => adminId.toString() === m.user._id.toString());
       return {
         _id: m.user._id,
@@ -429,7 +435,16 @@ exports.getChannelMembers = async (req, res) => {
       };
     });
 
-    return res.json({ members: formattedMembers });
+    const total = allMembers.length;
+    const page = allMembers.slice(offset, offset + limit);
+
+    return res.json({
+      members: page,
+      total,
+      limit,
+      offset,
+      hasMore: offset + limit < total
+    });
   } catch (err) {
     return handleError(res, err, "GET CHANNEL MEMBERS ERROR");
   }
@@ -499,7 +514,7 @@ exports.exitChannel = async (req, res) => {
       // Emit deletion event
       const io = req.app?.get("io");
       if (io) {
-        io.to(`channel_${channelId}`).emit('channel-deleted', {
+        io.to(`channel:${channelId}`).emit('channel-deleted', {
           channelId,
           channelName: channel.name,
           reason: 'empty'
@@ -532,7 +547,7 @@ exports.exitChannel = async (req, res) => {
     // Emit socket event
     const io = req.app?.get("io");
     if (io) {
-      io.to(`channel_${channelId}`).emit('member-left', {
+      io.to(`channel:${channelId}`).emit('member-left', {
         channelId,
         userId,
         username,
@@ -583,7 +598,7 @@ exports.assignAdmin = async (req, res) => {
     // Check if target user is a channel member
     const _isTargetMember = isMember(channel.members, targetUserId);
 
-    if (!isMember) {
+    if (!_isTargetMember) {
       return res.status(400).json({ message: "User is not a member of this channel" });
     }
 
@@ -623,7 +638,7 @@ exports.assignAdmin = async (req, res) => {
     // Emit socket event
     const io = req.app?.get("io");
     if (io) {
-      io.to(`channel_${channelId}`).emit('admin-assigned', {
+      io.to(`channel:${channelId}`).emit('admin-assigned', {
         channelId,
         assignerId: userId,
         assignedUserId: targetUserId,
@@ -683,7 +698,7 @@ exports.deleteChannel = async (req, res) => {
     // Emit socket event to all members
     const io = req.app?.get("io");
     if (io) {
-      io.to(`channel_${channelId}`).emit('channel-deleted', {
+      io.to(`channel:${channelId}`).emit('channel-deleted', {
         channelId,
         channelName,
         workspaceId,
@@ -812,7 +827,7 @@ exports.updateChannelInfo = async (req, res) => {
     // Emit socket event
     const io = req.app?.get("io");
     if (io) {
-      io.to(`channel_${channelId}`).emit('channel-updated', {
+      io.to(`channel:${channelId}`).emit('channel-updated', {
         channelId,
         name: channel.name,
         description: channel.description
@@ -903,7 +918,7 @@ exports.demoteAdmin = async (req, res) => {
     // Emit socket event
     const io = req.app?.get("io");
     if (io) {
-      io.to(`channel_${channelId}`).emit('admin-demoted', {
+      io.to(`channel:${channelId}`).emit('admin-demoted', {
         channelId,
         demoterId: userId,
         demotedUserId: targetUserId,
@@ -1005,7 +1020,7 @@ exports.removeMember = async (req, res) => {
     const io = req.app?.get("io");
     if (io) {
       // Notify channel members
-      io.to(`channel_${channelId}`).emit('member-removed', {
+      io.to(`channel:${channelId}`).emit('member-removed', {
         channelId,
         removerId: userId,
         removedUserId: targetUserId,
@@ -1084,7 +1099,7 @@ exports.toggleChannelPrivacy = async (req, res) => {
     // Emit socket event
     const io = req.app?.get("io");
     if (io) {
-      io.to(`channel_${channelId}`).emit('channel-privacy-changed', {
+      io.to(`channel:${channelId}`).emit('channel-privacy-changed', {
         channelId,
         isPrivate: channel.isPrivate
       });
@@ -1145,7 +1160,7 @@ exports.clearChannelMessages = async (req, res) => {
     // Emit socket event
     const io = req.app?.get("io");
     if (io) {
-      io.to(`channel_${channelId}`).emit('messages-cleared', {
+      io.to(`channel:${channelId}`).emit('messages-cleared', {
         channelId,
         clearedBy: userId,
         count: result.deletedCount
@@ -1178,7 +1193,12 @@ exports.joinChannelViaLink = async (req, res) => {
       return res.status(404).json({ message: "Channel not found" });
     }
 
-    // 2. Check if user is workspace member
+    // 2. Block private channels from being joined via link
+    if (channel.isPrivate) {
+      return res.status(403).json({ message: "Cannot join private channel via link" });
+    }
+
+    // 3. Check if user is workspace member
     const workspace = channel.workspace;
     const isWorkspaceMember = workspace.members.some(m => String(m.user) === String(userId));
 
@@ -1314,7 +1334,7 @@ exports.addTab = async (req, res) => {
 
     const io = req.app?.get("io");
     if (io) {
-      io.to(`channel_${channelId}`).emit("tab-added", {
+      io.to(`channel:${channelId}`).emit("tab-added", {
         channelId,
         tab: createdTab
       });
@@ -1362,7 +1382,7 @@ exports.updateTab = async (req, res) => {
 
     const io = req.app?.get("io");
     if (io) {
-      io.to(`channel_${channelId}`).emit("tab-updated", {
+      io.to(`channel:${channelId}`).emit("tab-updated", {
         channelId,
         tabId,
         name: tab.name,
@@ -1408,7 +1428,7 @@ exports.deleteTab = async (req, res) => {
 
     const io = req.app?.get("io");
     if (io) {
-      io.to(`channel_${channelId}`).emit("tab-deleted", {
+      io.to(`channel:${channelId}`).emit("tab-deleted", {
         channelId,
         tabId
       });

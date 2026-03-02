@@ -227,7 +227,7 @@ export function useMessageActions(conversationId, conversationType, workspaceId 
         if (!messageId || !emoji) return { success: false };
 
         try {
-            const response = await api.post(`/api/messages/${messageId}/react`, { emoji });
+            const response = await api.post(`/api/v2/messages/${messageId}/react`, { emoji });
 
             // Emit via socket for real-time update
             if (socket?.connected) {
@@ -251,7 +251,7 @@ export function useMessageActions(conversationId, conversationType, workspaceId 
         if (!messageId || !emoji) return { success: false };
 
         try {
-            const response = await api.delete(`/api/messages/${messageId}/react`, {
+            const response = await api.delete(`/api/v2/messages/${messageId}/react`, {
                 data: { emoji }
             });
 
@@ -273,24 +273,23 @@ export function useMessageActions(conversationId, conversationType, workspaceId 
     }, [conversationId, user, socket]);
 
     // Delete message
-    const deleteMessage = useCallback(async (messageId, deleteForEveryone = false) => {
+    // scope: 'me' (hide for current user only) | 'everyone' (delete for all, sender only)
+    const deleteMessage = useCallback(async (messageId, scope = 'everyone') => {
         if (!messageId) return { success: false };
 
         try {
-            await api.delete(`/api/messages/${messageId}`, {
-                data: { deleteForEveryone }
-            });
-
-            // Emit via socket for real-time update
-            if (socket?.connected) {
-                socket.emit('message:delete', {
-                    channelId: conversationId,
-                    messageId,
-                    deleteForEveryone
-                });
+            // Pass socket id so server can send 'message:hidden' back to just this client
+            const headers = {};
+            if (socket?.id) {
+                headers['x-socket-id'] = socket.id;
             }
 
-            return { success: true, messageId };
+            await api.delete(`/api/v2/messages/${messageId}`, {
+                data: { scope },
+                headers
+            });
+
+            return { success: true, messageId, scope };
         } catch (err) {
             console.error('Error deleting message:', err);
             return { success: false, error: err.response?.data?.message };
@@ -302,7 +301,7 @@ export function useMessageActions(conversationId, conversationType, workspaceId 
         if (!messageId) return { success: false };
 
         try {
-            const response = await api.post(`/api/messages/${messageId}/pin`);
+            const response = await api.post(`/api/v2/messages/${messageId}/pin`);
 
             // Emit via socket for real-time update
             if (socket?.connected) {
@@ -324,7 +323,7 @@ export function useMessageActions(conversationId, conversationType, workspaceId 
         if (!messageId) return { success: false };
 
         try {
-            const response = await api.post(`/api/messages/${messageId}/unpin`);
+            const response = await api.post(`/api/v2/messages/${messageId}/pin`, { pin: false });
 
             // Emit via socket for real-time update
             if (socket?.connected) {
@@ -363,7 +362,7 @@ export function useMessageActions(conversationId, conversationType, workspaceId 
         if (!messageId || !newText?.trim()) return { success: false };
 
         try {
-            const response = await api.put(`/api/messages/${messageId}`, {
+            const response = await api.patch(`/api/v2/messages/${messageId}`, {
                 text: newText
             });
 

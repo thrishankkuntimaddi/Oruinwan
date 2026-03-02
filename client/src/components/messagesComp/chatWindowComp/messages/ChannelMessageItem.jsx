@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
+import api from '../../../../services/api';
 import { Smile, MessageSquare, Share, MoreHorizontal, Pin, Copy, Trash2, Info } from "lucide-react";
-import ReactionBadges from "./reactionBadges";
 import ReactionPicker from "./reactionPicker";
 import ReactMarkdown from "react-markdown";
 import remarkBreaks from "remark-breaks";
@@ -42,6 +42,10 @@ function ChannelMessageItem({
     const [showReactionPicker, setShowReactionPicker] = useState(false);
     const reactionPickerRef = useRef(null);
 
+    // Step 3 — Local edit state
+    const [isEditing, setIsEditing] = useState(false);
+    const [editText, setEditText] = useState(msg.text || '');
+
     // Avatar Logic
     const avatarUrl = msg.senderAvatar || null;
     const initial = msg.senderName ? msg.senderName.charAt(0).toUpperCase() : "?";
@@ -60,6 +64,42 @@ function ChannelMessageItem({
             document.removeEventListener("mousedown", handleClickOutside);
         };
     }, [showReactionPicker]);
+
+    // Step 3 — Save edit handler
+    const handleSaveEdit = async () => {
+        if (editText.trim() === msg.text) {
+            setIsEditing(false);
+            return;
+        }
+        try {
+            await api.patch(`/api/v2/messages/${msg._id}`, { text: editText });
+        } catch (err) {
+            console.error('Edit failed:', err);
+        }
+        setIsEditing(false);
+    };
+
+    // Step 5 — Reaction toggle handler (one reaction per user, server enforces swap)
+    const toggleReaction = async (emoji) => {
+        const normalizeId = (id) => (id?._id || id)?.toString();
+
+        // Check if I already reacted with THIS EXACT emoji
+        const myExistingReaction = msg.reactions?.find(
+            (r) => normalizeId(r.userId) === normalizeId(currentUserId) && r.emoji === emoji
+        );
+
+        try {
+            if (myExistingReaction) {
+                // Same emoji — toggle off (remove)
+                await api.delete(`/api/v2/messages/${msg._id || msg.id}/react`, { data: { emoji } });
+            } else {
+                // New or different emoji — server will auto-swap if user already has one
+                await api.post(`/api/v2/messages/${msg._id || msg.id}/react`, { emoji });
+            }
+        } catch (err) {
+            console.error('Reaction toggle failed:', err);
+        }
+    };
 
     // Must be AFTER all hooks to avoid React Hooks rules violation
     if (msg.type === 'system' || msg.backend?.type === 'system') {
@@ -179,10 +219,20 @@ function ChannelMessageItem({
                     </div>
                 )}
 
-                {/* Message Text */}
+                {/* Message Text — Step 1: soft delete, Step 3: inline edit */}
                 <div className="text-gray-800 dark:text-gray-200 text-[14px] leading-relaxed whitespace-pre-wrap break-words max-w-[70%] message-content">
-                    {/* Display decrypted text if available, otherwise show encrypted fallback */}
-                    {msg.text ? (
+                    {msg.isDeleted ? (
+                        <span className="text-gray-400 italic">Message deleted</span>
+                    ) : isEditing ? (
+                        <input
+                            className="w-full bg-transparent border-b border-gray-500 outline-none text-[14px] text-gray-800 dark:text-gray-200"
+                            value={editText}
+                            onChange={(e) => setEditText(e.target.value)}
+                            onBlur={handleSaveEdit}
+                            onKeyDown={(e) => { if (e.key === 'Enter') handleSaveEdit(); if (e.key === 'Escape') setIsEditing(false); }}
+                            autoFocus
+                        />
+                    ) : msg.text ? (
                         <ReactMarkdown
                             remarkPlugins={[remarkBreaks]}
                             components={{
@@ -215,27 +265,45 @@ function ChannelMessageItem({
                     )}
 
                 </div>
+                {/* Edit badge — outside text div so it sits flush below/next to text, not wrapped inside pre-wrap */}
+                {msg.editedAt && !msg.isDeleted && (
+                    <span className="text-xs text-gray-400 italic"> (edited)</span>
+                )}
+
+                {/* Step 5 — Reaction bar (grouped emoji buttons) */}
+                {!msg.isDeleted && msg.reactions?.length > 0 && (
+                    <div className="flex gap-2 mt-1 flex-wrap">
+                        {Object.entries(
+                            msg.reactions.reduce((acc, r) => {
+                                acc[r.emoji] = acc[r.emoji] || [];
+                                // Normalize userId to string (can be ObjectId or populated object)
+                                const uid = (r.userId?._id || r.userId)?.toString();
+                                acc[r.emoji].push(uid);
+                                return acc;
+                            }, {})
+                        ).map(([emoji, users]) => (
+                            <button
+                                key={emoji}
+                                onClick={() => toggleReaction(emoji)}
+                                className={`px-2 py-0.5 rounded text-sm transition-colors ${users.includes(currentUserId?.toString())
+                                    ? 'bg-blue-600/30 dark:bg-blue-500/30 text-blue-700 dark:text-blue-300 border border-blue-400'
+                                    : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                                    }`}
+                            >
+                                {emoji} {users.length}
+                            </button>
+                        ))}
+                    </div>
+                )}
 
                 {/* Sending/Failed States */}
                 {msg.sending && <div className="text-xs text-gray-400 italic mt-1">Sending...</div>}
                 {msg.failed && <div className="text-xs text-red-500 font-medium mt-1">Failed to send</div>}
 
-                {/* Reactions */}
-                {msg.reactions && msg.reactions.length > 0 && (
-                    <div className="mt-1">
-                        <div className="mt-1">
-                            <ReactionBadges
-                                reactions={msg.reactions}
-                                currentUserId={currentUserId}
-                                onReactionClick={(emoji) => addReaction(msg.id, emoji)}
-                                channelMembers={channelMembers}
-                            />
-                        </div>
-                    </div>
-                )}
 
-                {/* Thread Reply Link */}
-                {count > 0 && onOpenThread && (
+
+                {/* Thread Reply Link — hide for deleted messages */}
+                {count > 0 && onOpenThread && !msg.isDeleted && (
                     <div
                         onClick={(e) => { e.stopPropagation(); onOpenThread(msg.id); }}
                         className="mt-2 flex items-center gap-2 group/thread cursor-pointer"
@@ -270,8 +338,8 @@ function ChannelMessageItem({
 
             </div>
 
-            {/* Minimalist Hover Toolbar - Vertically aligned in the row, left of timestamp */}
-            <div className={`absolute top-0.5 right-24 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-sm rounded p-0.5 flex items-center z-10 ${showToolbar || openMsgMenuId === msg.id || showReactionPicker ? "opacity-100" : "opacity-0 invisible"}`}>
+            {/* Minimalist Hover Toolbar — hidden entirely for deleted messages */}
+            <div className={`absolute top-0.5 right-24 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-sm rounded p-0.5 flex items-center z-10 ${!msg.isDeleted && (showToolbar || openMsgMenuId === msg.id || showReactionPicker) ? "opacity-100" : "opacity-0 invisible"}`}>
 
                 {/* Reaction Picker Trigger */}
                 <div className="relative" ref={reactionPickerRef}>
@@ -286,7 +354,7 @@ function ChannelMessageItem({
                         <div className="absolute right-0 top-full mt-1 z-50">
                             <ReactionPicker
                                 onSelect={(emoji) => {
-                                    addReaction(msg.id, emoji);
+                                    toggleReaction(emoji); // uses msg._id from closure, enforces one-per-user
                                     setShowReactionPicker(false);
                                 }}
                             />
@@ -300,17 +368,96 @@ function ChannelMessageItem({
                 <div className="relative">
                     <button onClick={(e) => toggleMsgMenu(e, msg.id)} className={`p-1 rounded ${openMsgMenuId === msg.id ? "bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100" : "text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700"}`} title="More"><MoreHorizontal size={14} /></button>
                     {openMsgMenuId === msg.id && (
-                        <div className="absolute right-0 top-full mt-1 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl py-1 z-50 text-sm animate-fade-in">
-                            <button onClick={() => { copyMessage(msg.id); toggleMsgMenu({ stopPropagation: () => { } }, null); }} className="w-full text-left px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2 text-gray-700 dark:text-gray-300"><Copy size={14} /> Copy text</button>
-                            <button onClick={() => { replyToMessage(msg.id); toggleMsgMenu({ stopPropagation: () => { } }, null); }} className="w-full text-left px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2 text-gray-700 dark:text-gray-300"><MessageSquare size={14} /> Reply</button>
-                            <button onClick={() => { pinMessage(msg.id); toggleMsgMenu({ stopPropagation: () => { } }, null); }} className="w-full text-left px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2 text-gray-700 dark:text-gray-300"><Pin size={14} /> {msg.isPinned ? "Unpin message" : "Pin message"}</button>
-                            <button onClick={() => { infoMessage(msg.id); toggleMsgMenu({ stopPropagation: () => { } }, null); }} className="w-full text-left px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2 text-gray-700 dark:text-gray-300"><Info size={14} /> Message info</button>
-                            <div className="border-t border-gray-100 dark:border-gray-700 my-1"></div>
-                            {/* Show both delete options for own messages OR if admin */}
+                        <div className="absolute right-0 top-full mt-1 w-52 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl py-1 z-50 text-sm animate-fade-in">
+
+                            {/* Copy text */}
+                            <button
+                                onClick={() => {
+                                    navigator.clipboard.writeText(msg.text || msg.payload?.text || '');
+                                    toggleMsgMenu({ stopPropagation: () => { } }, null);
+                                }}
+                                className="w-full text-left px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2 text-gray-700 dark:text-gray-300"
+                            >
+                                <Copy size={14} /> Copy text
+                            </button>
+
+                            {/* Reply */}
+                            <button
+                                onClick={() => {
+                                    replyToMessage && replyToMessage(msg.id);
+                                    toggleMsgMenu({ stopPropagation: () => { } }, null);
+                                }}
+                                className="w-full text-left px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2 text-gray-700 dark:text-gray-300"
+                            >
+                                <MessageSquare size={14} /> Reply
+                            </button>
+
+                            {/* Pin / Unpin */}
+                            <button
+                                onClick={async () => {
+                                    try {
+                                        await api.post(`/api/v2/messages/${msg._id}/pin`);
+                                    } catch (err) { console.error('Pin failed:', err); }
+                                    toggleMsgMenu({ stopPropagation: () => { } }, null);
+                                }}
+                                className="w-full text-left px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2 text-gray-700 dark:text-gray-300"
+                            >
+                                <Pin size={14} /> {msg.isPinned ? 'Unpin message' : 'Pin message'}
+                            </button>
+
+                            {/* Message info */}
+                            <button
+                                onClick={() => {
+                                    infoMessage && infoMessage(msg.id);
+                                    toggleMsgMenu({ stopPropagation: () => { } }, null);
+                                }}
+                                className="w-full text-left px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2 text-gray-700 dark:text-gray-300"
+                            >
+                                <Info size={14} /> Message info
+                            </button>
+
+                            {/* Edit — own messages only */}
+                            {isMe && !msg.isDeleted && (
+                                <button
+                                    onClick={() => {
+                                        setIsEditing(true);
+                                        toggleMsgMenu({ stopPropagation: () => { } }, null);
+                                    }}
+                                    className="w-full text-left px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2 text-gray-700 dark:text-gray-300"
+                                >
+                                    <Copy size={14} /> Edit message
+                                </button>
+                            )}
+
+                            <div className="border-t border-gray-100 dark:border-gray-700 my-1" />
+
+                            {/* Delete options */}
                             {(isMe || isAdmin) && (
                                 <>
-                                    <button onClick={() => { deleteMessage(msg.id, 'me'); toggleMsgMenu({ stopPropagation: () => { } }, null); }} className="w-full text-left px-4 py-2 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2 text-red-600 dark:text-red-400"><Trash2 size={14} /> Delete for me</button>
-                                    <button onClick={() => { deleteMessage(msg.id, 'everyone'); toggleMsgMenu({ stopPropagation: () => { } }, null); }} className="w-full text-left px-4 py-2 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2 text-orange-600 dark:text-orange-400"><Trash2 size={14} /> Delete for everyone</button>
+                                    <button
+                                        onClick={async () => {
+                                            try {
+                                                await deleteMessage(msg._id || msg.id, 'me');
+                                            } catch (err) { console.error('Delete (me) failed:', err); }
+                                            toggleMsgMenu({ stopPropagation: () => { } }, null);
+                                        }}
+                                        className="w-full text-left px-4 py-2 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2 text-red-600 dark:text-red-400"
+                                    >
+                                        <Trash2 size={14} /> Delete for me
+                                    </button>
+                                    {isMe && (
+                                        <button
+                                            onClick={async () => {
+                                                try {
+                                                    await deleteMessage(msg._id || msg.id, 'everyone');
+                                                } catch (err) { console.error('Delete (everyone) failed:', err); }
+                                                toggleMsgMenu({ stopPropagation: () => { } }, null);
+                                            }}
+                                            className="w-full text-left px-4 py-2 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2 text-orange-600 dark:text-orange-400"
+                                        >
+                                            <Trash2 size={14} /> Delete for everyone
+                                        </button>
+                                    )}
                                 </>
                             )}
                         </div>

@@ -30,8 +30,7 @@ const MessageSchema = new mongoose.Schema({
   attachments: [AttachmentSchema],
 
   // Threading support
-  threadParent: { type: mongoose.Schema.Types.ObjectId, ref: "Message", default: null },
-  parentId: { type: mongoose.Schema.Types.ObjectId, ref: "Message", default: null }, // Alias for controller compatibility
+  parentId: { type: mongoose.Schema.Types.ObjectId, ref: "Message", default: null }, // Canonical thread field
   replyCount: { type: Number, default: 0, min: 0 }, // Number of replies to this message
   lastReplyAt: { type: Date, default: null }, // Timestamp of most recent reply
 
@@ -49,6 +48,11 @@ const MessageSchema = new mongoose.Schema({
   deletedAt: { type: Date, default: null },
   isDeletedUniversally: { type: Boolean, default: false },
   hiddenFor: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }], // Local deletions only
+
+  // Edit tracking
+  editedAt: { type: Date, default: null },
+  isDeleted: { type: Boolean, default: false },    // Soft delete flag (universal)
+  version: { type: Number, default: 1 },           // Increments on each edit
 }, { timestamps: true });
 
 MessageSchema.index({ company: 1, channel: 1, createdAt: -1 });

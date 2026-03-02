@@ -239,21 +239,23 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
                 break;
 
             case 'message-updated':
-                // Handle message updates (e.g., reply count changed)
+                // Handle message updates (reply count changes, edits, etc.)
                 const { messageId, updates } = event.payload;
 
                 if (messageId && updates) {
-                    // ✅ Update the message's replyCount directly in the event object
+                    const payloadPatch = {
+                        ...(updates.replyCount !== undefined && { replyCount: updates.replyCount }),
+                        ...(updates.lastReplyAt !== undefined && { lastReplyAt: updates.lastReplyAt }),
+                        ...(updates.text !== undefined && { text: updates.text }),
+                        ...(updates.editedAt !== undefined && { editedAt: updates.editedAt }),
+                    };
+
                     conversationRef.current.updateEvent(messageId, {
-                        replyCount: updates.replyCount,
-                        lastReplyAt: updates.lastReplyAt,
-                        payload: {
-                            replyCount: updates.replyCount,
-                            lastReplyAt: updates.lastReplyAt
-                        }
+                        ...(updates.replyCount !== undefined && { replyCount: updates.replyCount }),
+                        ...(updates.lastReplyAt !== undefined && { lastReplyAt: updates.lastReplyAt }),
+                        payload: payloadPatch
                     });
 
-                    // Also update threadCounts state for persistence
                     if (updates.replyCount !== undefined) {
                         setThreadCounts(prev => ({
                             ...prev,
@@ -266,24 +268,67 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
 
             case 'message-deleted':
                 // Handle message deletion
+                // Server sends { messageId, deletedBy, deletedByName } — does NOT include isDeleted:true
+                // We must set it explicitly so enrichedMessage picks it up via event.payload?.isDeleted
                 if (event.payload) {
                     if (event.payload.isLocal) {
                         conversationRef.current.removeEvent(event.payload.messageId);
                     } else {
                         conversationRef.current.updateEvent(event.payload.messageId, {
-                            payload: event.payload
+                            payload: {
+                                ...event.payload,
+                                isDeleted: true,
+                                isDeletedUniversally: true
+                            }
                         });
                     }
                 }
                 break;
 
+            case 'message-hidden':
+                // Handle "Delete for me" — remove the message from THIS user's view only
+                if (event.payload?.messageId) {
+                    conversationRef.current.removeEvent(event.payload.messageId);
+                }
+                break;
+
             case 'message-pinned':
-            case 'message-unpinned':
-                // Handle pin updates
+                // Handle pin updates — server sends { messageId, pinnedBy, pinnedAt }
                 if (event.payload) {
                     conversationRef.current.updateEvent(event.payload.messageId || event.payload._id, {
-                        payload: event.payload
+                        payload: {
+                            ...event.payload,
+                            isPinned: true
+                        }
                     });
+                }
+                break;
+
+            case 'message-unpinned':
+                // Handle unpin — server sends { messageId }
+                if (event.payload) {
+                    conversationRef.current.updateEvent(event.payload.messageId || event.payload._id, {
+                        payload: {
+                            ...event.payload,
+                            isPinned: false,
+                            pinnedBy: null,
+                            pinnedAt: null
+                        }
+                    });
+                }
+                break;
+
+            case 'reaction-added':
+            case 'reaction-removed':
+                // Handle reactions — server sends { messageId, reactions } (full reactions array)
+                if (event.payload) {
+                    const reactionMsgId = event.payload.messageId;
+                    const updatedReactions = event.payload.reactions;
+                    if (reactionMsgId && updatedReactions !== undefined) {
+                        conversationRef.current.updateEvent(reactionMsgId, {
+                            payload: { reactions: updatedReactions }
+                        });
+                    }
                 }
                 break;
 
@@ -339,7 +384,7 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
             case 'thread-reply':
                 // Handle thread reply events - Update thread count
                 const reply = event.payload.reply || event.payload.message || event.payload;
-                const replyParentId = reply.parentId || event.payload.parentId || reply.replyTo || reply.threadParent;
+                const replyParentId = reply.parentId || event.payload.parentId || reply.replyTo;
 
                 if (replyParentId) {
                     setThreadCounts(prev => {
@@ -520,7 +565,7 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
                     },
                     sender: result.message.sender,
                     createdAt: result.message.createdAt,
-                    parentId: result.message.threadParent
+                    parentId: result.message.parentId
                 };
 
                 // Add to conversation state (will replace optimistic message)
@@ -589,8 +634,17 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
     // Enhanced actions with conversation integration
     const enhancedActions = useMemo(() => ({
         ...actions,
-        sendMessage: handleSend
-    }), [actions, handleSend]);
+        sendMessage: handleSend,
+        // Wrap deleteMessage: for scope='me', immediately remove from local state
+        // without relying solely on socket echo (reliable fallback)
+        deleteMessage: async (messageId, scope = 'everyone') => {
+            const result = await actions.deleteMessage(messageId, scope);
+            if (result?.success && scope === 'me') {
+                conversation.removeEvent(messageId);
+            }
+            return result;
+        }
+    }), [actions, handleSend]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // Get channel members for join markers (channels only)
     const channelMembers = chat?.members || [];

@@ -329,7 +329,7 @@ async function createTask(userId, taskData, io, req) {
                 });
                 await msg.save();
                 await msg.populate("sender", "username profilePicture");
-                if (io) io.to(`channel_${task.channel}`).emit("new-message", msg);
+                if (io) io.to(`channel:${task.channel}`).emit("new-message", msg);
             }
             else if (task.assignedTo.length === 1 && task.assignedTo[0].toString() !== userId) {
                 // Individual DM Notification (E2EE)
@@ -376,7 +376,7 @@ async function createTask(userId, taskData, io, req) {
             if (task.visibility === "workspace") {
                 io.to(`workspace_${workspaceId}`).emit("task-created", task);
             } else if (task.visibility === "channel" && task.channel) {
-                io.to(`channel_${task.channel._id || task.channel}`).emit("task-created", task);
+                io.to(`channel:${task.channel._id || task.channel}`).emit("task-created", task);
             } else {
                 // Private - emit to creator and assignees
                 const recipients = new Set([userId, ...task.assignedTo.map(a => a._id.toString())]);
@@ -520,7 +520,7 @@ async function updateTask(userId, taskId, updates, io, req) {
                     await msg.save();
                     await msg.populate("sender", "username profilePicture");
                     if (io) {
-                        io.to(`channel_${task.channel}`).emit("new-message", msg);
+                        io.to(`channel:${task.channel}`).emit("new-message", msg);
                     }
                 } catch (msgErr) {
                     console.error("Failed to send completion message:", msgErr);
@@ -664,7 +664,7 @@ async function updateTask(userId, taskId, updates, io, req) {
         if (task.visibility === "workspace") {
             io.to(`workspace_${task.workspace}`).emit("task-updated", populatedTask);
         } else if (task.visibility === "channel" && task.channel) {
-            io.to(`channel_${task.channel}`).emit("task-updated", populatedTask);
+            io.to(`channel:${task.channel}`).emit("task-updated", populatedTask);
         }
     }
 
@@ -762,7 +762,7 @@ async function deleteTask(userId, taskId, io, req) {
                 await msg.populate("sender", "username profilePicture");
 
                 if (io) {
-                    io.to(`channel_${task.channel}`).emit("new-message", msg);
+                    io.to(`channel:${task.channel}`).emit("new-message", msg);
                 }
             } catch (msgErr) {
                 console.error("Failed to send deletion message:", msgErr);
@@ -785,7 +785,7 @@ async function deleteTask(userId, taskId, io, req) {
             if (task.visibility === "workspace") {
                 io.to(`workspace_${task.workspace}`).emit("task-deleted", { taskId });
             } else if (task.visibility === "channel" && task.channel) {
-                io.to(`channel_${task.channel}`).emit("task-deleted", { taskId });
+                io.to(`channel:${task.channel}`).emit("task-deleted", { taskId });
             } else {
                 const recipients = new Set([
                     task.createdBy.toString(),

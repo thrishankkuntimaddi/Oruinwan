@@ -55,7 +55,6 @@ function MessageEvent({
         replyAvatars: event.replyAvatars || event.payload?.replyAvatars || [],
         lastReplyAt: event.lastReplyAt || event.payload?.lastReplyAt,
         parentId: event.parentId || event.payload?.parentId,
-        threadParent: event.parentId || event.payload?.parentId,
         senderName: event.sender?.username || event.payload?.sender?.username || 'Unknown',
         senderAvatar: event.sender?.profilePicture
             || event.payload?.sender?.profilePicture
@@ -65,19 +64,30 @@ function MessageEvent({
         ts: event.createdAt || event.payload?.createdAt,
         isRead: (event.readBy || event.payload?.readBy)?.some(r => (r.user?._id || r.user || r._id || r) === currentUserId),
         status: event.status || 'sent',
+        // Soft delete fields
+        isDeleted: event.payload?.isDeleted || event.isDeleted || false,
+        isDeletedUniversally: event.payload?.isDeletedUniversally || event.isDeletedUniversally || false,
+        deletedBy: event.payload?.deletedBy || event.deletedBy || null,
+        deletedByName: event.payload?.deletedByName || event.deletedByName || null,
+        // Edit fields
+        editedAt: event.payload?.editedAt || event.editedAt || null,
+        // Channel context (for axios calls in ChannelMessageItem)
+        channelId: event.payload?.channel || event.payload?.channelId || event.channelId || null,
         // Encryption fields
         isEncrypted,
         ciphertext,
         messageIv
     };
 
+
     // Common handlers
     const handleAddReaction = (emoji) => {
         actions.addReaction?.(enrichedMessage._id, emoji);
     };
 
-    const handleDelete = (deleteForEveryone = false) => {
-        actions.deleteMessage?.(enrichedMessage._id, deleteForEveryone);
+    const handleDelete = (scope = 'everyone') => {
+        // scope: 'me' | 'everyone' — pass straight through to actions.deleteMessage
+        actions.deleteMessage?.(enrichedMessage._id, scope);
     };
 
     const handlePin = () => {
@@ -112,7 +122,7 @@ function MessageEvent({
                 replyToMessage={() => { }}
                 forwardMessage={handleForward}
                 copyMessage={() => { }}
-                deleteMessage={(id, type) => handleDelete(type === 'everyone')}
+                deleteMessage={(id, scope) => handleDelete(scope)}
                 infoMessage={() => { }}
                 currentUserId={currentUserId}
                 onOpenThread={handleThreadOpen}
@@ -135,7 +145,7 @@ function MessageEvent({
             replyToMessage={() => { }}
             forwardMessage={handleForward}
             copyMessage={() => { }}
-            deleteMessage={(id, type) => handleDelete(type === 'everyone')}
+            deleteMessage={(id, scope) => handleDelete(scope)}
             infoMessage={() => { }}
             currentUserId={currentUserId}
             onOpenThread={handleThreadOpen}

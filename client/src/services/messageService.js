@@ -3,7 +3,7 @@
  * Message Service - API v2
  * 
  * Migrated to use /api/v2/messages/* endpoints
- * Legacy /api/messages/* endpoints still available for backward compatibility
+ * Canonical /api/v2/messages/* endpoints
  */
 import api from './api';
 
@@ -48,23 +48,23 @@ export const messageService = {
         return Promise.all(sendPromises);
     },
 
-    // Update message (still using v1 - no v2 endpoint yet)
-    updateMessage: (id, data) => api.put(`/api/messages/${id}`, data),
+    // Update message (v2 - PATCH)
+    updateMessage: (id, data) => api.patch(`/api/v2/messages/${id}`, data),
 
-    // Delete message (still using v1 - no v2 endpoint yet)
-    deleteMessage: (id) => api.delete(`/api/messages/${id}`),
+    // Delete message (v2)
+    deleteMessage: (id) => api.delete(`/api/v2/messages/${id}`),
 
-    // Get thread messages (still using v1 - no v2 endpoint yet)
-    getThread: (messageId) => api.get(`/api/messages/thread/${messageId}`),
+    // Get thread messages (v2)
+    getThread: (messageId) => api.get(`/api/v2/messages/thread/${messageId}`),
 
-    // Get thread count (still using v1 - no v2 endpoint yet)
-    getThreadCount: (messageId) => api.get(`/api/messages/${messageId}/thread-count`),
+    // Get thread count (v2)
+    getThreadCount: (messageId) => api.get(`/api/v2/messages/${messageId}/thread-count`),
 
     // Offline recovery: fetch messages sent after lastSeenMessageId (or latest 50 if null)
     getMissedMessages: (conversationId, type, lastSeenMessageId = null) => {
         const params = { conversationId, type };
         if (lastSeenMessageId) params.lastSeenMessageId = lastSeenMessageId;
-        return api.get('/api/messages/missed', { params });
+        return api.get('/api/v2/messages/missed', { params });
     }
 };
 

@@ -10,6 +10,7 @@ import NewDMModal from "./NewDMModal";
 import { AuthContext } from "../../contexts/AuthContext";
 import { SocketContext } from "../../contexts/SocketContext";
 import { API_BASE } from "../../services/api";
+import { channelService } from "../../services/channelService";
 
 
 import { Button, Input, Avatar, Badge } from "../../shared/components/ui";
@@ -24,6 +25,7 @@ export default function MessageList({ onSelectChat }) {
   const [showJoin, setShowJoin] = useState(false);
   const [showNewChat, setShowNewChat] = useState(false);
 
+  const { workspaceId } = useParams();
   const socketRef = useRef(null);
 
   /* -------------------------------------------------
@@ -53,8 +55,10 @@ export default function MessageList({ onSelectChat }) {
       const chatsRes = await axios.get(`${API_BASE}/api/chat/list`, { headers });
       const existingChats = chatsRes.data.chats || [];
 
-      // Fetch all joined channels (to ensure we show empty channels too)
-      const channelsRes = await axios.get(`${API_BASE}/api/chat/channels`, { headers });
+      // Fetch joined channels via canonical endpoint
+      const channelsRes = workspaceId
+        ? await channelService.getMyChannels(workspaceId)
+        : { data: { channels: [] } };
       const myChannels = channelsRes.data.channels || [];
 
       // Fetch all users in workspace
@@ -127,7 +131,7 @@ export default function MessageList({ onSelectChat }) {
     } catch (err) {
       console.error("Failed to load chat list:", err);
     }
-  }, [myId]);
+  }, [myId, workspaceId]);
 
   useEffect(() => {
     loadAllChats();
