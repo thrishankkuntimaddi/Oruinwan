@@ -113,12 +113,12 @@ const limiter = rateLimit({
   max: isProduction ? 20 : 100, // Stricter in production
   standardHeaders: true,
   legacyHeaders: false,
-  // Skip rate limiting for frequently-called endpoints
+  // Skip rate limiting for frequently-called read-only endpoints
+  // NOTE: /refresh is intentionally NOT skipped — it has its own dedicated limiter below
   skip: (req) => {
     const p = req.path;
-    // Don't rate limit /me, /refresh, /users (used on every page load)
-    // req.path here is relative to the router mount point (/api/auth)
-    return p === '/me' || p === '/refresh' || p.startsWith('/users');
+    // Don't rate limit /me, /users (used on every page load)
+    return p === '/me' || p.startsWith('/users');
   },
   // Return JSON instead of plain text
   handler: (req, res) => {
@@ -128,6 +128,21 @@ const limiter = rateLimit({
   },
 });
 app.use("/api/auth", limiter);
+
+// SECURITY FIX (BUG-10): Dedicated rate limiter for the /refresh endpoint.
+// Previously /refresh was in the skip list — meaning zero throttling, enabling DoS.
+// 60/min allows legitimate proactive token renewal while blocking flood attacks.
+const refreshLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: isProduction ? 60 : 200,
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: (req) => req.path !== '/refresh', // Only apply to /refresh
+  handler: (req, res) => {
+    res.status(429).json({ message: "Too many token refresh requests, please try again later." });
+  },
+});
+app.use("/api/auth", refreshLimiter);
 
 // Health check endpoint for production monitoring
 app.get('/api/health', async (req, res) => {
@@ -172,6 +187,10 @@ app.use(express.static(path.join(__dirname, "../dist")));
 
 // Serve uploaded files with authentication check
 const requireAuth = require("./middleware/auth");
+// SECURITY FIX (H-2): Import role middleware for dashboard mount-level guards.
+// Defence-in-depth: role is enforced here so any new route added to these files
+// is automatically protected, even if the developer forgets to add per-route middleware.
+const { requireOwner, requireAdmin, requireManager } = require("./middleware/permissionMiddleware");
 app.use('/uploads', requireAuth, express.static(path.join(__dirname, 'uploads')));
 
 // ---------------------------------------------------------
@@ -236,12 +255,17 @@ app.use((req, res, next) => {
 app.use("/api/auth", require("./src/features/auth/auth.routes"));
 app.use("/api/admin", require("./middleware/auth"), require("./src/features/admin/admin.routes"));
 app.use("/api/admin", require("./middleware/auth"), require("./src/features/onboarding/onboarding.routes")); // Employee onboarding
-app.use("/api/admin-dashboard", require("./src/features/admin/admin-dashboard.routes"));
-app.use("/api/owner-dashboard", require("./src/features/admin/owner-dashboard.routes"));
-app.use("/api/manager-dashboard", require("./src/features/admin/manager-dashboard.routes")); // Old pattern
-app.use("/api/manager", require("./src/features/admin/manager-dashboard.routes")); // New pattern - supports /api/manager/dashboard/*
+// SECURITY FIX (H-2): Role middleware applied at mount level (defence-in-depth on top of per-route guards).
+// requireAuth  → rejects unauthenticated requests before they reach any route handler.
+// requireOwner / requireAdmin / requireManager → rejects under-privileged authenticated users.
+// This guarantees that every current AND future route in these files is role-gated,
+// even if a developer forgets to add middleware to a new route handler.
+app.use("/api/admin-dashboard", requireAuth, requireAdmin, require("./src/features/admin/admin-dashboard.routes"));
+app.use("/api/owner-dashboard", requireAuth, requireOwner, require("./src/features/admin/owner-dashboard.routes"));
+app.use("/api/manager-dashboard", requireAuth, requireManager, require("./src/features/admin/manager-dashboard.routes"));
+app.use("/api/manager", requireAuth, requireManager, require("./src/features/admin/manager-dashboard.routes"));
 
-app.use("/api/polls", require("./src/features/polls/poll.routes"));
+app.use("/api/polls", requireAuth, require("./src/features/polls/poll.routes")); // SECURITY FIX (BUG-2): requireAuth added at mount level
 app.use("/api/chat", require("./src/features/chatlist/chatlist.routes"));
 app.use("/api/channels", require("./src/features/channels/channel.routes"));
 

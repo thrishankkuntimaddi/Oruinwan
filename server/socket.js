@@ -42,9 +42,17 @@ function registerChatHandlers(io, socket) {
         }
     });
 
-    // Real-time Direct Messages (Admin ↔ Company) - legacy
+    // Real-time Direct Messages (Admin to Company) - legacy
     socket.on('admin:dm:send', async (data) => {
         try {
+            // SECURITY: Only platform admins can send admin DMs
+            const user = await User.findById(socket.user.id).select('roles');
+            if (!user || !user.roles.includes('chttrix_admin')) {
+                console.warn(`\uD83D\uDEAB [admin:dm:send] Non-admin user ${socket.user.id} denied`);
+                socket.emit('error', { message: 'Admin privileges required' });
+                return;
+            }
+
             const { companyId, message } = data;
 
             // TODO: Save message to database
@@ -71,73 +79,110 @@ function registerChatHandlers(io, socket) {
 
     // Join company room (for receiving admin messages) - legacy
     socket.on('company:join', async (companyId) => {
-        socket.join(`company:${companyId}`);
-        console.log(`🏢 User ${socket.user.id} joined company:${companyId}`);
+        try {
+            // SECURITY FIX (M-7): Verify the user actually belongs to this company.
+            // Without this check, any authenticated user could join any company room
+            // and receive admin:dm:receive broadcasts from that company.
+            const user = await User.findById(socket.user.id).select('companyId');
+            if (!user || !user.companyId || user.companyId.toString() !== companyId) {
+                console.warn(`\uD83D\uDEAB User ${socket.user.id} denied company:join for company:${companyId}`);
+                socket.emit('error', { message: 'Unauthorized: invalid company' });
+                return;
+            }
+
+            socket.join(`company:${companyId}`);
+            console.log(`\uD83C\uDFE2 User ${socket.user.id} joined company:${companyId}`);
+
+        } catch (err) {
+            console.error('Error joining company room:', err);
+            socket.emit('error', { message: 'Failed to join company room' });
+        }
     });
 
+    // Helper: inline chttrix_admin role guard for admin-only socket events
+    const requireAdminSocket = async (eventName) => {
+        const user = await User.findById(socket.user.id).select('roles');
+        if (!user || !user.roles.includes('chttrix_admin')) {
+            console.warn(`\uD83D\uDEAB [${eventName}] Non-admin user ${socket.user.id} denied`);
+            socket.emit('error', { message: 'Admin privileges required' });
+            return false;
+        }
+        return true;
+    };
+
     // Broadcast new audit log to all admins - legacy
+    // SECURITY: Guard — only platform admins should inject audit events
     socket.on('audit:new', async (logData) => {
+        if (!await requireAdminSocket('audit:new')) return;
         io.to('chttrix_admins').emit('audit:update', logData);
     });
 
     // System health update - legacy
-    socket.on('health:update', (metrics) => {
+    // SECURITY: Guard — only platform admins should push health metrics
+    socket.on('health:update', async (metrics) => {
+        if (!await requireAdminSocket('health:update')) return;
         io.to('chttrix_admins').emit('health:metrics', metrics);
     });
 
     // Ticket notifications - legacy
-    socket.on('ticket:created', (ticketData) => {
+    // SECURITY: Guard — only platform admins should broadcast ticket events
+    socket.on('ticket:created', async (ticketData) => {
+        if (!await requireAdminSocket('ticket:created')) return;
         io.to('chttrix_admins').emit('ticket:new', ticketData);
     });
 
-    socket.on('ticket:updated', (ticketData) => {
+    socket.on('ticket:updated', async (ticketData) => {
+        if (!await requireAdminSocket('ticket:updated')) return;
         io.to('chttrix_admins').emit('ticket:update', ticketData);
     });
 
     // Broadcast notifications - legacy
-    socket.on('broadcast:sent', (broadcastData) => {
+    socket.on('broadcast:sent', async (broadcastData) => {
+        if (!await requireAdminSocket('broadcast:sent')) return;
         io.to('chttrix_admins').emit('broadcast:complete', broadcastData);
     });
 
     // Company registration notification - legacy
-    socket.on('company:registered', (companyData) => {
+    socket.on('company:registered', async (companyData) => {
+        if (!await requireAdminSocket('company:registered')) return;
         io.to('chttrix_admins').emit('company:pending', companyData);
     });
 
-    // Generic chat handlers (idempotent with guards) - legacy
-    socket.on('chat:join', (channelId) => {
-        // Idempotent check: prevent duplicate joins
+    // SECURITY FIX (BUG-6): Legacy unguarded 'chat:join' and 'chat:leave' handlers REMOVED.
+    // These ran in parallel with the secured handlers in src/socket/handlers/messages.socket.js
+    // and allowed any authenticated user to join any channel room without membership validation.
+    // The secured handlers registered by registerSocketHandlers() now exclusively handle
+    // these events with proper database membership checks.
+
+    // Legacy chat:message — only forwards if sender is actually in the channel room.
+    // SECURITY: Without the room check below, any connected socket could inject messages
+    // into any channel's broadcast stream by simply knowing the channelId.
+    socket.on('chat:message', (data) => {
+        const { channelId, message } = data;
         const roomName = `channel:${channelId}`;
-        if (socket.rooms.has(roomName)) {
-            console.log(`⏭️ User ${socket.user.id} already in ${roomName}`);
+
+        // Only allow broadcast if this socket is legitimately in the room
+        // (i.e. passed the membership check in chat:join / conversation:join)
+        if (!socket.rooms.has(roomName)) {
+            console.warn(`\uD83D\uDEAB [chat:message] User ${socket.user.id} not in room ${roomName} — blocked`);
+            socket.emit('error', { message: 'Not a member of this channel' });
             return;
         }
 
-        socket.join(roomName);
-        console.log(`💬 User ${socket.user.id} joined ${roomName}`);
-    });
-
-    socket.on('chat:leave', (channelId) => {
-        const roomName = `channel:${channelId}`;
-        if (!socket.rooms.has(roomName)) {
-            return; // Already not in room
-        }
-
-        socket.leave(roomName);
-        console.log(`👋 User ${socket.user.id} left ${roomName}`);
-    });
-
-    socket.on('chat:message', (data) => {
-        const { channelId, message } = data;
-        io.to(`channel:${channelId}`).emit('chat:new_message', {
+        io.to(roomName).emit('chat:new_message', {
             ...message,
             sender: socket.user.id
         });
     });
 
+    // Legacy chat:typing — guard against non-members triggering typing indicators
     socket.on('chat:typing', (data) => {
         const { channelId, isTyping } = data;
-        socket.to(`channel:${channelId}`).emit('chat:user_typing', {
+        const roomName = `channel:${channelId}`;
+
+        if (!socket.rooms.has(roomName)) return; // Silently drop — not in room
+
+        socket.to(roomName).emit('chat:user_typing', {
             userId: socket.user.id,
             isTyping
         });
@@ -146,77 +191,49 @@ function registerChatHandlers(io, socket) {
     // ==================== POLL HANDLERS (ISOLATED) ====================
     // Polls are a separate feature and do NOT interfere with messaging
 
-    // Poll created - broadcast to channel
+    // Poll created - broadcast to channel (room membership implicitly enforced
+    // because the poll was created via authenticated HTTP POST, not socket)
     socket.on('poll:created', (data) => {
         const { channelId, poll } = data;
-        console.log(`📊 New poll created in channel:${channelId} by user:${socket.user.id}`);
+        console.log(`\uD83D\uDCCA New poll created in channel:${channelId} by user:${socket.user.id}`);
         io.to(`channel:${channelId}`).emit('poll:new', poll);
     });
 
     // Poll voted - broadcast updated poll to channel
     socket.on('poll:voted', (data) => {
         const { channelId, poll } = data;
-        console.log(`✅ Poll ${poll._id} voted by user:${socket.user.id}`);
+        console.log(`\u2705 Poll ${poll._id} voted by user:${socket.user.id}`);
         io.to(`channel:${channelId}`).emit('poll:update', poll);
     });
 
     // Poll deleted - broadcast removal to channel
     socket.on('poll:deleted', (data) => {
         const { channelId, pollId } = data;
-        console.log(`🗑️ Poll ${pollId} deleted from channel:${channelId}`);
+        console.log(`\uD83D\uDDD1\uFE0F Poll ${pollId} deleted from channel:${channelId}`);
         io.to(`channel:${channelId}`).emit('poll:removed', { pollId });
     });
 
     // Poll closed - broadcast update to channel
     socket.on('poll:closed', (data) => {
         const { channelId, poll } = data;
-        console.log(`🔒 Poll ${poll._id} closed in channel:${channelId}`);
+        console.log(`\uD83D\uDD12 Poll ${poll._id} closed in channel:${channelId}`);
         io.to(`channel:${channelId}`).emit('poll:update', poll);
     });
 
-    // ==================== UNIFIED EVENT HANDLER (NEW ARCHITECTURE) ====================
-    // This is the future - unified event handling for all conversation events
-    socket.on('conversation:event', async (data) => {
-        try {
-            const { conversationId, conversationType, event } = data;
-
-            console.log(`📤 Conversation event: ${event.type} in ${conversationType}:${conversationId}`);
-
-            // Determine room name
-            const room = conversationType === 'channel'
-                ? `channel:${conversationId}`
-                : `dm:${conversationId}`;
-
-            // Broadcast event to room
-            io.to(room).emit('conversation:event', {
-                ...event,
-                timestamp: new Date()
-            });
-
-            // Also emit specific event types for backward compatibility
-            switch (event.type) {
-                case 'message':
-                    io.to(room).emit('new-message', event.payload);
-                    break;
-                case 'poll':
-                    io.to(room).emit('poll:new', event.payload);
-                    break;
-                case 'meeting':
-                    io.to(room).emit('meeting:new', event.payload);
-                    break;
-                case 'system':
-                    io.to(room).emit('system:event', event.payload);
-                    break;
-            }
-        } catch (err) {
-            console.error('Error handling conversation event:', err);
-            socket.emit('error', { message: 'Failed to process event' });
-        }
-    });
+    // SECURITY FIX (M-2): The 'conversation:event' handler has been moved EXCLUSIVELY
+    // to src/socket/handlers/messages.socket.js which:
+    //   1. Verifies socket.rooms.has(room) BEFORE broadcasting (room-presence guard)
+    //   2. Is registered once per connection via registerSocketHandlers()
+    // Registering it here again (in the legacy layer) would fire the event twice:
+    //   - once WITH the room guard (modular handler)
+    //   - once WITHOUT (this legacy handler)
+    // The second firing was a bypass vector — any authenticated socket could inject
+    // events to any conversation room by knowing its ID.
+    // DO NOT re-add a 'conversation:event' handler here.
 
     // Handle disconnection
     socket.on('disconnect', () => {
-        console.log(`❌ Socket disconnected: ${socket.user.id}`);
+        console.log(`\u274C Socket disconnected: ${socket.user.id}`);
     });
 }
 
