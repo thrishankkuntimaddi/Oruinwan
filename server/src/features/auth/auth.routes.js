@@ -183,8 +183,19 @@ router.get("/users", requireAuth, async (req, res) => {
     const currentUserId = req.user.sub;
     const User = require("../../../models/User");
 
-    // Get all users except the current user
-    const users = await User.find({ _id: { $ne: currentUserId } })
+    // SECURITY FIX (BUG-8): Scope users list to the requester's company.
+    // Previously returned all platform users \u2014 a user from Company A could enumerate
+    // all Company B users. Now: company users see only their company, personal users
+    // see only other personal (companyless) users.
+    const currentUser = await User.findById(currentUserId).select('companyId').lean();
+
+    const query = currentUser?.companyId
+      ? { _id: { $ne: currentUserId }, companyId: currentUser.companyId }
+      // BUGFIX: $exists: false alone misses documents where companyId is explicitly null.
+      // User schema defaults companyId to null — so we must match BOTH null and missing field.
+      : { _id: { $ne: currentUserId }, $or: [{ companyId: null }, { companyId: { $exists: false } }] };
+
+    const users = await User.find(query)
       .select("_id username email profilePicture")
       .limit(100)
       .lean();
@@ -225,21 +236,36 @@ router.get(
   (req, res) => {
     // Successful authentication
     const token = generateToken(req.user);
-    // Also generate refresh token? For now just access token to bootstrap
-    // Better to redirect to frontend which then calls /refresh or /me
-    res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/oauth-success?access=${token}`);
+    // SECURITY FIX: Use URL fragment (#) instead of query string (?)
+    // Fragments are never sent to servers, never appear in access logs,
+    // and never appear in Referer headers sent to third-party resources.
+    res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/oauth-success#access=${token}`);
   }
 );
 
 // LinkedIn OAuth - Manual OpenID Connect Implementation
 // Using /v2/userinfo endpoint (passport-linkedin-oauth2 uses deprecated /v2/me)
 router.get("/linkedin", (req, res) => {
+  // SECURITY FIX (BUG-11): Use cryptographically secure random bytes for the OAuth state.
+  // Math.random() is predictable and not safe for CSRF protection.
+  const { randomBytes } = require('crypto');
+  const state = randomBytes(16).toString('hex');
+
+  // Store state in a short-lived HttpOnly cookie so we can validate it on callback.
+  // SameSite=Lax prevents cross-site cookie sending while allowing the OAuth redirect.
+  res.cookie('linkedin_oauth_state', state, {
+    httpOnly: true,
+    sameSite: 'Lax',
+    maxAge: 5 * 60 * 1000,           // 5 minutes — OAuth flows complete within this window
+    secure: process.env.NODE_ENV === 'production'
+  });
+
   const params = new URLSearchParams({
     response_type: "code",
     client_id: process.env.LINKEDIN_CLIENT_ID,
     redirect_uri: `${process.env.BACKEND_URL || 'http://localhost:5000'}/api/auth/linkedin/callback`,
     scope: "openid profile email",
-    state: Math.random().toString(36).substring(7), // Simple random state for CSRF protection
+    state,
   });
 
   res.redirect(
@@ -249,12 +275,24 @@ router.get("/linkedin", (req, res) => {
 
 router.get("/linkedin/callback", async (req, res) => {
   try {
-    const { code, error, error_description } = req.query;
+    const { code, state, error, error_description } = req.query;
 
     if (error) {
       console.error('LinkedIn OAuth error:', error, error_description);
       return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/login?error=linkedin_failed`);
     }
+
+    // SECURITY FIX (BUG-11): Validate the state parameter against the cookie value.
+    // Without this check, any request to the callback URL processes an OAuth code,
+    // which enables CSRF — an attacker can link a victim's session to the attacker's account.
+    const storedState = req.cookies?.linkedin_oauth_state;
+    if (!state || !storedState || state !== storedState) {
+      console.error('LinkedIn OAuth: state mismatch — potential CSRF attack');
+      res.clearCookie('linkedin_oauth_state');
+      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/login?error=oauth_state_mismatch`);
+    }
+    // Clear the state cookie — single use only
+    res.clearCookie('linkedin_oauth_state');
 
     // Exchange code for access token
     const tokenRes = await axios.post(
@@ -315,7 +353,8 @@ router.get("/linkedin/callback", async (req, res) => {
     }
 
     const token = generateToken(user);
-    res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/oauth-success?access=${token}`);
+    // SECURITY FIX: Use URL fragment (#) instead of query string (?)
+    res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/oauth-success#access=${token}`);
   } catch (err) {
     console.error('LinkedIn OAuth callback error:', err.response?.data || err.message);
     res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/login?error=linkedin_failed`);

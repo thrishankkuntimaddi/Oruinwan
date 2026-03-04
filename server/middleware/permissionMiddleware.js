@@ -44,7 +44,10 @@ const requireOwner = async (req, res, next) => {
 
         console.log('[REQUIRE_OWNER] Checking owner role for user:', req.user.email, 'Role:', req.user.companyRole);
 
-        if (req.user.companyRole === 'owner' || req.user.isCoOwner) {
+        // SECURITY FIX (BUG-4): Check coOwnerOf is scoped to THIS company, not a global flag
+        const isCoOwnerHere = (req.user.coOwnerOf && req.user.companyId &&
+            req.user.coOwnerOf.toString() === req.user.companyId.toString()) || req.user.isCoOwner;
+        if (req.user.companyRole === 'owner' || isCoOwnerHere) {
             console.log('[REQUIRE_OWNER] Access granted');
             next();
         } else {
@@ -79,7 +82,9 @@ const requireAdmin = async (req, res, next) => {
         }
 
         const adminRoles = ['owner', 'admin'];
-        if (adminRoles.includes(req.user.companyRole) || req.user.isCoOwner) {
+        const isCoOwnerHere = (req.user.coOwnerOf && req.user.companyId &&
+            req.user.coOwnerOf.toString() === req.user.companyId.toString()) || req.user.isCoOwner;
+        if (adminRoles.includes(req.user.companyRole) || isCoOwnerHere) {
             next();
         } else {
             res.status(403).json({ message: "Access denied: Admin privileges required" });
@@ -99,7 +104,9 @@ const requireDepartmentManager = async (req, res, next) => {
         const departmentId = req.params.id || req.params.departmentId;
 
         // Owners and Admins explicitly have access to all departments
-        if (['owner', 'admin'].includes(req.user.companyRole) || req.user.isCoOwner) {
+        const isCoOwnerHere = (req.user.coOwnerOf && req.user.companyId &&
+            req.user.coOwnerOf.toString() === req.user.companyId.toString()) || req.user.isCoOwner;
+        if (['owner', 'admin'].includes(req.user.companyRole) || isCoOwnerHere) {
             return next();
         }
 
@@ -132,7 +139,9 @@ const requireDepartmentManager = async (req, res, next) => {
 const canCreateWorkspace = async (req, res, next) => {
     try {
         // 1. Owner/Admin -> Always allow
-        if (['owner', 'admin'].includes(req.user.companyRole) || req.user.isCoOwner) {
+        const isCoOwnerHere = (req.user.coOwnerOf && req.user.companyId &&
+            req.user.coOwnerOf.toString() === req.user.companyId.toString()) || req.user.isCoOwner;
+        if (['owner', 'admin'].includes(req.user.companyRole) || isCoOwnerHere) {
             return next();
         }
 
@@ -175,7 +184,9 @@ const requireManager = async (req, res, next) => {
         }
 
         const managerRoles = ['owner', 'admin', 'manager'];
-        if (managerRoles.includes(req.user.companyRole) || req.user.isCoOwner) {
+        const isCoOwnerHere = (req.user.coOwnerOf && req.user.companyId &&
+            req.user.coOwnerOf.toString() === req.user.companyId.toString()) || req.user.isCoOwner;
+        if (managerRoles.includes(req.user.companyRole) || isCoOwnerHere) {
             next();
         } else {
             res.status(403).json({ message: "Access denied: Manager privileges required" });

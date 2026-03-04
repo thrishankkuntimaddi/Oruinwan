@@ -91,6 +91,13 @@ const UserSchema = new mongoose.Schema(
     reportsTo: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
 
     // For Owners: Co-owner status flag
+    // SECURITY FIX (BUG-4): Changed from a global boolean to a company ObjectId reference.
+    // A bare isCoOwner:true flag was not scoped to a company, meaning if a co-owner of
+    // Company A ever joined Company B, their elevated privileges would carry over.
+    // Now stores the specific companyId they co-own — middleware checks companyId match.
+    coOwnerOf: { type: mongoose.Schema.Types.ObjectId, ref: 'Company', default: null },
+    // DEPRECATED: isCoOwner boolean kept for backward-compatibility reads during migration.
+    // New code must use coOwnerOf. Remove after migration is complete.
     isCoOwner: { type: Boolean, default: false },
 
     // Permissions override (optional granular control)

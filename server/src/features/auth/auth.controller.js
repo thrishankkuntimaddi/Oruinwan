@@ -26,7 +26,15 @@ const REFRESH_DAYS = parseInt(process.env.REFRESH_TOKEN_DAYS || "7", 10);
 
 function generateAccessToken(user) {
   return jwt.sign(
-    { sub: user._id.toString(), roles: user.roles },
+    {
+      sub: user._id.toString(),
+      roles: user.roles,
+      // SECURITY FIX (BUG-3): Embed companyRole in JWT so checkRole middleware
+      // can evaluate it without an extra DB call. This also eliminates the extra
+      // User.findById() call inside requireOwner/requireAdmin/requireManager when
+      // they fall back to DB lookup because companyRole was absent from the token.
+      companyRole: user.companyRole || null
+    },
     process.env.ACCESS_TOKEN_SECRET,
     { expiresIn: ACCESS_EXPIRES }
   );
@@ -423,10 +431,31 @@ exports.login = async (req, res) => {
       return res.status(400).json({ message: "Invalid credentials" });
     }
 
+    // SECURITY FIX (C-2): Enforce brute-force lockout BEFORE running bcrypt.
+    // bcrypt is deliberately slow; skipping it on locked accounts avoids DoS amplification.
+    if (user.lockedUntil && user.lockedUntil > new Date()) {
+      const minutesLeft = Math.ceil((user.lockedUntil - Date.now()) / 60000);
+      return res.status(429).json({
+        message: `Account locked due to too many failed attempts. Try again in ${minutesLeft} minute(s).`
+      });
+    }
+
     // 3. VALIDATE PASSWORD
     const match = await bcrypt.compare(password, user.passwordHash);
-    if (!match)
+    if (!match) {
+      // Increment failed attempt counter
+      user.failedLoginAttempts = (user.failedLoginAttempts || 0) + 1;
+
+      // Lock account after 5 consecutive failures (15-minute cooldown)
+      if (user.failedLoginAttempts >= 5) {
+        user.lockedUntil = new Date(Date.now() + 15 * 60 * 1000);
+        user.failedLoginAttempts = 0;
+        console.warn(`🔒 [LOGIN] Account locked for ${user.email} after 5 failed attempts`);
+      }
+
+      await user.save();
       return res.status(400).json({ message: "Invalid credentials" });
+    }
 
     // 🔒 Check if password login is disabled for OAuth users
     if (user.authProvider && user.authProvider !== 'local' && !user.passwordLoginEnabled) {
@@ -595,6 +624,10 @@ exports.login = async (req, res) => {
     // Capture first-login BEFORE overwriting lastLoginAt
     const isFirstLogin = user.lastLoginAt === null || user.lastLoginAt === undefined;
 
+    // SECURITY FIX (C-2): Reset brute-force counters on successful login
+    user.failedLoginAttempts = 0;
+    user.lockedUntil = null;
+
     user.lastLoginAt = new Date();
     user.isOnline = true;
 
@@ -623,7 +656,9 @@ exports.login = async (req, res) => {
     const response = {
       message: "Login successful",
       accessToken,
-      refreshToken, // ✅ Dual-channel: client stores this for cross-origin refresh fallback
+      // SECURITY FIX (H-1): refreshToken intentionally excluded from JSON body.
+      // It is already set securely via HttpOnly cookie by setRefreshTokenCookie() above.
+      // Returning it in the response body would expose it to XSS attacks.
       user: responseUser,
       redirectTo: redirectTo,
       isAdmin: isAdmin
@@ -736,8 +771,11 @@ exports.refresh = async (req, res) => {
       setRefreshTokenCookie(res, newRefresh);
 
       console.log('✅ [REFRESH] Token refresh completed successfully');
-      // Also return new refresh token in body for cross-origin clients
-      return res.json({ accessToken: newAccess, refreshToken: newRefresh });
+      // SECURITY FIX (BUG-1): refreshToken intentionally excluded from JSON body.
+      // It is already set securely via HttpOnly cookie by setRefreshTokenCookie() above.
+      // Returning it in the response body would expose it to XSS attacks — any script
+      // running on the page could read response.data.refreshToken and exfiltrate it.
+      return res.json({ accessToken: newAccess });
 
     } catch (_err) {
       if (_err.name === 'VersionError' && attempts < MAX_RETRIES - 1) {
@@ -794,6 +832,19 @@ exports.logoutAll = async (req, res) => {
     } catch {
       clearRefreshTokenCookie(res);
       return res.json({ message: "Logged out" });
+    }
+
+    // SECURITY FIX (BUG-9): Verify the token hash exists in the DB before wiping all sessions.
+    // Previously, any JWT-valid refresh token (even a stale/rotated one no longer in the DB)
+    // could trigger a logoutAll for the decoded user. An attacker who obtained an old rotated
+    // token could use it to force-logout all of a victim's active sessions (targeted DoS).
+    const tokenHash = sha256(token);
+    const user = await User.findOne({ 'refreshTokens.tokenHash': tokenHash });
+
+    if (!user) {
+      // Token not found in DB — already rotated or invalid. Treat as already logged out.
+      clearRefreshTokenCookie(res);
+      return res.json({ message: 'Logged out' });
     }
 
     await User.findByIdAndUpdate(decoded.sub, { refreshTokens: [] });
