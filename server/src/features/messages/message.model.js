@@ -18,6 +18,28 @@ const MessageSchema = new mongoose.Schema({
   platformSession: { type: mongoose.Schema.Types.ObjectId, ref: "PlatformSession", default: null }, // Link to platform chat session
   sender: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
 
+  // Message type: 'message' (default) or 'system' (auto-generated events)
+  type: {
+    type: String,
+    enum: ['message', 'system'],
+    default: 'message'
+  },
+
+  // System event metadata (populated only when type === 'system')
+  systemEvent: {
+    type: String,
+    enum: [
+      'channel_created',
+      'member_joined', 'member_left', 'member_removed', 'member_invited',
+      'admin_assigned', 'admin_demoted',
+      'channel_renamed', 'channel_privacy_changed',
+      'messages_cleared',
+      null
+    ],
+    default: null
+  },
+  systemData: { type: mongoose.Schema.Types.Mixed, default: null }, // Arbitrary metadata for system events
+
   // E2EE: Encrypted payload containing ciphertext, messageIv, and isEncrypted flag
   payload: {
     ciphertext: String,

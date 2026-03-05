@@ -186,8 +186,8 @@ const HomePanel = ({ title }) => {
             setNewName("");
             showToast(response.data.message || "Workspace renamed successfully");
 
-            // Refresh the page to update workspace name everywhere
-            window.location.reload();
+            // Refresh contacts so sidebar reflects the new workspace name without a page reload
+            if (activeWorkspace?.id) refreshContacts(activeWorkspace.id);
         } catch (error) {
             console.error("Error renaming workspace:", error);
             showToast(error.response?.data?.message || "Failed to rename workspace", "error");

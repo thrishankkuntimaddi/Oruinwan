@@ -3,6 +3,7 @@ import PollCreationModal from '../modals/PollCreationModal.jsx';
 import MemberListModal from '../modals/MemberListModal.jsx';
 import ContactInfoModal from '../modals/contactInfoModal.jsx';
 import ChannelManagementModal from '../../ChannelManagementModal.jsx';
+import ForwardMessageModal from '../modals/ForwardMessageModal.jsx';
 
 /**
  * Consolidated modal renderer component
@@ -30,7 +31,12 @@ export default function ModalRenderer({ activeModal, onClose, modalProps }) {
         // Channel management props
         channel,
         workspaceId,
-        initialTab
+        initialTab,
+
+        // Forward message props
+        currentChatId,
+        currentChatType,
+        onForward,
     } = modalProps || {};
 
     switch (activeModal) {
@@ -41,6 +47,16 @@ export default function ModalRenderer({ activeModal, onClose, modalProps }) {
                     onClose={onClose}
                     onCreate={onCreate}
                     channelId={channelId}
+                />
+            );
+
+        case 'forward':
+            return (
+                <ForwardMessageModal
+                    onClose={onClose}
+                    onForward={onForward}
+                    currentChatId={currentChatId}
+                    currentChatType={currentChatType}
                 />
             );
 

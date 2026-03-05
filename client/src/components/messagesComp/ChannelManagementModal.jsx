@@ -204,9 +204,8 @@ export default function ChannelManagementModal({ channel, onClose, currentUserId
                 "success"
             );
             setPrivacyVerification("");
-            setTimeout(() => {
-                window.location.reload();
-            }, 1000);
+            // Close modal — 'channel-updated' socket event propagates the change reactively
+            setTimeout(() => onClose?.(), 800);
         } catch (err) {
             console.error("Toggle privacy failed:", err);
             showToast(err?.response?.data?.message || "Failed to change channel privacy", "error");
@@ -249,9 +248,8 @@ export default function ChannelManagementModal({ channel, onClose, currentUserId
             const headers = token ? { Authorization: `Bearer ${token}` } : {};
             await axios.delete(`${API_BASE}/api/channels/${channel.id}/messages`, { headers });
             showToast("All messages have been cleared from this channel", "success");
-            setTimeout(() => {
-                window.location.reload();
-            }, 1000);
+            setShowClearMessagesConfirm(false);
+            // 'messages-cleared' socket event empties the chat window reactively
         } catch (err) {
             console.error("Clear messages failed:", err);
             showToast(err?.response?.data?.message || "Failed to clear messages", "error");
@@ -280,7 +278,8 @@ export default function ChannelManagementModal({ channel, onClose, currentUserId
             );
             showToast("Channel name updated successfully", "success");
             setIsEditingName(false);
-            window.location.reload();
+            setEditedName(editedName.trim().toLowerCase());
+            // 'channel-updated' socket event propagates the new name to all clients reactively
         } catch (err) {
             console.error("Update name failed:", err);
             showToast(err?.response?.data?.message || "Failed to update channel name", "error");

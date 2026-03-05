@@ -8,11 +8,14 @@
 
 
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useChatSocket, useConversation, useMessageActions } from '../../../hooks';
 import Header from './header/header.jsx';
 import ChannelTabs from './tabs/ChannelTabs.jsx';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useSocket } from '../../../contexts/SocketContext';
+import { useContacts } from '../../../contexts/ContactsContext';
+import { useWorkspace } from '../../../contexts/WorkspaceContext';
 import api from '../../../services/api';
 import { useToast } from '../../../contexts/ToastContext';
 
@@ -37,10 +40,13 @@ import './chatWindow.css';
  * @param {string} workspaceId - Workspace ID (required for DMs)
  */
 function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId }) {
-    const { user, encryptionReady } = useAuth(); // ✅ FIX 3: Get encryption ready flag
-    const { socket: rawSocket } = useSocket(); // Get raw socket for ThreadPanel
+    const { user, encryptionReady } = useAuth();
+    const { socket: rawSocket } = useSocket();
     const currentUserId = user?.sub || user?._id;
     const { showToast } = useToast();
+    const navigate = useNavigate();
+    const { refreshContacts } = useContacts();
+    const { activeWorkspace } = useWorkspace();
 
     // Check if user is a member of the channel
     const isMember = useMemo(() => {
@@ -71,7 +77,6 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
     // State for joining
     const [isJoining, setIsJoining] = useState(false);
 
-    // Join handler
     const handleJoinChannel = useCallback(async () => {
         if (!chat || !chat.id) return;
 
@@ -80,15 +85,16 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
             await api.post(`/api/channels/${chat.id}/join-discoverable`);
             showToast(`Joined ${chat.name} successfully!`, 'success');
 
-            // Refresh the page or trigger a re-fetch
-            window.location.reload();
+            // Refresh the sidebar channel list, then navigate into the channel
+            if (activeWorkspace?.id) await refreshContacts(activeWorkspace.id);
+            navigate(`/workspace/${activeWorkspace?.id}/channel/${chat.id}`);
         } catch (err) {
             console.error('Join channel error:', err);
             showToast(err.response?.data?.message || 'Failed to join channel', 'error');
         } finally {
             setIsJoining(false);
         }
-    }, [chat, showToast]);
+    }, [chat, showToast, navigate, refreshContacts, activeWorkspace]);
 
     // Conversation state
     const [activeThread, setActiveThread] = useState(null);
@@ -102,6 +108,8 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
 
     // Modal state (consolidated)
     const [activeModal, setActiveModal] = useState(null);
+    // Track which message is being forwarded (used by ForwardMessageModal)
+    const [forwardingMessageId, setForwardingMessageId] = useState(null);
 
     // Header UI state
     const [showSearch, setShowSearch] = useState(false);
@@ -643,8 +651,26 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
                 conversation.removeEvent(messageId);
             }
             return result;
+        },
+        // Open the ForwardMessageModal; actual API call happens in handleForward
+        forwardMessage: (messageId) => {
+            setForwardingMessageId(messageId);
+            setActiveModal('forward');
         }
     }), [actions, handleSend]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    // Handle confirmed forward: call API with selected targets, then close modal
+    const handleForward = useCallback(async (targets) => {
+        if (!forwardingMessageId || !targets?.length) return;
+        try {
+            await actions.forwardMessage(forwardingMessageId, targets);
+        } catch (err) {
+            console.error('[ChatWindowV2] Forward failed:', err);
+        } finally {
+            setActiveModal(null);
+            setForwardingMessageId(null);
+        }
+    }, [forwardingMessageId, actions]);
 
     // Get channel members for join markers (channels only)
     const channelMembers = chat?.members || [];
@@ -767,7 +793,7 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
             {/* Consolidated Modal Renderer */}
             <ModalRenderer
                 activeModal={activeModal}
-                onClose={() => setActiveModal(null)}
+                onClose={() => { setActiveModal(null); setForwardingMessageId(null); }}
                 modalProps={{
                     // Poll creation props
                     onCreate: handleCreatePoll,
@@ -784,7 +810,12 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
                     // Channel management props
                     channel: chat,
                     workspaceId,
-                    initialTab: activeModal?.startsWith('channel-') ? activeModal.replace('channel-', '') : 'settings'
+                    initialTab: activeModal?.startsWith('channel-') ? activeModal.replace('channel-', '') : 'settings',
+
+                    // Forward message props
+                    currentChatId: conversationId,
+                    currentChatType: conversationType,
+                    onForward: handleForward,
                 }}
             />
         </div>

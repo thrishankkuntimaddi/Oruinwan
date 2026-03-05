@@ -178,7 +178,7 @@ exports.postThreadReply = async (req, res) => {
         if (io) {
             const roomName = parentMessage.channel
                 ? `channel:${parentMessage.channel}`
-                : `dm_${parentMessage.dm}`;
+                : `dm:${parentMessage.dm}`;
 
             // ✅ THREAD AWARENESS: Emit thread:created on FIRST reply only
             if (updatedParent.replyCount === 1) {
@@ -210,14 +210,14 @@ exports.postThreadReply = async (req, res) => {
                 });
             } else if (parentMessage.dm) {
                 // Send to DM session room
-                io.to(`dm_${parentMessage.dm}`).emit("thread-reply", {
+                io.to(`dm:${parentMessage.dm}`).emit("thread-reply", {
                     parentId: messageId,
                     reply: reply.toObject(),
                     clientTempId // ✅ Include for optimistic UI reconciliation
                 });
 
                 // Broadcast message-updated to update reply count in main chat
-                io.to(`dm_${parentMessage.dm}`).emit("message-updated", {
+                io.to(`dm:${parentMessage.dm}`).emit("message-updated", {
                     messageId: messageId,
                     updates: {
                         replyCount: updatedParent.replyCount

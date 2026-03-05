@@ -290,9 +290,10 @@ function ConversationStream({
             {/* Join Marker (for channels) - only show if no channel_created system event exists */}
             {conversationType === 'channel' && userJoinedAt && !systemEvents.some(e => e.type === 'channel_created') && (
                 <div style={{ padding: '0 1rem' }}>
-                    <JoinMarker date={userJoinedAt} />
+                    <JoinMarker date={userJoinedAt} memberInfo={{ userId: currentUserId }} currentUserId={currentUserId} />
                 </div>
             )}
+
 
             {/* Channel Created System Event - show at the top, before any date dividers */}
             {systemEvents.filter(e => e.type === 'channel_created').map(event => (

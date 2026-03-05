@@ -463,8 +463,8 @@ exports.forwardMessage = async (req, res) => {
         }
 
         // Find the original message
-        const InternalMessage = require('../../../models/InternalMessage');
-        const originalMessage = await InternalMessage.findById(messageId);
+        const Message = require('../../features/messages/message.model');
+        const originalMessage = await Message.findById(messageId);
 
         if (!originalMessage) {
             return res.status(404).json({ message: 'Original message not found' });
@@ -504,17 +504,20 @@ exports.forwardMessage = async (req, res) => {
                         continue;
                     }
 
-                    // Create forwarded message
+                    // Create forwarded message — re-use original encrypted payload from source
+                    const srcCiphertext = originalMessage.payload?.ciphertext || originalMessage.ciphertext;
+                    const srcMessageIv = originalMessage.payload?.messageIv || originalMessage.messageIv;
+
                     await messagesService.createMessage({
                         type: 'message',
                         company: channel.company,
                         workspace: channel.workspace,
                         channel: id,
                         sender: userId,
-                        ciphertext: originalMessage.ciphertext,
-                        messageIv: originalMessage.messageIv,
-                        isEncrypted: originalMessage.isEncrypted,
-                        attachments: originalMessage.attachments || [],
+                        ciphertext: srcCiphertext,
+                        messageIv: srcMessageIv,
+                        isEncrypted: true,
+                        attachments: originalMessage.payload?.attachments || originalMessage.attachments || [],
                         forwardedFrom: messageId
                     }, req.io);
 
@@ -532,17 +535,20 @@ exports.forwardMessage = async (req, res) => {
                         continue;
                     }
 
-                    // Create forwarded message
+                    // Create forwarded message — re-use original encrypted payload from source
+                    const srcCiphertext = originalMessage.payload?.ciphertext || originalMessage.ciphertext;
+                    const srcMessageIv = originalMessage.payload?.messageIv || originalMessage.messageIv;
+
                     await messagesService.createMessage({
                         type: 'message',
                         company: dmSession.company,
                         workspace: dmSession.workspace,
                         dm: id,
                         sender: userId,
-                        ciphertext: originalMessage.ciphertext,
-                        messageIv: originalMessage.messageIv,
-                        isEncrypted: originalMessage.isEncrypted,
-                        attachments: originalMessage.attachments || [],
+                        ciphertext: srcCiphertext,
+                        messageIv: srcMessageIv,
+                        isEncrypted: true,
+                        attachments: originalMessage.payload?.attachments || originalMessage.attachments || [],
                         forwardedFrom: messageId
                     }, req.io);
 
@@ -693,6 +699,23 @@ exports.pinMessage = async (req, res) => {
         const message = await Message.findById(messageId);
         if (!message) {
             return res.status(404).json({ message: 'Message not found' });
+        }
+
+        // Permission: sender OR channel admin can pin/unpin
+        const isSender = String(message.sender) === String(userId);
+        let isChannelAdmin = false;
+        if (!isSender && message.channel) {
+            const Channel = require('../../features/channels/channel.model');
+            const channel = await Channel.findById(message.channel).select('admins createdBy').lean();
+            if (channel) {
+                const adminIds = (channel.admins || []).map(id => id.toString());
+                isChannelAdmin = adminIds.includes(userId.toString()) ||
+                    channel.createdBy?.toString() === userId.toString();
+            }
+        }
+
+        if (!isSender && !isChannelAdmin) {
+            return res.status(403).json({ message: 'Only the message sender or a channel admin can pin messages' });
         }
 
         message.isPinned = pin;

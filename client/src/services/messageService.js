@@ -52,7 +52,14 @@ export const messageService = {
     updateMessage: (id, data) => api.patch(`/api/v2/messages/${id}`, data),
 
     // Delete message (v2)
-    deleteMessage: (id) => api.delete(`/api/v2/messages/${id}`),
+    // scope: 'me' (hide only for current user) | 'everyone' (soft-delete for all, sender only)
+    deleteMessage: (id, scope = 'everyone', socketId = null) => {
+        const headers = socketId ? { 'x-socket-id': socketId } : {};
+        return api.delete(`/api/v2/messages/${id}`, {
+            data: { scope },
+            headers
+        });
+    },
 
     // Get thread messages (v2)
     getThread: (messageId) => api.get(`/api/v2/messages/thread/${messageId}`),

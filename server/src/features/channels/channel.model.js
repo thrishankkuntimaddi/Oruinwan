@@ -51,7 +51,7 @@ const ChannelSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 // Indexes
-ChannelSchema.index({ workspace: 1, name: 1 });
+ChannelSchema.index({ workspace: 1, name: 1 }, { unique: true }); // Enforce unique channel name per workspace
 ChannelSchema.index({ company: 1, isPrivate: 1 });
 ChannelSchema.index({ "members.user": 1 }); // Correct nested path for member queries
 

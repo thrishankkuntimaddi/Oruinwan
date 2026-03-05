@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import api from '../../../../services/api';
-import { Smile, MessageSquare, Share, MoreHorizontal, Pin, Copy, Trash2, Info } from "lucide-react";
+import { Smile, MessageSquare, Share, MoreHorizontal, Pin, Copy, Trash2, Info, Pencil, Check, X } from "lucide-react";
 import ReactionPicker from "./reactionPicker";
 import ReactMarkdown from "react-markdown";
 import remarkBreaks from "remark-breaks";
@@ -67,15 +67,22 @@ function ChannelMessageItem({
 
     // Step 3 — Save edit handler
     const handleSaveEdit = async () => {
-        if (editText.trim() === msg.text) {
+        const trimmed = editText.trim();
+        if (trimmed === (msg.text || '').trim()) {
             setIsEditing(false);
             return;
         }
+        if (!trimmed) return; // Don't save empty message
         try {
-            await api.patch(`/api/v2/messages/${msg._id}`, { text: editText });
+            await api.patch(`/api/v2/messages/${msg._id || msg.id}`, { text: trimmed });
         } catch (err) {
             console.error('Edit failed:', err);
         }
+        setIsEditing(false);
+    };
+
+    const handleCancelEdit = () => {
+        setEditText(msg.text || '');
         setIsEditing(false);
     };
 
@@ -101,12 +108,33 @@ function ChannelMessageItem({
         }
     };
 
-    // Must be AFTER all hooks to avoid React Hooks rules violation
+    // System message renderer — reads from systemEvent + systemData
     if (msg.type === 'system' || msg.backend?.type === 'system') {
+        const sd = msg.systemData || msg.backend?.systemData || {};
+        const ev = msg.systemEvent || msg.backend?.systemEvent || '';
+
+        const isMe = (id) => String(id) === String(currentUserId);
+        const name = (id, fallback) => isMe(id) ? 'You' : (fallback || 'Someone');
+
+        const textMap = {
+            member_joined: () => `${name(sd.userId, sd.userName)} joined #${sd.channelName || 'this channel'}`,
+            member_left: () => `${name(sd.userId, sd.userName)} left #${sd.channelName || 'this channel'}`,
+            member_invited: () => `${name(sd.inviterId, sd.inviterName)} invited ${isMe(sd.invitedUserId) ? 'you' : (sd.invitedUserName || 'someone')} to #${sd.channelName || 'this channel'}`,
+            member_removed: () => `${name(sd.removedById, sd.removedByName)} removed ${isMe(sd.removedUserId) ? 'you' : (sd.removedUserName || 'someone')}`,
+            channel_created: () => `${name(sd.userId, sd.userName)} created this channel`,
+            channel_renamed: () => `${name(sd.userId, sd.userName)} renamed the channel from #${sd.oldName} to #${sd.newName}`,
+            admin_assigned: () => `${name(sd.assignerId, sd.assignerName)} made ${isMe(sd.assignedUserId) ? 'you' : (sd.assignedUserName || 'someone')} an admin`,
+            admin_demoted: () => `${name(sd.demoterId, sd.demoterName)} removed ${isMe(sd.demotedUserId) ? 'your' : `${sd.demotedUserName || 'someone'}'s`} admin role`,
+            messages_cleared: () => `${name(sd.userId, sd.userName)} cleared the message history`,
+            channel_privacy_changed: () => `${name(sd.userId, sd.userName)} made this channel ${sd.newPrivacy || 'private'}`,
+        };
+
+        const displayText = textMap[ev]?.() || msg.payload?.text || msg.text || `System event`;
+
         return (
             <div className="flex justify-center my-3">
                 <div className="bg-gray-100/80 dark:bg-gray-800/80 px-4 py-1.5 rounded-full text-xs text-gray-600 dark:text-gray-300 font-medium shadow-sm">
-                    {msg.payload?.text}
+                    {displayText}
                 </div>
             </div>
         );
@@ -224,14 +252,34 @@ function ChannelMessageItem({
                     {msg.isDeleted ? (
                         <span className="text-gray-400 italic">Message deleted</span>
                     ) : isEditing ? (
-                        <input
-                            className="w-full bg-transparent border-b border-gray-500 outline-none text-[14px] text-gray-800 dark:text-gray-200"
-                            value={editText}
-                            onChange={(e) => setEditText(e.target.value)}
-                            onBlur={handleSaveEdit}
-                            onKeyDown={(e) => { if (e.key === 'Enter') handleSaveEdit(); if (e.key === 'Escape') setIsEditing(false); }}
-                            autoFocus
-                        />
+                        <div className="flex flex-col gap-2 w-full max-w-[70%]">
+                            <textarea
+                                className="w-full bg-gray-50 dark:bg-gray-700/60 border border-blue-400 dark:border-blue-500 rounded-md px-3 py-2 text-[14px] text-gray-800 dark:text-gray-200 outline-none resize-none focus:ring-2 focus:ring-blue-400/50 min-h-[60px]"
+                                value={editText}
+                                onChange={(e) => setEditText(e.target.value)}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSaveEdit(); }
+                                    if (e.key === 'Escape') handleCancelEdit();
+                                }}
+                                autoFocus
+                                rows={Math.min(6, (editText.match(/\n/g) || []).length + 2)}
+                            />
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={handleSaveEdit}
+                                    className="flex items-center gap-1.5 px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-md transition-colors"
+                                >
+                                    <Check size={12} /> Save
+                                </button>
+                                <button
+                                    onClick={handleCancelEdit}
+                                    className="flex items-center gap-1.5 px-3 py-1 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 text-xs font-medium rounded-md transition-colors"
+                                >
+                                    <X size={12} /> Cancel
+                                </button>
+                                <span className="text-[10px] text-gray-400">Enter to save · Esc to cancel</span>
+                            </div>
+                        </div>
                     ) : msg.text ? (
                         <ReactMarkdown
                             remarkPlugins={[remarkBreaks]}
@@ -396,8 +444,8 @@ function ChannelMessageItem({
                             <button
                                 onClick={async () => {
                                     try {
-                                        await api.post(`/api/v2/messages/${msg._id}/pin`);
-                                    } catch (err) { console.error('Pin failed:', err); }
+                                        await api.post(`/api/v2/messages/${msg._id || msg.id}/pin`, { pin: !msg.isPinned });
+                                    } catch (err) { console.error('[ChannelMessageItem] Pin toggle failed:', err); }
                                     toggleMsgMenu({ stopPropagation: () => { } }, null);
                                 }}
                                 className="w-full text-left px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2 text-gray-700 dark:text-gray-300"
@@ -421,11 +469,12 @@ function ChannelMessageItem({
                                 <button
                                     onClick={() => {
                                         setIsEditing(true);
+                                        setEditText(msg.text || '');
                                         toggleMsgMenu({ stopPropagation: () => { } }, null);
                                     }}
                                     className="w-full text-left px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2 text-gray-700 dark:text-gray-300"
                                 >
-                                    <Copy size={14} /> Edit message
+                                    <Pencil size={14} /> Edit message
                                 </button>
                             )}
 

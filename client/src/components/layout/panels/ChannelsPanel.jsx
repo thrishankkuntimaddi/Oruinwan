@@ -167,6 +167,16 @@ const ChannelsPanel = ({ title }) => {
                     }
                     break;
 
+                case 'member-left':
+                    // Handles the current user leaving via exitChannel API
+                    // (socket echoes 'member-left' after server processes exit)
+                    if (String(data.userId) === String(channelId)) break; // wrong event shape guard
+                    setChannels(prev => prev.filter(ch => ch.id !== data.channelId));
+                    if (data.channelId === channelId) {
+                        navigate(`/workspace/${workspaceId}`);
+                    }
+                    break;
+
                 default:
                     break;
             }

@@ -76,6 +76,21 @@ async function createMessage(messageData, io = null) {
     await message.populate('sender', 'username email profilePicture');
 
     // ============================================================
+    // FIX 4: Update channel activity counters (non-blocking)
+    // Keeps lastMessageAt and messageCount accurate for ordering + unread
+    // ============================================================
+    if (channel) {
+        const Channel = require('../../features/channels/channel.model.js');
+        Channel.findByIdAndUpdate(
+            channel,
+            {
+                $inc: { messageCount: 1 },
+                $set: { lastMessageAt: message.createdAt }
+            }
+        ).catch(err => console.error('[createMessage] Failed to update channel counters:', err));
+    }
+
+    // ============================================================
     // SOCKET EMIT AFTER DB SAVE (Race condition prevention)
     // ============================================================
     // Socket emit MUST come after DB write
@@ -397,8 +412,22 @@ async function deleteMessage(messageId, userId, io, scope = 'everyone', socketId
     }
 
     // ── Delete For Everyone ───────────────────────────────────────
-    if (message.sender._id.toString() !== userId.toString()) {
-        const err = new Error('Unauthorized: only the sender can delete this message for everyone');
+    const isSender = message.sender._id.toString() === userId.toString();
+
+    // Channel admins may also delete any message for everyone
+    let isChannelAdmin = false;
+    if (!isSender && message.channel) {
+        const Channel = require('../../features/channels/channel.model');
+        const channel = await Channel.findById(message.channel).select('admins createdBy').lean();
+        if (channel) {
+            const adminIds = (channel.admins || []).map(id => id.toString());
+            isChannelAdmin = adminIds.includes(userId.toString()) ||
+                channel.createdBy?.toString() === userId.toString();
+        }
+    }
+
+    if (!isSender && !isChannelAdmin) {
+        const err = new Error('Unauthorized: only the sender or a channel admin can delete this message for everyone');
         err.status = 403;
         throw err;
     }

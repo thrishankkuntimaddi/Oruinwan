@@ -15,8 +15,11 @@ export const channelService = {
     // Delete channel
     deleteChannel: (id) => api.delete(`/api/channels/${id}`),
 
-    // Join a public channel
+    // Join a public channel (member-invited / admin-added path)
     joinChannel: (id) => api.post(`/api/channels/${id}/join`),
+
+    // Join a discoverable public channel (self-service discovery path)
+    joinDiscoverableChannel: (id) => api.post(`/api/channels/${id}/join-discoverable`),
 
     // Exit a channel (was: /leave — corrected to /exit)
     exitChannel: (id) => api.post(`/api/channels/${id}/exit`),
