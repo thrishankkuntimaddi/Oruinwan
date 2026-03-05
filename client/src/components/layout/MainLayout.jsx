@@ -1,12 +1,108 @@
 import React, { useState, useRef, useEffect } from "react";
-import { useLocation } from "react-router-dom"; // Added useLocation
+import { useLocation } from "react-router-dom";
 import IconSidebar from "./IconSidebar";
 import ProfileMenu from "../SidebarComp/ProfileSidebar";
 import ChttrixAIChat from "../ai/ChttrixAIChat/ChttrixAIChat";
 import UniversalSearch from "../common/UniversalSearch";
 import { useWorkspace } from "../../contexts/WorkspaceContext";
 import { useUniversalSearch } from "../../hooks/useUniversalSearch";
-import { Bot, BookOpen, Command, Bug, Sparkles, Search, MessageCircle, X, Loader2, Menu } from "lucide-react"; // Added Menu icon
+import { Bot, BookOpen, Command, Bug, Sparkles, Search, MessageCircle, X, Loader2, Menu, Bell, CircleHelp, AtSign, UserPlus, Check } from "lucide-react";
+
+// --- Workspace Notification Panel (self-contained) ---
+const WS_MOCK_NOTIFS = [
+    { id: 1, icon: AtSign, color: 'text-indigo-600 bg-indigo-50', title: 'You were mentioned', body: '@you in #general — "Can you review the PR?"', time: '2m ago', read: false },
+    { id: 2, icon: UserPlus, color: 'text-emerald-600 bg-emerald-50', title: 'New member joined', body: 'Alex joined the Design workspace', time: '20m ago', read: false },
+    { id: 3, icon: Bell, color: 'text-violet-600 bg-violet-50', title: 'Channel update', body: '#announcements — New pinned message', time: '1h ago', read: true },
+];
+
+const WorkspaceNotificationPanel = () => {
+    const [open, setOpen] = useState(false);
+    const [notifs, setNotifs] = useState(WS_MOCK_NOTIFS);
+    const unread = notifs.filter(n => !n.read).length;
+    const markAllRead = () => setNotifs(prev => prev.map(n => ({ ...n, read: true })));
+    const dismiss = (id) => setNotifs(prev => prev.filter(n => n.id !== id));
+
+    return (
+        <div className="relative">
+            <button
+                onClick={() => setOpen(o => !o)}
+                className={`relative p-1.5 rounded-md transition-colors ${open ? 'bg-indigo-100 text-indigo-600' : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700'}`}
+                title="Notifications"
+            >
+                <Bell size={20} strokeWidth={2} />
+                {unread > 0 && (
+                    <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 flex items-center justify-center rounded-full bg-indigo-600 text-white text-[9px] font-bold px-1">
+                        {unread}
+                    </span>
+                )}
+            </button>
+
+            {open && <div className="fixed inset-0 z-[90]" onClick={() => setOpen(false)} />}
+
+            {open && (
+                <div className="absolute top-10 right-0 w-80 bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 z-[100] overflow-hidden"
+                    style={{ animation: 'wsFadeIn 0.15s cubic-bezier(.4,0,.2,1)' }}>
+                    {/* Header */}
+                    <div className="flex items-center justify-between px-3 py-2 bg-gradient-to-r from-indigo-600 to-purple-600">
+                        <div className="flex items-center gap-2 text-white">
+                            <Bell size={14} />
+                            <span className="text-xs font-bold">Notifications</span>
+                            {unread > 0 && <span className="bg-white/25 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full">{unread} new</span>}
+                        </div>
+                        {unread > 0 && (
+                            <button onClick={markAllRead} className="flex items-center gap-1 text-white/80 hover:text-white text-[10px] font-semibold">
+                                <Check size={10} /> All read
+                            </button>
+                        )}
+                    </div>
+
+                    {/* List */}
+                    <div className="max-h-72 overflow-y-auto divide-y divide-gray-100 dark:divide-gray-700">
+                        {notifs.length === 0 ? (
+                            <div className="flex flex-col items-center py-10 text-gray-400">
+                                <Bell size={28} className="mb-2 opacity-30" />
+                                <p className="text-xs font-medium">All caught up!</p>
+                            </div>
+                        ) : notifs.map(n => {
+                            const Icon = n.icon;
+                            return (
+                                <div key={n.id} className={`flex items-start gap-3 px-3 py-2.5 group transition-colors ${n.read ? 'bg-white dark:bg-gray-800' : 'bg-indigo-50/60 dark:bg-indigo-900/10'} hover:bg-gray-50 dark:hover:bg-gray-700/50`}>
+                                    <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${n.color}`}>
+                                        <Icon size={14} />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-1.5">
+                                            <p className={`text-xs font-semibold truncate ${n.read ? 'text-gray-700' : 'text-gray-900 dark:text-gray-100'}`}>{n.title}</p>
+                                            {!n.read && <span className="flex-shrink-0 w-1.5 h-1.5 rounded-full bg-indigo-500" />}
+                                        </div>
+                                        <p className="text-[10px] text-gray-500 truncate mt-0.5">{n.body}</p>
+                                        <p className="text-[9px] text-gray-400 mt-0.5 font-medium">{n.time}</p>
+                                    </div>
+                                    <button onClick={() => dismiss(n.id)} className="flex-shrink-0 p-0.5 text-gray-300 hover:text-gray-500 opacity-0 group-hover:opacity-100 transition-all">
+                                        <X size={11} />
+                                    </button>
+                                </div>
+                            );
+                        })}
+                    </div>
+
+                    {/* Footer */}
+                    <div className="border-t border-gray-100 dark:border-gray-700 px-3 py-2 bg-gray-50 dark:bg-gray-900 text-center">
+                        <button className="text-[10px] text-indigo-600 font-bold hover:underline">View all notifications</button>
+                    </div>
+                </div>
+            )}
+
+            <style>{`
+                @keyframes wsFadeIn {
+                    from { opacity: 0; transform: translateY(-6px) scale(0.97); }
+                    to   { opacity: 1; transform: translateY(0) scale(1); }
+                }
+            `}</style>
+        </div>
+    );
+};
+
 
 const MainLayout = ({ children, sidePanel }) => {
     const { activeWorkspace } = useWorkspace();
@@ -300,106 +396,85 @@ const MainLayout = ({ children, sidePanel }) => {
 
 
                 {/* Right: Utilities */}
-                <div className="flex items-center space-x-2 sm:space-x-4 w-12 sm:w-20 justify-end relative">
-                    <button
-                        onClick={() => setShowHelp(!showHelp)}
-                        className={`hidden sm:block text-gray-500 hover:text-gray-700 text-sm font-medium transition-colors ${showHelp ? "text-blue-600" : ""}`}
-                    >
-                        Help
-                    </button>
+                <div className="flex items-center space-x-1 justify-end relative">
 
+                    {/* Notification Bell */}
+                    <WorkspaceNotificationPanel />
+
+                    {/* Help Button */}
+                    <div className="relative">
+                        <button
+                            onClick={() => setShowHelp(!showHelp)}
+                            className={`p-1.5 rounded-md transition-colors ${showHelp ? 'bg-indigo-100 text-indigo-600' : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700'}`}
+                            title="Help & Resources"
+                        >
+                            <CircleHelp size={20} strokeWidth={2} />
+                        </button>
+
+                        {/* Help Popover */}
+                        {showHelp && (
+                            <>
+                                <div className="fixed inset-0 z-[90]" onClick={() => setShowHelp(false)}></div>
+                                <div className="absolute top-10 right-0 w-64 bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl rounded-xl shadow-2xl border border-gray-200/60 dark:border-gray-700/60 z-[100] overflow-hidden animate-fade-in origin-top-right ring-1 ring-black/5">
+                                    {/* Minimal Header */}
+                                    <div className="px-3 py-2 border-b border-gray-100 dark:border-gray-700/50 flex items-center justify-between bg-gray-50/50 dark:bg-gray-900/50">
+                                        <span className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Support</span>
+                                        <div className="flex items-center gap-2">
+                                            <div className="flex items-center gap-1.5 px-1.5 py-0.5 bg-green-100/50 dark:bg-green-900/20 rounded-full">
+                                                <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
+                                                <span className="text-[9px] font-bold text-green-600 dark:text-green-400">Systems Normal</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Search */}
+                                    <div className="p-2">
+                                        <div className="relative group">
+                                            <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-indigo-500 transition-colors" />
+                                            <input type="text" placeholder="Search docs..." className="w-full pl-8 pr-3 py-1.5 bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-600 rounded-lg text-xs text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-indigo-500/50 focus:border-indigo-500/50 transition-all" />
+                                        </div>
+                                    </div>
+
+                                    {/* Quick Actions */}
+                                    <div className="px-1 pb-1 space-y-0.5">
+                                        <button onClick={() => { setShowHelp(false); setActiveHelpModal("academy"); }} className="w-full flex items-center gap-3 px-2 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-md transition-colors text-left group">
+                                            <div className="flex items-center justify-center w-6 h-6 rounded-md bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 group-hover:scale-110 transition-transform"><BookOpen size={14} /></div>
+                                            <span className="text-xs font-medium text-gray-700 dark:text-gray-200">Academy</span>
+                                        </button>
+                                        <button onClick={() => { setShowHelp(false); setActiveHelpModal("shortcuts"); }} className="w-full flex items-center gap-3 px-2 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-md transition-colors text-left group">
+                                            <div className="flex items-center justify-center w-6 h-6 rounded-md bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 group-hover:scale-110 transition-transform"><Command size={14} /></div>
+                                            <span className="text-xs font-medium text-gray-700 dark:text-gray-200">Shortcuts</span>
+                                        </button>
+                                        <button onClick={() => { setShowHelp(false); setActiveHelpModal("whatsnew"); }} className="w-full flex items-center gap-3 px-2 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-md transition-colors text-left group">
+                                            <div className="flex items-center justify-center w-6 h-6 rounded-md bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 group-hover:scale-110 transition-transform"><Sparkles size={14} /></div>
+                                            <span className="text-xs font-medium text-gray-700 dark:text-gray-200">What's New</span>
+                                        </button>
+                                        <button onClick={() => { setShowHelp(false); setActiveHelpModal("bug"); }} className="w-full flex items-center gap-3 px-2 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-md transition-colors text-left group">
+                                            <div className="flex items-center justify-center w-6 h-6 rounded-md bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 group-hover:scale-110 transition-transform"><Bug size={14} /></div>
+                                            <span className="text-xs font-medium text-gray-700 dark:text-gray-200">Report Bug</span>
+                                        </button>
+                                    </div>
+
+                                    {/* Footer */}
+                                    <div className="border-t border-gray-100 dark:border-gray-700/50 p-2 bg-gray-50/80 dark:bg-gray-900/80">
+                                        <button onClick={() => { setShowHelp(false); setActiveHelpModal("contact"); }} className="w-full flex items-center justify-center gap-2 py-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-all group">
+                                            <MessageCircle size={12} className="text-indigo-600 dark:text-indigo-400 group-hover:scale-110 transition-transform" />
+                                            <span className="text-[10px] font-bold text-gray-700 dark:text-gray-300">Contact Support</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </>
+                        )}
+                    </div>
+
+                    {/* ChttrixAI Button */}
                     <button
                         onClick={() => setShowAI(!showAI)}
-                        className={`p-1.5 rounded-md transition-colors ${showAI ? "bg-blue-100 text-blue-600" : "text-gray-500 hover:bg-gray-100"}`}
+                        className={`p-1.5 rounded-md transition-colors ${showAI ? 'bg-blue-100 text-blue-600' : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700'}`}
                         title="Toggle Chttrix AI"
                     >
                         <Bot size={20} strokeWidth={2} />
                     </button>
-
-                    {/* Help Popover - Minimal & Compact */}
-                    {showHelp && (
-                        <>
-                            <div className="fixed inset-0 z-[90]" onClick={() => setShowHelp(false)}></div>
-                            <div className="absolute top-12 right-0 w-64 bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl rounded-xl shadow-2xl border border-gray-200/60 dark:border-gray-700/60 z-[100] overflow-hidden animate-fade-in origin-top-right ring-1 ring-black/5">
-                                {/* Minimal Header */}
-                                <div className="px-3 py-2 border-b border-gray-100 dark:border-gray-700/50 flex items-center justify-between bg-gray-50/50 dark:bg-gray-900/50">
-                                    <span className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Support</span>
-                                    <div className="flex items-center gap-2">
-                                        <div className="flex items-center gap-1.5 px-1.5 py-0.5 bg-green-100/50 dark:bg-green-900/20 rounded-full">
-                                            <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
-                                            <span className="text-[9px] font-bold text-green-600 dark:text-green-400">Systems Normal</span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Search - Ultra Compact */}
-                                <div className="p-2">
-                                    <div className="relative group">
-                                        <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-indigo-500 transition-colors" />
-                                        <input
-                                            type="text"
-                                            placeholder="Search docs..."
-                                            className="w-full pl-8 pr-3 py-1.5 bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-600 rounded-lg text-xs text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-indigo-500/50 focus:border-indigo-500/50 transition-all"
-                                        />
-                                    </div>
-                                </div>
-
-                                {/* Quick Actions List - Minimal List Style */}
-                                <div className="px-1 pb-1 space-y-0.5">
-                                    <button
-                                        onClick={() => { setShowHelp(false); setActiveHelpModal("academy"); }}
-                                        className="w-full flex items-center gap-3 px-2 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-md transition-colors text-left group"
-                                    >
-                                        <div className="flex items-center justify-center w-6 h-6 rounded-md bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 group-hover:scale-110 transition-transform">
-                                            <BookOpen size={14} />
-                                        </div>
-                                        <span className="text-xs font-medium text-gray-700 dark:text-gray-200">Academy</span>
-                                    </button>
-
-                                    <button
-                                        onClick={() => { setShowHelp(false); setActiveHelpModal("shortcuts"); }}
-                                        className="w-full flex items-center gap-3 px-2 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-md transition-colors text-left group"
-                                    >
-                                        <div className="flex items-center justify-center w-6 h-6 rounded-md bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 group-hover:scale-110 transition-transform">
-                                            <Command size={14} />
-                                        </div>
-                                        <span className="text-xs font-medium text-gray-700 dark:text-gray-200">Shortcuts</span>
-                                    </button>
-
-                                    <button
-                                        onClick={() => { setShowHelp(false); setActiveHelpModal("whatsnew"); }}
-                                        className="w-full flex items-center gap-3 px-2 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-md transition-colors text-left group"
-                                    >
-                                        <div className="flex items-center justify-center w-6 h-6 rounded-md bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 group-hover:scale-110 transition-transform">
-                                            <Sparkles size={14} />
-                                        </div>
-                                        <span className="text-xs font-medium text-gray-700 dark:text-gray-200">What's New</span>
-                                    </button>
-
-                                    <button
-                                        onClick={() => { setShowHelp(false); setActiveHelpModal("bug"); }}
-                                        className="w-full flex items-center gap-3 px-2 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-md transition-colors text-left group"
-                                    >
-                                        <div className="flex items-center justify-center w-6 h-6 rounded-md bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 group-hover:scale-110 transition-transform">
-                                            <Bug size={14} />
-                                        </div>
-                                        <span className="text-xs font-medium text-gray-700 dark:text-gray-200">Report Bug</span>
-                                    </button>
-                                </div>
-
-                                {/* Footer - Minimal */}
-                                <div className="border-t border-gray-100 dark:border-gray-700/50 p-2 bg-gray-50/80 dark:bg-gray-900/80">
-                                    <button
-                                        onClick={() => { setShowHelp(false); setActiveHelpModal("contact"); }}
-                                        className="w-full flex items-center justify-center gap-2 py-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-all group"
-                                    >
-                                        <MessageCircle size={12} className="text-indigo-600 dark:text-indigo-400 group-hover:scale-110 transition-transform" />
-                                        <span className="text-[10px] font-bold text-gray-700 dark:text-gray-300">Contact Support</span>
-                                    </button>
-                                </div>
-                            </div>
-                        </>
-                    )}
                 </div>
             </div>
 

@@ -7,6 +7,8 @@ import {
 import { useAuth } from "../contexts/AuthContext";
 import api from "../services/api";
 import ProfileQuickSettings from "../components/workspace/ProfileQuickSettings";
+import ChttrixAIChat from "../components/ai/ChttrixAIChat/ChttrixAIChat";
+import { WorkspaceProvider } from "../contexts/WorkspaceContext";
 
 // Extracted view components
 import Header from './workspaceSelectComponents/Header.jsx';
@@ -38,6 +40,9 @@ const WorkspaceSelect = () => {
 
     // Profile Quick Settings State
     const [showProfile, setShowProfile] = useState(false);
+
+    // ChttrixAI State
+    const [showAI, setShowAI] = useState(false);
 
     // Create Modal State
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -205,6 +210,8 @@ const WorkspaceSelect = () => {
                 onOwnerConsoleClick={() => navigate('/owner/dashboard')}
                 onAdminConsoleClick={() => navigate('/admin/dashboard')}
                 onManagerConsoleClick={() => navigate('/manager/dashboard')}
+                onAIClick={() => setShowAI(o => !o)}
+                showAI={showAI}
             />
 
             {/* Main Content */}
@@ -258,6 +265,15 @@ const WorkspaceSelect = () => {
 
             {/* Profile Quick Settings Modal */}
             {showProfile && <ProfileQuickSettings onClose={() => setShowProfile(false)} />}
+
+            {/* ChttrixAI Panel */}
+            {showAI && (
+                <div className="fixed top-0 right-0 h-full w-[380px] z-[200] shadow-2xl">
+                    <WorkspaceProvider>
+                        <ChttrixAIChat onClose={() => setShowAI(false)} isSidebar={true} />
+                    </WorkspaceProvider>
+                </div>
+            )}
         </div>
     );
 };
