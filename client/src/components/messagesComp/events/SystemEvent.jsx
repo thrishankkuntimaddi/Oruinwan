@@ -23,11 +23,26 @@ const ICONS = {
 };
 
 function SystemEvent({ event, currentUserId }) {
-    // Support both backend format (systemEvent + systemData) and old format (payload.action)
-    // ChatWindowV2 normalizes socket events: raw backend doc lives at event.backend
-    const ev = event.systemEvent || event.backend?.systemEvent || event.payload?.action || '';
-    const sd = event.systemData || event.backend?.systemData || {};
-    const ts = event.createdAt || event.backend?.createdAt || event.payload?.timestamp;
+    // Exhaustive fallback chain — event shape varies by source:
+    //   History (useConversation):  ev at event.systemEvent (hoisted from msg)
+    //   Realtime (ChatWindowV2):    ev at event.backend.systemEvent (raw socket doc)
+    //   Fallback:                   ev at event.payload.systemEvent (full msg in payload)
+    const ev =
+        event.systemEvent ||
+        event.backend?.systemEvent ||
+        event.payload?.systemEvent ||
+        event.payload?.action ||
+        '';
+    const sd =
+        event.systemData ||
+        event.backend?.systemData ||
+        event.payload?.systemData ||
+        {};
+    const ts =
+        event.createdAt ||
+        event.backend?.createdAt ||
+        event.payload?.createdAt ||
+        event.payload?.timestamp;
 
     const isMe = (id) => id && currentUserId && String(id) === String(currentUserId);
     const who = (id, name) => isMe(id) ? 'You' : (name || 'Someone');
