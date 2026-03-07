@@ -13,7 +13,7 @@ export default function ReplyPreview({ replyingTo, onCancel }) {
     "🔒 Encrypted message";
 
   return (
-    <div className="flex items-center gap-2 px-4 py-2 bg-gray-50 dark:bg-gray-800/80 border-l-4 border-blue-500 rounded-t-xl mx-2 mb-0 animate-in fade-in slide-in-from-bottom-1">
+    <div className="flex items-center gap-2 px-4 py-2 bg-gray-50 dark:bg-gray-800/80 border border-b-0 border-secondary-200 dark:border-secondary-700 rounded-t-2xl animate-in fade-in slide-in-from-bottom-1">
       {/* Icon */}
       <MessageSquare size={14} className="text-blue-500 flex-shrink-0" />
 
