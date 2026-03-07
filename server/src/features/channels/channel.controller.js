@@ -866,6 +866,7 @@ exports.getChannelDetails = async (req, res) => {
       isDefault: channel.isDefault,
       createdBy: channel.createdBy,
       createdAt: channel.createdAt,
+      creatorName: channel.createdBy?.username || channel.createdBy?.firstName || 'Unknown',
       memberCount: channel.members.length,
       admins: channel.admins || [],
       members: channel.members.map(m => ({

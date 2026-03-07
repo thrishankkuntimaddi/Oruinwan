@@ -57,6 +57,8 @@ function ConversationStream({
     events = [],
     systemEvents = [],
     creatorName = null,
+    channelCreatedAt = null,
+    channelName = null,
     loading = false,
     onLoadMore,
     hasMore = false,
@@ -368,8 +370,45 @@ function ConversationStream({
                 </div>
             )}
 
-            {/* Join Marker (for channels) - only show if no channel_created system event exists */}
-            {conversationType === 'channel' && userJoinedAt && !systemEvents.some(e => e.type === 'channel_created') && (
+            {/* ── Channel Creation Banner ──────────────────────────────── */}
+            {conversationType === 'channel' && channelCreatedAt && (
+                <div style={{ padding: '2rem 1.5rem 1rem', borderBottom: '1px solid #e5e7eb' }}
+                    className="dark:border-gray-800"
+                >
+                    {/* Big hash icon */}
+                    <div style={{
+                        width: 56, height: 56, borderRadius: 12,
+                        background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        marginBottom: '0.75rem', fontSize: 28, color: '#fff', fontWeight: 900,
+                    }}>#</div>
+
+                    <h2 style={{ fontSize: '1.25rem', fontWeight: 700, margin: '0 0 0.25rem', color: 'inherit' }}>
+                        Welcome to #{channelName || 'this channel'}!
+                    </h2>
+
+                    <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: 0 }}>
+                        <span style={{ fontWeight: 600 }}>#{channelName || 'this channel'}</span>
+                        {' '}was created by{' '}
+                        <span style={{ fontWeight: 600 }}>
+                            {creatorName || 'Unknown'}
+                        </span>
+                        {' '}on{' '}
+                        {channelCreatedAt
+                            ? new Date(channelCreatedAt).toLocaleDateString('en-US', {
+                                month: 'long', day: 'numeric', year: 'numeric'
+                            })
+                            : 'Unknown date'
+                        }.
+                        {' '}This is the very beginning of the{' '}
+                        <span style={{ fontWeight: 600 }}>#{channelName}</span>
+                        {' '}channel.
+                    </p>
+                </div>
+            )}
+
+            {/* Join Marker (for channels) */}
+            {conversationType === 'channel' && userJoinedAt && (
                 <div style={{ padding: '0 1rem' }}>
                     <JoinMarker date={userJoinedAt} memberInfo={{ userId: currentUserId }} currentUserId={currentUserId} />
                 </div>
