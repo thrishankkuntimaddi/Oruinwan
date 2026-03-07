@@ -1,8 +1,12 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { Plus, CheckCircle, User, Trash2, Edit2, Layout, CheckSquare, Calendar } from 'lucide-react';
 import api from '../../../../services/api';
+import { useWorkspace } from '../../../../contexts/WorkspaceContext';
 
-export default function TasksTab({ channelId, channelName, workspaceId, currentUserId, socket }) {
+export default function TasksTab({ channelId, channelName, workspaceId: workspaceIdProp, currentUserId, socket }) {
+    const { activeWorkspace } = useWorkspace();
+    // Prefer the prop, fall back to the active workspace from context
+    const workspaceId = workspaceIdProp || activeWorkspace?.id || activeWorkspace?._id;
     const [tasks, setTasks] = useState([]);
     const [newTaskTitle, setNewTaskTitle] = useState('');
     const [loading, setLoading] = useState(true);
