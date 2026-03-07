@@ -150,8 +150,45 @@ export default function TasksTab({ channelId, channelName, workspaceId, currentU
 
     if (loading) {
         return (
-            <div className="flex items-center justify-center h-full">
-                <div className="text-gray-500 dark:text-gray-400">Loading tasks...</div>
+            <div className="flex flex-col h-full w-full bg-gray-50/50 dark:bg-gray-900 overflow-hidden animate-pulse">
+                {/* Header skeleton */}
+                <div className="px-6 py-5 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 flex items-center justify-between">
+                    <div>
+                        <div className="h-5 w-32 bg-gray-200 dark:bg-gray-700 rounded-lg mb-2" />
+                        <div className="h-3 w-48 bg-gray-100 dark:bg-gray-800 rounded ml-8" />
+                    </div>
+                    <div className="h-7 w-20 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg" />
+                </div>
+
+                {/* Board skeleton */}
+                <div className="flex-1 p-6 overflow-hidden">
+                    <div className="flex gap-6 h-full">
+                        {[0, 1].map(col => (
+                            <div key={col} className="flex-1 flex flex-col rounded-2xl bg-gray-100/60 dark:bg-gray-800/30 border border-gray-200 dark:border-gray-800/50 p-4 gap-3">
+                                {/* Column header */}
+                                <div className="flex items-center gap-2 mb-1">
+                                    <div className="w-2 h-2 rounded-full bg-gray-300 dark:bg-gray-600" />
+                                    <div className="h-3.5 w-16 bg-gray-200 dark:bg-gray-700 rounded" />
+                                    <div className="h-5 w-6 bg-white dark:bg-gray-700 rounded-md ml-2 border border-gray-200 dark:border-gray-600" />
+                                </div>
+
+                                {/* Input skeleton */}
+                                <div className="h-11 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-transparent" />
+
+                                {/* Task card skeletons */}
+                                {[80, 55, 65].map((w, i) => (
+                                    <div key={i} className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm flex flex-col gap-2.5">
+                                        <div className={`h-3.5 w-${w === 55 ? '3/5' : w === 65 ? '2/3' : '4/5'} bg-gray-100 dark:bg-gray-700 rounded`} />
+                                        <div className="flex gap-2 mt-1">
+                                            <div className="h-5 w-16 bg-amber-50 dark:bg-amber-900/20 rounded-md" />
+                                            <div className="h-5 w-14 bg-indigo-50 dark:bg-indigo-900/20 rounded-md" />
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        ))}
+                    </div>
+                </div>
             </div>
         );
     }
