@@ -440,12 +440,13 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
             case 'thread:created':
                 // ✅ THREAD AWARENESS: Update parent message when thread is created
                 const { parentMessageId, replyCount, lastReplyAt } = event.payload;
-                // Thread created - update parent message with reply count
 
-                // Update the parent message to show it has a thread
+                // Update top-level replyCount AND payload for consistency
                 conversationRef.current.updateEvent(parentMessageId, {
+                    replyCount: replyCount || 1,   // ← top-level (used by filter)
+                    lastReplyAt: lastReplyAt,
                     payload: {
-                        replyCount: replyCount,
+                        replyCount: replyCount || 1,
                         lastReplyAt: lastReplyAt
                     }
                 });
@@ -504,8 +505,10 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
 
         const newCounts = {};
         conversation.events.forEach(event => {
-            if (event.payload?.replyCount > 0) {
-                newCounts[event.id] = event.payload.replyCount;
+            // replyCount is a top-level field on events (set in useConversation)
+            const count = event.replyCount ?? event.payload?.replyCount ?? 0;
+            if (count > 0) {
+                newCounts[event.id] = count;
             }
         });
 
