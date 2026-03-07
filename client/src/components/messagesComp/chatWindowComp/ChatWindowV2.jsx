@@ -694,10 +694,15 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
             setReplyingTo(message);
         },
         // Open MessageInfoModal: fetch readBy/members from backend then show modal
-        infoMessage: async (messageId) => {
+        infoMessage: async (messageId, decryptedText) => {
             try {
                 const response = await api.get(`/api/v2/messages/${messageId}/info`);
-                setMessageInfoData(response.data);
+                // Override text with client-side decrypted content (E2EE messages have null text in DB)
+                const data = response.data;
+                if (decryptedText && data.message) {
+                    data.message.text = decryptedText;
+                }
+                setMessageInfoData(data);
                 setActiveModal('message-info');
             } catch (err) {
                 console.error('[ChatWindowV2] Failed to fetch message info:', err);

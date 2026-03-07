@@ -771,27 +771,39 @@ exports.getMessageInfo = async (req, res) => {
             return res.status(404).json({ message: 'Message not found' });
         }
 
-        // Verify access
-        let workspaceId = null;
         let channelMembers = [];
 
         if (message.channel) {
             const channel = await Channel.findById(message.channel)
                 .populate('members.user', 'username profilePicture')
                 .lean();
-            if (!channel || !channel.isMember?.(userId)) {
-                // isMember may not work on lean — check manually
-                const isMember = channel?.members?.some(m =>
-                    String(m.user?._id || m.user) === String(userId)
-                );
-                if (!isMember) return res.status(403).json({ message: 'Not authorized' });
+
+            if (!channel) return res.status(404).json({ message: 'Channel not found' });
+
+            // Auth check (lean object — use manual check)
+            const isMember = channel.isDefault || channel.members?.some(m =>
+                String(m.user?._id || m.user) === String(userId)
+            );
+            if (!isMember) return res.status(403).json({ message: 'Not authorized' });
+
+            // If default channel, members array may be empty → fetch all workspace members
+            if (channel.isDefault && (!channel.members || channel.members.length === 0)) {
+                const workspace = await Workspace.findById(channel.workspace)
+                    .populate('members.user', 'username profilePicture')
+                    .lean();
+                channelMembers = (workspace?.members || []).map(m => ({
+                    _id: String(m.user?._id || m.user),
+                    username: m.user?.username || 'Unknown',
+                    profilePicture: m.user?.profilePicture || null
+                }));
+            } else {
+                channelMembers = (channel.members || []).map(m => ({
+                    _id: String(m.user?._id || m.user),
+                    username: m.user?.username || 'Unknown',
+                    profilePicture: m.user?.profilePicture || null
+                }));
             }
-            workspaceId = channel?.workspace;
-            channelMembers = (channel?.members || []).map(m => ({
-                _id: String(m.user?._id || m.user),
-                username: m.user?.username || 'Unknown',
-                profilePicture: m.user?.profilePicture || null
-            }));
+
         } else if (message.dm) {
             const dmSession = await DMSession.findById(message.dm)
                 .populate('participants', 'username profilePicture')
@@ -812,11 +824,13 @@ exports.getMessageInfo = async (req, res) => {
             (message.readBy || []).map(u => String(u._id || u))
         );
 
+        console.log(`[MESSAGE INFO] msgId=${messageId} members=${channelMembers.length} readBy=${readByIds.size}`);
+
         return res.json({
             message: {
                 _id: message._id,
                 text: message.text,
-                isEncrypted: message.isEncrypted,
+                isEncrypted: !!(message.payload?.ciphertext || message.isEncrypted),
                 payload: message.payload,
                 createdAt: message.createdAt,
                 sender: message.sender,
