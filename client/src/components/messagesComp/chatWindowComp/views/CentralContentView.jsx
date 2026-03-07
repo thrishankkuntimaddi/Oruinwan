@@ -64,6 +64,7 @@ const CentralContentView = ({
     rawSocket,
     socket,
     workspaceId,
+    showThreadsOnly = false,
 
     // Canvas/dashboard handlers
     dashboardView,
@@ -112,6 +113,7 @@ const CentralContentView = ({
                             onCancelReply={onCancelReply}
                             currentUserId={currentUserId}
                             conversationId={chat?.id}
+                            showThreadsOnly={showThreadsOnly}
                         />
 
                         {/* Footer - fixed at bottom */}

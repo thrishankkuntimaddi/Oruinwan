@@ -71,6 +71,7 @@ function ConversationStream({
     currentUserId,
     threadCounts = {},
     conversationId = null, // ← used to detect channel switch and reset scroll
+    showThreadsOnly = false, // ← filter to only show messages with threads
 }) {
     const streamRef = useRef(null);
     const bottomRef = useRef(null);
@@ -179,12 +180,20 @@ function ConversationStream({
 
         // Merge and sort by timestamp
         const merged = [...mainStreamEvents, ...transformedSystemEvents];
-        return merged.sort((a, b) => {
+        const sorted = merged.sort((a, b) => {
             const dateA = new Date(a.createdAt);
             const dateB = new Date(b.createdAt);
             return dateA - dateB;
         });
-    }, [mainStreamEvents, systemEvents]);
+
+        // When showThreadsOnly is on, keep only message events with replyCount > 0
+        if (showThreadsOnly) {
+            return sorted.filter(e =>
+                e.type !== 'message' || (e.replyCount > 0)
+            );
+        }
+        return sorted;
+    }, [mainStreamEvents, systemEvents, showThreadsOnly]);
 
     // Group by date - create our own implementation to ensure arrays
     const groupedEvents = useMemo(() => {
@@ -297,6 +306,28 @@ function ConversationStream({
                 backgroundColor: 'var(--bg-primary)'
             }}
         >
+            {/* Threads-only filter banner */}
+            {showThreadsOnly && (
+                <div style={{
+                    position: 'sticky',
+                    top: 0,
+                    zIndex: 10,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
+                    padding: '6px 12px',
+                    background: '#EFF6FF',
+                    borderBottom: '1px solid #BFDBFE',
+                    fontSize: '12px',
+                    color: '#2563EB',
+                    fontWeight: 500,
+                }}>
+                    <span>🧵</span>
+                    <span>Showing only threaded messages — click the thread icon to see all messages</span>
+                </div>
+            )}
+
             {/* Load More Indicator */}
             {hasMore && (
                 <div style={{ textAlign: 'center', padding: '1rem' }}>

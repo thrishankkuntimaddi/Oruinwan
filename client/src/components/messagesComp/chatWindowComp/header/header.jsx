@@ -53,6 +53,7 @@ export default function Header({
   typingUsers = [], // NEW: Array of {id, name} objects
   onCreatePoll, // Poll creation handler
   onShowThreadsView, // Show threads-only view
+  isThreadsOnly, // Whether threads-only filter is active
   onShowMemberList, // Show member list modal
 }) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -256,12 +257,15 @@ export default function Header({
                 )}
               </div>
 
-              {/* Threads Button (Moved to end) */}
+              {/* Threads Button - toggle threads-only filter */}
               {chat.type === "channel" && (
                 <button
-                  title="Threads View - Show only threaded messages"
+                  title={isThreadsOnly ? "Show all messages" : "Show threads only"}
                   onClick={() => onShowThreadsView?.()}
-                  className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded transition-colors"
+                  className={`p-1.5 rounded transition-colors ${isThreadsOnly
+                    ? 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30'
+                    : 'text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-100 dark:hover:bg-gray-800'
+                    }`}
                 >
                   <MessageSquare size={16} />
                 </button>

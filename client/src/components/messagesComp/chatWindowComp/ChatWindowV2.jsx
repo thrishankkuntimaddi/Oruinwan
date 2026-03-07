@@ -135,6 +135,9 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
     // Thread reply counts (separate from message state for persistence)
     const [threadCounts, setThreadCounts] = useState({});
 
+    // Threads-only filter mode: show only messages with replies in the chat stream
+    const [showThreadsOnly, setShowThreadsOnly] = useState(false);
+
     // Extract conversation details
     const conversationId = chat?.id || chat?._id;
     const conversationType = chat?.type || (chat?.participants ? 'dm' : 'channel');
@@ -199,7 +202,9 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
     // Missing key = UNINITIALIZED state (normal for new channels)
 
     // Header action handlers (from custom hook)
-    const handleShowThreadsView = headerActions.handleShowThreadsView;
+    const handleShowThreadsView = useCallback(() => {
+        setShowThreadsOnly(prev => !prev);
+    }, []);
     const handleShowMemberList = useCallback(() => {
         setActiveModal('members');
     }, []);
@@ -821,6 +826,7 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
                 currentUserId={currentUserId}
                 showToast={showToast}
                 onShowThreadsView={handleShowThreadsView}
+                isThreadsOnly={showThreadsOnly}
                 onShowMemberList={handleShowMemberList}
             />
 
@@ -894,6 +900,7 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
                 rawSocket={rawSocket}
                 socket={socket}
                 workspaceId={workspaceId}
+                showThreadsOnly={showThreadsOnly}
 
                 // Canvas/dashboard handlers
                 dashboardView={dashboardView}
