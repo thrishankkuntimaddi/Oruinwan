@@ -13,32 +13,23 @@ const turndownService = new TurndownService({
 
 /**
  * Pre-process contentEditable HTML before handing to Turndown.
- * ContentEditable uses <div> / <div><br></div> for newlines — Turndown
- * strips bare divs without emitting \n.  We normalise them to <p> tags
- * so Turndown produces the correct markdown line breaks.
+ *
+ * Chrome contentEditable wraps each new line in a <div>; Firefox uses <br>.
+ * Turndown strips bare <div> tags without inserting \n, collapsing lines.
+ * We convert all block-closing tags to <br> so Turndown emits proper newlines.
  */
 const normaliseEditorHtml = (html) => {
-  // Wrap raw text fragment so we can use the DOM
-  const wrap = document.createElement('div');
-  wrap.innerHTML = html;
-
-  // Replace every top-level <div> that is NOT a <ul>/<ol> child with <p>
-  // so Turndown treats them as block paragraphs (→ \n)
-  const walker = document.createTreeWalker(wrap, NodeFilter.SHOW_ELEMENT);
-  const divsToConvert = [];
-  let node;
-  while ((node = walker.nextNode())) {
-    if (node.tagName === 'DIV' && node.closest('ul, ol') === null) {
-      divsToConvert.push(node);
-    }
-  }
-  divsToConvert.forEach(div => {
-    const p = document.createElement('p');
-    p.innerHTML = div.innerHTML || '<br>';
-    div.replaceWith(p);
-  });
-
-  return wrap.innerHTML;
+  return html
+    // <div><br></div>  →  <br>  (empty line)
+    .replace(/<div>\s*<br\s*\/?>\s*<\/div>/gi, '<br>')
+    // </div><div>  →  <br>  (line boundary between blocks)
+    .replace(/<\/div>\s*<div>/gi, '<br>')
+    // </p><p>  →  <br>
+    .replace(/<\/p>\s*<p>/gi, '<br>')
+    // Remaining closing block tags  →  <br>
+    .replace(/<\/(div|p)>/gi, '<br>')
+    // Strip remaining opening block tags
+    .replace(/<(div|p)[^>]*>/gi, '');
 };
 
 // Helper to strip HTML tags
