@@ -331,24 +331,39 @@ function ConversationStream({
                 </div>
             )}
 
-            {/* Load More Indicator */}
+            {/* Load More / Pagination Skeleton */}
             {hasMore && (
-                <div style={{ textAlign: 'center', padding: '1rem' }}>
+                <div style={{ padding: '0.5rem 1rem' }}>
                     {loading ? (
-                        <Loader2 className="animate-spin" size={24} style={{ margin: '0 auto' }} />
+                        <div className="animate-pulse space-y-3 py-2">
+                            {[65, 80, 50].map((w, i) => (
+                                <div key={i} className="flex items-start gap-3">
+                                    <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 flex-shrink-0 mt-0.5" />
+                                    <div className="flex-1 space-y-2">
+                                        <div className="flex gap-2">
+                                            <div className="h-2.5 w-20 bg-gray-200 dark:bg-gray-700 rounded" />
+                                            <div className="h-2.5 w-10 bg-gray-100 dark:bg-gray-700/50 rounded" />
+                                        </div>
+                                        <div className="h-3 bg-gray-100 dark:bg-gray-700/50 rounded" style={{ width: `${w}%` }} />
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
                     ) : (
-                        <button
-                            onClick={onLoadMore}
-                            className="text-blue-500 hover:underline"
-                            style={{
-                                background: 'none',
-                                border: 'none',
-                                cursor: 'pointer',
-                                fontSize: '0.875rem'
-                            }}
-                        >
-                            Load older messages
-                        </button>
+                        <div style={{ textAlign: 'center', padding: '0.5rem' }}>
+                            <button
+                                onClick={onLoadMore}
+                                className="text-blue-500 hover:underline"
+                                style={{
+                                    background: 'none',
+                                    border: 'none',
+                                    cursor: 'pointer',
+                                    fontSize: '0.875rem'
+                                }}
+                            >
+                                Load older messages
+                            </button>
+                        </div>
                     )}
                 </div>
             )}
@@ -453,6 +468,44 @@ function ConversationStream({
             </div>
 
             {/* Empty State */}
+            {/* Initial load skeleton - shows while first messages fetch */}
+            {events.length === 0 && loading && (
+                <div className="flex-1 px-4 py-6 animate-pulse space-y-5">
+                    {[
+                        { w: 55, lines: 1, right: false },
+                        { w: 70, lines: 2, right: true },
+                        { w: 45, lines: 1, right: false },
+                        { w: 80, lines: 2, right: false },
+                        { w: 60, lines: 1, right: true },
+                        { w: 65, lines: 2, right: false },
+                        { w: 40, lines: 1, right: true },
+                    ].map((row, i) => (
+                        <div key={i} className={`flex items-start gap-3 ${row.right ? 'flex-row-reverse' : ''}`}>
+                            {!row.right && <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 flex-shrink-0 mt-0.5" />}
+                            <div className={`space-y-2 ${row.right ? 'items-end flex flex-col' : ''}`} style={{ maxWidth: '60%' }}>
+                                {!row.right && (
+                                    <div className="flex gap-2">
+                                        <div className="h-2.5 w-20 bg-gray-200 dark:bg-gray-700 rounded" />
+                                        <div className="h-2.5 w-12 bg-gray-100 dark:bg-gray-700/50 rounded" />
+                                    </div>
+                                )}
+                                <div
+                                    className={`h-9 rounded-2xl ${row.right ? 'bg-blue-100 dark:bg-blue-900/30' : 'bg-gray-100 dark:bg-gray-700/50'}`}
+                                    style={{ width: `${row.w * 3}px`, maxWidth: '100%' }}
+                                />
+                                {row.lines > 1 && (
+                                    <div
+                                        className="h-6 rounded-xl bg-gray-100 dark:bg-gray-700/40"
+                                        style={{ width: `${row.w * 2}px`, maxWidth: '100%' }}
+                                    />
+                                )}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
+
+            {/* Empty state when no messages and not loading */}
             {events.length === 0 && !loading && (
                 <div
                     style={{

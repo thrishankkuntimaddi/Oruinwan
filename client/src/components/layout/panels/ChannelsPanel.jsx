@@ -445,8 +445,13 @@ const ChannelsPanel = ({ title }) => {
                     {activeWorkspace?.name || 'Workspace'} Channels
                 </div>
                 {isLoadingChannels ? (
-                    <div className="px-4 py-8 text-center text-sm text-gray-500 dark:text-gray-400">
-                        Loading channels...
+                    <div className="px-2 space-y-1 animate-pulse">
+                        {[70, 50, 85, 60, 75, 45].map((w, i) => (
+                            <div key={i} className="flex items-center gap-3 px-3 py-2 rounded-lg">
+                                <div className="w-7 h-7 rounded-lg bg-gray-200 dark:bg-gray-700 flex-shrink-0" />
+                                <div className={`h-3 bg-gray-200 dark:bg-gray-700 rounded`} style={{ width: `${w}%` }} />
+                            </div>
+                        ))}
                     </div>
                 ) : sortedChannels.length > 0 ? (
                     sortedChannels.map(channel => (

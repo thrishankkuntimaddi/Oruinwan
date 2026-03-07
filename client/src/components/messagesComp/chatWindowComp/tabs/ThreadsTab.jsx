@@ -174,9 +174,23 @@ export default function ThreadsTab({ channelId, currentUserId, socket }) {
                 {/* List */}
                 <div className="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-2">
                     {loading ? (
-                        <div className="flex flex-col items-center justify-center py-10 opacity-50">
-                            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500 mb-2"></div>
-                            <span className="text-xs">Loading threads...</span>
+                        <div className="space-y-1 p-2 animate-pulse">
+                            {[75, 55, 90, 60, 80].map((w, i) => (
+                                <div key={i} className="flex items-center gap-2.5 px-3 py-2 rounded-lg bg-white dark:bg-gray-800/40">
+                                    {/* Avatar */}
+                                    <div className="w-7 h-7 rounded-full bg-gray-200 dark:bg-gray-700 flex-shrink-0" />
+                                    {/* Content */}
+                                    <div className="flex-1 min-w-0 space-y-1.5">
+                                        <div className="flex items-center gap-2">
+                                            <div className="h-2.5 w-16 bg-gray-200 dark:bg-gray-700 rounded" />
+                                            <div className="h-2 w-10 bg-gray-100 dark:bg-gray-700/50 rounded" />
+                                        </div>
+                                        <div className="h-2.5 bg-gray-100 dark:bg-gray-700/50 rounded" style={{ width: `${w}%` }} />
+                                    </div>
+                                    {/* Reply badge */}
+                                    <div className="w-8 h-5 bg-blue-50 dark:bg-blue-900/20 rounded flex-shrink-0" />
+                                </div>
+                            ))}
                         </div>
                     ) : filteredThreads.length === 0 ? (
                         <div className="text-center py-10 opacity-40">
