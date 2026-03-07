@@ -101,6 +101,7 @@ const CentralContentView = ({
                             creatorName={chat.creatorName}
                             channelCreatedAt={chat.createdAt}
                             channelName={chat.name}
+                            channelCreatedById={chat.createdBy?._id || chat.createdBy}
                             loading={conversation.loading}
                             onLoadMore={conversation.loadMore}
                             hasMore={conversation.hasMore}

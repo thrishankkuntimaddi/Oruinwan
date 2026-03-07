@@ -59,6 +59,7 @@ function ConversationStream({
     creatorName = null,
     channelCreatedAt = null,
     channelName = null,
+    channelCreatedById = null,
     loading = false,
     onLoadMore,
     hasMore = false,
@@ -72,8 +73,8 @@ function ConversationStream({
     onCancelReply,
     currentUserId,
     threadCounts = {},
-    conversationId = null, // ← used to detect channel switch and reset scroll
-    showThreadsOnly = false, // ← filter to only show messages with threads
+    conversationId = null,
+    showThreadsOnly = false,
 }) {
     const streamRef = useRef(null);
     const bottomRef = useRef(null);
@@ -407,12 +408,13 @@ function ConversationStream({
                 </div>
             )}
 
-            {/* Join Marker (for channels) */}
-            {conversationType === 'channel' && userJoinedAt && (
-                <div style={{ padding: '0 1rem' }}>
-                    <JoinMarker date={userJoinedAt} memberInfo={{ userId: currentUserId }} currentUserId={currentUserId} />
-                </div>
-            )}
+            {/* Join Marker — only for non-creators */}
+            {conversationType === 'channel' && userJoinedAt &&
+                String(currentUserId) !== String(channelCreatedById) && (
+                    <div style={{ padding: '0 1rem' }}>
+                        <JoinMarker date={userJoinedAt} memberInfo={{ userId: currentUserId }} currentUserId={currentUserId} />
+                    </div>
+                )}
 
 
             {/* Channel Created System Event - show at the top, before any date dividers */}
