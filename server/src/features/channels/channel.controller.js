@@ -1303,6 +1303,7 @@ exports.clearChannelMessages = async (req, res) => {
       io.to(`channel:${channelId}`).emit('messages-cleared', {
         channelId,
         clearedBy: userId,
+        clearedByName: user?.username || 'Admin',
         count: result.deletedCount
       });
     }

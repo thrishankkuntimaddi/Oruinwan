@@ -260,6 +260,17 @@ export function useConversation(conversationId, conversationType, workspaceId) {
         eventsMapRef.current.set(realEvent.id, realEvent);
     }, []);
 
+    // Clear all events (for messages-cleared socket event)
+    const clearEvents = useCallback((keepEvent = null) => {
+        eventsMapRef.current.clear();
+        if (keepEvent) {
+            eventsMapRef.current.set(keepEvent.id, keepEvent);
+            setEvents([keepEvent]);
+        } else {
+            setEvents([]);
+        }
+    }, []);
+
     // Add real-time event (from socket)
     const addRealtimeEvent = useCallback(async (event, currentUserId = null) => {
 
@@ -416,6 +427,7 @@ export function useConversation(conversationId, conversationType, workspaceId) {
         updateEvent,
         removeEvent,
         replaceEvent,
+        clearEvents,
         addRealtimeEvent,
         reset,
         reload: loadMessages

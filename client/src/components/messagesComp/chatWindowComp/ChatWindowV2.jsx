@@ -408,6 +408,25 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
                 conversationRef.current.removeEvent(event.payload.pollId);
                 break;
 
+            case 'messages-cleared':
+                // Server emits { channelId, clearedBy, count }
+                // Wipe the local conversation stream and show a system pill
+                {
+                    const clearPill = {
+                        id: `system_cleared_${Date.now()}`,
+                        type: 'system',
+                        systemEvent: 'messages_cleared',
+                        systemData: {
+                            userId: event.payload?.clearedBy,
+                            userName: event.payload?.clearedByName || '',
+                        },
+                        createdAt: new Date().toISOString(),
+                        payload: {}
+                    };
+                    conversationRef.current.clearEvents(clearPill);
+                }
+                break;
+
             case 'user-typing':
                 // Handle typing indicator
                 const { userId, isTyping } = event.payload;
