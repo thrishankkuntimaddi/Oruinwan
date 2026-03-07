@@ -10,6 +10,17 @@ import ReactMarkdown from "react-markdown";
 import remarkBreaks from "remark-breaks";
 import EncryptedMessage from "../../EncryptedMessage";
 import { Avatar } from "../../../../shared/components/ui";
+// Phase 7.1 — Attachment type renderers
+import ImageMessage from "./types/ImageMessage";
+import VideoMessage from "./types/VideoMessage";
+import FileMessage from "./types/FileMessage";
+import VoiceMessage from "./types/VoiceMessage";
+// Phase 7.4 — Contact card
+import ContactMessage from "./types/ContactMessage";
+// Phase 7.5 — Link preview
+import LinkPreviewMessage from "./types/LinkPreviewMessage";
+// Phase 7.6 — Meeting card
+import MeetingMessage from "./types/MeetingMessage";
 
 /* ---------------------------------------------------------
    CHANNEL MessageItem Component (Slack Style)
@@ -282,75 +293,106 @@ function ChannelMessageItem({
                     </div>
                 )}
 
-                {/* Message Text — Step 1: soft delete, Step 3: inline edit */}
-                <div className="text-gray-800 dark:text-gray-200 text-[14px] leading-relaxed whitespace-pre-wrap break-words max-w-[70%] message-content">
-                    {msg.isDeleted ? (
-                        <span className="text-gray-400 italic">Message deleted</span>
-                    ) : isEditing ? (
-                        <div className="flex flex-col gap-2 w-full max-w-[70%]">
-                            <textarea
-                                className="w-full bg-gray-50 dark:bg-gray-700/60 border border-blue-400 dark:border-blue-500 rounded-md px-3 py-2 text-[14px] text-gray-800 dark:text-gray-200 outline-none resize-none focus:ring-2 focus:ring-blue-400/50 min-h-[60px]"
-                                value={editText}
-                                onChange={(e) => setEditText(e.target.value)}
-                                onKeyDown={(e) => {
-                                    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSaveEdit(); }
-                                    if (e.key === 'Escape') handleCancelEdit();
-                                }}
-                                autoFocus
-                                rows={Math.min(6, (editText.match(/\n/g) || []).length + 2)}
-                            />
-                            <div className="flex items-center gap-2">
-                                <button
-                                    onClick={handleSaveEdit}
-                                    className="flex items-center gap-1.5 px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-md transition-colors"
-                                >
-                                    <Check size={12} /> Save
-                                </button>
-                                <button
-                                    onClick={handleCancelEdit}
-                                    className="flex items-center gap-1.5 px-3 py-1 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 text-xs font-medium rounded-md transition-colors"
-                                >
-                                    <X size={12} /> Cancel
-                                </button>
-                                <span className="text-[10px] text-gray-400">Enter to save · Esc to cancel</span>
-                            </div>
-                        </div>
-                    ) : msg.text ? (
-                        <ReactMarkdown
-                            remarkPlugins={[remarkBreaks]}
-                            components={{
-                                a: ({ node, children, ...props }) => (
-                                    <a
-                                        {...props}
-                                        className="text-blue-600 dark:text-blue-400 hover:underline"
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                    >
-                                        {children}
-                                    </a>
-                                ),
-                                ul: ({ node, ...props }) => <ul {...props} className="list-disc list-inside ml-1" />,
-                                ol: ({ node, ...props }) => <ol {...props} className="list-decimal list-inside ml-1" />,
-                            }}
-                        >
-                            {msg.text}
-                        </ReactMarkdown>
-                    ) : msg.payload?.isEncrypted ? (
-                        <EncryptedMessage
-                            ciphertext={msg.payload.ciphertext}
-                            messageIv={msg.payload.messageIv}
-                            conversationId={msg.channelId || msg.conversationId}
-                            conversationType="channel"
-                            parentMessageId={msg.parentId || null}
-                        />
-                    ) : (
-                        <span className="text-gray-400 italic">No message content</span>
-                    )}
+                {/* Phase 7.1/7.4 — Rich message type rendering (image/video/file/voice/contact) */}
+                {!msg.isDeleted && msg.attachment && (
+                    <div className="mt-0.5">
+                        {msg.type === 'image' && <ImageMessage msg={msg} />}
+                        {msg.type === 'video' && <VideoMessage msg={msg} />}
+                        {msg.type === 'file' && <FileMessage msg={msg} />}
+                        {msg.type === 'voice' && <VoiceMessage msg={msg} />}
+                    </div>
+                )}
+                {/* Phase 7.4 — Contact card (has contact, not attachment) */}
+                {!msg.isDeleted && msg.type === 'contact' && (
+                    <div className="mt-0.5">
+                        <ContactMessage msg={msg} />
+                    </div>
+                )}
 
-                </div>
+                {/* Phase 7.6 — Meeting card */}
+                {!msg.isDeleted && msg.type === 'meeting' && msg.meeting && (
+                    <div className="mt-0.5">
+                        <MeetingMessage meeting={msg.meeting} />
+                    </div>
+                )}
+
+                {/* Message Text — Step 1: soft delete, Step 3: inline edit */}
+                {/* Only render text block for text/encrypted messages, not pure attachment messages */}
+                {(!msg.attachment || msg.text) && (
+                    <div className="text-gray-800 dark:text-gray-200 text-[14px] leading-relaxed whitespace-pre-wrap break-words max-w-[70%] message-content">
+                        {msg.isDeleted ? (
+                            <span className="text-gray-400 italic">Message deleted</span>
+                        ) : isEditing ? (
+                            <div className="flex flex-col gap-2 w-full max-w-[70%]">
+                                <textarea
+                                    className="w-full bg-gray-50 dark:bg-gray-700/60 border border-blue-400 dark:border-blue-500 rounded-md px-3 py-2 text-[14px] text-gray-800 dark:text-gray-200 outline-none resize-none focus:ring-2 focus:ring-blue-400/50 min-h-[60px]"
+                                    value={editText}
+                                    onChange={(e) => setEditText(e.target.value)}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSaveEdit(); }
+                                        if (e.key === 'Escape') handleCancelEdit();
+                                    }}
+                                    autoFocus
+                                    rows={Math.min(6, (editText.match(/\n/g) || []).length + 2)}
+                                />
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        onClick={handleSaveEdit}
+                                        className="flex items-center gap-1.5 px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-md transition-colors"
+                                    >
+                                        <Check size={12} /> Save
+                                    </button>
+                                    <button
+                                        onClick={handleCancelEdit}
+                                        className="flex items-center gap-1.5 px-3 py-1 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 text-xs font-medium rounded-md transition-colors"
+                                    >
+                                        <X size={12} /> Cancel
+                                    </button>
+                                    <span className="text-[10px] text-gray-400">Enter to save · Esc to cancel</span>
+                                </div>
+                            </div>
+                        ) : msg.text ? (
+                            <ReactMarkdown
+                                remarkPlugins={[remarkBreaks]}
+                                components={{
+                                    a: ({ node, children, ...props }) => (
+                                        <a
+                                            {...props}
+                                            className="text-blue-600 dark:text-blue-400 hover:underline"
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                        >
+                                            {children}
+                                        </a>
+                                    ),
+                                    ul: ({ node, ...props }) => <ul {...props} className="list-disc list-inside ml-1" />,
+                                    ol: ({ node, ...props }) => <ol {...props} className="list-decimal list-inside ml-1" />,
+                                }}
+                            >
+                                {msg.text}
+                            </ReactMarkdown>
+                        ) : msg.payload?.isEncrypted ? (
+                            <EncryptedMessage
+                                ciphertext={msg.payload.ciphertext}
+                                messageIv={msg.payload.messageIv}
+                                conversationId={msg.channelId || msg.conversationId}
+                                conversationType="channel"
+                                parentMessageId={msg.parentId || null}
+                            />
+                        ) : (
+                            <span className="text-gray-400 italic">No message content</span>
+                        )}
+
+                    </div>
+                )}
                 {/* Edit badge — outside text div so it sits flush below/next to text, not wrapped inside pre-wrap */}
                 {msg.editedAt && !msg.isDeleted && (
                     <span className="text-xs text-gray-400 italic"> (edited)</span>
+                )}
+
+                {/* Phase 7.5 — Link preview card */}
+                {!msg.isDeleted && msg.linkPreview?.url && (
+                    <LinkPreviewMessage preview={msg.linkPreview} />
                 )}
 
                 {/* Step 5 — Reaction bar (grouped emoji buttons) */}

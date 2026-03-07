@@ -340,6 +340,9 @@ app.use("/api/v2/notes", require("./src/features/notes/notes.routes"));
 // Favorites (Migrated from legacy)
 app.use("/api/v2/favorites", require("./src/features/favorites/favorites.routes"));
 
+// Phase 7.5 — Link Preview (SSRF-safe OG scraper)
+app.use("/api/v2/link-preview", require("./src/modules/linkPreview/linkPreview.routes"));
+
 // Status (Migrated from legacy) - PUBLIC endpoint
 app.use("/api/v2/status", require("./src/features/status/status.routes"));
 
@@ -348,6 +351,9 @@ app.use("/api/v2/admin", require("./src/features/admin/admin.routes"));
 
 // Audit (Migrated from legacy)
 app.use("/api/v2/audit", require("./src/features/audit/audit.routes"));
+
+// Phase 7.1: File / Image / Video Uploads (GCS via ADC)
+app.use("/api/v2/uploads", require("./src/modules/uploads/upload.routes"));
 
 // ============================================================================
 // 📦 V1 ROUTES (LEGACY - TO BE MIGRATED)

@@ -58,6 +58,10 @@ router.get(
 // Send channel message
 router.post('/channel', messagesController.sendChannelMessage);
 
+// Phase 7.3 — Create a poll-as-message
+// IMPORTANT: must be before /:messageId to prevent 'poll' being captured as a param
+router.post('/poll', messagesController.createPollMessage);
+
 // Get channel messages
 router.get('/channel/:channelId', messagesController.getChannelMessages);
 
@@ -153,6 +157,9 @@ router.get('/missed', async (req, res) => {
 
 // Get message info (readBy, members, reactions)
 router.get('/:messageId/info', messagesController.getMessageInfo);
+
+// Phase 7.3 — Vote on an embedded poll
+router.post('/:messageId/vote', messagesController.voteOnPoll);
 
 // Edit a message (sender only)
 router.patch('/:messageId', messagesController.editMessage);

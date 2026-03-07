@@ -7,9 +7,14 @@ const Workspace = require("../models/Workspace");
 const User = require("../models/User");
 const logger = require("../utils/logger");
 const messagesService = require("../src/modules/messages/messages.service");
+// Phase 7.7 — Huddle signaling
+const registerHuddleHandlers = require("../src/socket/handlers/huddles.socket");
 
 module.exports = async function registerChatHandlers(io, socket) {
   const userId = socket.user.id; // extracted from JWT
+
+  // Phase 7.7 — Register huddle events for this socket
+  registerHuddleHandlers(io, socket);
 
   // ✅ JOIN USER-SPECIFIC ROOM for targeted events
   socket.join(`user_${userId}`);

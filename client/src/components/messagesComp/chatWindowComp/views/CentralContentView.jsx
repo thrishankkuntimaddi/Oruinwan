@@ -46,6 +46,13 @@ const CentralContentView = ({
     onMessageChange,
     onSend,
     onAttach,
+    onSendAttachment,
+    onCreatePoll,          // Phase 7.3
+    // Phase 7.5 — link preview
+    linkPreview,
+    linkPreviewLoading,
+    onDismissPreview,
+    conversationId,
     showAttach,
     setShowAttach,
     showEmoji,
@@ -125,6 +132,10 @@ const CentralContentView = ({
                             onChange={onMessageChange}
                             onSend={onSend}
                             onAttach={onAttach}
+                            onSendAttachment={onSendAttachment}
+                            onCreatePoll={onCreatePoll}
+                            conversationId={conversationId}
+                            conversationType={conversationType}
                             showAttach={showAttach}
                             setShowAttach={setShowAttach}
                             showEmoji={showEmoji}
@@ -137,6 +148,9 @@ const CentralContentView = ({
                             disabled={!canInteract}
                             replyingTo={replyingTo}
                             onCancelReply={onCancelReply}
+                            linkPreview={linkPreview}
+                            linkPreviewLoading={linkPreviewLoading}
+                            onDismissPreview={onDismissPreview}
                         />
                     </div>
                 </>

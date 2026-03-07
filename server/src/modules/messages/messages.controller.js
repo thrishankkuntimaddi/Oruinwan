@@ -33,13 +33,20 @@ exports.sendDirectMessage = async (req, res) => {
             ciphertext,
             messageIv,
             isEncrypted,
-            clientTempId
+            clientTempId,
+            // Phase-7 fields
+            type = 'message',
+            poll = null,
+            contact = null,
+            meeting = null,
+            linkPreview = null,
         } = req.body;
 
         // ============================================================
-        // E2EE HARD ENFORCEMENT
+        // E2EE HARD ENFORCEMENT — bypassed for structured message types
         // ============================================================
-        if (!ciphertext || !messageIv || !isEncrypted) {
+        const STRUCTURED_TYPES_DM = ['image', 'video', 'file', 'voice', 'poll', 'contact', 'meeting'];
+        if (!STRUCTURED_TYPES_DM.includes(type) && (!ciphertext || !messageIv || !isEncrypted)) {
             return res.status(400).json({
                 message: 'E2EE required: ciphertext and messageIv must be provided'
             });
@@ -101,21 +108,26 @@ exports.sendDirectMessage = async (req, res) => {
             });
         }
 
-        // Create message (E2EE enforced in service layer)
+        // Create message (E2EE enforced in service layer for type='message')
         const message = await messagesService.createMessage(
             {
-                type: 'message',
+                type,
                 company: dmSession.company,
                 workspace: dmSession.workspace,
                 dm: dmSession._id,
                 sender: senderId,
                 attachments,
-                parentId: replyTo || null,          // thread reply
-                quotedMessageId: req.body.quotedMessageId || null, // inline reply
+                parentId: replyTo || null,
+                quotedMessageId: req.body.quotedMessageId || null,
                 ciphertext,
                 messageIv,
                 isEncrypted,
-                clientTempId
+                clientTempId,
+                // Phase-7
+                poll,
+                contact,
+                meeting,
+                linkPreview,
             },
             req.io
         );
@@ -328,13 +340,20 @@ exports.sendChannelMessage = async (req, res) => {
             ciphertext,
             messageIv,
             isEncrypted,
-            clientTempId
+            clientTempId,
+            // Phase-7 fields
+            type = 'message',
+            poll = null,
+            contact = null,
+            meeting = null,
+            linkPreview = null,
         } = req.body;
 
         // ============================================================
-        // E2EE HARD ENFORCEMENT
+        // E2EE HARD ENFORCEMENT — bypassed for structured message types
         // ============================================================
-        if (!ciphertext || !messageIv || !isEncrypted) {
+        const STRUCTURED_TYPES_CH = ['image', 'video', 'file', 'voice', 'poll', 'contact', 'meeting'];
+        if (!STRUCTURED_TYPES_CH.includes(type) && (!ciphertext || !messageIv || !isEncrypted)) {
             return res.status(400).json({
                 message: 'E2EE required: ciphertext and messageIv must be provided'
             });
@@ -356,21 +375,26 @@ exports.sendChannelMessage = async (req, res) => {
             return res.status(403).json({ message: 'Not a channel member' });
         }
 
-        // Create message (E2EE enforced in service layer)
+        // Create message (E2EE enforced in service layer for type='message')
         const message = await messagesService.createMessage(
             {
-                type: 'message',
+                type,
                 company: channel.company,
                 workspace: channel.workspace,
                 channel: channelId,
                 sender: senderId,
                 attachments,
-                parentId: replyTo || null,          // thread reply → goes into thread panel
-                quotedMessageId: quotedMessageId || null, // inline reply → stays in main feed
+                parentId: replyTo || null,
+                quotedMessageId: quotedMessageId || null,
                 ciphertext,
                 messageIv,
                 isEncrypted,
-                clientTempId
+                clientTempId,
+                // Phase-7
+                poll,
+                contact,
+                meeting,
+                linkPreview,
             },
             req.io
         );
@@ -776,7 +800,167 @@ exports.pinMessage = async (req, res) => {
     }
 };
 
-// ==================== MESSAGE INFO ====================
+// ==================== POLL MESSAGES (Phase 7.3) ====================
+
+/**
+ * Create a poll-as-message
+ * POST /api/v2/messages/poll
+ * Body: { channelId, poll: { question, options[], allowMultiple, anonymous, endDate } }
+ *
+ * Polls are embedded inside the Message document (type:'poll').
+ * E2EE is bypassed because poll data is structured, not a text payload.
+ */
+exports.createPollMessage = async (req, res) => {
+    try {
+        const senderId = req.user.sub;
+        const { channelId, poll } = req.body;
+
+        // — Validate inputs —
+        if (!channelId) {
+            return res.status(400).json({ message: 'channelId is required' });
+        }
+        if (!poll || !poll.question || !Array.isArray(poll.options) || poll.options.length < 2) {
+            return res.status(400).json({ message: 'poll.question and at least 2 options are required' });
+        }
+        if (poll.options.length > 10) {
+            return res.status(400).json({ message: 'Maximum 10 poll options allowed' });
+        }
+
+        // — Channel membership check —
+        const channel = await Channel.findById(channelId);
+        if (!channel) return res.status(404).json({ message: 'Channel not found' });
+        if (!channel.isMember(senderId)) {
+            return res.status(403).json({ message: 'Not a channel member' });
+        }
+
+        // — Build embedded poll subdoc —
+        const pollDoc = {
+            question: poll.question.trim(),
+            options: poll.options.map(opt => ({
+                text: (typeof opt === 'string' ? opt : opt.text).trim(),
+                votes: [],
+            })),
+            allowMultiple: poll.allowMultiple || false,
+            anonymous: poll.anonymous || false,
+            createdBy: senderId,
+            endDate: poll.endDate || null,
+            isActive: true,
+            totalVotes: 0,
+        };
+
+        // — createMessage bypasses E2EE for type !== 'message' —
+        const message = await messagesService.createMessage(
+            {
+                type: 'poll',
+                company: channel.company,
+                workspace: channel.workspace,
+                channel: channelId,
+                sender: senderId,
+                poll: pollDoc,
+                // No ciphertext/messageIv needed — service skips E2EE for non-message types
+            },
+            req.io
+        );
+
+        return res.status(201).json({ message });
+    } catch (err) {
+        return handleError(res, err, 'CREATE POLL MESSAGE ERROR');
+    }
+};
+
+/**
+ * Vote on an embedded poll
+ * POST /api/v2/messages/:messageId/vote
+ * Body: { optionIndices: [0, 2] }  ← zero-based indices
+ *
+ * Atomically:
+ *   1. Remove voter's previous votes from all options
+ *   2. Add their vote to selected options
+ *   3. Recount totalVotes (unique voters)
+ *   4. Emit poll:vote_updated to the channel room
+ */
+exports.voteOnPoll = async (req, res) => {
+    try {
+        const userId = req.user.sub;
+        const { messageId } = req.params;
+        const { optionIndices } = req.body; // array of zero-based indices
+
+        // — Validate —
+        if (!Array.isArray(optionIndices) || optionIndices.length === 0) {
+            return res.status(400).json({ message: 'optionIndices[] is required' });
+        }
+
+        const Message = require('../../features/messages/message.model');
+        const message = await Message.findById(messageId);
+        if (!message) return res.status(404).json({ message: 'Message not found' });
+        if (message.type !== 'poll') {
+            return res.status(400).json({ message: 'Message is not a poll' });
+        }
+
+        const poll = message.poll;
+        if (!poll || !poll.isActive) {
+            return res.status(400).json({ message: 'Poll is closed or not found' });
+        }
+
+        // — Channel membership check —
+        if (message.channel) {
+            const channel = await Channel.findById(message.channel);
+            if (!channel || !channel.isMember(userId)) {
+                return res.status(403).json({ message: 'Not a channel member' });
+            }
+        }
+
+        // — Validate indices —
+        if (optionIndices.some(i => i < 0 || i >= poll.options.length)) {
+            return res.status(400).json({ message: 'Invalid option index' });
+        }
+
+        // — Single-choice enforcement —
+        if (!poll.allowMultiple && optionIndices.length > 1) {
+            return res.status(400).json({ message: 'This poll only allows one selection' });
+        }
+
+        // — Remove previous votes from all options —
+        const userIdStr = userId.toString();
+        poll.options.forEach(opt => {
+            opt.votes = opt.votes.filter(v => v.toString() !== userIdStr);
+        });
+
+        // — Add new votes —
+        optionIndices.forEach(idx => {
+            const opt = poll.options[idx];
+            if (opt && !opt.votes.some(v => v.toString() === userIdStr)) {
+                opt.votes.push(userId);
+            }
+        });
+
+        // — Recount total unique voters —
+        const allVoters = new Set();
+        poll.options.forEach(opt => opt.votes.forEach(v => allVoters.add(v.toString())));
+        poll.totalVotes = allVoters.size;
+
+        // Mongoose doesn't detect sub-array mutations automatically
+        message.markModified('poll');
+        await message.save();
+
+        // — Populate sender for response —
+        await message.populate('sender', 'username profilePicture');
+
+        // — Socket: broadcast vote update to channel room —
+        const io = req.io || req.app?.get('io');
+        if (io && message.channel) {
+            io.to(`channel:${message.channel}`).emit('poll:vote_updated', {
+                messageId: message._id,
+                poll: message.poll,
+            });
+        }
+
+        return res.json({ message });
+    } catch (err) {
+        return handleError(res, err, 'VOTE ON POLL ERROR');
+    }
+};
+
 
 /**
  * Get full message info: readBy list, members, reactions

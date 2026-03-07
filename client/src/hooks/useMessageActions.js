@@ -33,13 +33,11 @@ export function useMessageActions(conversationId, conversationType, workspaceId 
     }, []);
 
     // Send message
-    const sendMessage = useCallback(async ({ text, attachments = [], replyTo = null, quotedMessageId = null }) => {
+    const sendMessage = useCallback(async ({ text, attachment = null, type = 'message', attachments = [], replyTo = null, quotedMessageId = null, contact = null, linkPreview = null }) => {
 
         // ⚠️ CRITICAL FIX 6: Block send if encryption not ready
         if (!encryptionReady) {
             console.error('🛑 [E2EE] Message send BLOCKED - Encryption not ready yet');
-            console.error('   Identity keys are still loading from IndexedDB');
-            console.error('   This prevents "Encryption failed" errors during rehydration');
             return {
                 success: false,
                 error: 'ENCRYPTION_NOT_READY',
@@ -47,56 +45,117 @@ export function useMessageActions(conversationId, conversationType, workspaceId 
             };
         }
 
-        if (!conversationId || (!text?.trim() && attachments.length === 0)) {
-            console.error('❌ [sendMessage] Validation failed:', { conversationId, text: text?.trim(), attachments });
+        // Phase 7.1: Attachment messages (image/video/file/voice) bypass text & E2EE validation
+        const isAttachmentMessage = ['image', 'video', 'file', 'voice'].includes(type) && attachment;
+        // Phase 7.4: Contact messages bypass E2EE (structured, not sensitive text)
+        const isContactMessage = type === 'contact' && contact;
+
+        if (!conversationId || (!text?.trim() && attachments.length === 0 && !isAttachmentMessage && !isContactMessage)) {
+            console.error('❌ [sendMessage] Validation failed:', { conversationId, text: text?.trim(), attachments, type });
             return { success: false, error: 'Message content required' };
         }
 
         const tempId = generateTempId();
 
-        // Create optimistic message structure early so it's available in catch block
-        // ✅ ALLOWED: Plaintext in optimistic message for LOCAL display only
+        // ── CONTACT PATH (Phase 7.4): skip E2EE ──────────────────────────────
+        if (isContactMessage) {
+            try {
+                const payload = conversationType === 'channel'
+                    ? { channelId: conversationId, type: 'contact', contact, clientTempId: tempId }
+                    : { dmSessionId: conversationId, workspaceId, type: 'contact', contact, clientTempId: tempId };
+
+                const endpoint = conversationType === 'channel'
+                    ? '/api/v2/messages/channel'
+                    : '/api/v2/messages/direct';
+
+                const response = await api.post(endpoint, payload);
+
+                if (socket?.connected) {
+                    socket.emit('chat:message', {
+                        channelId: conversationId,
+                        message: response.data.message,
+                        clientTempId: tempId
+                    });
+                }
+
+                return {
+                    success: true,
+                    tempId,
+                    message: { ...response.data.message, contact, type: 'contact' },
+                };
+            } catch (err) {
+                console.error('❌ [sendMessage] Contact send error:', err);
+                return { success: false, error: err.response?.data?.message || 'Failed to share contact' };
+            }
+        }
+
+        // ── ATTACHMENT PATH (Phase 7.1): skip E2EE, send structured payload ──
+        if (isAttachmentMessage) {
+            try {
+                // Normalise attachment to AttachmentSchema shape
+                const attachmentDoc = {
+                    type: attachment.type,   // 'image' | 'video' | 'file' | 'voice'
+                    url: attachment.url,
+                    name: attachment.name,
+                    size: attachment.size,
+                    mimeType: attachment.mimeType,
+                };
+
+                const payload = conversationType === 'channel'
+                    ? { channelId: conversationId, type, attachments: [attachmentDoc], clientTempId: tempId }
+                    : { dmSessionId: conversationId, workspaceId, type, attachments: [attachmentDoc], clientTempId: tempId };
+
+                const endpoint = conversationType === 'channel'
+                    ? '/api/v2/messages/channel'
+                    : '/api/v2/messages/direct';
+
+                const response = await api.post(endpoint, payload);
+
+                if (socket?.connected) {
+                    socket.emit('chat:message', {
+                        channelId: conversationId,
+                        message: response.data.message,
+                        clientTempId: tempId
+                    });
+                }
+
+                return {
+                    success: true,
+                    tempId,
+                    message: { ...response.data.message, attachment, type },
+                };
+            } catch (err) {
+                console.error('❌ [sendMessage] Attachment send error:', err);
+                return { success: false, error: err.response?.data?.message || 'Failed to send attachment' };
+            }
+        }
+
+        // ── TEXT PATH (existing E2EE flow) ────────────────────────────────────
         let optimisticMessage = {
             _id: tempId,
             type: 'message',
-            payload: {
-                text,  // OK - never leaves browser
-                attachments
-            },
+            payload: { text, attachments },
             sender: {
                 _id: user?.sub || user?._id,
                 username: user?.username,
                 profilePicture: user?.profilePicture
             },
-            parentId: replyTo,         // thread reply
-            quotedMessageId,           // inline reply
+            parentId: replyTo,
+            quotedMessageId,
             createdAt: new Date().toISOString(),
             reactions: [],
             isPinned: false,
             status: 'sending'
         };
 
-        // Declare variables for encrypted payload
         let ciphertext;
         let messageIv;
 
-
         try {
-            // ✅ PHASE 3/4: Fetch conversation key
             const conversationKeyService = (await import('../services/conversationKeyService')).default;
             let key = await conversationKeyService.getConversationKey(conversationId, conversationType);
 
-            // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-            // 🔐 PHASE 4 FIX: DETECT MISSING KEY STATE
-            // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
             if (key && typeof key === 'object' && key.status === 'MISSING_FOR_USER') {
-                // 🛑 CRITICAL: Key exists but not distributed to this user
-                // This is a LATE JOINER or LEGACY KEY scenario
-                // BLOCK message sending - DO NOT regenerate key
-                console.error('🛑 [PHASE 4] Conversation key missing for user - blocking message send');
-                console.error('   User is a late joiner or legacy key detected');
-                console.error('   Key distribution required before sending');
-
                 return {
                     success: false,
                     error: 'KEY_NOT_AVAILABLE',
@@ -104,17 +163,7 @@ export function useMessageActions(conversationId, conversationType, workspaceId 
                 };
             }
 
-            // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-            // 🔐 PHASE 5/6: NO LAZY KEY CREATION
-            // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
             if (!key && conversationType === 'channel') {
-                // PHASE 5: Channels MUST be encrypted at birth (no lazy creation)
-                // PHASE 6: Joiners receive keys via Phase 4 distribution
-                console.error('❌ [PHASE 5/6] Channel has no conversation key');
-                console.error('   PHASE 5 ensures channels are encrypted at creation');
-                console.error('   PHASE 6 ensures joiners receive keys via distribution');
-                console.error('   This channel was not properly initialized');
-
                 return {
                     success: false,
                     error: 'CHANNEL_NOT_ENCRYPTED',
@@ -122,78 +171,64 @@ export function useMessageActions(conversationId, conversationType, workspaceId 
                 };
             }
 
-            // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-            // ✅ PHASE 3: ENCRYPT MESSAGE (for both first and subsequent messages)
-            // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
             if (!key) {
-                // DMs must have keys initialized first (Phase 4 requirement)
-                console.error('❌ [E2EE] No conversation key found for DM');
                 return {
                     success: false,
                     error: 'Conversation is not encrypted yet. Please wait for encryption to be initialized.'
                 };
             }
 
-            // ============ E2EE: ENCRYPT MESSAGE ============
-
-            // Use conversation key (or thread key if reply)
             const encrypted = await encryptMessageForSending(
                 text,
                 conversationId,
                 conversationType,
-                replyTo // parentMessageId for thread derivation (inline replies don't use parentId)
+                replyTo
             );
 
             ciphertext = encrypted.ciphertext;
             messageIv = encrypted.messageIv;
 
         } catch (encError) {
-            // ✅ CRITICAL: Block send if encryption fails (security requirement)
             console.error('❌ [E2EE] Encryption failed:', encError);
-            console.error('❌ [E2EE] Context:', { conversationId, conversationType });
-
             return {
                 success: false,
                 error: 'ENCRYPTION_FAILED',
                 message: `Message encryption failed. ${encError.message.includes('not found') ? 'Conversation not yet encrypted. Please refresh and try again.' : 'Please try again.'}`
             };
         }
-        // ==============================================
-
 
         try {
             let response;
 
             if (conversationType === 'channel') {
-
-                // ✅ PHASE 3: Always send encrypted (key was generated above if needed)
                 response = await api.post('/api/v2/messages/channel', {
                     channelId: conversationId,
                     ciphertext,
                     messageIv,
                     isEncrypted: true,
                     attachments,
-                    replyTo,           // thread reply (parentId) — null for inline replies
-                    quotedMessageId,   // inline reply reference — stays in main feed
-                    clientTempId: tempId
+                    replyTo,
+                    quotedMessageId,
+                    clientTempId: tempId,
+                    // Phase 7.5 — link preview
+                    linkPreview: linkPreview || undefined,
                 });
             } else if (conversationType === 'dm') {
                 response = await api.post('/api/v2/messages/direct', {
-                    dmSessionId: conversationId,  // ✅ FIXED: Send DM session ID
+                    dmSessionId: conversationId,
                     workspaceId,
                     ciphertext,
                     messageIv,
                     isEncrypted: true,
                     attachments,
-                    replyTo,           // thread reply (parentId)
-                    quotedMessageId,   // inline reply reference
-                    clientTempId: tempId
+                    replyTo,
+                    quotedMessageId,
+                    clientTempId: tempId,
+                    // Phase 7.5 — link preview
+                    linkPreview: linkPreview || undefined,
                 });
             }
 
-
-            // Emit via socket for real-time delivery
             if (socket?.connected) {
                 socket.emit('chat:message', {
                     channelId: conversationId,
@@ -224,6 +259,7 @@ export function useMessageActions(conversationId, conversationType, workspaceId 
             };
         }
     }, [conversationId, conversationType, workspaceId, user, socket, encryptionReady, generateTempId]); // ✅ FIX 6: Add encryptionReady
+
 
     // Add reaction
     const addReaction = useCallback(async (messageId, emoji) => {

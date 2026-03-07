@@ -87,16 +87,22 @@ export function useConversation(conversationId, conversationType, workspaceId) {
             const hasMore = response?.data?.hasMore || false; // Get hasMore from backend
 
             // Normalize messages into events with safe defaults
+            const ATTACHMENT_TYPES = ['image', 'video', 'file', 'voice'];
             const normalized = messages.map(msg => ({
                 id: msg._id,
-                // Preserve type: 'system' for system messages, detect polls, default to 'message'
-                type: msg.type === 'system' ? 'system' : (msg.pollId ? 'poll' : 'message'),
+                // Preserve type for all rich messages (image/video/file/voice/system/poll)
+                type: msg.type === 'system' ? 'system'
+                    : msg.pollId ? 'poll'
+                        : ATTACHMENT_TYPES.includes(msg.type) ? msg.type
+                            : 'message',
                 payload: {
                     ...msg,
                     replyCount: msg.replyCount || 0,
                     reactions: msg.reactions || [],
                     isPinned: msg.isPinned || false,
                     attachments: msg.attachments || [],
+                    // Convenience alias: attachment types always have exactly one entry
+                    attachment: ATTACHMENT_TYPES.includes(msg.type) ? (msg.attachments?.[0] || null) : undefined,
                     isDeleted: msg.isDeleted || msg.deletedAt != null,
                     deletedBy: msg.deletedBy || null,
                     deletedByName: msg.deletedByName || null
@@ -164,13 +170,17 @@ export function useConversation(conversationId, conversationType, workspaceId) {
 
             const normalized = messages.map(msg => ({
                 id: msg._id,
-                type: msg.type === 'system' ? 'system' : (msg.pollId ? 'poll' : 'message'),
+                type: msg.type === 'system' ? 'system'
+                    : msg.pollId ? 'poll'
+                        : ATTACHMENT_TYPES.includes(msg.type) ? msg.type
+                            : 'message',
                 payload: {
                     ...msg,
                     replyCount: msg.replyCount || 0,
                     reactions: msg.reactions || [],
                     isPinned: msg.isPinned || false,
                     attachments: msg.attachments || [],
+                    attachment: ATTACHMENT_TYPES.includes(msg.type) ? (msg.attachments?.[0] || null) : undefined,
                     isDeleted: msg.isDeleted || msg.deletedAt != null,
                     deletedBy: msg.deletedBy || null,
                     deletedByName: msg.deletedByName || null

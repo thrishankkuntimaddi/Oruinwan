@@ -117,12 +117,28 @@ function MessageEvent({
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [event._id || event.id]);
 
+    const ATTACHMENT_TYPES = ['image', 'video', 'file', 'voice'];
+    const msgType = event.type || event.payload?.type || 'message';
+    const rawAttachments = event.payload?.payload?.attachments || event.payload?.attachments || event.attachments || [];
+
     const enrichedMessage = {
         _id: event._id || event.id,
         id: event._id || event.id,
+        // Preserve rich message type (image/video/file/voice/message)
+        type: msgType,
         // ✅ Use decrypted content if available, otherwise fallback to encrypted structure
         text: messageText,
-        attachments: event.payload?.payload?.attachments || event.payload?.attachments || event.attachments || [],
+        attachments: rawAttachments,
+        // Convenience alias for attachment-type messages (ImageMessage, VideoMessage, etc.)
+        attachment: ATTACHMENT_TYPES.includes(msgType)
+            ? (event.payload?.attachment || rawAttachments[0] || null)
+            : undefined,
+        // Phase 7.4 — contact card
+        contact: event.contact || event.payload?.contact || null,
+        // Phase 7.5 — link preview
+        linkPreview: event.linkPreview || event.payload?.linkPreview || null,
+        // Phase 7.6 — meeting
+        meeting: event.meeting || event.payload?.meeting || null,
         sender: event.sender || event.payload?.sender || {},
         createdAt: event.createdAt || event.payload?.createdAt,
         reactions: event.reactions || event.payload?.reactions || [],

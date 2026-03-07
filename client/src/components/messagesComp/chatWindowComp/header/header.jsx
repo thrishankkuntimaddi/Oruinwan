@@ -18,7 +18,9 @@ import {
   Lock,
   MessageSquare,
   Users,
-  Megaphone
+  Megaphone,
+  Radio,
+  PhoneOff,
 } from "lucide-react";
 import ConfirmationModal from "../../../../shared/components/ui/ConfirmationModal";
 import { Avatar, Input } from "../../../../shared/components/ui";
@@ -55,6 +57,9 @@ export default function Header({
   onShowThreadsView, // Show threads-only view
   isThreadsOnly, // Whether threads-only filter is active
   onShowMemberList, // Show member list modal
+  // Phase 7.7 — Huddle
+  onStartHuddle,
+  huddleActive = false,
 }) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showClearChatConfirm, setShowClearChatConfirm] = useState(false);
@@ -195,13 +200,19 @@ export default function Header({
               {/* Channel Specific Actions */}
               {chat.type === "channel" && (
                 <>
-                  <button
-                    title="Start Meeting"
-                    onClick={() => showToast?.("Meeting feature coming soon!", "info")}
-                    className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded transition-colors"
-                  >
-                    <Video size={16} />
-                  </button>
+                  {/* Phase 7.7 — Huddle button */}
+                  {onStartHuddle && (
+                    <button
+                      title={huddleActive ? 'In huddle' : 'Start huddle'}
+                      onClick={onStartHuddle}
+                      className={`p-1.5 rounded transition-colors ${huddleActive
+                          ? 'text-green-500 bg-green-50 dark:bg-green-900/30 animate-pulse'
+                          : 'text-gray-400 dark:text-gray-500 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20'
+                        }`}
+                    >
+                      {huddleActive ? <PhoneOff size={16} /> : <Radio size={16} />}
+                    </button>
+                  )}
 
                   {/* Poll Button */}
                   {onCreatePoll && (

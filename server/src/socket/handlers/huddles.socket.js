@@ -203,6 +203,49 @@ function registerHuddleHandlers(io, socket) {
             audioEnabled
         });
     });
+
+    // ── WebRTC Signaling ─────────────────────────────────────────────────────
+    // These relay WebRTC negotiation messages between peers.
+    // The server never inspects SDP/ICE payloads — it just routes to the target.
+
+    /**
+     * Relay a WebRTC offer to a specific peer
+     * data: { huddleId, targetUserId, offer: RTCSessionDescriptionInit }
+     */
+    socket.on('huddle:offer', ({ huddleId, targetUserId, offer }) => {
+        if (!huddleId || !targetUserId || !offer) return;
+        io.to(`user_${targetUserId}`).emit('huddle:offer', {
+            huddleId,
+            fromUserId: socket.user.id,
+            offer
+        });
+    });
+
+    /**
+     * Relay a WebRTC answer to a specific peer
+     * data: { huddleId, targetUserId, answer: RTCSessionDescriptionInit }
+     */
+    socket.on('huddle:answer', ({ huddleId, targetUserId, answer }) => {
+        if (!huddleId || !targetUserId || !answer) return;
+        io.to(`user_${targetUserId}`).emit('huddle:answer', {
+            huddleId,
+            fromUserId: socket.user.id,
+            answer
+        });
+    });
+
+    /**
+     * Relay an ICE candidate to a specific peer
+     * data: { huddleId, targetUserId, candidate: RTCIceCandidateInit }
+     */
+    socket.on('huddle:ice-candidate', ({ huddleId, targetUserId, candidate }) => {
+        if (!huddleId || !targetUserId) return;
+        io.to(`user_${targetUserId}`).emit('huddle:ice-candidate', {
+            huddleId,
+            fromUserId: socket.user.id,
+            candidate
+        });
+    });
 }
 
 module.exports = registerHuddleHandlers;

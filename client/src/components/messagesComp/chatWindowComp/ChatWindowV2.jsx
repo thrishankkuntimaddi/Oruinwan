@@ -24,10 +24,22 @@ import CentralContentView from './views/CentralContentView.jsx';
 import ErrorDisplay from './views/ErrorDisplay.jsx';
 import ModalRenderer from './views/ModalRenderer.jsx';
 
+// Phase 7.3 — Poll Modal
+import CreatePollModal from './modals/CreatePollModal.jsx';
+// Phase 7.4 — Workspace-scoped Contact Picker
+import ContactPickerModal from './modals/ContactPickerModal.jsx';
+// Phase 7.6 — Meeting Scheduler
+import ScheduleMeetingModal from './modals/ScheduleMeetingModal.jsx';
+
 // Custom hooks
 import useHeaderActions from './hooks/useHeaderActions.js';
 import useCanvasActions from './hooks/useCanvasActions.js';
 import useMessageInput from './hooks/useMessageInput.js';
+// Phase 7.5 — Link preview hook
+import { useLinkPreview } from './hooks/useLinkPreview.js';
+// Phase 7.7 — Huddle
+import { useHuddle } from './hooks/useHuddle.js';
+import HuddleOverlay from './huddle/HuddleOverlay.jsx';
 
 import './chatWindow.css';
 
@@ -46,6 +58,13 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
     const { showToast } = useToast();
     const navigate = useNavigate();
     const { refreshContacts } = useContacts();
+
+    // Phase 7.7 — Huddle (only active for channels)
+    const huddle = useHuddle({
+        channelId: chat?.type === 'channel' ? chat?.id : null,
+        currentUser: user,
+        socket: rawSocket,
+    });
     const { activeWorkspace } = useWorkspace();
 
     // Check if user is a member of the channel
@@ -136,6 +155,12 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
     const [forwardingMessageId, setForwardingMessageId] = useState(null);
     // Message info: fetched data for MessageInfoModal
     const [messageInfoData, setMessageInfoData] = useState(null);
+    // Phase 7.3 — Poll modal
+    const [showPollModal, setShowPollModal] = useState(false);
+    // Phase 7.4 — Contact picker modal
+    const [showContactModal, setShowContactModal] = useState(false);
+    // Phase 7.6 — Meeting scheduler modal
+    const [showMeetingModal, setShowMeetingModal] = useState(false);
 
     // Header UI state
     const [showSearch, setShowSearch] = useState(false);
@@ -605,6 +630,9 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
     const handleEmojiPick = messageInputActions.handleEmojiPick;
     const handleAttach = messageInputActions.handleAttach;
 
+    // Phase 7.5 — Link preview: detect URL in typed text, debounce 600ms
+    const { preview: linkPreview, loading: linkPreviewLoading, clearPreview: clearLinkPreview } = useLinkPreview(newMessage);
+
     // Handle sending message from footer
     const handleSend = useCallback(async (markdown) => {
         // ✅ PHASE 3: No broken channel check - always allow sending
@@ -614,12 +642,16 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
         const messageData = {
             text: markdown,
             attachments: [],
-            replyTo: null,                        // thread reply — null for WhatsApp-style replies
-            quotedMessageId: replyingTo?._id || null  // inline reply: stays in main feed
+            replyTo: null,
+            quotedMessageId: replyingTo?._id || null,
+            // Phase 7.5 — attach detected link preview
+            linkPreview: linkPreview || null,
         };
 
         // Send the message (useMessageActions will encrypt it)
         const result = await actions.sendMessage(messageData);
+        // Clear link preview banner
+        clearLinkPreview();
 
         if (result.success) {
             // Message sent successfully
@@ -680,6 +712,145 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
     }, [actions, replyingTo, showToast]);
 
 
+    // Phase 7.1 — Send an uploaded attachment as a message
+    const handleSendAttachment = useCallback(async (attachment) => {
+        // attachment = { url, name, size, sizeFormatted, mimeType, type, gcsPath }
+        try {
+            const messageData = {
+                text: null,
+                attachment,
+                type: attachment.type,
+                attachments: [],
+                replyTo: null,
+                quotedMessageId: null,
+            };
+            const result = await actions.sendMessage(messageData);
+            if (result.success && result.message) {
+                const normalizedEvent = {
+                    id: result.message._id,
+                    type: attachment.type || 'file',
+                    payload: {
+                        ...result.message,
+                        attachment,
+                        type: attachment.type,
+                        replyCount: 0,
+                        reactions: [],
+                        isPinned: false,
+                        isDeleted: false,
+                    },
+                    sender: result.message.sender,
+                    createdAt: result.message.createdAt,
+                };
+                await conversation.addRealtimeEvent(normalizedEvent, currentUserId);
+            } else if (!result.success) {
+                showToast(result.error || 'Failed to send attachment', 'error');
+            }
+        } catch (err) {
+            console.error('[ChatWindowV2] handleSendAttachment error:', err);
+            showToast('Failed to send attachment', 'error');
+        }
+        setShowAttach(false);
+    }, [actions, conversation, currentUserId, showToast]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    // Phase 7.4 — Send a workspace-member contact card as a message
+    const handleSendContact = useCallback(async (contact) => {
+        // contact = { name, email, phone, avatar }
+        try {
+            const messageData = {
+                type: 'contact',
+                contact,
+                text: null,
+            };
+            const result = await actions.sendMessage(messageData);
+            if (result.success && result.message) {
+                const msg = result.message;
+                const normalizedEvent = {
+                    id: msg._id,
+                    _id: msg._id,
+                    type: 'contact',
+                    contact: msg.contact || contact,
+                    sender: msg.sender,
+                    createdAt: msg.createdAt,
+                    payload: { contact: msg.contact || contact, sender: msg.sender },
+                };
+                await conversation.addRealtimeEvent(normalizedEvent, currentUserId);
+            }
+        } catch (err) {
+            console.error('[ChatWindowV2] handleSendContact error:', err);
+            showToast('Failed to share contact', 'error');
+        }
+        setShowContactModal(false);
+        setShowAttach(false);
+    }, [actions, conversation, currentUserId, showToast]);
+
+    // Phase 7.6 — Send a meeting message
+    const handleSendMeeting = useCallback(async (meetingData) => {
+        // meetingData = { title, startTime, duration, meetingLink, participants }
+        try {
+            const messageData = {
+                type: 'meeting',
+                meeting: meetingData,
+                text: null,
+            };
+            const result = await actions.sendMessage(messageData);
+            if (result.success && result.message) {
+                const msg = result.message;
+                const normalizedEvent = {
+                    id: msg._id,
+                    _id: msg._id,
+                    type: 'meeting',
+                    meeting: msg.meeting || meetingData,
+                    sender: msg.sender,
+                    createdAt: msg.createdAt,
+                    payload: { meeting: msg.meeting || meetingData, sender: msg.sender },
+                };
+                await conversation.addRealtimeEvent(normalizedEvent, currentUserId);
+            }
+        } catch (err) {
+            console.error('[ChatWindowV2] handleSendMeeting error:', err);
+            showToast('Failed to schedule meeting', 'error');
+        }
+        setShowMeetingModal(false);
+        setShowAttach(false);
+    }, [actions, conversation, currentUserId, showToast]);
+
+    // Phase 7.4 — Override handleAttach so 'contact' type opens the picker
+    const handleCreatePoll = useCallback(async (pollData) => {
+        if (!conversationId || conversationType !== 'channel') return;
+        try {
+            const { data } = await api.post('/api/v2/messages/poll', {
+                channelId: conversationId,
+                poll: pollData,
+            });
+            const msg = data.message;
+            if (msg) {
+                const normalizedEvent = {
+                    id: msg._id,
+                    _id: msg._id,
+                    type: 'poll',
+                    poll: msg.poll,
+                    sender: msg.sender,
+                    createdAt: msg.createdAt,
+                    payload: { poll: msg.poll, sender: msg.sender },
+                };
+                await conversation.addRealtimeEvent(normalizedEvent, currentUserId);
+            }
+            setShowPollModal(false);
+        } catch (err) {
+            console.error('[ChatWindowV2] handleCreatePoll error:', err);
+            showToast(err?.response?.data?.message || 'Failed to create poll', 'error');
+        }
+    }, [conversationId, conversationType, conversation, currentUserId, showToast]);
+
+    // Phase 7.3 — Real-time poll vote updates
+    useEffect(() => {
+        if (!rawSocket) return;
+        const handler = ({ messageId, poll }) => {
+            conversation.updateEvent?.(messageId, { poll });
+        };
+        rawSocket.on('poll:vote_updated', handler);
+        return () => rawSocket.off('poll:vote_updated', handler);
+    }, [rawSocket, conversation]);
 
     // Canvas/Tab handlers (from custom hook)
     const fetchTabs = canvasActions.fetchTabs;
@@ -699,22 +870,6 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
     }, [chat, fetchTabs]);
 
 
-
-    // Poll handler
-    const handleCreatePoll = useCallback(async (pollData) => {
-        try {
-            const result = await actions.createPoll(pollData);
-            if (result.success) {
-                showToast('Poll created successfully', 'success');
-                setActiveModal(null);
-            } else {
-                showToast(result.error || 'Failed to create poll', 'error');
-            }
-        } catch (err) {
-            console.error('Create poll error:', err);
-            showToast('Failed to create poll', 'error');
-        }
-    }, [actions, showToast]);
 
     // Handle thread open
     const handleThreadOpen = useCallback((message) => {
@@ -878,6 +1033,9 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
                 onShowThreadsView={handleShowThreadsView}
                 isThreadsOnly={showThreadsOnly}
                 onShowMemberList={handleShowMemberList}
+                // Phase 7.7 — Huddle
+                onStartHuddle={chat?.type === 'channel' ? huddle.startHuddle : undefined}
+                huddleActive={huddle.active}
             />
 
             {/* Canvas Tabs (channels only) */}
@@ -931,7 +1089,24 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
                 newMessage={newMessage}
                 onMessageChange={handleMessageChange}
                 onSend={handleSend}
-                onAttach={handleAttach}
+                onAttach={(type) => {
+                    if (type === 'contact') {
+                        setShowContactModal(true);
+                        setShowAttach(false);
+                    } else if (type === 'meeting') {
+                        setShowMeetingModal(true);
+                        setShowAttach(false);
+                    } else {
+                        handleAttach(type);
+                    }
+                }}
+                onSendAttachment={handleSendAttachment}
+                onCreatePoll={() => setShowPollModal(true)}
+                // Phase 7.5 — link preview
+                linkPreview={linkPreview}
+                linkPreviewLoading={linkPreviewLoading}
+                onDismissPreview={clearLinkPreview}
+                conversationId={conversationId}
                 showAttach={showAttach}
                 setShowAttach={setShowAttach}
                 showEmoji={showEmoji}
@@ -998,6 +1173,40 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
                     messageInfoData,
                 }}
             />
+            {/* Phase 7.3 — Poll Creation Modal */}
+            <CreatePollModal
+                isOpen={showPollModal}
+                onClose={() => setShowPollModal(false)}
+                onCreatePoll={handleCreatePoll}
+                channelName={chat?.name || ''}
+            />
+            {/* Phase 7.4 — Workspace Contact Picker */}
+            <ContactPickerModal
+                isOpen={showContactModal}
+                onClose={() => setShowContactModal(false)}
+                onSelect={handleSendContact}
+                workspaceId={workspaceId || activeWorkspace?.id}
+            />
+            {/* Phase 7.6 — Meeting Scheduler */}
+            {showMeetingModal && (
+                <ScheduleMeetingModal
+                    conversationId={conversationId}
+                    conversationType={conversationType}
+                    onSchedule={handleSendMeeting}
+                    onClose={() => setShowMeetingModal(false)}
+                />
+            )}
+            {/* Phase 7.7 — Huddle overlay (fixed bottom-left, channel only) */}
+            {chat?.type === 'channel' && (
+                <HuddleOverlay
+                    active={huddle.active}
+                    participants={huddle.participants}
+                    muted={huddle.muted}
+                    channelName={chat?.name || ''}
+                    onToggleMute={huddle.toggleMute}
+                    onLeave={huddle.leaveHuddle}
+                />
+            )}
         </div>
     );
 }

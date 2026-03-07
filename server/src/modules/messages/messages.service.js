@@ -36,19 +36,26 @@ async function createMessage(messageData, io = null) {
         quotedMessageId = null,   // ← WhatsApp-style inline reply (NOT a thread)
         ciphertext,
         messageIv,
-        _isEncrypted
+        _isEncrypted,
+        // Phase-7 rich-message fields
+        poll = null,
+        contact = null,
+        meeting = null,
+        linkPreview = null,
     } = messageData;
 
     // ============================================================
-    // E2EE HARD ENFORCEMENT
+    // E2EE ENFORCEMENT — type-aware (Phase-7 update)
     // ============================================================
-    // All workspace messages MUST be encrypted
-    // Server must be cryptographically blind
-    if (!ciphertext || !messageIv) {
-        throw new Error('E2EE required: missing ciphertext or messageIv');
+    // Standard text messages MUST be encrypted.
+    // Rich types (poll, file, image, video, voice, contact, meeting)
+    // carry structured data instead of ciphertext and bypass this gate.
+    const TEXT_TYPES = ['message'];
+    if (TEXT_TYPES.includes(type) && (!ciphertext || !messageIv)) {
+        throw new Error('E2EE required for text messages: missing ciphertext or messageIv');
     }
 
-    // Build message document with CORRECT payload structure
+    // Build message document
     const messageDoc = {
         type,
         company,
@@ -58,16 +65,23 @@ async function createMessage(messageData, io = null) {
         sender,
         parentId,
         quotedMessageId: quotedMessageId || null,
-        // Payload matches Message schema exactly
-        payload: {
-            ciphertext,      // Base64-encoded AES-GCM ciphertext
-            messageIv,       // Base64-encoded IV
+        // E2EE payload — only populated for type==='message'
+        payload: type === 'message' ? {
+            ciphertext,
+            messageIv,
             isEncrypted: true,
-            attachments: attachments || []
-        }
+        } : undefined,
+        // Canonical attachments field (Phase-7)
+        attachments: attachments || [],
     };
 
-    console.log('🔐 Creating encrypted message');
+    // Attach Phase-7 subdocuments only when provided
+    if (poll) messageDoc.poll = poll;
+    if (contact) messageDoc.contact = contact;
+    if (meeting) messageDoc.meeting = meeting;
+    if (linkPreview) messageDoc.linkPreview = linkPreview;
+
+    console.log(`📨 Creating message [type=${type}]${type === 'message' ? ' 🔐' : ''}`);
 
     // ============================================================
     // DB WRITE FIRST (CRITICAL: Prevent race conditions)

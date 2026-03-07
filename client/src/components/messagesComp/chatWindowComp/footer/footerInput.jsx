@@ -2,6 +2,7 @@ import React, { useRef, useEffect, useState, useCallback } from "react";
 import { Bold, Italic, Link, List, Smile, Mic, SendHorizontal, Paperclip } from "lucide-react";
 import EmojiPicker from "./emojiPicker";
 import AttachMenu from "./attachMenu";
+import VoiceRecorder from "./VoiceRecorder";
 import TurndownService from "turndown";
 import { Button } from "../../../../shared/components/ui";
 import ReplyPreview from "../messages/replyPreview";
@@ -40,6 +41,14 @@ export default function FooterInput({
   onChange,
   onSend,
   onAttach,
+  onSendAttachment,
+  onCreatePoll,        // Phase 7.3
+  // Phase 7.5 — link preview
+  linkPreview = null,
+  linkPreviewLoading = false,
+  onDismissPreview,
+  conversationId,
+  conversationType,
   showAttach,
   setShowAttach,
   showEmoji,
@@ -217,6 +226,48 @@ export default function FooterInput({
         ${replyingTo ? 'rounded-tl-none rounded-tr-none border-t-0' : ''}
       `}>
 
+        {/* Phase 7.5 — Link preview banner (dismissable) */}
+        {(linkPreview || linkPreviewLoading) && (
+          <div className="px-3 py-2 border-b border-gray-100 dark:border-gray-700/60 flex items-start gap-2 bg-blue-50/40 dark:bg-blue-900/10">
+            {linkPreviewLoading && !linkPreview && (
+              <div className="flex items-center gap-2 text-xs text-gray-400">
+                <svg className="animate-spin h-3.5 w-3.5 text-blue-400" viewBox="0 0 24 24" fill="none">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                </svg>
+                Fetching preview…
+              </div>
+            )}
+            {linkPreview && (
+              <>
+                {linkPreview.image && (
+                  <img
+                    src={linkPreview.image}
+                    alt=""
+                    className="w-10 h-10 rounded object-cover flex-shrink-0 border border-gray-200 dark:border-gray-700"
+                    onError={e => { e.target.style.display = 'none'; }}
+                  />
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-semibold text-gray-800 dark:text-gray-200 truncate">{linkPreview.title || linkPreview.url}</p>
+                  {linkPreview.site && (
+                    <p className="text-[10px] text-gray-400 truncate">{linkPreview.site}</p>
+                  )}
+                </div>
+                <button
+                  onClick={onDismissPreview}
+                  className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-0.5 rounded flex-shrink-0"
+                  title="Dismiss preview"
+                >
+                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                    <path d="M1 1l10 10M11 1L1 11" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                  </svg>
+                </button>
+              </>
+            )}
+          </div>
+        )}
+
         {/* Rich Text Input — uncontrolled div, no html= binding */}
         <div className="w-full px-3 py-2 text-sm max-h-[30vh] overflow-y-auto custom-scrollbar min-h-[4rem] relative">
           <div
@@ -301,20 +352,38 @@ export default function FooterInput({
               </button>
               {showAttach && (
                 <div className="absolute bottom-full right-0 mb-2 z-50">
-                  <AttachMenu onAttach={onAttach} />
+                  <AttachMenu
+                    onAttach={onAttach}
+                    onSendAttachment={onSendAttachment}
+                    onCreatePoll={onCreatePoll}
+                    conversationId={conversationId}
+                    conversationType={conversationType}
+                  />
                 </div>
               )}
             </div>
 
-            {/* Voice */}
+            {/* Voice — opens full-screen recorder overlay */}
             {showVoice && (
-              <button
-                onClick={() => { if (!blocked) setRecording(!recording); }}
-                className={`p-1.5 rounded-lg transition-all ${recording ? "text-red-500 bg-red-50 dark:bg-red-900/30 animate-pulse" : "text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"}`}
-                title="Voice"
-              >
-                <Mic size={18} />
-              </button>
+              <>
+                <button
+                  onClick={() => { if (!blocked && !disabled) setRecording(true); }}
+                  className={`p-1.5 rounded-lg transition-all text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700`}
+                  title="Voice note"
+                >
+                  <Mic size={18} />
+                </button>
+
+                {/* Phase 7.2 — Recorder overlay */}
+                {recording && (
+                  <VoiceRecorder
+                    onSendAttachment={onSendAttachment}
+                    conversationId={conversationId}
+                    conversationType={conversationType}
+                    onClose={() => setRecording(false)}
+                  />
+                )}
+              </>
             )}
 
             {/* Send */}

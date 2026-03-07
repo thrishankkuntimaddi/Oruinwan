@@ -1,24 +1,28 @@
 // client/src/components/messagesComp/events/PollEvent.jsx
-// Wrapper for poll type events - reuses existing PollCard component
+// Phase 7.3: renders a poll event using the embedded msg.poll subdoc —
+// no separate network fetch needed.
 
 import React from 'react';
-import PollCard from '../chatWindowComp/messages/PollCard';
+import PollMessage from '../chatWindowComp/messages/types/PollMessage';
 
 /**
- * Renders a poll event
- * @param {object} event - Poll event
- * @param {object} actions - Message actions (not used for polls currently)
- * @param {string} currentUserId - Current user's ID
+ * Renders a poll event from the conversation stream.
+ * event.poll (or event.payload.poll) is the embedded poll subdoc.
  */
-function PollEvent({ event, actions, currentUserId }) {
-    const message = event.payload;
-
-    // PollCard expects the message with pollId populated
-    // The poll data should be in the message.pollId field
+function PollEvent({ event, currentUserId }) {
+    // Normalise: poll events may arrive with data at top level or inside payload
+    const pollMsg = {
+        _id: event._id || event.id,
+        id: event._id || event.id,
+        type: 'poll',
+        poll: event.poll || event.payload?.poll || null,
+        sender: event.sender || event.payload?.sender || {},
+        createdAt: event.createdAt || event.payload?.createdAt,
+    };
 
     return (
-        <div className="poll-event" style={{ margin: '0.5rem 0' }}>
-            <PollCard message={message} currentUserId={currentUserId} />
+        <div className="my-1 px-4">
+            <PollMessage msg={pollMsg} currentUserId={currentUserId} />
         </div>
     );
 }

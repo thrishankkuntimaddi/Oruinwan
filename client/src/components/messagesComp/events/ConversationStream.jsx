@@ -225,6 +225,14 @@ function ConversationStream({
     const renderEvent = (event) => {
         switch (event.type) {
             case 'message':
+            // Phase 7.1 — Attachment types route through MessageEvent → ChannelMessageItem/DMMessageItem
+            // which dispatch to the appropriate type renderer (ImageMessage, VideoMessage, etc.)
+            case 'image':
+            case 'video':
+            case 'file':
+            case 'voice':
+            // Phase 7.4 — Contact card
+            case 'contact':
                 return conversationType === 'channel' ? (
                     <MessageEvent
                         key={event.id}

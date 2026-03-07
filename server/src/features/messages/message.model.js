@@ -6,8 +6,13 @@ const ReactionSchema = new mongoose.Schema({
 }, { _id: false });
 
 const AttachmentSchema = new mongoose.Schema({
-  type: { type: String, enum: ["image", "video", "file"], required: true },
-  url: String, name: String, size: Number
+  type: { type: String, enum: ['image', 'video', 'file', 'audio', 'voice'], required: true },
+  url: String,
+  name: String,
+  size: Number,
+  mimeType: String,   // e.g. 'application/pdf', 'video/mp4', 'audio/ogg'
+  duration: Number,   // seconds — for audio/video attachments
+  thumbnail: String,   // URL — for video poster or image thumb
 }, { _id: false });
 
 const MessageSchema = new mongoose.Schema({
@@ -18,10 +23,20 @@ const MessageSchema = new mongoose.Schema({
   platformSession: { type: mongoose.Schema.Types.ObjectId, ref: "PlatformSession", default: null }, // Link to platform chat session
   sender: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
 
-  // Message type: 'message' (default) or 'system' (auto-generated events)
+  // Message type — determines how the UI renders the message bubble
   type: {
     type: String,
-    enum: ['message', 'system'],
+    enum: [
+      'message',   // standard text / encrypted
+      'system',    // auto-generated system event pill
+      'poll',      // Phase-7.3
+      'file',      // Phase-7.1
+      'image',     // Phase-7.1
+      'video',     // Phase-7.1
+      'voice',     // Phase-7.2
+      'contact',   // Phase-7.4
+      'meeting',   // Phase-7.6
+    ],
     default: 'message'
   },
 
@@ -42,15 +57,61 @@ const MessageSchema = new mongoose.Schema({
   systemData: { type: mongoose.Schema.Types.Mixed, default: null }, // Arbitrary metadata for system events
 
   // E2EE: Encrypted payload containing ciphertext, messageIv, and isEncrypted flag
+  // NOTE: payload.attachments is DEPRECATED — use top-level attachments[] instead.
+  //       Kept here only for backward-compat reads of legacy documents.
   payload: {
     ciphertext: String,
     messageIv: String,
-    attachments: [AttachmentSchema],
     isEncrypted: { type: Boolean, default: false }
   },
 
-  text: { type: String, default: "" },
+  text: { type: String, default: '' },
+
+  // ── Canonical attachment location (Phase-7 writes here; legacy payload.attachments is read-only) ──
   attachments: [AttachmentSchema],
+
+  // ── Phase-7 rich-message subdocuments (populated only when type matches) ──
+
+  // type === 'poll'
+  poll: {
+    question: String,
+    options: [{
+      text: String,
+      votes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }]
+    }],
+    allowMultiple: { type: Boolean, default: false },
+    anonymous: { type: Boolean, default: false },
+    createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    endDate: Date,
+    isActive: { type: Boolean, default: true },     // Phase-7.3
+    totalVotes: { type: Number, default: 0 },         // Phase-7.3 cached count
+  },
+
+  // type === 'contact'
+  contact: {
+    name: String,
+    email: String,
+    phone: String,
+    avatar: String
+  },
+
+  // type === 'meeting'
+  meeting: {
+    title: String,
+    startTime: Date,
+    duration: Number,   // minutes
+    meetingLink: String,
+    participants: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }]
+  },
+
+  // type === 'message' with URL — inline link card
+  linkPreview: {
+    url: String,
+    title: String,
+    description: String,
+    image: String,
+    site: String
+  },
 
   // Threading support
   parentId: { type: mongoose.Schema.Types.ObjectId, ref: "Message", default: null }, // Canonical thread field
