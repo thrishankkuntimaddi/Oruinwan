@@ -279,6 +279,7 @@ function ConversationStream({
                     <SystemEvent
                         key={event.id}
                         event={event}
+                        currentUserId={currentUserId}
                     />
                 );
 

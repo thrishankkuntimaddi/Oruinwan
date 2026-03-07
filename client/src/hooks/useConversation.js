@@ -89,7 +89,8 @@ export function useConversation(conversationId, conversationType, workspaceId) {
             // Normalize messages into events with safe defaults
             const normalized = messages.map(msg => ({
                 id: msg._id,
-                type: msg.pollId ? 'poll' : 'message',
+                // Preserve type: 'system' for system messages, detect polls, default to 'message'
+                type: msg.type === 'system' ? 'system' : (msg.pollId ? 'poll' : 'message'),
                 payload: {
                     ...msg,
                     replyCount: msg.replyCount || 0,
@@ -100,6 +101,11 @@ export function useConversation(conversationId, conversationType, workspaceId) {
                     deletedBy: msg.deletedBy || null,
                     deletedByName: msg.deletedByName || null
                 },
+                // For system events, also hoist the fields SystemEvent.jsx needs to the top level
+                ...(msg.type === 'system' && {
+                    systemEvent: msg.systemEvent,
+                    systemData: msg.systemData,
+                }),
                 sender: msg.sender,
                 createdAt: msg.createdAt,
                 parentId: msg.parentId
@@ -158,8 +164,21 @@ export function useConversation(conversationId, conversationType, workspaceId) {
 
             const normalized = messages.map(msg => ({
                 id: msg._id,
-                type: msg.pollId ? 'poll' : 'message',
-                payload: msg,
+                type: msg.type === 'system' ? 'system' : (msg.pollId ? 'poll' : 'message'),
+                payload: {
+                    ...msg,
+                    replyCount: msg.replyCount || 0,
+                    reactions: msg.reactions || [],
+                    isPinned: msg.isPinned || false,
+                    attachments: msg.attachments || [],
+                    isDeleted: msg.isDeleted || msg.deletedAt != null,
+                    deletedBy: msg.deletedBy || null,
+                    deletedByName: msg.deletedByName || null
+                },
+                ...(msg.type === 'system' && {
+                    systemEvent: msg.systemEvent,
+                    systemData: msg.systemData,
+                }),
                 sender: msg.sender,
                 createdAt: msg.createdAt,
                 parentId: msg.parentId
