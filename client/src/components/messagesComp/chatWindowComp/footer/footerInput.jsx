@@ -188,7 +188,7 @@ export default function FooterInput({
       `}>
 
         {/* Rich Text Input — uncontrolled div, no html= binding */}
-        <div className="w-full px-3 py-2 text-sm max-h-[60vh] overflow-y-auto custom-scrollbar resize-y min-h-[4rem] relative">
+        <div className="w-full px-3 py-2 text-sm max-h-[30vh] overflow-y-auto custom-scrollbar min-h-[4rem] relative">
           <div
             ref={editableRef}
             contentEditable={!blocked && !disabled}
