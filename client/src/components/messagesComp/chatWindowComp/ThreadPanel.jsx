@@ -17,6 +17,7 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
     const [newReply, setNewReply] = useState("");
     const [loading, setLoading] = useState(false);
     const [sending, setSending] = useState(false);
+    const [parentExpanded, setParentExpanded] = useState(false);
     const repliesEndRef = useRef(null);
 
 
@@ -428,16 +429,16 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
 
                     {loading ? (
                         <div className="flex-1 px-4 py-4 animate-pulse space-y-5 overflow-hidden">
-                            {[{n:20,l1:62,l2:0},{n:16,l1:78,l2:45},{n:22,l1:50,l2:0},{n:18,l1:85,l2:55},{n:24,l1:60,l2:0}].map((b,i) => (
+                            {[{ n: 20, l1: 62, l2: 0 }, { n: 16, l1: 78, l2: 45 }, { n: 22, l1: 50, l2: 0 }, { n: 18, l1: 85, l2: 55 }, { n: 24, l1: 60, l2: 0 }].map((b, i) => (
                                 <div key={i} className="flex items-start gap-2.5">
                                     <div className="w-7 h-7 rounded-full bg-gray-200 dark:bg-gray-700 flex-shrink-0 mt-0.5" />
-                                    <div className="flex-1 space-y-1.5" style={{maxWidth:'75%'}}>
+                                    <div className="flex-1 space-y-1.5" style={{ maxWidth: '75%' }}>
                                         <div className="flex gap-2 items-baseline">
-                                            <div className="h-2.5 bg-gray-300 dark:bg-gray-600 rounded" style={{width:`${b.n*4}px`}} />
+                                            <div className="h-2.5 bg-gray-300 dark:bg-gray-600 rounded" style={{ width: `${b.n * 4}px` }} />
                                             <div className="h-2 w-8 bg-gray-100 dark:bg-gray-700/50 rounded" />
                                         </div>
-                                        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded-lg" style={{width:`${b.l1}%`}} />
-                                        {b.l2 > 0 && <div className="h-4 bg-gray-100 dark:bg-gray-700/60 rounded-lg" style={{width:`${b.l2}%`}} />}
+                                        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded-lg" style={{ width: `${b.l1}%` }} />
+                                        {b.l2 > 0 && <div className="h-4 bg-gray-100 dark:bg-gray-700/60 rounded-lg" style={{ width: `${b.l2}%` }} />}
                                     </div>
                                 </div>
                             ))}
@@ -476,9 +477,22 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
                                                         {formatTime(parentMessageState.ts || parentMessageState.createdAt)}
                                                     </span>
                                                 </div>
-                                                <p className="text-xs text-gray-800 dark:text-gray-200 mt-0.5 leading-relaxed whitespace-pre-wrap break-words">
+                                                {/* Clamped message with Show more/less toggle */}
+                                                <p className={`text-xs text-gray-800 dark:text-gray-200 mt-0.5 leading-relaxed whitespace-pre-wrap break-words overflow-hidden transition-all duration-200 ${parentExpanded ? '' : 'line-clamp-4'}`}>
                                                     {parentMessageState.decryptedContent || parentMessageState.payload?.text || parentMessageState.text}
                                                 </p>
+                                                {/* Show more / less button — only renders when text is long enough to clamp */}
+                                                {(() => {
+                                                    const txt = parentMessageState.decryptedContent || parentMessageState.payload?.text || parentMessageState.text || '';
+                                                    return txt.length > 200 || txt.split('\n').length > 4 ? (
+                                                        <button
+                                                            onClick={() => setParentExpanded(v => !v)}
+                                                            className="mt-1 text-[10px] font-semibold text-blue-500 hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
+                                                        >
+                                                            {parentExpanded ? 'Show less ↑' : 'Show more ↓'}
+                                                        </button>
+                                                    ) : null;
+                                                })()}
                                             </div>
                                         </div>
                                     </div>
