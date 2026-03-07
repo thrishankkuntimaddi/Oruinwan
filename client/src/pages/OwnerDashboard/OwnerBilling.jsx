@@ -89,8 +89,34 @@ const OwnerBilling = () => {
 
     if (loading) {
         return (
-            <div className="flex items-center justify-center h-screen bg-gray-50 dark:bg-gray-900">
-                <div className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+            <div className="h-screen bg-gray-50 dark:bg-gray-900 p-8 animate-pulse space-y-6">
+                <div className="flex items-center justify-between">
+                    <div className="space-y-2">
+                        <div className="h-6 w-44 bg-gray-200 dark:bg-gray-700 rounded-xl" />
+                        <div className="h-3 w-60 bg-gray-100 dark:bg-gray-800 rounded" />
+                    </div>
+                    <div className="h-9 w-28 bg-indigo-100 dark:bg-indigo-900/30 rounded-xl" />
+                </div>
+                <div className="grid grid-cols-3 gap-4">
+                    {[1,2,3].map(i => (
+                        <div key={i} className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 space-y-3">
+                            <div className="h-3 w-24 bg-gray-200 dark:bg-gray-700 rounded" />
+                            <div className="h-10 w-16 bg-gray-300 dark:bg-gray-600 rounded-xl" />
+                        </div>
+                    ))}
+                </div>
+                <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 space-y-4">
+                    {[75,55,85,60,70].map((w,i) => (
+                        <div key={i} className="flex items-center gap-4">
+                            <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 flex-shrink-0" />
+                            <div className="flex-1 space-y-1.5">
+                                <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded" style={{width:`${w}%`}} />
+                                <div className="h-2.5 bg-gray-100 dark:bg-gray-700/50 rounded" style={{width:`${w-20}%`}} />
+                            </div>
+                            <div className="h-7 w-20 bg-gray-100 dark:bg-gray-700 rounded-xl" />
+                        </div>
+                    ))}
+                </div>
             </div>
         );
     }

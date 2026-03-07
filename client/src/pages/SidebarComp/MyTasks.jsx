@@ -291,14 +291,32 @@ const MyTasks = () => {
       {/* Scrollable Content Area */}
       <div className="flex-1 overflow-y-auto overflow-x-hidden p-8 scroll-smooth custom-scrollbar">
         {loading ? (
-          <div className="flex flex-col items-center justify-center h-[50vh] text-gray-400 animate-in fade-in duration-700">
-            <div className="relative">
-              <div className="w-16 h-16 border-4 border-blue-100 rounded-full animate-spin border-t-blue-600"></div>
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="w-8 h-8 bg-white rounded-full"></div>
-              </div>
+          <div className="p-8 animate-pulse">
+            {/* Stats bar skeleton */}
+            <div className="flex gap-4 mb-8">
+              {[1,2,3,4].map(i => (
+                <div key={i} className="flex-1 bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-700">
+                  <div className="h-3 w-16 bg-gray-200 dark:bg-gray-700 rounded mb-3" />
+                  <div className="h-8 w-10 bg-gray-300 dark:bg-gray-600 rounded-lg" />
+                </div>
+              ))}
             </div>
-            <p className="mt-6 text-lg font-medium text-gray-500">Syncing your tasks...</p>
+            {/* Task card skeletons */}
+            <div className="space-y-3">
+              {[80,60,90,55,75].map((w,i) => (
+                <div key={i} className="bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-700 flex items-center gap-4">
+                  <div className="w-5 h-5 rounded-full border-2 border-gray-200 dark:border-gray-700 flex-shrink-0" />
+                  <div className="flex-1 space-y-2">
+                    <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded" style={{width:`${w}%`}} />
+                    <div className="flex gap-2">
+                      <div className="h-5 w-20 bg-blue-50 dark:bg-blue-900/20 rounded-full" />
+                      <div className="h-5 w-16 bg-amber-50 dark:bg-amber-900/20 rounded-full" />
+                    </div>
+                  </div>
+                  <div className="w-7 h-7 rounded-full bg-gray-200 dark:bg-gray-700 flex-shrink-0" />
+                </div>
+              ))}
+            </div>
           </div>
         ) : filteredTasks.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-[50vh] text-center max-w-sm mx-auto">

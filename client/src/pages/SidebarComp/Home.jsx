@@ -203,9 +203,26 @@ const Home = () => {
   return (
     <div className="w-full h-full flex flex-col bg-white dark:bg-gray-900">
       {isLoading ? (
-        <div className="flex flex-col items-center justify-center h-full text-gray-400 dark:text-gray-500 bg-white dark:bg-gray-900">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-4"></div>
-          <p className="text-sm text-gray-500 dark:text-gray-400">Loading chat...</p>
+        <div className="w-full h-full flex flex-col bg-white dark:bg-gray-900 animate-pulse p-4 gap-4">
+          {/* Header skeleton */}
+          <div className="flex items-center gap-3 pb-3 border-b border-gray-100 dark:border-gray-800">
+            <div className="w-9 h-9 rounded-full bg-gray-200 dark:bg-gray-700" />
+            <div className="flex-1 space-y-1.5">
+              <div className="h-3 w-28 bg-gray-200 dark:bg-gray-700 rounded" />
+              <div className="h-2 w-16 bg-gray-100 dark:bg-gray-700/50 rounded" />
+            </div>
+          </div>
+          {/* Chat bubble skeletons */}
+          <div className="flex-1 space-y-4 overflow-hidden">
+            {[{w:160,r:false},{w:200,r:true},{w:140,r:false},{w:220,r:true},{w:180,r:false},{w:130,r:true}].map((b,i)=>(
+              <div key={i} className={`flex items-end gap-2 ${b.r ? 'flex-row-reverse' : ''}`}>
+                {!b.r && <div className="w-7 h-7 rounded-full bg-gray-200 dark:bg-gray-700 flex-shrink-0" />}
+                <div className={`h-9 rounded-2xl ${b.r ? 'bg-blue-100 dark:bg-blue-900/30' : 'bg-gray-100 dark:bg-gray-700/50'}`} style={{width:b.w}} />
+              </div>
+            ))}
+          </div>
+          {/* Input skeleton */}
+          <div className="h-11 rounded-xl bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700" />
         </div>
       ) : activeChat ? (
         <ChatWindowV2

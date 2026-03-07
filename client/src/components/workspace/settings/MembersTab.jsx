@@ -199,8 +199,17 @@ const MembersTab = ({
             </div>
 
             {loadingMembers ? (
-                <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-8 text-center border border-gray-200 dark:border-gray-700">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                <div className="animate-pulse space-y-3 py-4">
+                    {[80,60,90,55,70,75].map((w,i) => (
+                        <div key={i} className="flex items-center gap-4 bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-100 dark:border-gray-700">
+                            <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 flex-shrink-0" />
+                            <div className="flex-1 space-y-1.5">
+                                <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded" style={{width:`${w}%`}} />
+                                <div className="h-2.5 bg-gray-100 dark:bg-gray-700/50 rounded" style={{width:`${w-25}%`}} />
+                            </div>
+                            <div className="h-7 w-16 bg-gray-100 dark:bg-gray-700 rounded-lg" />
+                        </div>
+                    ))}
                     <p className="text-gray-500 dark:text-gray-400 text-sm mt-4">Loading members...</p>
                 </div>
             ) : members.length > 0 ? (

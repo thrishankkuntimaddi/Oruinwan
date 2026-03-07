@@ -355,8 +355,17 @@ const InvitationsTab = ({ activeWorkspace, isAdmin }) => {
             {/* Invitations List - Card Based Layout */}
             <div className="flex-1 overflow-auto px-8 py-6">
                 {loading ? (
-                    <div className="text-center py-12">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                    <div className="animate-pulse space-y-3 py-4">
+                        {[75,55,85,60,70].map((w,i) => (
+                            <div key={i} className="flex items-center gap-4 bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-100 dark:border-gray-700">
+                                <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 flex-shrink-0" />
+                                <div className="flex-1 space-y-1.5">
+                                    <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded" style={{width:`${w}%`}} />
+                                    <div className="h-2.5 bg-gray-100 dark:bg-gray-700/50 rounded" style={{width:`${w-25}%`}} />
+                                </div>
+                                <div className="h-7 w-20 bg-gray-100 dark:bg-gray-700 rounded-lg" />
+                            </div>
+                        ))}
                         <p className="text-gray-600">Loading invitations...</p>
                     </div>
                 ) : filteredInvites.length === 0 ? (

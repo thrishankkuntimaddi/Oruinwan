@@ -50,7 +50,23 @@ const CompanyDetail = ({ companyId, onBack }) => {
         }
     };
 
-    if (loading) return <div className="p-8">Loading...</div>;
+    if (loading) return (
+    <div className="p-8 animate-pulse space-y-6">
+        <div className="flex items-center gap-4">
+            <div className="w-16 h-16 rounded-2xl bg-gray-200 dark:bg-gray-700" />
+            <div className="space-y-2">
+                <div className="h-5 w-40 bg-gray-200 dark:bg-gray-700 rounded-lg" />
+                <div className="h-3 w-56 bg-gray-100 dark:bg-gray-800 rounded" />
+            </div>
+        </div>
+        <div className="grid grid-cols-3 gap-4">
+            {[1,2,3].map(i => <div key={i} className="h-28 bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700" />)}
+        </div>
+        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-6 space-y-3">
+            {[70,50,80,60].map((w,i) => <div key={i} className="h-3 bg-gray-200 dark:bg-gray-700 rounded" style={{width:`${w}%`}} />)}
+        </div>
+    </div>
+);
     if (!company) return <div className="p-8">Company not found</div>;
 
     return (

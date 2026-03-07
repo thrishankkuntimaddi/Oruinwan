@@ -369,7 +369,17 @@ const MessagesPanel = ({ title }) => {
                 </div>
 
                 {isLoading ? (
-                    <div className="px-4 py-8 text-center text-sm text-gray-500">Loading...</div>
+                    <div className="px-2 space-y-1 animate-pulse">
+                        {[60, 75, 50, 85, 65].map((w, i) => (
+                            <div key={i} className="flex items-center gap-3 px-3 py-2 rounded-lg">
+                                <div className="w-9 h-9 rounded-full bg-gray-200 dark:bg-gray-700 flex-shrink-0" />
+                                <div className="flex-1 space-y-1.5">
+                                    <div className="h-2.5 bg-gray-200 dark:bg-gray-700 rounded" style={{width:`${w}%`}} />
+                                    <div className="h-2 bg-gray-100 dark:bg-gray-700/50 rounded" style={{width:`${w*0.6}%`}} />
+                                </div>
+                            </div>
+                        ))}
+                    </div>
                 ) : filteredList.length > 0 ? (
                     filteredList.map((item) => <Item key={item.id} item={item} />)
                 ) : (

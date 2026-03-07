@@ -151,7 +151,14 @@ export const ChannelList = () => {
                 {expanded.channels && (
                     <div className="mt-1 space-y-0.5">
                         {loading ? (
-                            <div className="px-4 py-2 text-xs text-gray-400">Loading channels...</div>
+                            <div className="px-2 space-y-0.5 animate-pulse">
+                                {[65, 50, 80, 45, 70].map((w, i) => (
+                                    <div key={i} className="flex items-center gap-2 px-2 py-1.5 rounded-md">
+                                        <div className="w-5 h-5 rounded bg-gray-200 dark:bg-gray-700 flex-shrink-0" />
+                                        <div className="h-2.5 bg-gray-200 dark:bg-gray-700 rounded" style={{width:`${w}%`}} />
+                                    </div>
+                                ))}
+                            </div>
                         ) : filteredChannels.length > 0 ? (
                             filteredChannels.map(channel => (
                                 <Item

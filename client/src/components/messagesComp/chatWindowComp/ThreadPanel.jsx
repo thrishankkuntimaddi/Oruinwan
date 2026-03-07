@@ -427,8 +427,13 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
                     )}
 
                     {loading ? (
-                        <div className="flex-1 flex items-center justify-center">
-                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                        <div className="flex-1 px-4 py-4 animate-pulse space-y-4 overflow-hidden">
+                            {[{w:160,r:false},{w:200,r:true},{w:130,r:false},{w:180,r:true},{w:150,r:false}].map((b,i) => (
+                                <div key={i} className={`flex items-end gap-2 ${b.r ? 'flex-row-reverse' : ''}`}>
+                                    {!b.r && <div className="w-7 h-7 rounded-full bg-gray-200 dark:bg-gray-700 flex-shrink-0" />}
+                                    <div className={`h-9 rounded-2xl ${b.r ? 'bg-blue-100 dark:bg-blue-900/30' : 'bg-gray-100 dark:bg-gray-700/50'}`} style={{width:b.w}} />
+                                </div>
+                            ))}
                         </div>
                     ) : (
                         <>
