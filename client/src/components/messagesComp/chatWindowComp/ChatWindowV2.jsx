@@ -772,6 +772,8 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
     // Get channel members for join markers (channels only)
     const channelMembers = chat?.members || [];
     const userJoinedAt = conversationType === 'channel'
+        ? chat?.members?.find(m => (m.user?._id || m.user) === currentUserId)?.joinedAt
+        : null;
 
     return (
         <div className="chat-window" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
