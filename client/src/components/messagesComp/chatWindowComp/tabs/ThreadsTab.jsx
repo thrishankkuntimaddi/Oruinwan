@@ -140,9 +140,10 @@ export default function ThreadsTab({ channelId, currentUserId, socket }) {
     }, [socket, channelId]);
 
 
-    const filteredThreads = threads.filter(t =>
-        (t.payload?.text || t.text || '').toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const filteredThreads = threads.filter(t => {
+        const text = t.decryptedContent || t.payload?.text || t.text || '';
+        return text.toLowerCase().includes(searchTerm.toLowerCase());
+    });
 
     return (
         <div className="flex w-full h-full bg-gray-50 dark:bg-gray-900">
@@ -208,7 +209,7 @@ export default function ThreadsTab({ channelId, currentUserId, socket }) {
                                 </div>
 
                                 <p className="text-sm text-gray-800 dark:text-gray-200 line-clamp-2 mb-3 leading-relaxed">
-                                    {thread.payload?.text || thread.text}
+                                    {thread.decryptedContent || thread.payload?.text || thread.text || '🔒 Encrypted message'}
                                 </p>
 
                                 <div className="flex items-center justify-between">

@@ -14,36 +14,43 @@ exports.getChannelThreads = async (req, res) => {
         const { channelId } = req.params;
         const userId = req.user.sub;
 
-        console.log(`[THREADS][GET_CHANNEL_THREADS] Fetching threads for channel ${channelId}, user ${userId}`);
-
-        // 1. Verify user is a member of this channel
+        // 1. Verify user is a member of this channel and get their join date
         const channel = await Channel.findById(channelId);
 
         if (!channel) {
             return res.status(404).json({ message: "Channel not found" });
         }
 
-        const isMember = channel.members.some(m => String(m.user || m) === String(userId));
-        if (!isMember) {
+        const memberEntry = channel.members.find(m => String(m.user || m) === String(userId));
+        if (!memberEntry && !channel.isDefault) {
             return res.status(403).json({ message: "Access denied: You are not a member of this channel" });
         }
 
-        // 2. Find all parent messages in this channel that have replies
-        const threads = await Message.find({
+        // Get user's join date (or epoch for default channels / if joinedAt missing)
+        const userJoinedAt = memberEntry?.joinedAt || memberEntry?.createdAt || null;
+
+        // 2. Find all parent messages with replies, filtered to after user joined
+        const query = {
             channel: channelId,
             replyCount: { $gt: 0 },
             parentId: null // Only parent messages, not replies
-        })
+        };
+
+        // Filter out threads the user wasn't around for
+        if (userJoinedAt) {
+            query.createdAt = { $gte: new Date(userJoinedAt) };
+        }
+
+        const threads = await Message.find(query)
             .populate("sender", "_id username profilePicture")
             .sort({ lastReplyAt: -1, createdAt: -1 }) // Most recent activity first
             .lean();
 
-        console.log(`[THREADS][GET_CHANNEL_THREADS] Found ${threads.length} active threads in channel ${channelId}`);
-
         return res.json({
             threads,
             count: threads.length,
-            channelId
+            channelId,
+            userJoinedAt: userJoinedAt || null
         });
     } catch (err) {
         console.error("[THREADS][GET_CHANNEL_THREADS] Error:", err);
