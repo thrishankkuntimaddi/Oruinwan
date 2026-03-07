@@ -26,37 +26,64 @@ const Home = () => {
       try {
         // 1. Check if it's a channel route
         if (location.pathname.includes("/channel/") && id) {
-          // Fetch channel info with complete metadata
-          const res = await api.get(`/api/channels/${id}/details`);
-          const channelData = res.data.channel || res.data;
+          try {
+            // Members get full details (createdAt, creatorName, admins etc.)
+            const res = await api.get(`/api/channels/${id}/details`);
+            const channelData = res.data.channel || res.data;
 
-          if (channelData) {
-            setActiveChat({
-              id: channelData._id || channelData.id,
-              name: `#${channelData.name}`,
-              type: "channel",
-              workspaceId,
-              isPrivate: channelData.isPrivate,
-              isDiscoverable: channelData.isDiscoverable,
-              members: channelData.members || [],
-              createdBy: channelData.createdBy,
-              createdAt: channelData.createdAt,
-              creatorName: channelData.creatorName,
-              systemEvents: channelData.systemEvents || [],
-              isDefault: channelData.isDefault,
-              description: channelData.description,
-              admins: channelData.admins || [],
-              workspaceRole: activeWorkspace?.role
-            });
-          } else {
-            setActiveChat({
-              id,
-              name: "Channel",
-              type: "channel",
-              workspaceId,
-              members: [],
-              workspaceRole: activeWorkspace?.role
-            });
+            if (channelData) {
+              setActiveChat({
+                id: channelData._id || channelData.id,
+                name: `#${channelData.name}`,
+                type: "channel",
+                workspaceId,
+                isPrivate: channelData.isPrivate,
+                isDiscoverable: channelData.isDiscoverable,
+                members: channelData.members || [],
+                createdBy: channelData.createdBy,
+                createdAt: channelData.createdAt,
+                creatorName: channelData.creatorName,
+                systemEvents: channelData.systemEvents || [],
+                isDefault: channelData.isDefault,
+                description: channelData.description,
+                admins: channelData.admins || [],
+                workspaceRole: activeWorkspace?.role,
+                isMember: true,
+              });
+            }
+          } catch (detailsErr) {
+            // 403 = non-member trying to view a discoverable public channel
+            // Fall back to workspace channels list (always accessible) for basic info
+            if (detailsErr?.response?.status === 403 || detailsErr?.response?.status === 404) {
+              try {
+                const listRes = await api.get(`/api/workspaces/${workspaceId}/channels`);
+                const channels = listRes.data.channels || [];
+                const channel = channels.find(c => String(c._id) === String(id));
+
+                if (channel) {
+                  setActiveChat({
+                    id: channel._id,
+                    name: `#${channel.name}`,
+                    type: "channel",
+                    workspaceId,
+                    isPrivate: channel.isPrivate,
+                    isDiscoverable: channel.isDiscoverable ?? true,
+                    members: [],
+                    description: channel.description,
+                    isDefault: channel.isDefault,
+                    workspaceRole: activeWorkspace?.role,
+                    isMember: false, // ← triggers JoinChannelCTA in CentralContentView
+                  });
+                } else {
+                  setActiveChat(null);
+                }
+              } catch {
+                setActiveChat(null);
+              }
+            } else {
+              // Unexpected error — show empty state
+              setActiveChat(null);
+            }
           }
           return;
         }
