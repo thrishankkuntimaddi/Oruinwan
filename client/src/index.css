@@ -227,3 +227,12 @@ body,
 .message-editor em {
   font-style: italic;
 }
+
+/* ── Rendered message content — tighten paragraph spacing ─────── */
+.message-content p {
+  margin: 0;
+  padding: 0;
+}
+.message-content p + p {
+  margin-top: 0.15rem;
+}

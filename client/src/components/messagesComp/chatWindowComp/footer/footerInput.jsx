@@ -160,8 +160,9 @@ export default function FooterInput({
     const hasFormatting = /<(ul|ol|b|strong|i|em|a )/.test(html);
     if (!hasFormatting) {
       // Fast path: innerText natively preserves every newline the user sees.
-      // This is the only 100% reliable way for plain multiline text.
-      markdown = el.innerText.trim();
+      // Chrome returns \n\n between <div> blocks — collapse to single \n so
+      // remarkBreaks renders tight <br> spacing, not paragraph gaps.
+      markdown = el.innerText.trim().replace(/\n{2,}/g, '\n');
     } else {
       // Has lists / bold / italic — convert via Turndown
       markdown = turndownService.turndown(normaliseEditorHtml(html)).trim();
