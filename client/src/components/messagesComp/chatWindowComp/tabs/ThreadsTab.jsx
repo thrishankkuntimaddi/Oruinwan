@@ -194,9 +194,17 @@ export default function ThreadsTab({ channelId, currentUserId, socket }) {
                                     }`}
                             >
                                 {/* Avatar */}
-                                <div className="w-7 h-7 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-[11px] font-bold text-white flex-shrink-0">
-                                    {(thread.sender?.username || thread.senderName || '?').charAt(0).toUpperCase()}
-                                </div>
+                                {thread.sender?.profilePicture ? (
+                                    <img
+                                        src={thread.sender.profilePicture}
+                                        alt={thread.sender?.username || 'User'}
+                                        className="w-7 h-7 rounded-full object-cover flex-shrink-0 border border-gray-200 dark:border-gray-700"
+                                    />
+                                ) : (
+                                    <div className="w-7 h-7 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-[11px] font-bold text-white flex-shrink-0">
+                                        {(thread.sender?.username || thread.senderName || '?').charAt(0).toUpperCase()}
+                                    </div>
+                                )}
 
                                 {/* Content */}
                                 <div className="flex-1 min-w-0">

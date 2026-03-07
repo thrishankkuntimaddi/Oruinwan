@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { Plus, CheckCircle, User, Trash2, Edit2, Layout, CheckSquare, Calendar } from 'lucide-react';
-import axios from 'axios';
+import api from '../../../../services/api';
 
 export default function TasksTab({ channelId, channelName, workspaceId, currentUserId, socket }) {
     const [tasks, setTasks] = useState([]);
@@ -18,21 +18,25 @@ export default function TasksTab({ channelId, channelName, workspaceId, currentU
 
     // Load tasks for this channel
     const loadTasks = useCallback(async () => {
-        if (!channelId || !workspaceId) return;
+        if (!channelId || !workspaceId) {
+            setLoading(false); // Don't hang on loading if props missing
+            return;
+        }
 
         try {
             setLoading(true);
-            const res = await axios.get('/api/v2/tasks', {
+            const res = await api.get('/api/v2/tasks', {
                 params: { workspaceId }
             });
 
             // Filter to only show channel tasks for this channel
-            const channelTasks = res.data.tasks.filter(t =>
-                t.channel && t.channel._id === channelId
+            const channelTasks = (res.data.tasks || []).filter(t =>
+                t.channel && (t.channel._id === channelId || t.channel === channelId)
             );
             setTasks(channelTasks);
         } catch (error) {
             console.error('Failed to load tasks:', error);
+            setTasks([]);
         } finally {
             setLoading(false);
         }
@@ -86,7 +90,7 @@ export default function TasksTab({ channelId, channelName, workspaceId, currentU
         if (!newTaskTitle.trim() || !workspaceId) return;
 
         try {
-            const res = await axios.post('/api/v2/tasks', {
+            const res = await api.post('/api/v2/tasks', {
                 title: newTaskTitle.trim(),
                 workspace: workspaceId,
                 channel: channelId,
@@ -118,7 +122,7 @@ export default function TasksTab({ channelId, channelName, workspaceId, currentU
         const newStatus = task.status === 'done' ? 'todo' : 'done';
 
         try {
-            await axios.put(`/api/v2/tasks/${taskId}`, { status: newStatus });
+            await api.put(`/api/v2/tasks/${taskId}`, { status: newStatus });
 
             // Optimistically update UI
             setTasks(prev => prev.map(t =>
@@ -133,7 +137,7 @@ export default function TasksTab({ channelId, channelName, workspaceId, currentU
 
     const deleteTask = async (taskId) => {
         try {
-            await axios.delete(`/api/v2/tasks/${taskId}`);
+            await api.delete(`/api/v2/tasks/${taskId}`);
 
             // Optimistically remove
             setTasks(prev => prev.filter(t => t._id !== taskId));

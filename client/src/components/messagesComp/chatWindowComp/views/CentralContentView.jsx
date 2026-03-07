@@ -63,6 +63,7 @@ const CentralContentView = ({
     // Socket
     rawSocket,
     socket,
+    workspaceId,
 
     // Canvas/dashboard handlers
     dashboardView,
@@ -139,7 +140,7 @@ const CentralContentView = ({
                 <TasksTab
                     channelId={chat.id}
                     channelName={chat.name}
-                    workspaceId={chat.workspaceId}
+                    workspaceId={workspaceId || chat.workspaceId}
                     currentUserId={currentUserId}
                     socket={rawSocket}
                 />

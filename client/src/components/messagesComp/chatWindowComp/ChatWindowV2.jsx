@@ -893,6 +893,7 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
                 // Socket
                 rawSocket={rawSocket}
                 socket={socket}
+                workspaceId={workspaceId}
 
                 // Canvas/dashboard handlers
                 dashboardView={dashboardView}
