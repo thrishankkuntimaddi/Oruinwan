@@ -12,25 +12,21 @@ const turndownService = new TurndownService({
 });
 
 /**
- * Pre-process contentEditable HTML before handing to Turndown.
+ * Pre-process contentEditable HTML → Markdown-friendly HTML.
+ * Chrome wraps every line in a <div>; the opening <div> marks a new line.
+ * Closing </div> carries no extra meaning once the opener is handled.
  *
- * Chrome contentEditable wraps each new line in a <div>; Firefox uses <br>.
- * Turndown strips bare <div> tags without inserting \n, collapsing lines.
- * We convert all block-closing tags to <br> so Turndown emits proper newlines.
+ *   "DF<div>ASDF</div><div>ASD</div>"
+ *   after: "DF<br>ASDF<br>ASD"
  */
-const normaliseEditorHtml = (html) => {
-  return html
-    // <div><br></div>  →  <br>  (empty line)
+const normaliseEditorHtml = (html) =>
+  html
+    // Empty-line placeholder first: <div><br></div> → <br>
     .replace(/<div>\s*<br\s*\/?>\s*<\/div>/gi, '<br>')
-    // </div><div>  →  <br>  (line boundary between blocks)
-    .replace(/<\/div>\s*<div>/gi, '<br>')
-    // </p><p>  →  <br>
-    .replace(/<\/p>\s*<p>/gi, '<br>')
-    // Remaining closing block tags  →  <br>
-    .replace(/<\/(div|p)>/gi, '<br>')
-    // Strip remaining opening block tags
-    .replace(/<(div|p)[^>]*>/gi, '');
-};
+    // Opening block tag → newline (the block START = new line)
+    .replace(/<(div|p)[^>]*>/gi, '<br>')
+    // Closing block tags → empty (newline already added by opener)
+    .replace(/<\/(div|p)>/gi, '');
 
 // Helper to strip HTML tags
 const stripTags = (html) => {
@@ -154,12 +150,24 @@ export default function FooterInput({
       SEND
   --------------------------------------------------------- */
   const handleSend = useCallback(() => {
-    const html = editableRef.current?.innerHTML || "";
+    const el = editableRef.current;
+    if (!el) return;
+    const html = el.innerHTML || '';
     const textContent = stripTags(html).trim();
     if (!textContent || blocked || disabled) return;
 
-    let markdown = turndownService.turndown(normaliseEditorHtml(html));
-    markdown = markdown.trim();
+    let markdown;
+    const hasFormatting = /<(ul|ol|b|strong|i|em|a )/.test(html);
+    if (!hasFormatting) {
+      // Fast path: innerText natively preserves every newline the user sees.
+      // This is the only 100% reliable way for plain multiline text.
+      markdown = el.innerText.trim();
+    } else {
+      // Has lists / bold / italic — convert via Turndown
+      markdown = turndownService.turndown(normaliseEditorHtml(html)).trim();
+    }
+
+    if (!markdown) return;
 
     onSend(markdown);
 
