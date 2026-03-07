@@ -34,9 +34,9 @@ function ChannelMessageItem({
     // TEMPORARY FIX: Fallback to msg.replyCount if threadCounts missing
     const count = (threadCounts && threadCounts[msg.id]) || msg.replyCount || 0;
 
-    // ✅ Fix: Properly check if message is from current user by comparing IDs
-    const senderId = typeof msg.sender === 'object' ? msg.sender?._id : msg.sender;
-    const isMe = senderId === currentUserId || msg.sender === "you" || msg.sender === "me";
+    // ✅ Fix: Robust isMe — use String() to handle ObjectId vs string type mismatch
+    const senderId = msg.sender?._id || msg.senderId || (typeof msg.sender === 'string' ? msg.sender : null);
+    const isMe = !!senderId && !!currentUserId && String(senderId) === String(currentUserId);
     const isSelected = selectedIds?.has(msg.id) || false;
     const [showToolbar, setShowToolbar] = useState(false);
     const [showReactionPicker, setShowReactionPicker] = useState(false);
@@ -44,7 +44,7 @@ function ChannelMessageItem({
 
     // Step 3 — Local edit state
     const [isEditing, setIsEditing] = useState(false);
-    const [editText, setEditText] = useState(msg.text || '');
+    const [editText, setEditText] = useState(msg.decryptedContent || msg.text || '');
 
     // Avatar Logic
     const avatarUrl = msg.senderAvatar || null;
@@ -65,16 +65,37 @@ function ChannelMessageItem({
         };
     }, [showReactionPicker]);
 
-    // Step 3 — Save edit handler
+    // Step 3 — Save edit handler (E2EE-aware)
     const handleSaveEdit = async () => {
         const trimmed = editText.trim();
-        if (trimmed === (msg.text || '').trim()) {
+        const currentText = msg.decryptedContent || msg.text || '';
+        if (trimmed === currentText.trim()) {
             setIsEditing(false);
             return;
         }
         if (!trimmed) return; // Don't save empty message
         try {
-            await api.patch(`/api/v2/messages/${msg._id || msg.id}`, { text: trimmed });
+            const channelId = msg.channelId || (msg.channel && (msg.channel._id || msg.channel));
+            const convType  = channelId ? 'channel' : 'dm';
+
+            if (channelId) {
+                // E2EE path: encrypt then save ciphertext
+                const { encryptMessageForSending } = await import('../../../../services/messageEncryptionService');
+                const encrypted = await encryptMessageForSending(trimmed, channelId, convType);
+
+                if (encrypted && encrypted.status !== 'ENCRYPTION_NOT_READY') {
+                    await api.patch(`/api/v2/messages/${msg._id || msg.id}`, {
+                        ciphertext: encrypted.ciphertext,
+                        messageIv:  encrypted.messageIv
+                    });
+                } else {
+                    // Fallback: plaintext (only if key not available)
+                    await api.patch(`/api/v2/messages/${msg._id || msg.id}`, { text: trimmed });
+                }
+            } else {
+                // No channel context — send plaintext
+                await api.patch(`/api/v2/messages/${msg._id || msg.id}`, { text: trimmed });
+            }
         } catch (err) {
             console.error('Edit failed:', err);
         }
@@ -82,7 +103,7 @@ function ChannelMessageItem({
     };
 
     const handleCancelEdit = () => {
-        setEditText(msg.text || '');
+        setEditText(msg.decryptedContent || msg.text || '');
         setIsEditing(false);
     };
 
@@ -469,7 +490,7 @@ function ChannelMessageItem({
                                 <button
                                     onClick={() => {
                                         setIsEditing(true);
-                                        setEditText(msg.text || '');
+                                        setEditText(msg.decryptedContent || msg.text || '');
                                         toggleMsgMenu({ stopPropagation: () => { } }, null);
                                     }}
                                     className="w-full text-left px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2 text-gray-700 dark:text-gray-300"

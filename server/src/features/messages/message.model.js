@@ -56,6 +56,10 @@ const MessageSchema = new mongoose.Schema({
   replyCount: { type: Number, default: 0, min: 0 }, // Number of replies to this message
   lastReplyAt: { type: Date, default: null }, // Timestamp of most recent reply
 
+  // WhatsApp-style inline reply (quoted message preview) — NOT a thread reply
+  // parentId=null means the message stays in the main feed; quotedMessageId is just a reference
+  quotedMessageId: { type: mongoose.Schema.Types.ObjectId, ref: "Message", default: null },
+
   reactions: [ReactionSchema],
   readBy: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
 

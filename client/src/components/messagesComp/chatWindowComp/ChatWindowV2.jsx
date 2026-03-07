@@ -256,11 +256,20 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
                         ...(updates.lastReplyAt !== undefined && { lastReplyAt: updates.lastReplyAt }),
                         ...(updates.text !== undefined && { text: updates.text }),
                         ...(updates.editedAt !== undefined && { editedAt: updates.editedAt }),
+                        // E2EE: propagate new ciphertext if present
+                        ...(updates.payload?.ciphertext && {
+                            ciphertext: updates.payload.ciphertext,
+                            messageIv: updates.payload.messageIv,
+                            isEncrypted: true
+                        })
                     };
 
                     conversationRef.current.updateEvent(messageId, {
                         ...(updates.replyCount !== undefined && { replyCount: updates.replyCount }),
                         ...(updates.lastReplyAt !== undefined && { lastReplyAt: updates.lastReplyAt }),
+                        // ✅ Update decryptedContent so render immediately shows new text
+                        ...(updates.decryptedContent !== undefined && { decryptedContent: updates.decryptedContent }),
+                        ...(updates.editedAt !== undefined && { editedAt: updates.editedAt }),
                         payload: payloadPatch
                     });
 
@@ -272,6 +281,7 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
                     }
                 }
                 break;
+
 
 
             case 'message-deleted':
@@ -545,7 +555,8 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
         const messageData = {
             text: markdown,
             attachments: [],
-            replyTo: replyingTo?._id
+            replyTo: null,                        // thread reply — null for WhatsApp-style replies
+            quotedMessageId: replyingTo?._id || null  // inline reply: stays in main feed
         };
 
         // Send the message (useMessageActions will encrypt it)
@@ -559,6 +570,24 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
             // Do NOT depend on socket for UI rendering
             // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
             if (result.message) {
+                // Capture current replyingTo before we clear it —
+                // replyingTo has the DECRYPTED text already (it was visible on screen)
+                const currentReplyingTo = replyingTo;
+
+                // Always build quotedPreview from the already-decrypted replyingTo state.
+                // NEVER use result.message.quotedMessageId here — that's a ciphertext object from DB.
+                const quotedPreview = currentReplyingTo ? {
+                    _id: result.message.quotedMessageId?._id || result.message.quotedMessageId,
+                    senderName: currentReplyingTo.senderName || currentReplyingTo.sender?.username || 'Someone',
+                    payload: {
+                        // Use decrypted text in priority order
+                        text: currentReplyingTo.text
+                            || currentReplyingTo.decryptedContent
+                            || currentReplyingTo.payload?.text
+                            || ''
+                    }
+                } : null;
+
                 const normalizedEvent = {
                     id: result.message._id,
                     type: result.message.pollId ? 'poll' : 'message',
@@ -573,13 +602,12 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
                     },
                     sender: result.message.sender,
                     createdAt: result.message.createdAt,
-                    parentId: result.message.parentId
+                    parentId: result.message.parentId, // null for inline replies
+                    quotedMessageId: quotedPreview     // ✅ decrypted quoted preview
                 };
 
                 // Add to conversation state (will replace optimistic message)
                 await conversation.addRealtimeEvent(normalizedEvent, currentUserId);
-
-                // Message committed to conversation state
             }
 
             setReplyingTo(null);
@@ -656,6 +684,10 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
         forwardMessage: (messageId) => {
             setForwardingMessageId(messageId);
             setActiveModal('forward');
+        },
+        // ✅ WhatsApp-style reply: set replying context with full message object
+        replyToMessage: (message) => {
+            setReplyingTo(message);
         }
     }), [actions, handleSend]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -751,6 +783,9 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
                 activeThread={activeThread}
                 onThreadOpen={handleThreadOpen}
                 onThreadClose={handleThreadClose}
+
+                // Reply callback
+                onReply={(message) => setReplyingTo(message)}
 
                 // Message input
                 newMessage={newMessage}

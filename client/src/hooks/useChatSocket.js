@@ -225,21 +225,42 @@ export function useChatSocket(conversationId, conversationType, eventHandler) {
             });
         };
 
-        const handleMessageEdited = (data) => {
-            // message:edited from server → same shape as message-updated
-            // data is the full updated message object
+        const handleMessageEdited = async (data) => {
+            // message:edited from server → decrypt new ciphertext, update decryptedContent
             const msgId = data._id || data.id;
+
+            // Attempt to decrypt the new payload (E2EE path)
+            let newDecryptedContent = data.text || null; // plaintext fallback
+            if (data.payload?.ciphertext && data.payload?.messageIv) {
+                try {
+                    const { batchDecryptMessages } = await import('../services/messageEncryptionService');
+                    const fake = [{ id: msgId, type: 'message', payload: data.payload }];
+                    const decrypted = await batchDecryptMessages(fake, conversationId, conversationType, null);
+                    newDecryptedContent = decrypted[0]?.decryptedContent || newDecryptedContent;
+                } catch (_) { /* leave as text fallback */ }
+            }
+
             eventHandlerRef.current?.({
                 type: 'message-updated',
                 payload: {
                     messageId: msgId,
                     updates: {
-                        text: data.text,
-                        editedAt: data.editedAt
+                        text: newDecryptedContent,
+                        decryptedContent: newDecryptedContent,
+                        editedAt: data.editedAt,
+                        // Carry new encrypted payload so the event is consistent
+                        ...(data.payload?.ciphertext && {
+                            payload: {
+                                ciphertext: data.payload.ciphertext,
+                                messageIv: data.payload.messageIv,
+                                isEncrypted: true
+                            }
+                        })
                     }
                 }
             });
         };
+
 
         const handleMessageUpdated = (data) => {
             eventHandlerRef.current?.({

@@ -4,6 +4,7 @@ import EmojiPicker from "./emojiPicker";
 import AttachMenu from "./attachMenu";
 import TurndownService from "turndown";
 import { Button } from "../../../../shared/components/ui";
+import ReplyPreview from "../messages/replyPreview";
 
 const turndownService = new TurndownService({
   headingStyle: "atx",
@@ -34,6 +35,8 @@ export default function FooterInput({
   showAI = true,
   showVoice = true,
   disabled = false,
+  replyingTo = null,
+  onCancelReply,
 }) {
   const emojiRef = useRef(null);
   const attachRef = useRef(null);
@@ -171,11 +174,17 @@ export default function FooterInput({
 
   return (
     <div className="px-4 py-4 bg-white dark:bg-gray-900 relative">
+      {/* WhatsApp-style reply preview bar */}
+      {replyingTo && (
+        <ReplyPreview replyingTo={replyingTo} onCancel={onCancelReply} />
+      )}
+
       <div className={`
         border rounded-2xl transition-all transition-colors duration-200 relative shadow-sm
         bg-white dark:bg-secondary-800 
         border-secondary-200 dark:border-secondary-700
         focus-within:border-primary-500 focus-within:ring-1 focus-within:ring-primary-500
+        ${replyingTo ? 'rounded-tl-none rounded-tr-none border-t-0' : ''}
       `}>
 
         {/* Rich Text Input — uncontrolled div, no html= binding */}

@@ -65,6 +65,7 @@ function ConversationStream({
     channelMembers = [],
     userJoinedAt = null,
     onThreadOpen,
+    onReply,          // ← new: forwarded to MessageEvent → replyToMessage
     replyingTo = null,
     onCancelReply,
     currentUserId,
@@ -186,6 +187,7 @@ function ConversationStream({
                         event={event}
                         actions={actions}
                         onThreadOpen={onThreadOpen}
+                        onReply={onReply}
                         replyingTo={replyingTo}
                         onCancelReply={onCancelReply}
                         currentUserId={currentUserId}
@@ -200,6 +202,7 @@ function ConversationStream({
                         event={event}
                         actions={actions}
                         isDM={true}
+                        onReply={onReply}
                         currentUserId={currentUserId}
                         openMsgMenuId={openMsgMenuId}
                         toggleMsgMenu={toggleMsgMenu}

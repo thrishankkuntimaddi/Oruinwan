@@ -73,7 +73,10 @@ const CentralContentView = ({
     onSaveCanvas,
     onDeleteTab,
     onRenameTab,
-    onShareTab
+    onShareTab,
+
+    // Reply callback — set by ChatWindowV2 via enhancedActions
+    onReply
 }) => {
     return (
         <div className="chat-content" style={{ display: 'flex', flex: 1, overflow: 'hidden', minHeight: 0, backgroundColor: 'var(--bg-primary)' }}>
@@ -102,6 +105,7 @@ const CentralContentView = ({
                             channelMembers={channelMembers}
                             userJoinedAt={userJoinedAt}
                             onThreadOpen={onThreadOpen}
+                            onReply={onReply}
                             threadCounts={threadCounts}
                             replyingTo={replyingTo}
                             onCancelReply={onCancelReply}
@@ -124,6 +128,8 @@ const CentralContentView = ({
                             blocked={muted}
                             setNewMessage={setNewMessage}
                             disabled={!canInteract}
+                            replyingTo={replyingTo}
+                            onCancelReply={onCancelReply}
                         />
                     </div>
                 </>

@@ -33,6 +33,7 @@ async function createMessage(messageData, io = null) {
         sender,
         attachments = [],
         parentId = null,
+        quotedMessageId = null,   // ← WhatsApp-style inline reply (NOT a thread)
         ciphertext,
         messageIv,
         _isEncrypted
@@ -56,6 +57,7 @@ async function createMessage(messageData, io = null) {
         dm,
         sender,
         parentId,
+        quotedMessageId: quotedMessageId || null,
         // Payload matches Message schema exactly
         payload: {
             ciphertext,      // Base64-encoded AES-GCM ciphertext
@@ -74,6 +76,14 @@ async function createMessage(messageData, io = null) {
 
     // Populate sender for response and real-time broadcast
     await message.populate('sender', 'username email profilePicture');
+
+    // Populate quotedMessage for inline reply preview
+    if (message.quotedMessageId) {
+        await message.populate({
+            path: 'quotedMessageId',
+            populate: { path: 'sender', select: 'username profilePicture' }
+        });
+    }
 
     // ============================================================
     // FIX 4: Update channel activity counters (non-blocking)
@@ -176,6 +186,10 @@ async function fetchMessages(query, options = {}) {
         .populate('readBy.user', 'username')
         .populate({
             path: 'parentId',
+            populate: { path: 'sender', select: 'username profilePicture' }
+        })
+        .populate({
+            path: 'quotedMessageId',
             populate: { path: 'sender', select: 'username profilePicture' }
         });
 
@@ -333,9 +347,9 @@ async function getUserDMSessions(userId, workspaceId) {
 
 /**
  * Edit a message (sender only)
- * Updates text, sets editedAt, increments version
+ * Updates payload.ciphertext (E2EE) or text, sets editedAt, increments version
  */
-async function editMessage(messageId, userId, newText, io) {
+async function editMessage(messageId, userId, { text, ciphertext, messageIv } = {}, io) {
     const message = await Message.findById(messageId)
         .populate('sender', 'username email profilePicture');
     if (!message) throw new Error('Message not found');
@@ -352,9 +366,20 @@ async function editMessage(messageId, userId, newText, io) {
         throw err;
     }
 
-    // Store new text in payload for E2EE consistency
-    // Note: for encrypted messages, newText IS the new ciphertext/payload blob
-    message.text = newText;
+    if (ciphertext && messageIv) {
+        // E2EE edit: update the encrypted payload so batchDecryptMessages sees new text on reload
+        message.payload = {
+            ...(message.payload || {}),
+            ciphertext,
+            messageIv,
+            isEncrypted: true
+        };
+        message.markModified('payload');
+    } else if (text) {
+        // Plaintext fallback (legacy/DM without key)
+        message.text = text;
+    }
+
     message.editedAt = new Date();
     message.version = (message.version || 1) + 1;
     await message.save();

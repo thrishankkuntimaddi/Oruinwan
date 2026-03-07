@@ -1,7 +1,7 @@
 // client/src/components/messagesComp/events/MessageEvent.jsx
 // Wrapper for message type events - reuses existing message components
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import ChannelMessageItem from '../chatWindowComp/messages/ChannelMessageItem';
 import DMMessageItem from '../chatWindowComp/messages/DMMessageItem';
 
@@ -11,8 +11,7 @@ import DMMessageItem from '../chatWindowComp/messages/DMMessageItem';
  * @param {object} actions - Message actions from useMessageActions
  * @param {boolean} isDM - Whether this is a DM conversation
  * @param {function} onThreadOpen - Callback when thread is opened
- * @param {object} replyingTo - Currently replying to message
- * @param {function} onCancelReply - Cancel reply callback
+ * @param {function} onReply - Called with enrichedMessage when Reply is clicked
  * @param {string} currentUserId - Current user's ID
  * @param {object} threadCounts - Object containing thread counts for messages
  */
@@ -20,6 +19,7 @@ function MessageEvent({
     event,
     actions = {},
     onThreadOpen,
+    onReply,       // ← new: called with enrichedMessage when Reply is clicked
     replyingTo,
     onCancelReply,
     currentUserId,
@@ -40,6 +40,82 @@ function MessageEvent({
 
     // Extract text with priority: decryptedContent > nested payload > direct payload
     const messageText = event.decryptedContent || event.payload?.payload?.text || event.payload?.text || event.text || '';
+
+    // Extract repliedTo info for showing quoted message preview
+    // Backend populates 'quotedMessageId' as the inlined quoted Message doc (with sender populated)
+    // The frontend may also receive an explicit 'repliedTo' field on some paths
+    const rawRepliedTo = event.quotedMessageId                    // populated quotedMessageId (primary)
+        || event.payload?.quotedMessageId                         // nested inside payload
+        || event.repliedTo                                        // legacy explicit field
+        || event.payload?.repliedTo                               // legacy nested
+        || null;
+
+    // Build the immediate (possibly encrypted) repliedTo from what we have
+    const immediateRepliedTo = rawRepliedTo ? {
+        senderName: rawRepliedTo.senderName || rawRepliedTo.sender?.username || 'Someone',
+        payload: {
+            // Use plaintext if available (from replyingTo state capture),
+            // only fall back to "🔒" if the field is truly a ciphertext blob
+            text: rawRepliedTo.payload?.text
+                || rawRepliedTo.text
+                || rawRepliedTo.decryptedContent
+                || null  // null triggers async decryption below
+        }
+    } : null;
+
+    // Async decryption of quoted message for historical loads (other users / page refresh)
+    const [decryptedRepliedTo, setDecryptedRepliedTo] = useState(immediateRepliedTo);
+
+    useEffect(() => {
+        setDecryptedRepliedTo(immediateRepliedTo);
+
+        // If we have a completely encrypted quoted payload (no plaintext available), decrypt it
+        if (!immediateRepliedTo) return;
+        if (immediateRepliedTo.payload?.text) return; // already have plaintext
+
+        const quotedPayload = rawRepliedTo?.payload || rawRepliedTo; // handle nested payload
+        const qCiphertext = quotedPayload?.ciphertext || rawRepliedTo?.payload?.ciphertext;
+        const qIv = quotedPayload?.messageIv || rawRepliedTo?.payload?.messageIv;
+        const conversationId = event.payload?.channel || event.payload?.channelId || event.channelId
+            || event.payload?.dm || event.channelId || null;
+        const conversationType = (event.payload?.dm || event.dm) ? 'dm' : 'channel';
+
+        if (!qCiphertext || !qIv || !conversationId) {
+            // No ciphertext to decrypt or no conversationId — show placeholder
+            setDecryptedRepliedTo(prev => ({
+                ...prev,
+                payload: { text: '🔒 Encrypted message' }
+            }));
+            return;
+        }
+
+        // Decrypt asynchronously using the conversation key
+        let cancelled = false;
+        (async () => {
+            try {
+                const { decryptReceivedMessage } = await import('../../../services/messageEncryptionService');
+                const plaintext = await decryptReceivedMessage(
+                    qCiphertext, qIv, conversationId, conversationType, null
+                );
+                if (!cancelled) {
+                    setDecryptedRepliedTo({
+                        senderName: rawRepliedTo.senderName || rawRepliedTo.sender?.username || 'Someone',
+                        payload: { text: plaintext }
+                    });
+                }
+            } catch {
+                if (!cancelled) {
+                    setDecryptedRepliedTo(prev => ({
+                        ...prev,
+                        payload: { text: '🔒 Encrypted message' }
+                    }));
+                }
+            }
+        })();
+
+        return () => { cancelled = true; };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [event._id || event.id]);
 
     const enrichedMessage = {
         _id: event._id || event.id,
@@ -76,7 +152,9 @@ function MessageEvent({
         // Encryption fields
         isEncrypted,
         ciphertext,
-        messageIv
+        messageIv,
+        // ✅ Quoted/inline reply preview — decrypted asynchronously
+        repliedTo: decryptedRepliedTo
     };
 
 
@@ -119,7 +197,7 @@ function MessageEvent({
                 formatTime={(ts) => new Date(ts).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
                 addReaction={handleAddReaction}
                 pinMessage={handlePin}
-                replyToMessage={() => { }}
+                replyToMessage={(id) => onReply?.(enrichedMessage)}
                 forwardMessage={handleForward}
                 copyMessage={() => { }}
                 deleteMessage={(id, scope) => handleDelete(scope)}
@@ -142,7 +220,7 @@ function MessageEvent({
             formatTime={(ts) => new Date(ts).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
             addReaction={handleAddReaction}
             pinMessage={handlePin}
-            replyToMessage={() => { }}
+            replyToMessage={(id) => onReply?.(enrichedMessage)}
             forwardMessage={handleForward}
             copyMessage={() => { }}
             deleteMessage={(id, scope) => handleDelete(scope)}

@@ -33,7 +33,7 @@ export function useMessageActions(conversationId, conversationType, workspaceId 
     }, []);
 
     // Send message
-    const sendMessage = useCallback(async ({ text, attachments = [], replyTo = null }) => {
+    const sendMessage = useCallback(async ({ text, attachments = [], replyTo = null, quotedMessageId = null }) => {
 
         // ⚠️ CRITICAL FIX 6: Block send if encryption not ready
         if (!encryptionReady) {
@@ -68,7 +68,8 @@ export function useMessageActions(conversationId, conversationType, workspaceId 
                 username: user?.username,
                 profilePicture: user?.profilePicture
             },
-            parentId: replyTo,
+            parentId: replyTo,         // thread reply
+            quotedMessageId,           // inline reply
             createdAt: new Date().toISOString(),
             reactions: [],
             isPinned: false,
@@ -141,7 +142,7 @@ export function useMessageActions(conversationId, conversationType, workspaceId 
                 text,
                 conversationId,
                 conversationType,
-                replyTo // parentMessageId for thread derivation
+                replyTo // parentMessageId for thread derivation (inline replies don't use parentId)
             );
 
             ciphertext = encrypted.ciphertext;
@@ -173,7 +174,8 @@ export function useMessageActions(conversationId, conversationType, workspaceId 
                     messageIv,
                     isEncrypted: true,
                     attachments,
-                    replyTo,
+                    replyTo,           // thread reply (parentId) — null for inline replies
+                    quotedMessageId,   // inline reply reference — stays in main feed
                     clientTempId: tempId
                 });
             } else if (conversationType === 'dm') {
@@ -184,7 +186,8 @@ export function useMessageActions(conversationId, conversationType, workspaceId 
                     messageIv,
                     isEncrypted: true,
                     attachments,
-                    replyTo,
+                    replyTo,           // thread reply (parentId)
+                    quotedMessageId,   // inline reply reference
                     clientTempId: tempId
                 });
             }

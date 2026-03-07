@@ -110,7 +110,8 @@ exports.sendDirectMessage = async (req, res) => {
                 dm: dmSession._id,
                 sender: senderId,
                 attachments,
-                parentId: replyTo || null,
+                parentId: replyTo || null,          // thread reply
+                quotedMessageId: req.body.quotedMessageId || null, // inline reply
                 ciphertext,
                 messageIv,
                 isEncrypted,
@@ -322,7 +323,8 @@ exports.sendChannelMessage = async (req, res) => {
         const {
             channelId,
             attachments,
-            replyTo,
+            replyTo,          // ← legacy: thread reply (parentId)
+            quotedMessageId,  // ← new: WhatsApp-style inline reply (NOT parentId)
             ciphertext,
             messageIv,
             isEncrypted,
@@ -363,7 +365,8 @@ exports.sendChannelMessage = async (req, res) => {
                 channel: channelId,
                 sender: senderId,
                 attachments,
-                parentId: replyTo || null,
+                parentId: replyTo || null,          // thread reply → goes into thread panel
+                quotedMessageId: quotedMessageId || null, // inline reply → stays in main feed
                 ciphertext,
                 messageIv,
                 isEncrypted,
@@ -587,14 +590,17 @@ exports.editMessage = async (req, res) => {
         const userId = req.user.sub;
         const { text, ciphertext, messageIv } = req.body;
 
-        // Accept either plaintext edit or E2EE payload
-        const newText = text || ciphertext || null;
-        if (!newText) {
+        if (!text && !ciphertext) {
             return res.status(400).json({ message: 'text or ciphertext is required' });
         }
 
         const io = req.app?.get('io');
-        const message = await messagesService.editMessage(messageId, userId, newText, io);
+        const message = await messagesService.editMessage(
+            messageId,
+            userId,
+            { text, ciphertext, messageIv },
+            io
+        );
 
         return res.json({ message });
     } catch (err) {
