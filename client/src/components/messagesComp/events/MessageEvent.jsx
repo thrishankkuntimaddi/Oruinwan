@@ -176,8 +176,12 @@ function MessageEvent({
         }
     };
 
-    const handleForward = (targets) => {
-        actions.forwardMessage?.(enrichedMessage._id, targets);
+    // ChannelMessageItem calls forwardMessage(msg.id) to OPEN the modal.
+    // enhancedActions.forwardMessage(id) sets forwardingMessageId + activeModal='forward'.
+    // The modal then calls handleForward(targets) which calls the API.
+    // We must pass the modal opener here — NOT call the API directly with msg.id as "targets".
+    const handleForward = () => {
+        actions.forwardMessage?.(enrichedMessage._id);
     };
 
     const handleThreadOpen = () => {

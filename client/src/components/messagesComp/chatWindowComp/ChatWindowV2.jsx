@@ -691,24 +691,87 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
         }
     }), [actions, handleSend]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    // Handle confirmed forward: call API with selected targets, then close modal
+    // Handle confirmed forward: re-encrypt the plaintext per target and post as a new message
     const handleForward = useCallback(async (targets) => {
         if (!forwardingMessageId || !targets?.length) return;
         try {
-            await actions.forwardMessage(forwardingMessageId, targets);
+            // Find the message being forwarded in conversation state to get its decrypted text
+            const sourceMsg = conversation.events?.find(
+                e => (e._id || e.id) === forwardingMessageId
+            );
+            const plaintextToForward = sourceMsg?.decryptedContent
+                || sourceMsg?.text
+                || sourceMsg?.payload?.text
+                || null;
+
+            if (!plaintextToForward) {
+                // Fallback to old backend-side copy if plaintext not available
+                await actions.forwardMessage(forwardingMessageId, targets);
+                return;
+            }
+
+            // Re-encrypt and send to each target separately with their own conversation key
+            const { encryptMessageForSending } = await import('../../../services/messageEncryptionService');
+            const results = await Promise.allSettled(
+                targets.map(async (target) => {
+                    const targetConversationId = target.id;
+                    const targetType = target.type; // 'channel' | 'dm'
+
+                    const encrypted = await encryptMessageForSending(
+                        plaintextToForward,
+                        targetConversationId,
+                        targetType,
+                        null // not a thread reply
+                    );
+
+                    if (!encrypted || encrypted.status === 'ENCRYPTION_NOT_READY') {
+                        throw new Error(`Encryption not ready for ${targetType}:${targetConversationId}`);
+                    }
+
+                    // Post as a new message to the target conversation
+                    if (targetType === 'channel') {
+                        await api.post('/api/v2/messages/channel', {
+                            channelId: targetConversationId,
+                            ciphertext: encrypted.ciphertext,
+                            messageIv: encrypted.messageIv,
+                            isEncrypted: true,
+                            attachments: [],
+                            forwardedFrom: forwardingMessageId
+                        });
+                    } else if (targetType === 'dm') {
+                        // Resolve DM session then send
+                        const dmResolve = await api.get(
+                            `/api/v2/messages/workspace/${workspaceId}/dm/resolve/${target.id}`
+                        );
+                        const dmSessionId = dmResolve.data.dmSessionId;
+                        await api.post('/api/v2/messages/direct', {
+                            dmSessionId,
+                            workspaceId,
+                            ciphertext: encrypted.ciphertext,
+                            messageIv: encrypted.messageIv,
+                            isEncrypted: true,
+                            attachments: [],
+                            forwardedFrom: forwardingMessageId
+                        });
+                    }
+                })
+            );
+
+            const succeeded = results.filter(r => r.status === 'fulfilled').length;
+            const failed = results.filter(r => r.status === 'rejected').length;
+            if (failed > 0) console.warn(`[ChatWindowV2] Forward: ${succeeded} succeeded, ${failed} failed`);
+
         } catch (err) {
             console.error('[ChatWindowV2] Forward failed:', err);
         } finally {
             setActiveModal(null);
             setForwardingMessageId(null);
         }
-    }, [forwardingMessageId, actions]);
+    }, [forwardingMessageId, actions, conversation.events, workspaceId]);
 
     // Get channel members for join markers (channels only)
     const channelMembers = chat?.members || [];
     const userJoinedAt = conversationType === 'channel'
-        ? chat?.members?.find(m => (m.user?._id || m.user) === currentUserId)?.joinedAt
-        : null;
 
     return (
         <div className="chat-window" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
