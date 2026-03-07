@@ -110,6 +110,7 @@ const CentralContentView = ({
                             replyingTo={replyingTo}
                             onCancelReply={onCancelReply}
                             currentUserId={currentUserId}
+                            conversationId={chat?.id}
                         />
 
                         {/* Footer - fixed at bottom */}

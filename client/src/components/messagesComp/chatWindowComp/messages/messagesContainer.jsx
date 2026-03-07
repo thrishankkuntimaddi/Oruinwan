@@ -40,6 +40,7 @@ export default function MessagesContainer({
   hasMore = false,
   isLoadingMore = false,
   onLoadMore,
+  conversationId, // ← used to reset scroll state when switching channels
 }) {
   const messagesRef = useRef(null);
 
@@ -48,12 +49,19 @@ export default function MessagesContainer({
   --------------------------------------------------------- */
   const prevMessagesInfoRef = useRef({ length: 0, lastId: null });
 
+  // Reset scroll tracking when conversation switches
+  useEffect(() => {
+    prevMessagesInfoRef.current = { length: 0, lastId: null };
+    // Immediately jump to bottom when switching channels
+    const el = messagesRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [conversationId]);
+
   /* ---------------------------------------------------------
      AUTO SCROLL TO BOTTOM ON NEW MESSAGES
      Only scroll if:
-     1. Initial load
-     2. New message added to the bottom
-     Avoid scrolling on updates (reactions, pins) or history load
+     1. Initial load (length 0 → N)  — instant jump to bottom
+     2. New message added at the end — smooth scroll
   --------------------------------------------------------- */
   useEffect(() => {
     const el = messagesRef.current;
@@ -63,16 +71,20 @@ export default function MessagesContainer({
     const currentLastId = currentLen > 0 ? messages[currentLen - 1].id : null;
     const prevInfo = prevMessagesInfoRef.current;
 
-    // Check if new message added at the end (length increased AND last ID changed)
     const isNewMessageAtEnd =
       currentLen > prevInfo.length &&
       currentLastId !== prevInfo.lastId;
-
-    // Check if initial load (from 0 to N)
     const isInitialLoad = prevInfo.length === 0 && currentLen > 0;
 
-    if (isNewMessageAtEnd || isInitialLoad) {
-      el.scrollTop = el.scrollHeight;
+    if (isInitialLoad || isNewMessageAtEnd) {
+      // Double rAF: wait for browser to paint the new DOM before measuring scrollHeight
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          const container = messagesRef.current;
+          if (!container) return;
+          container.scrollTop = container.scrollHeight;
+        });
+      });
     }
 
     prevMessagesInfoRef.current = {
@@ -80,8 +92,6 @@ export default function MessagesContainer({
       lastId: currentLastId
     };
   }, [messages]);
-
-
 
   /* ---------------------------------------------------------
      FILTER & GROUP BY DATE

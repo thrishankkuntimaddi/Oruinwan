@@ -65,15 +65,17 @@ function ConversationStream({
     channelMembers = [],
     userJoinedAt = null,
     onThreadOpen,
-    onReply,          // ← new: forwarded to MessageEvent → replyToMessage
+    onReply,
     replyingTo = null,
     onCancelReply,
     currentUserId,
-    threadCounts = {} // ✅ Add threadCounts prop
+    threadCounts = {},
+    conversationId = null, // ← used to detect channel switch and reset scroll
 }) {
     const streamRef = useRef(null);
     const bottomRef = useRef(null);
     const prevScrollHeight = useRef(0);
+    const prevEventsLengthRef = useRef(0); // track initial load
     const [openMsgMenuId, setOpenMsgMenuId] = useState(null);
 
     const toggleMsgMenu = (e, id) => {
@@ -92,17 +94,44 @@ function ConversationStream({
         };
     }, [openMsgMenuId]);
 
+    // Reset scroll tracking when switching channels/DMs
+    useEffect(() => {
+        prevEventsLengthRef.current = 0;
+        // Also jump to bottom immediately if content already loaded
+        if (bottomRef.current) {
+            requestAnimationFrame(() => {
+                bottomRef.current?.scrollIntoView({ behavior: 'instant' });
+            });
+        }
+    }, [conversationId]);
+
     // Auto-scroll to bottom on new messages
     useEffect(() => {
-        if (bottomRef.current && events.length > 0) {
-            const isNearBottom = streamRef.current
-                ? streamRef.current.scrollHeight - streamRef.current.scrollTop - streamRef.current.clientHeight < 200
-                : true;
+        if (!bottomRef.current) return;
 
+        const currentLen = events.length;
+        const isInitialLoad = prevEventsLengthRef.current === 0 && currentLen > 0;
+        const isNewMessage = currentLen > prevEventsLengthRef.current;
+
+        if (isInitialLoad) {
+            // On first load: jump instantly to bottom (DOM not yet scrolled)
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    bottomRef.current?.scrollIntoView({ behavior: 'instant' });
+                });
+            });
+        } else if (isNewMessage) {
+            // On new message: only scroll if user is near bottom
+            const el = streamRef.current;
+            const isNearBottom = el
+                ? el.scrollHeight - el.scrollTop - el.clientHeight < 200
+                : true;
             if (isNearBottom) {
-                bottomRef.current.scrollIntoView({ behavior: 'smooth' });
+                bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
             }
         }
+
+        prevEventsLengthRef.current = currentLen;
     }, [events]);
 
     // Maintain scroll position when loading more
