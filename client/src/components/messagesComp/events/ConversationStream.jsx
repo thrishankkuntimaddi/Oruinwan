@@ -186,14 +186,17 @@ function ConversationStream({
             return dateA - dateB;
         });
 
-        // When showThreadsOnly is on, keep only message events with replyCount > 0
+        // When showThreadsOnly is on, keep only message events with threads
         if (showThreadsOnly) {
-            return sorted.filter(e =>
-                e.type !== 'message' || (e.replyCount > 0)
-            );
+            return sorted.filter(e => {
+                if (e.type !== 'message') return true; // keep system events
+                // Check the live threadCounts map first (real-time), fall back to event's own replyCount
+                const count = (threadCounts[e.id] ?? 0) || (e.replyCount ?? 0);
+                return count > 0;
+            });
         }
         return sorted;
-    }, [mainStreamEvents, systemEvents, showThreadsOnly]);
+    }, [mainStreamEvents, systemEvents, showThreadsOnly, threadCounts]);
 
     // Group by date - create our own implementation to ensure arrays
     const groupedEvents = useMemo(() => {
