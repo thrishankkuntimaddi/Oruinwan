@@ -226,6 +226,8 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
                         createdAt: backendMsg.createdAt,
                         channelId: backendMsg.channel,
                         dmId: backendMsg.dm,
+                        // ✅ quotedMessageId: keep it even as a string — MessageEvent will decrypt async
+                        quotedMessageId: backendMsg.quotedMessageId || null,
                         backend: backendMsg // Keep original for reference
                     };
 
