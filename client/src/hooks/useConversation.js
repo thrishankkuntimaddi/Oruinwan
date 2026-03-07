@@ -249,7 +249,19 @@ export function useConversation(conversationId, conversationType, workspaceId) {
         if (eventsMapRef.current.has(event.id)) {
 
             // Update instead of add (might have new data like reactions)
-            updateEvent(event.id, event);
+            // ✅ Preserve quotedMessageId if the existing event already has a populated object
+            // (socket event has only ObjectId string; normalizedEvent has senderName+text)
+            const existingEvent = eventsMapRef.current.get(event.id);
+            const existingQuotedId = existingEvent?.quotedMessageId;
+            const incomingQuotedId = event.quotedMessageId;
+            const shouldPreserveQuoted = existingQuotedId && typeof existingQuotedId === 'object'
+                && typeof incomingQuotedId !== 'object'; // incoming is string — keep the rich object
+
+            const mergedEvent = shouldPreserveQuoted
+                ? { ...event, quotedMessageId: existingQuotedId }
+                : event;
+
+            updateEvent(event.id, mergedEvent);
             return;
         }
 
