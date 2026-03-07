@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { MessageSquare, ArrowRight, Clock, Search, ListFilter, X } from 'lucide-react';
+import { MessageSquare, ArrowRight, Search, ListFilter, X } from 'lucide-react';
 import ThreadPanel from '../ThreadPanel';
 import api from '../../../../services/api';
 import { formatTime } from '../helpers/helpers';
@@ -188,38 +188,38 @@ export default function ThreadsTab({ channelId, currentUserId, socket }) {
                             <div
                                 key={thread._id}
                                 onClick={() => setSelectedThread(thread)}
-                                className={`group p-3 rounded-xl cursor-pointer border transition-all hover:shadow-md ${selectedThread?._id === thread._id
-                                    ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800/50 shadow-sm'
-                                    : 'bg-white dark:bg-gray-800/50 border-transparent hover:border-gray-200 dark:hover:border-gray-700'
+                                className={`group flex items-center gap-2.5 px-3 py-2 rounded-lg cursor-pointer border transition-all ${selectedThread?._id === thread._id
+                                    ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800/50'
+                                    : 'bg-white dark:bg-gray-800/40 border-transparent hover:border-gray-200 dark:hover:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/70'
                                     }`}
                             >
-                                <div className="flex items-start justify-between mb-2">
-                                    <div className="flex items-center gap-2">
-                                        <div className="w-6 h-6 rounded bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-[10px] font-bold text-gray-600 dark:text-gray-300">
-                                            {(thread.sender?.username || thread.senderName || '?').charAt(0)}
-                                        </div>
-                                        <span className="text-xs font-semibold text-gray-700 dark:text-gray-300 truncate max-w-[120px]">
-                                            {thread.sender?.username || thread.senderName || "Unknown"}
+                                {/* Avatar */}
+                                <div className="w-7 h-7 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-[11px] font-bold text-white flex-shrink-0">
+                                    {(thread.sender?.username || thread.senderName || '?').charAt(0).toUpperCase()}
+                                </div>
+
+                                {/* Content */}
+                                <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-1.5 mb-0.5">
+                                        <span className="text-[11px] font-semibold text-gray-700 dark:text-gray-300 truncate">
+                                            {thread.sender?.username || thread.senderName || 'Unknown'}
+                                        </span>
+                                        <span className="text-[10px] text-gray-400 flex-shrink-0">
+                                            {formatTime(thread.createdAt)}
                                         </span>
                                     </div>
-                                    <span className="text-[10px] text-gray-400 flex items-center gap-1">
-                                        <Clock size={10} />
-                                        {formatTime(thread.createdAt)}
-                                    </span>
+                                    <p className="text-[12px] text-gray-600 dark:text-gray-400 truncate leading-tight">
+                                        {thread.decryptedContent || thread.payload?.text || thread.text || '🔒 Encrypted message'}
+                                    </p>
                                 </div>
 
-                                <p className="text-sm text-gray-800 dark:text-gray-200 line-clamp-2 mb-3 leading-relaxed">
-                                    {thread.decryptedContent || thread.payload?.text || thread.text || '🔒 Encrypted message'}
-                                </p>
+                                {/* Reply badge */}
+                                <span className="flex-shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-blue-50 dark:bg-blue-900/30 text-[10px] font-semibold text-blue-600 dark:text-blue-400">
+                                    <MessageSquare size={9} />
+                                    {thread.replyCount}
+                                </span>
 
-                                <div className="flex items-center justify-between">
-                                    <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-white dark:bg-gray-800 text-xs font-medium text-blue-600 dark:text-blue-400 border border-gray-100 dark:border-gray-700">
-                                        <MessageSquare size={10} />
-                                        {thread.replyCount} replies
-                                    </span>
-                                    <ArrowRight size={14} className={`text-gray-400 opacity-0 -translate-x-2 transition-all ${selectedThread?._id === thread._id ? 'opacity-100 translate-x-0 text-blue-500' : 'group-hover:opacity-100 group-hover:translate-x-0'
-                                        }`} />
-                                </div>
+                                <ArrowRight size={13} className={`flex-shrink-0 text-gray-400 opacity-0 -translate-x-1 transition-all ${selectedThread?._id === thread._id ? 'opacity-100 translate-x-0 text-blue-500' : 'group-hover:opacity-100 group-hover:translate-x-0'}`} />
                             </div>
                         ))
                     )}
