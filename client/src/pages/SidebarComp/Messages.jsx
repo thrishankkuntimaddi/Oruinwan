@@ -38,9 +38,8 @@ export default function Messages() {
 
       const fetchChannelDetails = async () => {
         try {
-          const response = await api.get(`/api/channels/${channelParam}`);
-          const channel = response.data;
-
+          const response = await api.get(`/api/channels/${channelParam}/details`);
+          const channel = response.data.channel || response.data;
 
           setSelectedChat({
             id: channel._id || channel.id,
@@ -51,6 +50,8 @@ export default function Messages() {
             isDiscoverable: channel.isDiscoverable,
             members: channel.members || [],
             creatorName: channel.creatorName,
+            createdAt: channel.createdAt,
+            createdBy: channel.createdBy,
             systemEvents: channel.systemEvents || []
           });
           setCurrentBroadcast(null);

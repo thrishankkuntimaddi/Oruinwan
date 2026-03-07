@@ -730,16 +730,45 @@ exports.pinMessage = async (req, res) => {
         await message.save();
 
         const io = req.app?.get('io');
-        if (io) {
-            const room = message.channel
-                ? `channel:${message.channel}`
-                : `dm:${message.dm}`;
-            io.to(room).emit(pin ? 'message-pinned' : 'message-unpinned', {
+
+        // Emit pin/unpin socket event for instant UI update
+        if (io && message.channel) {
+            io.to(`channel:${message.channel}`).emit(pin ? 'message-pinned' : 'message-unpinned', {
                 messageId,
                 pinnedBy: userId,
                 pinnedAt: message.pinnedAt
             });
         }
+
+        // ── System message: "Alice pinned / unpinned a message" ──────────
+        if (message.channel) {
+            try {
+                const User = require('../../../models/User');
+                const pinner = await User.findById(userId).select('username').lean();
+
+                // Short snippet of the pinned message for context
+                const snippet = message.payload?.text || message.text || message.decryptedContent || '';
+                const messageSnippet = snippet.length > 60 ? snippet.slice(0, 57) + '…' : snippet;
+
+                const systemMsg = await Message.create({
+                    type: 'system',
+                    systemEvent: pin ? 'message_pinned' : 'message_unpinned',
+                    sender: userId,
+                    channel: message.channel,
+                    workspace: message.workspace,
+                    systemData: {
+                        userId,
+                        userName: pinner?.username || 'Someone',
+                        messageSnippet,
+                        pinnedMessageId: messageId,
+                    },
+                });
+                if (io) io.to(`channel:${message.channel}`).emit('new-message', systemMsg);
+            } catch (sysErr) {
+                console.error('[SYSTEM MSG] pin system message failed:', sysErr);
+            }
+        }
+        // ─────────────────────────────────────────────────────────────────
 
         return res.json({ message });
     } catch (err) {

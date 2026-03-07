@@ -1,6 +1,10 @@
 import React, { useState, useRef, useEffect } from "react";
 import api from '../../../../services/api';
-import { Smile, MessageSquare, Share, MoreHorizontal, Pin, Copy, Trash2, Info, Pencil, Check, X } from "lucide-react";
+import {
+    Smile, MessageSquare, Share, MoreHorizontal, Pin, Copy, Trash2, Info, Pencil, Check, X,
+    Hash, UserCheck, LogOut, UserPlus, UserMinus, Shield, ShieldOff,
+    PenLine, FileText, Lock, PinIcon, Eraser
+} from "lucide-react";
 import ReactionPicker from "./reactionPicker";
 import ReactMarkdown from "react-markdown";
 import remarkBreaks from "remark-breaks";
@@ -76,7 +80,7 @@ function ChannelMessageItem({
         if (!trimmed) return; // Don't save empty message
         try {
             const channelId = msg.channelId || (msg.channel && (msg.channel._id || msg.channel));
-            const convType  = channelId ? 'channel' : 'dm';
+            const convType = channelId ? 'channel' : 'dm';
 
             if (channelId) {
                 // E2EE path: encrypt then save ciphertext
@@ -86,7 +90,7 @@ function ChannelMessageItem({
                 if (encrypted && encrypted.status !== 'ENCRYPTION_NOT_READY') {
                     await api.patch(`/api/v2/messages/${msg._id || msg.id}`, {
                         ciphertext: encrypted.ciphertext,
-                        messageIv:  encrypted.messageIv
+                        messageIv: encrypted.messageIv
                     });
                 } else {
                     // Fallback: plaintext (only if key not available)
@@ -137,25 +141,35 @@ function ChannelMessageItem({
         const isMe = (id) => String(id) === String(currentUserId);
         const name = (id, fallback) => isMe(id) ? 'You' : (fallback || 'Someone');
 
-        const textMap = {
-            member_joined: () => `${name(sd.userId, sd.userName)} joined #${sd.channelName || 'this channel'}`,
-            member_left: () => `${name(sd.userId, sd.userName)} left #${sd.channelName || 'this channel'}`,
-            member_invited: () => `${name(sd.inviterId, sd.inviterName)} invited ${isMe(sd.invitedUserId) ? 'you' : (sd.invitedUserName || 'someone')} to #${sd.channelName || 'this channel'}`,
-            member_removed: () => `${name(sd.removedById, sd.removedByName)} removed ${isMe(sd.removedUserId) ? 'you' : (sd.removedUserName || 'someone')}`,
-            channel_created: () => `${name(sd.userId, sd.userName)} created this channel`,
-            channel_renamed: () => `${name(sd.userId, sd.userName)} renamed the channel from #${sd.oldName} to #${sd.newName}`,
-            admin_assigned: () => `${name(sd.assignerId, sd.assignerName)} made ${isMe(sd.assignedUserId) ? 'you' : (sd.assignedUserName || 'someone')} an admin`,
-            admin_demoted: () => `${name(sd.demoterId, sd.demoterName)} removed ${isMe(sd.demotedUserId) ? 'your' : `${sd.demotedUserName || 'someone'}'s`} admin role`,
-            messages_cleared: () => `${name(sd.userId, sd.userName)} cleared the message history`,
-            channel_privacy_changed: () => `${name(sd.userId, sd.userName)} made this channel ${sd.newPrivacy || 'private'}`,
+        // { icon: LucideComponent, color: tailwind bg class, text fn }
+        const eventConfig = {
+            channel_created: { Icon: Hash, color: 'bg-indigo-500', text: () => `${name(sd.userId, sd.userName)} created this channel` },
+            member_joined: { Icon: UserCheck, color: 'bg-green-500', text: () => `${name(sd.userId, sd.userName)} joined #${sd.channelName || 'this channel'}` },
+            member_left: { Icon: LogOut, color: 'bg-orange-400', text: () => `${name(sd.userId, sd.userName)} left #${sd.channelName || 'this channel'}` },
+            member_invited: { Icon: UserPlus, color: 'bg-blue-500', text: () => `${name(sd.inviterId, sd.inviterName)} invited ${isMe(sd.invitedUserId) ? 'you' : (sd.invitedUserName || 'someone')} to #${sd.channelName || 'this channel'}` },
+            member_removed: { Icon: UserMinus, color: 'bg-red-500', text: () => `${name(sd.removerId || sd.removedById, sd.removerName || sd.removedByName)} removed ${isMe(sd.removedUserId) ? 'you' : (sd.removedUserName || 'someone')}` },
+            admin_assigned: { Icon: Shield, color: 'bg-purple-500', text: () => `${name(sd.assignerId, sd.assignerName)} made ${isMe(sd.assignedUserId) ? 'you' : (sd.assignedUserName || 'someone')} an admin` },
+            admin_demoted: { Icon: ShieldOff, color: 'bg-gray-500', text: () => `${name(sd.demoterId, sd.demoterName)} removed ${isMe(sd.demotedUserId) ? 'your' : `${sd.demotedUserName || "someone"}'s`} admin role` },
+            channel_renamed: { Icon: PenLine, color: 'bg-sky-500', text: () => `${name(sd.userId, sd.userName)} renamed the channel from #${sd.oldName} to #${sd.newName}` },
+            channel_desc_changed: { Icon: FileText, color: 'bg-teal-500', text: () => `${name(sd.userId, sd.userName)} updated the channel description` },
+            channel_privacy_changed: { Icon: Lock, color: 'bg-yellow-500', text: () => `${name(sd.userId, sd.userName)} made this channel ${sd.newPrivacy || 'private'}` },
+            message_pinned: { Icon: PinIcon, color: 'bg-pink-500', text: () => `${name(sd.userId, sd.userName)} pinned a message${sd.messageSnippet ? `: "${sd.messageSnippet}"` : ''}` },
+            message_unpinned: { Icon: PinIcon, color: 'bg-pink-400', text: () => `${name(sd.userId, sd.userName)} unpinned a message` },
+            messages_cleared: { Icon: Eraser, color: 'bg-rose-500', text: () => `${name(sd.userId, sd.userName)} cleared the message history` },
         };
 
-        const displayText = textMap[ev]?.() || msg.payload?.text || msg.text || `System event`;
+        const config = eventConfig[ev];
+        const IconComp = config?.Icon || Info;
+        const dotColor = config?.color || 'bg-gray-400';
+        const displayText = config?.text?.() || msg.payload?.text || msg.text || 'System event';
 
         return (
-            <div className="flex justify-center my-3">
-                <div className="bg-gray-100/80 dark:bg-gray-800/80 px-4 py-1.5 rounded-full text-xs text-gray-600 dark:text-gray-300 font-medium shadow-sm">
-                    {displayText}
+            <div className="flex justify-center my-3 px-4">
+                <div className="flex items-center gap-2 bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700/60 px-3 py-1.5 rounded-full text-xs text-gray-600 dark:text-gray-300 font-medium shadow-sm max-w-xl">
+                    <span className={`flex-shrink-0 w-4 h-4 rounded-full ${dotColor} flex items-center justify-center`}>
+                        <IconComp size={9} color="white" strokeWidth={2.5} />
+                    </span>
+                    <span className="truncate">{displayText}</span>
                 </div>
             </div>
         );

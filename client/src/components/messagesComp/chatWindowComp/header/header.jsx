@@ -64,11 +64,15 @@ export default function Header({
   // User-created channels: Channel creator OR promoted admin
   const isDefaultChannel = chat.isDefault || ['general', 'announcements'].includes(chat.name?.toLowerCase().replace(/^#/, ''));
   const isWorkspaceAdmin = chat.workspaceRole === 'owner' || chat.workspaceRole === 'admin';
-  const isChannelCreator = chat.createdBy && String(chat.createdBy) === String(currentUserId);
+  // createdBy can be a raw ID string OR a populated object {_id, username} depending on the API path
+  const createdByIdStr = chat.createdBy?._id
+    ? String(chat.createdBy._id)
+    : String(chat.createdBy || '');
+  const isChannelCreator = !!currentUserId && createdByIdStr === String(currentUserId);
 
-  // Check if user is a promoted admin (in the admins array)
+  // Check if user is a promoted admin (in the admins array — entries may be populated {_id} or raw string)
   const isPromotedAdmin = chat.admins && Array.isArray(chat.admins)
-    ? chat.admins.some(adminId => String(adminId) === String(currentUserId))
+    ? chat.admins.some(a => String(a?._id || a) === String(currentUserId))
     : false;
 
   // Admin for default channels = workspace admin, admin for user channels = creator OR promoted admin
@@ -289,9 +293,16 @@ export default function Header({
                     {chat.type === "channel" && (
                       <>
                         <div className="px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">Channel Options</div>
+                        {/* All members can view channel info */}
+                        {setShowChannelManagement && (
+                          <button className="w-full text-left px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 flex items-center gap-3" onClick={() => { setShowChannelManagement("members"); setShowMenu(false); }}>
+                            <Users size={16} /> Channel Info
+                          </button>
+                        )}
+                        {/* Only admins/creators can manage settings */}
                         {isChannelAdmin && setShowChannelManagement && (
                           <button className="w-full text-left px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 flex items-center gap-3" onClick={() => { setShowChannelManagement("settings"); setShowMenu(false); }}>
-                            <Settings size={16} /> Channel Settings
+                            <Settings size={16} /> Manage Channel
                           </button>
                         )}
                         <button className="w-full text-left px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 flex items-center gap-3" onClick={() => { onShowMemberList?.(); setShowMenu(false); }}>

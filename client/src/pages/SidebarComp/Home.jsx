@@ -27,26 +27,26 @@ const Home = () => {
         // 1. Check if it's a channel route
         if (location.pathname.includes("/channel/") && id) {
           // Fetch channel info with complete metadata
-          const res = await api.get(`/api/workspaces/${workspaceId}/channels`);
-          const channels = res.data.channels || [];
-          const channel = channels.find(c => String(c._id) === String(id) || c.name === id);
+          const res = await api.get(`/api/channels/${id}/details`);
+          const channelData = res.data.channel || res.data;
 
-          if (channel) {
+          if (channelData) {
             setActiveChat({
-              id: channel._id,
-              name: `#${channel.name}`,
+              id: channelData._id || channelData.id,
+              name: `#${channelData.name}`,
               type: "channel",
               workspaceId,
-              isPrivate: channel.isPrivate,
-              isDiscoverable: channel.isDiscoverable,
-              members: channel.members || [],
-              createdBy: channel.createdBy,
-              creatorName: channel.creatorName,
-              systemEvents: channel.systemEvents || [],
-              isDefault: channel.isDefault,
-              description: channel.description,
-              admins: channel.admins || [], // Include admins array
-              workspaceRole: activeWorkspace?.role // Pass workspace role for permission checks
+              isPrivate: channelData.isPrivate,
+              isDiscoverable: channelData.isDiscoverable,
+              members: channelData.members || [],
+              createdBy: channelData.createdBy,
+              createdAt: channelData.createdAt,
+              creatorName: channelData.creatorName,
+              systemEvents: channelData.systemEvents || [],
+              isDefault: channelData.isDefault,
+              description: channelData.description,
+              admins: channelData.admins || [],
+              workspaceRole: activeWorkspace?.role
             });
           } else {
             setActiveChat({
@@ -214,16 +214,16 @@ const Home = () => {
           </div>
           {/* Chat message skeletons - Slack-style, all left-aligned */}
           <div className="flex-1 space-y-5 overflow-hidden">
-            {[{n:18,l1:65,l2:0},{n:22,l1:50,l2:38},{n:16,l1:78,l2:0},{n:24,l1:55,l2:42},{n:20,l1:70,l2:0}].map((b,i)=>(
+            {[{ n: 18, l1: 65, l2: 0 }, { n: 22, l1: 50, l2: 38 }, { n: 16, l1: 78, l2: 0 }, { n: 24, l1: 55, l2: 42 }, { n: 20, l1: 70, l2: 0 }].map((b, i) => (
               <div key={i} className="flex items-start gap-2.5">
                 <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 flex-shrink-0 mt-0.5" />
-                <div className="flex-1 space-y-1.5" style={{maxWidth:'70%'}}>
+                <div className="flex-1 space-y-1.5" style={{ maxWidth: '70%' }}>
                   <div className="flex gap-2 items-baseline">
-                    <div className="h-2.5 bg-gray-300 dark:bg-gray-600 rounded" style={{width:`${b.n*4}px`}} />
+                    <div className="h-2.5 bg-gray-300 dark:bg-gray-600 rounded" style={{ width: `${b.n * 4}px` }} />
                     <div className="h-2 w-8 bg-gray-100 dark:bg-gray-700/50 rounded" />
                   </div>
-                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded-lg" style={{width:`${b.l1}%`}} />
-                  {b.l2 > 0 && <div className="h-4 bg-gray-100 dark:bg-gray-700/60 rounded-lg" style={{width:`${b.l2}%`}} />}
+                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded-lg" style={{ width: `${b.l1}%` }} />
+                  {b.l2 > 0 && <div className="h-4 bg-gray-100 dark:bg-gray-700/60 rounded-lg" style={{ width: `${b.l2}%` }} />}
                 </div>
               </div>
             ))}

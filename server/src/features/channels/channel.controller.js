@@ -908,7 +908,7 @@ exports.updateChannelInfo = async (req, res) => {
     }
 
     const oldName = channel.name;
-    const _oldDesc = channel.description;
+    const oldDesc = channel.description;
 
     // Update fields
     if (name && name.trim()) {
@@ -920,9 +920,11 @@ exports.updateChannelInfo = async (req, res) => {
 
     await saveWithRetry(channel);
 
-    // Create system message and emit to timeline if name changed
-    if (name && name !== oldName) {
-      const user = await User.findById(userId).select('username').lean();
+    const io = req.app?.get("io");
+    const user = await User.findById(userId).select('username').lean();
+
+    // System message: channel renamed
+    if (name && name.trim().toLowerCase() !== oldName) {
       const systemMsg = await Message.create({
         channel: channelId,
         workspace: channel.workspace,
@@ -937,28 +939,35 @@ exports.updateChannelInfo = async (req, res) => {
           channelId,
         },
       });
+      if (io) io.to(`channel:${channelId}`).emit('new-message', systemMsg);
+    }
 
-      const io = req.app?.get("io");
-      if (io) {
-        // Timeline event
-        io.to(`channel:${channelId}`).emit('new-message', systemMsg);
-        // Header/sidebar refresh
-        io.to(`channel:${channelId}`).emit('channel-updated', {
+    // System message: description changed
+    if (description !== undefined && description !== oldDesc) {
+      const systemMsg = await Message.create({
+        channel: channelId,
+        workspace: channel.workspace,
+        type: 'system',
+        systemEvent: 'channel_desc_changed',
+        sender: userId,
+        systemData: {
+          userId,
+          userName: user?.username || 'Admin',
+          oldDesc,
+          newDesc: description,
           channelId,
-          name: channel.name,
-          description: channel.description
-        });
-      }
-    } else {
-      // Description-only change — still emit channel-updated for sidebar
-      const io = req.app?.get("io");
-      if (io) {
-        io.to(`channel:${channelId}`).emit('channel-updated', {
-          channelId,
-          name: channel.name,
-          description: channel.description
-        });
-      }
+        },
+      });
+      if (io) io.to(`channel:${channelId}`).emit('new-message', systemMsg);
+    }
+
+    // Always emit channel-updated for sidebar/header refresh
+    if (io) {
+      io.to(`channel:${channelId}`).emit('channel-updated', {
+        channelId,
+        name: channel.name,
+        description: channel.description
+      });
     }
 
     return res.json({

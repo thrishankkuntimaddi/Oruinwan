@@ -392,15 +392,15 @@ function ConversationStream({
                         <span style={{ fontWeight: 600 }}>#{channelName || 'this channel'}</span>
                         {' '}was created by{' '}
                         <span style={{ fontWeight: 600 }}>
-                            {creatorName || 'Unknown'}
+                            {String(currentUserId) === String(channelCreatedById)
+                                ? 'You'
+                                : (creatorName || 'Unknown')
+                            }
                         </span>
                         {' '}on{' '}
-                        {channelCreatedAt
-                            ? new Date(channelCreatedAt).toLocaleDateString('en-US', {
-                                month: 'long', day: 'numeric', year: 'numeric'
-                            })
-                            : 'Unknown date'
-                        }.
+                        {new Date(channelCreatedAt).toLocaleDateString('en-US', {
+                            month: 'long', day: 'numeric', year: 'numeric'
+                        })}.
                         {' '}This is the very beginning of the{' '}
                         <span style={{ fontWeight: 600 }}>#{channelName}</span>
                         {' '}channel.
@@ -417,16 +417,6 @@ function ConversationStream({
                 )}
 
 
-            {/* Channel Created System Event - show at the top, before any date dividers */}
-            {systemEvents.filter(e => e.type === 'channel_created').map(event => (
-                <div key={`channel-created-${event._id || event.timestamp}`} style={{ padding: '0 1rem', marginTop: '1rem' }}>
-                    <SystemEventItem
-                        event={event}
-                        currentUserId={currentUserId}
-                        creatorName={creatorName}
-                    />
-                </div>
-            ))}
 
             {/* Grouped Events by Date - only show if there are actual messages */}
             <div style={{ padding: '0 1rem' }}>

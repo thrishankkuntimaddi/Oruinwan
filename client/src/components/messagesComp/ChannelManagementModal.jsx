@@ -41,9 +41,14 @@ export default function ChannelManagementModal({ channel, onClose, currentUserId
     // Admin permission logic
     const isDefaultChannel = channel?.isDefault || ['general', 'announcements'].includes(channel?.name?.toLowerCase().replace(/^#/, ''));
     const isWorkspaceAdmin = channel?.workspaceRole === 'owner' || channel?.workspaceRole === 'admin';
-    const isChannelCreator = String(channel?.createdBy) === String(currentUserId);
+    // createdBy can be a populated object {_id, username} or a raw ID string
+    const createdByIdStr = channel?.createdBy?._id
+        ? String(channel.createdBy._id)
+        : String(channel?.createdBy || '');
+    const isChannelCreator = !!currentUserId && createdByIdStr === String(currentUserId);
+    // admins entries can be populated objects {_id, username} or raw ID strings
     const isPromotedAdmin = channel?.admins && Array.isArray(channel.admins)
-        ? channel.admins.some(adminId => String(adminId) === String(currentUserId))
+        ? channel.admins.some(a => String(a?._id || a) === String(currentUserId))
         : false;
     const isAdmin = isDefaultChannel ? isWorkspaceAdmin : (isChannelCreator || isPromotedAdmin);
 

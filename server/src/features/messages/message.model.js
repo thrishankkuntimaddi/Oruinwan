@@ -32,7 +32,8 @@ const MessageSchema = new mongoose.Schema({
       'channel_created',
       'member_joined', 'member_left', 'member_removed', 'member_invited',
       'admin_assigned', 'admin_demoted',
-      'channel_renamed', 'channel_privacy_changed',
+      'channel_renamed', 'channel_desc_changed', 'channel_privacy_changed',
+      'message_pinned', 'message_unpinned',
       'messages_cleared',
       null
     ],
