@@ -271,6 +271,7 @@ const Home = () => {
             sessionStorage.removeItem('activeChat');
           }}
           workspaceId={workspaceId}
+          onChatUpdate={setActiveChat}
         />
       ) : (
         <EmptyState

@@ -24,9 +24,10 @@ const ICONS = {
 
 function SystemEvent({ event, currentUserId }) {
     // Support both backend format (systemEvent + systemData) and old format (payload.action)
-    const ev = event.systemEvent || event.payload?.action || '';
-    const sd = event.systemData || {};
-    const ts = event.createdAt || event.payload?.timestamp;
+    // ChatWindowV2 normalizes socket events: raw backend doc lives at event.backend
+    const ev = event.systemEvent || event.backend?.systemEvent || event.payload?.action || '';
+    const sd = event.systemData || event.backend?.systemData || {};
+    const ts = event.createdAt || event.backend?.createdAt || event.payload?.timestamp;
 
     const isMe = (id) => id && currentUserId && String(id) === String(currentUserId);
     const who = (id, name) => isMe(id) ? 'You' : (name || 'Someone');

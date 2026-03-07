@@ -39,7 +39,7 @@ import './chatWindow.css';
  * @param {function} onDeleteChat - Delete chat callback
  * @param {string} workspaceId - Workspace ID (required for DMs)
  */
-function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId }) {
+function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId, onChatUpdate }) {
     const { user, encryptionReady } = useAuth();
     const { socket: rawSocket } = useSocket();
     const currentUserId = user?.sub || user?._id;
@@ -85,16 +85,40 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
             await api.post(`/api/channels/${chat.id}/join-discoverable`);
             showToast(`Joined ${chat.name} successfully!`, 'success');
 
-            // Refresh the sidebar channel list, then navigate into the channel
+            // Refresh sidebar channel list
             if (activeWorkspace?.id) await refreshContacts(activeWorkspace.id);
-            navigate(`/workspace/${activeWorkspace?.id}/channel/${chat.id}`);
+
+            // Fetch full channel details with isMember:true and update parent
+            try {
+                const res = await api.get(`/api/channels/${chat.id}/details`);
+                const channelData = res.data.channel || res.data;
+                if (channelData && onChatUpdate) {
+                    onChatUpdate({
+                        ...chat,
+                        id: channelData._id || channelData.id,
+                        name: `#${channelData.name}`,
+                        isPrivate: channelData.isPrivate,
+                        isDiscoverable: channelData.isDiscoverable,
+                        members: channelData.members || [],
+                        createdBy: channelData.createdBy,
+                        createdAt: channelData.createdAt,
+                        creatorName: channelData.creatorName,
+                        description: channelData.description,
+                        admins: channelData.admins || [],
+                        isMember: true,
+                    });
+                }
+            } catch {
+                // If details fetch fails, force navigate to reload
+                navigate(`/workspace/${activeWorkspace?.id}/channel/${chat.id}`);
+            }
         } catch (err) {
             console.error('Join channel error:', err);
             showToast(err.response?.data?.message || 'Failed to join channel', 'error');
         } finally {
             setIsJoining(false);
         }
-    }, [chat, showToast, navigate, refreshContacts, activeWorkspace]);
+    }, [chat, showToast, navigate, refreshContacts, activeWorkspace, onChatUpdate]);
 
     // Conversation state
     const [activeThread, setActiveThread] = useState(null);
