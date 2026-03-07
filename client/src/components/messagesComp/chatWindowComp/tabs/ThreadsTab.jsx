@@ -148,7 +148,7 @@ export default function ThreadsTab({ channelId, currentUserId, socket }) {
     return (
         <div className="flex w-full h-full bg-gray-50 dark:bg-gray-900">
             {/* Left Column: Thread List */}
-            <div className={`w-full md:w-1/3 min-w-[320px] max-w-sm flex flex-col border-r border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 ${selectedThread ? 'hidden md:flex' : 'flex'}`}>
+            <div className="flex-shrink-0 w-[280px] flex flex-col border-r border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
                 {/* Header */}
                 <div className="p-4 border-b border-gray-100 dark:border-gray-800">
                     <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100 mb-4 flex items-center gap-2">
@@ -249,7 +249,7 @@ export default function ThreadsTab({ channelId, currentUserId, socket }) {
             </div>
 
             {/* Right Column: Thread Panel */}
-            <div className={`flex-1 flex flex-col bg-white dark:bg-gray-950/50 ${!selectedThread ? 'hidden md:flex' : 'flex'}`}>
+            <div className="flex-1 flex flex-col bg-white dark:bg-gray-950/50 overflow-hidden">
                 {selectedThread ? (
                     <div className="flex-1 flex flex-col h-full overflow-hidden">
                         {/* Custom Close Header */}
