@@ -468,36 +468,33 @@ function ConversationStream({
             </div>
 
             {/* Empty State */}
-            {/* Initial load skeleton - shows while first messages fetch */}
+            {/* Initial load skeleton - Slack-style: all left-aligned with avatar + name + message */}
             {events.length === 0 && loading && (
-                <div className="flex-1 px-4 py-6 animate-pulse space-y-5">
+                <div className="flex-1 px-4 py-6 animate-pulse space-y-6">
                     {[
-                        { w: 55, lines: 1, right: false },
-                        { w: 70, lines: 2, right: true },
-                        { w: 45, lines: 1, right: false },
-                        { w: 80, lines: 2, right: false },
-                        { w: 60, lines: 1, right: true },
-                        { w: 65, lines: 2, right: false },
-                        { w: 40, lines: 1, right: true },
+                        { name: 22, line1: 68, line2: 0 },
+                        { name: 18, line1: 50, line2: 35 },
+                        { name: 24, line1: 80, line2: 55 },
+                        { name: 20, line1: 45, line2: 0 },
+                        { name: 22, line1: 72, line2: 40 },
+                        { name: 16, line1: 58, line2: 0 },
+                        { name: 26, line1: 85, line2: 60 },
                     ].map((row, i) => (
-                        <div key={i} className={`flex items-start gap-3 ${row.right ? 'flex-row-reverse' : ''}`}>
-                            {!row.right && <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 flex-shrink-0 mt-0.5" />}
-                            <div className={`space-y-2 ${row.right ? 'items-end flex flex-col' : ''}`} style={{ maxWidth: '60%' }}>
-                                {!row.right && (
-                                    <div className="flex gap-2">
-                                        <div className="h-2.5 w-20 bg-gray-200 dark:bg-gray-700 rounded" />
-                                        <div className="h-2.5 w-12 bg-gray-100 dark:bg-gray-700/50 rounded" />
-                                    </div>
-                                )}
-                                <div
-                                    className={`h-9 rounded-2xl ${row.right ? 'bg-blue-100 dark:bg-blue-900/30' : 'bg-gray-100 dark:bg-gray-700/50'}`}
-                                    style={{ width: `${row.w * 3}px`, maxWidth: '100%' }}
-                                />
-                                {row.lines > 1 && (
-                                    <div
-                                        className="h-6 rounded-xl bg-gray-100 dark:bg-gray-700/40"
-                                        style={{ width: `${row.w * 2}px`, maxWidth: '100%' }}
-                                    />
+                        <div key={i} className="flex items-start gap-3">
+                            {/* Avatar */}
+                            <div className="w-9 h-9 rounded-full bg-gray-200 dark:bg-gray-700 flex-shrink-0 mt-0.5" />
+                            {/* Content */}
+                            <div className="flex-1 space-y-2" style={{ maxWidth: '70%' }}>
+                                {/* Name + timestamp */}
+                                <div className="flex items-baseline gap-2">
+                                    <div className="h-3 bg-gray-300 dark:bg-gray-600 rounded" style={{ width: `${row.name * 4}px` }} />
+                                    <div className="h-2.5 w-10 bg-gray-100 dark:bg-gray-700/50 rounded" />
+                                </div>
+                                {/* Message line 1 */}
+                                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded-lg" style={{ width: `${row.line1}%` }} />
+                                {/* Message line 2 (optional) */}
+                                {row.line2 > 0 && (
+                                    <div className="h-4 bg-gray-100 dark:bg-gray-700/60 rounded-lg" style={{ width: `${row.line2}%` }} />
                                 )}
                             </div>
                         </div>

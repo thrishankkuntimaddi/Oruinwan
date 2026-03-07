@@ -212,12 +212,19 @@ const Home = () => {
               <div className="h-2 w-16 bg-gray-100 dark:bg-gray-700/50 rounded" />
             </div>
           </div>
-          {/* Chat bubble skeletons */}
-          <div className="flex-1 space-y-4 overflow-hidden">
-            {[{w:160,r:false},{w:200,r:true},{w:140,r:false},{w:220,r:true},{w:180,r:false},{w:130,r:true}].map((b,i)=>(
-              <div key={i} className={`flex items-end gap-2 ${b.r ? 'flex-row-reverse' : ''}`}>
-                {!b.r && <div className="w-7 h-7 rounded-full bg-gray-200 dark:bg-gray-700 flex-shrink-0" />}
-                <div className={`h-9 rounded-2xl ${b.r ? 'bg-blue-100 dark:bg-blue-900/30' : 'bg-gray-100 dark:bg-gray-700/50'}`} style={{width:b.w}} />
+          {/* Chat message skeletons - Slack-style, all left-aligned */}
+          <div className="flex-1 space-y-5 overflow-hidden">
+            {[{n:18,l1:65,l2:0},{n:22,l1:50,l2:38},{n:16,l1:78,l2:0},{n:24,l1:55,l2:42},{n:20,l1:70,l2:0}].map((b,i)=>(
+              <div key={i} className="flex items-start gap-2.5">
+                <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 flex-shrink-0 mt-0.5" />
+                <div className="flex-1 space-y-1.5" style={{maxWidth:'70%'}}>
+                  <div className="flex gap-2 items-baseline">
+                    <div className="h-2.5 bg-gray-300 dark:bg-gray-600 rounded" style={{width:`${b.n*4}px`}} />
+                    <div className="h-2 w-8 bg-gray-100 dark:bg-gray-700/50 rounded" />
+                  </div>
+                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded-lg" style={{width:`${b.l1}%`}} />
+                  {b.l2 > 0 && <div className="h-4 bg-gray-100 dark:bg-gray-700/60 rounded-lg" style={{width:`${b.l2}%`}} />}
+                </div>
               </div>
             ))}
           </div>
