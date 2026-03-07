@@ -11,6 +11,36 @@ const turndownService = new TurndownService({
   bulletListMarker: "-",
 });
 
+/**
+ * Pre-process contentEditable HTML before handing to Turndown.
+ * ContentEditable uses <div> / <div><br></div> for newlines — Turndown
+ * strips bare divs without emitting \n.  We normalise them to <p> tags
+ * so Turndown produces the correct markdown line breaks.
+ */
+const normaliseEditorHtml = (html) => {
+  // Wrap raw text fragment so we can use the DOM
+  const wrap = document.createElement('div');
+  wrap.innerHTML = html;
+
+  // Replace every top-level <div> that is NOT a <ul>/<ol> child with <p>
+  // so Turndown treats them as block paragraphs (→ \n)
+  const walker = document.createTreeWalker(wrap, NodeFilter.SHOW_ELEMENT);
+  const divsToConvert = [];
+  let node;
+  while ((node = walker.nextNode())) {
+    if (node.tagName === 'DIV' && node.closest('ul, ol') === null) {
+      divsToConvert.push(node);
+    }
+  }
+  divsToConvert.forEach(div => {
+    const p = document.createElement('p');
+    p.innerHTML = div.innerHTML || '<br>';
+    div.replaceWith(p);
+  });
+
+  return wrap.innerHTML;
+};
+
 // Helper to strip HTML tags
 const stripTags = (html) => {
   const tmp = document.createElement("DIV");
@@ -137,7 +167,7 @@ export default function FooterInput({
     const textContent = stripTags(html).trim();
     if (!textContent || blocked || disabled) return;
 
-    let markdown = turndownService.turndown(html);
+    let markdown = turndownService.turndown(normaliseEditorHtml(html));
     markdown = markdown.trim();
 
     onSend(markdown);
@@ -195,7 +225,7 @@ export default function FooterInput({
             suppressContentEditableWarning
             onInput={handleInput}
             onKeyDown={handleKeyDown}
-            className={`focus:outline-none min-h-[40px] whitespace-pre-wrap break-words text-gray-800 dark:text-gray-100 ${(blocked || disabled) ? "cursor-not-allowed opacity-50" : ""}`}
+            className={`focus:outline-none min-h-[40px] break-words text-gray-800 dark:text-gray-100 message-editor ${(blocked || disabled) ? "cursor-not-allowed opacity-50" : ""}`}
           />
           {!hasText && !blocked && (
             <div className="absolute top-2 left-3 text-gray-400 dark:text-gray-500 pointer-events-none text-sm select-none">

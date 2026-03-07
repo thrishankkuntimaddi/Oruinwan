@@ -202,3 +202,28 @@ body,
     opacity: 0;
   }
 }
+/* ── Message editor (contentEditable footer input) ─────────────── */
+.message-editor {
+  white-space: pre-wrap;
+}
+.message-editor ul {
+  list-style-type: disc;
+  padding-left: 1.25rem;
+  margin: 0.15rem 0;
+}
+.message-editor ol {
+  list-style-type: decimal;
+  padding-left: 1.25rem;
+  margin: 0.15rem 0;
+}
+.message-editor li {
+  margin: 0.1rem 0;
+}
+.message-editor b,
+.message-editor strong {
+  font-weight: 700;
+}
+.message-editor i,
+.message-editor em {
+  font-style: italic;
+}
