@@ -141,6 +141,11 @@ export async function decryptReceivedMessage(ciphertextBase64, ivBase64, convers
  */
 export async function decryptMessageGracefully(message, conversationId, conversationType) {
     try {
+        // System messages have no encrypted payload — pass through as-is
+        if (message.type === 'system') {
+            return message.systemData?.text || message.text || '';
+        }
+
         const { payload, parentId } = message;
 
         if (!payload || !payload.ciphertext || !payload.messageIv) {
@@ -207,6 +212,11 @@ export async function batchDecryptMessages(messages, conversationId, conversatio
         const decrypted = await Promise.all(
             messagesToDecrypt.map(async (message) => {
                 try {
+                    // ── System messages have no encrypted payload — pass through ──
+                    if (message.type === 'system') {
+                        return { ...message, decryptedContent: null, isSystem: true };
+                    }
+
                     // Handle nested payload structure from Message model
                     // Server stores encryption data in payload.payload.{ciphertext, messageIv}
                     const encryptionPayload = message.payload?.payload || message.payload || message;
