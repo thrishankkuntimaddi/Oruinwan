@@ -110,6 +110,8 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
     const [activeModal, setActiveModal] = useState(null);
     // Track which message is being forwarded (used by ForwardMessageModal)
     const [forwardingMessageId, setForwardingMessageId] = useState(null);
+    // Message info: fetched data for MessageInfoModal
+    const [messageInfoData, setMessageInfoData] = useState(null);
 
     // Header UI state
     const [showSearch, setShowSearch] = useState(false);
@@ -690,6 +692,16 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
         // ✅ WhatsApp-style reply: set replying context with full message object
         replyToMessage: (message) => {
             setReplyingTo(message);
+        },
+        // Open MessageInfoModal: fetch readBy/members from backend then show modal
+        infoMessage: async (messageId) => {
+            try {
+                const response = await api.get(`/api/v2/messages/${messageId}/info`);
+                setMessageInfoData(response.data);
+                setActiveModal('message-info');
+            } catch (err) {
+                console.error('[ChatWindowV2] Failed to fetch message info:', err);
+            }
         }
     }), [actions, handleSend]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -918,6 +930,9 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId 
                     currentChatId: conversationId,
                     currentChatType: conversationType,
                     onForward: handleForward,
+
+                    // Message info props
+                    messageInfoData,
                 }}
             />
         </div>

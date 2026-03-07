@@ -205,7 +205,7 @@ function MessageEvent({
                 forwardMessage={handleForward}
                 copyMessage={() => { }}
                 deleteMessage={(id, scope) => handleDelete(scope)}
-                infoMessage={() => { }}
+                infoMessage={(id) => actions.infoMessage?.(id)}
                 currentUserId={currentUserId}
                 onOpenThread={handleThreadOpen}
                 threadCounts={threadCounts} // ✅ Forward threadCounts
@@ -228,7 +228,7 @@ function MessageEvent({
             forwardMessage={handleForward}
             copyMessage={() => { }}
             deleteMessage={(id, scope) => handleDelete(scope)}
-            infoMessage={() => { }}
+            infoMessage={(id) => actions.infoMessage?.(id)}
             currentUserId={currentUserId}
             onOpenThread={handleThreadOpen}
             threadCounts={threadCounts} // ✅ Forward threadCounts

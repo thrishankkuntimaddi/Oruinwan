@@ -1,177 +1,167 @@
 import React from "react";
-import { X, CheckCircle2, Clock, Lock, Smile } from "lucide-react";
+import { X, CheckCircle2, Clock, Lock, Smile, MessageSquare } from "lucide-react";
 
-export default function MessageInfoModal({ msg, onClose, currentUserId, workspaceMembers = [] }) {
-  // Early return if no message
+/**
+ * MessageInfoModal
+ * Props from backend /api/v2/messages/:id/info:
+ *   msg      - { _id, text, payload, createdAt, sender, reactions, readBy: string[] }
+ *   members  - [{ _id, username, profilePicture }]
+ *   readBy   - string[]  (same as msg.readBy, duped for convenience)
+ *   currentUserId - string
+ *   onClose  - fn
+ */
+export default function MessageInfoModal({ msg, members = [], readBy = [], currentUserId, onClose }) {
   if (!msg) return null;
 
-  // Debug logging
+  const readBySet = new Set(readBy.map(String));
 
+  // Seen by = members who have read AND are not the current user
+  const seenByList = members.filter(m => {
+    const id = String(m._id);
+    return readBySet.has(id) && id !== String(currentUserId);
+  }).sort((a, b) => (a.username || '').localeCompare(b.username || ''));
 
-  // Get readBy array - handle both array of IDs and array of objects
-  const rawReadBy = msg.backend?.readBy || [];
-  const readBy = rawReadBy.map(item => {
-    // If it's an object with _id or id, extract that
-    if (typeof item === 'object' && item !== null) {
-      return String(item._id || item.id || item);
-    }
-    // Otherwise convert to string
-    return String(item);
-  });
+  // Delivered to = members who haven't read AND are not the current user
+  const deliveredToList = members.filter(m => {
+    const id = String(m._id);
+    return !readBySet.has(id) && id !== String(currentUserId);
+  }).sort((a, b) => (a.username || '').localeCompare(b.username || ''));
 
+  const displayText = msg.text || msg.payload?.text || '🔒 Encrypted message';
+  const sentAt = msg.createdAt
+    ? new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    : '–';
+  const sentDate = msg.createdAt
+    ? new Date(msg.createdAt).toLocaleDateString([], { day: 'numeric', month: 'short', year: 'numeric' })
+    : '';
 
-
-  // Resolve "Seen by" names
-  const seenByList = workspaceMembers
-    .filter(m => {
-      const memberId = String(m.id || m._id);
-      const isReader = readBy.includes(memberId);
-      const isNotCurrentUser = memberId !== String(currentUserId);
-
-      return isReader && isNotCurrentUser;
-    })
-    .sort((a, b) => {
-      const nameA = a.name || a.username || "";
-      const nameB = b.name || b.username || "";
-      return nameA.localeCompare(nameB);
-    });
-
-
-
-  // Resolve "Delivered to" names (everyone else in the workspace who hasn't seen it)
-  const deliveredToList = workspaceMembers
-    .filter(m => {
-      const memberId = String(m.id || m._id);
-      return !readBy.includes(memberId) && memberId !== String(currentUserId);
-    })
-    .sort((a, b) => {
-      const nameA = a.name || a.username || "";
-      const nameB = b.name || b.username || "";
-      return nameA.localeCompare(nameB);
-    });
+  const Avatar = ({ user, size = 'sm', blue = false }) => {
+    const char = (user.username || '?').charAt(0).toUpperCase();
+    const sizeClass = size === 'sm' ? 'w-7 h-7 text-[11px]' : 'w-8 h-8 text-xs';
+    const colorClass = blue
+      ? 'bg-blue-50 dark:bg-blue-900/30 border-blue-100 dark:border-blue-800/50 text-blue-600 dark:text-blue-400'
+      : 'bg-gray-100 dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400';
+    return user.profilePicture ? (
+      <img src={user.profilePicture} alt={user.username}
+        className={`${sizeClass} rounded-full object-cover flex-shrink-0 border ${colorClass}`} />
+    ) : (
+      <div className={`${sizeClass} rounded-full flex items-center justify-center border flex-shrink-0 font-bold ${colorClass}`}>
+        {char}
+      </div>
+    );
+  };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center animate-fade-in text-gray-800">
-      <div className="absolute inset-0 bg-black/30 backdrop-blur-[1px]" onClick={onClose}></div>
-      <div className="bg-white dark:bg-slate-800 w-[320px] rounded-lg shadow-2xl overflow-hidden relative z-10 border border-gray-200 dark:border-gray-700">
+    <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center animate-fade-in">
+      {/* Backdrop */}
+      <div className="absolute inset-0 bg-black/30 backdrop-blur-[2px]" onClick={onClose} />
 
-        {/* Header */}
-        <div className="px-4 py-2.5 bg-gray-50 dark:bg-slate-900 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
-          <span className="text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-tight">Message Details</span>
-          <button onClick={onClose} className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
+      {/* Panel */}
+      <div className="relative z-10 bg-white dark:bg-slate-900 w-full max-w-sm rounded-t-2xl sm:rounded-2xl shadow-2xl overflow-hidden border border-gray-200 dark:border-gray-700 animate-in slide-in-from-bottom-4 sm:slide-in-from-bottom-0">
+
+        {/* ── Header ── */}
+        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-800">
+          <div className="flex items-center gap-2">
+            <MessageSquare size={16} className="text-blue-500" />
+            <span className="text-sm font-semibold text-gray-800 dark:text-gray-100">Message Info</span>
+          </div>
+          <button onClick={onClose}
+            className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors">
             <X size={16} />
           </button>
         </div>
 
-        {/* Message Preview */}
-        <div className="p-4 bg-white dark:bg-slate-800 border-b border-gray-50 dark:border-gray-700">
-          <div className="text-[13px] text-gray-600 dark:text-gray-300 italic line-clamp-3 leading-snug">
-            "{msg.text}"
-          </div>
-          <div className="mt-2 flex items-center gap-1.5 text-[10px] text-gray-400">
-            <Clock size={12} />
-            Sent at {new Date(msg.ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+        {/* ── Message preview ── */}
+        <div className="px-4 py-3 bg-gray-50 dark:bg-slate-800 border-b border-gray-100 dark:border-gray-800">
+          <p className="text-sm text-gray-700 dark:text-gray-300 italic line-clamp-3 leading-snug">
+            "{displayText}"
+          </p>
+          <div className="mt-1.5 flex items-center gap-3 text-[11px] text-gray-400">
+            <span className="flex items-center gap-1"><Clock size={11} /> {sentDate} at {sentAt}</span>
+            <span className="flex items-center gap-1">
+              <Lock size={11} className="text-blue-400" />
+              {msg.isEncrypted ? 'End-to-end encrypted' : 'Encrypted in transit'}
+            </span>
           </div>
         </div>
 
-        {/* Status Body */}
-        <div className="max-h-[400px] overflow-y-auto custom-scrollbar">
-          {/* Encryption Status */}
-          <div className="p-4 py-3 bg-blue-50/30 dark:bg-blue-900/10 border-b border-gray-100 dark:border-gray-700">
-            <div className="flex items-center gap-2 text-xs">
-              <Lock size={14} className="text-blue-600 dark:text-blue-400" />
-              <span className="font-semibold text-blue-900 dark:text-blue-200">
-                {msg.backend?.isEncrypted ? 'End-to-end encrypted' : 'Message encrypted in transit'}
-              </span>
-            </div>
-            <p className="text-[10px] text-gray-600 dark:text-gray-400 ml-6 mt-1">
-              {msg.backend?.isEncrypted
-                ? 'Only members of this conversation can read this message'
-                : 'Message is protected during transmission'}
-            </p>
-          </div>
+        {/* ── Scrollable body ── */}
+        <div className="max-h-[55vh] overflow-y-auto custom-scrollbar divide-y divide-gray-100 dark:divide-gray-800">
 
-          {/* Reactions Section */}
+          {/* Reactions */}
           {msg.reactions && msg.reactions.length > 0 && (
-            <>
-              <div className="p-4 py-3">
-                <div className="flex items-center gap-2 text-xs font-bold text-gray-800 dark:text-white mb-3">
-                  <Smile size={14} className="text-yellow-500" />
-                  Reactions ({msg.reactions.reduce((acc, r) => acc + (r.users?.length || 0), 0)})
-                </div>
-                <div className="space-y-2 pl-1">
-                  {msg.reactions.map((reaction, idx) => {
-                    const reactedUsers = workspaceMembers.filter(m =>
-                      reaction.users?.some(userId => String(userId) === String(m.id || m._id))
-                    );
-
-                    return (
-                      <div key={idx} className="flex items-start gap-2">
-                        <span className="text-lg flex-shrink-0">{reaction.emoji}</span>
-                        <div className="flex-1">
-                          <div className="text-xs text-gray-700 dark:text-gray-300">
-                            {reactedUsers.map(u => u.name || u.username).join(', ') || `${reaction.users?.length || 0} members`}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
+            <div className="px-4 py-3">
+              <div className="flex items-center gap-2 text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2.5">
+                <Smile size={14} className="text-yellow-500" />
+                Reactions ({msg.reactions.reduce((acc, r) => acc + (r.users?.length || 0), 0)})
               </div>
-              <div className="h-px bg-gray-50 dark:bg-slate-700 mx-4 my-1"></div>
-            </>
+              <div className="space-y-2">
+                {msg.reactions.map((reaction, idx) => {
+                  const reactedNames = members
+                    .filter(m => reaction.users?.some(uid => String(uid) === String(m._id)))
+                    .map(u => u.username || 'Unknown');
+                  return (
+                    <div key={idx} className="flex items-center gap-2.5">
+                      <span className="text-base">{reaction.emoji}</span>
+                      <span className="text-xs text-gray-600 dark:text-gray-400">
+                        {reactedNames.join(', ') || `${reaction.users?.length || 0} members`}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           )}
 
-          {/* Seen By Section */}
-          <div className="p-4 py-3">
-            <div className="flex items-center gap-2 text-xs font-bold text-gray-800 dark:text-white mb-3">
+          {/* Seen By */}
+          <div className="px-4 py-3">
+            <div className="flex items-center gap-2 text-xs font-semibold text-gray-700 dark:text-gray-200 mb-2.5">
               <CheckCircle2 size={14} className="text-blue-500" />
               Seen by {seenByList.length}
             </div>
-
             {seenByList.length > 0 ? (
-              <div className="space-y-3 pl-1">
-                {seenByList.map((user) => (
-                  <div key={user.id || user._id} className="flex items-center gap-2.5">
-                    <div className="w-6 h-6 rounded bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center border border-blue-100/50 dark:border-blue-800/50">
-                      <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400">{(user.name || user.username || "?").charAt(0).toUpperCase()}</span>
-                    </div>
-                    <span className="text-[12px] font-medium text-gray-700 dark:text-gray-300">{user.name || user.username || "Unknown"}</span>
+              <div className="space-y-2.5">
+                {seenByList.map(user => (
+                  <div key={user._id} className="flex items-center gap-2.5">
+                    <Avatar user={user} blue />
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                      {user.username}
+                    </span>
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="text-[11px] text-gray-400 italic pl-6 py-1">No one has seen this yet.</div>
+              <p className="text-xs text-gray-400 italic pl-5">No one has read this yet.</p>
             )}
           </div>
 
-          <div className="h-px bg-gray-50 dark:bg-slate-700 mx-4 my-1"></div>
-
-          {/* Delivered Section */}
-          <div className="p-4 py-3">
-            <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-3">Delivered to ({deliveredToList.length})</div>
+          {/* Delivered To */}
+          <div className="px-4 py-3">
+            <div className="flex items-center gap-2 text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2.5 uppercase tracking-wider">
+              Delivered to ({deliveredToList.length})
+            </div>
             {deliveredToList.length > 0 ? (
-              <div className="space-y-3 pl-1">
-                {deliveredToList.map((user) => (
-                  <div key={user.id || user._id} className="flex items-center gap-2.5 opacity-70">
-                    <div className="w-6 h-6 rounded bg-gray-50 dark:bg-gray-700 flex items-center justify-center border border-gray-200 dark:border-gray-600">
-                      <span className="text-[10px] font-bold text-gray-400">{(user.name || user.username || "?").charAt(0).toUpperCase()}</span>
-                    </div>
-                    <span className="text-[12px] text-gray-600 dark:text-gray-400">{user.name || user.username || "Unknown"}</span>
+              <div className="space-y-2.5">
+                {deliveredToList.map(user => (
+                  <div key={user._id} className="flex items-center gap-2.5 opacity-65">
+                    <Avatar user={user} />
+                    <span className="text-sm text-gray-600 dark:text-gray-400">
+                      {user.username}
+                    </span>
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="text-[11px] text-gray-400 italic pl-6 py-1">All members have seen this.</div>
+              <p className="text-xs text-gray-400 italic pl-5">All members have seen this.</p>
             )}
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="p-3 bg-gray-50 dark:bg-slate-900 flex justify-center border-t border-gray-100 dark:border-gray-700">
+        {/* ── Footer ── */}
+        <div className="px-4 py-3 border-t border-gray-100 dark:border-gray-800">
           <button
             onClick={onClose}
-            className="w-full py-2 text-[12px] font-bold text-gray-600 dark:text-gray-300 bg-white dark:bg-slate-700 border border-gray-200 dark:border-gray-600 rounded hover:bg-gray-100 dark:hover:bg-slate-600 transition-all shadow-sm active:scale-[0.98]"
+            className="w-full py-2 text-sm font-medium text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-gray-700 rounded-xl hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
           >
             Close
           </button>

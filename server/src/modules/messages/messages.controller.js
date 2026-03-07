@@ -746,3 +746,88 @@ exports.pinMessage = async (req, res) => {
         return res.status(500).json({ message: err.message || 'Server error' });
     }
 };
+
+// ==================== MESSAGE INFO ====================
+
+/**
+ * Get full message info: readBy list, members, reactions
+ * GET /api/v2/messages/:messageId/info
+ */
+exports.getMessageInfo = async (req, res) => {
+    try {
+        const userId = req.user.sub;
+        const { messageId } = req.params;
+
+        const Message = require('../../features/messages/message.model');
+        const Workspace = require('../../../models/Workspace');
+
+        // Fetch message with populated readBy users
+        const message = await Message.findById(messageId)
+            .populate('sender', 'username profilePicture')
+            .populate('readBy', 'username profilePicture')
+            .lean();
+
+        if (!message) {
+            return res.status(404).json({ message: 'Message not found' });
+        }
+
+        // Verify access
+        let workspaceId = null;
+        let channelMembers = [];
+
+        if (message.channel) {
+            const channel = await Channel.findById(message.channel)
+                .populate('members.user', 'username profilePicture')
+                .lean();
+            if (!channel || !channel.isMember?.(userId)) {
+                // isMember may not work on lean — check manually
+                const isMember = channel?.members?.some(m =>
+                    String(m.user?._id || m.user) === String(userId)
+                );
+                if (!isMember) return res.status(403).json({ message: 'Not authorized' });
+            }
+            workspaceId = channel?.workspace;
+            channelMembers = (channel?.members || []).map(m => ({
+                _id: String(m.user?._id || m.user),
+                username: m.user?.username || 'Unknown',
+                profilePicture: m.user?.profilePicture || null
+            }));
+        } else if (message.dm) {
+            const dmSession = await DMSession.findById(message.dm)
+                .populate('participants', 'username profilePicture')
+                .lean();
+            const isParticipant = dmSession?.participants?.some(
+                p => String(p._id || p) === String(userId)
+            );
+            if (!isParticipant) return res.status(403).json({ message: 'Not authorized' });
+            channelMembers = (dmSession?.participants || []).map(p => ({
+                _id: String(p._id || p),
+                username: p.username || 'Unknown',
+                profilePicture: p.profilePicture || null
+            }));
+        }
+
+        // Normalize readBy
+        const readByIds = new Set(
+            (message.readBy || []).map(u => String(u._id || u))
+        );
+
+        return res.json({
+            message: {
+                _id: message._id,
+                text: message.text,
+                isEncrypted: message.isEncrypted,
+                payload: message.payload,
+                createdAt: message.createdAt,
+                sender: message.sender,
+                reactions: message.reactions || [],
+                readBy: [...readByIds]
+            },
+            members: channelMembers,
+            readBy: [...readByIds]
+        });
+
+    } catch (err) {
+        return handleError(res, err, 'GET MESSAGE INFO ERROR');
+    }
+};

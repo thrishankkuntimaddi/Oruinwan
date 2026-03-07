@@ -4,6 +4,7 @@ import MemberListModal from '../modals/MemberListModal.jsx';
 import ContactInfoModal from '../modals/contactInfoModal.jsx';
 import ChannelManagementModal from '../../ChannelManagementModal.jsx';
 import ForwardMessageModal from '../modals/ForwardMessageModal.jsx';
+import MessageInfoModal from '../modals/MessageInfoModal.jsx';
 
 /**
  * Consolidated modal renderer component
@@ -37,6 +38,9 @@ export default function ModalRenderer({ activeModal, onClose, modalProps }) {
         currentChatId,
         currentChatType,
         onForward,
+
+        // Message info props
+        messageInfoData,
     } = modalProps || {};
 
     switch (activeModal) {
@@ -57,6 +61,17 @@ export default function ModalRenderer({ activeModal, onClose, modalProps }) {
                     onForward={onForward}
                     currentChatId={currentChatId}
                     currentChatType={currentChatType}
+                />
+            );
+
+        case 'message-info':
+            return (
+                <MessageInfoModal
+                    msg={messageInfoData?.message}
+                    members={messageInfoData?.members || []}
+                    readBy={messageInfoData?.readBy || []}
+                    currentUserId={currentUserId}
+                    onClose={onClose}
                 />
             );
 

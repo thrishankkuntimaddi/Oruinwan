@@ -151,6 +151,9 @@ router.get('/missed', async (req, res) => {
 
 // ==================== MESSAGE ACTIONS ====================
 
+// Get message info (readBy, members, reactions)
+router.get('/:messageId/info', messagesController.getMessageInfo);
+
 // Edit a message (sender only)
 router.patch('/:messageId', messagesController.editMessage);
 
