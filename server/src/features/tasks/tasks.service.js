@@ -248,8 +248,12 @@ async function createTask(userId, taskData, io, req) {
             throw error;
         }
 
-        // All channel members share ONE task
-        const memberIds = channel.members.map(m => m.user ? m.user.toString() : m.toString());
+        // If specific assignees are provided, track them — otherwise fall back to all channel members.
+        // Either way the task is channel-visible so everyone in the channel can see it.
+        const memberIds = (assignedToIds && assignedToIds.length > 0)
+            ? assignedToIds
+            : channel.members.map(m => m.user ? m.user.toString() : m.toString());
+
         taskDefinitions.push({
             assignedTo: memberIds,
             visibility: "channel",

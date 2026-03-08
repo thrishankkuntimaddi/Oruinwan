@@ -841,9 +841,14 @@ export default function TasksTab({ channelId, channelName, workspaceId: workspac
         try {
             setLoading(true);
             const res = await api.get('/api/v2/tasks', { params: { workspaceId } });
-            const mine = (res.data.tasks || []).filter(t =>
-                t.channel && (t.channel._id === channelId || t.channel === channelId)
-            );
+            const mine = (res.data.tasks || []).filter(t => {
+                // Include channel tasks belonging to this channel
+                const inChannel = t.channel && (t.channel._id === channelId || t.channel === channelId);
+                // Also include private tasks where the current user is assignee, linked to this channel via createdIn
+                const assignedHere = !t.channel && Array.isArray(t.assignedTo) &&
+                    t.assignedTo.some(a => (a._id || a) === currentUserId);
+                return inChannel || assignedHere;
+            });
             setTasks(mine);
         } catch { setTasks([]); }
         finally { setLoading(false); }
@@ -885,15 +890,18 @@ export default function TasksTab({ channelId, channelName, workspaceId: workspac
     // Actions
     const handleCreate = useCallback(async (data) => {
         try {
-            const assignmentType = data.assignedToIds?.length ? 'individual' : 'channel';
+            // Always use 'channel' assignment type when creating from the Tasks tab.
+            // This ensures the task is stored with visibility='channel' and a channel ID,
+            // so ALL channel members (including the assignee) can see it in their Tasks tab.
+            // Individual assignees are tracked via assignedToIds inside the channel task.
             const res = await api.post('/api/v2/tasks', {
                 title: data.title,
                 description: data.description,
                 priority: data.priority,
                 status: data.status,
                 workspaceId,
-                assignmentType,
-                channelId: assignmentType === 'channel' ? channelId : undefined,
+                assignmentType: 'channel',
+                channelId,
                 assignedToIds: data.assignedToIds || [],
                 visibility: 'channel',
                 ...(data.dueDate ? { dueDate: data.dueDate } : {}),
