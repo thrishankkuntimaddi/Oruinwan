@@ -107,6 +107,7 @@ async function getTasks(userId, filters) {
     const tasks = await Task.find(query)
         .populate("createdBy", "username profilePicture")
         .populate("assignedTo", "username profilePicture")
+        .populate("channel", "name")
         .populate("transferRequest.requestedTo", "username profilePicture")
         .populate("transferRequest.requestedBy", "username profilePicture")
         .sort({ dueDate: 1, priority: -1, createdAt: -1 })
