@@ -379,8 +379,8 @@ export default function TasksTab({ channelId, channelName, workspaceId: workspac
                     ].map(f => (
                         <button key={f.key} onClick={() => setFilter(f.key)}
                             className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${filter === f.key
-                                    ? 'bg-indigo-600 text-white'
-                                    : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-700 dark:hover:text-gray-300'
+                                ? 'bg-indigo-600 text-white'
+                                : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-700 dark:hover:text-gray-300'
                                 }`}>
                             {f.label}
                         </button>
@@ -389,16 +389,18 @@ export default function TasksTab({ channelId, channelName, workspaceId: workspac
             </div>
 
             {/* ── Kanban board — fills all remaining height ── */}
-            <div className="flex-1 min-h-0 flex gap-4 p-5 overflow-x-auto overflow-y-hidden">
-                {STATUSES.map(s => (
-                    <KanbanColumn
-                        key={s.key}
-                        meta={s}
-                        tasks={byStatus(s.key)}
-                        onCycle={handleCycle}
-                        onDelete={handleDelete}
-                    />
-                ))}
+            <div className="flex-1 min-h-0 overflow-y-auto p-5">
+                <div className="flex gap-4 w-full h-full">
+                    {STATUSES.map(s => (
+                        <KanbanColumn
+                            key={s.key}
+                            meta={s}
+                            tasks={byStatus(s.key)}
+                            onCycle={handleCycle}
+                            onDelete={handleDelete}
+                        />
+                    ))}
+                </div>
             </div>
 
             {showModal && <NewTaskModal onClose={() => setShowModal(false)} onSubmit={handleCreate} />}
