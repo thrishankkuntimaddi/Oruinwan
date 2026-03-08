@@ -93,6 +93,32 @@ const DMSessionSchema = new mongoose.Schema(
       }
     ],
 
+    /**
+     * Per-user mute (notifications silenced)
+     */
+    mutedBy: [{
+      user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+      mutedAt: { type: Date, default: Date.now }
+    }],
+
+    /**
+     * Per-user block — blocked user cannot send messages;
+     * the blocker sees no new messages from blocked user
+     */
+    blockedBy: [{
+      user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+      blockedAt: { type: Date, default: Date.now }
+    }],
+
+    /**
+     * Per-user "clear" watermark — messages before this
+     * timestamp are hidden for that user only
+     */
+    clearedAt: [{
+      user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+      clearedAt: { type: Date, default: Date.now }
+    }],
+
     metadata: mongoose.Schema.Types.Mixed
   },
   { timestamps: true }
