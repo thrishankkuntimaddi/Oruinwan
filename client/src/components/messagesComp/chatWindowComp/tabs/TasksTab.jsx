@@ -891,7 +891,7 @@ export default function TasksTab({ channelId, channelName, workspaceId: workspac
                 description: data.description,
                 priority: data.priority,
                 status: data.status,
-                workspaceId, channelId,
+                workspaceId,
                 assignmentType,
                 channelId: assignmentType === 'channel' ? channelId : undefined,
                 assignedToIds: data.assignedToIds || [],
