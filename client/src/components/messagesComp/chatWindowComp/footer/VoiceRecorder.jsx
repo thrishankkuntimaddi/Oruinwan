@@ -43,12 +43,19 @@ export default function VoiceRecorder({ onSendAttachment, conversationId, conver
     const chunksRef = useRef([]);
     const timerRef = useRef(null);
     const mimeRef = useRef('');
-    const startTimeRef = useRef(null); // wall-clock start time for accurate elapsed
+    const startTimeRef = useRef(null);
+    // cancelledRef: set to true in cleanup so stale onstop callbacks don't corrupt state.
+    // This guards against React Strict Mode double-invocation where cleanup fires and
+    // stops the MediaRecorder before the real recording session begins.
+    const cancelledRef = useRef(false);
 
     // Auto-start recording on mount
     useEffect(() => {
+        cancelledRef.current = false;
         startRecording();
+
         return () => {
+            cancelledRef.current = true;
             cleanup();
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -56,18 +63,28 @@ export default function VoiceRecorder({ onSendAttachment, conversationId, conver
 
     const cleanup = () => {
         clearInterval(timerRef.current);
+        timerRef.current = null;
         if (mediaRef.current?.state === 'recording') {
             mediaRef.current.stop();
         }
         mediaRef.current?.stream?.getTracks().forEach(t => t.stop());
+        mediaRef.current = null;
     };
 
     const startRecording = async () => {
         setError(null);
         setElapsed(0);
         chunksRef.current = [];
+
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+            // Bail out if this effect was already cleaned up (Strict Mode unmount fired)
+            if (cancelledRef.current) {
+                stream.getTracks().forEach(t => t.stop());
+                return;
+            }
+
             mimeRef.current = pickMime();
             const mr = new MediaRecorder(stream, mimeRef.current ? { mimeType: mimeRef.current } : undefined);
             mediaRef.current = mr;
@@ -75,7 +92,11 @@ export default function VoiceRecorder({ onSendAttachment, conversationId, conver
             mr.ondataavailable = e => {
                 if (e.data?.size > 0) chunksRef.current.push(e.data);
             };
+
             mr.onstop = () => {
+                // Ignore if this recorder was stopped by cleanup (Strict Mode remount)
+                if (cancelledRef.current) return;
+
                 const blob = new Blob(chunksRef.current, { type: mimeRef.current || 'audio/webm' });
                 setAudioBlob(blob);
                 setAudioUrl(URL.createObjectURL(blob));
@@ -85,22 +106,26 @@ export default function VoiceRecorder({ onSendAttachment, conversationId, conver
             mr.start(250); // collect chunks every 250ms
             setPhase('recording');
 
-            // Use wall-clock start time so timer is immune to React Strict Mode
-            // double-invocation (two intervals running simultaneously won't double-count).
+            // Wall-clock based timer — immune to multiple intervals being active
             startTimeRef.current = Date.now();
-            clearInterval(timerRef.current); // clear any stale interval before starting
+            clearInterval(timerRef.current);
             timerRef.current = setInterval(() => {
-                const elapsed = Math.floor((Date.now() - startTimeRef.current) / 1000);
-                setElapsed(elapsed);
-            }, 500); // poll at 500ms for sub-second accuracy, display stays whole seconds
+                if (!cancelledRef.current) {
+                    setElapsed(Math.floor((Date.now() - startTimeRef.current) / 1000));
+                }
+            }, 500);
+
         } catch (err) {
-            setError('Microphone access denied. Please allow microphone permissions.');
-            setPhase('idle');
+            if (!cancelledRef.current) {
+                setError('Microphone access denied. Please allow microphone permissions.');
+                setPhase('idle');
+            }
         }
     };
 
     const stopRecording = useCallback(() => {
         clearInterval(timerRef.current);
+        timerRef.current = null;
         if (mediaRef.current?.state === 'recording') {
             mediaRef.current.stop();
             mediaRef.current.stream.getTracks().forEach(t => t.stop());
@@ -108,6 +133,7 @@ export default function VoiceRecorder({ onSendAttachment, conversationId, conver
     }, []);
 
     const discard = useCallback(() => {
+        cancelledRef.current = true;
         cleanup();
         if (audioUrl) URL.revokeObjectURL(audioUrl);
         onClose();
