@@ -124,6 +124,7 @@ const CentralContentView = ({
                             currentUserId={currentUserId}
                             conversationId={chat?.id}
                             showThreadsOnly={showThreadsOnly}
+                            isPrivate={chat?.isPrivate || false}
                         />
 
                         {/* Footer - fixed at bottom */}

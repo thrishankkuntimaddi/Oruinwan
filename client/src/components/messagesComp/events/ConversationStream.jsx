@@ -60,6 +60,7 @@ function ConversationStream({
     channelCreatedAt = null,
     channelName = null,
     channelCreatedById = null,
+    isPrivate = false,
     loading = false,
     onLoadMore,
     hasMore = false,
@@ -394,20 +395,27 @@ function ConversationStream({
                     <div style={{ padding: '2rem 1.5rem 1rem', borderBottom: '1px solid #e5e7eb' }}
                         className="dark:border-gray-800"
                     >
-                        {/* Big hash icon */}
+                        {/* Channel icon: lock for private, # for public */}
                         <div style={{
                             width: 56, height: 56, borderRadius: 12,
-                            background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+                            background: isPrivate
+                                ? 'linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)'
+                                : 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            marginBottom: '0.75rem', fontSize: 28, color: '#fff', fontWeight: 900,
-                        }}>#</div>
+                            marginBottom: '0.75rem', color: '#fff',
+                        }}>
+                            {isPrivate
+                                ? <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
+                                : <span style={{ fontSize: 28, fontWeight: 900 }}>#</span>
+                            }
+                        </div>
 
                         <h2 style={{ fontSize: '1.25rem', fontWeight: 700, margin: '0 0 0.25rem', color: 'inherit' }}>
-                            Welcome to #{cleanName}!
+                            Welcome to {isPrivate ? '🔒' : '#'}{cleanName}!
                         </h2>
 
                         <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: 0 }}>
-                            <span style={{ fontWeight: 600 }}>#{cleanName}</span>
+                            <span style={{ fontWeight: 600 }}>{isPrivate ? '🔒' : '#'}{cleanName}</span>
                             {' '}was created by{' '}
                             <span style={{ fontWeight: 600 }}>
                                 {String(currentUserId) === String(channelCreatedById)
@@ -420,8 +428,8 @@ function ConversationStream({
                                 month: 'long', day: 'numeric', year: 'numeric'
                             })}.
                             {' '}This is the very beginning of the{' '}
-                            <span style={{ fontWeight: 600 }}>#{cleanName}</span>
-                            {' '}channel.
+                            <span style={{ fontWeight: 600 }}>{isPrivate ? '🔒' : '#'}{cleanName}</span>
+                            {' '}channel{isPrivate ? ' (private)' : ''}.
                         </p>
                     </div>
                 );
