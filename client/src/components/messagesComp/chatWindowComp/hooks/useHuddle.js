@@ -26,6 +26,10 @@ export function useHuddle({ channelId, currentUser, socket }) {
     const [huddleId, setHuddleId] = useState(null);
     const [participants, setParticipants] = useState([]); // [{ userId, username, audioEnabled, stream? }]
     const [muted, setMuted] = useState(false);
+    const [huddleAnnouncement, setHuddleAnnouncement] = useState(null); // { huddleId, startedBy }
+
+    // Resolve user ID from whichever field the auth context provides
+    const myUserId = currentUser?.id || currentUser?._id || currentUser?.sub;
 
     const localStreamRef = useRef(null);   // local MediaStream
     const peersRef = useRef({});     // userId → RTCPeerConnection
@@ -114,7 +118,7 @@ export function useHuddle({ channelId, currentUser, socket }) {
             setActive(true);
             setMuted(false);
             setParticipants([{
-                userId: currentUser.id || currentUser._id,
+                userId: myUserId,
                 username: currentUser.username || currentUser.name || 'You',
                 audioEnabled: true,
                 isLocal: true,
@@ -137,10 +141,10 @@ export function useHuddle({ channelId, currentUser, socket }) {
             setActive(true);
             setMuted(false);
             setParticipants(prev => {
-                const existing = prev.find(p => p.userId === (currentUser.id || currentUser._id));
+                const existing = prev.find(p => p.userId === myUserId);
                 if (existing) return prev;
                 return [...prev, {
-                    userId: currentUser.id || currentUser._id,
+                    userId: myUserId,
                     username: currentUser.username || currentUser.name || 'You',
                     audioEnabled: true,
                     isLocal: true,
@@ -176,8 +180,7 @@ export function useHuddle({ channelId, currentUser, socket }) {
 
         // Another user joined → initiate offer
         const onJoined = async ({ huddleId: hid, userId, username, audioEnabled }) => {
-            const myId = currentUser?.id || currentUser?._id;
-            if (userId === myId) return; // ignore self
+            if (userId === myUserId) return; // ignore self
 
             setParticipants(prev =>
                 prev.find(p => p.userId === userId)
@@ -256,8 +259,10 @@ export function useHuddle({ channelId, currentUser, socket }) {
 
         // Channel announced a new huddle started
         const onStarted = ({ huddleId: hid, startedBy }) => {
-            // Surface to UI — components can watch huddleAnnouncement state
-            // (ChatWindowV2 calls joinHuddle from a banner)
+            // Surface to UI so ChatWindowV2 can show a join banner
+            if (!active) {
+                setHuddleAnnouncement({ huddleId: hid, startedBy });
+            }
         };
 
         socket.on('huddle:joined', onJoined);
@@ -289,9 +294,11 @@ export function useHuddle({ channelId, currentUser, socket }) {
         huddleId,
         participants,
         muted,
+        huddleAnnouncement,
         startHuddle,
         joinHuddle,
         leaveHuddle,
         toggleMute,
+        dismissAnnouncement: () => setHuddleAnnouncement(null),
     };
 }

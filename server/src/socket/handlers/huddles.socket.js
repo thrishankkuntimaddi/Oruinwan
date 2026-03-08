@@ -214,7 +214,7 @@ function registerHuddleHandlers(io, socket) {
      */
     socket.on('huddle:offer', ({ huddleId, targetUserId, offer }) => {
         if (!huddleId || !targetUserId || !offer) return;
-        io.to(`user_${targetUserId}`).emit('huddle:offer', {
+        io.to(`user:${targetUserId}`).emit('huddle:offer', {
             huddleId,
             fromUserId: socket.user.id,
             offer
@@ -227,7 +227,7 @@ function registerHuddleHandlers(io, socket) {
      */
     socket.on('huddle:answer', ({ huddleId, targetUserId, answer }) => {
         if (!huddleId || !targetUserId || !answer) return;
-        io.to(`user_${targetUserId}`).emit('huddle:answer', {
+        io.to(`user:${targetUserId}`).emit('huddle:answer', {
             huddleId,
             fromUserId: socket.user.id,
             answer
@@ -240,7 +240,7 @@ function registerHuddleHandlers(io, socket) {
      */
     socket.on('huddle:ice-candidate', ({ huddleId, targetUserId, candidate }) => {
         if (!huddleId || !targetUserId) return;
-        io.to(`user_${targetUserId}`).emit('huddle:ice-candidate', {
+        io.to(`user:${targetUserId}`).emit('huddle:ice-candidate', {
             huddleId,
             fromUserId: socket.user.id,
             candidate

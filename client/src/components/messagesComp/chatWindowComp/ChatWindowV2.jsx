@@ -1097,8 +1097,10 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
                 onShowThreadsView={handleShowThreadsView}
                 isThreadsOnly={showThreadsOnly}
                 onShowMemberList={handleShowMemberList}
-                // Phase 7.7 — Huddle
-                onStartHuddle={chat?.type === 'channel' ? huddle.startHuddle : undefined}
+                // Phase 7.7 — Huddle: toggle start/leave
+                onStartHuddle={chat?.type === 'channel'
+                    ? (huddle.active ? huddle.leaveHuddle : huddle.startHuddle)
+                    : undefined}
                 huddleActive={huddle.active}
             />
 
@@ -1270,6 +1272,24 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
                     onToggleMute={huddle.toggleMute}
                     onLeave={huddle.leaveHuddle}
                 />
+            )}
+            {/* Huddle join announcement banner */}
+            {chat?.type === 'channel' && huddle.huddleAnnouncement && !huddle.active && (
+                <div className="fixed bottom-4 right-4 z-50 flex items-center gap-3 bg-gray-900 text-white px-4 py-3 rounded-2xl shadow-2xl border border-white/10 animate-fade-in">
+                    <span className="text-green-400 animate-pulse">●</span>
+                    <div className="text-sm">
+                        <span className="font-semibold">{huddle.huddleAnnouncement.startedBy?.username || 'Someone'}</span>
+                        {' '}started a huddle
+                    </div>
+                    <button
+                        onClick={() => { huddle.joinHuddle(huddle.huddleAnnouncement.huddleId); huddle.dismissAnnouncement(); }}
+                        className="text-xs bg-green-600 hover:bg-green-700 px-3 py-1.5 rounded-lg font-medium transition-colors"
+                    >Join</button>
+                    <button
+                        onClick={huddle.dismissAnnouncement}
+                        className="text-xs text-white/50 hover:text-white px-2 py-1 rounded transition-colors"
+                    >✕</button>
+                </div>
             )}
         </div>
     );
