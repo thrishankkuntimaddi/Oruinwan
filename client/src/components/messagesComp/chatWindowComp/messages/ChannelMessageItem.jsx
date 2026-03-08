@@ -319,7 +319,7 @@ function ChannelMessageItem({
 
                 {/* Message Text — Step 1: soft delete, Step 3: inline edit */}
                 {/* Only render text block for text/encrypted messages, not pure attachment or card messages */}
-                {(!msg.attachment || msg.text) && msg.type !== 'contact' && msg.type !== 'meeting' && (
+                {(!msg.attachment || msg.text) && msg.type !== 'contact' && msg.type !== 'meeting' && msg.type !== 'image' && msg.type !== 'video' && msg.type !== 'file' && msg.type !== 'voice' && (
                     <div className="text-gray-800 dark:text-gray-200 text-[14px] leading-relaxed whitespace-pre-wrap break-words max-w-[70%] message-content">
                         {msg.isDeleted ? (
                             <span className="text-gray-400 italic">Message deleted</span>

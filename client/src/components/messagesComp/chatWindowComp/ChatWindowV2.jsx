@@ -274,16 +274,34 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
 
                 if (backendMsg) {
                     // Normalize to event structure expected by ConversationStream
+                    const SOCKET_ATTACHMENT_TYPES = ['image', 'video', 'file', 'voice'];
                     const normalizedEvent = {
                         id: backendMsg._id,
                         // IMPORTANT: use msg.type directly (handles 'poll', 'system', 'image', etc)
                         type: backendMsg.type || 'message',
-                        payload: backendMsg.payload || backendMsg || {},
+                        // payload: for E2EE text messages this is the Mongoose E2EE subdoc
+                        // (backendMsg.payload = {ciphertext, messageIv, isEncrypted}).
+                        // For all other types, we want the full backendMsg so nested field
+                        // lookups (e.g. event.payload?.attachments) resolve correctly.
+                        payload: backendMsg.payload?.ciphertext
+                            ? backendMsg.payload   // real E2EE text message — keep subdoc
+                            : backendMsg,          // everything else — use full msg object
                         sender: backendMsg.sender,
                         createdAt: backendMsg.createdAt,
                         channelId: backendMsg.channel,
                         dmId: backendMsg.dm,
                         quotedMessageId: backendMsg.quotedMessageId || null,
+                        // Hoist E2EE fields to top-level so MessageEvent.jsx decryption works
+                        isEncrypted: backendMsg.payload?.isEncrypted || false,
+                        ciphertext: backendMsg.payload?.ciphertext,
+                        messageIv: backendMsg.payload?.messageIv,
+                        // Hoist attachments to top-level so MessageEvent.jsx rawAttachments resolves
+                        // via: event.payload?.payload?.attachments || event.payload?.attachments || event.attachments
+                        attachments: backendMsg.attachments || [],
+                        // Convenience alias: attachment-type messages always have exactly one entry
+                        ...(SOCKET_ATTACHMENT_TYPES.includes(backendMsg.type) && {
+                            attachment: backendMsg.attachments?.[0] || null,
+                        }),
                         // Hoist system event fields so SystemEvent.jsx finds them at top level
                         ...(backendMsg.type === 'system' && {
                             systemEvent: backendMsg.systemEvent,
