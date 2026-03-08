@@ -68,9 +68,9 @@ async function uploadToGCS(file, folder = 'channels') {
         stream.end(file.buffer);
     });
 
-    // Make the file publicly readable
-    await gcsFile.makePublic();
-
+    // NOTE: bucket has Uniform Bucket-Level Access enabled — do NOT call makePublic().
+    // Public read access is granted at the bucket level via IAM (allUsers → Storage Object Viewer).
+    // The public URL is deterministic from the bucket name + object path.
     const publicUrl = `https://storage.googleapis.com/${BUCKET_NAME}/${gcsPath}`;
     const type = resolveAttachmentType(file.mimetype);
 
