@@ -323,14 +323,12 @@ async function getUserDMSessions(userId, workspaceId) {
             // Get last message
             const lastMsg = await Message.findOne({ dm: session._id })
                 .sort({ createdAt: -1 })
-                .select('payload createdAt sender')
+                .select('payload type text createdAt sender')
                 .populate('sender', 'username');
 
             // Find the other user
-            // After populate, each participant IS a User object (not nested)
             const otherUser = session.participants.find(
                 (p) => {
-                    // Handle both populated (User object) and unpopulated (ObjectId) cases
                     const participantId = p?._id || p;
                     return String(participantId) !== String(userId);
                 }
@@ -343,11 +341,26 @@ async function getUserDMSessions(userId, workspaceId) {
                 'readBy.user': { $ne: userId }
             });
 
+            // ✅ FIX: Build meaningful lastMessage for E2EE and attachment-type messages
+            let lastMessageText = 'No messages yet';
+            if (lastMsg) {
+                if (lastMsg.type === 'image') lastMessageText = '📷 Photo';
+                else if (lastMsg.type === 'video') lastMessageText = '🎬 Video';
+                else if (lastMsg.type === 'voice') lastMessageText = '🎵 Voice note';
+                else if (lastMsg.type === 'file') lastMessageText = '📎 File';
+                else if (lastMsg.type === 'poll') lastMessageText = '📊 Poll';
+                else if (lastMsg.type === 'contact') lastMessageText = '👤 Contact';
+                else if (lastMsg.type === 'meeting') lastMessageText = '📅 Meeting';
+                else if (lastMsg.text) lastMessageText = lastMsg.text; // plaintext edit fallback
+                else if (lastMsg.payload?.isEncrypted || lastMsg.payload?.ciphertext) lastMessageText = '🔒 Encrypted message';
+                else lastMessageText = 'Message';
+            }
+
             return {
                 id: session._id,
                 otherUser: otherUser || { username: 'Self' },
                 otherUserId: otherUser?._id || otherUser,
-                lastMessage: lastMsg?.payload?.text || 'No messages yet',
+                lastMessage: lastMessageText,
                 lastMessageAt: lastMsg?.createdAt || session.createdAt,
                 unreadCount
             };
@@ -356,6 +369,7 @@ async function getUserDMSessions(userId, workspaceId) {
 
     return sessionList;
 }
+
 
 // ==================== MESSAGE MUTATIONS ====================
 

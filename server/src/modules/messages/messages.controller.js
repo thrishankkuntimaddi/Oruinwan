@@ -276,6 +276,24 @@ exports.resolveDMSession = async (req, res) => {
         const { workspaceId, userId: otherUserId } = req.params;
         const currentUserId = req.user.sub;
 
+        // ✅ FIX: Fetch workspace to carry company into DMSession
+        // Without company, messages created via this DM have undefined company field
+        const Workspace = require('../../../models/Workspace');
+        const workspace = await Workspace.findById(workspaceId).select('company members').lean();
+
+        if (!workspace) {
+            return res.status(404).json({ message: 'Workspace not found' });
+        }
+
+        // Verify both users are workspace members
+        const memberIds = workspace.members.map(m => String(m.user || m));
+        if (!memberIds.includes(String(currentUserId))) {
+            return res.status(403).json({ message: 'You are not a member of this workspace' });
+        }
+        if (!memberIds.includes(String(otherUserId))) {
+            return res.status(403).json({ message: 'Target user is not a member of this workspace' });
+        }
+
         // Find existing DM session
         let dmSession = await DMSession.findOne({
             workspace: workspaceId,
@@ -292,6 +310,8 @@ exports.resolveDMSession = async (req, res) => {
         if (!dmSession) {
             dmSession = await DMSession.create({
                 workspace: workspaceId,
+                // ✅ FIX: Include company so messages get the correct company field
+                company: workspace.company || null,
                 participants: [currentUserId, otherUserId],
                 createdAt: new Date()
             });
@@ -732,9 +752,19 @@ exports.pinMessage = async (req, res) => {
         }
 
         // Permission: sender OR channel admin can pin/unpin
+        // In DMs: any participant can pin any message
         const isSender = String(message.sender) === String(userId);
         let isChannelAdmin = false;
-        if (!isSender && message.channel) {
+        let isDMParticipant = false;
+
+        if (message.dm) {
+            // DM context — any participant may pin
+            const DMSession = require('../../../models/DMSession');
+            const dmSession = await DMSession.findById(message.dm).select('participants').lean();
+            if (dmSession) {
+                isDMParticipant = dmSession.participants.some(p => String(p) === String(userId));
+            }
+        } else if (!isSender && message.channel) {
             const Channel = require('../../features/channels/channel.model');
             const channel = await Channel.findById(message.channel).select('admins createdBy').lean();
             if (channel) {
@@ -744,8 +774,8 @@ exports.pinMessage = async (req, res) => {
             }
         }
 
-        if (!isSender && !isChannelAdmin) {
-            return res.status(403).json({ message: 'Only the message sender or a channel admin can pin messages' });
+        if (!isSender && !isChannelAdmin && !isDMParticipant) {
+            return res.status(403).json({ message: 'Only the message sender, a DM participant, or a channel admin can pin messages' });
         }
 
         message.isPinned = pin;
@@ -755,17 +785,31 @@ exports.pinMessage = async (req, res) => {
 
         const io = req.app?.get('io');
 
-        // Emit pin/unpin socket event for instant UI update
-        if (io && message.channel) {
-            io.to(`channel:${message.channel}`).emit(pin ? 'message-pinned' : 'message-unpinned', {
+        // Emit pin/unpin socket event for instant UI update (channel OR DM)
+        if (io) {
+            const pinRoom = message.channel
+                ? `channel:${message.channel}`
+                : `dm:${message.dm}`;
+
+            // ✅ FIX: Fetch pinner name for display in both channels and DMs
+            let pinnedByName = null;
+            try {
+                const User = require('../../../models/User');
+                const pinner = await User.findById(userId).select('username').lean();
+                pinnedByName = pinner?.username || null;
+            } catch (_e) { /* non-fatal */ }
+
+            io.to(pinRoom).emit(pin ? 'message-pinned' : 'message-unpinned', {
                 messageId,
                 pinnedBy: userId,
+                pinnedByName,
                 pinnedAt: message.pinnedAt
             });
         }
 
         // ── System message: "Alice pinned / unpinned a message" ──────────
         if (message.channel) {
+            // Channel pin system event
             try {
                 const User = require('../../../models/User');
                 const pinner = await User.findById(userId).select('username').lean();
@@ -791,6 +835,32 @@ exports.pinMessage = async (req, res) => {
             } catch (sysErr) {
                 console.error('[SYSTEM MSG] pin system message failed:', sysErr);
             }
+        } else if (message.dm) {
+            // ✅ DM pin system event — shows a pill like "Alice pinned a message"
+            try {
+                const User = require('../../../models/User');
+                const pinner = await User.findById(userId).select('username').lean();
+
+                const snippet = message.payload?.text || message.text || '';
+                const messageSnippet = snippet.length > 60 ? snippet.slice(0, 57) + '…' : snippet;
+
+                const systemMsg = await Message.create({
+                    type: 'system',
+                    systemEvent: pin ? 'dm_message_pinned' : 'dm_message_unpinned',
+                    sender: userId,
+                    dm: message.dm,
+                    workspace: message.workspace,
+                    systemData: {
+                        userId,
+                        userName: pinnedByName || pinner?.username || 'Someone',
+                        messageSnippet,
+                        pinnedMessageId: messageId,
+                    },
+                });
+                if (io) io.to(`dm:${message.dm}`).emit('new-message', systemMsg);
+            } catch (sysErr) {
+                console.error('[SYSTEM MSG] DM pin system message failed:', sysErr);
+            }
         }
         // ─────────────────────────────────────────────────────────────────
 
@@ -813,24 +883,17 @@ exports.pinMessage = async (req, res) => {
 exports.createPollMessage = async (req, res) => {
     try {
         const senderId = req.user.sub;
-        const { channelId, poll } = req.body;
+        const { channelId, dmId, poll } = req.body;
 
         // — Validate inputs —
-        if (!channelId) {
-            return res.status(400).json({ message: 'channelId is required' });
+        if (!channelId && !dmId) {
+            return res.status(400).json({ message: 'channelId or dmId is required' });
         }
         if (!poll || !poll.question || !Array.isArray(poll.options) || poll.options.length < 2) {
             return res.status(400).json({ message: 'poll.question and at least 2 options are required' });
         }
         if (poll.options.length > 10) {
             return res.status(400).json({ message: 'Maximum 10 poll options allowed' });
-        }
-
-        // — Channel membership check —
-        const channel = await Channel.findById(channelId);
-        if (!channel) return res.status(404).json({ message: 'Channel not found' });
-        if (!channel.isMember(senderId)) {
-            return res.status(403).json({ message: 'Not a channel member' });
         }
 
         // — Build embedded poll subdoc —
@@ -848,25 +911,54 @@ exports.createPollMessage = async (req, res) => {
             totalVotes: 0,
         };
 
-        // — createMessage bypasses E2EE for type !== 'message' —
-        const message = await messagesService.createMessage(
-            {
+        let messagePayload;
+
+        if (channelId) {
+            // — Channel poll: membership check —
+            const channel = await Channel.findById(channelId);
+            if (!channel) return res.status(404).json({ message: 'Channel not found' });
+            if (!channel.isMember(senderId)) {
+                return res.status(403).json({ message: 'Not a channel member' });
+            }
+
+            messagePayload = {
                 type: 'poll',
                 company: channel.company,
                 workspace: channel.workspace,
                 channel: channelId,
                 sender: senderId,
                 poll: pollDoc,
-                // No ciphertext/messageIv needed — service skips E2EE for non-message types
-            },
-            req.io
-        );
+            };
+        } else {
+            // — DM poll: participant check —
+            const DMSession = require('../../../models/DMSession');
+            const dmSession = await DMSession.findById(dmId).select('participants workspace company').lean();
+            if (!dmSession) return res.status(404).json({ message: 'DM session not found' });
+
+            const isParticipant = dmSession.participants.some(p => String(p) === String(senderId));
+            if (!isParticipant) {
+                return res.status(403).json({ message: 'Not a participant in this DM' });
+            }
+
+            messagePayload = {
+                type: 'poll',
+                company: dmSession.company || null,
+                workspace: dmSession.workspace,
+                dm: dmId,
+                sender: senderId,
+                poll: pollDoc,
+            };
+        }
+
+        // — createMessage bypasses E2EE for type !== 'message' —
+        const message = await messagesService.createMessage(messagePayload, req.io);
 
         return res.status(201).json({ message });
     } catch (err) {
         return handleError(res, err, 'CREATE POLL MESSAGE ERROR');
     }
 };
+
 
 /**
  * Vote on an embedded poll

@@ -40,6 +40,8 @@ function DMMessageItem({
     onOpenThread,
     threadCounts,
 }) {
+    // dmSessionId is baked into msg by MessageEvent — used for E2EE encryption on edit
+    const dmSessionId = msg.dmSessionId || null;
     // Check if message is from current user
     const senderId = typeof msg.sender === 'object' ? msg.sender?._id : msg.sender;
     const isMe = senderId === currentUserId || msg.sender === "you" || msg.sender === "me";
@@ -50,7 +52,16 @@ function DMMessageItem({
 
     // Edit state
     const [isEditing, setIsEditing] = useState(false);
-    const [editText, setEditText] = useState(msg.text || '');
+    const [editText, setEditText] = useState(msg.text || msg.decryptedContent || '');
+
+    // Keep editText in sync with updated message text (e.g., from real-time socket edits)
+    // Only update when NOT actively editing to avoid clobbering the user's in-progress changes
+    useEffect(() => {
+        if (!isEditing) {
+            setEditText(msg.text || msg.decryptedContent || '');
+        }
+    }, [msg.text, msg.decryptedContent, isEditing]);
+
 
     // Avatar Logic
     const avatarUrl = msg.senderAvatar || null;
@@ -71,16 +82,38 @@ function DMMessageItem({
         };
     }, [showReactionPicker]);
 
-    // Save edit — calls PATCH API; socket broadcasts message:edited to update all clients
+    // Save edit — encrypts new text with DM conversation key, then PATCHes the server
+    // Using E2EE ensures both real-time updates AND page reloads show the correct text
     const handleSaveEdit = async () => {
         const trimmed = editText.trim();
-        if (trimmed === (msg.text || '').trim()) {
+        const currentText = msg.text || msg.decryptedContent || '';
+        if (trimmed === currentText.trim()) {
             setIsEditing(false);
             return;
         }
         if (!trimmed) return; // Don't save empty message
         try {
-            await api.patch(`/api/v2/messages/${msg._id || msg.id}`, { text: trimmed });
+            let patchBody = {};
+            if (dmSessionId) {
+                // E2EE path: encrypt the new text with the DM conversation key
+                try {
+                    const { encryptMessageForSending } = await import('../../../../services/messageEncryptionService');
+                    const encrypted = await encryptMessageForSending(trimmed, dmSessionId, 'dm', null);
+                    if (encrypted?.ciphertext && encrypted?.messageIv) {
+                        patchBody = { ciphertext: encrypted.ciphertext, messageIv: encrypted.messageIv };
+                    } else {
+                        // Encryption not ready — fallback to plaintext
+                        patchBody = { text: trimmed };
+                    }
+                } catch (encErr) {
+                    console.warn('[DMMessageItem] Encryption failed, falling back to plaintext:', encErr);
+                    patchBody = { text: trimmed };
+                }
+            } else {
+                // No dmSessionId available — plaintext fallback
+                patchBody = { text: trimmed };
+            }
+            await api.patch(`/api/v2/messages/${msg._id || msg.id}`, patchBody);
         } catch (err) {
             console.error('[DMMessageItem] Edit failed:', err);
         }
@@ -434,13 +467,15 @@ function DMMessageItem({
     );
 }
 
-// Optimize with React.memo — include editedAt so edited messages re-render correctly
+// Optimize with React.memo — include all fields that affect rendered output
 export default React.memo(DMMessageItem, (prevProps, nextProps) => {
     return (
         prevProps.msg.id === nextProps.msg.id &&
         prevProps.msg.text === nextProps.msg.text &&
+        prevProps.msg.decryptedContent === nextProps.msg.decryptedContent &&
         prevProps.msg.editedAt === nextProps.msg.editedAt &&
         prevProps.msg.isPinned === nextProps.msg.isPinned &&
+        prevProps.msg.pinnedByName === nextProps.msg.pinnedByName &&
         prevProps.msg.isDeleted === nextProps.msg.isDeleted &&
         prevProps.msg.isDeletedUniversally === nextProps.msg.isDeletedUniversally &&
         prevProps.msg.sending === nextProps.msg.sending &&
@@ -448,6 +483,9 @@ export default React.memo(DMMessageItem, (prevProps, nextProps) => {
         prevProps.selectMode === nextProps.selectMode &&
         prevProps.selectedIds === nextProps.selectedIds &&
         prevProps.openMsgMenuId === nextProps.openMsgMenuId &&
-        JSON.stringify(prevProps.msg.reactions) === JSON.stringify(nextProps.msg.reactions)
+        JSON.stringify(prevProps.msg.repliedTo) === JSON.stringify(nextProps.msg.repliedTo) &&
+        JSON.stringify(prevProps.msg.reactions) === JSON.stringify(nextProps.msg.reactions) &&
+        prevProps.msg.dmSessionId === nextProps.msg.dmSessionId
     );
 });
+

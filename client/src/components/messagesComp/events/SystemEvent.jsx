@@ -3,7 +3,7 @@
 // Backend stores: event.systemEvent (e.g. 'member_joined') + event.systemData { userId, userName, ... }
 
 import React from 'react';
-import { UserPlus, UserMinus, Settings, Info, Hash, Shield, Trash2, Pin } from 'lucide-react';
+import { UserPlus, UserMinus, Settings, Info, Hash, Shield, Trash2, Pin, MessageCircle, Phone, Video } from 'lucide-react';
 
 const ICONS = {
     member_joined: <UserPlus size={14} />,
@@ -19,6 +19,13 @@ const ICONS = {
     channel_privacy_changed: <Settings size={14} />,
     message_pinned: <Pin size={14} />,
     message_unpinned: <Pin size={14} />,
+    // DM-specific events
+    dm_created: <MessageCircle size={14} />,
+    dm_message_pinned: <Pin size={14} />,
+    dm_message_unpinned: <Pin size={14} />,
+    dm_call_started: <Phone size={14} />,
+    dm_video_call_started: <Video size={14} />,
+    dm_messages_cleared: <Trash2 size={14} />,
     // Legacy keys
     'user-joined': <UserPlus size={14} />,
     'user-left': <UserMinus size={14} />,
@@ -78,6 +85,16 @@ function SystemEvent({ event, currentUserId }) {
             return `${who(sd.userId, sd.userName)} pinned a message${snippet}`;
         },
         message_unpinned: () => `${who(sd.userId, sd.userName)} unpinned a message`,
+        // DM-specific events
+        dm_created: () => `${who(sd.userId, sd.userName)} started this conversation`,
+        dm_message_pinned: () => {
+            const snippet = sd.messageSnippet ? `: "${sd.messageSnippet}"` : '';
+            return `${who(sd.userId, sd.userName)} pinned a message${snippet}`;
+        },
+        dm_message_unpinned: () => `${who(sd.userId, sd.userName)} unpinned a message`,
+        dm_call_started: () => `${who(sd.userId, sd.userName)} started a voice call`,
+        dm_video_call_started: () => `${who(sd.userId, sd.userName)} started a video call`,
+        dm_messages_cleared: () => `${who(sd.userId, sd.userName)} cleared the chat history`,
         // Legacy
         'user-joined': () => `${sd.userName || event.payload?.username || 'Someone'} joined`,
         'user-left': () => `${sd.userName || event.payload?.username || 'Someone'} left`,

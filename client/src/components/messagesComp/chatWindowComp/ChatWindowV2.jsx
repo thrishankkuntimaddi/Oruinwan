@@ -361,8 +361,13 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
                     conversationRef.current.updateEvent(messageId, {
                         ...(updates.replyCount !== undefined && { replyCount: updates.replyCount }),
                         ...(updates.lastReplyAt !== undefined && { lastReplyAt: updates.lastReplyAt }),
-                        // ✅ Update decryptedContent so render immediately shows new text
-                        ...(updates.decryptedContent !== undefined && { decryptedContent: updates.decryptedContent }),
+                        // ✅ Hoist decryptedContent AND text to TOP-LEVEL so MessageEvent.jsx
+                        // priority lookup (event.decryptedContent > event.payload?.text) finds it
+                        ...(updates.decryptedContent !== undefined && {
+                            decryptedContent: updates.decryptedContent,
+                            text: updates.decryptedContent  // keep in sync
+                        }),
+                        // ✅ Also hoist editedAt to top-level for DMMessageItem memo check
                         ...(updates.editedAt !== undefined && { editedAt: updates.editedAt }),
                         payload: payloadPatch
                     });
@@ -408,6 +413,11 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
                 // Handle pin updates — server sends { messageId, pinnedBy, pinnedAt }
                 if (event.payload) {
                     conversationRef.current.updateEvent(event.payload.messageId || event.payload._id, {
+                        // ✅ Hoist to top-level so MessageEvent.jsx finds it via event.isPinned
+                        isPinned: true,
+                        pinnedBy: event.payload.pinnedBy,
+                        pinnedAt: event.payload.pinnedAt,
+                        editedAt: event.payload.editedAt,
                         payload: {
                             ...event.payload,
                             isPinned: true
@@ -420,6 +430,10 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
                 // Handle unpin — server sends { messageId }
                 if (event.payload) {
                     conversationRef.current.updateEvent(event.payload.messageId || event.payload._id, {
+                        // ✅ Hoist to top-level
+                        isPinned: false,
+                        pinnedBy: null,
+                        pinnedAt: null,
                         payload: {
                             ...event.payload,
                             isPinned: false,
@@ -884,12 +898,22 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
 
     // Phase 7.4 — Override handleAttach so 'contact' type opens the picker
     const handleCreatePoll = useCallback(async (pollData) => {
-        if (!conversationId || conversationType !== 'channel') return;
+        if (!conversationId) return;
         try {
-            const { data } = await api.post('/api/v2/messages/poll', {
-                channelId: conversationId,
-                poll: pollData,
-            });
+            let data;
+            if (conversationType === 'channel') {
+                // Channel poll
+                ({ data } = await api.post('/api/v2/messages/poll', {
+                    channelId: conversationId,
+                    poll: pollData,
+                }));
+            } else {
+                // ✅ DM poll — use dmId endpoint
+                ({ data } = await api.post('/api/v2/messages/poll', {
+                    dmId: conversationId,
+                    poll: pollData,
+                }));
+            }
             const msg = data.message;
             if (msg) {
                 const normalizedEvent = {

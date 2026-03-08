@@ -76,9 +76,21 @@ function MessageEvent({
         const quotedPayload = rawRepliedTo?.payload || rawRepliedTo; // handle nested payload
         const qCiphertext = quotedPayload?.ciphertext || rawRepliedTo?.payload?.ciphertext;
         const qIv = quotedPayload?.messageIv || rawRepliedTo?.payload?.messageIv;
-        const conversationId = event.payload?.channel || event.payload?.channelId || event.channelId
-            || event.payload?.dm || event.channelId || null;
-        const conversationType = (event.payload?.dm || event.dm) ? 'dm' : 'channel';
+
+        // ✅ FIX: Extract DM session ID from all possible locations:
+        //   - event.payload.dm  → historical load (payload = full msg object)
+        //   - event.dmId        → real-time socket normalization (ChatWindowV2 normalizedEvent)
+        //   - event.backend.dm  → raw backend message kept for reference
+        const rawDmId = event.payload?.dm?._id || event.payload?.dm
+            || event.dmId                              // real-time socket events
+            || event.backend?.dm?._id || event.backend?.dm   // backend reference
+            || event.dm?._id || event.dm || null;
+        const rawChannelId = event.payload?.channel?._id || event.payload?.channel
+            || event.payload?.channelId
+            || event.channelId
+            || event.backend?.channel?._id || event.backend?.channel || null;
+        const conversationId = rawChannelId || rawDmId || null;
+        const conversationType = rawDmId ? 'dm' : 'channel';
 
         if (!qCiphertext || !qIv || !conversationId) {
             // No ciphertext to decrypt or no conversationId — show placeholder
@@ -163,6 +175,8 @@ function MessageEvent({
         deletedByName: event.payload?.deletedByName || event.deletedByName || null,
         // Edit fields
         editedAt: event.payload?.editedAt || event.editedAt || null,
+        // ✅ Expose decryptedContent so DMMessageItem memo can detect text changes
+        decryptedContent: event.decryptedContent || messageText || null,
         // Channel context (for axios calls in ChannelMessageItem)
         channelId: event.payload?.channel || event.payload?.channelId || event.channelId || null,
         // Encryption fields
@@ -170,7 +184,15 @@ function MessageEvent({
         ciphertext,
         messageIv,
         // ✅ Quoted/inline reply preview — decrypted asynchronously
-        repliedTo: decryptedRepliedTo
+        repliedTo: decryptedRepliedTo,
+        // Pin context
+        pinnedByName: event.payload?.pinnedByName || event.pinnedByName || null,
+        // DM session ID — needed for E2EE edit encryption in DMMessageItem
+        dmSessionId: event.dmId
+            || event.payload?.dm?._id || event.payload?.dm
+            || event.backend?.dm?._id || event.backend?.dm
+            || event.dm?._id || event.dm
+            || null,
     };
 
 

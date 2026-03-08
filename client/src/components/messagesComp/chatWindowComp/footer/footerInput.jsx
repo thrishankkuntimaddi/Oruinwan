@@ -356,8 +356,10 @@ export default function FooterInput({
                     onAttach={onAttach}
                     onSendAttachment={onSendAttachment}
                     onCreatePoll={onCreatePoll}
+                    onOpenVoiceRecorder={showVoice ? (() => setRecording(true)) : undefined}
                     conversationId={conversationId}
                     conversationType={conversationType}
+                    onClose={() => setShowAttach(false)}
                   />
                 </div>
               )}

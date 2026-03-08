@@ -229,16 +229,25 @@ export function useChatSocket(conversationId, conversationType, eventHandler) {
             // message:edited from server → decrypt new ciphertext, update decryptedContent
             const msgId = data._id || data.id;
 
-            // Attempt to decrypt the new payload (E2EE path)
-            let newDecryptedContent = data.text || null; // plaintext fallback
-            if (data.payload?.ciphertext && data.payload?.messageIv) {
+            // ✅ FIX: If server sent updated plaintext .text (non-E2EE edit path),
+            // use it directly WITHOUT decrypting the ciphertext.
+            // Otherwise the old unchanged ciphertext would be decrypted and OVERWRITE the new text.
+            let newDecryptedContent = null;
+
+            if (data.text) {
+                // Plaintext edit — use directly
+                newDecryptedContent = data.text;
+            } else if (data.payload?.ciphertext && data.payload?.messageIv) {
+                // E2EE edit — decrypt the new ciphertext
                 try {
                     const { batchDecryptMessages } = await import('../services/messageEncryptionService');
                     const fake = [{ id: msgId, type: 'message', payload: data.payload }];
                     const decrypted = await batchDecryptMessages(fake, conversationId, conversationType, null);
-                    newDecryptedContent = decrypted[0]?.decryptedContent || newDecryptedContent;
-                } catch (_) { /* leave as text fallback */ }
+                    newDecryptedContent = decrypted[0]?.decryptedContent || null;
+                } catch (_) { /* leave null */ }
             }
+
+            if (!newDecryptedContent) return; // Nothing to update
 
             eventHandlerRef.current?.({
                 type: 'message-updated',
