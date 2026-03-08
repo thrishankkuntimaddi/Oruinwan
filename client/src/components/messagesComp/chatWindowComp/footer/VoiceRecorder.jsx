@@ -161,6 +161,15 @@ export default function VoiceRecorder({ onSendAttachment, conversationId, conver
     const sendVoice = useCallback(async () => {
         if (!audioBlob) return;
         setPhase('uploading');
+
+        // ── Release mic IMMEDIATELY — don't wait for upload + unmount ──
+        // The user hit Send; they no longer need the mic. Stopping here
+        // turns off the browser's mic indicator right away.
+        if (streamRef.current) {
+            streamRef.current.getTracks().forEach(t => t.stop());
+            streamRef.current = null;
+        }
+
         try {
             const ext = mimeRef.current.includes('ogg') ? 'ogg' : mimeRef.current.includes('mp4') ? 'mp4' : 'webm';
             const file = new File([audioBlob], `voice-note-${Date.now()}.${ext}`, { type: audioBlob.type });
