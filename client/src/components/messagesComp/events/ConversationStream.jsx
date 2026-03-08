@@ -8,7 +8,7 @@ import SystemEvent from './SystemEvent';
 import SystemEventItem from '../SystemEventItem';
 import MeetingEvent from './MeetingEvent';
 import JoinMarker from '../chatWindowComp/messages/JoinMarker';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Lock, Hash } from 'lucide-react';
 
 // ⚠️ PURE RENDERING COMPONENT
 // This component receives ALL business logic as props (actions, callbacks).
@@ -398,15 +398,13 @@ function ConversationStream({
                         {/* Channel icon: lock for private, # for public */}
                         <div style={{
                             width: 56, height: 56, borderRadius: 12,
-                            background: isPrivate
-                                ? 'linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)'
-                                : 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+                            background: isPrivate ? '#f3f0ff' : 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            marginBottom: '0.75rem', color: '#fff',
+                            marginBottom: '0.75rem',
                         }}>
                             {isPrivate
-                                ? <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
-                                : <span style={{ fontSize: 28, fontWeight: 900 }}>#</span>
+                                ? <Lock size={26} strokeWidth={2} color="#7c3aed" />
+                                : <span style={{ fontSize: 28, fontWeight: 900, color: '#fff' }}>#</span>
                             }
                         </div>
 
