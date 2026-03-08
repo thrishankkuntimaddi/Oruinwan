@@ -278,7 +278,7 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
                         id: backendMsg._id,
                         // IMPORTANT: use msg.type directly (handles 'poll', 'system', 'image', etc)
                         type: backendMsg.type || 'message',
-                        payload: backendMsg.payload || {},
+                        payload: backendMsg.payload || backendMsg || {},
                         sender: backendMsg.sender,
                         createdAt: backendMsg.createdAt,
                         channelId: backendMsg.channel,
@@ -293,6 +293,14 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
                         // Hoist poll data so PollEvent.jsx finds it via event.poll
                         ...(backendMsg.type === 'poll' && {
                             poll: backendMsg.poll,
+                        }),
+                        // Hoist contact data so MessageEvent/ChannelMessageItem finds it
+                        ...(backendMsg.type === 'contact' && {
+                            contact: backendMsg.contact,
+                        }),
+                        // Hoist meeting data so MeetingMessage renders correctly
+                        ...(backendMsg.type === 'meeting' && {
+                            meeting: backendMsg.meeting,
                         }),
                         backend: backendMsg // Keep original for reference
                     };
