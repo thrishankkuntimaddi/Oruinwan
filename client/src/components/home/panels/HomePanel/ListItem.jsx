@@ -78,18 +78,18 @@ const ListItem = ({ item, isSelectionMode, selectedItems, setSelectedItems, togg
                                 }`}></div>
                         </div>
                     ) : (
-                        <div className={`w-7 h-7 flex items-center justify-center transition-colors ${isActive
-                                ? 'text-blue-600 dark:text-blue-400'
+                        <div className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors border ${isActive
+                                ? 'border-blue-300 dark:border-blue-700 text-blue-600 dark:text-blue-400'
                                 : item.label.toLowerCase() === 'announcements'
-                                    ? 'text-orange-500 dark:text-orange-400'
+                                    ? 'border-orange-200 dark:border-orange-800/60 text-orange-500 dark:text-orange-400'
                                     : item.isPrivate
-                                        ? 'text-purple-500 dark:text-purple-400'
-                                        : 'text-gray-400 dark:text-gray-500 group-hover:text-gray-600 dark:group-hover:text-gray-300'
+                                        ? 'border-purple-200 dark:border-purple-800/60 text-purple-500 dark:text-purple-400'
+                                        : 'border-gray-200 dark:border-gray-700 text-gray-400 dark:text-gray-500 group-hover:border-gray-300 group-hover:text-gray-600 dark:group-hover:text-gray-300'
                             }`}>
                             {item.isPrivate ? (
-                                <Lock size={14} strokeWidth={2.5} />
+                                <Lock size={13} strokeWidth={2.5} />
                             ) : item.label.toLowerCase() === 'announcements' ? (
-                                <Megaphone size={14} strokeWidth={2.5} />
+                                <Megaphone size={13} strokeWidth={2.5} />
                             ) : (
                                 <span className="text-sm font-bold">#</span>
                             )}
