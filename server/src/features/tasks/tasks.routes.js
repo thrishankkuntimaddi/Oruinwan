@@ -68,6 +68,18 @@ router.post('/:id/transfer-request/:action', tasksController.handleTransferReque
 // POST /api/v2/tasks/:id/subtasks - Create subtask
 router.post('/:id/subtasks', tasksController.createSubtask);
 
+// POST /api/v2/tasks/:id/links - Add linked issue
+router.post('/:id/links', tasksController.addLink);
+
+// DELETE /api/v2/tasks/:id/links/:linkId - Remove linked issue
+router.delete('/:id/links/:linkId', tasksController.removeLink);
+
+// POST /api/v2/tasks/:id/watchers - Watch a task
+router.post('/:id/watchers', tasksController.addWatcher);
+
+// DELETE /api/v2/tasks/:id/watchers - Unwatch a task
+router.delete('/:id/watchers', tasksController.removeWatcher);
+
 // ============================================================================
 // EXPORT
 // ============================================================================

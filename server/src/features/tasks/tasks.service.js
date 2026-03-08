@@ -27,6 +27,7 @@ const mongoose = require('mongoose');
 // Models (SHARED - do not modify)
 const Task = require('../../../models/Task');
 const TaskActivity = require('../../../models/TaskActivity');
+const IssueKeyCounter = require('../../../models/IssueKeyCounter');
 const User = require('../../../models/User');
 const Workspace = require('../../../models/Workspace');
 const Channel = require("../channels/channel.model.js");
@@ -266,6 +267,15 @@ async function createTask(userId, taskData, io, req) {
     const createdTasks = [];
 
     for (const def of taskDefinitions) {
+        // Generate Jira-style issue key atomically
+        let issueKey = null;
+        try {
+            const ws = await Workspace.findById(workspaceId).lean();
+            issueKey = await IssueKeyCounter.nextKey(workspaceId, ws?.name || 'TSK');
+        } catch (keyErr) {
+            console.warn('[ISSUE_KEY] Failed to generate key:', keyErr.message);
+        }
+
         const task = new Task({
             company: user.companyId,
             workspace: workspaceId,
@@ -280,8 +290,10 @@ async function createTask(userId, taskData, io, req) {
             dueDate: dueDate ? new Date(dueDate) : null,
             linkedMessage,
             tags: tags || [],
+            labels: Array.isArray(taskData.labels) ? taskData.labels : [],
             source: source || 'manual',
-            type: type || 'task'
+            type: type || 'task',
+            issueKey
         });
 
         await task.save();
@@ -1541,6 +1553,116 @@ function _buildVisibilityQuery(userId, workspaceId, userChannels, includeDeleted
 }
 
 // ============================================================================
+// LINKED ISSUES
+// ============================================================================
+
+/**
+ * Add a linked issue ("blocks", "is_blocked_by", "duplicates", "relates_to").
+ * Creates the link bidirectionally.
+ */
+async function addLink(userId, taskId, { linkedTaskId, linkType }) {
+    const INVERSE = {
+        blocks: 'is_blocked_by',
+        is_blocked_by: 'blocks',
+        duplicates: 'is_duplicated_by',
+        is_duplicated_by: 'duplicates',
+        relates_to: 'relates_to'
+    };
+
+    const [task, linked] = await Promise.all([
+        Task.findById(taskId),
+        Task.findById(linkedTaskId)
+    ]);
+    if (!task || !linked) {
+        const e = new Error('Task not found'); e.statusCode = 404; throw e;
+    }
+
+    // Idempotent - don't duplicate
+    const alreadyLinked = task.linkedIssues.some(
+        l => l.task.toString() === linkedTaskId && l.linkType === linkType
+    );
+    if (!alreadyLinked) {
+        task.linkedIssues.push({ task: linkedTaskId, linkType, createdBy: userId });
+        await task.save();
+    }
+
+    // Add inverse link on the other task
+    const inverseType = INVERSE[linkType] || 'relates_to';
+    const alreadyInverse = linked.linkedIssues.some(
+        l => l.task.toString() === taskId && l.linkType === inverseType
+    );
+    if (!alreadyInverse) {
+        linked.linkedIssues.push({ task: taskId, linkType: inverseType, createdBy: userId });
+        await linked.save();
+    }
+
+    const populated = await Task.findById(taskId)
+        .populate('linkedIssues.task', 'title issueKey status priority type')
+        .lean();
+    return { task: populated };
+}
+
+/**
+ * Remove a linked issue by link subdocument id.
+ */
+async function removeLink(userId, taskId, linkId) {
+    const task = await Task.findById(taskId);
+    if (!task) { const e = new Error('Task not found'); e.statusCode = 404; throw e; }
+
+    const link = task.linkedIssues.id(linkId);
+    if (!link) { const e = new Error('Link not found'); e.statusCode = 404; throw e; }
+
+    // Remove inverse from other task silently
+    const INVERSE = {
+        blocks: 'is_blocked_by', is_blocked_by: 'blocks',
+        duplicates: 'is_duplicated_by', is_duplicated_by: 'duplicates',
+        relates_to: 'relates_to'
+    };
+    try {
+        const other = await Task.findById(link.task);
+        if (other) {
+            const inverseType = INVERSE[link.linkType] || 'relates_to';
+            other.linkedIssues = other.linkedIssues.filter(
+                l => !(l.task.toString() === taskId && l.linkType === inverseType)
+            );
+            await other.save();
+        }
+    } catch { }
+
+    task.linkedIssues.pull(linkId);
+    await task.save();
+    return { message: 'Link removed' };
+}
+
+// ============================================================================
+// WATCHERS
+// ============================================================================
+
+/**
+ * Add the calling user as a watcher.
+ */
+async function addWatcher(userId, taskId) {
+    const task = await Task.findById(taskId);
+    if (!task) { const e = new Error('Task not found'); e.statusCode = 404; throw e; }
+    if (!task.watchers.map(id => id.toString()).includes(userId)) {
+        task.watchers.push(userId);
+        await task.save();
+    }
+    return { watchers: task.watchers };
+}
+
+/**
+ * Remove the calling user from watchers.
+ */
+async function removeWatcher(userId, taskId) {
+    const task = await Task.findById(taskId);
+    if (!task) { const e = new Error('Task not found'); e.statusCode = 404; throw e; }
+    task.watchers = task.watchers.filter(id => id.toString() !== userId);
+    await task.save();
+    return { watchers: task.watchers };
+}
+
+// ============================================================================
 // EXPORTS
 // ============================================================================
 
@@ -1556,5 +1678,9 @@ module.exports = {
     requestTransfer,
     handleTransferRequest,
     createSubtask,
-    getTaskActivity
+    getTaskActivity,
+    addLink,
+    removeLink,
+    addWatcher,
+    removeWatcher
 };

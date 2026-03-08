@@ -122,7 +122,16 @@ export const TasksProvider = ({ children }) => {
                     visibility: task.visibility || "private",
                     assignees: validAssignees, // Keep full valid assignee list
                     attachments: task.attachments || [],
-                    transferRequest: task.transferRequest || null
+                    transferRequest: task.transferRequest || null,
+                    // ── Jira-grade fields ──
+                    issueKey: task.issueKey || null,
+                    issueType: task.type || 'task',
+                    labels: task.labels || [],
+                    storyPoints: task.storyPoints ?? null,
+                    estimatedHours: task.estimatedHours ?? null,
+                    actualHours: task.actualHours ?? null,
+                    watchers: task.watchers || [],
+                    linkedIssues: task.linkedIssues || []
                 };
             });
 
@@ -173,7 +182,16 @@ export const TasksProvider = ({ children }) => {
                 visibility: task.visibility || "private",
                 assignees: validAssignees,
                 attachments: task.attachments || [],
-                transferRequest: task.transferRequest || null
+                transferRequest: task.transferRequest || null,
+                // ── Jira-grade fields ──
+                issueKey: task.issueKey || null,
+                issueType: task.type || 'task',
+                labels: task.labels || [],
+                storyPoints: task.storyPoints ?? null,
+                estimatedHours: task.estimatedHours ?? null,
+                actualHours: task.actualHours ?? null,
+                watchers: task.watchers || [],
+                linkedIssues: task.linkedIssues || []
             };
         };
 

@@ -15,6 +15,9 @@ const TaskSchema = new mongoose.Schema({
     workspace: { type: mongoose.Schema.Types.ObjectId, ref: "Workspace", required: true },
     project: { type: String, default: null },
 
+    // Jira-style issue key: auto-assigned by IssueKeyCounter, e.g. "CHT-7"
+    issueKey: { type: String, default: null, index: true },
+
     // ============ TAXONOMY ============
     type: {
         type: String,
@@ -93,6 +96,20 @@ const TaskSchema = new mongoose.Schema({
 
     // ============ METADATA ============
     tags: [{ type: String }],
+    // Jira-style labels (user-defined free-form strings)
+    labels: [{ type: String }],
+
+    // ============ LINKED ISSUES ============
+    linkedIssues: [{
+        task: { type: mongoose.Schema.Types.ObjectId, ref: "Task", required: true },
+        linkType: {
+            type: String,
+            enum: ['blocks', 'is_blocked_by', 'duplicates', 'is_duplicated_by', 'relates_to'],
+            required: true
+        },
+        createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+        createdAt: { type: Date, default: Date.now }
+    }],
     attachments: [{
         name: String,
         url: String,

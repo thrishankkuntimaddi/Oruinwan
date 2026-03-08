@@ -16,8 +16,8 @@ import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import {
     Plus, X, Loader2, ChevronUp, ChevronDown, Minus,
     Calendar, User, AlertTriangle, CheckCircle2, Clock,
-    BookOpen, ArrowRight, RotateCcw, Tag, Flag,
-    ListTodo, Eye, Activity, ChevronRight
+    BookOpen, ArrowRight, RotateCcw, Tag, Flag, Bug,
+    ListTodo, Eye, Activity, ChevronRight, Zap, Link2
 } from 'lucide-react';
 import api from '../../../../services/api';
 import { useWorkspace } from '../../../../contexts/WorkspaceContext';
@@ -107,6 +107,27 @@ function StatusBadge({ status }) {
     );
 }
 
+// ─── Issue Type Icon (Jira-discipline) ────────────────────────────────────────
+
+const ISSUE_TYPE_META = {
+    epic: { label: 'Epic', color: '#6554C0', bg: '#EAE6FF', Icon: Zap },
+    bug: { label: 'Bug', color: '#FF5630', bg: '#FFEBE6', Icon: AlertTriangle },
+    subtask: { label: 'Subtask', color: '#00B8D9', bg: '#E6FCFF', Icon: CheckCircle2 },
+    task: { label: 'Task', color: '#0052CC', bg: '#DEEBFF', Icon: CheckCircle2 },
+};
+
+function IssueTypeIcon({ type = 'task', size = 12 }) {
+    const meta = ISSUE_TYPE_META[type] || ISSUE_TYPE_META.task;
+    const { Icon, color, bg } = meta;
+    return (
+        <span title={meta.label}
+            className="inline-flex items-center justify-center rounded-sm flex-shrink-0"
+            style={{ width: 16, height: 16, background: bg }}>
+            <Icon size={size} style={{ color }} strokeWidth={2.5} />
+        </span>
+    );
+}
+
 // ─── Inline Quick-Add ─────────────────────────────────────────────────────────
 
 function InlineAdd({ defaultStatus, onSubmit, onCancel }) {
@@ -177,19 +198,35 @@ function TaskCard({ task, onClick, onDelete }) {
             )}
 
             <div className="px-3 pt-2 pb-2.5">
+                {/* Issue type + key row */}
+                <div className="flex items-center gap-1.5 mb-1.5">
+                    <IssueTypeIcon type={task.type || task.issueType || 'task'} size={10} />
+                    {(task.issueKey) && (
+                        <span className="text-[10px] font-mono font-semibold" style={{ color: '#7A869A' }}>
+                            {task.issueKey}
+                        </span>
+                    )}
+                </div>
+
                 {/* Summary */}
                 <p className={`text-sm leading-snug mb-2 ${done ? 'line-through text-gray-400' : 'text-gray-800'}`}>
                     {task.title}
                 </p>
 
+                {/* Labels */}
+                {task.labels?.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mb-1.5">
+                        {task.labels.slice(0, 3).map(l => (
+                            <span key={l} className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-medium"
+                                style={{ background: '#F4F5F7', color: '#42526E' }}>
+                                {l}
+                            </span>
+                        ))}
+                    </div>
+                )}
+
                 {/* Bottom chips row */}
                 <div className="flex items-center gap-1.5 flex-wrap">
-                    {/* Issue type dot */}
-                    <div className="w-3.5 h-3.5 rounded-sm flex-shrink-0 flex items-center justify-center"
-                        style={{ background: colMap[task.status]?.color || '#42526E' }}>
-                        <div className="w-1.5 h-1.5 rounded-full bg-white opacity-90" />
-                    </div>
-
                     {/* Priority */}
                     <PriorityIcon priority={task.priority || 'medium'} size={13} />
 

@@ -20,7 +20,7 @@ import {
   ChevronUp, ChevronDown, Minus, Calendar, User, Flag,
   AlertTriangle, Trash2, RotateCcw, Activity, ListTodo,
   LayoutGrid, List, SlidersHorizontal, ChevronRight,
-  BookOpen, Inbox, Send, Eye, Archive, Hash, Bell
+  BookOpen, Inbox, Send, Eye, Archive, Hash, Bell, Zap
 } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import TaskModal from '../../components/tasksComp/TaskModal';
@@ -124,6 +124,27 @@ function isOverdue(task) {
   return task.dueDate && new Date(task.dueDate) < new Date() && task.status !== 'Completed' && task.status !== 'Cancelled';
 }
 
+// ─── Issue Type Icon (Jira-discipline) ────────────────────────────────
+
+const ISSUE_TYPE_META = {
+  epic: { label: 'Epic', color: '#6554C0', bg: '#EAE6FF', Icon: Zap },
+  bug: { label: 'Bug', color: '#FF5630', bg: '#FFEBE6', Icon: AlertTriangle },
+  subtask: { label: 'Subtask', color: '#00B8D9', bg: '#E6FCFF', Icon: CheckCircle2 },
+  task: { label: 'Task', color: '#0052CC', bg: '#DEEBFF', Icon: CheckCircle2 },
+};
+
+function IssueTypeIcon({ type = 'task', size = 11 }) {
+  const meta = ISSUE_TYPE_META[type] || ISSUE_TYPE_META.task;
+  const { Icon, color, bg } = meta;
+  return (
+    <span title={meta.label}
+      className="inline-flex items-center justify-center rounded-sm flex-shrink-0"
+      style={{ width: 16, height: 16, background: bg }}>
+      <Icon size={size} style={{ color }} strokeWidth={2.5} />
+    </span>
+  );
+}
+
 // ─── Transfer Request Banner ───────────────────────────────────────────────
 
 function TransferBanner({ task, onApprove, onReject, onRequest }) {
@@ -173,21 +194,34 @@ function ListRow({ task, view, onEdit, onDelete, onRestore, onPermanentDelete, o
         style={{ background: pMeta.color }} />
 
       <div className="flex items-center gap-4 px-4 py-3 pl-5">
-        {/* Issue type + status indicator */}
+        {/* Issue type icon (replaces plain status dot) */}
         <div className="flex-shrink-0">
-          <div className="w-4 h-4 rounded-sm flex items-center justify-center"
-            style={{ background: STATUS_META[task.status]?.color || '#42526E' }}>
-            <div className="w-2 h-2 rounded-full bg-white opacity-90" />
-          </div>
+          <IssueTypeIcon type={task.issueType || 'task'} size={11} />
         </div>
 
         {/* Main content */}
         <div className="flex-1 min-w-0">
           <div className="flex items-start gap-2">
+            {/* Issue key */}
+            {task.issueKey && (
+              <span className="text-[10px] font-mono font-semibold flex-shrink-0 mt-0.5" style={{ color: '#7A869A' }}>
+                {task.issueKey}
+              </span>
+            )}
             <p className={`text-sm font-medium leading-snug flex-1 truncate ${isCompleted || isDeleted ? 'line-through text-gray-400' : 'text-gray-900'}`}>
               {task.title}
             </p>
           </div>
+
+          {/* Labels chips */}
+          {task.labels?.length > 0 && (
+            <div className="flex flex-wrap gap-1 mt-1">
+              {task.labels.slice(0, 4).map(l => (
+                <span key={l} className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-medium"
+                  style={{ background: '#F4F5F7', color: '#42526E' }}>{l}</span>
+              ))}
+            </div>
+          )}
 
           {/* Meta row */}
           <div className="flex items-center gap-3 mt-1 flex-wrap">
@@ -198,17 +232,17 @@ function ListRow({ task, view, onEdit, onDelete, onRestore, onPermanentDelete, o
 
             {/* Priority */}
             <span className="flex items-center gap-0.5 text-[10px] font-semibold"
-              style={{ color: pMeta.color }}>
+              style={{ color: PRIORITY_META[task.priority]?.color || '#E2B203' }}>
               <PriorityIcon priority={task.priority} size={10} />
               {task.priority}
             </span>
 
             {/* Due date */}
             {task.dueDate && (
-              <span className={`flex items-center gap-1 text-[10px] font-medium ${overdue ? 'text-red-600' : 'text-gray-400'}`}>
+              <span className={`flex items-center gap-1 text-[10px] font-medium ${isOverdue(task) ? 'text-red-600' : 'text-gray-400'}`}>
                 <Calendar size={9} />
                 {fmtDate(task.dueDate)}
-                {overdue && ' · Overdue'}
+                {isOverdue(task) && ' · Overdue'}
               </span>
             )}
 

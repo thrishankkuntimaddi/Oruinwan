@@ -307,6 +307,55 @@ async function getTaskActivity(req, res) {
 }
 
 // ============================================================================
+// LINK + WATCHER CONTROLLERS
+// ============================================================================
+
+/** POST /api/v2/tasks/:id/links */
+async function addLink(req, res) {
+    try {
+        const userId = req.user.sub;
+        const { linkedTaskId, linkType } = req.body;
+        if (!linkedTaskId || !linkType) {
+            return res.status(400).json({ message: 'linkedTaskId and linkType are required' });
+        }
+        const result = await tasksService.addLink(userId, req.params.id, { linkedTaskId, linkType });
+        return res.json(result);
+    } catch (error) {
+        return handleError(res, error);
+    }
+}
+
+/** DELETE /api/v2/tasks/:id/links/:linkId */
+async function removeLink(req, res) {
+    try {
+        const result = await tasksService.removeLink(req.user.sub, req.params.id, req.params.linkId);
+        return res.json(result);
+    } catch (error) {
+        return handleError(res, error);
+    }
+}
+
+/** POST /api/v2/tasks/:id/watchers */
+async function addWatcher(req, res) {
+    try {
+        const result = await tasksService.addWatcher(req.user.sub, req.params.id);
+        return res.json(result);
+    } catch (error) {
+        return handleError(res, error);
+    }
+}
+
+/** DELETE /api/v2/tasks/:id/watchers */
+async function removeWatcher(req, res) {
+    try {
+        const result = await tasksService.removeWatcher(req.user.sub, req.params.id);
+        return res.json(result);
+    } catch (error) {
+        return handleError(res, error);
+    }
+}
+
+// ============================================================================
 // EXPORTS
 // ============================================================================
 
@@ -322,5 +371,9 @@ module.exports = {
     requestTransfer,
     handleTransferRequest,
     createSubtask,
-    getTaskActivity
+    getTaskActivity,
+    addLink,
+    removeLink,
+    addWatcher,
+    removeWatcher
 };
