@@ -1,538 +1,833 @@
-import React, { useState, useMemo, useRef, useEffect } from "react";
-import { useLocation } from "react-router-dom";
+/**
+ * MyTasks.jsx — Jira-Grade Workspace Task Dashboard
+ *
+ * Scope: ENTIRE workspace — personal, incoming, delegated, across ALL channels
+ *
+ * Views:
+ *  - My Issues       (self-created self-assigned)
+ *  - Incoming        (assigned to me by others)
+ *  - Given           (I delegated to others)
+ *  - All Issues      (everything I can see — filterable by channel)
+ *  - Completed       (done tasks)
+ *  - Trash           (deleted tasks with restore/permanent delete)
+ *
+ * Modes: List view (default) | Board view (Jira Kanban)
+ */
+
+import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import {
-  Plus, Search, Calendar, Flag,
-  CheckCircle2, Trash2, User, ArrowUpDown, FileText, RotateCcw
-} from "lucide-react";
-import TaskModal from "../../components/tasksComp/TaskModal";
-import TaskCompletionModal from "../../components/tasksComp/TaskCompletionModal";
-import TransferRequestModal from "../../components/tasksComp/TransferRequestModal";
-import { useContacts } from "../../contexts/ContactsContext";
-import { useTasks } from "../../contexts/TasksContext";
-import { useAuth } from "../../contexts/AuthContext";
+  Plus, Search, X, Loader2, CheckCircle2, Clock, Circle,
+  ChevronUp, ChevronDown, Minus, Calendar, User, Flag,
+  AlertTriangle, Trash2, RotateCcw, Activity, ListTodo,
+  LayoutGrid, List, SlidersHorizontal, ChevronRight,
+  BookOpen, Inbox, Send, Eye, Archive, Hash, Bell
+} from 'lucide-react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import TaskModal from '../../components/tasksComp/TaskModal';
+import TransferRequestModal from '../../components/tasksComp/TransferRequestModal';
+import TaskCompletionModal from '../../components/tasksComp/TaskCompletionModal';
+import { useTasks } from '../../contexts/TasksContext';
+import { useAuth } from '../../contexts/AuthContext';
+import { useContacts } from '../../contexts/ContactsContext';
 
-const PRIORITY_ORDER = {
-  "Emergency": 4,
-  "High": 3,
-  "Medium": 2,
-  "Low": 1
+// ─── Design tokens (Jira Atlas palette) ─────────────────────────────────────-
+
+const JIRA_BLUE = '#0052CC';
+const BOARD_BG = '#F4F5F7';
+const CARD_SHADOW = '0 1px 2px rgba(9,30,66,0.25)';
+
+const STATUS_META = {
+  'To Do': { bg: '#DFE1E6', color: '#42526E', border: '#DFE1E6' },
+  'In Progress': { bg: '#DEEBFF', color: '#0052CC', border: '#0052CC' },
+  'Completed': { bg: '#E3FCEF', color: '#00875A', border: '#00875A' },
+  'Cancelled': { bg: '#FFE9E9', color: '#DE350B', border: '#DE350B' },
+  'Blocked': { bg: '#FFE9E9', color: '#FF5630', border: '#FF5630' },
+  'In Review': { bg: '#EAE6FF', color: '#6554C0', border: '#6554C0' },
 };
 
-const STATUS_COLORS = {
-  "To Do": "text-gray-600 bg-gray-100 hover:bg-gray-200",
-  "In Progress": "text-blue-600 bg-blue-50 hover:bg-blue-100",
-  "Completed": "text-emerald-600 bg-emerald-50 hover:bg-emerald-100",
-  "Cancelled": "text-red-600 bg-red-50 hover:bg-red-100"
+const PRIORITY_META = {
+  Highest: { color: '#CD1317', bg: 'rgba(205,19,23,0.08)' },
+  High: { color: '#E97F33', bg: 'rgba(233,127,51,0.08)' },
+  Medium: { color: '#E2B203', bg: 'rgba(226,178,3,0.08)' },
+  Low: { color: '#3E7FC1', bg: 'rgba(62,127,193,0.08)' },
+  Lowest: { color: '#7A869A', bg: 'rgba(122,134,154,0.08)' },
+  // Legacy values
+  Emergency: { color: '#CD1317', bg: 'rgba(205,19,23,0.08)' },
 };
 
-const PRIORITY_COLORS = {
-  "Emergency": "text-red-600 bg-red-50 border-red-200",
-  "High": "text-orange-600 bg-orange-50 border-orange-200",
-  "Medium": "text-blue-600 bg-blue-50 border-blue-200",
-  "Low": "text-gray-600 bg-gray-50 border-gray-200"
-};
+const BOARD_COLUMNS = [
+  { key: 'To Do', label: 'TO DO', color: '#42526E', headerBg: '#DFE1E6', topColor: '#42526E' },
+  { key: 'In Progress', label: 'IN PROGRESS', color: '#0052CC', headerBg: '#DEEBFF', topColor: '#0052CC' },
+  { key: 'In Review', label: 'IN REVIEW', color: '#6554C0', headerBg: '#EAE6FF', topColor: '#6554C0' },
+  { key: 'Completed', label: 'DONE', color: '#00875A', headerBg: '#E3FCEF', topColor: '#00875A' },
+];
 
-const MyTasks = () => {
+const SIDEBAR_VIEWS = [
+  { key: 'my-tasks', label: 'My Issues', icon: <Circle size={15} /> },
+  { key: 'shared-tasks', label: 'Incoming', icon: <Inbox size={15} /> },
+  { key: 'assigned-tasks', label: 'Given', icon: <Send size={15} /> },
+  { key: 'all-tasks', label: 'All Issues', icon: <Eye size={15} /> },
+  null, // separator
+  { key: 'completed-tasks', label: 'Completed', icon: <CheckCircle2 size={15} /> },
+  { key: 'deleted-tasks', label: 'Trash', icon: <Trash2 size={15} /> },
+];
+
+const SORT_OPTIONS = [
+  { id: 'priority', label: 'Priority' },
+  { id: 'dueDate', label: 'Due Date' },
+  { id: 'status', label: 'Status' },
+  { id: 'a-z', label: 'Alphabetical' },
+  { id: 'newest', label: 'Newest First' },
+];
+
+const PRIORITY_ORDER = { Emergency: 5, Highest: 5, High: 4, Medium: 3, Low: 2, Lowest: 1 };
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function PriorityIcon({ priority, size = 14 }) {
+  const p = priority?.toLowerCase();
+  const color = PRIORITY_META[priority]?.color || '#E2B203';
+  if (p === 'highest' || p === 'emergency') return <ChevronUp size={size} strokeWidth={3} style={{ color }} />;
+  if (p === 'high') return <ChevronUp size={size} strokeWidth={2} style={{ color }} />;
+  if (p === 'low') return <ChevronDown size={size} strokeWidth={2} style={{ color }} />;
+  if (p === 'lowest') return <ChevronDown size={size} strokeWidth={3} style={{ color }} />;
+  return <Minus size={size} strokeWidth={2.5} style={{ color }} />;
+}
+
+function StatusBadge({ status }) {
+  const m = STATUS_META[status] || STATUS_META['To Do'];
+  return (
+    <span className="inline-flex items-center text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-sm"
+      style={{ background: m.bg, color: m.color }}>
+      {status === 'To Do' && <Circle size={8} className="mr-1" strokeWidth={2.5} />}
+      {status === 'In Progress' && <Clock size={8} className="mr-1" strokeWidth={2.5} />}
+      {status === 'Completed' && <CheckCircle2 size={8} className="mr-1" strokeWidth={2.5} />}
+      {status}
+    </span>
+  );
+}
+
+function avatarColor(name) {
+  const colors = ['#6554C0', '#0052CC', '#00875A', '#FF5630', '#FF991F', '#36B37E', '#00B8D9', '#8777D9'];
+  if (!name) return colors[0];
+  return colors[name.charCodeAt(0) % colors.length];
+}
+function initials(name) {
+  if (!name) return '?';
+  return name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+}
+function fmtDate(d) {
+  if (!d) return '';
+  return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+function isOverdue(task) {
+  return task.dueDate && new Date(task.dueDate) < new Date() && task.status !== 'Completed' && task.status !== 'Cancelled';
+}
+
+// ─── Transfer Request Banner ───────────────────────────────────────────────
+
+function TransferBanner({ task, onApprove, onReject, onRequest }) {
+  if (task.transferRequest?.status === 'pending') {
+    return (
+      <div className="flex items-start gap-2 px-3 py-2 rounded-sm mt-2 text-xs"
+        style={{ background: '#EAE6FF', border: '1px solid #C0B6F2' }}>
+        <Bell size={12} className="mt-0.5 flex-shrink-0" style={{ color: '#6554C0' }} />
+        <div className="flex-1">
+          <span className="font-semibold" style={{ color: '#6554C0' }}>Transfer Pending</span>
+          <span className="text-gray-500 ml-1">→ {task.transferRequest.requestedTo?.username || '?'}</span>
+          {task.transferRequest.note && <p className="text-gray-500 italic mt-0.5">"{task.transferRequest.note}"</p>}
+        </div>
+        {onApprove && (
+          <div className="flex gap-1 flex-shrink-0">
+            <button onClick={e => { e.stopPropagation(); onApprove(); }}
+              className="px-2 py-1 text-[10px] font-bold text-white rounded-sm"
+              style={{ background: '#6554C0' }}>Approve</button>
+            <button onClick={e => { e.stopPropagation(); onReject(); }}
+              className="px-2 py-1 text-[10px] font-medium text-gray-600 bg-white border border-gray-200 rounded-sm">Reject</button>
+          </div>
+        )}
+      </div>
+    );
+  }
+  return null;
+}
+
+// ─── List Row ─────────────────────────────────────────────────────────────────
+
+function ListRow({ task, view, onEdit, onDelete, onRestore, onPermanentDelete, onTransferRequest, onTransferApprove, onTransferReject, onStatusChange }) {
+  const isDeleted = task.deleted;
+  const isCompleted = task.status === 'Completed';
+  const overdue = isOverdue(task);
+  const pMeta = PRIORITY_META[task.priority] || PRIORITY_META.Medium;
+  const isIncoming = view === 'shared-tasks';
+  const isGiven = view === 'assigned-tasks';
+
+  return (
+    <div
+      className="group relative bg-white hover:bg-gray-50 transition-colors cursor-pointer border-b"
+      style={{ borderColor: '#DFE1E6' }}
+      onClick={() => onEdit(task)}
+    >
+      {/* Priority strip */}
+      <div className="absolute left-0 top-0 bottom-0 w-0.5 rounded-r-full"
+        style={{ background: pMeta.color }} />
+
+      <div className="flex items-center gap-4 px-4 py-3 pl-5">
+        {/* Issue type + status indicator */}
+        <div className="flex-shrink-0">
+          <div className="w-4 h-4 rounded-sm flex items-center justify-center"
+            style={{ background: STATUS_META[task.status]?.color || '#42526E' }}>
+            <div className="w-2 h-2 rounded-full bg-white opacity-90" />
+          </div>
+        </div>
+
+        {/* Main content */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-start gap-2">
+            <p className={`text-sm font-medium leading-snug flex-1 truncate ${isCompleted || isDeleted ? 'line-through text-gray-400' : 'text-gray-900'}`}>
+              {task.title}
+            </p>
+          </div>
+
+          {/* Meta row */}
+          <div className="flex items-center gap-3 mt-1 flex-wrap">
+            {/* Channel / Project */}
+            <span className="flex items-center gap-1 text-[10px] font-medium text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded">
+              <Hash size={9} /> {task.project || 'General'}
+            </span>
+
+            {/* Priority */}
+            <span className="flex items-center gap-0.5 text-[10px] font-semibold"
+              style={{ color: pMeta.color }}>
+              <PriorityIcon priority={task.priority} size={10} />
+              {task.priority}
+            </span>
+
+            {/* Due date */}
+            {task.dueDate && (
+              <span className={`flex items-center gap-1 text-[10px] font-medium ${overdue ? 'text-red-600' : 'text-gray-400'}`}>
+                <Calendar size={9} />
+                {fmtDate(task.dueDate)}
+                {overdue && ' · Overdue'}
+              </span>
+            )}
+
+            {/* From/To */}
+            {isIncoming && (
+              <span className="text-[10px] text-gray-400">
+                From: <span className="font-medium text-gray-600">{task.assigner}</span>
+              </span>
+            )}
+            {isGiven && (
+              <span className="text-[10px] text-gray-400">
+                To: <span className="font-medium text-gray-600">{task.assignee}</span>
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Status badge */}
+        <div className="flex-shrink-0">
+          <StatusBadge status={task.status} />
+        </div>
+
+        {/* Actions */}
+        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+          {isDeleted ? (
+            <>
+              <button onClick={e => { e.stopPropagation(); onRestore(task.id); }}
+                className="p-1.5 rounded text-green-600 hover:bg-green-50 transition-colors"
+                title="Restore">
+                <RotateCcw size={13} />
+              </button>
+              <button onClick={e => { e.stopPropagation(); onPermanentDelete(task.id); }}
+                className="p-1.5 rounded text-red-500 hover:bg-red-50 transition-colors"
+                title="Delete forever">
+                <Trash2 size={13} />
+              </button>
+            </>
+          ) : isIncoming && !isCompleted ? (
+            <>
+              {task.transferRequest?.status !== 'pending' && (
+                <button onClick={e => { e.stopPropagation(); onTransferRequest(task); }}
+                  title="Request transfer"
+                  className="p-1.5 rounded text-purple-500 hover:bg-purple-50 transition-colors">
+                  <RotateCcw size={13} />
+                </button>
+              )}
+            </>
+          ) : (
+            <button onClick={e => { e.stopPropagation(); onDelete(task.id); }}
+              className="p-1.5 rounded text-gray-300 hover:text-red-500 hover:bg-red-50 transition-colors"
+              title="Delete">
+              <Trash2 size={13} />
+            </button>
+          )}
+        </div>
+
+        {/* Assignee avatar */}
+        {task.assignee && task.assignee !== 'Self' && (
+          <div className="w-6 h-6 rounded-full flex items-center justify-center text-white text-[9px] font-bold flex-shrink-0"
+            style={{ background: avatarColor(task.assignee) }}
+            title={task.assignee}>
+            {initials(task.assignee)}
+          </div>
+        )}
+      </div>
+
+      {/* Transfer request banner (for given tasks) */}
+      {isGiven && task.transferRequest?.status === 'pending' && (
+        <div className="px-5 pb-2">
+          <TransferBanner
+            task={task}
+            onApprove={() => onTransferApprove(task.id)}
+            onReject={() => onTransferReject(task.id)}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Board Card ───────────────────────────────────────────────────────────────
+
+function BoardCard({ task, view, onEdit, onDelete, onRestore }) {
+  const overdue = isOverdue(task);
+  const pMeta = PRIORITY_META[task.priority] || PRIORITY_META.Medium;
+
+  return (
+    <div
+      onClick={() => onEdit(task)}
+      className="group bg-white rounded-sm cursor-pointer mb-2 relative"
+      style={{
+        boxShadow: CARD_SHADOW,
+        borderLeft: `3px solid ${pMeta.color}`,
+      }}
+      onMouseEnter={e => { e.currentTarget.style.boxShadow = `${CARD_SHADOW}, 0 0 0 1px rgba(0,82,204,0.4)`; }}
+      onMouseLeave={e => { e.currentTarget.style.boxShadow = CARD_SHADOW; }}
+    >
+      <div className="px-3 pt-2 pb-2.5">
+        <div className="flex items-start gap-2">
+          <div className="w-3.5 h-3.5 rounded-sm flex items-center justify-center mt-0.5 flex-shrink-0"
+            style={{ background: STATUS_META[task.status]?.color || '#42526E' }}>
+            <div className="w-1.5 h-1.5 rounded-full bg-white opacity-90" />
+          </div>
+          <p className={`text-sm leading-snug flex-1 ${task.status === 'Completed' ? 'line-through text-gray-400' : 'text-gray-800'}`}>
+            {task.title}
+          </p>
+          <button onClick={e => { e.stopPropagation(); onDelete(task.id); }}
+            className="opacity-0 group-hover:opacity-100 p-0.5 rounded text-gray-300 hover:text-red-500 transition-all flex-shrink-0">
+            <X size={11} />
+          </button>
+        </div>
+
+        <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+          <span className="flex items-center gap-1 text-[10px] text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded">
+            <Hash size={8} /> {task.project || 'General'}
+          </span>
+          <PriorityIcon priority={task.priority} size={12} />
+          {task.dueDate && (
+            <span className={`flex items-center gap-0.5 text-[10px] ${overdue ? 'text-red-600' : 'text-gray-400'}`}>
+              <Calendar size={9} />
+              {fmtDate(task.dueDate).slice(0, 6)}
+            </span>
+          )}
+          <div className="flex-1" />
+          {task.assignee && task.assignee !== 'Self' && (
+            <div className="w-4 h-4 rounded-full flex items-center justify-center text-white text-[8px] font-bold"
+              style={{ background: avatarColor(task.assignee) }}>
+              {initials(task.assignee)}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Board Column ─────────────────────────────────────────────────────────────
+
+function BoardColumn({ col, tasks, view, onEdit, onDelete }) {
+  return (
+    <div className="flex-1 flex flex-col min-h-0 min-w-0" style={{ background: BOARD_BG }}>
+      <div className="flex items-center gap-2 px-3 py-2.5 flex-shrink-0"
+        style={{ borderTop: `3px solid ${col.topColor}` }}>
+        <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: col.color }}>
+          {col.label}
+        </span>
+        <span className="text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center"
+          style={{ background: col.headerBg, color: col.color }}>
+          {tasks.length}
+        </span>
+      </div>
+      <div className="flex-1 min-h-0 overflow-y-auto px-2 pb-2"
+        style={{ scrollbarWidth: 'thin' }}>
+        {tasks.length === 0 ? (
+          <div className="flex items-center justify-center h-16 opacity-40">
+            <p className="text-xs text-gray-400">No issues</p>
+          </div>
+        ) : (
+          tasks.map(t => (
+            <BoardCard key={t.id} task={t} view={view} onEdit={onEdit} onDelete={() => { }} />
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Stats Strip ──────────────────────────────────────────────────────────────
+
+function StatsStrip({ tasks, currentUserId }) {
+  const active = tasks.filter(t => !t.deleted && t.status !== 'Completed');
+  const overdue = active.filter(t => isOverdue(t));
+  const mine = active.filter(t => String(t.assigneeId) === String(currentUserId) || String(t.assignerId) === String(currentUserId));
+  const completed = tasks.filter(t => t.status === 'Completed').length;
+
+  const stats = [
+    { label: 'Active', value: active.length, color: JIRA_BLUE },
+    { label: 'Overdue', value: overdue.length, color: '#FF5630' },
+    { label: 'Mine', value: mine.length, color: '#6554C0' },
+    { label: 'Completed', value: completed, color: '#00875A' },
+  ];
+
+  return (
+    <div className="flex gap-3 px-5 pb-3 flex-shrink-0">
+      {stats.map(s => (
+        <div key={s.label} className="flex items-center gap-2 bg-white rounded-sm px-3 py-2"
+          style={{ boxShadow: CARD_SHADOW, border: '1px solid #DFE1E6' }}>
+          <div className="w-2 h-2 rounded-full" style={{ background: s.color }} />
+          <span className="text-[11px] text-gray-500 font-medium">{s.label}</span>
+          <span className="text-sm font-bold" style={{ color: s.color }}>{s.value}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ─── Create / Edit Task Modal (wrapper) ───────────────────────────────────────
+
+function CreateTaskModal({ initialData, channels, members, onClose, onSubmit, onUpdate }) {
+  return (
+    <TaskModal
+      onClose={onClose}
+      onAddTask={onSubmit}
+      onUpdateTask={onUpdate}
+      initialData={initialData}
+      channels={channels}
+      teamMembers={members}
+    />
+  );
+}
+
+// ─── Main MyTasks ─────────────────────────────────────────────────────────────
+
+export default function MyTasks() {
   const location = useLocation();
-  const activeTab = new URLSearchParams(location.search).get("tab") || "my-tasks";
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [completionTask, setCompletionTask] = useState(null);
-  const [deletionTask, setDeletionTask] = useState(null);
-  const [transferRequestTask, setTransferRequestTask] = useState(null);
-  const [editingTask, setEditingTask] = useState(null);
-  const [searchQuery, setSearchQuery] = useState("");
-  const { members, channels } = useContacts();
+  const navigate = useNavigate();
+  const activeView = new URLSearchParams(location.search).get('tab') || 'my-tasks';
+
   const { tasks, loading, createTask, updateTask, deleteTask, restoreTask, permanentlyDeleteTask, handleTransferResponse } = useTasks();
   const { user } = useAuth();
+  const { members, channels } = useContacts();
 
-  const [sortOrder, setSortOrder] = useState("priority");
-  const [showSortMenu, setShowSortMenu] = useState(false);
-  const sortMenuRef = useRef(null);
-
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (sortMenuRef.current && !sortMenuRef.current.contains(event.target)) {
-        setShowSortMenu(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+  const [viewMode, setViewMode] = useState('list'); // list | board
+  const [search, setSearch] = useState('');
+  const [sortOrder, setSortOrder] = useState('priority');
+  const [channelFilter, setChannelFilter] = useState('all');
+  const [priorityFilter, setPriorityFilter] = useState('all');
+  const [showFilters, setShowFilters] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+  const [editingTask, setEditingTask] = useState(null);
+  const [completionTask, setCompletionTask] = useState(null);
+  const [deletionTask, setDeletionTask] = useState(null);
+  const [transferTask, setTransferTask] = useState(null);
 
   const currentUserId = user?._id || user?.id;
 
-  const filteredTasks = useMemo(() => {
-    let filtered = [];
+  // Gather all unique channel / project names for filter
+  const channelNames = useMemo(() => {
+    const set = new Set(tasks.map(t => t.project || 'General').filter(Boolean));
+    return ['all', ...Array.from(set)];
+  }, [tasks]);
 
-    if (activeTab === "deleted-tasks") {
-      filtered = tasks.filter(t => t.deleted);
-    } else {
-      const activeTasks = tasks.filter(t => !t.deleted);
+  // Filter logic by view
+  const viewFiltered = useMemo(() => {
+    const isAssignee = (t) => {
+      if (t.assignees?.length > 0) return t.assignees.some(a => String(a._id || a.id) === String(currentUserId));
+      return String(t.assigneeId) === String(currentUserId);
+    };
 
-      const isAssignee = (t) => {
-        if (t.assignees && t.assignees.length > 0) {
-          return t.assignees.some(a => String(a._id || a.id) === String(currentUserId));
-        }
-        return String(t.assigneeId) === String(currentUserId);
-      };
+    const active = tasks.filter(t => !t.deleted);
 
-      if (activeTab === "my-tasks") {
-        filtered = activeTasks.filter(t => isAssignee(t) && t.assignerId === currentUserId && t.status !== "Completed");
-      } else if (activeTab === "shared-tasks") {
-        filtered = activeTasks.filter(t => isAssignee(t) && t.assignerId !== currentUserId && t.status !== "Completed");
-      } else if (activeTab === "assigned-tasks") {
-        filtered = activeTasks.filter(t => t.assignerId === currentUserId && !isAssignee(t) && t.status !== "Completed");
-      } else if (activeTab === "completed-tasks") {
-        filtered = activeTasks.filter(t => t.status === "Completed");
-      }
+    switch (activeView) {
+      case 'my-tasks':
+        return active.filter(t => isAssignee(t) && String(t.assignerId) === String(currentUserId) && t.status !== 'Completed');
+      case 'shared-tasks':
+        return active.filter(t => isAssignee(t) && String(t.assignerId) !== String(currentUserId) && t.status !== 'Completed');
+      case 'assigned-tasks':
+        return active.filter(t => String(t.assignerId) === String(currentUserId) && !isAssignee(t) && t.status !== 'Completed');
+      case 'all-tasks':
+        return active.filter(t => t.status !== 'Completed');
+      case 'completed-tasks':
+        return active.filter(t => t.status === 'Completed');
+      case 'deleted-tasks':
+        return tasks.filter(t => t.deleted);
+      default:
+        return active;
     }
+  }, [tasks, activeView, currentUserId]);
 
-    if (searchQuery) {
-      filtered = filtered.filter(t =>
-        t.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        t.description.toLowerCase().includes(searchQuery.toLowerCase())
+  // Second-pass filters: search + channel + priority + sort
+  const filtered = useMemo(() => {
+    let list = [...viewFiltered];
+
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      list = list.filter(t =>
+        t.title.toLowerCase().includes(q) ||
+        (t.description || '').toLowerCase().includes(q)
       );
     }
 
-    return filtered.sort((a, b) => {
-      if (sortOrder === "priority") {
-        return PRIORITY_ORDER[b.priority] - PRIORITY_ORDER[a.priority];
-      } else if (sortOrder === "dueDate") {
-        return new Date(a.dueDate || 0) - new Date(b.dueDate || 0);
-      } else if (sortOrder === "status") {
-        return (a.status || "").localeCompare(b.status || "");
-      } else if (sortOrder === "a-z") {
-        return (a.title || "").localeCompare(b.title || "");
-      }
+    if (channelFilter !== 'all') {
+      list = list.filter(t => (t.project || 'General') === channelFilter);
+    }
+
+    if (priorityFilter !== 'all') {
+      list = list.filter(t => t.priority === priorityFilter);
+    }
+
+    return list.sort((a, b) => {
+      if (sortOrder === 'priority') return (PRIORITY_ORDER[b.priority] || 0) - (PRIORITY_ORDER[a.priority] || 0);
+      if (sortOrder === 'dueDate') return new Date(a.dueDate || '2099') - new Date(b.dueDate || '2099');
+      if (sortOrder === 'status') return (a.status || '').localeCompare(b.status || '');
+      if (sortOrder === 'a-z') return (a.title || '').localeCompare(b.title || '');
+      if (sortOrder === 'newest') return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
       return 0;
     });
-  }, [tasks, activeTab, searchQuery, sortOrder, currentUserId]);
+  }, [viewFiltered, search, channelFilter, priorityFilter, sortOrder]);
 
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
-    setEditingTask(null);
-  };
+  // Board grouped by status
+  const boardGroups = useMemo(() =>
+    Object.fromEntries(BOARD_COLUMNS.map(c => [c.key, filtered.filter(t => t.status === c.key)])),
+    [filtered]
+  );
 
-  const handleDoubleClick = (task) => {
+  // --- Handlers ---
+  const handleEdit = useCallback((task) => {
     setEditingTask(task);
-    setIsModalOpen(true);
-  };
+    setShowModal(true);
+  }, []);
 
-  const handleAddTask = async (newTask) => {
-    await createTask(newTask);
-    setIsModalOpen(false);
-  };
+  const handleCreate = useCallback(async (data) => {
+    await createTask(data);
+    setShowModal(false);
+    setEditingTask(null);
+  }, [createTask]);
 
-  const handleDelete = (id) => {
+  const handleUpdate = useCallback(async (id, updates) => {
+    await updateTask(id, updates);
+    setShowModal(false);
+    setEditingTask(null);
+  }, [updateTask]);
+
+  const handleDelete = useCallback((id) => {
     const task = tasks.find(t => t.id === id);
     setDeletionTask(task);
+  }, [tasks]);
+
+  const handleConfirmDelete = useCallback(() => {
+    if (deletionTask) { deleteTask(deletionTask.id); setDeletionTask(null); }
+  }, [deleteTask, deletionTask]);
+
+  const handleRestore = useCallback((id) => restoreTask(id), [restoreTask]);
+
+  const handlePermanentDelete = useCallback((id) => {
+    if (window.confirm('Delete permanently? This cannot be undone.')) permanentlyDeleteTask(id);
+  }, [permanentlyDeleteTask]);
+
+  const handleTransferApprove = useCallback((id) => handleTransferResponse(id, 'approve'), [handleTransferResponse]);
+  const handleTransferReject = useCallback((id) => handleTransferResponse(id, 'reject'), [handleTransferResponse]);
+
+  const setView = (key) => {
+    const params = new URLSearchParams(location.search);
+    params.set('tab', key);
+    navigate(`?${params.toString()}`, { replace: true });
   };
 
-  const handleTransferRequest = async (newAssigneeId, note) => {
-    try {
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tasks/${transferRequestTask.id}/transfer-request`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({
-          newAssigneeId: newAssigneeId,  // Backend expects 'newAssigneeId', not 'requestedTo'
-          note: note
-        })
-      });
+  const isDeleted = activeView === 'deleted-tasks';
+  const isCompleted = activeView === 'completed-tasks';
+  const canCreate = !isDeleted && !isCompleted;
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to send transfer request');
-      }
+  const viewLabel = {
+    'my-tasks': 'My Issues',
+    'shared-tasks': 'Incoming',
+    'assigned-tasks': 'Given',
+    'all-tasks': 'All Issues',
+    'completed-tasks': 'Completed',
+    'deleted-tasks': 'Trash',
+  }[activeView] || 'Tasks';
 
-      setTransferRequestTask(null);
-      alert("Transfer request sent to assigner!");
-    } catch (error) {
-      console.error("Failed to send transfer request:", error);
-      alert(`Failed to send transfer request: ${error.message}`);
-    }
-  };
+  const viewDesc = {
+    'my-tasks': 'Tasks you created and own.',
+    'shared-tasks': 'Tasks assigned to you by others.',
+    'assigned-tasks': 'Tasks you delegated to others.',
+    'all-tasks': 'All workspace tasks visible to you.',
+    'completed-tasks': 'Finished tasks.',
+    'deleted-tasks': 'Trash — restore or delete permanently.',
+  }[activeView] || '';
 
-  const handleConfirmDeletion = () => {
-    if (!deletionTask) return;
-    deleteTask(deletionTask.id);
-    setDeletionTask(null);
-  };
-
-  const handleRestore = (id) => {
-    restoreTask(id);
-  };
-
-  const handlePermanentDelete = (id) => {
-    if (window.confirm("Are you sure you want to permanently delete this task? This cannot be undone.")) {
-      permanentlyDeleteTask(id);
-    }
-  };
-
-  const handleUpdate = (id, field, value) => {
-    if (field === "status" && (value === "Completed" || value === "done")) {
-      const task = tasks.find(t => t.id === id);
-      setCompletionTask(task);
-      return;
-    }
-    updateTask(id, { [field]: value });
-  };
-
-  const handleConfirmCompletion = (note) => {
-    if (!completionTask) return;
-    updateTask(completionTask.id, {
-      status: "Completed",
-      completionNote: note,
-      completedAt: new Date().toISOString()
-    });
-    setCompletionTask(null);
-  };
-
-  const canEditStatus = activeTab !== "assigned-tasks" && activeTab !== "completed-tasks" && activeTab !== "deleted-tasks";
-  const canEditPriority = activeTab !== "shared-tasks" && activeTab !== "completed-tasks" && activeTab !== "deleted-tasks";
-  const canEditDueDate = activeTab !== "shared-tasks" && activeTab !== "completed-tasks" && activeTab !== "deleted-tasks";
-  const isCompletedTab = activeTab === "completed-tasks";
-  const isDeletedTab = activeTab === "deleted-tasks";
+  // ── Loading skeleton ──
+  if (loading) {
+    return (
+      <div className="flex h-full overflow-hidden" style={{ background: '#F4F5F7' }}>
+        <div className="w-52 flex-shrink-0 bg-white border-r" style={{ borderColor: '#DFE1E6' }}>
+          <div className="p-4 space-y-2 animate-pulse">
+            {[100, 80, 90, 70, 85].map((w, i) => (
+              <div key={i} className="h-8 rounded" style={{ background: '#F4F5F7', width: `${w}%` }} />
+            ))}
+          </div>
+        </div>
+        <div className="flex-1 flex flex-col p-5 gap-3 animate-pulse">
+          <div className="h-6 w-48 bg-gray-200 rounded" />
+          {[90, 75, 85, 65, 80].map((w, i) => (
+            <div key={i} className="bg-white rounded-sm h-14 shadow-sm" style={{ width: `${w}%` }} />
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="flex flex-col h-full bg-slate-50 dark:bg-slate-900/50 overflow-hidden font-sans selection:bg-blue-100 selection:text-blue-900">
+    <div className="flex h-full overflow-hidden" style={{ background: '#F4F5F7' }}>
 
-      {/* Glassmorphic Header - Sticky & Blurred */}
-      <div className="shrink-0 px-8 py-5 bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl shadow-sm z-20 sticky top-0 transition-all duration-300">
-        <div className="flex flex-col gap-5">
-          <div className="flex items-center justify-between">
-            <div className="space-y-1">
-              <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-300 bg-clip-text text-transparent flex items-center gap-3">
-                {activeTab === "my-tasks" && "Personal Tasks"}
-                {activeTab === "shared-tasks" && "Incoming Requests"}
-                {activeTab === "assigned-tasks" && "Delegated Tasks"}
-                {activeTab === "completed-tasks" && <><CheckCircle2 className="text-emerald-500" size={28} /> Completed</>}
-                {activeTab === "deleted-tasks" && <><Trash2 className="text-rose-500" size={28} /> Trash Bin</>}
-              </h1>
-              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
-                {activeTab === "my-tasks" && "Manage your priorities effectively."}
-                {activeTab === "shared-tasks" && "Collaborate on tasks assigned to you."}
-                {activeTab === "assigned-tasks" && "Oversee team progress."}
-                {activeTab === "completed-tasks" && "Your history of accomplishments."}
-                {activeTab === "deleted-tasks" && "Recover or permanently remove items."}
-              </p>
-            </div>
-
-            {activeTab !== "completed-tasks" && activeTab !== "deleted-tasks" && (
-              <button
-                onClick={() => setIsModalOpen(true)}
-                className="group relative inline-flex items-center gap-2 bg-gradient-to-br from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white px-6 py-2.5 rounded-2xl font-semibold shadow-lg shadow-blue-500/30 transition-all duration-300 hover:scale-[1.02] hover:shadow-blue-500/50 active:scale-95"
-              >
-                <Plus size={20} className="stroke-[2.5]" />
-                <span>New Task</span>
-              </button>
+      {/* ── Left sidebar ── */}
+      <div className="w-52 flex-shrink-0 bg-white border-r flex flex-col overflow-y-auto" style={{ borderColor: '#DFE1E6' }}>
+        <div className="px-3 py-4">
+          <p className="text-[10px] font-bold uppercase tracking-widest mb-3 px-2" style={{ color: '#7A869A' }}>Tasks</p>
+          <nav className="space-y-0.5">
+            {SIDEBAR_VIEWS.map((v, i) =>
+              v === null
+                ? <div key={i} className="my-2 border-t" style={{ borderColor: '#DFE1E6' }} />
+                : (
+                  <button key={v.key} onClick={() => setView(v.key)}
+                    className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded text-sm font-medium transition-all"
+                    style={{
+                      background: activeView === v.key ? '#DEEBFF' : 'transparent',
+                      color: activeView === v.key ? JIRA_BLUE : '#42526E',
+                      fontWeight: activeView === v.key ? 700 : 500,
+                    }}>
+                    <span style={{ color: activeView === v.key ? JIRA_BLUE : '#7A869A' }}>
+                      {v.icon}
+                    </span>
+                    {v.label}
+                    <span className="ml-auto text-[10px] font-bold tabular-nums"
+                      style={{ color: activeView === v.key ? JIRA_BLUE : '#7A869A' }}>
+                      {v.key === 'my-tasks' && tasks.filter(t => !t.deleted && String(t.assignerId) === String(currentUserId) && String(t.assigneeId) === String(currentUserId) && t.status !== 'Completed').length}
+                      {v.key === 'shared-tasks' && tasks.filter(t => !t.deleted && String(t.assignerId) !== String(currentUserId) && t.assignees?.some(a => String(a._id) === String(currentUserId)) && t.status !== 'Completed').length}
+                      {v.key === 'assigned-tasks' && tasks.filter(t => !t.deleted && String(t.assignerId) === String(currentUserId) && String(t.assigneeId) !== String(currentUserId) && t.status !== 'Completed').length}
+                      {v.key === 'all-tasks' && tasks.filter(t => !t.deleted && t.status !== 'Completed').length}
+                      {v.key === 'completed-tasks' && tasks.filter(t => t.status === 'Completed').length}
+                      {v.key === 'deleted-tasks' && tasks.filter(t => t.deleted).length || undefined}
+                    </span>
+                  </button>
+                )
             )}
-          </div>
+          </nav>
 
-          {/* Interactive Toolbar */}
-          <div className="flex items-center gap-4">
-            {/* Search Bar */}
-            <div className="relative flex-1 max-w-lg group">
-              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-                <Search className="text-gray-400 group-focus-within:text-blue-500 transition-colors" size={18} />
-              </div>
-              <input
-                type="text"
-                placeholder="Search tasks..."
-                className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-gray-900/50 border-0 rounded-xl shadow-md ring-1 ring-gray-100 dark:ring-gray-700/50 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all outline-none text-sm font-medium text-gray-900 dark:text-white placeholder-gray-400 hover:shadow-lg"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
-
-            {/* Sort Menu */}
-            <div className="relative" ref={sortMenuRef}>
-              <button
-                onClick={() => setShowSortMenu(!showSortMenu)}
-                className={`flex items-center justify-center p-2.5 rounded-xl border transition-all duration-200 font-medium text-sm ${showSortMenu
-                  ? "bg-blue-50 border-blue-200 text-blue-700 dark:bg-blue-900/30 dark:border-blue-800 dark:text-blue-300"
-                  : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-gray-300"
-                  } shadow-sm`}
-                title="Sort"
-              >
-                <ArrowUpDown size={18} />
-              </button>
-
-              {showSortMenu && (
-                <div className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-gray-800 rounded-2xl shadow-xl shadow-gray-200/50 dark:shadow-black/50 border border-gray-100 dark:border-gray-700 py-1.5 z-30 animate-in fade-in zoom-in-95 duration-200 origin-top-right">
-                  {[
-                    { id: "priority", label: "Priority (High-Low)" },
-                    { id: "dueDate", label: "Due Date (Soonest)" },
-                    { id: "status", label: "Status" },
-                    { id: "a-z", label: "Alphabetical" }
-                  ].map(opt => (
-                    <button
-                      key={opt.id}
-                      onClick={() => { setSortOrder(opt.id); setShowSortMenu(false); }}
-                      className={`w-full text-left px-4 py-2.5 text-sm font-medium transition-colors flex items-center justify-between ${sortOrder === opt.id
-                        ? "text-blue-600 bg-blue-50 dark:bg-blue-900/20"
-                        : "text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50"
-                        }`}
-                    >
-                      {opt.label}
-                      {sortOrder === opt.id && <CheckCircle2 size={14} className="text-blue-500" />}
-                    </button>
-                  ))}
-                </div>
-              )}
+          {/* Channel filter in sidebar */}
+          <div className="mt-4">
+            <p className="text-[10px] font-bold uppercase tracking-widest mb-2 px-2" style={{ color: '#7A869A' }}>By Channel</p>
+            <div className="space-y-0.5">
+              {channelNames.slice(0, 8).map(ch => (
+                <button key={ch} onClick={() => setChannelFilter(ch)}
+                  className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded text-xs transition-all"
+                  style={{
+                    background: channelFilter === ch ? '#DEEBFF' : 'transparent',
+                    color: channelFilter === ch ? JIRA_BLUE : '#42526E',
+                  }}>
+                  <Hash size={10} style={{ opacity: 0.5 }} />
+                  {ch === 'all' ? 'All Channels' : ch}
+                </button>
+              ))}
             </div>
           </div>
         </div>
       </div>
 
-      {/* Scrollable Content Area */}
-      <div className="flex-1 overflow-y-auto overflow-x-hidden p-8 scroll-smooth custom-scrollbar">
-        {loading ? (
-          <div className="p-8 animate-pulse">
-            {/* Stats bar skeleton */}
-            <div className="flex gap-4 mb-8">
-              {[1,2,3,4].map(i => (
-                <div key={i} className="flex-1 bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-700">
-                  <div className="h-3 w-16 bg-gray-200 dark:bg-gray-700 rounded mb-3" />
-                  <div className="h-8 w-10 bg-gray-300 dark:bg-gray-600 rounded-lg" />
-                </div>
-              ))}
+      {/* ── Main content ── */}
+      <div className="flex-1 flex flex-col min-h-0 min-w-0 overflow-hidden">
+
+        {/* ── Toolbar ── */}
+        <div className="flex-shrink-0 bg-white border-b px-5 py-3" style={{ borderColor: '#DFE1E6' }}>
+          <div className="flex items-center gap-3">
+            <div>
+              <h1 className="text-base font-bold" style={{ color: '#172B4D' }}>{viewLabel}</h1>
+              <p className="text-xs" style={{ color: '#7A869A' }}>{viewDesc}</p>
             </div>
-            {/* Task card skeletons */}
-            <div className="space-y-3">
-              {[80,60,90,55,75].map((w,i) => (
-                <div key={i} className="bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-700 flex items-center gap-4">
-                  <div className="w-5 h-5 rounded-full border-2 border-gray-200 dark:border-gray-700 flex-shrink-0" />
-                  <div className="flex-1 space-y-2">
-                    <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded" style={{width:`${w}%`}} />
-                    <div className="flex gap-2">
-                      <div className="h-5 w-20 bg-blue-50 dark:bg-blue-900/20 rounded-full" />
-                      <div className="h-5 w-16 bg-amber-50 dark:bg-amber-900/20 rounded-full" />
-                    </div>
-                  </div>
-                  <div className="w-7 h-7 rounded-full bg-gray-200 dark:bg-gray-700 flex-shrink-0" />
-                </div>
-              ))}
+
+            <div className="flex-1" />
+
+            {/* Search */}
+            <div className="relative">
+              <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <input
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder="Search issues…"
+                className="pl-8 pr-3 py-1.5 text-xs border rounded-sm focus:outline-none w-44"
+                style={{ borderColor: '#DFE1E6' }}
+                onFocus={e => e.target.style.borderColor = JIRA_BLUE}
+                onBlur={e => e.target.style.borderColor = '#DFE1E6'}
+              />
             </div>
+
+            {/* Sort */}
+            <select value={sortOrder} onChange={e => setSortOrder(e.target.value)}
+              className="text-xs border rounded-sm px-2 py-1.5 bg-white focus:outline-none text-gray-700"
+              style={{ borderColor: '#DFE1E6' }}>
+              {SORT_OPTIONS.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
+            </select>
+
+            {/* Priority filter */}
+            <select value={priorityFilter} onChange={e => setPriorityFilter(e.target.value)}
+              className="text-xs border rounded-sm px-2 py-1.5 bg-white focus:outline-none text-gray-700"
+              style={{ borderColor: '#DFE1E6' }}>
+              <option value="all">All Priorities</option>
+              {['Highest', 'High', 'Medium', 'Low', 'Lowest', 'Emergency'].map(p =>
+                <option key={p} value={p}>{p}</option>
+              )}
+            </select>
+
+            {/* View toggle */}
+            <div className="flex rounded-sm overflow-hidden border" style={{ borderColor: '#DFE1E6' }}>
+              <button onClick={() => setViewMode('list')}
+                className="px-2.5 py-1.5 flex items-center transition-all"
+                style={{ background: viewMode === 'list' ? '#DEEBFF' : 'white', color: viewMode === 'list' ? JIRA_BLUE : '#42526E' }}>
+                <List size={14} />
+              </button>
+              <button onClick={() => setViewMode('board')}
+                className="px-2.5 py-1.5 flex items-center border-l transition-all"
+                style={{ borderColor: '#DFE1E6', background: viewMode === 'board' ? '#DEEBFF' : 'white', color: viewMode === 'board' ? JIRA_BLUE : '#42526E' }}>
+                <LayoutGrid size={14} />
+              </button>
+            </div>
+
+            {canCreate && (
+              <button onClick={() => { setEditingTask(null); setShowModal(true); }}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white rounded-sm transition-opacity hover:opacity-90"
+                style={{ background: JIRA_BLUE }}>
+                <Plus size={13} strokeWidth={2.5} /> Create
+              </button>
+            )}
           </div>
-        ) : filteredTasks.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-[50vh] text-center max-w-sm mx-auto">
-            <div className="w-24 h-24 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mb-6 shadow-inner">
-              {isDeletedTab ? <Trash2 size={40} className="text-gray-400" /> : <CheckCircle2 size={40} className="text-gray-400 opacity-60" />}
-            </div>
-            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
-              {activeTab === "completed-tasks" ? "No completed tasks yet" :
-                activeTab === "deleted-tasks" ? "Trash is empty" : "All Caught Up!"}
-            </h3>
-            <p className="text-gray-500 dark:text-gray-400 leading-relaxed">
-              {activeTab === "completed-tasks" ? "Start checking off items to build your history." :
-                activeTab === "deleted-tasks" ? "Items you delete will show up here." : "You have no active tasks in this view. Enjoy your free time or creating a new task."}
-            </p>
-          </div>
-        ) : (
-          <div className="grid gap-4 max-w-full">
-            {filteredTasks.map((task) => (
-              <div
-                key={task.id}
-                onDoubleClick={() => handleDoubleClick(task)}
-                className={`group relative bg-white dark:bg-gray-800 rounded-2xl p-4 pl-5 border transition-all duration-300 hover:-translate-y-1 hover:shadow-xl overflow-hidden ${isCompletedTab
-                  ? "border-emerald-100 bg-emerald-50/30 dark:border-emerald-900/30 dark:bg-emerald-900/10"
-                  : isDeletedTab
-                    ? "border-red-100 bg-red-50/30 dark:border-red-900/30 dark:bg-red-900/10"
-                    : "border-gray-100 dark:border-gray-700/50 shadow-sm hover:border-blue-200/50 dark:hover:border-blue-900/30"
-                  }`}
-              >
-                {/* Modern Vertical Priority Strip */}
-                <div className={`absolute left-0 top-0 bottom-0 w-1.5 transition-colors ${task.priority === "Emergency" ? "bg-red-500" :
-                  task.priority === "High" ? "bg-orange-500" :
-                    task.priority === "Medium" ? "bg-blue-500" : "bg-gray-300"
-                  }`} />
+        </div>
 
-                <div className="flex flex-col md:flex-row md:items-start gap-4">
-                  {/* Main Content */}
-                  <div className="flex-1 min-w-0 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <h3 className={`text-lg font-bold text-gray-900 dark:text-white truncate transition-colors ${isCompletedTab || isDeletedTab ? "line-through opacity-60" : "group-hover:text-blue-600 dark:group-hover:text-blue-400"
-                        }`}>
-                        {task.title}
-                      </h3>
-
-                      {/* Action Icons (Hover Reveal) */}
-                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                        {isDeletedTab ? (
-                          <>
-                            <button onClick={() => handleRestore(task.id)} className="p-2 hover:bg-green-100 text-green-600 rounded-lg transition-colors" title="Restore"><RotateCcw size={16} /></button>
-                            <button onClick={() => handlePermanentDelete(task.id)} className="p-2 hover:bg-red-100 text-red-600 rounded-lg transition-colors" title="Forever Delete"><Trash2 size={16} /></button>
-                          </>
-                        ) : activeTab === "shared-tasks" ? (
-                          // Incoming tasks: show Transfer Request button + delete only if completed
-                          <>
-                            {task.transferRequest?.status === 'pending' ? (
-                              <div className="px-2 py-1 bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 text-xs rounded-md font-semibold whitespace-nowrap">
-                                Transfer Pending
-                              </div>
-                            ) : (
-                              <button
-                                onClick={() => setTransferRequestTask(task)}
-                                className="p-2 hover:bg-blue-100 text-blue-600 rounded-lg transition-colors"
-                                title="Request Transfer"
-                              >
-                                <RotateCcw size={16} />
-                              </button>
-                            )}
-                            {task.status === "Completed" && (
-                              <button onClick={() => handleDelete(task.id)} className="p-2 hover:bg-red-50 text-gray-400 hover:text-red-500 rounded-lg transition-colors" title="Delete"><Trash2 size={16} /></button>
-                            )}
-                          </>
-                        ) : (
-                          // All other tabs: show delete normally
-                          <button onClick={() => handleDelete(task.id)} className="p-2 hover:bg-red-50 text-gray-400 hover:text-red-500 rounded-lg transition-colors" title="Delete"><Trash2 size={16} /></button>
-                        )}
-                      </div>
-                    </div>
-
-                    <p className={`text-sm text-gray-600 dark:text-gray-300 line-clamp-2 leading-relaxed ${(isCompletedTab || isDeletedTab) && "opacity-60"
-                      }`}>
-                      {task.description || <span className="italic text-gray-400">No description provided.</span>}
-                    </p>
-
-                    {/* Completion Note */}
-                    {task.status === "Completed" && task.completionNote && (
-                      <div className="mt-2 text-xs bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 px-3 py-2 rounded-lg border border-emerald-100 dark:border-emerald-800 flex items-start gap-2">
-                        <FileText size={14} className="mt-0.5 shrink-0" />
-                        <span className="font-medium">"{task.completionNote}"</span>
-                      </div>
-                    )}
-
-                    {/* Meta Tags Row */}
-                    <div className="flex flex-wrap items-center gap-4 pt-1">
-                      {/* Project */}
-                      <div className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 bg-gray-100/80 dark:bg-gray-700/50 px-2.5 py-1 rounded-md">
-                        <Flag size={12} /> {task.project}
-                      </div>
-
-                      {/* Due Date */}
-                      <div className={`flex items-center gap-1.5 text-xs font-medium ${new Date(task.dueDate) < new Date() && !isCompletedTab ? "text-red-500 bg-red-50 px-2 py-1 rounded-md" : "text-gray-500"
-                        }`}>
-                        <Calendar size={13} />
-                        {canEditDueDate ? (
-                          <input
-                            type="date"
-                            value={task.dueDate}
-                            onChange={(e) => handleUpdate(task.id, "dueDate", e.target.value)}
-                            className="bg-transparent border-0 p-0 text-inherit focus:ring-0 cursor-pointer h-5"
-                          />
-                        ) : (
-                          <span>{task.dueDate}</span>
-                        )}
-                      </div>
-
-                      {/* Assignment Info */}
-                      <div className="flex items-center gap-1.5 text-xs text-gray-500">
-                        <User size={13} />
-                        {activeTab === "assigned-tasks" ? (
-                          <span>To: <span className="font-semibold text-gray-700 dark:text-gray-300">{task.assignee}</span></span>
-                        ) : activeTab === "shared-tasks" ? (
-                          <span>From: <span className="font-semibold text-gray-700 dark:text-gray-300">{task.assigner}</span></span>
-                        ) : (
-                          <span>{task.assignees && task.assignees.length > 1 ? "Team Task" : "Personal"}</span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Actions Column */}
-                  <div className="flex flex-col items-end gap-3 md:w-36 shrink-0">
-                    {/* Transfer Request Action (Assigner View) */}
-                    {activeTab === "assigned-tasks" && task.transferRequest?.status === "pending" && (
-                      <div className="w-full bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800 rounded-xl p-3 flex flex-col gap-2 shadow-sm">
-                        <div className="flex items-center gap-1 text-xs font-semibold text-purple-700 dark:text-purple-300">
-                          <RotateCcw size={12} />
-                          <span>Transfer Request</span>
-                        </div>
-                        <p className="text-[10px] text-gray-500 leading-tight">
-                          To: <span className="font-medium text-gray-700 dark:text-gray-300">{task.transferRequest.requestedTo?.username || "Unknown"}</span>
-                        </p>
-                        {task.transferRequest.note && (
-                          <p className="text-[10px] italic text-gray-500 line-clamp-2">"{task.transferRequest.note}"</p>
-                        )}
-                        <div className="flex gap-2 mt-1">
-                          <button
-                            onClick={() => handleTransferResponse(task.id, 'approve')}
-                            className="flex-1 bg-purple-600 hover:bg-purple-700 text-white text-xs py-1.5 rounded-lg font-medium transition-colors shadow-sm"
-                          >
-                            Approve
-                          </button>
-                          <button
-                            onClick={() => handleTransferResponse(task.id, 'reject')}
-                            className="flex-1 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 text-xs py-1.5 rounded-lg font-medium transition-colors shadow-sm"
-                          >
-                            Reject
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                    {/* Custom Selectors Styled as Badges */}
-                    <div className="relative w-full">
-                      <select
-                        value={task.status}
-                        disabled={!canEditStatus}
-                        onChange={(e) => handleUpdate(task.id, "status", e.target.value)}
-                        className={`w-full appearance-none py-1.5 pl-3 pr-6 rounded-lg text-xs font-bold border-0 cursor-pointer outline-none transition-all ${STATUS_COLORS[task.status]} shadow-sm ring-1 ring-inset ring-black/5 hover:ring-black/10`}
-                      >
-                        {Object.keys(STATUS_COLORS).map(s => <option key={s} value={s}>{s}</option>)}
-                      </select>
-                    </div>
-
-                    <div className="relative w-full">
-                      <select
-                        value={task.priority}
-                        disabled={!canEditPriority}
-                        onChange={(e) => handleUpdate(task.id, "priority", e.target.value)}
-                        className={`w-full appearance-none py-1.5 pl-3 pr-6 rounded-lg text-xs font-bold border-0 cursor-pointer outline-none transition-all ${PRIORITY_COLORS[task.priority]} shadow-sm ring-1 ring-inset ring-black/5 hover:ring-black/10`}
-                      >
-                        {Object.keys(PRIORITY_COLORS).map(p => <option key={p} value={p}>{p}</option>)}
-                      </select>
-                    </div>
-                  </div>
-                </div>
+        {/* ── Stats strip ── */}
+        {activeView === 'all-tasks' && (
+          <div className="flex-shrink-0 bg-white border-b px-4 py-2.5 flex items-center gap-3" style={{ borderColor: '#DFE1E6' }}>
+            {[
+              { label: 'Active', count: tasks.filter(t => !t.deleted && t.status !== 'Completed').length, color: JIRA_BLUE },
+              { label: 'Overdue', count: tasks.filter(t => isOverdue(t)).length, color: '#FF5630' },
+              { label: 'Completed', count: tasks.filter(t => t.status === 'Completed').length, color: '#00875A' },
+              { label: 'In Review', count: tasks.filter(t => t.status === 'In Review').length, color: '#6554C0' },
+            ].map(s => (
+              <div key={s.label} className="flex items-center gap-1.5 text-xs">
+                <div className="w-1.5 h-1.5 rounded-full" style={{ background: s.color }} />
+                <span style={{ color: '#7A869A' }}>{s.label}</span>
+                <span className="font-bold" style={{ color: s.color }}>{s.count}</span>
               </div>
             ))}
+            <div className="flex-1" />
+            <span className="text-xs" style={{ color: '#7A869A' }}>{filtered.length} showing</span>
           </div>
         )}
+
+        {/* ── Content area ── */}
+        <div className="flex-1 min-h-0 overflow-hidden">
+          {filtered.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-full gap-3 opacity-60">
+              <div className="w-14 h-14 rounded-full bg-gray-200 flex items-center justify-center">
+                {isDeleted ? <Trash2 size={24} className="text-gray-400" /> : <CheckCircle2 size={24} className="text-gray-400" />}
+              </div>
+              <div className="text-center">
+                <p className="font-semibold text-sm text-gray-600">
+                  {isDeleted ? 'Trash is empty' : search ? 'No matching issues' : 'No issues here'}
+                </p>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  {isDeleted ? 'Deleted items will appear here.' : canCreate ? 'Click Create to add your first issue.' : ''}
+                </p>
+              </div>
+            </div>
+          ) : viewMode === 'board' ? (
+            /* Board view */
+            <div className="h-full flex gap-2.5 p-3 overflow-x-auto" style={{ background: BOARD_BG }}>
+              {BOARD_COLUMNS.map(col => (
+                <BoardColumn
+                  key={col.key}
+                  col={col}
+                  tasks={boardGroups[col.key] || []}
+                  view={activeView}
+                  onEdit={handleEdit}
+                  onDelete={handleDelete}
+                />
+              ))}
+            </div>
+          ) : (
+            /* List view */
+            <div className="h-full overflow-y-auto" style={{ background: BOARD_BG }}>
+              {/* Table header */}
+              <div className="sticky top-0 flex items-center gap-4 px-5 py-2 text-[10px] font-bold uppercase tracking-wider bg-white border-b"
+                style={{ color: '#7A869A', borderColor: '#DFE1E6' }}>
+                <span className="w-4 flex-shrink-0" />
+                <span className="flex-1">Summary</span>
+                <span className="w-28 text-center">Channel</span>
+                <span className="w-20 text-center">Priority</span>
+                <span className="w-24 text-center">Due Date</span>
+                <span className="w-24 text-center">Status</span>
+                <span className="w-12" />
+              </div>
+
+              <div>
+                {filtered.map(task => (
+                  <ListRow
+                    key={task.id}
+                    task={task}
+                    view={activeView}
+                    onEdit={handleEdit}
+                    onDelete={handleDelete}
+                    onRestore={handleRestore}
+                    onPermanentDelete={handlePermanentDelete}
+                    onTransferRequest={setTransferTask}
+                    onTransferApprove={handleTransferApprove}
+                    onTransferReject={handleTransferReject}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
-      {isModalOpen && (
-        <TaskModal
-          onClose={handleCloseModal}
-          onAddTask={handleAddTask}
-          onUpdateTask={updateTask}
+      {/* ── Modals ── */}
+      {showModal && (
+        <CreateTaskModal
           initialData={editingTask}
           channels={channels || []}
-          teamMembers={members || []}
+          members={members || []}
+          onClose={() => { setShowModal(false); setEditingTask(null); }}
+          onSubmit={handleCreate}
+          onUpdate={(id, updates) => handleUpdate(id, updates)}
         />
       )}
 
-      {/* Completion Modal */}
       {completionTask && (
         <TaskCompletionModal
           task={completionTask}
           onClose={() => setCompletionTask(null)}
-          onConfirm={handleConfirmCompletion}
+          onConfirm={(note) => { updateTask(completionTask.id, { status: 'Completed', completionNote: note, completedAt: new Date().toISOString() }); setCompletionTask(null); }}
           mode="completion"
-        />
-      )}
-
-      {/* Transfer Request Modal */}
-      {transferRequestTask && (
-        <TransferRequestModal
-          task={transferRequestTask}
-          members={members}
-          onClose={() => setTransferRequestTask(null)}
-          onConfirm={handleTransferRequest}
         />
       )}
 
@@ -540,12 +835,28 @@ const MyTasks = () => {
         <TaskCompletionModal
           task={deletionTask}
           onClose={() => setDeletionTask(null)}
-          onConfirm={handleConfirmDeletion}
+          onConfirm={handleConfirmDelete}
           mode="deletion"
+        />
+      )}
+
+      {transferTask && (
+        <TransferRequestModal
+          task={transferTask}
+          members={members || []}
+          onClose={() => setTransferTask(null)}
+          onConfirm={async (newAssigneeId, note) => {
+            try {
+              await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tasks/${transferTask.id}/transfer-request`, {
+                method: 'POST', credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ newAssigneeId, note }),
+              });
+              setTransferTask(null);
+            } catch (e) { console.error(e); }
+          }}
         />
       )}
     </div>
   );
-};
-
-export default MyTasks;
+}
