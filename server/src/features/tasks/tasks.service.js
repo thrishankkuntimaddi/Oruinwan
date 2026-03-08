@@ -27,7 +27,7 @@ const mongoose = require('mongoose');
 // Models (SHARED - do not modify)
 const Task = require('../../../models/Task');
 const TaskActivity = require('../../../models/TaskActivity');
-const IssueKeyCounter = require('../../../models/IssueKeyCounter');
+const IssueKeyCounter = require('./issue-key-counter.model');
 const User = require('../../../models/User');
 const Workspace = require('../../../models/Workspace');
 const Channel = require("../channels/channel.model.js");
