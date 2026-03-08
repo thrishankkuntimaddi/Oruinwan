@@ -411,11 +411,11 @@ function ConversationStream({
                         </div>
 
                         <h2 style={{ fontSize: '1.25rem', fontWeight: 700, margin: '0 0 0.25rem', color: 'inherit' }}>
-                            Welcome to {isPrivate ? '🔒' : '#'}{cleanName}!
+                            Welcome to {isPrivate ? '' : '#'}{cleanName}!
                         </h2>
 
                         <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: 0 }}>
-                            <span style={{ fontWeight: 600 }}>{isPrivate ? '🔒' : '#'}{cleanName}</span>
+                            <span style={{ fontWeight: 600 }}>{isPrivate ? '' : '#'}{cleanName}</span>
                             {' '}was created by{' '}
                             <span style={{ fontWeight: 600 }}>
                                 {String(currentUserId) === String(channelCreatedById)
@@ -428,8 +428,8 @@ function ConversationStream({
                                 month: 'long', day: 'numeric', year: 'numeric'
                             })}.
                             {' '}This is the very beginning of the{' '}
-                            <span style={{ fontWeight: 600 }}>{isPrivate ? '🔒' : '#'}{cleanName}</span>
-                            {' '}channel{isPrivate ? ' (private)' : ''}.
+                            <span style={{ fontWeight: 600 }}>{isPrivate ? '' : '#'}{cleanName}</span>
+                            {' '}channel.
                         </p>
                     </div>
                 );
