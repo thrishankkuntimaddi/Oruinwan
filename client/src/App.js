@@ -318,14 +318,14 @@ function App() {
                             }
                           />
 
-                          {/* Tasks */}
+                          {/* Tasks — MyTasks has its own built-in sidebar */}
                           <Route
                             path="/workspace/:workspaceId/tasks"
                             element={
                               <RequireAuth>
                                 <WorkspaceProvider>
                                   <RequireWorkspace>
-                                    <MainLayout sidePanel={<TasksPanel />}>
+                                    <MainLayout>
                                       <MyTasks />
                                     </MainLayout>
                                   </RequireWorkspace>
