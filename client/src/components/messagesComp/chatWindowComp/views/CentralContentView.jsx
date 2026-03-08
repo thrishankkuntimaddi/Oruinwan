@@ -83,6 +83,7 @@ const CentralContentView = ({
     onDeleteTab,
     onRenameTab,
     onShareTab,
+    onOpenCanvas,
 
     // Reply callback — set by ChatWindowV2 via enhancedActions
     onReply
@@ -182,34 +183,31 @@ const CentralContentView = ({
                     onViewChange={onDashboardViewChange}
                     onSearchChange={onDashboardSearchChange}
                     onCreate={onAddTab}
-                    onOpen={(tabId) => {
-                        // This is passed from parent as setActiveTab
-                        // We need to handle this via a callback
-                        if (typeof onDashboardViewChange === 'function') {
-                            // Actually, we need a separate onOpenCanvas callback
-                            // Let me add that to props
-                        }
-                    }}
+                    onOpen={onOpenCanvas}
                     onDelete={onDeleteTab}
                     onRename={onRenameTab}
                     onShare={onShareTab}
+                    channelName={chat?.name}
                 />
             ) : (
                 // Canvas Tab View (Dynamic Tabs)
-                tabs.find(t => t._id === activeTab) ? (
-                    <CanvasTab
-                        tab={tabs.find(t => t._id === activeTab)}
-                        onSave={(data) => onSaveCanvas(activeTab, data)}
-                        connected={socket?.connected || false}
-                        socket={rawSocket}
-                        channelId={chat.id}
-                        currentUserId={currentUserId}
-                    />
-                ) : (
-                    <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
-                        <p style={{ color: 'var(--text-muted)' }}>Loading canvas...</p>
-                    </div>
-                )
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'row', overflow: 'hidden', minHeight: 0 }}>
+                    {tabs.find(t => t._id === activeTab) ? (
+                        <CanvasTab
+                            tab={tabs.find(t => t._id === activeTab)}
+                            onSave={(data) => onSaveCanvas(activeTab, data)}
+                            connected={socket?.connected || false}
+                            socket={rawSocket}
+                            channelId={chat.id}
+                            currentUserId={currentUserId}
+                            channelMembers={channelMembers}
+                        />
+                    ) : (
+                        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
+                            <p style={{ color: 'var(--text-muted)' }}>Loading canvas...</p>
+                        </div>
+                    )}
+                </div>
             )}
 
             {/* Thread Panel (if active and in chat tab) */}

@@ -40,17 +40,6 @@ function registerSocketHandlers(io, socket) {
 
     logger.socket(`🎯 [Socket] All handlers registered for ${socket.user.id}`);
 
-    // Handle disconnection
-    socket.on('disconnect', () => {
-        logger.socket(`❌ Socket disconnected: ${socket.user.id}`);
-
-        // Broadcast offline status
-        io.emit('user:offline', {
-            userId: socket.user.id,
-            lastSeen: new Date()
-        });
-    });
-
     // Handle errors
     socket.on('error', (error) => {
         console.error(`Socket error for user ${socket.user.id}:`, error);

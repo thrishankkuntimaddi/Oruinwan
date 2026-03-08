@@ -656,9 +656,18 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
             });
         };
 
-        const handleTabUpdated = ({ tabId, name, content }) => {
+        const handleTabUpdated = ({ tabId, name, content, emoji, coverColor, wordCount, lastEditedBy, lastEditedAt }) => {
             setTabs(prev => prev.map(t =>
-                t._id === tabId ? { ...t, name, content } : t
+                t._id === tabId ? {
+                    ...t,
+                    ...(name !== undefined && { name }),
+                    ...(content !== undefined && { content }),
+                    ...(emoji !== undefined && { emoji }),
+                    ...(coverColor !== undefined && { coverColor }),
+                    ...(wordCount !== undefined && { wordCount }),
+                    ...(lastEditedBy !== undefined && { lastEditedBy }),
+                    ...(lastEditedAt !== undefined && { lastEditedAt }),
+                } : t
             ));
         };
 
@@ -1198,11 +1207,12 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
                 dashboardSearch={dashboardSearch}
                 onDashboardViewChange={setDashboardView}
                 onDashboardSearchChange={setDashboardSearch}
-                onAddTab={handleAddTab}
+                onAddTab={(name, coverColor) => handleAddTab(name, coverColor)}
                 onSaveCanvas={handleSaveCanvas}
                 onDeleteTab={handleDeleteTab}
                 onRenameTab={handleRenameTab}
                 onShareTab={handleShareTab}
+                onOpenCanvas={setActiveTab}
             />
 
             {/* Error Display */}

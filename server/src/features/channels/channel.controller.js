@@ -1456,7 +1456,7 @@ exports.addTab = async (req, res) => {
   try {
     const userId = req.user.sub;
     const channelId = req.params.id;
-    const { name, type = "canvas", content = "" } = req.body;
+    const { name, type = "canvas", content = "", coverColor = "#6366F1", emoji = "📄" } = req.body;
 
     if (!name) return res.status(400).json({ message: "Tab name is required" });
 
@@ -1482,6 +1482,10 @@ exports.addTab = async (req, res) => {
       name,
       type,
       content,
+      coverColor,
+      emoji,
+      lastEditedBy: userId,
+      lastEditedAt: new Date(),
       createdBy: userId,
       createdAt: new Date()
     };
@@ -1510,13 +1514,13 @@ exports.addTab = async (req, res) => {
 /**
  * Update a tab content or name
  * PUT /channels/:id/tabs/:tabId
- * Body: { name?, content? }
+ * Body: { name?, content?, emoji?, coverColor?, wordCount? }
  */
 exports.updateTab = async (req, res) => {
   try {
     const userId = req.user.sub;
     const { id: channelId, tabId } = req.params;
-    const { name, content, drawingData } = req.body;
+    const { name, content, drawingData, emoji, coverColor, wordCount } = req.body;
 
     const channel = await Channel.findById(channelId);
     if (!channel) return res.status(404).json({ message: "Channel not found" });
@@ -1534,11 +1538,24 @@ exports.updateTab = async (req, res) => {
       return res.status(403).json({ message: "Not a member of this channel" });
     }
 
-    if (name) tab.name = name;
+    if (name !== undefined) tab.name = name;
     if (content !== undefined) tab.content = content;
     if (drawingData !== undefined) tab.drawingData = drawingData;
+    if (emoji !== undefined) tab.emoji = emoji;
+    if (coverColor !== undefined) tab.coverColor = coverColor;
+    if (wordCount !== undefined) tab.wordCount = wordCount;
+
+    // Always track edit metadata
+    tab.lastEditedBy = userId;
+    tab.lastEditedAt = new Date();
 
     await saveWithRetry(channel);
+
+    // Re-populate lastEditedBy for the socket payload
+    const populatedChannel = await Channel.findById(channelId)
+      .select('tabs')
+      .populate('tabs.lastEditedBy', 'username profilePicture');
+    const populatedTab = populatedChannel?.tabs?.id(tabId);
 
     const io = req.app?.get("io");
     if (io) {
@@ -1548,11 +1565,16 @@ exports.updateTab = async (req, res) => {
         name: tab.name,
         content: tab.content,
         drawingData: tab.drawingData,
+        emoji: tab.emoji,
+        coverColor: tab.coverColor,
+        wordCount: tab.wordCount,
+        lastEditedBy: populatedTab?.lastEditedBy || null,
+        lastEditedAt: tab.lastEditedAt,
         updatedBy: userId
       });
     }
 
-    return res.json({ tab });
+    return res.json({ tab: populatedTab || tab });
   } catch (err) {
     console.error("UPDATE TAB ERROR:", err);
     return res.status(500).json({ message: "Server error" });

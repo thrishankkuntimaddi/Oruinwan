@@ -41,6 +41,11 @@ const ChannelSchema = new mongoose.Schema({
     type: { type: String, enum: ['canvas', 'tasks'], default: 'canvas' },
     content: { type: String, default: "" }, // HTML content for text mode
     drawingData: { type: Array, default: [] }, // For canvas: array of stroke objects
+    emoji: { type: String, default: "📄" }, // Page icon
+    coverColor: { type: String, default: "#6366F1" }, // Card accent color (hex)
+    lastEditedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
+    lastEditedAt: { type: Date, default: null },
+    wordCount: { type: Number, default: 0 },
     createdAt: { type: Date, default: Date.now },
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" }
   }],

@@ -1,423 +1,597 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, useCallback, useMemo } from 'react';
 import ContentEditable from 'react-contenteditable';
 import {
     Bold, Italic, Underline, Strikethrough,
-    Heading1, Heading2, Heading3,
-    List, ListOrdered, Link, Code, Quote,
+    Heading1, Heading2, Heading3, Type,
+    List, ListOrdered, Link, Code, Quote, Minus,
     AlignLeft, AlignCenter, AlignRight,
-    Undo, Redo, Type, Minus,
-    FileText, WifiOff, PenTool, Eraser, MousePointer, Maximize, Minimize
+    Undo, Redo, WifiOff, Maximize2, Minimize2,
+    Check, Loader2, Users, Circle, PanelRight
 } from 'lucide-react';
 
-export default function CanvasTab({ tab, onSave, connected, socket, channelId, currentUserId }) {
-    const [content, setContent] = useState(tab.content || "");
-    const [drawingData, setDrawingData] = useState(tab.drawingData || []);
-    const [mode, setMode] = useState('text'); // 'text' | 'draw'
-    const [saving, setSaving] = useState(false);
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
-    // Text Refs
-    const contentRef = useRef(tab.content || "");
+function countWords(html) {
+    const text = html.replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+    return text.length === 0 ? 0 : text.split(' ').filter(Boolean).length;
+}
+
+function timeAgo(date) {
+    if (!date) return null;
+    const diff = Math.floor((Date.now() - new Date(date)) / 1000);
+    if (diff < 10) return 'just now';
+    if (diff < 60) return `${diff}s ago`;
+    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+    return new Date(date).toLocaleDateString();
+}
+
+const EMOJIS = ['📄', '📝', '✍️', '📊', '🗒️', '💡', '🎨', '📐', '🔖', '⚡', '🚀', '🎯', '📌', '💬', '🔥', '✅', '📅', '🧩', '💎', '🌟', '📋', '🖊️', '🗂️', '🏷️', '💼', '🎪', '🌈', '⭐', '🔑', '🎁'];
+
+const COVER_COLORS = [
+    { label: 'Indigo', value: '#6366F1' },
+    { label: 'Violet', value: '#8B5CF6' },
+    { label: 'Pink', value: '#EC4899' },
+    { label: 'Rose', value: '#EF4444' },
+    { label: 'Amber', value: '#F59E0B' },
+    { label: 'Emerald', value: '#10B981' },
+    { label: 'Cyan', value: '#06B6D4' },
+    { label: 'Blue', value: '#3B82F6' },
+    { label: 'Lime', value: '#84CC16' },
+    { label: 'Orange', value: '#F97316' },
+];
+
+// ─── Avatar helper ────────────────────────────────────────────────────────────
+
+function Avatar({ name = '?', src, size = 32, ring, status }) {
+    const initials = (name || '?').slice(0, 2).toUpperCase();
+    const hue = (name.charCodeAt(0) || 0) * 47 % 360;
+    return (
+        <div className="relative flex-shrink-0" style={{ width: size, height: size }}>
+            {src ? (
+                <img src={src} alt={name} className="rounded-full w-full h-full object-cover"
+                    style={ring ? { outline: `2px solid ${ring}`, outlineOffset: 1 } : {}} />
+            ) : (
+                <div className="rounded-full w-full h-full flex items-center justify-center text-white font-bold select-none"
+                    style={{
+                        fontSize: size * 0.38,
+                        background: `hsl(${hue},65%,52%)`,
+                        outline: ring ? `2px solid ${ring}` : 'none',
+                        outlineOffset: 1
+                    }}>
+                    {initials}
+                </div>
+            )}
+            {status && (
+                <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-white"
+                    style={{ background: status === 'editing' ? '#6366F1' : status === 'viewing' ? '#10B981' : '#9CA3AF' }} />
+            )}
+        </div>
+    );
+}
+
+// ─── Emoji Picker ─────────────────────────────────────────────────────────────
+
+function EmojiPicker({ onSelect, onClose }) {
+    const ref = useRef(null);
+    useEffect(() => {
+        const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) onClose(); };
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+    }, [onClose]);
+    return (
+        <div ref={ref}
+            className="absolute top-full left-0 mt-2 w-64 bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 p-3"
+            style={{ boxShadow: '0 20px 60px rgba(0,0,0,0.15)' }}>
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 px-1">Choose icon</p>
+            <div className="grid grid-cols-8 gap-1">
+                {EMOJIS.map(e => (
+                    <button key={e} onClick={() => { onSelect(e); onClose(); }}
+                        className="w-8 h-8 flex items-center justify-center text-lg rounded-lg hover:bg-gray-100 transition-colors">
+                        {e}
+                    </button>
+                ))}
+            </div>
+        </div>
+    );
+}
+
+// ─── Cover Picker ─────────────────────────────────────────────────────────────
+
+function CoverPicker({ current, onSelect, onClose }) {
+    const ref = useRef(null);
+    useEffect(() => {
+        const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) onClose(); };
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+    }, [onClose]);
+    return (
+        <div ref={ref}
+            className="absolute top-full left-0 mt-2 w-52 bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 p-3"
+            style={{ boxShadow: '0 20px 60px rgba(0,0,0,0.15)' }}>
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 px-1">Cover color</p>
+            <div className="grid grid-cols-5 gap-2">
+                {COVER_COLORS.map(c => (
+                    <button key={c.value} onClick={() => { onSelect(c.value); onClose(); }}
+                        className="w-8 h-8 rounded-full transition-transform hover:scale-110"
+                        style={{
+                            background: c.value,
+                            outline: current === c.value ? `3px solid ${c.value}` : 'none',
+                            outlineOffset: 2
+                        }}
+                        title={c.label} />
+                ))}
+            </div>
+        </div>
+    );
+}
+
+// ─── Toolbar Button ───────────────────────────────────────────────────────────
+
+function TBtn({ icon: Icon, onClick, title, active }) {
+    return (
+        <button onClick={onClick} title={title}
+            className={`p-1.5 rounded-md transition-all ${active ? 'bg-indigo-100 text-indigo-700' : 'text-gray-500 hover:bg-gray-100 hover:text-gray-800'}`}>
+            <Icon size={15} strokeWidth={2} />
+        </button>
+    );
+}
+
+// ─── Presence Sidebar ─────────────────────────────────────────────────────────
+
+function PresenceSidebar({ viewers, onlineUserIds, channelMembers, currentUserId, coverColor, lastEditedUser, lastEdited }) {
+    const members = useMemo(() => {
+        if (!channelMembers?.length) return [];
+        return channelMembers.map(m => {
+            const user = m.user || m;
+            const userId = user?._id || user?.id || String(user);
+            const username = user?.username || user?.name || 'Member';
+            const profilePic = user?.profilePicture || user?.avatar || null;
+            return { userId, username, profilePic };
+        });
+    }, [channelMembers]);
+
+    const viewerIds = new Set(viewers.map(v => v.userId));
+
+    // Sort: viewers first, then online, then rest
+    const sorted = [...members].sort((a, b) => {
+        const aViewing = viewerIds.has(a.userId);
+        const bViewing = viewerIds.has(b.userId);
+        const aOnline = onlineUserIds.has(a.userId);
+        const bOnline = onlineUserIds.has(b.userId);
+        if (aViewing !== bViewing) return aViewing ? -1 : 1;
+        if (aOnline !== bOnline) return aOnline ? -1 : 1;
+        return 0;
+    });
+
+    const viewingNow = sorted.filter(m => viewerIds.has(m.userId));
+    const onlineRest = sorted.filter(m => !viewerIds.has(m.userId) && onlineUserIds.has(m.userId));
+    const offlineRest = sorted.filter(m => !viewerIds.has(m.userId) && !onlineUserIds.has(m.userId));
+
+    return (
+        <div className="flex flex-col h-full bg-white border-l border-gray-100 w-[220px] flex-shrink-0 overflow-y-auto">
+            {/* Header */}
+            <div className="px-4 pt-5 pb-3 border-b border-gray-100">
+                <div className="flex items-center gap-2">
+                    <Users size={13} className="text-gray-400" />
+                    <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Members</span>
+                </div>
+                <p className="text-[11px] text-gray-400 mt-0.5">{members.length} in channel</p>
+            </div>
+
+            {/* Viewing Now */}
+            {viewingNow.length > 0 && (
+                <div className="px-3 pt-3 pb-1">
+                    <p className="text-[10px] font-bold text-indigo-500 uppercase tracking-wider mb-2 px-1">
+                        👁 Viewing now · {viewingNow.length}
+                    </p>
+                    <div className="flex flex-col gap-1">
+                        {viewingNow.map(m => (
+                            <MemberRow key={m.userId} member={m} status="viewing"
+                                isSelf={m.userId === currentUserId} accent={coverColor} />
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {/* Online */}
+            {onlineRest.length > 0 && (
+                <div className="px-3 pt-3 pb-1">
+                    <p className="text-[10px] font-bold text-emerald-500 uppercase tracking-wider mb-2 px-1">
+                        Online · {onlineRest.length}
+                    </p>
+                    <div className="flex flex-col gap-1">
+                        {onlineRest.map(m => (
+                            <MemberRow key={m.userId} member={m} status="online"
+                                isSelf={m.userId === currentUserId} />
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {/* Offline */}
+            {offlineRest.length > 0 && (
+                <div className="px-3 pt-3 pb-3">
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 px-1">
+                        Offline · {offlineRest.length}
+                    </p>
+                    <div className="flex flex-col gap-1">
+                        {offlineRest.map(m => (
+                            <MemberRow key={m.userId} member={m} status="offline"
+                                isSelf={m.userId === currentUserId} />
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {/* Last edited */}
+            {lastEditedUser && (
+                <div className="mt-auto border-t border-gray-100 px-4 py-3">
+                    <p className="text-[10px] text-gray-400 font-medium mb-1.5">Last edited</p>
+                    <div className="flex items-center gap-2">
+                        <Avatar name={lastEditedUser.username || '?'} src={lastEditedUser.profilePicture} size={22} />
+                        <div>
+                            <p className="text-xs font-semibold text-gray-700 leading-none">{lastEditedUser.username}</p>
+                            {lastEdited && <p className="text-[10px] text-gray-400 mt-0.5">{timeAgo(lastEdited)}</p>}
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
+
+function MemberRow({ member, status, isSelf, accent }) {
+    const dotColor = status === 'viewing' ? (accent || '#6366F1')
+        : status === 'online' ? '#10B981'
+            : '#D1D5DB';
+
+    return (
+        <div className={`flex items-center gap-2.5 px-2 py-1.5 rounded-lg transition-colors ${status === 'viewing' ? 'bg-indigo-50/60' : 'hover:bg-gray-50'}`}>
+            <div className="relative flex-shrink-0">
+                <Avatar name={member.username} src={member.profilePic} size={26} />
+                <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-white"
+                    style={{ background: dotColor }} />
+            </div>
+            <div className="min-w-0 flex-1">
+                <p className="text-xs font-medium text-gray-800 truncate leading-none">
+                    {member.username}{isSelf && <span className="text-gray-400"> (you)</span>}
+                </p>
+                <p className="text-[10px] mt-0.5 leading-none"
+                    style={{ color: dopColor(status, accent) }}>
+                    {status === 'viewing' ? '● Viewing' : status === 'online' ? '● Online' : 'Offline'}
+                </p>
+            </div>
+        </div>
+    );
+}
+
+function dopColor(status, accent) {
+    if (status === 'viewing') return accent || '#6366F1';
+    if (status === 'online') return '#10B981';
+    return '#9CA3AF';
+}
+
+// ─── Main Editor ──────────────────────────────────────────────────────────────
+
+export default function CanvasTab({ tab, onSave, connected, socket, channelId, currentUserId, channelMembers = [] }) {
+    const [content, setContent] = useState(tab.content || '');
+    const [emoji, setEmoji] = useState(tab.emoji || '📄');
+    const [coverColor, setCoverColor] = useState(tab.coverColor || '#6366F1');
+    const [saveStatus, setSaveStatus] = useState('saved');
+    const [lastSaved, setLastSaved] = useState(tab.lastEditedAt || null);
+    const [isFullScreen, setIsFullScreen] = useState(false);
+    const [showSidebar, setShowSidebar] = useState(true);
+    const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+    const [showCoverPicker, setShowCoverPicker] = useState(false);
+
+    // Presence state
+    const [viewers, setViewers] = useState([]);           // who's viewing this tab
+    const [onlineUserIds, setOnlineUserIds] = useState(new Set()); // globally online
+
+    const contentRef = useRef(tab.content || '');
+    const emojiRef = useRef(tab.emoji || '📄');
+    const coverRef = useRef(tab.coverColor || '#6366F1');
     const saveTimeoutRef = useRef(null);
     const editorRef = useRef(null);
+    const containerRef = useRef(null);
     const isRemoteUpdate = useRef(false);
 
-    // Drawing Refs
-    const canvasRef = useRef(null);
-    const isDrawing = useRef(false);
-    const currentStroke = useRef([]);
+    const wordCount = useMemo(() => countWords(content), [content]);
+    const readTime = wordCount > 0 ? `${Math.max(1, Math.round(wordCount / 200))} min` : null;
 
-    // Full Screen Ref
-    const containerRef = useRef(null);
-    const [isFullScreen, setIsFullScreen] = useState(false);
-
-    // Toggle Full Screen
-    const toggleFullScreen = () => {
-        if (!document.fullscreenElement) {
-            containerRef.current?.requestFullscreen().catch(err => {
-                console.error(`Error attempting to enable full-screen mode: ${err.message} (${err.name})`);
-            });
-        } else {
-            document.exitFullscreen();
-        }
-    };
-
+    // ── Fullscreen ──
+    const toggleFullScreen = useCallback(() => {
+        if (!document.fullscreenElement) containerRef.current?.requestFullscreen().catch(() => { });
+        else document.exitFullscreen();
+    }, []);
     useEffect(() => {
-        const handleFullScreenChange = () => {
-            setIsFullScreen(!!document.fullscreenElement);
-        };
-
-        document.addEventListener('fullscreenchange', handleFullScreenChange);
-        return () => {
-            document.removeEventListener('fullscreenchange', handleFullScreenChange);
-        };
+        const h = () => setIsFullScreen(!!document.fullscreenElement);
+        document.addEventListener('fullscreenchange', h);
+        return () => document.removeEventListener('fullscreenchange', h);
     }, []);
 
-    // Listen for incoming content updates from other users
+    // ── Canvas join/leave emit ──
     useEffect(() => {
-        if (!socket || !connected) return;
+        if (!socket || !tab._id || !channelId) return;
+        socket.emit('canvas:join', { tabId: tab._id, channelId });
+        return () => {
+            socket.emit('canvas:leave', { tabId: tab._id, channelId });
+        };
+    }, [socket, tab._id, channelId]);
 
-        const handleTabUpdate = (data) => {
-            // Only update if this is the same tab and not from current user
-            if (data.tabId === tab._id && data.updatedBy !== currentUserId) {
-                isRemoteUpdate.current = true;
+    // ── Socket event listeners ──
+    useEffect(() => {
+        if (!socket) return;
 
-                if (data.content !== undefined) {
-                    setContent(data.content || "");
-                    contentRef.current = data.content || "";
-                }
-
-                if (data.drawingData !== undefined) {
-                    setDrawingData(data.drawingData || []);
-                    drawCanvas(data.drawingData || []);
-                }
-
-                // Brief flash to indicate remote update
-                setSaving(true);
-                setTimeout(() => setSaving(false), 500);
-            }
+        // Canvas viewer list updates
+        const handleViewers = ({ tabId, viewers: v }) => {
+            if (tabId === tab._id) setViewers(v || []);
         };
 
+        // Global presence
+        const handleOnline = ({ userId }) => {
+            setOnlineUserIds(prev => { const s = new Set(prev); s.add(userId); return s; });
+        };
+        const handleOffline = ({ userId }) => {
+            setOnlineUserIds(prev => { const s = new Set(prev); s.delete(userId); return s; });
+        };
+
+        // Tab content updates from other users
+        const handleTabUpdate = (data) => {
+            if (data.tabId !== tab._id || data.updatedBy === currentUserId) return;
+            isRemoteUpdate.current = true;
+            if (data.content !== undefined) { setContent(data.content || ''); contentRef.current = data.content || ''; }
+            if (data.emoji !== undefined) { setEmoji(data.emoji); emojiRef.current = data.emoji; }
+            if (data.coverColor !== undefined) { setCoverColor(data.coverColor); coverRef.current = data.coverColor; }
+            if (data.lastEditedAt) setLastSaved(data.lastEditedAt);
+            setSaveStatus('saved');
+        };
+
+        socket.on('canvas:viewers', handleViewers);
+        socket.on('user:online', handleOnline);
+        socket.on('user:offline', handleOffline);
         socket.on('tab-updated', handleTabUpdate);
 
         return () => {
+            socket.off('canvas:viewers', handleViewers);
+            socket.off('user:online', handleOnline);
+            socket.off('user:offline', handleOffline);
             socket.off('tab-updated', handleTabUpdate);
         };
-    }, [socket, connected, tab._id, currentUserId]);
+    }, [socket, tab._id, currentUserId]);
 
-    // Sync content when tab or drawingData changes
+    // ── Sync when tab prop changes ──
     useEffect(() => {
         if (!isRemoteUpdate.current) {
-            setContent(tab.content || "");
-            contentRef.current = tab.content || "";
-            if (tab.drawingData) {
-                setDrawingData(tab.drawingData);
-                drawCanvas(tab.drawingData);
-            }
+            setContent(tab.content || '');
+            contentRef.current = tab.content || '';
+            setEmoji(tab.emoji || '📄');
+            emojiRef.current = tab.emoji || '📄';
+            setCoverColor(tab.coverColor || '#6366F1');
+            coverRef.current = tab.coverColor || '#6366F1';
+            setLastSaved(tab.lastEditedAt || null);
         }
         isRemoteUpdate.current = false;
-    }, [tab.content, tab.drawingData, tab._id]);
+    }, [tab._id, tab.content, tab.emoji, tab.coverColor]);
 
-    // Initial Draw on Mount / Mode Change
-    useEffect(() => {
-        if (mode === 'draw') {
-            // Slight delay to ensure canvas is mounted
-            setTimeout(() => drawCanvas(drawingData), 50);
-        }
-    }, [mode, drawingData]);
-
-    // --- Text Handlers ---
-    const handleChange = (evt) => {
-        const newContent = evt.target.value;
-        setContent(newContent);
-        contentRef.current = newContent;
-        triggerSave({ content: newContent });
-    };
-
-    // --- Drawing Handlers ---
-    const startDrawing = (e) => {
-        if (mode !== 'draw') return;
-        const canvas = canvasRef.current;
-        if (!canvas) return;
-
-        isDrawing.current = true;
-        const rect = canvas.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
-
-        currentStroke.current = [{ x, y }];
-
-        const ctx = canvas.getContext('2d');
-        ctx.beginPath();
-        ctx.moveTo(x, y);
-        ctx.strokeStyle = '#000'; // Default black
-        ctx.lineWidth = 2;
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
-    };
-
-    const draw = (e) => {
-        if (!isDrawing.current || mode !== 'draw') return;
-        const canvas = canvasRef.current;
-        if (!canvas) return;
-
-        const rect = canvas.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
-
-        currentStroke.current.push({ x, y });
-
-        const ctx = canvas.getContext('2d');
-        ctx.lineTo(x, y);
-        ctx.stroke();
-    };
-
-    const stopDrawing = () => {
-        if (!isDrawing.current || mode !== 'draw') return;
-        isDrawing.current = false;
-
-        const newStroke = {
-            points: currentStroke.current,
-            color: '#000',
-            width: 2
-        };
-
-        const newDrawingData = [...drawingData, newStroke];
-        setDrawingData(newDrawingData);
-        triggerSave({ drawingData: newDrawingData });
-    };
-
-    const clearCanvas = () => {
-        if (window.confirm('Clear all drawings?')) {
-            setDrawingData([]);
-            const canvas = canvasRef.current;
-            if (canvas) {
-                const ctx = canvas.getContext('2d');
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-            }
-            triggerSave({ drawingData: [] });
-        }
-    };
-
-    const drawCanvas = (data) => {
-        const canvas = canvasRef.current;
-        if (!canvas) return;
-
-        const ctx = canvas.getContext('2d');
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
-
-        data.forEach(stroke => {
-            if (stroke.points.length < 1) return;
-            ctx.beginPath();
-            ctx.strokeStyle = stroke.color || '#000';
-            ctx.lineWidth = stroke.width || 2;
-            ctx.moveTo(stroke.points[0].x, stroke.points[0].y);
-
-            for (let i = 1; i < stroke.points.length; i++) {
-                ctx.lineTo(stroke.points[i].x, stroke.points[i].y);
-            }
-            ctx.stroke();
-        });
-    };
-
-    // --- Common Save Logic ---
-    const triggerSave = (updates) => {
-        setSaving(true);
+    // ── Save ──
+    const triggerSave = useCallback((updates = {}) => {
+        setSaveStatus('saving');
         if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-
-        // Merge updates with current state to ensure we don't lose one type of data
-        const payload = {
-            content: contentRef.current,
-            drawingData: drawingData,
-            ...updates
-        };
-
         saveTimeoutRef.current = setTimeout(() => {
-            onSave(payload);  // Parent already has tabId via closure
-            setSaving(false);
-        }, 1500); // 1.5s debounce
+            onSave({
+                content: contentRef.current,
+                emoji: emojiRef.current,
+                coverColor: coverRef.current,
+                wordCount: countWords(contentRef.current),
+                ...updates
+            });
+            setSaveStatus('saved');
+            setLastSaved(new Date().toISOString());
+        }, 1500);
+    }, [onSave]);
+
+    const handleChange = (evt) => {
+        const val = evt.target.value;
+        setContent(val);
+        contentRef.current = val;
+        triggerSave({ content: val });
     };
 
+    const handleEmojiChange = (e) => { setEmoji(e); emojiRef.current = e; triggerSave({ emoji: e }); };
+    const handleCoverChange = (c) => { setCoverColor(c); coverRef.current = c; triggerSave({ coverColor: c }); };
 
-    // Formatting helpers
-    const execFormat = (cmd, value = null) => {
-        document.execCommand(cmd, false, value);
-        editorRef.current?.focus();
-    };
+    const execFormat = (cmd, value = null) => { document.execCommand(cmd, false, value); editorRef.current?.focus(); };
+    const insertLink = () => { const url = prompt('Enter URL:'); if (url) execFormat('createLink', url); };
 
-    const insertLink = () => {
-        const url = prompt('Enter URL:');
-        if (url) execFormat('createLink', url);
-    };
+    useEffect(() => () => {
+        if (saveTimeoutRef.current) {
+            clearTimeout(saveTimeoutRef.current);
+            onSave({ content: contentRef.current, emoji: emojiRef.current, coverColor: coverRef.current, wordCount: countWords(contentRef.current) });
+        }
+    }, []); // eslint-disable-line
 
-    const toolbarButtons = [
-        // Mode Switcher
-        { icon: MousePointer, action: () => setMode('text'), title: 'Text Mode', active: mode === 'text', group: 'mode' },
-        { icon: PenTool, action: () => setMode('draw'), title: 'Draw Mode', active: mode === 'draw', group: 'mode' },
-        { divider: true },
-
-        // Text Formatting (Only show in text mode)
-        ...(mode === 'text' ? [
-            { icon: Bold, cmd: 'bold', title: 'Bold (Ctrl+B)', group: 'text' },
-            { icon: Italic, cmd: 'italic', title: 'Italic (Ctrl+I)', group: 'text' },
-            { icon: Underline, cmd: 'underline', title: 'Underline (Ctrl+U)', group: 'text' },
-            { icon: Strikethrough, cmd: 'strikeThrough', title: 'Strikethrough', group: 'text' },
-            { divider: true },
-
-            { icon: Heading1, cmd: 'formatBlock', value: '<H1>', title: 'Heading 1', group: 'heading' },
-            { icon: Heading2, cmd: 'formatBlock', value: '<H2>', title: 'Heading 2', group: 'heading' },
-            { icon: Heading3, cmd: 'formatBlock', value: '<H3>', title: 'Heading 3', group: 'heading' },
-            { icon: Type, cmd: 'formatBlock', value: '<P>', title: 'Paragraph', group: 'heading' },
-            { divider: true },
-
-            { icon: List, cmd: 'insertUnorderedList', title: 'Bullet List', group: 'list' },
-            { icon: ListOrdered, cmd: 'insertOrderedList', title: 'Numbered List', group: 'list' },
-            { divider: true },
-
-            { icon: AlignLeft, cmd: 'justifyLeft', title: 'Align Left', group: 'align' },
-            { icon: AlignCenter, cmd: 'justifyCenter', title: 'Align Center', group: 'align' },
-            { icon: AlignRight, cmd: 'justifyRight', title: 'Align Right', group: 'align' },
-            { divider: true },
-
-            { icon: Link, action: insertLink, title: 'Insert Link', group: 'insert' },
-            { icon: Code, cmd: 'formatBlock', value: '<PRE>', title: 'Code Block', group: 'insert' },
-            { icon: Quote, cmd: 'formatBlock', value: '<BLOCKQUOTE>', title: 'Quote', group: 'insert' },
-            { icon: Minus, cmd: 'insertHorizontalRule', title: 'Divider', group: 'insert' },
-            { divider: true },
-
-            { icon: Undo, cmd: 'undo', title: 'Undo (Ctrl+Z)', group: 'history' },
-            { icon: Redo, cmd: 'redo', title: 'Redo (Ctrl+Y)', group: 'history' },
-        ] : [
-            // Drawing Toolbar (Only show in draw mode)
-            { icon: Eraser, action: clearCanvas, title: 'Clear Canvas', group: 'draw' },
-        ]),
-
-        { divider: true },
-        // View Controls
-        { icon: isFullScreen ? Minimize : Maximize, action: toggleFullScreen, title: isFullScreen ? 'Exit Full Screen' : 'Full Screen', group: 'view' },
+    const toolbarGroups = [
+        [
+            { icon: Bold, cmd: 'bold', title: 'Bold' },
+            { icon: Italic, cmd: 'italic', title: 'Italic' },
+            { icon: Underline, cmd: 'underline', title: 'Underline' },
+            { icon: Strikethrough, cmd: 'strikeThrough', title: 'Strikethrough' },
+        ],
+        [
+            { icon: Heading1, cmd: 'formatBlock', value: '<H1>', title: 'Heading 1' },
+            { icon: Heading2, cmd: 'formatBlock', value: '<H2>', title: 'Heading 2' },
+            { icon: Heading3, cmd: 'formatBlock', value: '<H3>', title: 'Heading 3' },
+            { icon: Type, cmd: 'formatBlock', value: '<P>', title: 'Paragraph' },
+        ],
+        [
+            { icon: List, cmd: 'insertUnorderedList', title: 'Bullet List' },
+            { icon: ListOrdered, cmd: 'insertOrderedList', title: 'Numbered List' },
+        ],
+        [
+            { icon: AlignLeft, cmd: 'justifyLeft', title: 'Align Left' },
+            { icon: AlignCenter, cmd: 'justifyCenter', title: 'Align Center' },
+            { icon: AlignRight, cmd: 'justifyRight', title: 'Align Right' },
+        ],
+        [
+            { icon: Link, action: insertLink, title: 'Insert Link' },
+            { icon: Code, cmd: 'formatBlock', value: '<PRE>', title: 'Code Block' },
+            { icon: Quote, cmd: 'formatBlock', value: '<BLOCKQUOTE>', title: 'Blockquote' },
+            { icon: Minus, cmd: 'insertHorizontalRule', title: 'Divider' },
+        ],
+        [
+            { icon: Undo, cmd: 'undo', title: 'Undo' },
+            { icon: Redo, cmd: 'redo', title: 'Redo' },
+        ],
     ];
 
-    return (
-        <div ref={containerRef} className="flex-1 flex flex-col bg-gradient-to-br from-gray-50 via-white to-blue-50/30 dark:from-gray-950 dark:via-gray-900 dark:to-blue-950/10 h-full">
-            {/* Horizontal Toolbar */}
-            <div className="sticky top-0 z-10 bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border-b border-gray-200 dark:border-gray-800 shadow-sm transition-all duration-300">
-                <div className="flex items-center justify-between px-4 py-2.5 overflow-x-auto no-scrollbar">
-                    {/* Toolbar Buttons */}
-                    <div className="flex items-center gap-0.5">
-                        {toolbarButtons.map((btn, idx) =>
-                            btn.divider ? (
-                                <div key={idx} className="h-6 w-px bg-gray-300 dark:bg-gray-700 mx-1.5" />
-                            ) : (
-                                <button
-                                    key={idx}
-                                    onClick={() => btn.action ? btn.action() : execFormat(btn.cmd, btn.value)}
-                                    className={`
-                                        p-2 rounded-lg transition-all duration-200 active:scale-95
-                                        ${btn.active
-                                            ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-400 font-bold shadow-inner'
-                                            : 'text-gray-600 dark:text-gray-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 hover:text-blue-600 dark:hover:text-blue-400'}
-                                    `}
-                                    title={btn.title}
-                                >
-                                    <btn.icon size={18} strokeWidth={2} />
-                                </button>
-                            )
-                        )}
-                    </div>
+    const lastEditedUser = tab.lastEditedBy || null;
 
-                    {/* Status Indicator */}
-                    <div className="flex items-center gap-2 ml-4">
-                        {!connected && (
-                            <span className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-amber-700 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/30 rounded-full whitespace-nowrap animate-pulse">
-                                <WifiOff size={12} />
-                                Offline
-                            </span>
-                        )}
-                        <span className={`px-2.5 py-1 text-xs font-medium rounded-full whitespace-nowrap ${saving
-                            ? 'text-blue-700 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/30'
-                            : 'text-green-700 dark:text-green-400 bg-green-100 dark:bg-green-900/30'
-                            }`}>
-                            {saving ? 'Saving...' : 'Saved'}
+    return (
+        <div ref={containerRef} className="flex flex-col flex-1 min-w-0 bg-gray-50 overflow-hidden">
+
+            {/* ── Toolbar ── */}
+            <div className="flex-shrink-0 bg-white border-b border-gray-200 px-3 py-2 flex items-center justify-between gap-2 overflow-x-auto">
+                <div className="flex items-center gap-0.5 flex-shrink-0">
+                    {toolbarGroups.map((group, gi) => (
+                        <React.Fragment key={gi}>
+                            {gi > 0 && <div className="w-px h-5 bg-gray-200 mx-1 flex-shrink-0" />}
+                            {group.map((btn, bi) => (
+                                <TBtn key={bi} icon={btn.icon} title={btn.title}
+                                    onClick={() => btn.action ? btn.action() : execFormat(btn.cmd, btn.value)} />
+                            ))}
+                        </React.Fragment>
+                    ))}
+                    <div className="w-px h-5 bg-gray-200 mx-1 flex-shrink-0" />
+                    <TBtn icon={isFullScreen ? Minimize2 : Maximize2} onClick={toggleFullScreen} title="Fullscreen" />
+                </div>
+
+                {/* Right: status + sidebar toggle */}
+                <div className="flex items-center gap-2 flex-shrink-0">
+                    {!connected && (
+                        <span className="flex items-center gap-1 text-xs text-amber-600 bg-amber-50 px-2 py-1 rounded-full">
+                            <WifiOff size={11} /> Offline
                         </span>
-                    </div>
+                    )}
+                    {/* Live viewer avatars */}
+                    {viewers.length > 0 && (
+                        <div className="flex items-center">
+                            <div className="flex -space-x-1.5">
+                                {viewers.slice(0, 4).map(v => (
+                                    <Avatar key={v.userId} name={v.username} src={v.profilePicture} size={22}
+                                        ring={coverColor} />
+                                ))}
+                            </div>
+                            {viewers.length > 4 && (
+                                <span className="text-xs text-gray-400 ml-1.5">+{viewers.length - 4}</span>
+                            )}
+                        </div>
+                    )}
+                    <span className={`flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full ${saveStatus === 'saving' ? 'text-blue-600 bg-blue-50' : 'text-emerald-600 bg-emerald-50'}`}>
+                        {saveStatus === 'saving'
+                            ? <><Loader2 size={11} className="animate-spin" />Saving…</>
+                            : <><Check size={11} strokeWidth={3} />Saved</>}
+                    </span>
+                    {/* Sidebar toggle */}
+                    <button onClick={() => setShowSidebar(s => !s)}
+                        title={showSidebar ? 'Hide members' : 'Show members'}
+                        className={`p-1.5 rounded-lg transition-all ${showSidebar ? 'bg-indigo-100 text-indigo-600' : 'text-gray-400 hover:bg-gray-100 hover:text-gray-600'}`}>
+                        <Users size={15} />
+                    </button>
                 </div>
             </div>
 
-            {/* Editor Area */}
-            <div className="flex-1 overflow-y-auto">
-                <div className="px-4 py-6 md:px-8 md:py-10 max-w-4xl mx-auto">
-                    {/* Canvas Paper */}
-                    <div className={`bg-white dark:bg-gray-900 shadow-xl shadow-blue-900/5 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden min-h-[calc(100vh-200px)] relative group ${mode === 'draw' ? 'cursor-crosshair' : ''}`}>
+            {/* ── Main layout: Editor + Sidebar ── */}
+            <div className="flex flex-1 min-h-0 overflow-hidden">
 
-                        {/* Text Editor (Hidden in Draw Mode? No, Overlay) */}
-                        {/* We overlay the canvas on top of text when in draw mode, or switch visibility. 
-                            Let's keep text visible but disable interaction in draw mode to prevent confusion, 
-                            OR allow both. Simpler to overlay canvas logic.
-                        */}
+                {/* ── Editor area ── */}
+                <div className="flex-1 overflow-y-auto">
+                    <div className="max-w-3xl mx-auto px-6 py-10">
+                        {/* Cover color strip */}
+                        <div className="h-2 rounded-t-xl mb-8 transition-colors duration-300"
+                            style={{ background: `linear-gradient(90deg, ${coverColor}, ${coverColor}99)` }} />
 
-                        {/* Header */}
-                        <div className="px-10 pt-10 pb-4 select-none">
-                            <h1 className="text-4xl font-extrabold text-gray-900 dark:text-gray-100 tracking-tight leading-tight">
-                                {tab.name}
-                            </h1>
-                            <p className="text-gray-400 dark:text-gray-500 text-sm mt-2 font-medium flex items-center gap-2">
-                                <FileText size={14} />
-                                Shared Document Canvas {mode === 'draw' ? '(Drawing Mode)' : ''}
-                            </p>
-                        </div>
+                        {/* Paper */}
+                        <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden mb-10"
+                            style={{ boxShadow: '0 1px 20px rgba(0,0,0,0.06)' }}>
 
-                        <div className="relative px-10 pb-12 min-h-[800px]">
-                            {/* Text Layer */}
-                            <ContentEditable
-                                innerRef={editorRef}
-                                html={content}
-                                disabled={mode === 'draw'} // Disable text editing while drawing
-                                onChange={handleChange}
-                                className={`
-                                    prose prose-lg dark:prose-invert max-w-none 
-                                    focus:outline-none 
-                                    min-h-[500px]
-                                    prose-headings:font-bold prose-headings:tracking-tight
-                                    prose-h1:text-4xl prose-h1:mb-6 prose-h1:mt-8 first:prose-h1:mt-0
-                                    prose-h2:text-3xl prose-h2:mb-4 prose-h2:mt-8 prose-h2:text-gray-800 dark:prose-h2:text-gray-100
-                                    prose-h3:text-2xl prose-h3:mb-3 prose-h3:mt-6
-                                    prose-p:text-gray-600 dark:prose-p:text-gray-300 prose-p:leading-relaxed prose-p:mb-4
-                                    prose-a:text-blue-600 dark:prose-a:text-blue-400 prose-a:no-underline hover:prose-a:underline
-                                    prose-strong:text-gray-900 dark:prose-strong:text-gray-100 prose-strong:font-bold
-                                    prose-code:bg-gray-100 dark:prose-code:bg-gray-800 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-indigo-600 dark:prose-code:text-indigo-400 prose-code:font-mono prose-code:text-sm
-                                    prose-pre:bg-gray-900 dark:prose-pre:bg-gray-950 prose-pre:text-gray-100 prose-pre:p-4 prose-pre:rounded-xl prose-pre:shadow-lg
-                                    prose-blockquote:border-l-4 prose-blockquote:border-blue-500 prose-blockquote:bg-blue-50/50 dark:prose-blockquote:bg-blue-900/10 prose-blockquote:py-3 prose-blockquote:px-5 prose-blockquote:my-6 prose-blockquote:rounded-r-lg prose-blockquote:not-italic
-                                    prose-ul:my-4 prose-ul:list-disc prose-ul:pl-6
-                                    prose-ol:my-4 prose-ol:list-decimal prose-ol:pl-6
-                                    prose-li:text-gray-700 dark:prose-li:text-gray-300 prose-li:my-1.5 prose-li:pl-1
-                                    prose-hr:border-gray-200 dark:prose-hr:border-gray-800 prose-hr:my-8
-                                    selection:bg-blue-100 dark:selection:bg-blue-900/50 selection:text-blue-900 dark:selection:text-blue-100
-                                    ${mode === 'draw' ? 'pointer-events-none opacity-50' : ''}
-                                `}
-                                data-placeholder="Type '/' to browse commands..."
-                            />
-
-                            {/* Paint Layer (Overlay) */}
-                            {/* We use strict absolute positioning covering the whole editor area */}
-                            <canvas
-                                ref={canvasRef}
-                                width={800} // Hardcoded for POC, should be dynamic or responsive
-                                height={1200}
-                                onMouseDown={startDrawing}
-                                onMouseMove={draw}
-                                onMouseUp={stopDrawing}
-                                onMouseLeave={stopDrawing}
-                                className={`absolute top-0 left-0 w-full h-full z-10 touch-none ${mode === 'draw' ? 'block' : 'pointer-events-none'}`}
-                                style={{
-                                    // Make sure it sits on top of text when drawing, but lets clicks through when not
-                                    // Pointer events controlled by class above
-                                    opacity: mode === 'draw' ? 1 : 0.7 // slightly fade drawing when typing? Or keep clear.
-                                }}
-                            />
-
-                            {/* Empty State */}
-                            {!content && mode === 'text' && (
-                                <div className="absolute top-0 left-0 right-0 pointer-events-none opacity-40 mt-10 ml-10">
-                                    <p className="text-2xl font-medium text-gray-300 dark:text-gray-600">Start writing or drawing...</p>
+                            {/* Doc header */}
+                            <div className="px-10 pt-10 pb-6 border-b border-gray-100">
+                                <div className="flex items-center gap-2 mb-4 relative">
+                                    <div className="relative">
+                                        <button onClick={() => { setShowEmojiPicker(s => !s); setShowCoverPicker(false); }}
+                                            className="text-4xl hover:bg-gray-100 rounded-xl p-1.5 transition-colors leading-none" title="Change icon">
+                                            {emoji}
+                                        </button>
+                                        {showEmojiPicker && <EmojiPicker onSelect={handleEmojiChange} onClose={() => setShowEmojiPicker(false)} />}
+                                    </div>
+                                    <div className="relative">
+                                        <button onClick={() => { setShowCoverPicker(s => !s); setShowEmojiPicker(false); }}
+                                            className="flex items-center gap-1.5 text-xs font-medium text-gray-400 hover:text-gray-700 hover:bg-gray-100 px-2 py-1.5 rounded-lg transition-colors">
+                                            <span className="w-3 h-3 rounded-full inline-block" style={{ background: coverColor }} />
+                                            Cover
+                                        </button>
+                                        {showCoverPicker && <CoverPicker current={coverColor} onSelect={handleCoverChange} onClose={() => setShowCoverPicker(false)} />}
+                                    </div>
                                 </div>
-                            )}
-                        </div>
-                    </div>
 
-                    {/* Footer Tips */}
-                    <div className="mt-8 text-center pb-8 opacity-60 hover:opacity-100 transition-opacity duration-500">
-                        <p className="text-xs text-gray-400 dark:text-gray-500 font-medium">
-                            <span className="inline-flex items-center gap-1.5">
-                                <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
-                                Real-time collaboration enabled
-                            </span>
-                            <span className="mx-3 text-gray-300 dark:text-gray-700">|</span>
-                            {mode === 'text' ? 'Markdown shortcuts supported' : 'Freehand drawing active'}
-                        </p>
+                                <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight leading-tight mb-2">{tab.name}</h1>
+
+                                <div className="flex items-center gap-3 text-xs text-gray-400 flex-wrap">
+                                    {wordCount > 0 && <span>{wordCount} words · {readTime} read</span>}
+                                    {lastSaved && <><span className="text-gray-200">·</span><span>Saved {timeAgo(lastSaved)}</span></>}
+                                    {viewers.length > 1 && (
+                                        <><span className="text-gray-200">·</span>
+                                            <span style={{ color: coverColor }}>{viewers.length} viewing</span></>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Editor body */}
+                            <div className="px-10 py-8 min-h-[500px]">
+                                <ContentEditable
+                                    innerRef={editorRef}
+                                    html={content}
+                                    onChange={handleChange}
+                                    className={`
+                                        prose prose-base max-w-none focus:outline-none
+                                        prose-headings:font-bold prose-headings:tracking-tight prose-headings:text-gray-900
+                                        prose-h1:text-3xl prose-h1:mb-4 prose-h1:mt-8 first:prose-h1:mt-0
+                                        prose-h2:text-2xl prose-h2:mb-3 prose-h2:mt-7
+                                        prose-h3:text-xl prose-h3:mb-2 prose-h3:mt-5
+                                        prose-p:text-gray-700 prose-p:leading-relaxed prose-p:mb-3
+                                        prose-a:text-indigo-600 prose-a:no-underline hover:prose-a:underline
+                                        prose-strong:text-gray-900 prose-strong:font-bold
+                                        prose-code:bg-gray-100 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-indigo-600 prose-code:font-mono prose-code:text-sm
+                                        prose-pre:bg-gray-900 prose-pre:text-gray-100 prose-pre:p-4 prose-pre:rounded-xl prose-pre:shadow-lg prose-pre:font-mono
+                                        prose-blockquote:border-l-4 prose-blockquote:bg-indigo-50/60 prose-blockquote:py-3 prose-blockquote:px-5 prose-blockquote:my-5 prose-blockquote:rounded-r-xl prose-blockquote:not-italic
+                                        prose-ul:my-3 prose-ul:list-disc prose-ul:pl-6
+                                        prose-ol:my-3 prose-ol:list-decimal prose-ol:pl-6
+                                        prose-li:text-gray-700 prose-li:my-1
+                                        prose-hr:border-gray-200 prose-hr:my-8
+                                        selection:bg-indigo-100 selection:text-indigo-900
+                                        min-h-[400px]
+                                    `}
+                                    data-placeholder="Start writing…"
+                                />
+                            </div>
+                        </div>
                     </div>
                 </div>
+
+                {/* ── Presence Sidebar ── */}
+                {showSidebar && (
+                    <PresenceSidebar
+                        viewers={viewers}
+                        onlineUserIds={onlineUserIds}
+                        channelMembers={channelMembers}
+                        currentUserId={currentUserId}
+                        coverColor={coverColor}
+                        lastEditedUser={lastEditedUser}
+                        lastEdited={lastSaved}
+                    />
+                )}
             </div>
         </div>
     );
