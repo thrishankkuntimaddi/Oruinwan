@@ -156,14 +156,16 @@ const CentralContentView = ({
                     </div>
                 </>
             ) : activeTab === 'tasks' ? (
-                // Tasks Tab
-                <TasksTab
-                    channelId={chat.id}
-                    channelName={chat.name}
-                    workspaceId={workspaceId || chat.workspaceId}
-                    currentUserId={currentUserId}
-                    socket={rawSocket}
-                />
+                // Tasks Tab — flex-1 so it matches chat content height
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minHeight: 0 }}>
+                    <TasksTab
+                        channelId={chat.id}
+                        channelName={chat.name}
+                        workspaceId={workspaceId || chat.workspaceId}
+                        currentUserId={currentUserId}
+                        socket={rawSocket}
+                    />
+                </div>
             ) : activeTab === 'threads' ? (
                 // Threads Tab
                 <ThreadsTab
