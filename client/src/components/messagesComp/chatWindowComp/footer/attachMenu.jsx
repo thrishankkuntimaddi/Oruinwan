@@ -113,7 +113,8 @@ export default function AttachMenu({
       icon: <BarChart2 size={16} />,
       color: "bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400",
       action: () => { onCreatePoll?.(); onClose?.(); },
-      hide: !onCreatePoll,
+      // ✅ Poll only for channels, never for DMs
+      hide: !onCreatePoll || conversationType === 'dm',
     },
     {
       label: "Meeting",
@@ -126,23 +127,11 @@ export default function AttachMenu({
   return (
     <div
       onClick={(e) => e.stopPropagation()}
-      className="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-2xl shadow-2xl p-2 flex flex-col z-50 min-w-[190px] animate-in fade-in slide-in-from-bottom-2 origin-bottom-right"
+      className="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-2xl shadow-2xl p-3 z-50 w-[220px] animate-in fade-in slide-in-from-bottom-2 origin-bottom-right"
     >
       {/* Hidden file inputs */}
-      <input
-        ref={photoInputRef}
-        type="file"
-        accept="image/*"
-        className="hidden"
-        onChange={handlePhotoChange}
-      />
-      <input
-        ref={videoInputRef}
-        type="file"
-        accept="video/*"
-        className="hidden"
-        onChange={handleVideoChange}
-      />
+      <input ref={photoInputRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoChange} />
+      <input ref={videoInputRef} type="file" accept="video/*" className="hidden" onChange={handleVideoChange} />
       <input
         ref={fileInputRef}
         type="file"
@@ -153,33 +142,34 @@ export default function AttachMenu({
 
       {/* Upload spinner */}
       {uploading && (
-        <div className="flex items-center gap-2 px-3 py-2.5 text-xs text-gray-500 dark:text-gray-400">
+        <div className="flex items-center justify-center gap-2 py-4 text-xs text-gray-500 dark:text-gray-400">
           <Loader2 size={14} className="animate-spin text-blue-500" />
           Uploading…
         </div>
       )}
 
       {uploadError && (
-        <div className="px-3 py-1.5 text-xs text-red-500">{uploadError}</div>
+        <div className="px-2 py-1 text-xs text-red-500 text-center">{uploadError}</div>
       )}
 
       {!uploading && (
-        <>
+        // ✅ 3-column grid layout (matrix style)
+        <div className="grid grid-cols-3 gap-1.5">
           {items
             .filter((item) => !item.hide)
             .map((item) => (
               <button
                 key={item.label}
-                className="px-3 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-700/60 rounded-xl flex items-center gap-3 text-gray-700 dark:text-gray-200 transition-colors text-sm font-medium group"
+                className="flex flex-col items-center gap-1.5 p-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700/60 transition-colors group"
                 onClick={item.action}
               >
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-110 ${item.color}`}>
+                <div className={`w-11 h-11 rounded-full flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-110 ${item.color}`}>
                   {item.icon}
                 </div>
-                <span>{item.label}</span>
+                <span className="text-[10px] font-medium text-gray-600 dark:text-gray-300 leading-tight text-center">{item.label}</span>
               </button>
             ))}
-        </>
+        </div>
       )}
     </div>
   );
