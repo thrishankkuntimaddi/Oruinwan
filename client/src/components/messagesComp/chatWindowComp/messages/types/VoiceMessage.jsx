@@ -7,6 +7,9 @@ import { Play, Pause, Mic } from "lucide-react";
 import { toProxyUrl } from "../../../../../utils/gcsProxy";
 
 function formatDuration(seconds) {
+    // WebM/Opus files from MediaRecorder often report Infinity until fully buffered.
+    // Fall back to dashes rather than showing "Infinity:NaN".
+    if (!seconds || !isFinite(seconds) || isNaN(seconds)) return '--:--';
     const m = Math.floor(seconds / 60).toString().padStart(2, '0');
     const s = Math.floor(seconds % 60).toString().padStart(2, '0');
     return `${m}:${s}`;
@@ -27,10 +30,19 @@ export default function VoiceMessage({ msg }) {
     useEffect(() => {
         const audio = audioRef.current;
         if (!audio) return;
-        const onMeta = () => setDuration(audio.duration || 0);
+        const onMeta = () => {
+            // audio.duration is Infinity for WebM streams without duration metadata.
+            // Fall back to storedDuration (recorded by VoiceRecorder) in that case.
+            const d = audio.duration;
+            setDuration(isFinite(d) && d > 0 ? d : storedDuration || 0);
+        };
         const onTime = () => {
             setCurrent(audio.currentTime);
-            setProgress(audio.duration ? (audio.currentTime / audio.duration) * 100 : 0);
+            // Use finite duration; fall back to storedDuration for WebM streams
+            const totalDur = isFinite(audio.duration) && audio.duration > 0
+                ? audio.duration
+                : storedDuration || 0;
+            setProgress(totalDur ? (audio.currentTime / totalDur) * 100 : 0);
         };
         const onEnd = () => { setPlaying(false); setCurrent(0); setProgress(0); };
         audio.addEventListener('loadedmetadata', onMeta);
