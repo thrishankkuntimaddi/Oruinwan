@@ -26,7 +26,7 @@ router.get('/file', requireAuth, async (req, res) => {
         if (!/^[a-zA-Z0-9/_.\-]+$/.test(gcsPath)) {
             return res.status(400).json({ error: 'Invalid path' });
         }
-        await streamGCSFile(gcsPath, res);
+        await streamGCSFile(gcsPath, req, res);
     } catch (err) {
         console.error('[UploadRoutes] /file error:', err);
         if (!res.headersSent) {

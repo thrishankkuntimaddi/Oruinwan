@@ -86,35 +86,61 @@ async function uploadToGCS(file, folder = 'channels') {
 // ─── Streaming proxy helper ───────────────────────────────────────────────────
 /**
  * Stream a GCS object directly to an HTTP response.
- * The backend acts as an authenticated proxy — the GCS bucket stays fully private.
+ * Supports HTTP Range requests (RFC 7233) so HTML5 <audio>/<video> elements
+ * can seek and play correctly. Without Range support browsers refuse to play.
  *
- * @param {string} gcsPath  — object path inside the bucket (e.g. channels/2026-03-08/uuid.pdf)
+ * @param {string} gcsPath  — object path inside the bucket
+ * @param {object} req      — Express request object (for Range header)
  * @param {object} res      — Express response object
  */
-async function streamGCSFile(gcsPath, res) {
+async function streamGCSFile(gcsPath, req, res) {
     const bucket = storageClient.bucket(BUCKET_NAME);
     const gcsFile = bucket.file(gcsPath);
 
-    // Verify the file exists and get metadata (for Content-Type / Content-Length)
+    // Get metadata — needed for Content-Type, file size, and original filename
     const [metadata] = await gcsFile.getMetadata();
     const mimeType = metadata.contentType || 'application/octet-stream';
-    const fileSize = metadata.size;
+    const fileSize = parseInt(metadata.size, 10);
     const originalName = metadata.metadata?.originalName || path.basename(gcsPath);
 
-    res.setHeader('Content-Type', mimeType);
-    res.setHeader('Content-Length', fileSize);
-    res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(originalName)}"`);
-    res.setHeader('Cache-Control', 'private, max-age=3600');
+    const rangeHeader = req.headers['range'];
 
-    // Pipe GCS read stream → HTTP response
-    const readStream = gcsFile.createReadStream();
-    readStream.on('error', (err) => {
-        console.error('[UploadService] GCS stream error:', err);
-        if (!res.headersSent) {
-            res.status(500).json({ error: 'Failed to stream file' });
-        }
-    });
-    readStream.pipe(res);
+    if (rangeHeader) {
+        // ── Partial content (Range request) — required for audio/video seeking ──
+        const [, rangeStr] = rangeHeader.split('=');
+        const [startStr, endStr] = rangeStr.split('-');
+        const start = parseInt(startStr, 10) || 0;
+        const end = endStr !== '' && endStr !== undefined ? parseInt(endStr, 10) : fileSize - 1;
+        const chunkSize = end - start + 1;
+
+        res.writeHead(206, {
+            'Content-Range': `bytes ${start}-${end}/${fileSize}`,
+            'Accept-Ranges': 'bytes',
+            'Content-Length': chunkSize,
+            'Content-Type': mimeType,
+            'Cache-Control': 'private, max-age=3600',
+        });
+
+        gcsFile.createReadStream({ start, end })
+            .on('error', err => console.error('[UploadService] GCS range stream error:', err))
+            .pipe(res);
+    } else {
+        // ── Full content response ─────────────────────────────────────────────
+        res.writeHead(200, {
+            'Content-Length': fileSize,
+            'Content-Type': mimeType,
+            'Accept-Ranges': 'bytes', // advertise Range support for future requests
+            'Content-Disposition': `inline; filename="${encodeURIComponent(originalName)}"`,
+            'Cache-Control': 'private, max-age=3600',
+        });
+
+        gcsFile.createReadStream()
+            .on('error', err => {
+                console.error('[UploadService] GCS stream error:', err);
+                if (!res.headersSent) res.status(500).json({ error: 'Failed to stream file' });
+            })
+            .pipe(res);
+    }
 }
 
 module.exports = { uploadToGCS, streamGCSFile, BUCKET_NAME };
