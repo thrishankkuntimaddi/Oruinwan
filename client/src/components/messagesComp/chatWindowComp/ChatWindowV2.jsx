@@ -169,6 +169,19 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
     const [muted, setMuted] = useState(false);
     const [blocked, setBlocked] = useState(false);
 
+    // ── Load persisted mute/block status for DMs ──────────────────────────────
+    React.useEffect(() => {
+        if (chat?.type !== 'dm' || !chat?.id) return;
+        api.get(`/api/v2/dm/${chat.id}/status`)
+            .then(({ data }) => {
+                setMuted(data.isMuted || false);
+                setBlocked(data.isBlocked || false);
+            })
+            .catch(() => { }); // non-fatal
+    }, [chat?.id, chat?.type]);
+
+
+
     // Message input state
     const [newMessage, setNewMessage] = useState('');
     const [showAttach, setShowAttach] = useState(false);
@@ -212,6 +225,19 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
         onClose,
         onDeleteChat
     });
+
+    // ── API-backed mute/block toggle handlers ────────────────────────────────
+    const handleMuteToggle = React.useCallback(async () => {
+        if (chat?.type !== 'dm') { setMuted(m => !m); return; }
+        const next = await headerActions.handleMuteToggle(muted);
+        setMuted(next);
+    }, [chat?.type, headerActions, muted]);
+
+    const handleBlockToggle = React.useCallback(async () => {
+        if (chat?.type !== 'dm') { setBlocked(b => !b); return; }
+        const next = await headerActions.handleBlockToggle(blocked);
+        setBlocked(next);
+    }, [chat?.type, headerActions, blocked]);
 
     const canvasActions = useCanvasActions({
         chat,
@@ -1118,9 +1144,9 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
                 setShowContactInfo={() => setActiveModal('contact')}
                 setShowChannelManagement={(tab) => setActiveModal(tab ? `channel-${tab}` : 'channel-settings')}
                 muted={muted}
-                setMuted={setMuted}
+                setMuted={handleMuteToggle}
                 blocked={blocked}
-                setBlocked={setBlocked}
+                setBlocked={handleBlockToggle}
                 onDeleteChat={handleDeleteChat}
                 onClearChat={handleClearChat}
                 onExitChannel={handleExitChannel}

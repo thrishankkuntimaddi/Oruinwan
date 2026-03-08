@@ -310,6 +310,9 @@ app.use("/api/tasks", require("./src/features/tasks/tasks.routes")); // Direct r
 // Modular, domain-driven routes with clean separation
 app.use("/api/v2/messages", require("./src/modules/messages/messages.routes"));
 
+// DM contact option actions (clear, delete, block, mute)
+app.use("/api/v2/dm", require("./src/modules/messages/dmActions.routes"));
+
 // E2EE Infrastructure
 app.use("/api/v2/encryption", require("./src/modules/encryption/encryption.routes"));
 
