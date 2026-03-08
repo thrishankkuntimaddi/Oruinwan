@@ -91,10 +91,13 @@ export function useConversation(conversationId, conversationType, workspaceId) {
             const normalized = messages.map(msg => ({
                 id: msg._id,
                 // Preserve type for all rich messages (image/video/file/voice/system/poll)
+                // IMPORTANT: check msg.type === 'poll' FIRST — embedded polls have type:'poll'
+                // but no pollId field (they store poll data inline, not as a reference)
                 type: msg.type === 'system' ? 'system'
-                    : msg.pollId ? 'poll'
-                        : ATTACHMENT_TYPES.includes(msg.type) ? msg.type
-                            : 'message',
+                    : msg.type === 'poll' ? 'poll'
+                        : msg.pollId ? 'poll'
+                            : ATTACHMENT_TYPES.includes(msg.type) ? msg.type
+                                : 'message',
                 payload: {
                     ...msg,
                     replyCount: msg.replyCount || 0,
@@ -107,6 +110,8 @@ export function useConversation(conversationId, conversationType, workspaceId) {
                     deletedBy: msg.deletedBy || null,
                     deletedByName: msg.deletedByName || null
                 },
+                // Hoist poll data to top level so PollEvent can find it via event.poll
+                ...((msg.type === 'poll' || msg.pollId) && { poll: msg.poll }),
                 // For system events, also hoist the fields SystemEvent.jsx needs to the top level
                 ...(msg.type === 'system' && {
                     systemEvent: msg.systemEvent,
@@ -171,9 +176,10 @@ export function useConversation(conversationId, conversationType, workspaceId) {
             const normalized = messages.map(msg => ({
                 id: msg._id,
                 type: msg.type === 'system' ? 'system'
-                    : msg.pollId ? 'poll'
-                        : ATTACHMENT_TYPES.includes(msg.type) ? msg.type
-                            : 'message',
+                    : msg.type === 'poll' ? 'poll'
+                        : msg.pollId ? 'poll'
+                            : ATTACHMENT_TYPES.includes(msg.type) ? msg.type
+                                : 'message',
                 payload: {
                     ...msg,
                     replyCount: msg.replyCount || 0,
@@ -185,6 +191,7 @@ export function useConversation(conversationId, conversationType, workspaceId) {
                     deletedBy: msg.deletedBy || null,
                     deletedByName: msg.deletedByName || null
                 },
+                ...((msg.type === 'poll' || msg.pollId) && { poll: msg.poll }),
                 ...(msg.type === 'system' && {
                     systemEvent: msg.systemEvent,
                     systemData: msg.systemData,

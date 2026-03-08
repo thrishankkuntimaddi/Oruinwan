@@ -886,8 +886,9 @@ exports.voteOnPoll = async (req, res) => {
         const { optionIndices } = req.body; // array of zero-based indices
 
         // — Validate —
-        if (!Array.isArray(optionIndices) || optionIndices.length === 0) {
-            return res.status(400).json({ message: 'optionIndices[] is required' });
+        // optionIndices must be an array; empty array = remove vote (allowed)
+        if (!Array.isArray(optionIndices)) {
+            return res.status(400).json({ message: 'optionIndices must be an array' });
         }
 
         const Message = require('../../features/messages/message.model');
@@ -910,8 +911,8 @@ exports.voteOnPoll = async (req, res) => {
             }
         }
 
-        // — Validate indices —
-        if (optionIndices.some(i => i < 0 || i >= poll.options.length)) {
+        // — Validate indices (only when non-empty) —
+        if (optionIndices.length > 0 && optionIndices.some(i => i < 0 || i >= poll.options.length)) {
             return res.status(400).json({ message: 'Invalid option index' });
         }
 
@@ -919,6 +920,7 @@ exports.voteOnPoll = async (req, res) => {
         if (!poll.allowMultiple && optionIndices.length > 1) {
             return res.status(400).json({ message: 'This poll only allows one selection' });
         }
+
 
         // — Remove previous votes from all options —
         const userIdStr = userId.toString();
@@ -943,19 +945,43 @@ exports.voteOnPoll = async (req, res) => {
         message.markModified('poll');
         await message.save();
 
-        // — Populate sender for response —
-        await message.populate('sender', 'username profilePicture');
+        // — Enrich with voter names (best-effort — vote is already saved above) —
+        let pollWithVoterNames;
+        try {
+            await message.populate('sender', 'username profilePicture');
+            const User = require('../../../models/User');
+            const allVoterIds = new Set();
+            message.poll.options.forEach(opt => opt.votes.forEach(v => allVoterIds.add(v.toString())));
+            const voterDocs = allVoterIds.size > 0
+                ? await User.find({ _id: { $in: [...allVoterIds] } }).select('_id username').lean()
+                : [];
+            const voterMap = {};
+            voterDocs.forEach(u => { voterMap[u._id.toString()] = u.username; });
+            pollWithVoterNames = {
+                ...message.poll.toObject(),
+                options: message.poll.options.map(opt => ({
+                    ...opt.toObject(),
+                    votes: opt.votes.map(v => ({
+                        _id: v.toString(),
+                        username: voterMap[v.toString()] || '?'
+                    }))
+                }))
+            };
+        } catch (enrichErr) {
+            console.warn('[voteOnPoll] Voter name enrichment failed (vote saved OK):', enrichErr.message);
+            pollWithVoterNames = message.poll.toObject();
+        }
 
         // — Socket: broadcast vote update to channel room —
         const io = req.io || req.app?.get('io');
         if (io && message.channel) {
             io.to(`channel:${message.channel}`).emit('poll:vote_updated', {
                 messageId: message._id,
-                poll: message.poll,
+                poll: pollWithVoterNames,
             });
         }
 
-        return res.json({ message });
+        return res.json({ message: { ...message.toObject(), poll: pollWithVoterNames } });
     } catch (err) {
         return handleError(res, err, 'VOTE ON POLL ERROR');
     }

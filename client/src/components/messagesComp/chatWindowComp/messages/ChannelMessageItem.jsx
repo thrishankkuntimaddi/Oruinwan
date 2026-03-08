@@ -158,9 +158,10 @@ function ChannelMessageItem({
             member_joined: { Icon: UserCheck, color: 'bg-green-500', text: () => `${name(sd.userId, sd.userName)} joined #${sd.channelName || 'this channel'}` },
             member_left: { Icon: LogOut, color: 'bg-orange-400', text: () => `${name(sd.userId, sd.userName)} left #${sd.channelName || 'this channel'}` },
             member_invited: { Icon: UserPlus, color: 'bg-blue-500', text: () => `${name(sd.inviterId, sd.inviterName)} invited ${isMe(sd.invitedUserId) ? 'you' : (sd.invitedUserName || 'someone')} to #${sd.channelName || 'this channel'}` },
-            member_removed: { Icon: UserMinus, color: 'bg-red-500', text: () => `${name(sd.removerId || sd.removedById, sd.removerName || sd.removedByName)} removed ${isMe(sd.removedUserId) ? 'you' : (sd.removedUserName || 'someone')}` },
-            admin_assigned: { Icon: Shield, color: 'bg-purple-500', text: () => `${name(sd.assignerId, sd.assignerName)} made ${isMe(sd.assignedUserId) ? 'you' : (sd.assignedUserName || 'someone')} an admin` },
-            admin_demoted: { Icon: ShieldOff, color: 'bg-gray-500', text: () => `${name(sd.demoterId, sd.demoterName)} removed ${isMe(sd.demotedUserId) ? 'your' : `${sd.demotedUserName || "someone"}'s`} admin role` },
+            member_removed: { Icon: UserMinus, color: 'bg-red-500', text: () => `${name(sd.removedById || sd.removedByUserId, sd.removedByName)} removed ${isMe(sd.removedUserId) ? 'you' : (sd.removedUserName || 'someone')}` },
+            // admin events: backend stores a human-readable sentence in msg.text
+            admin_assigned: { Icon: Shield, color: 'bg-purple-500', text: () => msg.text || `${name(sd.assignerId, sd.assignerName)} made ${isMe(sd.assignedUserId) ? 'you' : (sd.assignedUserName || 'someone')} an admin` },
+            admin_demoted: { Icon: ShieldOff, color: 'bg-gray-500', text: () => msg.text || `${name(sd.demoterId, sd.demoterName)} removed ${isMe(sd.demotedUserId) ? 'your' : `${sd.demotedUserName || "someone"}'s`} admin role` },
             channel_renamed: { Icon: PenLine, color: 'bg-sky-500', text: () => `${name(sd.userId, sd.userName)} renamed the channel from #${sd.oldName} to #${sd.newName}` },
             channel_desc_changed: { Icon: FileText, color: 'bg-teal-500', text: () => `${name(sd.userId, sd.userName)} updated the channel description` },
             channel_privacy_changed: { Icon: Lock, color: 'bg-yellow-500', text: () => `${name(sd.userId, sd.userName)} made this channel ${sd.newPrivacy || 'private'}` },
@@ -172,7 +173,7 @@ function ChannelMessageItem({
         const config = eventConfig[ev];
         const IconComp = config?.Icon || Info;
         const dotColor = config?.color || 'bg-gray-400';
-        const displayText = config?.text?.() || msg.payload?.text || msg.text || 'System event';
+        const displayText = config?.text?.() || msg.text || msg.payload?.text || 'System event';
 
         return (
             <div className="flex justify-center my-3 px-4">

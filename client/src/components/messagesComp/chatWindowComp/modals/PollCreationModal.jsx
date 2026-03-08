@@ -59,7 +59,7 @@ export default function PollCreationModal({ onClose, onCreate }) {
         await onCreate({
             question: question.trim(),
             options: validOptions.map(opt => opt.trim()),
-            type
+            allowMultiple: type === 'multiple',
         });
 
         // Don't close modal here - let the parent component close it on success

@@ -276,6 +276,7 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
                     // Normalize to event structure expected by ConversationStream
                     const normalizedEvent = {
                         id: backendMsg._id,
+                        // IMPORTANT: use msg.type directly (handles 'poll', 'system', 'image', etc)
                         type: backendMsg.type || 'message',
                         payload: backendMsg.payload || {},
                         sender: backendMsg.sender,
@@ -287,6 +288,11 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
                         ...(backendMsg.type === 'system' && {
                             systemEvent: backendMsg.systemEvent,
                             systemData: backendMsg.systemData,
+                            text: backendMsg.text,
+                        }),
+                        // Hoist poll data so PollEvent.jsx finds it via event.poll
+                        ...(backendMsg.type === 'poll' && {
+                            poll: backendMsg.poll,
                         }),
                         backend: backendMsg // Keep original for reference
                     };
@@ -470,13 +476,34 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
                 break;
 
             case 'member-joined':
-            case 'member-left':
-                // Add system event
+                // Legacy socket path: add a system pill for the member joining
                 conversationRef.current.addRealtimeEvent({
                     id: `system_${Date.now()}`,
                     type: 'system',
-                    payload: event.payload,
-                    createdAt: new Date().toISOString()
+                    systemEvent: 'member_joined',
+                    systemData: {
+                        userId: event.payload?.userId,
+                        userName: event.payload?.userName || event.payload?.username,
+                        channelName: event.payload?.channelName,
+                    },
+                    createdAt: new Date().toISOString(),
+                    payload: {}
+                });
+                break;
+
+            case 'member-left':
+                // Legacy socket path: add a system pill for the member leaving
+                conversationRef.current.addRealtimeEvent({
+                    id: `system_${Date.now()}`,
+                    type: 'system',
+                    systemEvent: 'member_left',
+                    systemData: {
+                        userId: event.payload?.userId,
+                        userName: event.payload?.userName || event.payload?.username,
+                        channelName: event.payload?.channelName,
+                    },
+                    createdAt: new Date().toISOString(),
+                    payload: {}
                 });
                 break;
 
@@ -679,9 +706,13 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
                     }
                 } : null;
 
+                const msgType = result.message.type === 'poll' ? 'poll'
+                    : result.message.pollId ? 'poll'
+                        : 'message';
+
                 const normalizedEvent = {
                     id: result.message._id,
-                    type: result.message.pollId ? 'poll' : 'message',
+                    type: msgType,
                     payload: {
                         ...result.message,
                         replyCount: result.message.replyCount || 0,
@@ -691,6 +722,8 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
                         isDeleted: result.message.isDeleted || result.message.deletedAt != null,
                         clientTempId: result.tempId
                     },
+                    // Hoist poll data so PollEvent.jsx can find it via event.poll
+                    ...(msgType === 'poll' && { poll: result.message.poll }),
                     sender: result.message.sender,
                     createdAt: result.message.createdAt,
                     parentId: result.message.parentId, // null for inline replies
@@ -828,6 +861,7 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
                     id: msg._id,
                     _id: msg._id,
                     type: 'poll',
+                    // Hoist poll data so PollEvent can find it via event.poll
                     poll: msg.poll,
                     sender: msg.sender,
                     createdAt: msg.createdAt,
@@ -836,6 +870,7 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
                 await conversation.addRealtimeEvent(normalizedEvent, currentUserId);
             }
             setShowPollModal(false);
+            setActiveModal(null);
         } catch (err) {
             console.error('[ChatWindowV2] handleCreatePoll error:', err);
             showToast(err?.response?.data?.message || 'Failed to create poll', 'error');
@@ -846,11 +881,14 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
     useEffect(() => {
         if (!rawSocket) return;
         const handler = ({ messageId, poll }) => {
-            conversation.updateEvent?.(messageId, { poll });
+            // Use conversationRef (not stale conversation closure)
+            // Cast messageId to string — backend sends ObjectId, events stored with string ids
+            const idStr = messageId?.toString?.() || String(messageId);
+            conversationRef.current?.updateEvent(idStr, { poll });
         };
         rawSocket.on('poll:vote_updated', handler);
         return () => rawSocket.off('poll:vote_updated', handler);
-    }, [rawSocket, conversation]);
+    }, [rawSocket]); // no `conversation` dep — we use the ref
 
     // Canvas/Tab handlers (from custom hook)
     const fetchTabs = canvasActions.fetchTabs;

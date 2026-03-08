@@ -741,7 +741,9 @@ exports.assignAdmin = async (req, res) => {
       systemEvent: 'admin_assigned',
       systemData: {
         assignerId: userId,
+        assignerName: requesterName,
         assignedUserId: targetUserId,
+        assignedUserName: targetName,
         assignedAt: new Date()
       },
       text: `${requesterName} assigned ${targetName} as channel admin`,
@@ -751,16 +753,13 @@ exports.assignAdmin = async (req, res) => {
     // Emit socket event
     const io = req.app?.get("io");
     if (io) {
+      // Emit new-message so the system pill appears in the chat stream
+      io.to(`channel:${channelId}`).emit('new-message', systemMessage);
+      // Also emit admin-assigned for sidebar/permission refresh
       io.to(`channel:${channelId}`).emit('admin-assigned', {
         channelId,
         assignerId: userId,
-        assignedUserId: targetUserId,
-        systemMessage: {
-          _id: systemMessage._id,
-          text: systemMessage.text,
-          type: systemMessage.type,
-          createdAt: systemMessage.createdAt
-        }
+        assignedUserId: targetUserId
       });
     }
 
@@ -1044,7 +1043,9 @@ exports.demoteAdmin = async (req, res) => {
       systemEvent: 'admin_demoted',
       systemData: {
         demoterId: userId,
+        demoterName: requesterName,
         demotedUserId: targetUserId,
+        demotedUserName: targetName,
         demotedAt: new Date()
       },
       text: `${requesterName} removed ${targetName} as channel admin`,
@@ -1054,16 +1055,13 @@ exports.demoteAdmin = async (req, res) => {
     // Emit socket event
     const io = req.app?.get("io");
     if (io) {
+      // Emit new-message so the system pill appears in the chat stream
+      io.to(`channel:${channelId}`).emit('new-message', systemMessage);
+      // Also emit admin-demoted for sidebar/permission refresh
       io.to(`channel:${channelId}`).emit('admin-demoted', {
         channelId,
         demoterId: userId,
-        demotedUserId: targetUserId,
-        systemMessage: {
-          _id: systemMessage._id,
-          text: systemMessage.text,
-          type: systemMessage.type,
-          createdAt: systemMessage.createdAt
-        }
+        demotedUserId: targetUserId
       });
     }
 
@@ -1144,28 +1142,27 @@ exports.removeMember = async (req, res) => {
       type: 'system',
       systemEvent: 'member_removed',
       systemData: {
-        removerId: userId,
+        removedById: userId,
+        removedByUserId: userId,
+        removedByName: removerName,
         removedUserId: targetUserId,
+        removedUserName: targetName,
         removedAt: new Date()
       },
-      text: `${removerName} removed ${targetName} from this channel on ${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`,
+      text: `${removerName} removed ${targetName} from this channel`,
       sender: userId
     });
 
     // Emit socket events
     const io = req.app?.get("io");
     if (io) {
-      // Notify channel members
+      // Emit new-message so the system pill appears in the chat stream
+      io.to(`channel:${channelId}`).emit('new-message', systemMessage);
+      // Also emit member-removed for sidebar refresh
       io.to(`channel:${channelId}`).emit('member-removed', {
         channelId,
         removerId: userId,
         removedUserId: targetUserId,
-        systemMessage: {
-          _id: systemMessage._id,
-          text: systemMessage.text,
-          type: systemMessage.type,
-          createdAt: systemMessage.createdAt
-        }
       });
 
       // Notify removed user specifically

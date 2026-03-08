@@ -217,6 +217,13 @@ export async function batchDecryptMessages(messages, conversationId, conversatio
                         return { ...message, decryptedContent: null, isSystem: true };
                     }
 
+                    // ── Non-text messages (poll, image, video, file, voice, contact, meeting)
+                    //    are never encrypted — pass through unchanged ──
+                    const NON_ENCRYPTED_TYPES = ['poll', 'image', 'video', 'file', 'voice', 'contact', 'meeting'];
+                    if (NON_ENCRYPTED_TYPES.includes(message.type)) {
+                        return { ...message, isDecryptable: false };
+                    }
+
                     // Handle nested payload structure from Message model
                     // Server stores encryption data in payload.payload.{ciphertext, messageIv}
                     const encryptionPayload = message.payload?.payload || message.payload || message;
@@ -224,20 +231,16 @@ export async function batchDecryptMessages(messages, conversationId, conversatio
                     const { parentId } = message;
 
                     if (!ciphertext || !messageIv) {
-                        console.warn(`⚠️ [Batch Decrypt] Invalid message format for ${message.id}:`, {
-                            hasPayload: !!message.payload,
-                            hasNestedPayload: !!message.payload?.payload,
-                            hasCiphertext: !!ciphertext,
-                            hasIv: !!messageIv,
-                            payloadKeys: Object.keys(message.payload || {}),
-                            nestedKeys: Object.keys(message.payload?.payload || {})
-                        });
+                        // Message exists but has no encryption data — likely a plain-text legacy message
+                        // or a message type we don't encrypt. Pass through without error.
+                        console.warn(`⚠️ [Batch Decrypt] No ciphertext for message ${message.id} (type=${message.type}) — passing through`);
                         return {
                             ...message,
-                            decryptedContent: '⚠️ Invalid message format',
+                            decryptedContent: message.payload?.text || message.text || null,
                             isDecryptable: false
                         };
                     }
+
 
                     // Use conversation key or derived thread key
                     let decryptionKey = conversationKey;
