@@ -1,5 +1,5 @@
 import React from 'react';
-import PollCreationModal from '../modals/PollCreationModal.jsx';
+import CreatePollModal from '../modals/CreatePollModal.jsx';
 import MemberListModal from '../modals/MemberListModal.jsx';
 import ContactInfoModal from '../modals/contactInfoModal.jsx';
 import ChannelManagementModal from '../../ChannelManagementModal.jsx';
@@ -46,11 +46,11 @@ export default function ModalRenderer({ activeModal, onClose, modalProps }) {
     switch (activeModal) {
         case 'poll':
             return (
-                <PollCreationModal
+                <CreatePollModal
                     isOpen={true}
                     onClose={onClose}
-                    onCreate={onCreate}
-                    channelId={channelId}
+                    onCreatePoll={onCreate}
+                    channelName={channelName || ''}
                 />
             );
 
