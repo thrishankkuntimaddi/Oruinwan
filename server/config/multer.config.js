@@ -1,7 +1,5 @@
 // server/config/multer.config.js
 const multer = require('multer');
-const path = require('path');
-const mime = require('mime-types');
 
 // Define file size limits by category (in bytes)
 const FILE_SIZE_LIMITS = {
@@ -28,43 +26,23 @@ const getFileCategory = (mimetype) => {
     return null;
 };
 
-// Configure storage
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        const category = getFileCategory(file.mimetype);
-
-        if (!category) {
-            return cb(new Error('Invalid file type'), null);
-        }
-
-        const uploadPath = path.join(__dirname, '../uploads/notes', category);
-        cb(null, uploadPath);
-    },
-    filename: (req, file, cb) => {
-        // Generate unique filename: timestamp_randomstring.ext
-        const uniqueSuffix = Date.now() + '_' + Math.round(Math.random() * 1E9);
-        const extension = mime.extension(file.mimetype);
-        cb(null, `${uniqueSuffix}.${extension}`);
-    }
-});
-
 // File filter to validate file types
 const fileFilter = (req, file, cb) => {
     const category = getFileCategory(file.mimetype);
-
     if (!category) {
         return cb(new Error(`File type ${file.mimetype} is not allowed`), false);
     }
-
     cb(null, true);
 };
 
-// Create multer instance for note attachments
+// Use memory storage — files are uploaded to GCS, never written to local disk.
+// This is required for containerised / serverless environments (Cloud Run, etc.)
+// where the local filesystem is ephemeral and disappears on every deploy/restart.
 const uploadNoteAttachment = multer({
-    storage: storage,
+    storage: multer.memoryStorage(),
     fileFilter: fileFilter,
     limits: {
-        fileSize: 50 * 1024 * 1024 // Max 50MB (will be further validated per category)
+        fileSize: 50 * 1024 * 1024 // 50MB max (per-category validated below)
     }
 });
 

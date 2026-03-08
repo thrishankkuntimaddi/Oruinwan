@@ -1,9 +1,10 @@
-// server/controllers/uploadController.js
+// server/src/shared/upload/upload.controller.js
+// Note-attachment upload — stores files in GCS (memory→GCS, never local disk)
 const { uploadNoteAttachment, getFileCategory, validateFileSize, FILE_SIZE_LIMITS } = require('../../../config/multer.config');
+const { uploadToGCS, streamGCSFile, BUCKET_NAME } = require('../../modules/uploads/upload.service');
+const { Storage } = require('@google-cloud/storage');
 const Note = require('../../../models/Note');
 const Workspace = require('../../../models/Workspace');
-const path = require('path');
-const fs = require('fs');
 
 /**
  * Upload a file for note attachment
@@ -15,7 +16,7 @@ const fs = require('fs');
  */
 exports.uploadNoteAttachment = async (req, res) => {
     try {
-        // Upload file using multer
+        // Run multer middleware (memory storage)
         uploadNoteAttachment.single('file')(req, res, async (err) => {
             if (err) {
                 console.error('Upload error:', err);
@@ -31,49 +32,42 @@ exports.uploadNoteAttachment = async (req, res) => {
             const { workspaceId, noteId } = req.body;
             const userId = req.user.sub;
 
-            // Validate workspace access
             if (!workspaceId) {
-                // Delete uploaded file
-                fs.unlinkSync(req.file.path);
                 return res.status(400).json({ message: 'Workspace ID required' });
             }
 
             const workspace = await Workspace.findById(workspaceId);
             if (!workspace || !workspace.isMember(userId)) {
-                // Delete uploaded file
-                fs.unlinkSync(req.file.path);
                 return res.status(403).json({ message: 'Access denied to workspace' });
             }
 
             // Validate file size based on category
             if (!validateFileSize(req.file)) {
-                // Delete uploaded file
-                fs.unlinkSync(req.file.path);
                 const category = getFileCategory(req.file.mimetype);
                 const categoryKey = category === 'images' ? 'image' :
                     category === 'videos' ? 'video' :
                         category === 'audio' ? 'audio' : 'document';
-                const limit = FILE_SIZE_LIMITS[categoryKey];
-                const limitMB = Math.round(limit / (1024 * 1024));
-
+                const limitMB = Math.round(FILE_SIZE_LIMITS[categoryKey] / (1024 * 1024));
                 return res.status(400).json({
                     message: `File size exceeds limit of ${limitMB}MB for ${categoryKey} files`
                 });
             }
 
-            // Build file URL (relative to server root)
-            const category = path.basename(path.dirname(req.file.path)); // images, videos, audio, documents
-            const fileUrl = `/uploads/notes/${category}/${req.file.filename}`;
+            // Upload to GCS (memory buffer → Cloud Storage)
+            const gcsFolder = `notes/${workspaceId}`;
+            const gcsAttachment = await uploadToGCS(req.file, gcsFolder);
 
-            // Prepare attachment data
+            const category = getFileCategory(req.file.mimetype);
+            const categoryKey = category === 'images' ? 'image' :
+                category === 'videos' ? 'video' :
+                    category === 'audio' ? 'audio' : 'document';
+
             const attachmentData = {
                 name: req.file.originalname,
-                url: fileUrl,
+                url: gcsAttachment.url,          // GCS proxy URL (/api/v2/uploads/file?path=<gcsPath>)
                 type: req.file.mimetype,
                 size: req.file.size,
-                category: category === 'images' ? 'image' :
-                    category === 'videos' ? 'video' :
-                        category === 'audio' ? 'audio' : 'document',
+                category: categoryKey,
                 uploadedBy: userId,
                 uploadedAt: new Date()
             };
@@ -82,14 +76,9 @@ exports.uploadNoteAttachment = async (req, res) => {
             if (noteId) {
                 const note = await Note.findById(noteId);
                 if (!note) {
-                    // Delete uploaded file
-                    fs.unlinkSync(req.file.path);
                     return res.status(404).json({ message: 'Note not found' });
                 }
-
                 if (!note.canEdit(userId)) {
-                    // Delete uploaded file
-                    fs.unlinkSync(req.file.path);
                     return res.status(403).json({ message: 'Not authorized to edit this note' });
                 }
 
@@ -120,12 +109,11 @@ exports.uploadNoteAttachment = async (req, res) => {
 
             return res.status(200).json({
                 message: 'File uploaded successfully',
-                url: fileUrl,
-                filename: req.file.filename,
+                url: gcsAttachment.url,
                 originalName: req.file.originalname,
                 size: req.file.size,
                 mimeType: req.file.mimetype,
-                category: attachmentData.category,
+                category: categoryKey,
                 attachment: attachmentData
             });
         });
@@ -137,45 +125,43 @@ exports.uploadNoteAttachment = async (req, res) => {
 };
 
 /**
- * Delete an uploaded file
+ * Delete a note attachment from GCS
  * DELETE /api/upload/note-attachment/:filename
+ * Query: gcsPath — the GCS object path returned when the file was uploaded
  */
 exports.deleteAttachment = async (req, res) => {
     try {
-        const { filename } = req.params;
-        const { category } = req.query; // images, videos, audio, documents
         const userId = req.user.sub;
+        const { gcsPath } = req.query;
 
-        if (!category) {
-            return res.status(400).json({ message: 'File category required' });
+        if (!gcsPath) {
+            return res.status(400).json({ message: 'gcsPath query parameter required' });
         }
 
-        // Construct file path
-        const filePath = path.join(__dirname, '../uploads/notes', category, filename);
-
-        // Check if file exists
-        if (!fs.existsSync(filePath)) {
-            return res.status(404).json({ message: 'File not found' });
+        // Basic path traversal guard
+        if (!/^[a-zA-Z0-9/_.\-]+$/.test(gcsPath)) {
+            return res.status(400).json({ message: 'Invalid gcsPath' });
         }
 
-        // Find notes that reference this file
-        const fileUrl = `/uploads/notes/${category}/${filename}`;
-        const notes = await Note.find({
-            'attachments.url': fileUrl
-        });
+        // The proxy URL that was stored in attachment.url looks like:
+        //   /api/v2/uploads/file?path=<gcsPath>
+        // Match on that URL so we can find the owning note without a separate gcsPath field.
+        const proxyUrl = `/api/v2/uploads/file?path=${encodeURIComponent(gcsPath)}`;
+        const notes = await Note.find({ 'attachments.url': proxyUrl });
 
-        // Verify user has permission to delete (must be owner of at least one note with this attachment)
+        // Verify user has permission to delete
         const hasPermission = notes.some(note => note.owner.toString() === userId);
         if (!hasPermission) {
             return res.status(403).json({ message: 'Not authorized to delete this file' });
         }
 
-        // Delete file
-        fs.unlinkSync(filePath);
+        // Delete from GCS
+        const storageClient = new Storage({ projectId: process.env.GCP_PROJECT_ID || 'chttrix-prod' });
+        await storageClient.bucket(BUCKET_NAME).file(gcsPath).delete();
 
         // Remove from all notes' attachments
         for (const note of notes) {
-            note.attachments = note.attachments.filter(att => att.url !== fileUrl);
+            note.attachments = note.attachments.filter(att => att.url !== proxyUrl);
             await note.save();
         }
 

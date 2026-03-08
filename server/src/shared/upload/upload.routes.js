@@ -15,10 +15,11 @@ router.use(requireAuth);
 router.post('/note-attachment', uploadController.uploadNoteAttachment);
 
 /**
- * @route   DELETE /api/upload/note-attachment/:filename
- * @desc    Delete an uploaded file
+ * @route   DELETE /api/upload/note-attachment
+ * @desc    Delete an uploaded file from GCS
+ * @query   gcsPath — the GCS object path returned at upload time
  * @access  Private
  */
-router.delete('/note-attachment/:filename', uploadController.deleteAttachment);
+router.delete('/note-attachment', uploadController.deleteAttachment);
 
 module.exports = router;

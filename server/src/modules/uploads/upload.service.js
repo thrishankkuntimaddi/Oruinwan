@@ -13,6 +13,10 @@ const path = require('path');
 
 
 // ─── GCS client ──────────────────────────────────────────────────────────────
+// On Cloud Run the chttrix-runtime service account is automatically picked up
+// by Application Default Credentials (ADC) — no keyFilename or credentials
+// object should be passed here.  GCP_PROJECT_ID is optional (ADC auto-detects
+// the project on Cloud Run) but kept for clarity.
 const storageClient = new Storage({
     projectId: process.env.GCP_PROJECT_ID || 'chttrix-prod',
 });
