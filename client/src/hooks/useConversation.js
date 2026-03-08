@@ -96,8 +96,10 @@ export function useConversation(conversationId, conversationType, workspaceId) {
                 type: msg.type === 'system' ? 'system'
                     : msg.type === 'poll' ? 'poll'
                         : msg.pollId ? 'poll'
-                            : ATTACHMENT_TYPES.includes(msg.type) ? msg.type
-                                : 'message',
+                            : msg.type === 'contact' ? 'contact'
+                                : msg.type === 'meeting' ? 'meeting'
+                                    : ATTACHMENT_TYPES.includes(msg.type) ? msg.type
+                                        : 'message',
                 payload: {
                     ...msg,
                     replyCount: msg.replyCount || 0,
@@ -112,6 +114,8 @@ export function useConversation(conversationId, conversationType, workspaceId) {
                 },
                 // Hoist poll data to top level so PollEvent can find it via event.poll
                 ...((msg.type === 'poll' || msg.pollId) && { poll: msg.poll }),
+                // Hoist contact data to top level so MessageEvent finds it at event.contact
+                ...(msg.type === 'contact' && { contact: msg.contact }),
                 // For system events, also hoist the fields SystemEvent.jsx needs to the top level
                 ...(msg.type === 'system' && {
                     systemEvent: msg.systemEvent,
