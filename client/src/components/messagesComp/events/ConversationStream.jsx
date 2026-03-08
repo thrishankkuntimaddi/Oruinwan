@@ -189,11 +189,17 @@ function ConversationStream({
             return dateA - dateB;
         });
 
-        // When showThreadsOnly is on, keep only message events with threads
+        // When showThreadsOnly is on, keep only message events with threads.
+        // System events (channel updates, pins, etc.) are always shown.
+        // Attachment types (image, video, voice, file, poll, contact) are message
+        // bubbles too — they should ALSO be excluded unless they have replies.
         if (showThreadsOnly) {
+            const SYSTEM_TYPES = new Set(['system', 'channel-update', 'pin', 'member-joined', 'member-left', 'meeting']);
             return sorted.filter(e => {
-                if (e.type !== 'message') return true; // keep system events
-                // Check the live threadCounts map first (real-time), fall back to event's own replyCount
+                // Always keep true system/meta events
+                if (SYSTEM_TYPES.has(e.type)) return true;
+                // For all user-generated content (text, image, video, voice, file, poll, contact, etc.)
+                // only keep items that have at least one thread reply
                 const count = (threadCounts[e.id] ?? 0) || (e.replyCount ?? 0);
                 return count > 0;
             });
