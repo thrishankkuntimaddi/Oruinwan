@@ -816,11 +816,8 @@ export default function TasksTab({ channelId, channelName, workspaceId: workspac
     const loadMembers = useCallback(async () => {
         if (!workspaceId) return;
         try {
-            const res = await api.get(`/api/v2/workspaces/${workspaceId}/members`).catch(() =>
-                api.get(`/api/workspaces/${workspaceId}/members`).catch(() =>
-                    api.get(`/api/v1/workspaces/${workspaceId}/members`).catch(() => ({ data: { members: [] } }))
-                )
-            );
+            // Correct endpoint: /api/workspaces/:id/members (no v2 prefix)
+            const res = await api.get(`/api/workspaces/${workspaceId}/members`).catch(() => ({ data: { members: [] } }));
             const list = res.data.members || res.data.users || res.data || [];
             setMembers(Array.isArray(list) ? list.map(m => m.user || m).filter(Boolean) : []);
         } catch { setMembers([]); }

@@ -445,13 +445,8 @@ export default function MyTasks() {
 
   const currentUserId = user?._id || user?.id;
 
-  // Gather all unique channel / project names for filter
-  const channelNames = useMemo(() => {
-    const set = new Set(tasks.map(t => t.project || 'General').filter(Boolean));
-    return ['all', ...Array.from(set)];
-  }, [tasks]);
 
-  // Filter logic by view
+  // Filter logic by view — declared BEFORE channelCounts so it can be used as dependency
   const viewFiltered = useMemo(() => {
     const isAssignee = (t) => {
       if (t.assignees?.length > 0) return t.assignees.some(a => String(a._id || a.id) === String(currentUserId));
@@ -477,6 +472,21 @@ export default function MyTasks() {
         return active;
     }
   }, [tasks, activeView, currentUserId]);
+
+  // channelCounts: channels that have tasks in the current view, sorted by count
+  const channelCounts = useMemo(() => {
+    const counts = {};
+    viewFiltered.forEach(t => {
+      const ch = t.project || 'General';
+      counts[ch] = (counts[ch] || 0) + 1;
+    });
+    return counts;
+  }, [viewFiltered]);
+
+  // channelNames: only channels that appear in this view, sorted by task count desc
+  const channelNames = useMemo(() => {
+    return Object.keys(channelCounts).sort((a, b) => channelCounts[b] - channelCounts[a]);
+  }, [channelCounts]);
 
   // Second-pass filters: search + channel + priority + sort
   const filtered = useMemo(() => {
@@ -636,23 +646,42 @@ export default function MyTasks() {
             )}
           </nav>
 
-          {/* Channel filter in sidebar */}
-          <div className="mt-4">
-            <p className="text-[10px] font-bold uppercase tracking-widest mb-2 px-2" style={{ color: '#7A869A' }}>By Channel</p>
-            <div className="space-y-0.5">
-              {channelNames.slice(0, 8).map(ch => (
-                <button key={ch} onClick={() => setChannelFilter(ch)}
+          {/* Channel filter in sidebar — only channels with tasks in current view */}
+          {channelNames.length > 0 && (
+            <div className="mt-4">
+              <p className="text-[10px] font-bold uppercase tracking-widest mb-2 px-2" style={{ color: '#7A869A' }}>By Channel</p>
+              <div className="space-y-0.5">
+                {/* All Channels reset button */}
+                <button onClick={() => setChannelFilter('all')}
                   className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded text-xs transition-all"
                   style={{
-                    background: channelFilter === ch ? '#DEEBFF' : 'transparent',
-                    color: channelFilter === ch ? JIRA_BLUE : '#42526E',
+                    background: channelFilter === 'all' ? '#DEEBFF' : 'transparent',
+                    color: channelFilter === 'all' ? JIRA_BLUE : '#42526E',
                   }}>
                   <Hash size={10} style={{ opacity: 0.5 }} />
-                  {ch === 'all' ? 'All Channels' : ch}
+                  <span className="flex-1 text-left">All Channels</span>
+                  <span className="text-[10px] font-bold tabular-nums" style={{ color: channelFilter === 'all' ? JIRA_BLUE : '#7A869A' }}>
+                    {viewFiltered.length}
+                  </span>
                 </button>
-              ))}
+                {/* Per-channel buttons — only channels with tasks */}
+                {channelNames.map(ch => (
+                  <button key={ch} onClick={() => setChannelFilter(ch)}
+                    className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded text-xs transition-all"
+                    style={{
+                      background: channelFilter === ch ? '#DEEBFF' : 'transparent',
+                      color: channelFilter === ch ? JIRA_BLUE : '#42526E',
+                    }}>
+                    <Hash size={10} style={{ opacity: 0.5 }} />
+                    <span className="flex-1 text-left truncate">{ch}</span>
+                    <span className="text-[10px] font-bold tabular-nums" style={{ color: channelFilter === ch ? JIRA_BLUE : '#7A869A' }}>
+                      {channelCounts[ch] || 0}
+                    </span>
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
 
