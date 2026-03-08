@@ -78,18 +78,20 @@ const ListItem = ({ item, isSelectionMode, selectedItems, setSelectedItems, togg
                                 }`}></div>
                         </div>
                     ) : (
-                        <div className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors shadow-sm ${isActive
-                            ? "bg-blue-100/50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400"
-                            : item.label.toLowerCase() === 'announcements'
-                                ? "bg-orange-50 dark:bg-orange-900/20 text-orange-500 dark:text-orange-400"
-                                : "bg-gray-100 dark:bg-gray-800/50 text-gray-400 dark:text-gray-500 group-hover:bg-gray-200 dark:group-hover:bg-gray-700"
+                        <div className={`w-7 h-7 flex items-center justify-center transition-colors ${isActive
+                                ? 'text-blue-600 dark:text-blue-400'
+                                : item.label.toLowerCase() === 'announcements'
+                                    ? 'text-orange-500 dark:text-orange-400'
+                                    : item.isPrivate
+                                        ? 'text-purple-500 dark:text-purple-400'
+                                        : 'text-gray-400 dark:text-gray-500 group-hover:text-gray-600 dark:group-hover:text-gray-300'
                             }`}>
                             {item.isPrivate ? (
                                 <Lock size={14} strokeWidth={2.5} />
                             ) : item.label.toLowerCase() === 'announcements' ? (
                                 <Megaphone size={14} strokeWidth={2.5} />
                             ) : (
-                                <span className="text-sm font-bold opacity-70">#</span>
+                                <span className="text-sm font-bold">#</span>
                             )}
                         </div>
                     )}
