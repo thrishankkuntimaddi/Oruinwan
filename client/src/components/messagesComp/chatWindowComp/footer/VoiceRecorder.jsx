@@ -43,6 +43,7 @@ export default function VoiceRecorder({ onSendAttachment, conversationId, conver
     const chunksRef = useRef([]);
     const timerRef = useRef(null);
     const mimeRef = useRef('');
+    const startTimeRef = useRef(null); // wall-clock start time for accurate elapsed
 
     // Auto-start recording on mount
     useEffect(() => {
@@ -84,8 +85,14 @@ export default function VoiceRecorder({ onSendAttachment, conversationId, conver
             mr.start(250); // collect chunks every 250ms
             setPhase('recording');
 
-            // Elapsed timer
-            timerRef.current = setInterval(() => setElapsed(s => s + 1), 1000);
+            // Use wall-clock start time so timer is immune to React Strict Mode
+            // double-invocation (two intervals running simultaneously won't double-count).
+            startTimeRef.current = Date.now();
+            clearInterval(timerRef.current); // clear any stale interval before starting
+            timerRef.current = setInterval(() => {
+                const elapsed = Math.floor((Date.now() - startTimeRef.current) / 1000);
+                setElapsed(elapsed);
+            }, 500); // poll at 500ms for sub-second accuracy, display stays whole seconds
         } catch (err) {
             setError('Microphone access denied. Please allow microphone permissions.');
             setPhase('idle');
