@@ -44,9 +44,10 @@ export default function VoiceRecorder({ onSendAttachment, conversationId, conver
     const timerRef = useRef(null);
     const mimeRef = useRef('');
     const startTimeRef = useRef(null);
+    // streamRef: holds the raw MediaStream so we can ALWAYS stop mic tracks,
+    // even if mediaRef was never assigned (guards against async race conditions).
+    const streamRef = useRef(null);
     // cancelledRef: set to true in cleanup so stale onstop callbacks don't corrupt state.
-    // This guards against React Strict Mode double-invocation where cleanup fires and
-    // stops the MediaRecorder before the real recording session begins.
     const cancelledRef = useRef(false);
 
     // Auto-start recording on mount
@@ -64,11 +65,20 @@ export default function VoiceRecorder({ onSendAttachment, conversationId, conver
     const cleanup = () => {
         clearInterval(timerRef.current);
         timerRef.current = null;
+
+        // Stop the MediaRecorder first
         if (mediaRef.current?.state === 'recording') {
             mediaRef.current.stop();
         }
-        mediaRef.current?.stream?.getTracks().forEach(t => t.stop());
         mediaRef.current = null;
+
+        // Always release the raw mic stream — this turns off the browser mic indicator.
+        // Using streamRef (not mediaRef.stream) ensures the mic is released even if
+        // mediaRef was never set (async race) or already nulled.
+        if (streamRef.current) {
+            streamRef.current.getTracks().forEach(t => t.stop());
+            streamRef.current = null;
+        }
     };
 
     const startRecording = async () => {
@@ -79,9 +89,14 @@ export default function VoiceRecorder({ onSendAttachment, conversationId, conver
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
+            // Store stream ref IMMEDIATELY — before any cancelledRef check —
+            // so cleanup() can always release the mic even if we bail out.
+            streamRef.current = stream;
+
             // Bail out if this effect was already cleaned up (Strict Mode unmount fired)
             if (cancelledRef.current) {
                 stream.getTracks().forEach(t => t.stop());
+                streamRef.current = null;
                 return;
             }
 
@@ -128,7 +143,11 @@ export default function VoiceRecorder({ onSendAttachment, conversationId, conver
         timerRef.current = null;
         if (mediaRef.current?.state === 'recording') {
             mediaRef.current.stop();
-            mediaRef.current.stream.getTracks().forEach(t => t.stop());
+        }
+        // Stop mic tracks via streamRef for guaranteed release
+        if (streamRef.current) {
+            streamRef.current.getTracks().forEach(t => t.stop());
+            streamRef.current = null;
         }
     }, []);
 
