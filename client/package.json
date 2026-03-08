@@ -18,7 +18,8 @@
     "recharts": "^3.6.0",
     "remark-breaks": "^4.0.0",
     "socket.io-client": "^4.8.1",
-    "turndown": "^7.2.2"
+    "turndown": "^7.2.2",
+    "uuid": "^13.0.0"
   },
   "scripts": {
     "start": "vite",
