@@ -4,6 +4,7 @@
  */
 import React, { useRef, useState, useEffect } from "react";
 import { Play, Pause, Mic } from "lucide-react";
+import { toProxyUrl } from "../../../../../utils/gcsProxy";
 
 function formatDuration(seconds) {
     const m = Math.floor(seconds / 60).toString().padStart(2, '0');
@@ -12,7 +13,9 @@ function formatDuration(seconds) {
 }
 
 export default function VoiceMessage({ msg }) {
-    const { url, sizeFormatted, duration: storedDuration } = msg.attachment || {};
+    const attachment = msg.attachment || {};
+    const { sizeFormatted, duration: storedDuration } = attachment;
+    const proxyUrl = toProxyUrl(attachment);
     const audioRef = useRef(null);
     const [playing, setPlaying] = useState(false);
     const [current, setCurrent] = useState(0);
@@ -40,7 +43,7 @@ export default function VoiceMessage({ msg }) {
         };
     }, []);
 
-    if (!url) return null;
+    if (!proxyUrl) return null;
 
     const toggle = () => {
         const audio = audioRef.current;
@@ -59,7 +62,7 @@ export default function VoiceMessage({ msg }) {
 
     return (
         <div className="mt-1 flex items-center gap-3 px-3 py-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl max-w-xs">
-            <audio ref={audioRef} src={url} preload="metadata" />
+            <audio ref={audioRef} src={proxyUrl} preload="metadata" />
 
             {/* Play/Pause */}
             <button

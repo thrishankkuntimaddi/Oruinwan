@@ -1,9 +1,13 @@
 /**
  * FileMessage.jsx — Phase 7.1 Attachments
  * Renders a clickable file card: icon + name + size + download button.
+ *
+ * Downloads route through the authenticated backend proxy
+ * (GET /api/v2/uploads/file?path=<gcsPath>) so the GCS bucket can stay private.
  */
 import React from "react";
 import { FileText, Film, Archive, Sheet, File, Download } from "lucide-react";
+import { toProxyUrl } from "../../../../../utils/gcsProxy";
 
 const ICON_MAP = {
     pdf: { Icon: FileText, color: "text-red-500 bg-red-50 dark:bg-red-900/20 dark:text-red-400" },
@@ -24,16 +28,17 @@ function getFileInfo(name = '') {
 }
 
 export default function FileMessage({ msg }) {
-    const { url, name, sizeFormatted } = msg.attachment || {};
+    const attachment = msg.attachment || {};
+    const { name, sizeFormatted } = attachment;
+    const proxyUrl = toProxyUrl(attachment);
 
-    if (!url) return null;
+    if (!proxyUrl) return null;
 
     const { Icon, color } = getFileInfo(name);
 
     return (
         <a
-            href={url}
-            download={name}
+            href={proxyUrl}
             target="_blank"
             rel="noopener noreferrer"
             className="mt-1 flex items-center gap-3 px-3 py-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700/80 transition-colors max-w-xs group"

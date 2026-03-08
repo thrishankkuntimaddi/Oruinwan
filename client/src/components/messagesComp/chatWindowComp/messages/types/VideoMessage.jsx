@@ -4,16 +4,19 @@
  */
 import React from "react";
 import { ExternalLink } from "lucide-react";
+import { toProxyUrl } from "../../../../../utils/gcsProxy";
 
 export default function VideoMessage({ msg }) {
-    const { url, name, sizeFormatted } = msg.attachment || {};
+    const attachment = msg.attachment || {};
+    const { name, sizeFormatted } = attachment;
+    const proxyUrl = toProxyUrl(attachment);
 
-    if (!url) return null;
+    if (!proxyUrl) return null;
 
     return (
         <div className="mt-1 max-w-sm rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 shadow-sm">
             <video
-                src={url}
+                src={proxyUrl}
                 controls
                 preload="metadata"
                 className="w-full max-h-64 bg-black block"
@@ -25,7 +28,7 @@ export default function VideoMessage({ msg }) {
                 <div className="flex items-center gap-2 flex-shrink-0 ml-2">
                     {sizeFormatted && <span>{sizeFormatted}</span>}
                     <a
-                        href={url}
+                        href={proxyUrl}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-blue-500 hover:text-blue-600 dark:text-blue-400"

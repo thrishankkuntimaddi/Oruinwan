@@ -4,12 +4,15 @@
  */
 import React, { useState } from "react";
 import { X, ExternalLink } from "lucide-react";
+import { toProxyUrl } from "../../../../../utils/gcsProxy";
 
 export default function ImageMessage({ msg }) {
-    const { url, name, sizeFormatted } = msg.attachment || {};
+    const attachment = msg.attachment || {};
+    const { name, sizeFormatted } = attachment;
+    const proxyUrl = toProxyUrl(attachment);
     const [lightbox, setLightbox] = useState(false);
 
-    if (!url) return null;
+    if (!proxyUrl) return null;
 
     return (
         <>
@@ -19,7 +22,7 @@ export default function ImageMessage({ msg }) {
                 onClick={() => setLightbox(true)}
             >
                 <img
-                    src={url}
+                    src={proxyUrl}
                     alt={name || "Image"}
                     className="max-w-full max-h-64 object-cover block"
                     loading="lazy"
@@ -43,14 +46,14 @@ export default function ImageMessage({ msg }) {
                         onClick={(e) => e.stopPropagation()}
                     >
                         <img
-                            src={url}
+                            src={proxyUrl}
                             alt={name}
                             className="max-w-full max-h-[80vh] object-contain rounded-lg shadow-2xl"
                         />
                         <div className="mt-3 flex items-center gap-3">
                             <span className="text-white/80 text-sm">{name}</span>
                             <a
-                                href={url}
+                                href={proxyUrl}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="text-white/70 hover:text-white transition-colors"

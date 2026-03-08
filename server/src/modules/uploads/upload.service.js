@@ -13,8 +13,6 @@ const path = require('path');
 
 
 // ─── GCS client ──────────────────────────────────────────────────────────────
-// ADC: on Cloud Run the SA is injected automatically.
-// Locally, run: gcloud auth application-default login
 const storageClient = new Storage({
     projectId: process.env.GCP_PROJECT_ID || 'chttrix-prod',
 });
@@ -59,7 +57,7 @@ async function uploadToGCS(file, folder = 'channels') {
             resumable: false,
             contentType: file.mimetype,
             metadata: {
-                cacheControl: 'public, max-age=31536000',
+                cacheControl: 'private, max-age=3600',
                 originalName: file.originalname,
             },
         });
@@ -68,21 +66,55 @@ async function uploadToGCS(file, folder = 'channels') {
         stream.end(file.buffer);
     });
 
-    // NOTE: bucket has Uniform Bucket-Level Access enabled — do NOT call makePublic().
-    // Public read access is granted at the bucket level via IAM (allUsers → Storage Object Viewer).
-    // The public URL is deterministic from the bucket name + object path.
-    const publicUrl = `https://storage.googleapis.com/${BUCKET_NAME}/${gcsPath}`;
+    // NOTE: Bucket has Uniform Bucket-Level Access — cannot makePublic() per-object.
+    // Files are served via the authenticated backend proxy:
+    //   GET /api/v2/uploads/file?path=<gcsPath>
+    // This keeps the bucket fully private while still serving files to authenticated users.
     const type = resolveAttachmentType(file.mimetype);
 
     return {
-        url: publicUrl,
+        url: `/api/v2/uploads/file?path=${encodeURIComponent(gcsPath)}`,
         name: file.originalname,
         size: file.size,
         sizeFormatted: formatSize(file.size),
         mimeType: file.mimetype,
         type,           // 'image' | 'video' | 'voice' | 'file'
-        gcsPath,        // stored for potential future deletion
+        gcsPath,        // stored for re-proxying / future deletion
     };
 }
 
-module.exports = { uploadToGCS };
+// ─── Streaming proxy helper ───────────────────────────────────────────────────
+/**
+ * Stream a GCS object directly to an HTTP response.
+ * The backend acts as an authenticated proxy — the GCS bucket stays fully private.
+ *
+ * @param {string} gcsPath  — object path inside the bucket (e.g. channels/2026-03-08/uuid.pdf)
+ * @param {object} res      — Express response object
+ */
+async function streamGCSFile(gcsPath, res) {
+    const bucket = storageClient.bucket(BUCKET_NAME);
+    const gcsFile = bucket.file(gcsPath);
+
+    // Verify the file exists and get metadata (for Content-Type / Content-Length)
+    const [metadata] = await gcsFile.getMetadata();
+    const mimeType = metadata.contentType || 'application/octet-stream';
+    const fileSize = metadata.size;
+    const originalName = metadata.metadata?.originalName || path.basename(gcsPath);
+
+    res.setHeader('Content-Type', mimeType);
+    res.setHeader('Content-Length', fileSize);
+    res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(originalName)}"`);
+    res.setHeader('Cache-Control', 'private, max-age=3600');
+
+    // Pipe GCS read stream → HTTP response
+    const readStream = gcsFile.createReadStream();
+    readStream.on('error', (err) => {
+        console.error('[UploadService] GCS stream error:', err);
+        if (!res.headersSent) {
+            res.status(500).json({ error: 'Failed to stream file' });
+        }
+    });
+    readStream.pipe(res);
+}
+
+module.exports = { uploadToGCS, streamGCSFile, BUCKET_NAME };
