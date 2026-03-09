@@ -52,6 +52,86 @@ router.post("/me/set-password", requireAuth, setPassword); // For OAuth users
 router.post("/oauth/set-password", requireAuth, setPassword); // Alias for backward compatibility
 router.post("/oauth/skip-password", requireAuth, skipPassword); // Skip password setup for OAuth users
 
+// PROFILE PICTURE ROUTES
+const multer = require('multer');
+const { uploadToGCS } = require('../../modules/uploads/upload.service');
+const { Storage } = require('@google-cloud/storage');
+const BUCKET_NAME = process.env.GCS_BUCKET_NAME || 'chttrix-uploads';
+
+const profilePicUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB
+  fileFilter: (req, file, cb) => {
+    const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/svg+xml'];
+    if (!allowed.includes(file.mimetype)) {
+      return cb(new Error('Only image files are allowed (jpg, png, webp, gif, svg)'), false);
+    }
+    cb(null, true);
+  }
+});
+
+router.post("/me/profile-picture", requireAuth, profilePicUpload.single('profilePicture'), async (req, res) => {
+  try {
+    const User = require("../../../models/User");
+    if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
+
+    const user = await User.findById(req.user.sub).select('profilePicture profilePictureGcsPath');
+
+    // Delete old picture from GCS if it was one we uploaded (not an external URL)
+    if (user.profilePictureGcsPath) {
+      try {
+        const storageClient = new Storage({ projectId: process.env.GCP_PROJECT_ID || 'chttrix-prod' });
+        await storageClient.bucket(BUCKET_NAME).file(user.profilePictureGcsPath).delete();
+      } catch (delErr) {
+        console.warn('[ProfilePic] Could not delete old GCS file:', delErr.message);
+      }
+    }
+
+    // Upload new picture to GCS
+    const gcsResult = await uploadToGCS(req.file, 'profiles');
+
+    await User.findByIdAndUpdate(req.user.sub, {
+      profilePicture: gcsResult.url,
+      profilePictureGcsPath: gcsResult.gcsPath,
+    }, { strict: false });
+
+    return res.json({
+      message: 'Profile picture updated',
+      profilePicture: gcsResult.url,
+    });
+  } catch (err) {
+    console.error('PROFILE PIC UPLOAD ERROR:', err);
+    return res.status(500).json({ message: err.message || 'Upload failed' });
+  }
+});
+
+router.delete("/me/profile-picture", requireAuth, async (req, res) => {
+  try {
+    const User = require("../../../models/User");
+    const user = await User.findById(req.user.sub).select('profilePictureGcsPath');
+
+    if (user.profilePictureGcsPath) {
+      try {
+        const storageClient = new Storage({ projectId: process.env.GCP_PROJECT_ID || 'chttrix-prod' });
+        await storageClient.bucket(BUCKET_NAME).file(user.profilePictureGcsPath).delete();
+      } catch (delErr) {
+        console.warn('[ProfilePic] Could not delete GCS file on removal:', delErr.message);
+      }
+    }
+
+    await User.findByIdAndUpdate(req.user.sub, {
+      $unset: { profilePicture: 1, profilePictureGcsPath: 1 }
+    }, { strict: false });
+
+    return res.json({ message: 'Profile picture removed' });
+  } catch (err) {
+    console.error('PROFILE PIC DELETE ERROR:', err);
+    return res.status(500).json({ message: 'Failed to remove profile picture' });
+  }
+});
+
+
+
 // EMAIL MANAGEMENT ROUTES
 router.post("/me/emails", requireAuth, addEmail);
 router.post("/me/emails/:id/verify", requireAuth, verifyEmailCode);

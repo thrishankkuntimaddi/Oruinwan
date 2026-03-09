@@ -1,8 +1,10 @@
 import React, { useState, useRef, useCallback, useMemo } from 'react';
 import { ImagePlus, X, Loader2, Sparkles, CheckCircle2, Trash2, Upload } from 'lucide-react';
 import Card from './Card';
+import ImageCropEditor from './ImageCropEditor';
 import api from '../../services/api';
 import { useToast } from '../../contexts/ToastContext';
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 100 Professional Avatars across 7 DiceBear styles suited for B2B workspaces
@@ -145,10 +147,10 @@ const AvatarPickerModal = ({ onSelect, onClose, uploading }) => {
                                 key={cat}
                                 onClick={() => setActiveCategory(cat)}
                                 className={`flex-shrink-0 px-3.5 py-1.5 text-[11.5px] font-semibold rounded-full border transition-all ${isActive
-                                        ? isAll
-                                            ? 'bg-gray-900 dark:bg-white text-white dark:text-gray-900 border-transparent'
-                                            : `${catConfig?.color} border-current`
-                                        : 'bg-white dark:bg-gray-900 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+                                    ? isAll
+                                        ? 'bg-gray-900 dark:bg-white text-white dark:text-gray-900 border-transparent'
+                                        : `${catConfig?.color} border-current`
+                                    : 'bg-white dark:bg-gray-900 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
                                     }`}
                             >
                                 {cat}
@@ -174,8 +176,8 @@ const AvatarPickerModal = ({ onSelect, onClose, uploading }) => {
                                     onClick={() => setSelectedKey(isSelected ? null : key)}
                                     title={`${avatar.cat} — ${avatar.seed}`}
                                     className={`relative flex flex-col items-center gap-1 p-1.5 rounded-xl transition-all border-2 group ${isSelected
-                                            ? 'border-blue-600 bg-blue-50 dark:bg-blue-950/20 shadow-sm'
-                                            : 'border-transparent hover:border-gray-200 dark:hover:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800'
+                                        ? 'border-blue-600 bg-blue-50 dark:bg-blue-950/20 shadow-sm'
+                                        : 'border-transparent hover:border-gray-200 dark:hover:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800'
                                         }`}
                                 >
                                     <img
@@ -249,21 +251,34 @@ const AvatarPickerModal = ({ onSelect, onClose, uploading }) => {
 const ProfileTab = ({ user, profileData, setProfileData, loading, handleProfileUpdate }) => {
     const { showToast } = useToast();
     const [uploadingImage, setUploadingImage] = useState(false);
-    const [previewUrl, setPreviewUrl] = useState(null);
-    const [selectedFile, setSelectedFile] = useState(null);
+    const [previewUrl, setPreviewUrl] = useState(null);      // used for live preview
+    const [selectedFile, setSelectedFile] = useState(null);  // cropped File ready to upload
+    const [cropSrc, setCropSrc] = useState(null);            // raw src passed to crop editor
     const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
     const [showAvatarPicker, setShowAvatarPicker] = useState(false);
     const fileInputRef = useRef(null);
 
+    // Step 1: user picks a file → open crop editor
     const handleImageSelect = (e) => {
         const file = e.target.files?.[0];
         if (!file) return;
         if (!file.type.startsWith('image/')) { showToast('Please select an image file', 'error'); return; }
-        if (file.size > 5 * 1024 * 1024) { showToast('Image must be under 5 MB', 'error'); return; }
-        setSelectedFile(file);
-        setPreviewUrl(URL.createObjectURL(file));
+        if (file.size > 10 * 1024 * 1024) { showToast('Image must be under 10 MB', 'error'); return; }
+        // Reset input so the same file can be selected again later
+        if (fileInputRef.current) fileInputRef.current.value = '';
+        const objectUrl = URL.createObjectURL(file);
+        setCropSrc(objectUrl); // opens crop editor
     };
 
+    // Step 2: crop editor confirms → store blob as File, show preview
+    const handleCropConfirm = (blob) => {
+        const file = new File([blob], 'profile-picture.jpg', { type: 'image/jpeg' });
+        setSelectedFile(file);
+        setPreviewUrl(URL.createObjectURL(blob));
+        setCropSrc(null); // close editor
+    };
+
+    // Step 3: user clicks Save Photo
     const handleUploadProfilePicture = async () => {
         if (!selectedFile) return;
         setUploadingImage(true);
@@ -271,7 +286,7 @@ const ProfileTab = ({ user, profileData, setProfileData, loading, handleProfileU
             const formData = new FormData();
             formData.append('profilePicture', selectedFile);
             await api.post('/api/auth/me/profile-picture', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
-            setPreviewUrl(null); setSelectedFile(null);
+            setSelectedFile(null);
             showToast('Profile photo updated', 'success');
             window.dispatchEvent(new CustomEvent('auth:refresh-user'));
         } catch (err) {
@@ -279,21 +294,42 @@ const ProfileTab = ({ user, profileData, setProfileData, loading, handleProfileU
         } finally { setUploadingImage(false); }
     };
 
+    // Avatar picker: render DiceBear SVG to a canvas → export as PNG → upload
     const handleAvatarSelect = useCallback(async (avatarConfig) => {
         setUploadingImage(true);
+        setShowAvatarPicker(false);
         try {
-            const url = avatarUrl(avatarConfig.cat, avatarConfig.seed);
-            const svgRes = await fetch(url);
-            if (!svgRes.ok) throw new Error('Avatar fetch failed');
-            const svgBlob = await svgRes.blob();
-            const file = new File([svgBlob], `avatar-${avatarConfig.seed}.svg`, { type: 'image/svg+xml' });
+            const svgUrl = avatarUrl(avatarConfig.cat, avatarConfig.seed);
+            // Fetch the SVG
+            const res = await fetch(svgUrl);
+            if (!res.ok) throw new Error('Could not load avatar');
+            const svgText = await res.text();
+
+            // Convert SVG text → PNG blob via canvas
+            const blob = await new Promise((resolve, reject) => {
+                const svgBlob = new Blob([svgText], { type: 'image/svg+xml;charset=utf-8' });
+                const url = URL.createObjectURL(svgBlob);
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = 400;
+                    canvas.height = 400;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, 400, 400);
+                    URL.revokeObjectURL(url);
+                    canvas.toBlob((b) => b ? resolve(b) : reject(new Error('Canvas toBlob failed')), 'image/png', 1.0);
+                };
+                img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('SVG image load failed')); };
+                img.src = url;
+            });
+
+            // Upload PNG to backend
             const formData = new FormData();
-            formData.append('profilePicture', file);
-            await api.post('/api/auth/me/profile-picture', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
-            setPreviewUrl(url);
+            formData.append('profilePicture', new File([blob], `avatar-${avatarConfig.seed}.png`, { type: 'image/png' }));
+            const { data } = await api.post('/api/auth/me/profile-picture', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+            setPreviewUrl(svgUrl);  // preview the original SVG (looks clean)
             setSelectedFile(null);
-            setShowAvatarPicker(false);
-            showToast(`${avatarConfig.seed} avatar applied`, 'success');
+            showToast(`${avatarConfig.seed} set as profile avatar`, 'success');
             window.dispatchEvent(new CustomEvent('auth:refresh-user'));
         } catch (err) {
             showToast(err.response?.data?.message || 'Failed to apply avatar', 'error');
@@ -435,6 +471,16 @@ const ProfileTab = ({ user, profileData, setProfileData, loading, handleProfileU
             {/* Avatar Picker Modal */}
             {showAvatarPicker && (
                 <AvatarPickerModal onSelect={handleAvatarSelect} onClose={() => setShowAvatarPicker(false)} uploading={uploadingImage} />
+            )}
+
+            {/* Image Crop Editor — opens after file selection */}
+            {cropSrc && (
+                <ImageCropEditor
+                    src={cropSrc}
+                    onConfirm={handleCropConfirm}
+                    onCancel={() => { setCropSrc(null); }}
+                    outputSize={400}
+                />
             )}
 
             {/* Remove Confirm */}
