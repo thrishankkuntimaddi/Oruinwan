@@ -415,6 +415,109 @@ io.on("connection", async (socket) => {
 });
 
 // ---------------------------------------------------------
+// SCHEDULED MEETINGS API (inline — lightweight, no separate router file)
+// ---------------------------------------------------------
+const ScheduledMeeting = require('./src/models/ScheduledMeeting');
+
+// GET /api/scheduled-meetings?workspaceId=xxx  — upcoming meetings
+app.get('/api/scheduled-meetings', requireAuth, async (req, res) => {
+  try {
+    const { workspaceId, limit = 10 } = req.query;
+    if (!workspaceId) return res.status(400).json({ message: 'workspaceId required' });
+
+    const now = new Date();
+    const meetings = await ScheduledMeeting.find({
+      workspaceId,
+      startTime: { $gte: now },
+      status: { $in: ['scheduled', 'live'] },
+    })
+      .sort({ startTime: 1 })
+      .limit(Number(limit))
+      .populate('createdBy', 'username firstName lastName avatarUrl')
+      .lean();
+
+    res.json({ meetings });
+  } catch (err) {
+    logger.error('GET /api/scheduled-meetings error:', err);
+    res.status(500).json({ message: 'Failed to fetch meetings' });
+  }
+});
+
+// POST /api/scheduled-meetings  — create a new scheduled meeting
+app.post('/api/scheduled-meetings', requireAuth, async (req, res) => {
+  try {
+    const { workspaceId, channelId, dmSessionId, title, startTime, duration, meetingLink, participants } = req.body;
+    if (!workspaceId || !title || !startTime) {
+      return res.status(400).json({ message: 'workspaceId, title, and startTime are required' });
+    }
+
+    const meeting = await ScheduledMeeting.create({
+      workspaceId,
+      channelId: channelId || null,
+      dmSessionId: dmSessionId || null,
+      createdBy: req.user.sub,
+      title: title.trim(),
+      startTime: new Date(startTime),
+      duration: duration || 30,
+      meetingLink: meetingLink || null,
+      participants: participants || [],
+      status: 'scheduled',
+    });
+
+    const populated = await meeting.populate('createdBy', 'username firstName lastName avatarUrl');
+
+    // Broadcast to workspace so all HomePanel sidebars refresh
+    req.io.to(`workspace:${workspaceId}`).emit('schedule:created', { meeting: populated });
+
+    res.status(201).json({ meeting: populated });
+  } catch (err) {
+    logger.error('POST /api/scheduled-meetings error:', err);
+    res.status(500).json({ message: 'Failed to create meeting' });
+  }
+});
+
+// PATCH /api/scheduled-meetings/:id  — update status (cancel/complete/live)
+app.patch('/api/scheduled-meetings/:id', requireAuth, async (req, res) => {
+  try {
+    const { status } = req.body;
+    const VALID_STATUSES = ['scheduled', 'live', 'completed', 'cancelled'];
+    if (!VALID_STATUSES.includes(status)) {
+      return res.status(400).json({ message: 'Invalid status' });
+    }
+
+    const meeting = await ScheduledMeeting.findByIdAndUpdate(
+      req.params.id,
+      { status },
+      { new: true }
+    ).populate('createdBy', 'username firstName lastName avatarUrl');
+
+    if (!meeting) return res.status(404).json({ message: 'Meeting not found' });
+
+    req.io.to(`workspace:${meeting.workspaceId}`).emit('schedule:updated', { meeting });
+
+    res.json({ meeting });
+  } catch (err) {
+    logger.error('PATCH /api/scheduled-meetings/:id error:', err);
+    res.status(500).json({ message: 'Failed to update meeting' });
+  }
+});
+
+// DELETE /api/scheduled-meetings/:id
+app.delete('/api/scheduled-meetings/:id', requireAuth, async (req, res) => {
+  try {
+    const meeting = await ScheduledMeeting.findByIdAndDelete(req.params.id);
+    if (!meeting) return res.status(404).json({ message: 'Meeting not found' });
+
+    req.io.to(`workspace:${meeting.workspaceId}`).emit('schedule:deleted', { meetingId: meeting._id });
+
+    res.json({ message: 'Meeting deleted' });
+  } catch (err) {
+    logger.error('DELETE /api/scheduled-meetings/:id error:', err);
+    res.status(500).json({ message: 'Failed to delete meeting' });
+  }
+});
+
+// ---------------------------------------------------------
 // ERROR HANDLERS (MUST BE AFTER ALL ROUTES)
 // ---------------------------------------------------------
 

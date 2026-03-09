@@ -6,7 +6,8 @@ import {
     ArrowUpDown, BookOpen, Layers, Hash,
     FileText, Trash2, FolderPlus, Lightbulb,
     FolderOpen, Move, Users, ClipboardList,
-    FolderKanban, Cpu, Megaphone, StickyNote
+    FolderKanban, Cpu, Megaphone, StickyNote,
+    Check, X
 } from "lucide-react";
 import api from "../../../services/api";
 import { useNotes } from "../../../contexts/NotesContext";

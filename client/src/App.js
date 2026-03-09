@@ -1,5 +1,5 @@
 // src/App.jsx - Recompile Trigger (Updated)
-import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate, useParams } from "react-router-dom";
 
 // Context Providers  
 import { WorkspaceProvider } from "./contexts/WorkspaceContext";
@@ -23,6 +23,7 @@ import TasksPanel from "./components/layout/panels/TasksPanel";
 import NotesPanel from "./components/layout/panels/NotesPanel";
 import UpdatesPanel from "./components/layout/panels/UpdatesPanel";
 import MeetingsPanel from "./components/layout/panels/MeetingsPanel";
+import { HuddleProvider } from "./contexts/HuddleContext";
 
 // Pages (Protected)
 import Home from "./pages/SidebarComp/Home";
@@ -389,9 +390,7 @@ function App() {
                               <RequireAuth>
                                 <WorkspaceProvider>
                                   <RequireWorkspace>
-                                    <MainLayout sidePanel={<MeetingsPanel />}>
-                                      <Meetings />
-                                    </MainLayout>
+                                    <HuddleRouteWrapper />
                                   </RequireWorkspace>
                                 </WorkspaceProvider>
                               </RequireAuth>
@@ -614,6 +613,18 @@ function GlobalPasswordUnlockModal() {
   if (!requiresPassword) return null;
 
   return <PasswordUnlockModal onSubmit={unlockEncryption} />;
+}
+
+// Huddles Route Wrapper — provides shared HuddleContext to both side panel and main panel
+function HuddleRouteWrapper() {
+  const { workspaceId } = useParams();
+  return (
+    <HuddleProvider workspaceId={workspaceId}>
+      <MainLayout sidePanel={<MeetingsPanel />}>
+        <Meetings />
+      </MainLayout>
+    </HuddleProvider>
+  );
 }
 
 export default App;

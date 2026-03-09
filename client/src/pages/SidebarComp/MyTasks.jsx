@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import TaskModal from '../../components/tasksComp/TaskModal';
+import WorkspaceTaskDetailPanel from '../../components/tasksComp/WorkspaceTaskDetailPanel';
 import TransferRequestModal from '../../components/tasksComp/TransferRequestModal';
 import TaskCompletionModal from '../../components/tasksComp/TaskCompletionModal';
 import { useTasks } from '../../contexts/TasksContext';
@@ -473,6 +474,8 @@ export default function MyTasks() {
   const [showFilters, setShowFilters] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [editingTask, setEditingTask] = useState(null);
+  // Right-side detail panel (replaces click-to-edit modal)
+  const [selectedTask, setSelectedTask] = useState(null);
   const [completionTask, setCompletionTask] = useState(null);
   const [deletionTask, setDeletionTask] = useState(null);
   const [transferTask, setTransferTask] = useState(null);
@@ -559,10 +562,24 @@ export default function MyTasks() {
   );
 
   // --- Handlers ---
+  // Clicking a task row opens the right-side detail panel
   const handleEdit = useCallback((task) => {
-    setEditingTask(task);
-    setShowModal(true);
+    setSelectedTask(task);
   }, []);
+
+  // Panel save handler — updates task in context and refreshes selectedTask
+  const handlePanelUpdate = useCallback(async (id, updates) => {
+    const updated = await updateTask(id, updates);
+    // Keep selectedTask in sync (updateTask returns updated task)
+    setSelectedTask(prev => prev?.id === id ? { ...prev, ...updates } : prev);
+  }, [updateTask]);
+
+  // Panel delete handler
+  const handlePanelDelete = useCallback((id) => {
+    const task = tasks.find(t => t.id === id);
+    setSelectedTask(null);
+    setDeletionTask(task);
+  }, [tasks]);
 
   const handleCreate = useCallback(async (data) => {
     await createTask(data);
@@ -621,6 +638,14 @@ export default function MyTasks() {
     'completed-tasks': 'Finished tasks.',
     'deleted-tasks': 'Trash — restore or delete permanently.',
   }[activeView] || '';
+
+  // Keep selectedTask in sync when tasks array updates (e.g. after socket push)
+  // Must be BEFORE any early returns to satisfy React hooks rules
+  useEffect(() => {
+    if (!selectedTask) return;
+    const fresh = tasks.find(t => t.id === selectedTask.id);
+    if (fresh) setSelectedTask(fresh);
+  }, [tasks]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Loading skeleton ──
   if (loading) {
@@ -719,159 +744,173 @@ export default function MyTasks() {
         </div>
       </div>
 
-      {/* ── Main content ── */}
-      <div className="flex-1 flex flex-col min-h-0 min-w-0 overflow-hidden">
+      {/* ── Main content + optional right panel ── */}
+      <div className="flex-1 flex min-h-0 min-w-0 overflow-hidden">
+        <div className="flex-1 flex flex-col min-h-0 min-w-0 overflow-hidden">
 
-        {/* ── Toolbar ── */}
-        <div className="flex-shrink-0 bg-white border-b px-5 py-3" style={{ borderColor: '#DFE1E6' }}>
-          <div className="flex items-center gap-3">
-            <div>
-              <h1 className="text-base font-bold" style={{ color: '#172B4D' }}>{viewLabel}</h1>
-              <p className="text-xs" style={{ color: '#7A869A' }}>{viewDesc}</p>
-            </div>
+          {/* ── Toolbar ── */}
+          <div className="flex-shrink-0 bg-white border-b px-5 py-3" style={{ borderColor: '#DFE1E6' }}>
+            <div className="flex items-center gap-3">
+              <div>
+                <h1 className="text-base font-bold" style={{ color: '#172B4D' }}>{viewLabel}</h1>
+                <p className="text-xs" style={{ color: '#7A869A' }}>{viewDesc}</p>
+              </div>
 
-            <div className="flex-1" />
+              <div className="flex-1" />
 
-            {/* Search */}
-            <div className="relative">
-              <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-              <input
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                placeholder="Search issues…"
-                className="pl-8 pr-3 py-1.5 text-xs border rounded-sm focus:outline-none w-44"
-                style={{ borderColor: '#DFE1E6' }}
-                onFocus={e => e.target.style.borderColor = JIRA_BLUE}
-                onBlur={e => e.target.style.borderColor = '#DFE1E6'}
-              />
-            </div>
+              {/* Search */}
+              <div className="relative">
+                <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <input
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                  placeholder="Search issues…"
+                  className="pl-8 pr-3 py-1.5 text-xs border rounded-sm focus:outline-none w-44"
+                  style={{ borderColor: '#DFE1E6' }}
+                  onFocus={e => e.target.style.borderColor = JIRA_BLUE}
+                  onBlur={e => e.target.style.borderColor = '#DFE1E6'}
+                />
+              </div>
 
-            {/* Sort */}
-            <select value={sortOrder} onChange={e => setSortOrder(e.target.value)}
-              className="text-xs border rounded-sm px-2 py-1.5 bg-white focus:outline-none text-gray-700"
-              style={{ borderColor: '#DFE1E6' }}>
-              {SORT_OPTIONS.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
-            </select>
+              {/* Sort */}
+              <select value={sortOrder} onChange={e => setSortOrder(e.target.value)}
+                className="text-xs border rounded-sm px-2 py-1.5 bg-white focus:outline-none text-gray-700"
+                style={{ borderColor: '#DFE1E6' }}>
+                {SORT_OPTIONS.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
+              </select>
 
-            {/* Priority filter */}
-            <select value={priorityFilter} onChange={e => setPriorityFilter(e.target.value)}
-              className="text-xs border rounded-sm px-2 py-1.5 bg-white focus:outline-none text-gray-700"
-              style={{ borderColor: '#DFE1E6' }}>
-              <option value="all">All Priorities</option>
-              {['Highest', 'High', 'Medium', 'Low', 'Lowest', 'Emergency'].map(p =>
-                <option key={p} value={p}>{p}</option>
+              {/* Priority filter */}
+              <select value={priorityFilter} onChange={e => setPriorityFilter(e.target.value)}
+                className="text-xs border rounded-sm px-2 py-1.5 bg-white focus:outline-none text-gray-700"
+                style={{ borderColor: '#DFE1E6' }}>
+                <option value="all">All Priorities</option>
+                {['Highest', 'High', 'Medium', 'Low', 'Lowest', 'Emergency'].map(p =>
+                  <option key={p} value={p}>{p}</option>
+                )}
+              </select>
+
+              {/* View toggle */}
+              <div className="flex rounded-sm overflow-hidden border" style={{ borderColor: '#DFE1E6' }}>
+                <button onClick={() => setViewMode('list')}
+                  className="px-2.5 py-1.5 flex items-center transition-all"
+                  style={{ background: viewMode === 'list' ? '#DEEBFF' : 'white', color: viewMode === 'list' ? JIRA_BLUE : '#42526E' }}>
+                  <List size={14} />
+                </button>
+                <button onClick={() => setViewMode('board')}
+                  className="px-2.5 py-1.5 flex items-center border-l transition-all"
+                  style={{ borderColor: '#DFE1E6', background: viewMode === 'board' ? '#DEEBFF' : 'white', color: viewMode === 'board' ? JIRA_BLUE : '#42526E' }}>
+                  <LayoutGrid size={14} />
+                </button>
+              </div>
+
+              {canCreate && (
+                <button onClick={() => { setEditingTask(null); setShowModal(true); }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white rounded-sm transition-opacity hover:opacity-90"
+                  style={{ background: JIRA_BLUE }}>
+                  <Plus size={13} strokeWidth={2.5} /> Create
+                </button>
               )}
-            </select>
-
-            {/* View toggle */}
-            <div className="flex rounded-sm overflow-hidden border" style={{ borderColor: '#DFE1E6' }}>
-              <button onClick={() => setViewMode('list')}
-                className="px-2.5 py-1.5 flex items-center transition-all"
-                style={{ background: viewMode === 'list' ? '#DEEBFF' : 'white', color: viewMode === 'list' ? JIRA_BLUE : '#42526E' }}>
-                <List size={14} />
-              </button>
-              <button onClick={() => setViewMode('board')}
-                className="px-2.5 py-1.5 flex items-center border-l transition-all"
-                style={{ borderColor: '#DFE1E6', background: viewMode === 'board' ? '#DEEBFF' : 'white', color: viewMode === 'board' ? JIRA_BLUE : '#42526E' }}>
-                <LayoutGrid size={14} />
-              </button>
             </div>
+          </div>
 
-            {canCreate && (
-              <button onClick={() => { setEditingTask(null); setShowModal(true); }}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white rounded-sm transition-opacity hover:opacity-90"
-                style={{ background: JIRA_BLUE }}>
-                <Plus size={13} strokeWidth={2.5} /> Create
-              </button>
+          {/* ── Stats strip ── */}
+          {activeView === 'all-tasks' && (
+            <div className="flex-shrink-0 bg-white border-b px-4 py-2.5 flex items-center gap-3" style={{ borderColor: '#DFE1E6' }}>
+              {[
+                { label: 'Active', count: tasks.filter(t => !t.deleted && t.status !== 'Completed').length, color: JIRA_BLUE },
+                { label: 'Overdue', count: tasks.filter(t => isOverdue(t)).length, color: '#FF5630' },
+                { label: 'Completed', count: tasks.filter(t => t.status === 'Completed').length, color: '#00875A' },
+                { label: 'In Review', count: tasks.filter(t => t.status === 'In Review').length, color: '#6554C0' },
+              ].map(s => (
+                <div key={s.label} className="flex items-center gap-1.5 text-xs">
+                  <div className="w-1.5 h-1.5 rounded-full" style={{ background: s.color }} />
+                  <span style={{ color: '#7A869A' }}>{s.label}</span>
+                  <span className="font-bold" style={{ color: s.color }}>{s.count}</span>
+                </div>
+              ))}
+              <div className="flex-1" />
+              <span className="text-xs" style={{ color: '#7A869A' }}>{filtered.length} showing</span>
+            </div>
+          )}
+
+          {/* ── Content area ── */}
+          <div className="flex-1 min-h-0 overflow-hidden">
+            {filtered.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-full gap-3 opacity-60">
+                <div className="w-14 h-14 rounded-full bg-gray-200 flex items-center justify-center">
+                  {isDeleted ? <Trash2 size={24} className="text-gray-400" /> : <CheckCircle2 size={24} className="text-gray-400" />}
+                </div>
+                <div className="text-center">
+                  <p className="font-semibold text-sm text-gray-600">
+                    {isDeleted ? 'Trash is empty' : search ? 'No matching issues' : 'No issues here'}
+                  </p>
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    {isDeleted ? 'Deleted items will appear here.' : canCreate ? 'Click Create to add your first issue.' : ''}
+                  </p>
+                </div>
+              </div>
+            ) : viewMode === 'board' ? (
+              /* Board view */
+              <div className="h-full flex gap-2.5 p-3 overflow-x-auto" style={{ background: BOARD_BG }}>
+                {BOARD_COLUMNS.map(col => (
+                  <BoardColumn
+                    key={col.key}
+                    col={col}
+                    tasks={boardGroups[col.key] || []}
+                    view={activeView}
+                    onEdit={handleEdit}
+                    onDelete={handleDelete}
+                  />
+                ))}
+              </div>
+            ) : (
+              /* List view */
+              <div className="h-full overflow-y-auto" style={{ background: BOARD_BG }}>
+                {/* Table header */}
+                <div className="sticky top-0 flex items-center gap-4 px-5 py-2 text-[10px] font-bold uppercase tracking-wider bg-white border-b"
+                  style={{ color: '#7A869A', borderColor: '#DFE1E6' }}>
+                  <span className="w-4 flex-shrink-0" />
+                  <span className="flex-1">Summary</span>
+                  <span className="w-28 text-center">Channel</span>
+                  <span className="w-20 text-center">Priority</span>
+                  <span className="w-24 text-center">Due Date</span>
+                  <span className="w-24 text-center">Status</span>
+                  <span className="w-12" />
+                </div>
+
+                <div>
+                  {filtered.map(task => (
+                    <ListRow
+                      key={task.id}
+                      task={task}
+                      view={activeView}
+                      onEdit={handleEdit}
+                      onDelete={handleDelete}
+                      onRestore={handleRestore}
+                      onPermanentDelete={handlePermanentDelete}
+                      onTransferRequest={setTransferTask}
+                      onTransferApprove={handleTransferApprove}
+                      onTransferReject={handleTransferReject}
+                    />
+                  ))}
+                </div>
+              </div>
             )}
           </div>
         </div>
 
-        {/* ── Stats strip ── */}
-        {activeView === 'all-tasks' && (
-          <div className="flex-shrink-0 bg-white border-b px-4 py-2.5 flex items-center gap-3" style={{ borderColor: '#DFE1E6' }}>
-            {[
-              { label: 'Active', count: tasks.filter(t => !t.deleted && t.status !== 'Completed').length, color: JIRA_BLUE },
-              { label: 'Overdue', count: tasks.filter(t => isOverdue(t)).length, color: '#FF5630' },
-              { label: 'Completed', count: tasks.filter(t => t.status === 'Completed').length, color: '#00875A' },
-              { label: 'In Review', count: tasks.filter(t => t.status === 'In Review').length, color: '#6554C0' },
-            ].map(s => (
-              <div key={s.label} className="flex items-center gap-1.5 text-xs">
-                <div className="w-1.5 h-1.5 rounded-full" style={{ background: s.color }} />
-                <span style={{ color: '#7A869A' }}>{s.label}</span>
-                <span className="font-bold" style={{ color: s.color }}>{s.count}</span>
-              </div>
-            ))}
-            <div className="flex-1" />
-            <span className="text-xs" style={{ color: '#7A869A' }}>{filtered.length} showing</span>
-          </div>
+        {/* ── Right task detail panel ── */}
+        {selectedTask && (
+          <WorkspaceTaskDetailPanel
+            task={selectedTask}
+            members={members || []}
+            onClose={() => setSelectedTask(null)}
+            onUpdate={handlePanelUpdate}
+            onDelete={handlePanelDelete}
+          />
         )}
 
-        {/* ── Content area ── */}
-        <div className="flex-1 min-h-0 overflow-hidden">
-          {filtered.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full gap-3 opacity-60">
-              <div className="w-14 h-14 rounded-full bg-gray-200 flex items-center justify-center">
-                {isDeleted ? <Trash2 size={24} className="text-gray-400" /> : <CheckCircle2 size={24} className="text-gray-400" />}
-              </div>
-              <div className="text-center">
-                <p className="font-semibold text-sm text-gray-600">
-                  {isDeleted ? 'Trash is empty' : search ? 'No matching issues' : 'No issues here'}
-                </p>
-                <p className="text-xs text-gray-400 mt-0.5">
-                  {isDeleted ? 'Deleted items will appear here.' : canCreate ? 'Click Create to add your first issue.' : ''}
-                </p>
-              </div>
-            </div>
-          ) : viewMode === 'board' ? (
-            /* Board view */
-            <div className="h-full flex gap-2.5 p-3 overflow-x-auto" style={{ background: BOARD_BG }}>
-              {BOARD_COLUMNS.map(col => (
-                <BoardColumn
-                  key={col.key}
-                  col={col}
-                  tasks={boardGroups[col.key] || []}
-                  view={activeView}
-                  onEdit={handleEdit}
-                  onDelete={handleDelete}
-                />
-              ))}
-            </div>
-          ) : (
-            /* List view */
-            <div className="h-full overflow-y-auto" style={{ background: BOARD_BG }}>
-              {/* Table header */}
-              <div className="sticky top-0 flex items-center gap-4 px-5 py-2 text-[10px] font-bold uppercase tracking-wider bg-white border-b"
-                style={{ color: '#7A869A', borderColor: '#DFE1E6' }}>
-                <span className="w-4 flex-shrink-0" />
-                <span className="flex-1">Summary</span>
-                <span className="w-28 text-center">Channel</span>
-                <span className="w-20 text-center">Priority</span>
-                <span className="w-24 text-center">Due Date</span>
-                <span className="w-24 text-center">Status</span>
-                <span className="w-12" />
-              </div>
-
-              <div>
-                {filtered.map(task => (
-                  <ListRow
-                    key={task.id}
-                    task={task}
-                    view={activeView}
-                    onEdit={handleEdit}
-                    onDelete={handleDelete}
-                    onRestore={handleRestore}
-                    onPermanentDelete={handlePermanentDelete}
-                    onTransferRequest={setTransferTask}
-                    onTransferApprove={handleTransferApprove}
-                    onTransferReject={handleTransferReject}
-                  />
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
+      </div>{/* end main content + right panel wrapper */}
 
       {/* ── Modals ── */}
       {showModal && (

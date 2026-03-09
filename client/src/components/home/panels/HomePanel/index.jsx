@@ -1,14 +1,14 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Trash2, X } from 'lucide-react';
+import { Trash2, X, Calendar, Clock, Video, ExternalLink, Plus, Loader } from 'lucide-react';
 import ConfirmationModal from "../../../../shared/components/ui/ConfirmationModal";
 import { useContacts } from "../../../../contexts/ContactsContext";
 import { useAuth } from "../../../../contexts/AuthContext";
 import { useToast } from "../../../../contexts/ToastContext";
-// import { useUsers } from "../../../../hooks/useUsers"; // Currently unused
 import { useWorkspace } from "../../../../contexts/WorkspaceContext";
 import api, { API_BASE } from "../../../../services/api";
 import { io } from "socket.io-client";
+import { useScheduledMeetings } from "../../../../hooks/useScheduledMeetings";
 
 // Import sub-components
 import WorkspaceHeader from "./WorkspaceHeader";
@@ -24,9 +24,12 @@ const HomePanel = ({ title }) => {
     const navigate = useNavigate();
 
     const { allItems: items, deleteItem, addItem, toggleFavorite, refreshContacts } = useContacts();
-    const { accessToken } = useAuth(); // user removed - currently unused
+    const { accessToken } = useAuth();
     const { showToast } = useToast();
     const { activeWorkspace } = useWorkspace();
+
+    // Real-time scheduled meetings
+    const { meetings: scheduledMeetings, loading: meetingsLoading, createMeeting, cancelMeeting } = useScheduledMeetings(activeWorkspace?.id);
 
     // Refresh contacts (channels) when active workspace changes
     React.useEffect(() => {
@@ -86,6 +89,11 @@ const HomePanel = ({ title }) => {
         dms: true,
         schedules: true,
     });
+
+    // Schedule modal state
+    const [showScheduleModal, setShowScheduleModal] = useState(false);
+    const [scheduleForm, setScheduleForm] = useState({ title: '', startDate: '', startHour: '09', startMin: '00', duration: 30, meetingLink: '' });
+    const [schedulingLoading, setSchedulingLoading] = useState(false);
 
     const [workspaceName, setWorkspaceName] = useState(title || localStorage.getItem("currentWorkspace") || "Chttrix");
 
@@ -301,6 +309,60 @@ const HomePanel = ({ title }) => {
         setShowSelectionDeleteConfirm(false);
     };
 
+    // ── Schedule Meeting Handler ──────────────────────────────────────
+    const handleScheduleMeeting = useCallback(async (e) => {
+        e.preventDefault();
+        if (!scheduleForm.title.trim()) { showToast('Title is required', 'error'); return; }
+        if (!scheduleForm.startDate) { showToast('Start date is required', 'error'); return; }
+        const isoTime = new Date(`${scheduleForm.startDate}T${scheduleForm.startHour}:${scheduleForm.startMin}:00`).toISOString();
+        if (new Date(isoTime) <= new Date()) { showToast('Start time must be in the future', 'error'); return; }
+
+        setSchedulingLoading(true);
+        try {
+            await createMeeting({
+                title: scheduleForm.title.trim(),
+                startTime: isoTime,
+                duration: scheduleForm.duration,
+                meetingLink: scheduleForm.meetingLink || null,
+            });
+            setShowScheduleModal(false);
+            setScheduleForm({ title: '', startDate: '', startHour: '09', startMin: '00', duration: 30, meetingLink: '' });
+            showToast('Meeting scheduled!', 'success');
+        } catch (err) {
+            showToast('Failed to schedule meeting', 'error');
+        } finally {
+            setSchedulingLoading(false);
+        }
+    }, [scheduleForm, createMeeting, showToast]);
+
+    const handleCancelMeeting = useCallback(async (meetingId) => {
+        try {
+            await cancelMeeting(meetingId);
+            showToast('Meeting cancelled', 'info');
+        } catch {
+            showToast('Failed to cancel meeting', 'error');
+        }
+    }, [cancelMeeting, showToast]);
+
+    // ── Helper: format relative time ─────────────────────────────────
+    const formatRelativeTime = (date) => {
+        const now = new Date();
+        const d = new Date(date);
+        const diffMs = d - now;
+        const diffMins = Math.floor(diffMs / 60000);
+        const diffHours = Math.floor(diffMins / 60);
+        const diffDays = Math.floor(diffHours / 24);
+        if (diffMins < 60) return `in ${diffMins}m`;
+        if (diffHours < 24) return `in ${diffHours}h`;
+        if (diffDays === 1) return 'tomorrow';
+        // If within a week show day name
+        if (diffDays < 7) return d.toLocaleDateString('en-US', { weekday: 'short' });
+        return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    };
+
+    const formatTime = (date) =>
+        new Date(date).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+
     const favorites = items.filter(i => i.isFavorite);
     const channels = items.filter(i => !i.isFavorite && i.type === 'channel');
     const dms = items.filter(i => !i.isFavorite && i.type === 'dm');
@@ -427,30 +489,212 @@ const HomePanel = ({ title }) => {
                 <SectionHeader
                     label="Upcoming Schedules"
                     isOpen={expanded.schedules}
-                    onClick={() => toggle("schedules")}
-                    onAdd={() => showToast("Schedule feature coming soon!", "info")}
+                    onClick={() => toggle('schedules')}
+                    onAdd={() => setShowScheduleModal(true)}
                 />
                 {expanded.schedules && (
-                    <div className="space-y-0.5">
-                        <ListItem
-                            item={{ id: 's1', label: 'Daily Standup', type: 'schedule', icon: '📅' }}
-                            isSelectionMode={isSelectionMode}
-                            selectedItems={selectedItems}
-                            setSelectedItems={setSelectedItems}
-                            toggleFavorite={() => { }}
-                        />
-                        <ListItem
-                            item={{ id: 's2', label: 'Design Review', type: 'schedule', icon: '📅' }}
-                            isSelectionMode={isSelectionMode}
-                            selectedItems={selectedItems}
-                            setSelectedItems={setSelectedItems}
-                            toggleFavorite={() => { }}
-                        />
+                    <div className="space-y-0.5 pb-1">
+                        {meetingsLoading ? (
+                            <div className="flex items-center gap-2 px-5 py-2 text-gray-400">
+                                <Loader size={12} className="animate-spin" />
+                                <span className="text-xs">Loading...</span>
+                            </div>
+                        ) : scheduledMeetings.length === 0 ? (
+                            <div className="px-5 py-2">
+                                <p className="text-xs text-gray-400 dark:text-gray-500">No upcoming meetings</p>
+                                <button
+                                    onClick={() => setShowScheduleModal(true)}
+                                    className="mt-1 text-xs text-indigo-500 hover:text-indigo-600 dark:text-indigo-400 font-medium flex items-center gap-1"
+                                >
+                                    <Plus size={10} /> Schedule one
+                                </button>
+                            </div>
+                        ) : (
+                            scheduledMeetings.map(meeting => (
+                                <div
+                                    key={meeting._id}
+                                    className="group flex items-center gap-2.5 px-4 py-2 rounded-md mx-1 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors cursor-default"
+                                >
+                                    {/* Icon */}
+                                    <div className="w-7 h-7 rounded-lg bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center shrink-0">
+                                        {meeting.status === 'live' ? (
+                                            <span className="relative flex h-2 w-2">
+                                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
+                                                <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500" />
+                                            </span>
+                                        ) : (
+                                            <Calendar size={13} className="text-indigo-500 dark:text-indigo-400" />
+                                        )}
+                                    </div>
+
+                                    {/* Details */}
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate leading-tight">
+                                            {meeting.title}
+                                        </p>
+                                        <p className="text-[10px] text-gray-400 flex items-center gap-1">
+                                            <Clock size={8} />
+                                            {formatTime(meeting.startTime)} · {formatRelativeTime(meeting.startTime)}
+                                            {meeting.duration ? ` · ${meeting.duration}m` : ''}
+                                        </p>
+                                    </div>
+
+                                    {/* Actions */}
+                                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        {meeting.meetingLink && (
+                                            <a
+                                                href={meeting.meetingLink}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                title="Open meeting link"
+                                                className="p-1 rounded hover:bg-indigo-100 dark:hover:bg-indigo-900/40 text-indigo-500"
+                                                onClick={e => e.stopPropagation()}
+                                            >
+                                                <ExternalLink size={11} />
+                                            </a>
+                                        )}
+                                        <button
+                                            onClick={() => handleCancelMeeting(meeting._id)}
+                                            title="Cancel"
+                                            className="p-1 rounded hover:bg-red-100 dark:hover:bg-red-900/30 text-gray-400 hover:text-red-500 transition-colors"
+                                        >
+                                            <X size={11} />
+                                        </button>
+                                    </div>
+                                </div>
+                            ))
+                        )}
                     </div>
                 )}
             </div>
 
+            {/* Schedule Meeting Modal */}
+            {showScheduleModal && (
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+                    onClick={e => { if (e.target === e.currentTarget) setShowScheduleModal(false); }}
+                >
+                    <div className="relative w-full max-w-sm mx-4 bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+                        {/* Header */}
+                        <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-200 dark:border-gray-700 bg-indigo-600">
+                            <div className="p-1.5 bg-white/20 rounded-lg">
+                                <Calendar size={15} className="text-white" />
+                            </div>
+                            <h2 className="text-sm font-bold text-white flex-1">Schedule Meeting</h2>
+                            <button onClick={() => setShowScheduleModal(false)} className="text-white/70 hover:text-white p-1">
+                                <X size={16} />
+                            </button>
+                        </div>
+
+                        {/* Form */}
+                        <form onSubmit={handleScheduleMeeting} className="px-5 py-4 space-y-3">
+                            {/* Title */}
+                            <div>
+                                <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                                    Title <span className="text-red-500">*</span>
+                                </label>
+                                <input
+                                    type="text"
+                                    value={scheduleForm.title}
+                                    onChange={e => setScheduleForm(f => ({ ...f, title: e.target.value }))}
+                                    placeholder="e.g. Weekly Sync"
+                                    maxLength={100}
+                                    className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                />
+                            </div>
+
+                            {/* Date */}
+                            <div>
+                                <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                                    Date <span className="text-red-500">*</span>
+                                </label>
+                                <input
+                                    type="date"
+                                    value={scheduleForm.startDate}
+                                    onChange={e => setScheduleForm(f => ({ ...f, startDate: e.target.value }))}
+                                    min={new Date().toISOString().slice(0, 10)}
+                                    className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                />
+                            </div>
+
+                            {/* Time + Duration */}
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Time</label>
+                                    <div className="flex gap-1">
+                                        <select
+                                            value={scheduleForm.startHour}
+                                            onChange={e => setScheduleForm(f => ({ ...f, startHour: e.target.value }))}
+                                            className="flex-1 px-2 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                        >
+                                            {Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0')).map(h => (
+                                                <option key={h} value={h}>{h}</option>
+                                            ))}
+                                        </select>
+                                        <span className="self-center text-gray-400 font-bold">:</span>
+                                        <select
+                                            value={scheduleForm.startMin}
+                                            onChange={e => setScheduleForm(f => ({ ...f, startMin: e.target.value }))}
+                                            className="flex-1 px-2 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                        >
+                                            {['00', '15', '30', '45'].map(m => <option key={m} value={m}>{m}</option>)}
+                                        </select>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Duration</label>
+                                    <select
+                                        value={scheduleForm.duration}
+                                        onChange={e => setScheduleForm(f => ({ ...f, duration: Number(e.target.value) }))}
+                                        className="w-full px-2 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                    >
+                                        {[15, 30, 45, 60, 90, 120].map(d => <option key={d} value={d}>{d} min</option>)}
+                                    </select>
+                                </div>
+                            </div>
+
+                            {/* Meeting Link (optional) */}
+                            <div>
+                                <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                                    Meeting link <span className="text-gray-400 font-normal">(optional)</span>
+                                </label>
+                                <input
+                                    type="url"
+                                    value={scheduleForm.meetingLink}
+                                    onChange={e => setScheduleForm(f => ({ ...f, meetingLink: e.target.value }))}
+                                    placeholder="https://meet.google.com/..."
+                                    className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                />
+                            </div>
+
+                            {/* Actions */}
+                            <div className="flex gap-2 pt-1">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowScheduleModal(false)}
+                                    className="flex-1 py-2 text-sm font-medium rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={schedulingLoading}
+                                    className="flex-1 py-2 text-sm font-semibold rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white transition disabled:opacity-60 flex items-center justify-center gap-2"
+                                >
+                                    {schedulingLoading ? (
+                                        <><Loader size={13} className="animate-spin" /> Scheduling…</>
+                                    ) : (
+                                        'Schedule'
+                                    )}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
             {/* Confirmation Modal for Selection Delete */}
+
             <ConfirmationModal
                 isOpen={showSelectionDeleteConfirm}
                 onClose={() => setShowSelectionDeleteConfirm(false)}

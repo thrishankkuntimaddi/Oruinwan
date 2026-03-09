@@ -1,520 +1,718 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useToast } from "../../contexts/ToastContext";
 import { useAuth } from "../../contexts/AuthContext";
-import { X, Calendar, User, Flag, Briefcase, AlignLeft, Type, Users, Hash, Link as LinkIcon, Plus, CheckCircle2, Paperclip } from "lucide-react";
+import {
+  X, Calendar, User, Flag, Briefcase, AlignLeft, Type,
+  Users, Hash, Link as LinkIcon, Plus, CheckCircle2,
+  Paperclip, ChevronDown, AlertCircle, AlertTriangle,
+  Minus, ArrowDown, Clock, Zap, Tag, MoreHorizontal,
+  Edit3, Eye, Shield, Check, Loader2
+} from "lucide-react";
 import api from "../../services/api";
 
 const priorities = ["Emergency", "High", "Medium", "Low"];
 
+const statuses = ["To Do", "In Progress", "In Review", "Completed", "Blocked"];
+
+const PRIORITY_CONFIG = {
+  Emergency: {
+    color: "text-red-600",
+    bg: "bg-red-50 dark:bg-red-900/20",
+    border: "border-red-200 dark:border-red-800/50",
+    dot: "bg-red-500",
+    badge: "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400",
+    Icon: AlertCircle,
+    iconColor: "text-red-500",
+  },
+  High: {
+    color: "text-orange-600",
+    bg: "bg-orange-50 dark:bg-orange-900/20",
+    border: "border-orange-200 dark:border-orange-800/50",
+    dot: "bg-orange-500",
+    badge: "bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-400",
+    Icon: AlertTriangle,
+    iconColor: "text-orange-500",
+  },
+  Medium: {
+    color: "text-amber-600",
+    bg: "bg-amber-50 dark:bg-amber-900/20",
+    border: "border-amber-200 dark:border-amber-800/50",
+    dot: "bg-amber-400",
+    badge: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400",
+    Icon: Minus,
+    iconColor: "text-amber-500",
+  },
+  Low: {
+    color: "text-blue-600",
+    bg: "bg-blue-50 dark:bg-blue-900/20",
+    border: "border-blue-200 dark:border-blue-800/50",
+    dot: "bg-blue-400",
+    badge: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400",
+    Icon: ArrowDown,
+    iconColor: "text-blue-500",
+  },
+};
+
+const STATUS_CONFIG = {
+  "To Do": {
+    badge: "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400",
+    dot: "bg-gray-400",
+    icon: "○",
+  },
+  "In Progress": {
+    badge: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400",
+    dot: "bg-blue-500",
+    icon: "◔",
+  },
+  "In Review": {
+    badge: "bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-400",
+    dot: "bg-purple-500",
+    icon: "◑",
+  },
+  Completed: {
+    badge: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400",
+    dot: "bg-emerald-500",
+    icon: "●",
+  },
+  Blocked: {
+    badge: "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400",
+    dot: "bg-red-500",
+    icon: "⊘",
+  },
+};
+
+function Avatar({ name, size = "sm", className = "" }) {
+  const initials = (name || "?").split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2);
+  const colors = [
+    "from-blue-500 to-indigo-600",
+    "from-emerald-500 to-teal-600",
+    "from-purple-500 to-pink-600",
+    "from-orange-500 to-red-600",
+    "from-cyan-500 to-blue-600",
+  ];
+  const idx = (name || "").charCodeAt(0) % colors.length;
+  const sz = size === "sm" ? "w-7 h-7 text-[10px]" : size === "md" ? "w-9 h-9 text-xs" : "w-11 h-11 text-sm";
+  return (
+    <div className={`${sz} rounded-full bg-gradient-to-br ${colors[idx]} flex items-center justify-center text-white font-bold flex-shrink-0 ring-2 ring-white dark:ring-gray-900 shadow-sm ${className}`}>
+      {initials}
+    </div>
+  );
+}
+
+function Dropdown({ children, trigger, align = "left" }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+  useEffect(() => {
+    const h = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, []);
+  return (
+    <div className="relative" ref={ref}>
+      <div onClick={() => setOpen((v) => !v)}>{trigger}</div>
+      {open && (
+        <div
+          className={`absolute z-50 mt-1.5 ${align === "right" ? "right-0" : "left-0"} min-w-[160px] bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-100 dark:border-gray-700 py-1 overflow-hidden`}
+          style={{ animation: "dropIn 0.12s ease-out" }}
+        >
+          {typeof children === "function" ? children(() => setOpen(false)) : children}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function TaskModal({ onClose, onAddTask, onUpdateTask, channels = [], teamMembers = [], initialData = null }) {
   const { showToast } = useToast();
   const { user } = useAuth();
+
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [project, setProject] = useState("");
-  const [assignmentType, setAssignmentType] = useState("self"); // "self", "individual", "channel"
-  const [taskMode, setTaskMode] = useState("split"); // "split" or "shared" (for individual assignments)
-  const [selectedMembers, setSelectedMembers] = useState([]); // For multi-select
-  const [selectedChannel, setSelectedChannel] = useState(""); // For channel assignment
-  const [attachments, setAttachments] = useState([]); // { name, url }
+  const [assignmentType, setAssignmentType] = useState("self");
+  const [taskMode, setTaskMode] = useState("split");
+  const [selectedMembers, setSelectedMembers] = useState([]);
+  const [selectedChannel, setSelectedChannel] = useState("");
+  const [attachments, setAttachments] = useState([]);
   const [newAttachmentUrl, setNewAttachmentUrl] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [priority, setPriority] = useState("Medium");
   const [status, setStatus] = useState("To Do");
-  const [channelMembers, setChannelMembers] = useState([]); // Members of selected project/channel
+  const [channelMembers, setChannelMembers] = useState([]);
   const [loadingMembers, setLoadingMembers] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [memberSearch, setMemberSearch] = useState("");
+
   const isEditing = !!initialData;
   const isReadOnly = isEditing && (initialData?.status === "Completed" || String(initialData?.assignerId) !== String(user?._id));
+  const isAssigner = isEditing && String(initialData?.assignerId) === String(user?._id);
 
-  // Initialize Data for Editing
   useEffect(() => {
     if (initialData) {
       setTitle(initialData.title || "");
       setDescription(initialData.description || "");
-      setDueDate(initialData.dueDate || "");
+      setDueDate(initialData.dueDate ? initialData.dueDate.split("T")[0] : "");
       setPriority(initialData.priority || "Medium");
       setAttachments(initialData.attachments || []);
+      setStatus(initialData.status || "To Do");
 
-      // Determine Assignment Type & selections
       if (initialData.visibility === "channel") {
         setAssignmentType("channel");
         setProject(initialData.project);
-        // selectedChannel logic handled by useEffect below via 'project'
       } else if (initialData.assignees && initialData.assignees.length > 1) {
         setAssignmentType("individual");
-        setSelectedMembers(initialData.assignees.map(u => u._id));
+        setSelectedMembers(initialData.assignees.map((u) => u._id));
       } else if (initialData.assignees && initialData.assignees.length === 1 && initialData.assignees[0]._id !== user._id) {
         setAssignmentType("individual");
         setSelectedMembers([initialData.assignees[0]._id]);
       } else {
         setAssignmentType("self");
       }
-      setStatus(initialData.status || "To Do");
     }
   }, [initialData, user]);
 
-  // Fetch channel members when a project/channel is selected
   useEffect(() => {
-    const fetchChannelMembers = async () => {
-      if (!project) {
-        setChannelMembers([]);
-        setSelectedChannel("");
-        return;
-      }
-
-      const selectedChan = channels.find(ch => ch.label === project || ch.id === project);
-
-      // Sync selectedChannel with project context
-      if (selectedChan) {
-        setSelectedChannel(selectedChan.id);
-      } else {
-        setSelectedChannel("");
-      }
-
-      if (!selectedChan) {
-        setChannelMembers(teamMembers);
-        return;
-      }
-
+    const fetch = async () => {
+      if (!project) { setChannelMembers([]); setSelectedChannel(""); return; }
+      const ch = channels.find((c) => c.label === project || c.id === project);
+      if (ch) setSelectedChannel(ch.id); else setSelectedChannel("");
+      if (!ch) { setChannelMembers(teamMembers); return; }
       try {
         setLoadingMembers(true);
-        const response = await api.get(`/api/channels/${selectedChan.id}/members`);
-        setChannelMembers(response.data.members || []);
-      } catch (error) {
-        console.error("Failed to fetch channel members:", error);
-        setChannelMembers(teamMembers);
-      } finally {
-        setLoadingMembers(false);
-      }
+        const res = await api.get(`/api/channels/${ch.id}/members`);
+        setChannelMembers(res.data.members || []);
+      } catch { setChannelMembers(teamMembers); }
+      finally { setLoadingMembers(false); }
     };
-
-    fetchChannelMembers();
+    fetch();
   }, [project, channels, teamMembers]);
 
-  // Toggle member selection for multi-select
-  const toggleMemberSelection = (memberId) => {
-    setSelectedMembers(prev =>
-      prev.includes(memberId)
-        ? prev.filter(id => id !== memberId)
-        : [...prev, memberId]
-    );
-  };
+  const toggleMember = (id) =>
+    setSelectedMembers((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
 
-  const handleAdd = () => {
-    // Validate all required fields
-    if (!title.trim()) {
-      return showToast("Task title is required", "error");
-    }
+  const handleSubmit = async () => {
+    if (!title.trim()) return showToast("Task title is required", "error");
+    if (!project) return showToast("Please select a channel", "error");
+    if (!dueDate) return showToast("Deadline is required", "error");
 
-    if (!description.trim()) {
-      return showToast("Description is required", "error");
-    }
-
-    if (!project) {
-      return showToast("Please select a channel", "error");
-    }
-
-    if (!dueDate) {
-      return showToast("Deadline is required", "error");
-    }
-
-    // Validate due date
     const selectedDate = new Date(dueDate);
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
     tomorrow.setHours(0, 0, 0, 0);
+    if (!isEditing && selectedDate < tomorrow) return showToast("Due date must be at least tomorrow", "error");
+    if (assignmentType === "individual" && selectedMembers.length === 0)
+      return showToast("Please select at least one member", "error");
 
-    const maxDate = new Date('2100-12-31');
+    const payload = { title, description, project, assignmentType, taskMode, assignedToIds: assignmentType === "individual" ? selectedMembers : [], channelId: assignmentType === "channel" ? selectedChannel : null, dueDate, priority, status, attachments };
 
-    if (selectedDate < tomorrow) {
-      return showToast("Due date must be at least tomorrow", "error");
+    setSaving(true);
+    try {
+      if (isEditing && onUpdateTask) await onUpdateTask(initialData.id, payload);
+      else await onAddTask(payload);
+      onClose();
+    } catch {
+      showToast("Something went wrong", "error");
+    } finally {
+      setSaving(false);
     }
-
-    if (selectedDate > maxDate) {
-      return showToast("Due date cannot exceed year 2100", "error");
-    }
-
-    // Validate assignment based on type
-    if (assignmentType === "individual" && selectedMembers.length === 0) {
-      return showToast("Please select at least one team member", "error");
-    }
-
-    if (assignmentType === "channel" && !selectedChannel) {
-      return showToast("Please select a channel", "error");
-    }
-
-    const taskPayload = {
-      title,
-      description,
-      project,
-      assignmentType,
-      taskMode, // Add task mode (split/shared)
-      assignedToIds: assignmentType === "individual" ? selectedMembers : [],
-      channelId: assignmentType === "channel" ? selectedChannel : null,
-      dueDate,
-      priority,
-      status,
-      attachments, // Include attachments
-    };
-
-    if (isEditing && onUpdateTask) {
-      onUpdateTask(initialData.id, taskPayload);
-    } else {
-      onAddTask(taskPayload);
-    }
-    onClose();
   };
 
-  // Use channel members if available, otherwise use all team members
   const availableMembers = channelMembers.length > 0 ? channelMembers : teamMembers;
+  const filteredMembers = availableMembers.filter((m) =>
+    (m.username || m.email || "").toLowerCase().includes(memberSearch.toLowerCase())
+  );
+
+  const prioConf = PRIORITY_CONFIG[priority] || PRIORITY_CONFIG.Medium;
+  const statConf = STATUS_CONFIG[status] || STATUS_CONFIG["To Do"];
+  const PrioIcon = prioConf.Icon;
+
+  const getDueDateLabel = () => {
+    if (!dueDate) return null;
+    const d = new Date(dueDate);
+    const now = new Date();
+    const diff = Math.ceil((d - now) / 86400000);
+    if (diff < 0) return { text: "Overdue", color: "text-red-500" };
+    if (diff === 0) return { text: "Due today", color: "text-orange-500" };
+    if (diff === 1) return { text: "Due tomorrow", color: "text-amber-500" };
+    return { text: `${diff}d left`, color: "text-gray-400" };
+  };
+  const dueDateLabel = getDueDateLabel();
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-md transition-opacity duration-300">
-      <div className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-2xl rounded-3xl w-full max-w-2xl shadow-2xl shadow-blue-900/20 dark:shadow-black/50 transform transition-all scale-100 overflow-hidden border border-white/50 dark:border-gray-800/50 max-h-[85vh] overflow-y-auto custom-scrollbar">
-
-        {/* Header */}
-        <div className="px-6 py-4 border-b border-gray-100/50 dark:border-gray-800/50 flex justify-between items-center bg-gradient-to-r from-blue-50/50 to-indigo-50/50 dark:from-gray-800/50 dark:to-gray-900/50 sticky top-0 z-10 backdrop-blur-xl">
-          <h2 className="text-xl font-bold text-gray-800 dark:text-white flex items-center gap-3">
-            <span className="bg-gradient-to-br from-blue-600 to-indigo-600 text-white p-2 rounded-xl shadow-lg shadow-blue-500/20">
-              <Briefcase size={20} />
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ backgroundColor: "rgba(0,0,0,0.55)", backdropFilter: "blur(8px)" }}
+    >
+      <div
+        className="bg-white dark:bg-gray-900 rounded-2xl w-full shadow-2xl flex flex-col overflow-hidden border border-gray-200/80 dark:border-gray-700/80"
+        style={{ maxWidth: 860, maxHeight: "90vh" }}
+      >
+        {/* ── Top bar ── */}
+        <div className="flex items-center gap-3 px-5 py-3.5 border-b border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 flex-shrink-0">
+          {/* Issue key badge */}
+          {initialData?.issueKey && (
+            <span className="text-[11px] font-bold text-gray-400 dark:text-gray-500 tracking-widest uppercase bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded-md">
+              {initialData.issueKey}
             </span>
-            <span className="tracking-tight">{isEditing ? (isReadOnly ? "Task Details" : "Update Task") : "Create New Task"}</span>
-          </h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 hover:bg-gray-100 p-2 rounded-full transition-all duration-200">
-            <X size={24} />
+          )}
+
+          <div className="flex items-center gap-2 flex-1 min-w-0">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center flex-shrink-0 shadow-md shadow-blue-500/25">
+              <Briefcase size={15} className="text-white" />
+            </div>
+            <h2 className="text-[14px] font-bold text-gray-800 dark:text-white tracking-tight truncate">
+              {isEditing ? (isReadOnly ? "Task Details" : "Update Task") : "Create New Task"}
+            </h2>
+          </div>
+
+          {/* Quick status pill in header */}
+          {isEditing && (
+            <span className={`hidden sm:flex items-center gap-1.5 text-[11.5px] font-semibold px-2.5 py-1 rounded-full ${statConf.badge}`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${statConf.dot}`} />
+              {status}
+            </span>
+          )}
+
+          <button
+            onClick={onClose}
+            className="flex-shrink-0 w-8 h-8 flex items-center justify-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-all"
+          >
+            <X size={16} />
           </button>
         </div>
 
-        {/* Completion Note (if available) */}
+        {/* ── Banner alerts ── */}
+        {isEditing && !isReadOnly && isAssigner && initialData?.status !== "Completed" && (
+          <div className="flex items-center gap-2.5 px-5 py-2 bg-blue-50 dark:bg-blue-900/20 border-b border-blue-100 dark:border-blue-800/30 text-blue-700 dark:text-blue-400 text-xs font-medium flex-shrink-0">
+            <Shield size={13} className="flex-shrink-0" />
+            You are the assigner — you have full editing access.
+          </div>
+        )}
+        {isEditing && isReadOnly && initialData?.status !== "Completed" && (
+          <div className="flex items-center gap-2.5 px-5 py-2 bg-amber-50 dark:bg-amber-900/20 border-b border-amber-100 dark:border-amber-800/30 text-amber-700 dark:text-amber-400 text-xs font-medium flex-shrink-0">
+            <Eye size={13} className="flex-shrink-0" />
+            View-only. Only <strong className="ml-1">{initialData?.assigner || "the assigner"}</strong>&nbsp;can edit this task.
+          </div>
+        )}
         {initialData?.status === "Completed" && initialData?.completionNote && (
-          <div className="mx-6 mt-4 p-3 bg-emerald-50/80 border border-emerald-100 rounded-2xl flex flex-col gap-2 shadow-sm">
-            <div className="flex items-center gap-2 text-emerald-700 font-bold text-sm">
-              <CheckCircle2 size={18} /> Completion Note
+          <div className="flex items-start gap-2.5 px-5 py-3 bg-emerald-50 dark:bg-emerald-900/20 border-b border-emerald-100 dark:border-emerald-800/30 flex-shrink-0">
+            <CheckCircle2 size={14} className="text-emerald-600 flex-shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-semibold text-emerald-800 dark:text-emerald-300 mb-0.5">Completion note</p>
+              <p className="text-xs text-emerald-700 dark:text-emerald-400 italic">"{initialData.completionNote}"</p>
             </div>
-            <p className="text-emerald-800 text-sm italic pl-6 border-l-2 border-emerald-200">"{initialData.completionNote}"</p>
             {initialData.completedAt && (
-              <span className="text-[10px] text-emerald-600 font-bold uppercase tracking-wider pl-6 self-end">
-                Completed on {new Date(initialData.completedAt).toLocaleDateString()}
+              <span className="text-[10px] text-emerald-500 font-semibold whitespace-nowrap">
+                {new Date(initialData.completedAt).toLocaleDateString()}
               </span>
             )}
           </div>
         )}
 
-        {/* Assigner View Warning */}
-        {isEditing && !isReadOnly && String(initialData?.assignerId) === String(user?._id) && initialData?.status !== "Completed" && (
-          <div className="mx-6 mt-4 p-3 bg-blue-50/50 border border-blue-100 rounded-2xl flex items-center gap-3 text-blue-700 text-xs font-semibold shadow-sm">
-            <User size={18} className="text-blue-500" />
-            <span>You are the assigner. You have full edit access to this task.</span>
+        {/* ── Body: two-column layout ── */}
+        <div className="flex flex-1 overflow-hidden">
+
+          {/* LEFT – main content */}
+          <div className="flex-1 overflow-y-auto p-5 space-y-5 min-w-0" style={{ scrollbarWidth: "thin" }}>
+
+            {/* Title */}
+            <div>
+              <input
+                type="text"
+                readOnly={isReadOnly}
+                placeholder="Task title…"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                className={`w-full text-[18px] font-bold text-gray-900 dark:text-white placeholder-gray-300 dark:placeholder-gray-600 bg-transparent outline-none border-0 border-b-2 pb-1.5 transition-colors ${isReadOnly ? "border-transparent cursor-default" : "border-gray-100 dark:border-gray-800 focus:border-blue-500 dark:focus:border-blue-500"}`}
+              />
+            </div>
+
+            {/* Description */}
+            <div>
+              <label className="flex items-center gap-1.5 text-[10.5px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-2">
+                <AlignLeft size={11} /> Description
+              </label>
+              <textarea
+                readOnly={isReadOnly}
+                placeholder="Add context, requirements, acceptance criteria…"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                rows={4}
+                className={`w-full px-3.5 py-3 text-[13px] text-gray-700 dark:text-gray-200 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700/60 rounded-xl resize-none outline-none leading-relaxed placeholder-gray-300 dark:placeholder-gray-600 transition-all ${isReadOnly ? "cursor-default opacity-80" : "focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white dark:focus:bg-gray-800"}`}
+              />
+            </div>
+
+            {/* Attachments / Resources */}
+            <div>
+              <label className="flex items-center gap-1.5 text-[10.5px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-2">
+                <Paperclip size={11} /> Resources
+              </label>
+              <div className="space-y-2">
+                {!isReadOnly && (
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      placeholder="Paste a URL (Figma, Notion, GitHub…)"
+                      value={newAttachmentUrl}
+                      onChange={(e) => setNewAttachmentUrl(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && newAttachmentUrl.trim()) {
+                          setAttachments([...attachments, { name: newAttachmentUrl, url: newAttachmentUrl, type: "link" }]);
+                          setNewAttachmentUrl("");
+                        }
+                      }}
+                      className="flex-1 px-3.5 py-2 text-[12.5px] bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700/60 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-gray-800 dark:text-white placeholder-gray-300 dark:placeholder-gray-600 transition-all"
+                    />
+                    <button
+                      onClick={() => {
+                        if (!newAttachmentUrl.trim()) return;
+                        setAttachments([...attachments, { name: newAttachmentUrl, url: newAttachmentUrl, type: "link" }]);
+                        setNewAttachmentUrl("");
+                      }}
+                      className="px-3 py-2 bg-gray-900 dark:bg-blue-600 text-white rounded-xl text-xs font-semibold hover:bg-gray-800 dark:hover:bg-blue-700 transition-all active:scale-95 flex items-center gap-1"
+                    >
+                      <Plus size={13} />
+                    </button>
+                  </div>
+                )}
+                {attachments.length > 0 ? (
+                  <div className="space-y-1.5">
+                    {attachments.map((att, i) => (
+                      <div key={i} className="group flex items-center gap-2.5 px-3 py-2 bg-white dark:bg-gray-800/60 border border-gray-100 dark:border-gray-700/50 rounded-xl hover:border-blue-200 dark:hover:border-blue-700/50 transition-all">
+                        <LinkIcon size={12} className="text-blue-400 flex-shrink-0" />
+                        <a href={att.url} target="_blank" rel="noopener noreferrer" className="flex-1 text-[12px] text-blue-600 dark:text-blue-400 truncate hover:underline font-medium">
+                          {att.name || att.url}
+                        </a>
+                        {!isReadOnly && (
+                          <button onClick={() => setAttachments(attachments.filter((_, j) => j !== i))} className="opacity-0 group-hover:opacity-100 text-gray-300 hover:text-red-500 transition-all p-0.5">
+                            <X size={13} />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-[11.5px] text-gray-300 dark:text-gray-600 italic px-1">No resources added yet.</p>
+                )}
+              </div>
+            </div>
+
+            {/* Member multi-select section — shown inline on left for individual type */}
+            {assignmentType === "individual" && (
+              <div>
+                <label className="flex items-center gap-1.5 text-[10.5px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-2">
+                  <Users size={11} /> Assign Members
+                </label>
+                <div className="border border-gray-200 dark:border-gray-700/60 rounded-xl overflow-hidden">
+                  {/* search */}
+                  {!isReadOnly && (
+                    <div className="px-3 py-2 border-b border-gray-100 dark:border-gray-800">
+                      <input
+                        type="text"
+                        placeholder="Search members…"
+                        value={memberSearch}
+                        onChange={(e) => setMemberSearch(e.target.value)}
+                        className="w-full text-[12px] bg-transparent outline-none text-gray-700 dark:text-gray-200 placeholder-gray-300 dark:placeholder-gray-600"
+                      />
+                    </div>
+                  )}
+                  <div className="max-h-44 overflow-y-auto divide-y divide-gray-50 dark:divide-gray-800/60" style={{ scrollbarWidth: "thin" }}>
+                    {loadingMembers ? (
+                      <div className="flex items-center gap-2 justify-center py-6 text-gray-400 text-xs">
+                        <Loader2 size={14} className="animate-spin" /> Loading members…
+                      </div>
+                    ) : filteredMembers.length === 0 ? (
+                      <p className="text-center text-[12px] text-gray-400 py-5">No members found.</p>
+                    ) : filteredMembers.map((m) => {
+                      const id = m._id || m.id;
+                      const sel = selectedMembers.includes(id);
+                      return (
+                        <button
+                          key={id}
+                          type="button"
+                          disabled={isReadOnly}
+                          onClick={() => toggleMember(id)}
+                          className={`w-full flex items-center gap-3 px-3 py-2.5 text-left transition-all ${sel ? "bg-blue-50 dark:bg-blue-900/20" : "hover:bg-gray-50 dark:hover:bg-gray-800/60"} ${isReadOnly ? "cursor-default" : ""}`}
+                        >
+                          <Avatar name={m.username || m.email} size="sm" />
+                          <span className={`flex-1 text-[12.5px] font-medium ${sel ? "text-blue-700 dark:text-blue-300" : "text-gray-700 dark:text-gray-200"}`}>
+                            {m.username || m.email}
+                          </span>
+                          <div className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 transition-all ${sel ? "bg-blue-600 border-blue-600" : "border-gray-300 dark:border-gray-600"}`}>
+                            {sel && <Check size={10} className="text-white" strokeWidth={3} />}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Selected summary */}
+                {selectedMembers.length > 0 && (
+                  <div className="mt-2 flex items-center gap-2">
+                    <div className="flex -space-x-2">
+                      {selectedMembers.slice(0, 4).map((id) => {
+                        const m = availableMembers.find((x) => (x._id || x.id) === id);
+                        return m ? <Avatar key={id} name={m.username || m.email} size="sm" /> : null;
+                      })}
+                      {selectedMembers.length > 4 && (
+                        <div className="w-7 h-7 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-[10px] font-bold text-gray-500 ring-2 ring-white dark:ring-gray-900">
+                          +{selectedMembers.length - 4}
+                        </div>
+                      )}
+                    </div>
+                    <span className="text-[11.5px] text-gray-400">
+                      {selectedMembers.length} member{selectedMembers.length > 1 ? "s" : ""} selected
+                    </span>
+                  </div>
+                )}
+
+                {/* Task mode toggle for multiple assigns */}
+                {selectedMembers.length > 1 && !isReadOnly && (
+                  <div className="mt-3 p-3 bg-blue-50/50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-800/30 rounded-xl">
+                    <p className="text-[10.5px] font-bold uppercase tracking-widest text-blue-500 mb-2">Task Mode</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      {[{ id: "split", emoji: "📋", label: "Split", sub: "Each gets their own copy" }, { id: "shared", emoji: "🤝", label: "Shared", sub: "Collaborate together" }].map((m) => (
+                        <button key={m.id} type="button" onClick={() => setTaskMode(m.id)}
+                          className={`px-3 py-2.5 rounded-xl border text-left transition-all ${taskMode === m.id ? "bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-500/25" : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:border-blue-300"}`}>
+                          <div className="text-sm font-bold">{m.emoji} {m.label}</div>
+                          <div className={`text-[10px] mt-0.5 ${taskMode === m.id ? "text-blue-200" : "text-gray-400"}`}>{m.sub}</div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Channel assignment */}
+            {assignmentType === "channel" && (
+              <div>
+                <label className="flex items-center gap-1.5 text-[10.5px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-2">
+                  <Hash size={11} /> Full Channel
+                </label>
+                <select
+                  value={selectedChannel}
+                  onChange={(e) => setSelectedChannel(e.target.value)}
+                  disabled={isReadOnly || (!!project && channels.some((c) => c.label === project || c.id === project))}
+                  className="w-full px-3.5 py-2.5 text-[13px] bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700/60 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-gray-700 dark:text-gray-200 font-medium disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  <option value="">Select target channel</option>
+                  {channels.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
+                </select>
+                {selectedChannel && (
+                  <p className="flex items-center gap-1.5 mt-1.5 text-[11.5px] text-blue-500 font-medium">
+                    <Users size={11} /> All channel members will be notified.
+                  </p>
+                )}
+              </div>
+            )}
           </div>
-        )}
 
-        {/* Assignee View Note */}
-        {isEditing && isReadOnly && initialData?.status !== "Completed" && (
-          <div className="mx-6 mt-4 p-3 bg-amber-50/50 border border-amber-100 rounded-2xl flex items-center gap-3 text-amber-700 text-xs font-semibold shadow-sm">
-            <AlignLeft size={18} className="text-amber-500" /> :
-            <span>Read-only mode. Only {initialData.assigner} can modify these details.</span>
-          </div>
-        )}
+          {/* RIGHT – metadata sidebar */}
+          <div className="w-[220px] flex-shrink-0 border-l border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/30 p-4 overflow-y-auto space-y-5" style={{ scrollbarWidth: "thin" }}>
 
-        {/* Body */}
-        <div className="p-6 space-y-4">
+            {/* Status */}
+            {isEditing && (
+              <div>
+                <p className="text-[9.5px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-2">Status</p>
+                {isReadOnly ? (
+                  <span className={`inline-flex items-center gap-1.5 text-[12px] font-semibold px-2.5 py-1 rounded-lg ${statConf.badge}`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${statConf.dot}`} />
+                    {status}
+                  </span>
+                ) : (
+                  <Dropdown
+                    trigger={
+                      <button className={`w-full flex items-center justify-between gap-2 px-2.5 py-2 rounded-lg border text-[12px] font-semibold cursor-pointer transition-all hover:shadow-sm ${statConf.badge} border-transparent`}>
+                        <span className="flex items-center gap-1.5">
+                          <span className={`w-1.5 h-1.5 rounded-full ${statConf.dot}`} />
+                          {status}
+                        </span>
+                        <ChevronDown size={12} />
+                      </button>
+                    }
+                  >
+                    {(close) => statuses.map((s) => {
+                      const c = STATUS_CONFIG[s];
+                      return (
+                        <button key={s} onClick={() => { setStatus(s); close(); }}
+                          className={`w-full flex items-center gap-2.5 px-3 py-2 text-[12.5px] font-medium transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/60 ${status === s ? "text-blue-600 bg-blue-50 dark:bg-blue-900/20 dark:text-blue-400" : "text-gray-700 dark:text-gray-200"}`}>
+                          <span className={`w-2 h-2 rounded-full ${c.dot}`} />
+                          {s}
+                          {status === s && <Check size={11} className="ml-auto text-blue-500" />}
+                        </button>
+                      );
+                    })}
+                  </Dropdown>
+                )}
+              </div>
+            )}
 
-          {/* Title - Floating Label Style */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider flex items-center gap-1.5 ml-1">
-              <Type size={12} /> Task Title
-            </label>
-            <input
-              type="text"
-              readOnly={initialData?.status === "Completed"}
-              placeholder="What needs to be done?"
-              className={`w-full px-4 py-2.5 bg-gray-50/50 dark:bg-gray-800/50 border border-gray-200/60 dark:border-gray-700/60 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white dark:focus:bg-gray-800 transition-all outline-none text-gray-900 dark:text-white font-medium placeholder-gray-400 shadow-sm ${isReadOnly ? "cursor-default opacity-80" : ""}`}
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-            />
-          </div>
-
-          {/* Description */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider flex items-center gap-1.5 ml-1">
-              <AlignLeft size={12} /> Description
-            </label>
-            <textarea
-              readOnly={initialData?.status === "Completed"}
-              placeholder="Add comprehensive details, context, and requirements..."
-              className={`w-full px-4 py-2.5 bg-gray-50/50 dark:bg-gray-800/50 border border-gray-200/60 dark:border-gray-700/60 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white dark:focus:bg-gray-800 transition-all outline-none text-gray-900 dark:text-white leading-relaxed placeholder-gray-400 min-h-[80px] resize-none shadow-sm ${initialData?.status === "Completed" ? "cursor-default opacity-80" : ""}`}
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
+            {/* Priority */}
+            <div>
+              <p className="text-[9.5px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-2">Priority</p>
+              {isReadOnly ? (
+                <span className={`inline-flex items-center gap-1.5 text-[12px] font-semibold px-2.5 py-1 rounded-lg ${prioConf.badge}`}>
+                  <PrioIcon size={11} className={prioConf.iconColor} />
+                  {priority}
+                </span>
+              ) : (
+                <Dropdown
+                  trigger={
+                    <button className={`w-full flex items-center justify-between gap-2 px-2.5 py-2 rounded-lg border text-[12px] font-semibold cursor-pointer transition-all hover:shadow-sm ${prioConf.badge} border-transparent`}>
+                      <span className="flex items-center gap-1.5">
+                        <PrioIcon size={11} className={prioConf.iconColor} />
+                        {priority}
+                      </span>
+                      <ChevronDown size={12} />
+                    </button>
+                  }
+                >
+                  {(close) => priorities.map((p) => {
+                    const c = PRIORITY_CONFIG[p];
+                    const PI = c.Icon;
+                    return (
+                      <button key={p} onClick={() => { setPriority(p); close(); }}
+                        className={`w-full flex items-center gap-2.5 px-3 py-2 text-[12.5px] font-medium transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/60 ${priority === p ? "text-blue-600 bg-blue-50 dark:bg-blue-900/20 dark:text-blue-400" : "text-gray-700 dark:text-gray-200"}`}>
+                        <PI size={13} className={c.iconColor} />
+                        {p}
+                        {priority === p && <Check size={11} className="ml-auto text-blue-500" />}
+                      </button>
+                    );
+                  })}
+                </Dropdown>
+              )}
+            </div>
 
             {/* Channel */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider flex items-center gap-1.5 ml-1">
-                <Hash size={12} /> Channel
-              </label>
-              <div className="relative">
+            <div>
+              <p className="text-[9.5px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-2">Channel</p>
+              {isReadOnly ? (
+                <span className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-gray-700 dark:text-gray-200">
+                  <Hash size={11} className="text-gray-400" />{project || "—"}
+                </span>
+              ) : (
                 <select
                   value={project}
-                  disabled={isReadOnly}
                   onChange={(e) => setProject(e.target.value)}
-                  className={`w-full px-4 py-2.5 bg-gray-50/50 dark:bg-gray-800/50 border border-gray-200/60 dark:border-gray-700/60 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none text-gray-700 dark:text-gray-200 appearance-none font-medium transition-all shadow-sm ${initialData?.status === "Completed" ? "cursor-default opacity-80" : "hover:bg-gray-100 dark:hover:bg-gray-700/50"}`}
+                  className="w-full px-2.5 py-2 text-[12px] bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-gray-700 dark:text-gray-200 font-medium"
                 >
-                  <option value="">Select Channel</option>
-                  {channels.length > 0 ? channels.map((ch) => (
-                    <option key={ch.id} value={ch.label}>{ch.label}</option>
-                  )) : (
+                  <option value="">Select channel</option>
+                  {channels.length > 0 ? channels.map((c) => <option key={c.id} value={c.label}>{c.label}</option>) : (
                     <>
                       <option value="General">General</option>
                       <option value="Development">Development</option>
-                      <option value="Design">Design</option>
                     </>
                   )}
                 </select>
-              </div>
+              )}
             </div>
 
-            {/* Due Date */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider flex items-center gap-1.5 ml-1">
-                <Calendar size={12} /> Deadline
-              </label>
-              <input
-                type="date"
-                readOnly={isReadOnly}
-                className={`w-full px-4 py-2.5 bg-gray-50/50 dark:bg-gray-800/50 border border-gray-200/60 dark:border-gray-700/60 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none text-gray-700 dark:text-gray-200 font-medium shadow-sm transition-all ${isReadOnly ? "cursor-default opacity-80" : "hover:bg-gray-100 dark:hover:bg-gray-700/50"}`}
-                value={dueDate}
-                onChange={(e) => setDueDate(e.target.value)}
-                min={new Date(new Date().setDate(new Date().getDate() + 1)).toISOString().split('T')[0]}
-                max="2100-12-31"
-              />
-            </div>
-          </div>
-
-          {/* Assignment Type */}
-          <div className="space-y-2">
-            <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider flex items-center gap-1.5 ml-1">
-              <User size={12} /> Assign To
-            </label>
-            <div className="grid grid-cols-3 gap-2">
-              {[
-                { id: "self", icon: User, label: "Me" },
-                { id: "individual", icon: Users, label: "Member(s)" },
-                { id: "channel", icon: Hash, label: "Full Channel" }
-              ].map((type) => (
-                <button
-                  key={type.id}
-                  type="button"
-                  disabled={isReadOnly}
-                  onClick={() => {
-                    if (type.id === "self") setSelectedMembers([]);
-                    if (type.id === "channel") setSelectedMembers([]);
-                    setAssignmentType(type.id);
-                  }}
-                  className={`px-3 py-2.5 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 border ${assignmentType === type.id
-                    ? "bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-500/30 scale-[1.02]"
-                    : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
-                    } ${isReadOnly && assignmentType !== type.id ? "hidden" : ""} ${isReadOnly && assignmentType === type.id ? "w-full col-span-3 cursor-default" : ""}`}
-                >
-                  <type.icon size={16} /> {type.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Task Mode (Split/Shared) - Only show for individual multi-select */}
-          {assignmentType === "individual" && selectedMembers.length > 1 && !isReadOnly && (
-            <div className="space-y-2 p-3 bg-blue-50/30 dark:bg-blue-900/10 border border-blue-100/50 dark:border-blue-800/30 rounded-2xl">
-              <label className="text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
-                Task Mode
-              </label>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => setTaskMode('split')}
-                  className={`px-3 py-2.5 rounded-xl font-bold text-sm transition-all flex flex-col items-center justify-center gap-1 border ${taskMode === 'split'
-                    ? "bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-500/30"
-                    : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700"
-                    }`}
-                >
-                  <span>📋 Split</span>
-                  <span className="text-[10px] opacity-80">Independent work</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setTaskMode('shared')}
-                  className={`px-3 py-2.5 rounded-xl font-bold text-sm transition-all flex flex-col items-center justify-center gap-1 border ${taskMode === 'shared'
-                    ? "bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-500/30"
-                    : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700"
-                    }`}
-                >
-                  <span>🤝 Shared</span>
-                  <span className="text-[10px] opacity-80">Collaborate together</span>
-                </button>
-              </div>
-              <p className="text-xs text-blue-600 dark:text-blue-400 px-1">
-                {taskMode === 'split'
-                  ? "✨ Each person gets their own task copy"
-                  : "✨ Everyone works on the same task together"}
-              </p>
-            </div>
-          )}
-
-          {/* Individual Assignment - Multi-select */}
-          {assignmentType === "individual" && (
-            <div className="space-y-2 max-h-36 overflow-y-auto border border-gray-200/60 dark:border-gray-700/60 rounded-2xl p-3 bg-gray-50/30 dark:bg-gray-800/30 custom-scrollbar shadow-inner">
-              {loadingMembers ? (
-                <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-2 font-medium animate-pulse">Loading directory...</p>
-              ) : availableMembers.length > 0 ? (
-                availableMembers.map((member) => {
-                  const memberId = member._id || member.id;
-                  const isSelected = selectedMembers.includes(memberId);
-                  return (
-                    <label
-                      key={memberId}
-                      className={`flex items-center gap-3 p-2 rounded-xl cursor-pointer transition-all ${isSelected ? "bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800" : "hover:bg-white dark:hover:bg-gray-700 hover:shadow-sm border border-transparent"}`}
-                    >
-                      <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${isSelected ? "bg-blue-500 border-blue-500" : "bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"}`}>
-                        {isSelected && <CheckCircle2 size={12} className="text-white" />}
-                      </div>
-                      <input
-                        type="checkbox"
-                        disabled={isReadOnly}
-                        checked={isSelected}
-                        onChange={() => toggleMemberSelection(memberId)}
-                        className="hidden"
-                      />
-                      <span className={`text-xs font-medium ${isSelected ? "text-blue-700 dark:text-blue-400" : "text-gray-700 dark:text-gray-300"}`}>{member.username || member.email}</span>
-                    </label>
-                  );
-                })
+            {/* Due date */}
+            <div>
+              <p className="text-[9.5px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-2">Due Date</p>
+              {isReadOnly ? (
+                <div className="space-y-0.5">
+                  <span className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-gray-700 dark:text-gray-200">
+                    <Calendar size={11} className="text-gray-400" />
+                    {dueDate ? new Date(dueDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—"}
+                  </span>
+                  {dueDateLabel && <p className={`text-[10.5px] font-semibold ml-4 ${dueDateLabel.color}`}>{dueDateLabel.text}</p>}
+                </div>
               ) : (
-                <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-2">No team members available</p>
+                <div className="space-y-1">
+                  <input
+                    type="date"
+                    value={dueDate}
+                    onChange={(e) => setDueDate(e.target.value)}
+                    min={new Date(new Date().setDate(new Date().getDate() + 1)).toISOString().split("T")[0]}
+                    max="2100-12-31"
+                    className="w-full px-2.5 py-2 text-[12px] bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-gray-700 dark:text-gray-200 font-medium"
+                  />
+                  {dueDateLabel && <p className={`text-[10.5px] font-semibold ${dueDateLabel.color}`}>{dueDateLabel.text}</p>}
+                </div>
               )}
             </div>
-          )}
 
-          {/* Channel Assignment */}
-          {assignmentType === "channel" && (
-            <div className="space-y-2 p-3 bg-blue-50/30 dark:bg-blue-900/10 border border-blue-100/50 dark:border-blue-800/30 rounded-2xl">
-              <select
-                value={selectedChannel}
-                onChange={(e) => setSelectedChannel(e.target.value)}
-                className="w-full px-4 py-2.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none text-gray-700 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed font-medium shadow-sm"
-                disabled={initialData?.status === "Completed" || (!!project && channels.some(ch => ch.label === project || ch.id === project))}
-              >
-                <option value="">Select Target Channel</option>
-                {channels.length > 0 ? channels.map((ch) => (
-                  <option key={ch.id} value={ch.id}>{ch.label}</option>
-                )) : (
-                  <>
-                    <option value="general">General</option>
-                    <option value="dev">Development</option>
-                  </>
-                )}
-              </select>
-              {selectedChannel && (
-                <p className="text-xs text-blue-600 dark:text-blue-400 flex items-center gap-1.5 px-1 font-medium">
-                  <Users size={12} /> Everyone in this channel will be notified.
-                </p>
-              )}
-            </div>
-          )}
-
-          {/* Priority */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider flex items-center gap-1.5 ml-1">
-              <Flag size={12} /> Urgency Level
-            </label>
-            <div className="relative">
-              <select
-                value={priority}
-                disabled={initialData?.status === "Completed"}
-                onChange={(e) => setPriority(e.target.value)}
-                className={`w-full px-4 py-2.5 bg-gray-50/50 dark:bg-gray-800/50 border border-gray-200/60 dark:border-gray-700/60 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none appearance-none font-medium transition-all shadow-sm ${priority === "Emergency" ? "text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800/50" :
-                  priority === "High" ? "text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-800/50" :
-                    "text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700/50"
-                  } ${initialData?.status === "Completed" ? "cursor-default opacity-80" : ""}`}
-              >
-                {priorities.map((p) => (
-                  <option key={p} value={p}>{p}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {/* Attachments Section */}
-          <div className="space-y-2 pt-1">
-            <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider flex items-center gap-1.5 ml-1">
-              <Paperclip size={12} /> Resources
-            </label>
-            <div className="space-y-2 bg-gray-50/30 dark:bg-gray-800/30 p-3 rounded-2xl border border-gray-200/50 dark:border-gray-700/50">
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  placeholder="Paste URL (e.g., https://figma.com/...)"
-                  value={newAttachmentUrl}
-                  onChange={e => setNewAttachmentUrl(e.target.value)}
-                  className="flex-1 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm text-gray-900 dark:text-white"
-                />
-                <button
-                  onClick={() => {
-                    if (!newAttachmentUrl) return;
-                    setAttachments([...attachments, { name: newAttachmentUrl, url: newAttachmentUrl, type: 'link' }]);
-                    setNewAttachmentUrl("");
-                  }}
-                  className="p-2 bg-gray-900 dark:bg-gray-700 text-white rounded-xl hover:bg-gray-800 dark:hover:bg-gray-600 transition-all shadow-lg shadow-gray-900/20 active:scale-95"
-                >
-                  <Plus size={18} />
-                </button>
-              </div>
-
-              {attachments.length > 0 && (
-                <div className="flex flex-col gap-2">
-                  {attachments.map((att, idx) => (
-                    <div key={idx} className="flex justify-between items-center text-sm p-2 bg-white dark:bg-gray-800 border border-blue-100 dark:border-gray-700 rounded-xl shadow-sm text-blue-700 dark:text-blue-400 hover:shadow-md transition-shadow group">
-                      <div className="flex items-center gap-3 overflow-hidden">
-                        <LinkIcon size={14} className="shrink-0 text-blue-400" />
-                        <a href={att.url} target="_blank" rel="noopener noreferrer" className="truncate font-medium hover:underline">
-                          {att.name || att.url}
-                        </a>
-                      </div>
-                      <button onClick={() => setAttachments(attachments.filter((_, i) => i !== idx))} className="text-gray-300 dark:text-gray-600 hover:text-red-500 dark:hover:text-red-400 p-1 opacity-0 group-hover:opacity-100 transition-all">
-                        <X size={16} />
-                      </button>
-                    </div>
+            {/* Assign to type */}
+            <div>
+              <p className="text-[9.5px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-2">Assignee</p>
+              {isReadOnly ? (
+                <span className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-gray-700 dark:text-gray-200">
+                  {assignmentType === "self" && <><User size={11} className="text-gray-400" /> Me</>}
+                  {assignmentType === "individual" && <><Users size={11} className="text-gray-400" /> {selectedMembers.length} member{selectedMembers.length !== 1 ? "s" : ""}</>}
+                  {assignmentType === "channel" && <><Hash size={11} className="text-gray-400" /> Full Channel</>}
+                </span>
+              ) : (
+                <div className="flex flex-col gap-1">
+                  {[
+                    { id: "self", Icon: User, label: "Me" },
+                    { id: "individual", Icon: Users, label: "Member(s)" },
+                    { id: "channel", Icon: Hash, label: "Full Channel" },
+                  ].map(({ id, Icon: BtnIcon, label }) => (
+                    <button
+                      key={id}
+                      type="button"
+                      onClick={() => {
+                        if (id === "self" || id === "channel") setSelectedMembers([]);
+                        setAssignmentType(id);
+                      }}
+                      className={`flex items-center gap-2 px-2.5 py-2 rounded-lg text-[12px] font-semibold border transition-all ${assignmentType === id
+                        ? "bg-blue-600 border-blue-600 text-white shadow-md shadow-blue-500/20"
+                        : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-600"
+                        }`}
+                    >
+                      <BtnIcon size={13} /> {label}
+                    </button>
                   ))}
                 </div>
               )}
             </div>
-          </div>
 
+            {/* Assignees avatars (read mode) */}
+            {isEditing && initialData?.assignees?.length > 0 && (
+              <div>
+                <p className="text-[9.5px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-2">People</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {initialData.assignees.map((a) => (
+                    <div key={a._id} className="flex items-center gap-1.5 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-full pr-2.5 pl-0.5 py-0.5">
+                      <Avatar name={a.username || a.email} size="sm" />
+                      <span className="text-[11px] font-medium text-gray-700 dark:text-gray-200 max-w-[80px] truncate">{a.username || a.email}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* Footer */}
-        <div className="px-6 py-4 bg-gray-50/80 dark:bg-gray-800/80 backdrop-blur-md border-t border-gray-200/60 dark:border-gray-700/60 flex justify-between gap-4 sticky bottom-0 z-10">
-          {/* Status (Hidden unless editing) */}
-          {/* If needed, status dropdown could go here, but usually managed in dashboard */}
-          <div></div>
-
-          <div className="flex items-center gap-3">
+        {/* ── Footer ── */}
+        <div className="flex items-center justify-between gap-4 px-5 py-3.5 border-t border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 flex-shrink-0">
+          <div className="text-[11px] text-gray-400 dark:text-gray-500">
+            {isEditing && initialData?.updatedAt && (
+              <>Last updated&nbsp;{new Date(initialData.updatedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</>
+            )}
+          </div>
+          <div className="flex items-center gap-2.5">
             <button
               onClick={onClose}
-              className="px-6 py-2.5 rounded-xl text-gray-600 dark:text-gray-300 font-bold text-sm hover:bg-gray-200/80 dark:hover:bg-gray-700/80 transition-colors"
+              className="px-4 py-2 text-[13px] font-semibold text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-all"
             >
               Cancel
             </button>
-            <button
-              onClick={handleAdd}
-              className={`px-6 py-2.5 rounded-xl bg-gradient-to-r from-gray-900 to-gray-800 dark:from-blue-600 dark:to-blue-700 text-white font-bold text-sm shadow-xl shadow-gray-900/20 dark:shadow-blue-900/40 hover:shadow-gray-900/30 hover:scale-[1.02] transition-all active:scale-95 flex items-center gap-2 ${isReadOnly ? "hidden" : ""}`}
-            >
-              {isEditing ? "Update Task" : "Create Task"}
-            </button>
+            {!isReadOnly && (
+              <button
+                onClick={handleSubmit}
+                disabled={saving}
+                className="flex items-center gap-2 px-5 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-[13px] font-bold rounded-xl shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 transition-all active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {saving ? <Loader2 size={14} className="animate-spin" /> : (isEditing ? <Edit3 size={14} /> : <Plus size={14} />)}
+                {saving ? "Saving…" : isEditing ? "Update Task" : "Create Task"}
+              </button>
+            )}
           </div>
         </div>
-
       </div>
     </div>
   );
