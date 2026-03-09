@@ -1,16 +1,60 @@
 // client/src/pages/admin/WorkspacesManagement.jsx
 import React, { useState, useEffect, useCallback } from 'react';
-import { Globe, Users, Calendar, MoreVertical, Plus, Search, Filter } from 'lucide-react';
+import { Globe, Users, Calendar, MoreVertical, Plus, Search, Filter, Rocket, Briefcase, Zap, Palette, Trophy, Target, Flame, Microscope, Shield, Lightbulb, Sparkles } from 'lucide-react';
 import { useToast } from '../../contexts/ToastContext';
+import { useAuth } from '../../contexts/AuthContext';
 import api from '../../services/api';
+import CreateWorkspaceModal from '../workspaceSelectComponents/CreateWorkspaceModal';
 
+// ── Icon helper — same pattern used in WorkspaceSelect.jsx ──────────────────
+const ICON_MAP = {
+    rocket: Rocket,
+    briefcase: Briefcase,
+    zap: Zap,
+    palette: Palette,
+    globe: Globe,
+    trophy: Trophy,
+    target: Target,
+    flame: Flame,
+    microscope: Microscope,
+    shield: Shield,
+    lightbulb: Lightbulb,
+    sparkles: Sparkles,
+};
+
+function getIconComponent(name) {
+    return ICON_MAP[name] || Globe;
+}
+
+// ── Default form state ───────────────────────────────────────────────────────
+const DEFAULT_CREATE_DATA = {
+    name: '',
+    rules: '',
+    icon: 'rocket',
+    color: '#4f46e5',
+    invites: '',
+};
+
+// ── Component ────────────────────────────────────────────────────────────────
 const WorkspacesManagement = () => {
     const { showToast } = useToast();
+    const { user } = useAuth();
+
+    // List state
     const [workspaces, setWorkspaces] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
-    const [filterStatus, setFilterStatus] = useState('all'); // all, active, archived
+    const [filterStatus, setFilterStatus] = useState('all');
 
+    // Modal state
+    const [modalOpen, setModalOpen] = useState(false);
+    const [createStep, setCreateStep] = useState(1);
+    const [createData, setCreateData] = useState(DEFAULT_CREATE_DATA);
+    const [nameError, setNameError] = useState('');
+    const [termsAccepted, setTermsAccepted] = useState(false);
+    const [creating, setCreating] = useState(false);
+
+    // ── Fetch workspaces ─────────────────────────────────────────────────────
     const fetchWorkspaces = useCallback(async () => {
         try {
             setLoading(true);
@@ -19,7 +63,7 @@ const WorkspacesManagement = () => {
         } catch (error) {
             console.error('Error fetching workspaces:', error);
             showToast('Failed to load workspaces', 'error');
-            setWorkspaces([]); // Set empty array on error
+            setWorkspaces([]);
         } finally {
             setLoading(false);
         }
@@ -29,27 +73,86 @@ const WorkspacesManagement = () => {
         fetchWorkspaces();
     }, [fetchWorkspaces]);
 
+    // ── Open / close modal ───────────────────────────────────────────────────
+    const handleOpenModal = () => {
+        setCreateStep(1);
+        setCreateData(DEFAULT_CREATE_DATA);
+        setNameError('');
+        setTermsAccepted(false);
+        setModalOpen(true);
+    };
+
+    const handleCloseModal = () => {
+        setModalOpen(false);
+        // Reset after animation
+        setTimeout(() => {
+            setCreateStep(1);
+            setCreateData(DEFAULT_CREATE_DATA);
+            setNameError('');
+            setTermsAccepted(false);
+        }, 300);
+    };
+
+    // ── Submit handler ───────────────────────────────────────────────────────
+    const handleSubmit = async (e) => {
+        if (e && e.preventDefault) e.preventDefault();
+        if (creating) return;
+
+        if (!createData.name.trim()) {
+            setNameError('Workspace name is required');
+            setCreateStep(1);
+            return;
+        }
+
+        try {
+            setCreating(true);
+            const payload = {
+                name: createData.name.trim(),
+                description: createData.rules?.trim() || '',
+                icon: createData.icon,
+                color: createData.color,
+                type: 'general',
+                settings: { isPrivate: false, allowMemberInvite: true },
+            };
+
+            await api.post('/api/workspaces', payload);
+            showToast(`Workspace "${payload.name}" created!`, 'success');
+            handleCloseModal();
+            fetchWorkspaces(); // Refresh the list
+        } catch (err) {
+            console.error('Create workspace error:', err);
+            const message = err.response?.data?.message || 'Failed to create workspace';
+            showToast(message, 'error');
+        } finally {
+            setCreating(false);
+        }
+    };
+
+    // ── Filtered list ────────────────────────────────────────────────────────
     const filteredWorkspaces = workspaces.filter(workspace => {
-        const matchesSearch = workspace.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        const matchesSearch =
+            workspace.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
             workspace.description?.toLowerCase().includes(searchTerm.toLowerCase());
         const matchesFilter = filterStatus === 'all' || workspace.status === filterStatus;
         return matchesSearch && matchesFilter;
     });
 
+    // ── Render ───────────────────────────────────────────────────────────────
     return (
         <div className="flex flex-col h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
             {/* Header */}
             <header className="h-16 px-8 flex items-center justify-between z-10 bg-white dark:bg-gray-800 border-b border-slate-200 dark:border-gray-700 shadow-sm">
                 <div>
                     <h2 className="text-xl font-black text-slate-800 dark:text-white flex items-center gap-2">
-                    
                         Workspaces Management
                     </h2>
                     <p className="text-xs text-slate-500 dark:text-gray-400 font-medium ml-8">
                         Manage all company workspaces
                     </p>
                 </div>
+                {/* ✅ FIX: onClick wired to open the Create Workspace modal */}
                 <button
+                    onClick={handleOpenModal}
                     className="px-4 py-2 bg-indigo-600 text-white text-sm font-bold rounded-lg hover:bg-indigo-700 transition-colors shadow-md hover:shadow-lg flex items-center gap-2"
                 >
                     <Plus size={16} />
@@ -100,70 +203,102 @@ const WorkspacesManagement = () => {
                         <div className="text-center py-20">
                             <Globe className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
                             <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">No workspaces found</h3>
-                            <p className="text-gray-500 dark:text-gray-400">
+                            <p className="text-gray-500 dark:text-gray-400 mb-6">
                                 {searchTerm ? 'Try a different search term' : 'Create your first workspace to get started'}
                             </p>
+                            {!searchTerm && (
+                                <button
+                                    onClick={handleOpenModal}
+                                    className="px-6 py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-colors inline-flex items-center gap-2"
+                                >
+                                    <Plus size={18} />
+                                    Create Workspace
+                                </button>
+                            )}
                         </div>
                     ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {filteredWorkspaces.map((workspace) => (
-                                <div
-                                    key={workspace._id}
-                                    className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 hover:shadow-lg transition-all duration-200 hover:border-indigo-300 dark:hover:border-indigo-600 cursor-pointer group"
-                                >
-                                    {/* Header */}
-                                    <div className="flex items-start justify-between mb-4">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center shadow-md">
-                                                <Globe className="w-6 h-6 text-white" />
+                            {filteredWorkspaces.map((workspace) => {
+                                const IconCmp = getIconComponent(workspace.icon);
+                                return (
+                                    <div
+                                        key={workspace._id}
+                                        className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 hover:shadow-lg transition-all duration-200 hover:border-indigo-300 dark:hover:border-indigo-600 cursor-pointer group"
+                                    >
+                                        {/* Header */}
+                                        <div className="flex items-start justify-between mb-4">
+                                            <div className="flex items-center gap-3">
+                                                <div
+                                                    className="w-12 h-12 rounded-xl flex items-center justify-center shadow-md"
+                                                    style={{ backgroundColor: workspace.color || '#4f46e5' }}
+                                                >
+                                                    <IconCmp className="w-6 h-6 text-white" />
+                                                </div>
+                                                <div>
+                                                    <h3 className="text-lg font-bold text-gray-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                                                        {workspace.name}
+                                                    </h3>
+                                                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${workspace.status === 'active'
+                                                        ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                                                        : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-400'
+                                                        }`}>
+                                                        {workspace.status || 'active'}
+                                                    </span>
+                                                </div>
                                             </div>
-                                            <div>
-                                                <h3 className="text-lg font-bold text-gray-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
-                                                    {workspace.name}
-                                                </h3>
-                                                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${workspace.status === 'active'
-                                                    ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                                                    : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-400'
-                                                    }`}>
-                                                    {workspace.status}
-                                                </span>
+                                            <button className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
+                                                <MoreVertical size={18} className="text-gray-400" />
+                                            </button>
+                                        </div>
+
+                                        {/* Description */}
+                                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-4 line-clamp-2">
+                                            {workspace.description || 'No description'}
+                                        </p>
+
+                                        {/* Stats */}
+                                        <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400 mb-4">
+                                            <div className="flex items-center gap-1">
+                                                <Users size={16} />
+                                                <span>{workspace.memberCount ?? workspace.members?.length ?? 0} members</span>
+                                            </div>
+                                            <div className="flex items-center gap-1">
+                                                <Globe size={16} />
+                                                <span>{workspace.channelCount ?? 0} channels</span>
                                             </div>
                                         </div>
-                                        <button className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
-                                            <MoreVertical size={18} className="text-gray-400" />
-                                        </button>
-                                    </div>
 
-                                    {/* Description */}
-                                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-4 line-clamp-2">
-                                        {workspace.description || 'No description'}
-                                    </p>
-
-                                    {/* Stats */}
-                                    <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400 mb-4">
-                                        <div className="flex items-center gap-1">
-                                            <Users size={16} />
-                                            <span>{workspace.memberCount} members</span>
-                                        </div>
-                                        <div className="flex items-center gap-1">
-                                            <Globe size={16} />
-                                            <span>{workspace.channelCount} channels</span>
+                                        {/* Footer */}
+                                        <div className="pt-4 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between">
+                                            <div className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
+                                                <Calendar size={14} />
+                                                Created {new Date(workspace.createdAt).toLocaleDateString()}
+                                            </div>
                                         </div>
                                     </div>
-
-                                    {/* Footer */}
-                                    <div className="pt-4 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between">
-                                        <div className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
-                                            <Calendar size={14} />
-                                            Created {new Date(workspace.createdAt).toLocaleDateString()}
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     )}
                 </div>
             </div>
+
+            {/* Create Workspace Modal */}
+            <CreateWorkspaceModal
+                isOpen={modalOpen}
+                onClose={handleCloseModal}
+                createStep={createStep}
+                setCreateStep={setCreateStep}
+                createData={createData}
+                setCreateData={setCreateData}
+                nameError={nameError}
+                setNameError={setNameError}
+                termsAccepted={termsAccepted}
+                setTermsAccepted={setTermsAccepted}
+                onSubmit={handleSubmit}
+                getIconComponent={getIconComponent}
+                user={user}
+            />
         </div>
     );
 };

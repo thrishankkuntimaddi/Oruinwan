@@ -32,14 +32,8 @@ export const DepartmentProvider = ({ children }) => {
         try {
             setLoading(true);
 
-            // Extract ID - handle both object and string formats
-
-            const companyId = typeof user.companyId === 'object' && user.companyId !== null
-                ? (user.companyId._id || user.companyId.id || user.companyId)
-                : user.companyId;
-
-
-            const response = await api.get(`${API_BASE}/api/departments/${companyId}`);
+            // GET /api/departments — server derives companyId from JWT via requireCompanyMember
+            const response = await api.get(`${API_BASE}/api/departments`);
             setDepartments(response.data.departments || []);
 
             // Set user's department if they have one

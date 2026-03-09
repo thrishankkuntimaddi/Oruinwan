@@ -14,19 +14,17 @@ const express = require('express');
 const router = express.Router();
 const tasksController = require('./tasks.controller');
 const requireAuth = require('../../../middleware/auth');
-// S-04: requireCompanyMember added for defence-in-depth tenant isolation.
-// Ensures company membership is validated at the route layer, not just service layer.
-const requireCompanyMember = require('../../shared/middleware/requireCompanyMember');
+// NOTE: requireCompanyMember intentionally NOT applied at router level.
+// Tasks are scoped to BOTH personal and company workspaces.
+// Personal accounts have no companyId — requireCompanyMember would block them.
+// Tenant isolation is enforced inside tasksController by filtering on req.user.sub.
 
 // ============================================================================
 // MIDDLEWARE
 // ============================================================================
 
-// All routes require authentication and company membership (S-04)
-// requireAuth      → validates JWT token
-// requireCompanyMember → DB read: validates companyId + accountStatus, attaches req.companyId
+// All routes require authentication only at the router level
 router.use(requireAuth);
-router.use(requireCompanyMember);
 
 // ============================================================================
 // ROUTES

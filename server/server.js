@@ -459,35 +459,39 @@ io.on("connection", async (socket) => {
 const ScheduledMeeting = require('./src/models/ScheduledMeeting');
 
 // GET /api/scheduled-meetings?workspaceId=xxx  — upcoming meetings
-// S-02 SECURITY FIX: companyId filter added. Query resolves user's companyId from DB
-// and validates workspace ownership before returning meetings (prevents cross-tenant reads).
+// S-02 + personal account fix:
+// - Company accounts: companyId resolved from DB, workspace ownership validated (cross-tenant guard).
+// - Personal accounts: no companyId — query scoped to workspaceId only.
+//   Tenant isolation for personal accounts comes from requireWorkspaceMember (caller owns workspace).
 app.get('/api/scheduled-meetings', requireAuth, async (req, res) => {
   try {
     const { workspaceId, limit = 10 } = req.query;
     if (!workspaceId) return res.status(400).json({ message: 'workspaceId required' });
 
-    // S-02: Resolve companyId from DB (JWT payload only carries `sub`)
     const User = require('./models/User');
     const dbUser = await User.findById(req.user.sub).select('companyId').lean();
-    if (!dbUser || !dbUser.companyId) {
-      return res.status(403).json({ message: 'Company membership required' });
-    }
-    const companyId = dbUser.companyId;
-
-    // S-02: Verify workspace belongs to this company (cross-tenant guard)
-    const WorkspaceModel = require('./src/features/workspaces/workspace.model');
-    const ws = await WorkspaceModel.findOne({ _id: workspaceId, company: companyId }).select('_id').lean();
-    if (!ws) {
-      return res.status(403).json({ message: 'Access denied' });
-    }
+    if (!dbUser) return res.status(401).json({ message: 'User not found' });
 
     const now = new Date();
-    const meetings = await ScheduledMeeting.find({
-      companyId,          // S-02: tenant-scoped query
-      workspaceId,
-      startTime: { $gte: now },
-      status: { $in: ['scheduled', 'live'] },
-    })
+    let query = { workspaceId, startTime: { $gte: now }, status: { $in: ['scheduled', 'live'] } };
+
+    const WorkspaceModel = require('./models/Workspace');
+
+    // For both company and personal accounts, verify the requesting user is a member of the workspace.
+    // 'members.user' is the correct subdocument field (members: [{ user: ObjectId, role, status }]).
+    // Company workspaces implicitly enforce tenant isolation since only company members are added.
+    const ws = await WorkspaceModel.findOne({
+      _id: workspaceId,
+      'members.user': req.user.sub
+    }).select('_id company').lean();
+    if (!ws) return res.status(403).json({ message: 'Access denied' });
+
+    // For company accounts: additionally scope the meetings query to their company's tenant
+    if (dbUser.companyId) {
+      query.companyId = dbUser.companyId;
+    }
+
+    const meetings = await ScheduledMeeting.find(query)
       .sort({ startTime: 1 })
       .limit(Number(limit))
       .populate('createdBy', 'username firstName lastName avatarUrl')

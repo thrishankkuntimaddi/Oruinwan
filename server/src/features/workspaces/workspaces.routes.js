@@ -27,40 +27,49 @@ const enforceRoleCeiling = require('../../shared/middleware/enforceRoleCeiling')
 // Any authenticated company member who is also a workspace member
 const memberGate = [requireAuth, requireCompanyMember, requireWorkspaceMember];
 
+// For READ routes that serve both personal and company accounts:
+// requireCompanyMember is intentionally omitted — personal accounts have no companyId.
+// requireWorkspaceMember still validates the caller is in the workspace (tenant safe).
+const memberGatePersonal = [requireAuth, requireWorkspaceMember];
+
 // Workspace admin or higher (company ceiling applied)
 const adminGate = [...memberGate, enforceRoleCeiling({ minRole: 'admin' })];
 
 // ── PUBLIC / lightly guarded routes ───────────────────────────────────────────
 
-// Create workspace — requireAuth + requireCompanyMember only (no workspace yet)
-router.post('/', requireAuth, requireCompanyMember, workspaceController.createWorkspace);
-router.post('/create', requireAuth, requireCompanyMember, workspaceController.createWorkspace); // Alias
+// Create workspace — requireAuth only.
+// Personal accounts have no companyId, so requireCompanyMember would wrongly reject them.
+// Controller validates context internally.
+router.post('/', requireAuth, workspaceController.createWorkspace);
+router.post('/create', requireAuth, workspaceController.createWorkspace); // Alias
 
-// List MY workspaces — must be a company member
-router.get('/my', requireAuth, requireCompanyMember, workspaceController.listMyWorkspaces);
+// List MY workspaces — requireAuth only.
+// Serves BOTH personal and company accounts (personal has no companyId — requireCompanyMember would 403).
+router.get('/my', requireAuth, workspaceController.listMyWorkspaces);
 
 // Get invite details (public — token is the credential)
 router.get('/invite/:token', workspaceController.getInviteDetails);
 
-// Join workspace via invite
-router.post('/join', requireAuth, requireCompanyMember, workspaceController.joinWorkspace);
+// Join workspace via invite — requireAuth only (joinee may be new, not yet a full company member)
+router.post('/join', requireAuth, workspaceController.joinWorkspace);
 
 // ── WORKSPACE-MEMBER ROUTES (S-01: requireWorkspaceMember + cross-tenant guard) ──
 
-// Get workspace members — S-01: was requireAuth only, now full memberGate
-router.get('/:workspaceId/members', ...memberGate, workspaceController.getWorkspaceMembers);
+// Get workspace members — personal + company accounts both need this
+// memberGatePersonal: requireAuth + requireWorkspaceMember (no requireCompanyMember)
+router.get('/:workspaceId/members', ...memberGatePersonal, workspaceController.getWorkspaceMembers);
 
-// Get ALL workspace members (for settings modal) — S-01: was requireAuth only
-router.get('/:workspaceId/all-members', ...memberGate, workspaceController.getAllWorkspaceMembers);
+// Get ALL workspace members (for settings modal)
+router.get('/:workspaceId/all-members', ...memberGatePersonal, workspaceController.getAllWorkspaceMembers);
 
-// Get workspace channels — S-01: was requireAuth only
-router.get('/:workspaceId/channels', ...memberGate, workspaceController.getWorkspaceChannels);
+// Get workspace channels
+router.get('/:workspaceId/channels', ...memberGatePersonal, workspaceController.getWorkspaceChannels);
 
 // Create channel in workspace — S-01: admin ceiling added
 router.post('/:workspaceId/channels', ...adminGate, workspaceController.createWorkspaceChannel);
 
-// Workspace statistics — member access
-router.get('/:workspaceId/stats', ...memberGate, workspaceController.getWorkspaceStats);
+// Workspace statistics — member access (personal + company)
+router.get('/:workspaceId/stats', ...memberGatePersonal, workspaceController.getWorkspaceStats);
 
 // ── ADMIN-ONLY ROUTES (S-01: enforceRoleCeiling({ minRole: 'admin' })) ────────
 

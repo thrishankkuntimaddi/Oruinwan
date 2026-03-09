@@ -46,11 +46,11 @@ const requireWorkspaceMember = async (req, res, next) => {
             });
         }
 
-        // Verify company isolation — prevent cross-tenant access
-        if (
-            workspace.company &&
-            workspace.company.toString() !== req.companyId
-        ) {
+        // Verify company isolation — prevent cross-tenant access.
+        // Only enforced when req.companyId is set (company accounts that went through requireCompanyMember).
+        // Personal accounts have no companyId and are skipped here — their isolation comes
+        // from the workspace.members check below (they can only access workspaces they belong to).
+        if (req.companyId && workspace.company && workspace.company.toString() !== req.companyId) {
             return res.status(403).json({
                 success: false,
                 error: "Access denied.",
@@ -58,7 +58,8 @@ const requireWorkspaceMember = async (req, res, next) => {
             });
         }
 
-        const userId = req.user._id.toString();
+        // Support both JWT-decoded users (req.user.sub) and DB-loaded users (req.user._id)
+        const userId = (req.user._id || req.user.sub).toString();
         const membership = workspace.members.find(
             (m) =>
                 m.user.toString() === userId &&
