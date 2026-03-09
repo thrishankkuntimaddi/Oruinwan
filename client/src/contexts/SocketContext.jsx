@@ -25,6 +25,7 @@ export const SocketProvider = ({ children }) => {
     const taskListenersRef = useRef([]);
     const noteListenersRef = useRef([]);
     const updateListenersRef = useRef([]);
+    const notificationListenersRef = useRef([]);
 
     // Initialize socket connection — re-run when user changes (login/logout)
     useEffect(() => {
@@ -394,6 +395,21 @@ export const SocketProvider = ({ children }) => {
         };
     }, [socket]);
 
+    // Broadcast Notification events (targeted per-user push)
+    useEffect(() => {
+        if (!socket) return;
+
+        const onNotification = (data) => {
+            notificationListenersRef.current.forEach(cb => cb('notification:new', data));
+        };
+
+        socket.on('notification:new', onNotification);
+
+        return () => {
+            socket.off('notification:new', onNotification);
+        };
+    }, [socket]);
+
     // Register/unregister listeners (using refs to avoid stale closures)
     const addChannelListener = useCallback((callback) => {
         channelListenersRef.current.push(callback);
@@ -437,6 +453,13 @@ export const SocketProvider = ({ children }) => {
         };
     }, []);
 
+    const addNotificationListener = useCallback((callback) => {
+        notificationListenersRef.current.push(callback);
+        return () => {
+            notificationListenersRef.current = notificationListenersRef.current.filter(cb => cb !== callback);
+        };
+    }, []);
+
     const value = {
         socket,
         isConnected,
@@ -446,7 +469,8 @@ export const SocketProvider = ({ children }) => {
         addTaskListener,
         addNoteListener,
         addUpdateListener,
-        connectSocket, // ✅ Export socket connection function
+        addNotificationListener,
+        connectSocket,
     };
 
     return (

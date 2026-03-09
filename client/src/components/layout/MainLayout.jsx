@@ -37,9 +37,8 @@ const WorkspaceNotificationPanel = () => {
     const navigate = useNavigate();
     const { activeWorkspace } = useWorkspace();
 
-    // Gracefully degrade if context not available (e.g. outside workspace route)
-    let notifCtx = null;
-    try { notifCtx = useNotifications(); } catch (_) { }
+    // useNotifications() returns null when outside NotificationsProvider — safe to call unconditionally
+    const notifCtx = useNotifications();
 
     const notifications = notifCtx?.notifications || [];
     const unreadCount = notifCtx?.unreadCount || 0;

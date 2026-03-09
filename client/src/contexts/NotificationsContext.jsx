@@ -3,8 +3,8 @@
  *
  * Provides real-time notification data across the entire app.
  * - Fetches from REST API on mount + workspace change
- * - Subscribes to socket `notification:new` for instant push
- * - Exposes markRead, markAllRead, dismiss, refresh
+ * - Subscribes to socket `notification:new` via SocketContext's addNotificationListener
+ * - Exposes markRead, markAllRead, dismiss, clearAll, refresh, loadMore
  */
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import api from '../services/api';
@@ -15,13 +15,11 @@ import { useAuth } from './AuthContext';
 const NotificationsContext = createContext(null);
 
 export function useNotifications() {
-    const ctx = useContext(NotificationsContext);
-    if (!ctx) throw new Error('useNotifications must be used inside NotificationsProvider');
-    return ctx;
+    return useContext(NotificationsContext); // returns null when outside provider — safe
 }
 
 export function NotificationsProvider({ children }) {
-    const { socket } = useSocket();
+    const { addNotificationListener } = useSocket();
     const { activeWorkspace } = useWorkspace();
     const { accessToken } = useAuth();
 
@@ -65,27 +63,27 @@ export function NotificationsProvider({ children }) {
         fetchNotifications(page + 1, true);
     }, [hasMore, loading, page, fetchNotifications]);
 
-    // ── Real-time socket ───────────────────────────────────────────────
+    // ── Real-time: subscribe via SocketContext's listener mechanism ────
     useEffect(() => {
-        if (!socket) return;
-
-        const onNew = ({ notification }) => {
+        const unsubscribe = addNotificationListener((event, payload) => {
+            if (event !== 'notification:new') return;
+            const { notification } = payload || {};
+            if (!notification) return;
+            // Only inject if it belongs to the current workspace
             if (String(notification.workspaceId) !== String(workspaceId)) return;
             setNotifications(prev => [notification, ...prev]);
             setUnreadCount(c => c + 1);
-        };
+        });
 
-        socket.on('notification:new', onNew);
-        return () => socket.off('notification:new', onNew);
-    }, [socket, workspaceId]);
+        return unsubscribe;
+    }, [addNotificationListener, workspaceId]);
 
     // ── Mutations ──────────────────────────────────────────────────────
     const markRead = useCallback(async (notifId) => {
+        if (!notifId) return;
         try {
             await api.patch(`/api/notifications/${notifId}/read`);
-            setNotifications(prev =>
-                prev.map(n => n._id === notifId ? { ...n, read: true } : n)
-            );
+            setNotifications(prev => prev.map(n => n._id === notifId ? { ...n, read: true } : n));
             setUnreadCount(c => Math.max(0, c - 1));
         } catch (err) {
             console.error('[NotificationsContext] markRead error:', err);
@@ -104,6 +102,7 @@ export function NotificationsProvider({ children }) {
     }, [workspaceId]);
 
     const dismiss = useCallback(async (notifId) => {
+        if (!notifId) return;
         try {
             const wasUnread = notifications.find(n => n._id === notifId && !n.read);
             await api.delete(`/api/notifications/${notifId}`);

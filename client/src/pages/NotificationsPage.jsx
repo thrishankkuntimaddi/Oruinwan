@@ -5,8 +5,8 @@ import {
     Trash2, Filter, RefreshCcw, Loader2, ExternalLink,
     ChevronDown, X
 } from 'lucide-react';
-import { useNotifications } from '../../contexts/NotificationsContext';
-import { useWorkspace } from '../../contexts/WorkspaceContext';
+import { useNotifications } from '../contexts/NotificationsContext';
+import { useWorkspace } from '../contexts/WorkspaceContext';
 
 // ── Type metadata ──────────────────────────────────────────────────────────
 const TYPE_META = {
