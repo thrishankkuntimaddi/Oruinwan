@@ -1,14 +1,14 @@
 // server/src/features/company-updates/updates.service.js
 //
-// Phase 5 — Company Updates Feed
+// Phase 2 — Company Communication Layer (refactored from Phase 5)
 // Business logic: company-scoped updates ("internal LinkedIn feed").
 // Separate from workspace updates (/api/updates) — do NOT merge.
 //
-// Socket room convention: company:{companyId}:updates
-// req.io is attached by server.js middleware — controllers pass it in.
+// Socket room: ROOMS.companyUpdates(companyId)
 
 const Update = require('../../../models/Update');
 const User = require('../../../models/User');
+const ROOMS = require('../../shared/utils/rooms');
 
 // ============================================================================
 // EMIT HELPERS
@@ -16,7 +16,7 @@ const User = require('../../../models/User');
 
 function emit(io, companyId, event, payload) {
     if (!io) return;
-    io.to(`company:${companyId}:updates`).emit(event, payload);
+    io.to(ROOMS.companyUpdates(companyId)).emit(event, payload);
 }
 
 // ============================================================================
@@ -26,9 +26,10 @@ function emit(io, companyId, event, payload) {
 /**
  * Create a new company update.
  * Only manager, admin, owner may post (enforced at middleware level, but
- * double-checked here for defence-in-depth).
+ * double-checked here for defence-in-depth.
  */
-async function postUpdate({ companyId, posterId, title, content, type, priority, attachments, mentions, io }) {
+async function postUpdate({ companyId, posterId, title, content, type, priority, visibility, targetDepartment, attachments, mentions, io }) {
+
     const ALLOWED_ROLES = ['manager', 'admin', 'owner'];
     const poster = await User.findOne({ _id: posterId, companyId }).select('companyRole username profilePicture').lean();
 
@@ -45,12 +46,14 @@ async function postUpdate({ companyId, posterId, title, content, type, priority,
 
     const update = await Update.create({
         company: companyId,
-        workspace: null,          // company-scoped: no workspace required
+        workspace: null,                         // company-scoped: no workspace
         postedBy: posterId,
         title: title || null,
         message: content,
         type: type || 'general',
         priority: priority || 'normal',
+        visibility: visibility || 'all',
+        targetDepartment: targetDepartment || null,
         attachments: attachments || [],
         mentions: mentions || [],
     });
@@ -63,6 +66,7 @@ async function postUpdate({ companyId, posterId, title, content, type, priority,
     emit(io, companyId, 'company:update:created', populated);
     return populated;
 }
+
 
 // ============================================================================
 // GET UPDATES

@@ -1,214 +1,229 @@
-// server/controllers/onboardEmployeeController.js
-const User = require('../../../models/User');
-const _Company = require('../../../models/Company');
-const bcrypt = require('bcryptjs');
-const crypto = require('crypto');
-const sendEmail = require('../../../utils/sendEmail');
-const { employeeCredentialsTemplate } = require('../../../utils/emailTemplates');
+// server/src/features/onboarding/onboarding.controller.js
+//
+// Phase 1 — Company Identity Layer Stabilization
+//
+// Thin HTTP layer. All business logic lives in the three service modules:
+//   onboarding.service.js  — individual flow (role ceiling, dept validation, user creation)
+//   bulkImport.service.js  — async batch job engine
+//   invite.service.js      — token lifecycle, accept, resend
+
+const { body, validationResult } = require('express-validator');
+const { onboardIndividual } = require('./onboarding.service');
+const { startBulkJob, getJobStatus } = require('./bulkImport.service');
+const { resendInvite, acceptInvite } = require('./invite.service');
+
+// ============================================================================
+// VALIDATION RULES
+// ============================================================================
+
+exports.validateIndividual = [
+    body('email')
+        .isEmail().withMessage('Valid email required')
+        .normalizeEmail(),
+    body('firstName')
+        .notEmpty().trim().withMessage('First name required'),
+    body('lastName')
+        .optional().trim(),
+    body('companyRole')
+        .isIn(['admin', 'manager', 'member', 'guest'])
+        .withMessage('companyRole must be admin, manager, member, or guest'),
+    body('departmentIds')
+        .optional()
+        .isArray().withMessage('departmentIds must be an array'),
+    body('additionalWorkspaceIds')
+        .optional()
+        .isArray().withMessage('additionalWorkspaceIds must be an array'),
+];
+
+exports.validateAcceptInvite = [
+    body('token').notEmpty().withMessage('Invite token required'),
+    body('password')
+        .isLength({ min: 8 }).withMessage('Password must be at least 8 characters'),
+];
+
+// ============================================================================
+// ERROR HELPER
+// ============================================================================
+
+function handleError(res, err) {
+    console.error('[ONBOARDING CTRL]', err.message);
+    return res.status(err.status || 500).json({
+        success: false,
+        error: err.message,
+        code: err.code || undefined,
+    });
+}
+
+// ============================================================================
+// HANDLERS
+// ============================================================================
 
 /**
- * Generate a secure random password
+ * POST /api/company/onboarding/individual
+ *
+ * Creates a single user with accountStatus:'invited' and sends a magic-link email.
+ * Role ceiling enforced by onboarding.service.onboardIndividual().
+ * Department assignment via department.service.assignMembers() (Phase 4).
  */
-const generatePassword = () => {
-    const length = 12;
-    const charset = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*';
-    let password = '';
-    const values = crypto.randomBytes(length);
-    for (let i = 0; i < length; i++) {
-        password += charset[values[i] % charset.length];
+exports.inviteIndividual = async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(400).json({
+            success: false,
+            errors: errors.array().map(e => ({ field: e.path, message: e.msg })),
+        });
     }
-    return password;
-};
 
-/**
- * Generate company email from name
- */
-const _generateCompanyEmail = (firstName, lastName, companyDomain) => {
-    const cleanFirst = firstName.toLowerCase().trim().replace(/[^a-z]/g, '');
-    const cleanLast = lastName.toLowerCase().trim().replace(/[^a-z]/g, '');
-    return `${cleanFirst}.${cleanLast}@${companyDomain}`;
-};
-
-/**
- * POST /api/admin/onboard-employee
- * Admin-only: Create employee account directly
- */
-exports.createEmployee = async (req, res) => {
     try {
-
-
-        const adminId = req.user?.sub || req.user?._id; // Try both for compatibility
         const {
+            email,
             firstName,
-            lastName,
-            personalEmail,
-            companyEmail, // Admin-provided company email
-            phone,
-            role, // "member", "guest", "manager"
-            departments = [], // Array of department IDs
-            workspaces = [], // Array of workspace IDs (optional)
+            lastName = '',
+            companyRole = 'member',
+            departmentIds = [],
+            additionalWorkspaceIds = [],
             jobTitle,
             joiningDate,
-            employeeCategory
         } = req.body;
 
-        console.log('📝 Onboard employee request:', {
-            adminId,
-            adminIdSource: req.user?.sub ? 'sub' : req.user?._id ? '_id' : 'none',
+        const result = await onboardIndividual({
+            companyId: req.companyId,       // set by requireCompanyMember
+            requesterRole: req.companyRole,     // set by requireCompanyMember
+            invitedBy: req.user._dbUser._id,
+            email,
             firstName,
             lastName,
-            personalEmail,
-            role,
-            departmentCount: departments.length
+            companyRole,
+            departmentIds,
+            additionalWorkspaceIds,
+            jobTitle,
+            joiningDate,
         });
 
-        // Validation
-        if (!firstName || !lastName || !personalEmail || !companyEmail || !role) {
-            console.error('❌ Missing required fields');
-            return res.status(400).json({ message: 'First name, last name, personal email, company email, and role are required' });
-        }
-
-        if (!['member', 'guest', 'manager'].includes(role)) {
-            console.error('❌ Invalid role:', role);
-            return res.status(400).json({ message: 'Invalid role. Must be member, guest, or manager' });
-        }
-
-        // Get admin's company
-        const admin = await User.findById(adminId).populate('companyId');
-
-        console.log('🔍 Admin lookup:', {
-            adminId,
-            hasAdmin: !!admin,
-            hasCompany: !!admin?.companyId,
-            companyId: admin?.companyId?._id
+        return res.status(201).json({
+            success: true,
+            message: `Invite sent to ${email}. They will receive a link to set their own password.`,
+            userId: result.userId,
+            emailSent: result.emailSent,
         });
 
-        if (!admin || !admin.companyId) {
-            console.error('❌ Admin has no company:', { adminId, hasAdmin: !!admin });
-            return res.status(403).json({ message: 'You must be part of a company to onboard employees' });
-        }
+    } catch (err) {
+        return handleError(res, err);
+    }
+};
 
-        // Check if admin has permission
-        if (!['owner', 'admin'].includes(admin.companyRole)) {
-            console.error('❌ Insufficient permissions:', { role: admin.companyRole });
-            return res.status(403).json({ message: 'Only company admins can onboard employees' });
-        }
+/**
+ * POST /api/company/onboarding/bulk
+ *
+ * Receives multipart/form-data with `employeeFile` (xlsx/csv).
+ * Returns HTTP 202 immediately with { jobId, total }.
+ * Processing runs in background — frontend polls GET /status/:jobId.
+ */
+exports.bulkImport = async (req, res) => {
+    if (!req.file) {
+        return res.status(400).json({
+            success: false,
+            error: 'No file uploaded. Attach an .xlsx or .csv file as `employeeFile`.',
+        });
+    }
 
-        const company = admin.companyId;
-
-        console.log('✅ Company found:', {
-            companyId: company._id,
-            name: company.name,
-            domain: company.domain
+    try {
+        const { jobId, total, validationErrors } = await startBulkJob({
+            companyId: req.companyId,
+            requesterRole: req.companyRole,
+            fileBuffer: req.file.buffer,
+            invitedBy: req.user._dbUser._id,
         });
 
-        // Check if company has a verified domain
-        if (!company.domain) {
-            console.error('❌ Company has no domain:', { companyId: company._id });
-            return res.status(400).json({ message: 'Company must have a domain configured to onboard employees' });
-        }
+        return res.status(202).json({
+            success: true,
+            jobId,
+            total,
+            status: 'queued',
+            message: `Processing ${total} employees in the background.`,
+            validationErrors: validationErrors || [], // hard-fails returned now, not async
+            pollUrl: `/api/company/onboarding/status/${jobId}`,
+        });
 
-        // Validate company email format
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(companyEmail)) {
-            return res.status(400).json({ message: 'Invalid company email format' });
-        }
+    } catch (err) {
+        return handleError(res, err);
+    }
+};
 
-        // Check if company email already exists
-        const existingUser = await User.findOne({ email: companyEmail.toLowerCase().trim() });
-        if (existingUser) {
-            return res.status(400).json({
-                message: 'This company email is already in use. Please use a different email.',
-                providedEmail: companyEmail
+/**
+ * GET /api/company/onboarding/status/:jobId
+ *
+ * Returns current job progress from MongoDB.
+ * Company isolation enforced — companyId must match.
+ */
+exports.getJobStatus = async (req, res) => {
+    try {
+        const job = await getJobStatus(req.params.jobId, req.companyId);
+
+        if (!job) {
+            return res.status(404).json({
+                success: false,
+                error: 'Job not found or does not belong to your company.',
             });
         }
 
-        // Generate temporary password
-        const temporaryPassword = generatePassword();
-        const passwordHash = await bcrypt.hash(temporaryPassword, 12);
+        return res.json({ success: true, job });
 
-        // Create employee user
-        const employee = new User({
-            username: `${firstName} ${lastName}`,
-            email: companyEmail.toLowerCase().trim(),
-            personalEmail: personalEmail.toLowerCase().trim(),
-            companyEmail: companyEmail.toLowerCase().trim(),
-            phone: phone || null,
-            passwordHash,
-            userType: 'company',
-            companyId: company._id,
-            companyRole: role,
-            jobTitle: jobTitle || null,
-            joiningDate: joiningDate || new Date(),
-            employeeCategory: employeeCategory || 'Full-time',
-            departments: departments,
-            managedDepartments: role === 'manager' ? departments : [],
-            // ARCH-FIX: assignedWorkspaces removed (dual-write bug). Write to workspaces[] only.
-            workspaces: workspaces.map(wsId => ({
-                workspace: wsId,
-                role: 'member',
-                joinedAt: new Date()
-            })),
-            verified: true, // Admin-created users are pre-verified
-            accountStatus: 'active',
-            lastLoginAt: null // Used to detect first login
+    } catch (err) {
+        return handleError(res, err);
+    }
+};
+
+/**
+ * POST /api/company/onboarding/resend/:userId
+ *
+ * Regenerates invite token and resends magic-link email.
+ * Only works for users with accountStatus:'invited'.
+ */
+exports.resendInviteEmail = async (req, res) => {
+    try {
+        const result = await resendInvite(req.params.userId, req.companyId);
+        return res.json({
+            success: true,
+            message: result.sent
+                ? 'Invite re-sent successfully.'
+                : 'User record updated but email delivery failed — check Brevo logs.',
+            emailSent: result.sent,
+        });
+    } catch (err) {
+        return handleError(res, err);
+    }
+};
+
+/**
+ * POST /api/company/onboarding/accept
+ *
+ * Public endpoint (no auth required) — called when employee clicks the invite link.
+ * Validates token, activates account, runs department.service.assignMembers() (Phase 4).
+ */
+exports.acceptInviteHandler = async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(400).json({
+            success: false,
+            errors: errors.array().map(e => ({ field: e.path, message: e.msg })),
+        });
+    }
+
+    try {
+        const { token, password } = req.body;
+        const { user, alreadyActive } = await acceptInvite(token, password);
+
+        return res.json({
+            success: true,
+            alreadyActive,
+            message: alreadyActive
+                ? 'Account is already active. Please log in.'
+                : 'Account activated! You can now log in with your new password.',
+            user,
         });
 
-        await employee.save();
-
-        // Send credentials email to personal email
-        const loginUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
-        const emailTemplate = employeeCredentialsTemplate(
-            `${firstName} ${lastName}`,
-            company.name,
-            companyEmail,
-            temporaryPassword,
-            loginUrl
-        );
-
-        try {
-            await sendEmail({
-                to: personalEmail,
-                subject: emailTemplate.subject,
-                html: emailTemplate.html,
-                text: emailTemplate.text
-            });
-        } catch (_emailError) {
-            console.error('Failed to send credentials email:', emailError);
-            // Don't fail the request if email fails, but notify admin
-            return res.status(201).json({
-                message: 'Employee created successfully, but email delivery failed. Please share credentials manually.',
-                employee: {
-                    _id: employee._id,
-                    username: employee.username,
-                    email: employee.email,
-                    role: employee.companyRole,
-                    jobTitle: employee.jobTitle
-                },
-                credentials: {
-                    email: companyEmail,
-                    temporaryPassword // Only return if email fails
-                },
-                emailError: 'Failed to send credentials email'
-            });
-        }
-
-        // Success - credentials sent via email
-        res.status(201).json({
-            message: 'Employee created successfully! Credentials sent to their personal email.',
-            employee: {
-                _id: employee._id,
-                username: employee.username,
-                email: employee.email,
-                personalEmail: employee.personalEmail,
-                role: employee.companyRole,
-                jobTitle: employee.jobTitle,
-                departments: employee.departments
-            }
-        });
-
-    } catch (error) {
-        console.error('Error creating employee:', error);
-        res.status(500).json({ message: 'Failed to create employee', error: error.message });
+    } catch (err) {
+        return handleError(res, err);
     }
 };

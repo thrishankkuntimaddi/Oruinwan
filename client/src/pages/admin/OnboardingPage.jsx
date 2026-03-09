@@ -19,6 +19,8 @@ const BulkImportModal = ({ onClose }) => {
     const [parsedRows, setParsedRows] = useState([]);
     const [result, setResult] = useState(null);
     const [showColGuide, setShowColGuide] = useState(false);
+    const [progress, setProgress] = useState({ processed: 0, total: 0 });
+
 
     const companyId =
         user?.company?.id || user?.company?._id ||
@@ -88,27 +90,56 @@ const BulkImportModal = ({ onClose }) => {
         handleFile(e.dataTransfer.files[0]);
     }, []);
 
-    // ── submit ────────────────────────────────────────────────────────────────
+
+    // ── submit via new stabilized onboarding endpoint ─────────────────────────
     const handleSubmit = async () => {
         if (!companyId) { showToast('No company ID found', 'error'); return; }
         setPhase('submitting');
         try {
             const formData = new FormData();
-            formData.append('step', '3');
             formData.append('employeeFile', excelFile);
 
-            const res = await axios.put(
-                `${import.meta.env.VITE_BACKEND_URL}/api/companies/${companyId}/setup`,
+            // FIX-4: POST to new endpoint — receives { jobId } immediately (HTTP 202)
+            const res = await axios.post(
+                `${import.meta.env.VITE_BACKEND_URL}/api/company/onboarding/bulk`,
                 formData,
                 { withCredentials: true }
             );
-            setResult(res.data.results || {});
-            setPhase('done');
+
+            const { jobId, total } = res.data;
+            setProgress({ processed: 0, total });
+
+            // Poll for job completion
+            const interval = setInterval(async () => {
+                try {
+                    const statusRes = await axios.get(
+                        `${import.meta.env.VITE_BACKEND_URL}/api/company/onboarding/status/${jobId}`,
+                        { withCredentials: true }
+                    );
+                    const job = statusRes.data.job;
+                    setProgress({ processed: job.processed, total: job.total });
+
+                    if (job.status === 'done') {
+                        clearInterval(interval);
+                        setResult({
+                            created: job.created,
+                            skipped: job.skipped,
+                            errors: job.errors || [],
+                        });
+                        setPhase('done');
+                    }
+                } catch { /* poll failures are non-fatal */ }
+            }, 2000);
+
+            // Safety: clear interval after 10 minutes
+            setTimeout(() => clearInterval(interval), 10 * 60 * 1000);
+
         } catch (err) {
-            showToast(err.response?.data?.message || 'Import failed', 'error');
+            showToast(err.response?.data?.error || 'Import failed', 'error');
             setPhase('preview');
         }
     };
+
 
     // ── role badge colour ─────────────────────────────────────────────────────
     const roleBadge = (role) => {
@@ -311,16 +342,28 @@ const BulkImportModal = ({ onClose }) => {
                     </div>
                 )}
 
-                {/* ── SUBMITTING ── */}
                 {phase === 'submitting' && (
                     <div className="flex flex-col items-center justify-center py-12 text-center">
                         <div className="w-16 h-16 rounded-2xl bg-green-50 dark:bg-green-900/30 flex items-center justify-center mb-4">
                             <Loader2 size={28} className="text-green-600 animate-spin" />
                         </div>
                         <p className="font-bold text-slate-800 dark:text-white mb-1">Creating Accounts…</p>
-                        <p className="text-sm text-slate-400">Sending welcome emails with temporary passwords</p>
+                        <p className="text-sm text-slate-400">
+                            {progress.total > 0
+                                ? `${progress.processed} / ${progress.total} processed`
+                                : 'Sending invite emails'}
+                        </p>
+                        {progress.total > 0 && (
+                            <div className="w-64 h-2 bg-slate-100 dark:bg-slate-700 rounded-full mt-3 overflow-hidden">
+                                <div
+                                    className="h-full bg-green-500 rounded-full transition-all duration-500"
+                                    style={{ width: `${Math.round((progress.processed / progress.total) * 100)}%` }}
+                                />
+                            </div>
+                        )}
                     </div>
                 )}
+
 
                 {/* ── DONE ── */}
                 {phase === 'done' && result && (

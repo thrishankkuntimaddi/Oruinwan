@@ -254,7 +254,23 @@ app.use((req, res, next) => {
 // Routes
 app.use("/api/auth", require("./src/features/auth/auth.routes"));
 app.use("/api/admin", require("./middleware/auth"), require("./src/features/admin/admin.routes"));
-app.use("/api/admin", require("./middleware/auth"), require("./src/features/onboarding/onboarding.routes")); // Employee onboarding
+// Employee Onboarding — STABILIZED (Phase 1 middleware applied within route file)
+// Old: app.use("/api/admin", ..legacy middleware.., onboarding.routes)  ← bypassed Phase 1
+// New: /api/company/onboarding — requireAuth + requireCompanyMember + requireCompanyRole('admin')
+app.use("/api/company/onboarding", require("./src/features/onboarding/onboarding.routes"));
+
+// Phase 2 — Company Communication Layer
+app.use("/api/company", require("./src/features/company-updates/updates.routes"));    // /api/company/updates
+app.use("/api/company", require("./src/features/company-analytics/analytics.routes")); // /api/company/analytics/*
+
+// Phase 3 — Company Security Layer
+app.use("/api/company", require("./src/features/security/security.routes")); // /api/company/security/*, /api/company/audit-logs
+
+// Phase 4 — Enterprise Integration Layer
+const integrationRouter = require("./src/features/integration/integration.routes");
+app.use("/api", integrationRouter); // /api/scim/users (SCIM Bearer auth)
+app.use("/api/company", integrationRouter); // /api/company/scim/tokens, /api/company/integrations/*
+
 // SECURITY FIX (H-2): Role middleware applied at mount level (defence-in-depth on top of per-route guards).
 // requireAuth  → rejects unauthenticated requests before they reach any route handler.
 // requireOwner / requireAdmin / requireManager → rejects under-privileged authenticated users.

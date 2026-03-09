@@ -500,6 +500,20 @@ exports.login = async (req, res) => {
       }
 
       await user.save();
+
+      // Phase 3 — Security: log failed login attempt (non-blocking)
+      if (user.companyId) {
+        const { logSecurityEvent } = require('../security/security.service');
+        logSecurityEvent({
+          companyId: user.companyId._id || user.companyId,
+          actorId: user._id,
+          eventType: 'login_failure',
+          outcome: 'failure',
+          metadata: { email: user.email, attempts: user.failedLoginAttempts },
+          req,
+        });
+      }
+
       return res.status(400).json({ message: "Invalid credentials" });
     }
 
@@ -683,6 +697,19 @@ exports.login = async (req, res) => {
 
     await saveWithRetry(user);
     setRefreshTokenCookie(res, refreshToken);
+
+    // Phase 3 — Security: log successful login (non-blocking)
+    if (user.companyId) {
+      const { logSecurityEvent } = require('../security/security.service');
+      logSecurityEvent({
+        companyId: user.companyId._id || user.companyId,
+        actorId: user._id,
+        eventType: 'login_success',
+        outcome: 'success',
+        metadata: { email: user.email, method: 'password' },
+        req,
+      });
+    }
 
     // Prepare User Object for Response
     const responseUser = {

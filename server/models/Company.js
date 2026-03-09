@@ -113,7 +113,39 @@ const CompanySchema = new mongoose.Schema({
   departments: [{ type: mongoose.Schema.Types.ObjectId, ref: "Department" }],
 
   // Additional metadata
-  metadata: { type: mongoose.Schema.Types.Mixed }
+  metadata: { type: mongoose.Schema.Types.Mixed },
+
+  // ────────────────────────────────────────────────────────────────────────
+  // Phase 3 — SSO Preparation (schema only — no SSO logic implemented yet)
+  // ────────────────────────────────────────────────────────────────────────
+  ssoEnabled: { type: Boolean, default: false },
+
+  ssoProvider: {
+    type: String,
+    enum: ['saml', 'oauth2', 'oidc', null],
+    default: null,
+  },
+
+  // URL pointing to the IdP SAML/OIDC metadata document
+  ssoMetadataUrl: { type: String, default: null },
+
+  // Verified domain that triggers SSO redirect for sign-in
+  ssoDomain: { type: String, default: null },
+
+  // Raw federation / IdP config (provider-specific — stored as-is)
+  // Validated at the application layer, not in schema to stay provider-agnostic
+  ssoConfig: { type: mongoose.Schema.Types.Mixed, default: null },
+
+  // ────────────────────────────────────────────────────────────────────────
+  // Phase 3 — Security Settings
+  // ────────────────────────────────────────────────────────────────────────
+  securitySettings: {
+    mfaRequired: { type: Boolean, default: false },
+    passwordMinLength: { type: Number, default: 8 },
+    sessionTimeoutMinutes: { type: Number, default: 1440 },  // 24h default
+    allowedIpRanges: [{ type: String }],                // CIDR notation
+    enforceSSO: { type: Boolean, default: false },  // block non-SSO logins when ssoEnabled
+  },
 
 }, { timestamps: true });
 

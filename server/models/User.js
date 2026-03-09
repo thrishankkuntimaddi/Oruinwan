@@ -65,7 +65,18 @@ const UserSchema = new mongoose.Schema(
       addedAt: { type: Date, default: Date.now }
     }],
 
-    passwordHash: { type: String, required: true },
+    passwordHash: { type: String, required: false, default: null }, // null for 'invited' users until they set their password
+
+    // Invite Token — Phase 1: Company Identity Layer
+    // Stores SHA-256 hash of the raw token (raw token only in invite email link, never in DB)
+    inviteToken: { type: String, default: null },  // SHA-256 hash
+    inviteTokenExpiry: { type: Date, default: null },  // 72h from invite creation
+    inviteEmailStatus: {
+      type: String,
+      enum: ['pending', 'sent', 'failed', 'accepted'],
+      default: 'pending',
+    },
+
 
     // User Type
     userType: {

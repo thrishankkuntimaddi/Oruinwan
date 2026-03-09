@@ -201,4 +201,68 @@ async function getCompanyAnalytics(companyId, timeRange = '30d') {
     };
 }
 
-module.exports = { getCompanyAnalytics };
+// ============================================================================
+// ACTIVITY ANALYTICS (for GET /api/company/analytics/activity)
+// ============================================================================
+
+/**
+ * Returns a lightweight activity snapshot for the last 7 days.
+ * Called by GET /api/company/analytics/activity.
+ * All queries are count-only — no message text is ever projected.
+ *
+ * @param {string} companyId
+ * @returns {Promise<Object>}
+ */
+async function getActivityAnalytics(companyId) {
+    const from = since('7d');
+    const mongoose = require('mongoose');
+    const cid = mongoose.Types.ObjectId.createFromHexString(companyId.toString());
+
+    const [
+        messageLast7Days,
+        taskCreatedLast7Days,
+        activeUsers,
+        newInvites,
+        updatesPosted,
+    ] = await Promise.all([
+        Message.countDocuments({ company: companyId, isDeleted: false, createdAt: { $gte: from } }),
+        Task.countDocuments({ company: companyId, createdAt: { $gte: from } }),
+        // Unique senders in last 7 days
+        Message.distinct('sender', { company: companyId, isDeleted: false, createdAt: { $gte: from } })
+            .then(ids => ids.length),
+        User.countDocuments({ companyId, accountStatus: 'invited', createdAt: { $gte: from } }),
+        require('../../../models/Update').countDocuments({ company: companyId, isDeleted: false, createdAt: { $gte: from } }),
+    ]);
+
+    // Daily message breakdown (last 7 days)
+    const dailyActivity = await Message.aggregate([
+        {
+            $match: {
+                company: cid,
+                isDeleted: false,
+                createdAt: { $gte: from },
+            },
+        },
+        {
+            $group: {
+                _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
+                count: { $sum: 1 },
+            },
+        },
+        { $sort: { _id: 1 } },
+        { $project: { _id: 0, date: '$_id', messageCount: '$count' } },
+    ]);
+
+    return {
+        period: { from, to: new Date() },
+        messagesLast7Days: messageLast7Days,
+        tasksCreatedLast7Days: taskCreatedLast7Days,
+        activeUsers,
+        newInvites,
+        updatesPosted,
+        dailyActivity,
+    };
+}
+
+module.exports = { getCompanyAnalytics, getActivityAnalytics };
+

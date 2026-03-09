@@ -43,8 +43,8 @@ exports.getUpdates = async (req, res) => {
 exports.postUpdate = async (req, res) => {
     if (validationGuard(req, res)) return;
     try {
-        const { title, content, type, priority, attachments, mentions } = req.body;
-        const posterId = req.user.sub || req.user._id;
+        const { title, content, type, priority, visibility, targetDepartment, attachments, mentions } = req.body;
+        const posterId = req.user._dbUser?._id || req.user.sub || req.user._id;
 
         const update = await updatesService.postUpdate({
             companyId: req.companyId,
@@ -53,6 +53,8 @@ exports.postUpdate = async (req, res) => {
             content,
             type,
             priority,
+            visibility,
+            targetDepartment,
             attachments,
             mentions,
             io: req.io,
@@ -63,6 +65,7 @@ exports.postUpdate = async (req, res) => {
         return handleError(res, err);
     }
 };
+
 
 /**
  * DELETE /api/company/updates/:id
