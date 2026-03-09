@@ -42,7 +42,9 @@ const requireOwner = async (req, res, next) => {
             req.user = fullUser;
         }
 
-        console.log('[REQUIRE_OWNER] Checking owner role for user:', req.user.email, 'Role:', req.user.companyRole);
+        // S-14 SECURITY FIX: Use _id instead of email in logs — email is PII and must not
+        // appear in operational log streams (GDPR / SOC2 compliance).
+        console.log('[REQUIRE_OWNER] Checking owner role for user:', req.user._id || req.user.sub, 'Role:', req.user.companyRole);
 
         // S-05 SECURITY FIX: Only scoped coOwner check — global isCoOwner flag removed.
         // A global boolean is unsafe in multi-tenant: one flag would grant owner access

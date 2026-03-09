@@ -175,7 +175,9 @@ router.post(
                 toCreate: employees.filter(e => !existingSet.has(e.email) && e.status !== 'terminated').length,
                 toDisable: employees.filter(e => existingSet.has(e.email) && e.status === 'terminated').length,
                 toUpdate: employees.filter(e => existingSet.has(e.email) && e.status !== 'terminated').length,
-                employees: employees.slice(0, 10), // preview first 10
+                // S-12 SECURITY FIX: Return allowlisted fields only — raw connector
+                // objects may contain PII beyond what Chttrix requires.
+                employees: safeEmployeePreview,
             });
         } catch (err) {
             return handleError(res, err);

@@ -266,10 +266,17 @@ app.use("/api/company", require("./src/features/company-analytics/analytics.rout
 // Phase 3 — Company Security Layer
 app.use("/api/company", require("./src/features/security/security.routes")); // /api/company/security/*, /api/company/audit-logs
 
-// Phase 4 — Enterprise Integration Layer
+// Phase 4 — Enterprise Integration Layer (S-20: split into two distinct mounts)
+// Previously the same router was mounted twice, creating /api/scim AND /api/company paths
+// from one file — a maintenance landmine. Now split cleanly:
+//
+//   scimRouter       → /api/scim/users           (SCIM Bearer token auth)
+//   integrationRouter → /api/company/scim/tokens  (standard admin gate)
+//                        /api/company/integrations/*
+
 const integrationRouter = require("./src/features/integration/integration.routes");
-app.use("/api", integrationRouter); // /api/scim/users (SCIM Bearer auth)
-app.use("/api/company", integrationRouter); // /api/company/scim/tokens, /api/company/integrations/*
+app.use("/api", integrationRouter);           // S-20: mounts /api/scim/... routes only
+app.use("/api/company", integrationRouter);  // S-20: mounts /api/company/scim/... and /api/company/integrations/...
 
 // SECURITY FIX (H-2): Role middleware applied at mount level (defence-in-depth on top of per-route guards).
 // requireAuth  → rejects unauthenticated requests before they reach any route handler.
@@ -282,7 +289,10 @@ app.use("/api/manager-dashboard", requireAuth, requireManager, require("./src/fe
 app.use("/api/manager", requireAuth, requireManager, require("./src/features/admin/manager-dashboard.routes"));
 
 app.use("/api/polls", requireAuth, require("./src/features/polls/poll.routes")); // SECURITY FIX (BUG-2): requireAuth added at mount level
-app.use("/api/chat", require("./src/features/chatlist/chatlist.routes"));
+// S-10 SECURITY FIX: requireAuth added at /api/chat mount level.
+// Previously relied on per-route auth inside chatlist.routes.js (single-layer defence).
+// Defence-in-depth: any authenticated request must pass JWT validation before reaching any chat route.
+app.use("/api/chat", requireAuth, require("./src/features/chatlist/chatlist.routes"));
 app.use("/api/channels", require("./src/features/channels/channel.routes"));
 
 
@@ -622,18 +632,25 @@ app.delete('/api/scheduled-meetings/:id', requireAuth, async (req, res) => {
 // ---------------------------------------------------------
 
 // 404 Handler - catch routes that don't exist
+// S-15 SECURITY FIX: In production, do NOT echo back method/path.
+// Path reflection acts as a route-enumeration oracle for attackers.
 app.use((req, res) => {
-  console.log('❌ [404] Route not found:', {
-    method: req.method,
-    path: req.path,
-    originalUrl: req.originalUrl,
-    headers: req.headers['authorization'] ? 'Has Auth' : 'No Auth'
-  });
-  res.status(404).json({
-    error: 'Not Found',
-    message: `Cannot ${req.method} ${req.path}`,
-    suggestion: 'Check the API documentation for available endpoints'
-  });
+  if (!isProduction) {
+    // Dev: verbose 404 for debugging convenience
+    console.log('❌ [404] Route not found:', {
+      method: req.method,
+      path: req.path,
+      originalUrl: req.originalUrl,
+      headers: req.headers['authorization'] ? 'Has Auth' : 'No Auth'
+    });
+    return res.status(404).json({
+      error: 'Not Found',
+      message: `Cannot ${req.method} ${req.path}`,
+      suggestion: 'Check the API documentation for available endpoints'
+    });
+  }
+  // Production: generic response, no path/method reflected
+  res.status(404).json({ error: 'Not Found' });
 });
 
 // Global Error Handler - catches all unhandled errors
