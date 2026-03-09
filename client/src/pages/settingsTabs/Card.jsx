@@ -10,14 +10,17 @@ import SharedCard from '../../shared/components/ui/Card';
  * @param {string} props.subtitle - Card subtitle
  * @param {string} props.className - Additional CSS classes
  */
-const Card = ({ children, title, subtitle, className = "" }) => (
+const Card = ({ children, title, subtitle, action, className = "" }) => (
     <SharedCard className={`transition-shadow duration-300 ${className}`} hover={true} noPadding={false}>
-        {(title || subtitle) && (
-            <SharedCard.Header
-                title={title}
-                subtitle={subtitle}
-                className="pb-4 border-b border-secondary-100 dark:border-secondary-800 mb-6"
-            />
+        {(title || subtitle || action) && (
+            <div className="flex items-start justify-between pb-4 border-b border-secondary-100 dark:border-secondary-800 mb-6">
+                <SharedCard.Header
+                    title={title}
+                    subtitle={subtitle}
+                    className=""
+                />
+                {action && <div className="flex-shrink-0 ml-4">{action}</div>}
+            </div>
         )}
         <SharedCard.Body>
             {children}
