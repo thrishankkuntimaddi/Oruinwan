@@ -39,7 +39,8 @@
     "passport-linkedin-oauth2": "^2.0.0",
     "socket.io": "^4.8.1",
     "twilio": "^5.11.1",
-    "ua-parser-js": "^2.0.8"
+    "ua-parser-js": "^2.0.8",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "eslint": "^9.17.0",

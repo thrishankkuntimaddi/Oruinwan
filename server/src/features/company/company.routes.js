@@ -82,4 +82,29 @@ router.get("/:id/members", requireAuth, companyController.getCompanyMembers);
  */
 router.put("/:id/members/:userId/role", requireAuth, companyController.updateMemberRole);
 
+// ============================================================================
+// SETUP WIZARD ROUTES
+// ============================================================================
+
+/**
+ * @route   POST /api/companies/:id/start-setup
+ * @desc    Accept terms and start setup wizard
+ * @access  Private (company admin)
+ */
+router.post("/:id/start-setup", requireAuth, companyController.startSetup);
+
+/**
+ * @route   PUT /api/companies/:id/setup
+ * @desc    Handle each setup step (multipart: logo or excel file)
+ * @access  Private (company admin)
+ */
+router.put("/:id/setup", requireAuth, companyController.handleSetup);
+
+/**
+ * @route   GET /api/companies/:id/setup/template
+ * @desc    Download sample Excel employee template
+ * @access  Private (company admin)
+ */
+router.get("/:id/setup/template", requireAuth, companyController.downloadTemplate);
+
 module.exports = router;

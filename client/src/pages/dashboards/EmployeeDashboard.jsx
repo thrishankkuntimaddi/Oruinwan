@@ -79,7 +79,7 @@ const EmployeeDashboard = () => {
                     <div className="py-6 animate-pulse space-y-4">
                         {/* Stat cards */}
                         <div className="grid grid-cols-3 gap-4">
-                            {[1,2,3].map(i => (
+                            {[1, 2, 3].map(i => (
                                 <div key={i} className="bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-700">
                                     <div className="h-3 w-20 bg-gray-200 dark:bg-gray-700 rounded mb-3" />
                                     <div className="h-8 w-12 bg-gray-300 dark:bg-gray-600 rounded-lg" />
@@ -88,12 +88,12 @@ const EmployeeDashboard = () => {
                         </div>
                         {/* List skeletons */}
                         <div className="bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-700 space-y-3">
-                            {[75,55,85,60].map((w,i) => (
+                            {[75, 55, 85, 60].map((w, i) => (
                                 <div key={i} className="flex items-center gap-3">
                                     <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 flex-shrink-0" />
                                     <div className="flex-1 space-y-1.5">
-                                        <div className="h-2.5 bg-gray-200 dark:bg-gray-700 rounded" style={{width:`${w}%`}} />
-                                        <div className="h-2 bg-gray-100 dark:bg-gray-700/50 rounded" style={{width:`${w-20}%`}} />
+                                        <div className="h-2.5 bg-gray-200 dark:bg-gray-700 rounded" style={{ width: `${w}%` }} />
+                                        <div className="h-2 bg-gray-100 dark:bg-gray-700/50 rounded" style={{ width: `${w - 20}%` }} />
                                     </div>
                                 </div>
                             ))}

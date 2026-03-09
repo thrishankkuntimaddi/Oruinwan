@@ -2,10 +2,12 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Clock, ArrowLeft, Shield, CheckCircle } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
+import { useAuth } from '../contexts/AuthContext';
 
 const PendingVerification = () => {
     const navigate = useNavigate();
     const { theme } = useTheme();
+    const { logout } = useAuth();
 
     return (
         <div className="min-h-screen w-full bg-white dark:bg-[#030712] relative overflow-hidden font-sans selection:bg-indigo-500 selection:text-white flex flex-col items-center justify-center p-6 transition-colors duration-500">
@@ -64,11 +66,8 @@ const PendingVerification = () => {
                 </div>
 
                 <button
-                    onClick={() => {
-                        // Logout the user instead of navigating home
-                        localStorage.removeItem('user');
-                        localStorage.removeItem('accessToken');
-                        document.cookie = 'jwt=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+                    onClick={async () => {
+                        await logout();
                         navigate('/login');
                     }}
                     className="group flex items-center justify-center gap-2 w-full py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-bold rounded-xl hover:bg-slate-800 dark:hover:bg-slate-100 transition-all transform hover:-translate-y-1 shadow-lg hover:shadow-xl"

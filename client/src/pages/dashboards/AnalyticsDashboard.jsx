@@ -106,7 +106,7 @@ const AnalyticsDashboard = () => {
                 </div>
                 {/* Stats cards */}
                 <div className="grid grid-cols-4 gap-4 mb-8">
-                    {[1,2,3,4].map(i => (
+                    {[1, 2, 3, 4].map(i => (
                         <div key={i} className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
                             <div className="h-3 w-20 bg-gray-200 dark:bg-gray-700 rounded mb-4" />
                             <div className="h-10 w-16 bg-gray-300 dark:bg-gray-600 rounded-lg mb-2" />
@@ -119,8 +119,8 @@ const AnalyticsDashboard = () => {
                     <div className="col-span-2 bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 h-64">
                         <div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded mb-6" />
                         <div className="flex items-end gap-3 h-36">
-                            {[60,80,45,90,70,55,85,65,75,50].map((h,i) => (
-                                <div key={i} className="flex-1 bg-blue-100 dark:bg-blue-900/30 rounded-t-lg" style={{height:`${h}%`}} />
+                            {[60, 80, 45, 90, 70, 55, 85, 65, 75, 50].map((h, i) => (
+                                <div key={i} className="flex-1 bg-blue-100 dark:bg-blue-900/30 rounded-t-lg" style={{ height: `${h}%` }} />
                             ))}
                         </div>
                     </div>
@@ -163,8 +163,8 @@ const AnalyticsDashboard = () => {
                                         key={days}
                                         onClick={() => handlePeriodChange(days)}
                                         className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${period === days
-                                                ? 'bg-white text-blue-600 shadow-sm'
-                                                : 'text-gray-600 hover:text-gray-900'
+                                            ? 'bg-white text-blue-600 shadow-sm'
+                                            : 'text-gray-600 hover:text-gray-900'
                                             }`}
                                     >
                                         {days === 365 ? '1Y' : `${days}D`}
