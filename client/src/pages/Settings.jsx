@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
     User, Lock, Palette, Bell, Globe, Shield, Laptop, Settings as SettingsIcon,
-    ChevronRight, Search, ArrowLeft, X
+    ChevronRight, Search, ArrowLeft, X, Menu
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
@@ -161,25 +161,6 @@ const Settings = () => {
                     <span className="ml-auto text-[10px] font-bold uppercase tracking-widest text-gray-400">Settings</span>
                 </div>
 
-                {/* Search */}
-                <div className="px-3 py-2.5 border-b border-gray-200 dark:border-gray-800">
-                    <div className="relative">
-                        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={12} />
-                        <input
-                            type="text"
-                            placeholder="Filter settings…"
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full pl-8 pr-7 py-1.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-[12px] text-gray-800 dark:text-gray-100 placeholder-gray-400 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
-                        />
-                        {searchQuery && (
-                            <button onClick={() => setSearchQuery('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
-                                <X size={11} />
-                            </button>
-                        )}
-                    </div>
-                </div>
-
                 {/* Nav items */}
                 <nav className="flex-1 overflow-y-auto py-2 px-2">
                     <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-600 px-2 py-1.5 mb-1">Account</p>
@@ -194,8 +175,8 @@ const Settings = () => {
                                     setMobileSidebarOpen(false);
                                 }}
                                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl mb-0.5 text-left transition-all group ${isActive
-                                        ? 'bg-blue-600 text-white shadow-sm'
-                                        : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100'
+                                    ? 'bg-blue-600 text-white shadow-sm'
+                                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100'
                                     }`}
                             >
                                 <Icon size={15} className={`flex-shrink-0 ${isActive ? 'text-white' : 'text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300'}`} />
@@ -231,21 +212,48 @@ const Settings = () => {
             {/* ── Main content ───────────────────────────────── */}
             <main className="flex-1 md:ml-64 flex flex-col min-h-screen">
                 {/* Top bar */}
-                <header className="h-14 flex items-center justify-between px-6 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 sticky top-0 z-10">
-                    <div className="flex items-center gap-3">
-                        {/* Mobile hamburger */}
+                <header className="h-14 flex items-center justify-between px-6 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 sticky top-0 z-10 gap-4">
+                    {/* Left: breadcrumb */}
+                    <div className="flex items-center gap-3 flex-shrink-0">
                         <button
                             className="md:hidden p-1.5 text-gray-500 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"
                             onClick={() => setMobileSidebarOpen(true)}
                         >
-                            <SettingsIcon size={18} />
+                            <Menu size={18} />
                         </button>
-                        <div className="flex items-center gap-2">
+                        <div className="hidden md:flex items-center gap-2">
                             <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Settings</span>
                             <span className="text-gray-300 dark:text-gray-700">/</span>
-                            <span className="text-sm font-bold text-gray-900 dark:text-white">{activeLabel}</span>
+                            <span className="text-[13px] font-bold text-gray-900 dark:text-white">{activeLabel}</span>
                         </div>
                     </div>
+
+                    {/* Center: Search bar */}
+                    <div className="flex-1 max-w-md">
+                        <div className="relative">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={14} />
+                            <input
+                                type="text"
+                                placeholder="Search settings…"
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className="w-full pl-9 pr-8 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-[13px] text-gray-800 dark:text-gray-100 placeholder-gray-400 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
+                            />
+                            {searchQuery && (
+                                <button onClick={() => setSearchQuery('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                                    <X size={13} />
+                                </button>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Right: back */}
+                    <button
+                        onClick={handleBackNavigation}
+                        className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 text-[12.5px] font-semibold text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+                    >
+                        <ArrowLeft size={14} /> Back
+                    </button>
                 </header>
 
                 {/* Content */}
