@@ -35,6 +35,43 @@ const memberGatePersonal = [requireAuth, requireWorkspaceMember];
 // Workspace admin or higher (company ceiling applied)
 const adminGate = [...memberGate, enforceRoleCeiling({ minRole: 'admin' })];
 
+// Admin gate that works for BOTH personal and company accounts.
+// Personal accounts have no companyId so requireCompanyMember would wrongly 403 them.
+// Instead we run memberGatePersonal (auth + workspace membership) then enforce
+// workspace-level admin/owner directly — no company ceiling calculation needed.
+const requireWorkspaceAdmin = (req, res, next) => {
+    const role = req.workspaceRole; // set by requireWorkspaceMember
+    if (role !== 'admin' && role !== 'owner') {
+        return res.status(403).json({
+            success: false,
+            error: `This action requires at least 'admin' workspace access. Your workspace role is '${role}'.`,
+            code: 'INSUFFICIENT_WORKSPACE_ROLE',
+            workspaceRole: role,
+            requiredRole: 'admin',
+        });
+    }
+    // For company accounts that DID go through requireCompanyMember, also apply the ceiling.
+    if (req.companyRole) {
+        const effectiveRole = enforceRoleCeiling.resolveEffectiveRole(req.companyRole, role);
+        req.effectiveRole = effectiveRole;
+        const ROLE_HIERARCHY = enforceRoleCeiling.ROLE_HIERARCHY;
+        if (ROLE_HIERARCHY.indexOf(effectiveRole) < ROLE_HIERARCHY.indexOf('admin')) {
+            return res.status(403).json({
+                success: false,
+                error: `This action requires at least 'admin' access. Your effective role is '${effectiveRole}'.`,
+                code: 'INSUFFICIENT_ROLE',
+                effectiveRole,
+                requiredRole: 'admin',
+            });
+        }
+    } else {
+        // Personal account — workspace role IS the effective role
+        req.effectiveRole = role;
+    }
+    next();
+};
+const adminGatePersonal = [...memberGatePersonal, requireWorkspaceAdmin];
+
 // ── PUBLIC / lightly guarded routes ───────────────────────────────────────────
 
 // Create workspace — requireAuth only.
@@ -66,7 +103,7 @@ router.get('/:workspaceId/all-members', ...memberGatePersonal, workspaceControll
 router.get('/:workspaceId/channels', ...memberGatePersonal, workspaceController.getWorkspaceChannels);
 
 // Create channel in workspace — S-01: admin ceiling added
-router.post('/:workspaceId/channels', ...adminGate, workspaceController.createWorkspaceChannel);
+router.post('/:workspaceId/channels', ...adminGatePersonal, workspaceController.createWorkspaceChannel);
 
 // Workspace statistics — member access (personal + company)
 router.get('/:workspaceId/stats', ...memberGatePersonal, workspaceController.getWorkspaceStats);
@@ -74,35 +111,48 @@ router.get('/:workspaceId/stats', ...memberGatePersonal, workspaceController.get
 // ── ADMIN-ONLY ROUTES (S-01: enforceRoleCeiling({ minRole: 'admin' })) ────────
 
 // Invite management
-// S-01: was requireAuth only — now adminGate
-router.post('/:workspaceId/invite', ...adminGate, workspaceController.inviteToWorkspace);
+// Use adminGatePersonal so personal accounts (no companyId) are not wrongly rejected.
+// adminGatePersonal = requireAuth + requireWorkspaceMember + requireWorkspaceAdmin
+// (requireWorkspaceAdmin enforces admin/owner workspace role AND applies company ceiling
+//  for company accounts automatically)
+router.post('/:workspaceId/invite', ...adminGatePersonal, workspaceController.inviteToWorkspace);
 // Legacy alias with :id param (kept for backward compat)
-router.post('/:id/invite', ...adminGate, workspaceController.inviteToWorkspace);
+router.post('/:id/invite', ...adminGatePersonal, workspaceController.inviteToWorkspace);
 
-router.get('/:workspaceId/invites', ...adminGate, workspaceAdminController.getWorkspaceInvites);
-router.post('/:workspaceId/invites/:inviteId/revoke', ...adminGate, workspaceAdminController.revokeInvite);
-router.post('/:workspaceId/invites/:inviteId/resend', ...adminGate, workspaceAdminController.resendInvite);
-router.post('/:workspaceId/invites/bulk-revoke', ...adminGate, workspaceAdminController.bulkRevokeInvites);
-router.delete('/:workspaceId/invites/bulk-delete', ...adminGate, workspaceAdminController.bulkDeleteInvites);
-router.post('/:workspaceId/invites/cleanup-expired', ...adminGate, workspaceAdminController.cleanupExpiredInvites);
+router.get('/:workspaceId/invites', ...adminGatePersonal, workspaceAdminController.getWorkspaceInvites);
+router.post('/:workspaceId/invites/:inviteId/revoke', ...adminGatePersonal, workspaceAdminController.revokeInvite);
+router.post('/:workspaceId/invites/:inviteId/resend', ...adminGatePersonal, workspaceAdminController.resendInvite);
+router.post('/:workspaceId/invites/bulk-revoke', ...adminGatePersonal, workspaceAdminController.bulkRevokeInvites);
+router.delete('/:workspaceId/invites/bulk-delete', ...adminGatePersonal, workspaceAdminController.bulkDeleteInvites);
+router.post('/:workspaceId/invites/cleanup-expired', ...adminGatePersonal, workspaceAdminController.cleanupExpiredInvites);
 
-// Member management — S-01: was requireAuth only for all of these
-router.post('/:workspaceId/members/:userId/suspend', ...adminGate, workspaceAdminController.suspendMember);
-router.post('/:workspaceId/members/:userId/restore', ...adminGate, workspaceAdminController.restoreMember);
-router.post('/:workspaceId/members/:userId/change-role', ...adminGate, workspaceAdminController.changeRole);
-router.post('/:workspaceId/remove-member', ...adminGate, workspaceAdminController.removeMember);
+// Member management — personal + company accounts both need these
+router.post('/:workspaceId/members/:userId/suspend', ...adminGatePersonal, workspaceAdminController.suspendMember);
+router.post('/:workspaceId/members/:userId/restore', ...adminGatePersonal, workspaceAdminController.restoreMember);
+router.post('/:workspaceId/members/:userId/change-role', ...adminGatePersonal, workspaceAdminController.changeRole);
+router.post('/:workspaceId/remove-member', ...adminGatePersonal, workspaceAdminController.removeMember);
 
-// ── ADMIN/OWNER-ONLY WORKSPACE MANAGEMENT ────────────────────────────────────
+// Rename workspace — works for personal + company
+router.put('/:id/rename', ...adminGatePersonal, workspaceController.renameWorkspace);
 
-// Rename workspace — S-01: was requireAuth only
-router.put('/:id/rename', requireAuth, requireCompanyMember, enforceRoleCeiling({ minRole: 'admin' }), workspaceController.renameWorkspace);
+// Update workspace settings — works for personal + company
+router.put('/:id', ...adminGatePersonal, workspaceController.updateWorkspace);
 
-// Update workspace settings — S-01: was requireAuth only
-router.put('/:id', requireAuth, requireCompanyMember, enforceRoleCeiling({ minRole: 'admin' }), workspaceController.updateWorkspace);
-
-// Delete workspace (OWNER ONLY) — S-01: was requireAuth only
+// Delete workspace (OWNER ONLY) — works for personal + company
 // IMPORTANT: Must come BEFORE GET /:companyId to avoid route conflicts
-router.delete('/:id', requireAuth, requireCompanyMember, enforceRoleCeiling({ minRole: 'owner' }), workspaceController.deleteWorkspace);
+const requireWorkspaceOwner = (req, res, next) => {
+    const role = req.workspaceRole;
+    if (role !== 'owner') {
+        return res.status(403).json({
+            success: false,
+            error: `Only the workspace owner can perform this action. Your workspace role is '${role}'.`,
+            code: 'INSUFFICIENT_WORKSPACE_ROLE',
+        });
+    }
+    req.effectiveRole = role;
+    next();
+};
+router.delete('/:id', ...memberGatePersonal, requireWorkspaceOwner, workspaceController.deleteWorkspace);
 
 // ── COMPANY-SCOPED LIST ───────────────────────────────────────────────────────
 

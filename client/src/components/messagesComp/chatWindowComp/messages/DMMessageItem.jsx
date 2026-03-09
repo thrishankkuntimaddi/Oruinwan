@@ -300,7 +300,7 @@ function DMMessageItem({
 
                 {/* Message Text */}
                 {(!msg.attachment || msg.text) && (
-                    <div className="text-gray-800 dark:text-gray-200 text-[14px] leading-relaxed whitespace-pre-wrap break-words max-w-[70%] message-content">
+                    <div className="text-gray-800 dark:text-gray-200 text-[14px] leading-relaxed break-all whitespace-pre-wrap max-w-[60%] message-content" style={{ overflowWrap: 'anywhere', wordBreak: 'break-word' }}>
                         {msg.isDeleted ? (
                             <span className="text-gray-400 italic">Message deleted</span>
                         ) : isEditing ? (

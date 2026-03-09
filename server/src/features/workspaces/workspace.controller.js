@@ -377,7 +377,7 @@ exports.deleteWorkspace = async (req, res) => {
  */
 exports.inviteToWorkspace = async (req, res) => {
   try {
-    const workspaceId = req.params.id;
+    const workspaceId = req.params.workspaceId || req.params.id;
     const { emails, inviteType = "link", role = "member", daysValid = 7 } = req.body;
     const inviterId = req.user?.sub;
 

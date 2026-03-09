@@ -36,6 +36,14 @@ const MessagesPanel = ({ title }) => {
 
     const { socket } = useSocket();
 
+    // Strip the raw E2EE placeholder that the API returns when it can't decrypt server-side.
+    // The actual decrypted text is only available inside the open chat window.
+    const sanitizePreview = (text) => {
+        if (!text) return '';
+        if (text.startsWith('\u{1F512}')) return ''; // '🔒 Encrypted message…'
+        return text;
+    };
+
     useEffect(() => {
         const loadDMs = async () => {
             if (!workspaceId) return;
@@ -57,7 +65,7 @@ const MessagesPanel = ({ title }) => {
                         avatar: session.otherUser?.profilePicture,
                         status: initialStatus,
                         unread: session.unreadCount || 0,
-                        lastMessage: session.lastMessage || "No messages yet",
+                        lastMessage: sanitizePreview(session.lastMessage) || "",
                         type: "dm"
                     };
                 });
@@ -158,7 +166,7 @@ const MessagesPanel = ({ title }) => {
                     avatar: session.otherUser?.profilePicture,
                     status: initialStatus,
                     unread: session.unreadCount || 0,
-                    lastMessage: session.lastMessage || "No messages yet",
+                    lastMessage: sanitizePreview(session.lastMessage) || "",
                     type: "dm"
                 };
             });
@@ -374,8 +382,8 @@ const MessagesPanel = ({ title }) => {
                             <div key={i} className="flex items-center gap-3 px-3 py-2 rounded-lg">
                                 <div className="w-9 h-9 rounded-full bg-gray-200 dark:bg-gray-700 flex-shrink-0" />
                                 <div className="flex-1 space-y-1.5">
-                                    <div className="h-2.5 bg-gray-200 dark:bg-gray-700 rounded" style={{width:`${w}%`}} />
-                                    <div className="h-2 bg-gray-100 dark:bg-gray-700/50 rounded" style={{width:`${w*0.6}%`}} />
+                                    <div className="h-2.5 bg-gray-200 dark:bg-gray-700 rounded" style={{ width: `${w}%` }} />
+                                    <div className="h-2 bg-gray-100 dark:bg-gray-700/50 rounded" style={{ width: `${w * 0.6}%` }} />
                                 </div>
                             </div>
                         ))}

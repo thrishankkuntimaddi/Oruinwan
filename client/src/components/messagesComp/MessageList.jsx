@@ -168,11 +168,16 @@ export default function MessageList({ onSelectChat }) {
             ? message.sender._id
             : message.sender;
 
-        const previewText =
+        // Prefer decryptedContent (set by MessageEvent after E2EE decryption) over raw text
+        const rawPreview =
+          message.decryptedContent ||
           message.text ||
           (message.attachments?.length
             ? `[${message.attachments[0].type}]`
             : "");
+        // Never show the encrypted placeholder string in the sidebar
+        const previewText =
+          rawPreview && !rawPreview.startsWith("\u{1F512}") ? rawPreview : "";
 
         const now = message.createdAt || new Date().toISOString();
 

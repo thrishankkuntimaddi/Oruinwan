@@ -269,14 +269,15 @@ export default function FooterInput({
         )}
 
         {/* Rich Text Input — uncontrolled div, no html= binding */}
-        <div className="w-full px-3 py-2 text-sm max-h-[30vh] overflow-y-auto custom-scrollbar min-h-[4rem] relative">
+        <div className="w-full px-3 py-2 text-sm max-h-[30vh] overflow-y-auto overflow-x-hidden custom-scrollbar min-h-[4rem] relative">
           <div
             ref={editableRef}
             contentEditable={!blocked && !disabled}
             suppressContentEditableWarning
             onInput={handleInput}
             onKeyDown={handleKeyDown}
-            className={`focus:outline-none min-h-[40px] break-words text-gray-800 dark:text-gray-100 message-editor ${(blocked || disabled) ? "cursor-not-allowed opacity-50" : ""}`}
+            className={`focus:outline-none min-h-[40px] break-all whitespace-pre-wrap text-gray-800 dark:text-gray-100 message-editor ${(blocked || disabled) ? "cursor-not-allowed opacity-50" : ""}`}
+            style={{ overflowWrap: 'anywhere', wordBreak: 'break-word' }}
           />
           {!hasText && !blocked && (
             <div className="absolute top-2 left-3 text-gray-400 dark:text-gray-500 pointer-events-none text-sm select-none">

@@ -229,25 +229,28 @@ const InvitePeopleModal = ({ isOpen, onClose, workspaceId, workspaceName }) => {
                                 </div>
 
                                 <div className="space-y-2 max-h-40 overflow-y-auto pr-1 custom-scrollbar">
-                                    {pendingInvites.map(invite => (
-                                        <div key={invite._id} className="group flex items-center justify-between p-2 rounded-lg hover:bg-white dark:hover:bg-gray-700 hover:shadow-sm border border-transparent hover:border-gray-100 dark:hover:border-gray-600 transition-all">
-                                            <div className="min-w-0">
-                                                <p className="text-xs font-medium text-gray-700 dark:text-gray-200 truncate max-w-[120px]">
-                                                    {invite.email || 'Link invite'}
-                                                </p>
-                                                <p className="text-[10px] text-gray-400 dark:text-gray-500">
-                                                    {invite.role}
-                                                </p>
+                                    {pendingInvites.map(invite => {
+                                        const inviteId = invite._id || invite.id;
+                                        return (
+                                            <div key={inviteId} className="group flex items-center justify-between p-2 rounded-lg hover:bg-white dark:hover:bg-gray-700 hover:shadow-sm border border-transparent hover:border-gray-100 dark:hover:border-gray-600 transition-all">
+                                                <div className="min-w-0">
+                                                    <p className="text-xs font-medium text-gray-700 dark:text-gray-200 truncate max-w-[120px]">
+                                                        {invite.email || 'Link invite'}
+                                                    </p>
+                                                    <p className="text-[10px] text-gray-400 dark:text-gray-500">
+                                                        {invite.role}
+                                                    </p>
+                                                </div>
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); handleRevokeInvite(inviteId); }}
+                                                    className="opacity-0 group-hover:opacity-100 text-gray-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 p-1 rounded-md transition-all"
+                                                    title="Revoke"
+                                                >
+                                                    <X className="w-3 h-3" />
+                                                </button>
                                             </div>
-                                            <button
-                                                onClick={(e) => { e.stopPropagation(); handleRevokeInvite(invite._id); }}
-                                                className="opacity-0 group-hover:opacity-100 text-gray-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 p-1 rounded-md transition-all"
-                                                title="Revoke"
-                                            >
-                                                <X className="w-3 h-3" />
-                                            </button>
-                                        </div>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
                             </>
                         )}
