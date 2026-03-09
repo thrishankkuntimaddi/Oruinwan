@@ -6,14 +6,15 @@ const THEMES = [
     {
         id: 'light',
         label: 'Light',
-        description: 'Clean, bright interface',
+        description: 'Clean & bright',
         icon: Sun,
         preview: (
-            <div className="w-full h-16 bg-white rounded-lg border border-slate-200 flex overflow-hidden">
-                <div className="w-1/3 bg-slate-100 h-full" />
-                <div className="flex-1 p-2 space-y-1">
-                    <div className="h-2 bg-slate-200 rounded w-3/4" />
-                    <div className="h-2 bg-slate-200 rounded w-1/2" />
+            <div className="w-full h-14 bg-white rounded-lg border border-gray-200 flex overflow-hidden">
+                <div className="w-1/3 bg-gray-100 h-full border-r border-gray-200" />
+                <div className="flex-1 p-2 space-y-1.5">
+                    <div className="h-1.5 bg-gray-200 rounded w-3/4" />
+                    <div className="h-1.5 bg-gray-200 rounded w-1/2" />
+                    <div className="h-1.5 bg-gray-100 rounded w-2/3" />
                 </div>
             </div>
         )
@@ -21,14 +22,15 @@ const THEMES = [
     {
         id: 'dark',
         label: 'Dark',
-        description: 'Easy on the eyes at night',
+        description: 'Easy at night',
         icon: Moon,
         preview: (
-            <div className="w-full h-16 bg-[#0B0F19] rounded-lg border border-white/10 flex overflow-hidden">
-                <div className="w-1/3 bg-[#111827] h-full" />
-                <div className="flex-1 p-2 space-y-1">
-                    <div className="h-2 bg-white/10 rounded w-3/4" />
-                    <div className="h-2 bg-white/10 rounded w-1/2" />
+            <div className="w-full h-14 bg-gray-950 rounded-lg border border-gray-700 flex overflow-hidden">
+                <div className="w-1/3 bg-gray-900 h-full border-r border-gray-800" />
+                <div className="flex-1 p-2 space-y-1.5">
+                    <div className="h-1.5 bg-gray-700 rounded w-3/4" />
+                    <div className="h-1.5 bg-gray-800 rounded w-1/2" />
+                    <div className="h-1.5 bg-gray-800 rounded w-2/3" />
                 </div>
             </div>
         )
@@ -36,28 +38,25 @@ const THEMES = [
     {
         id: 'auto',
         label: 'System',
-        description: 'Matches your OS setting',
+        description: 'Follows OS setting',
         icon: Laptop,
         preview: (
-            <div className="w-full h-16 rounded-lg border border-slate-200 flex overflow-hidden" style={{ background: 'linear-gradient(135deg, #fff 50%, #0B0F19 50%)' }}>
-                <div className="w-1/3 h-full" style={{ background: 'linear-gradient(135deg, #f1f5f9 50%, #111827 50%)' }} />
-                <div className="flex-1 p-2 space-y-1">
-                    <div className="h-2 rounded w-3/4" style={{ background: 'linear-gradient(135deg, #e2e8f0 50%, #ffffff1a 50%)' }} />
-                    <div className="h-2 rounded w-1/2" style={{ background: 'linear-gradient(135deg, #e2e8f0 50%, #ffffff1a 50%)' }} />
+            <div className="w-full h-14 rounded-lg border border-gray-300 flex overflow-hidden" style={{ background: 'linear-gradient(90deg, #fff 50%, #030712 50%)' }}>
+                <div className="w-1/3 h-full border-r border-gray-300" style={{ background: 'linear-gradient(90deg, #f3f4f6 50%, #111827 50%)' }} />
+                <div className="flex-1 p-2 space-y-1.5">
+                    <div className="h-1.5 rounded w-3/4" style={{ background: 'linear-gradient(90deg, #e5e7eb 50%, #374151 50%)' }} />
+                    <div className="h-1.5 rounded w-1/2" style={{ background: 'linear-gradient(90deg, #e5e7eb 50%, #374151 50%)' }} />
                 </div>
             </div>
         )
     },
 ];
 
-/**
- * AppearanceTab - Theme selection (fixed CSS variables to use concrete indigo/slate classes)
- */
 const AppearanceTab = ({ theme, toggleTheme }) => {
     return (
-        <div className="space-y-6 animate-fade-in-up">
-            <Card title="Interface Theme" subtitle="Customize the look and feel of Chttrix">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="space-y-4">
+            <Card title="Interface Theme" subtitle="Choose your preferred color scheme">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                     {THEMES.map((mode) => {
                         const isActive = theme === mode.id;
                         const Icon = mode.icon;
@@ -65,61 +64,49 @@ const AppearanceTab = ({ theme, toggleTheme }) => {
                             <button
                                 key={mode.id}
                                 onClick={() => toggleTheme(mode.id)}
-                                className={`relative p-4 border-2 rounded-2xl flex flex-col gap-3 transition-all duration-200 text-left ${isActive
-                                        ? 'border-indigo-600 dark:border-indigo-500 bg-indigo-50 dark:bg-indigo-900/10 ring-1 ring-indigo-500'
-                                        : 'border-slate-200 dark:border-slate-700 hover:border-indigo-300 dark:hover:border-slate-600 bg-white dark:bg-slate-900/40'
+                                className={`relative p-3 border rounded-xl flex flex-col gap-2.5 text-left transition-all ${isActive
+                                        ? 'border-blue-600 bg-blue-50 dark:bg-blue-950/20 ring-1 ring-blue-500'
+                                        : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 bg-white dark:bg-gray-900'
                                     }`}
                             >
-                                {/* Mini preview mockup */}
                                 {mode.preview}
-
                                 <div className="flex items-center gap-2">
-                                    <div className={`p-1.5 rounded-lg ${isActive ? 'bg-indigo-100 dark:bg-indigo-600 text-indigo-600 dark:text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'}`}>
-                                        <Icon size={16} />
+                                    <div className={`p-1 rounded-lg ${isActive ? 'bg-blue-100 dark:bg-blue-600/30 text-blue-600 dark:text-blue-400' : 'bg-gray-100 dark:bg-gray-800 text-gray-500'}`}>
+                                        <Icon size={13} />
                                     </div>
                                     <div>
-                                        <div className={`text-sm font-bold ${isActive ? 'text-indigo-900 dark:text-white' : 'text-slate-700 dark:text-slate-300'}`}>
-                                            {mode.label}
-                                        </div>
-                                        <div className="text-xs text-slate-500 dark:text-slate-400">{mode.description}</div>
+                                        <div className={`text-[12.5px] font-bold ${isActive ? 'text-blue-700 dark:text-blue-300' : 'text-gray-700 dark:text-gray-300'}`}>{mode.label}</div>
+                                        <div className="text-[11px] text-gray-400">{mode.description}</div>
                                     </div>
                                 </div>
-
                                 {isActive && (
-                                    <div className="absolute top-3 right-3 text-indigo-600 dark:text-indigo-400">
-                                        <CheckCircle2 size={18} />
+                                    <div className="absolute top-2.5 right-2.5">
+                                        <CheckCircle2 size={15} className="text-blue-600 dark:text-blue-400" />
                                     </div>
                                 )}
                             </button>
                         );
                     })}
                 </div>
-
-                <div className="mt-5 p-3 bg-slate-50 dark:bg-white/5 rounded-lg">
-                    <p className="text-xs text-slate-500 dark:text-slate-400">
-                        <span className="font-bold text-slate-700 dark:text-slate-300">System</span> mode automatically switches between Light and Dark based on your operating system settings.
-                    </p>
-                </div>
+                <p className="text-[11px] text-gray-400 mt-3">
+                    <strong className="text-gray-600 dark:text-gray-400">System</strong> mode follows your OS light/dark preference automatically.
+                </p>
             </Card>
 
-            <Card title="Font Size" subtitle="Adjust text size throughout the app">
+            <Card title="Font Size" subtitle="Adjust text density across the app">
                 <div className="flex items-center gap-4">
-                    <span className="text-xs text-slate-500">A</span>
+                    <span className="text-[11px] text-gray-400 w-4 text-center">A</span>
                     <input
                         type="range"
                         min="12"
                         max="18"
                         defaultValue="14"
-                        className="flex-1 accent-indigo-600"
-                        onChange={(e) => {
-                            document.documentElement.style.fontSize = `${e.target.value}px`;
-                        }}
+                        className="flex-1 accent-blue-600 h-1.5"
+                        onChange={(e) => { document.documentElement.style.fontSize = `${e.target.value}px`; }}
                     />
-                    <span className="text-lg text-slate-700 dark:text-slate-300 font-bold">A</span>
+                    <span className="text-base text-gray-700 dark:text-gray-300 font-bold w-4 text-center">A</span>
                 </div>
-                <p className="text-xs text-slate-400 dark:text-slate-500 mt-2">
-                    Font size changes apply immediately but are not saved between sessions yet.
-                </p>
+                <p className="text-[11px] text-gray-400 mt-2">Changes apply immediately but reset on refresh.</p>
             </Card>
         </div>
     );

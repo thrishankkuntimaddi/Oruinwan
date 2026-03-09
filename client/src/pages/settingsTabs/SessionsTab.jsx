@@ -1,13 +1,9 @@
 import React, { useState, useCallback } from 'react';
 import { Smartphone, Monitor, LogOut, RefreshCw, MapPin, Clock, Globe, AlertCircle } from 'lucide-react';
-import Button from '../../shared/components/ui/Button';
 import Card from './Card';
 import api from '../../services/api';
 import { useToast } from '../../contexts/ToastContext';
 
-/**
- * SessionsTab - Active sessions management with refresh
- */
 const SessionsTab = ({ sessions: initialSessions, handleLogoutSession, handleLogoutOthers, handleLogout }) => {
     const { showToast } = useToast();
     const [sessions, setSessions] = useState(initialSessions || []);
@@ -19,11 +15,8 @@ const SessionsTab = ({ sessions: initialSessions, handleLogoutSession, handleLog
         try {
             const { data } = await api.get('/api/auth/sessions');
             setSessions(Array.isArray(data) ? data : []);
-        } catch (err) {
-            showToast('Failed to refresh sessions', 'error');
-        } finally {
-            setRefreshing(false);
-        }
+        } catch { showToast('Failed to refresh sessions', 'error'); }
+        finally { setRefreshing(false); }
     }, [showToast]);
 
     const revokeSession = async (sessionId) => {
@@ -32,18 +25,12 @@ const SessionsTab = ({ sessions: initialSessions, handleLogoutSession, handleLog
             await handleLogoutSession(sessionId);
             setSessions(prev => prev.filter(s => s.id !== sessionId));
             showToast('Session revoked', 'success');
-        } catch {
-            showToast('Failed to revoke session', 'error');
-        } finally {
-            setRevokingId(null);
-        }
+        } catch { showToast('Failed to revoke session', 'error'); }
+        finally { setRevokingId(null); }
     };
 
     const logoutOthers = async () => {
-        try {
-            await handleLogoutOthers();
-            await refreshSessions();
-        } catch { }
+        try { await handleLogoutOthers(); await refreshSessions(); } catch { }
     };
 
     const formatLastActive = (dateStr) => {
@@ -57,124 +44,95 @@ const SessionsTab = ({ sessions: initialSessions, handleLogoutSession, handleLog
         return new Date(dateStr).toLocaleDateString();
     };
 
+    const refreshAction = (
+        <button onClick={refreshSessions} disabled={refreshing}
+            className="flex items-center gap-1.5 text-[11.5px] text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+            <RefreshCw size={12} className={refreshing ? 'animate-spin' : ''} />
+            Refresh
+        </button>
+    );
+
     return (
-        <div className="space-y-6 animate-fade-in-up">
-            <Card
-                title="Active Sessions"
-                subtitle="Devices currently logged into your account"
-                action={
-                    <button
-                        onClick={refreshSessions}
-                        disabled={refreshing}
-                        className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
-                    >
-                        <RefreshCw size={13} className={refreshing ? 'animate-spin' : ''} />
-                        Refresh
-                    </button>
-                }
-            >
-                <div className="space-y-3">
-                    {Array.isArray(sessions) && sessions.map((session) => (
-                        <div
-                            key={session.id}
-                            className={`flex items-center justify-between p-4 border rounded-xl transition-colors group ${session.current
-                                    ? 'border-indigo-200 dark:border-indigo-800 bg-indigo-50/50 dark:bg-indigo-900/10'
-                                    : 'border-slate-100 dark:border-white/5 hover:bg-slate-50 dark:hover:bg-white/5'
-                                }`}
-                        >
-                            <div className="flex items-center gap-4">
-                                <div className={`w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 ${session.current
-                                        ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/40 dark:text-indigo-400'
-                                        : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'
+        <div className="space-y-4">
+            <Card title="Active Sessions" subtitle="Devices logged into your account" action={refreshAction}>
+                <div className="space-y-2">
+                    {Array.isArray(sessions) && sessions.map(session => (
+                        <div key={session.id}
+                            className={`flex items-center justify-between p-3 border rounded-xl group transition-all ${session.current
+                                    ? 'border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-950/10'
+                                    : 'border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50'
+                                }`}>
+                            <div className="flex items-center gap-3">
+                                <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${session.current
+                                        ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400'
+                                        : 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400'
                                     }`}>
-                                    {session.os === 'mobile' ? <Smartphone size={20} /> : <Monitor size={20} />}
+                                    {session.os === 'mobile' ? <Smartphone size={16} /> : <Monitor size={16} />}
                                 </div>
                                 <div>
-                                    <div className="flex items-center gap-2 text-sm font-bold text-slate-800 dark:text-white">
-                                        {session.device || 'Unknown Device'}
-                                        {session.browser && <span className="font-normal text-slate-400">· {session.browser}</span>}
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-[12.5px] font-semibold text-gray-800 dark:text-gray-100">
+                                            {session.device || 'Unknown Device'}
+                                            {session.browser && <span className="font-normal text-gray-400"> · {session.browser}</span>}
+                                        </span>
                                         {session.current && (
-                                            <span className="px-2 py-0.5 bg-indigo-100 text-indigo-700 text-[10px] rounded-full dark:bg-indigo-500/20 dark:text-indigo-400 font-bold">
+                                            <span className="text-[10px] px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 font-bold rounded-full">
                                                 This device
                                             </span>
                                         )}
                                     </div>
-                                    <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                                        {session.location && (
-                                            <span className="flex items-center gap-1">
-                                                <MapPin size={10} />
-                                                {session.location}
-                                            </span>
-                                        )}
-                                        {session.lastActive && (
-                                            <span className="flex items-center gap-1">
-                                                <Clock size={10} />
-                                                {formatLastActive(session.lastActive)}
-                                            </span>
-                                        )}
-                                        {session.ip && (
-                                            <span className="flex items-center gap-1">
-                                                <Globe size={10} />
-                                                {session.ip}
-                                            </span>
-                                        )}
+                                    <div className="flex items-center gap-3 text-[11px] text-gray-400 mt-0.5">
+                                        {session.location && <span className="flex items-center gap-1"><MapPin size={10} />{session.location}</span>}
+                                        {session.lastActive && <span className="flex items-center gap-1"><Clock size={10} />{formatLastActive(session.lastActive)}</span>}
+                                        {session.ip && <span className="flex items-center gap-1"><Globe size={10} />{session.ip}</span>}
                                     </div>
                                 </div>
                             </div>
 
                             {session.current ? (
-                                <Button onClick={handleLogout} size="sm" variant="danger" icon={<LogOut size={13} />}>
-                                    Sign Out
-                                </Button>
+                                <button onClick={handleLogout}
+                                    className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30 text-[12px] font-semibold rounded-lg transition-colors">
+                                    <LogOut size={12} /> Sign Out
+                                </button>
                             ) : (
-                                <Button
+                                <button
                                     onClick={() => revokeSession(session.id)}
-                                    size="sm"
-                                    variant="ghost"
-                                    isLoading={revokingId === session.id}
                                     disabled={revokingId === session.id}
-                                    className="opacity-0 group-hover:opacity-100 transition-opacity text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10"
+                                    className="opacity-0 group-hover:opacity-100 px-3 py-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 text-[12px] font-semibold rounded-lg transition-all"
                                 >
-                                    Revoke
-                                </Button>
+                                    {revokingId === session.id ? 'Revoking…' : 'Revoke'}
+                                </button>
                             )}
                         </div>
                     ))}
 
                     {(!sessions || sessions.length === 0) && (
-                        <div className="text-center py-12">
-                            <AlertCircle className="mx-auto text-slate-300 dark:text-slate-600 mb-3" size={36} />
-                            <p className="text-slate-500 dark:text-slate-400 text-sm">No active sessions found</p>
-                            <button onClick={refreshSessions} className="text-indigo-600 dark:text-indigo-400 text-sm mt-2 hover:underline">
-                                Try refreshing
-                            </button>
+                        <div className="text-center py-10">
+                            <AlertCircle className="mx-auto text-gray-300 dark:text-gray-700 mb-2" size={28} />
+                            <p className="text-[12px] text-gray-400">No active sessions found</p>
+                            <button onClick={refreshSessions} className="text-[12px] text-blue-600 dark:text-blue-400 mt-1 hover:underline">Refresh</button>
                         </div>
                     )}
                 </div>
 
                 {sessions && sessions.length > 1 && (
-                    <div className="mt-5 pt-4 border-t border-slate-100 dark:border-white/5 flex items-center justify-between">
-                        <p className="text-xs text-slate-500 dark:text-slate-400">
-                            {sessions.length - 1} other active {sessions.length - 1 === 1 ? 'session' : 'sessions'}
-                        </p>
-                        <Button onClick={logoutOthers} variant="danger" size="sm" icon={<LogOut size={13} />}>
-                            Sign Out All Other Devices
-                        </Button>
+                    <div className="mt-4 pt-3 border-t border-gray-200 dark:border-gray-800 flex items-center justify-between">
+                        <span className="text-[11.5px] text-gray-400">{sessions.length - 1} other active {sessions.length - 1 === 1 ? 'session' : 'sessions'}</span>
+                        <button onClick={logoutOthers}
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-100 text-[12px] font-semibold rounded-lg transition-colors">
+                            <LogOut size={12} /> Sign Out All Others
+                        </button>
                     </div>
                 )}
             </Card>
 
-            <Card title="Account Security" subtitle="Review important security information">
-                <div className="flex items-start gap-3 p-4 bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800 rounded-xl">
-                    <AlertCircle size={16} className="text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
-                    <div>
-                        <p className="text-sm font-bold text-amber-800 dark:text-amber-300">Unrecognised session?</p>
-                        <p className="text-xs text-amber-700 dark:text-amber-400 mt-0.5">
-                            If you see a session you don't recognise, revoke it immediately and change your password in the <strong>Security</strong> tab.
-                        </p>
-                    </div>
+            <div className="flex items-start gap-2.5 p-3 bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800 rounded-xl">
+                <AlertCircle size={14} className="text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
+                <div>
+                    <p className="text-[12.5px] font-bold text-amber-800 dark:text-amber-300">Unrecognised device?</p>
+                    <p className="text-[11.5px] text-amber-700 dark:text-amber-400 mt-0.5">Revoke it immediately and change your password in the Security tab.</p>
                 </div>
-            </Card>
+            </div>
         </div>
     );
 };

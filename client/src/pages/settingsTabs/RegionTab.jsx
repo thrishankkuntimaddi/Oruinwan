@@ -1,13 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import Card from './Card';
 import api from '../../services/api';
-import Button from '../../shared/components/ui/Button';
 import { Check, Globe2 } from 'lucide-react';
 import { useToast } from '../../contexts/ToastContext';
 
-/**
- * RegionTab - Language and region settings with real API integration
- */
 const RegionTab = ({ region, setRegion }) => {
     const { showToast } = useToast();
     const [saving, setSaving] = useState(false);
@@ -15,9 +11,7 @@ const RegionTab = ({ region, setRegion }) => {
     const [detectedTimezone, setDetectedTimezone] = useState('');
 
     useEffect(() => {
-        try {
-            setDetectedTimezone(Intl.DateTimeFormat().resolvedOptions().timeZone);
-        } catch (e) { }
+        try { setDetectedTimezone(Intl.DateTimeFormat().resolvedOptions().timeZone); } catch { }
     }, []);
 
     const handleSave = async () => {
@@ -27,11 +21,8 @@ const RegionTab = ({ region, setRegion }) => {
             setHasChanges(false);
             showToast('Region settings saved', 'success');
         } catch (error) {
-            console.error('Failed to save region:', error);
             showToast(error.response?.data?.message || 'Failed to save settings', 'error');
-        } finally {
-            setSaving(false);
-        }
+        } finally { setSaving(false); }
     };
 
     const update = (key, value) => {
@@ -39,7 +30,6 @@ const RegionTab = ({ region, setRegion }) => {
         setHasChanges(true);
     };
 
-    // Live date format preview
     const previewDate = () => {
         const now = new Date();
         const y = now.getFullYear();
@@ -55,109 +45,79 @@ const RegionTab = ({ region, setRegion }) => {
         }
     };
 
+    const selectClass = "w-full px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-[12.5px] text-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all";
+    const labelClass = "block text-[10.5px] font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-1.5";
+
     return (
-        <div className="space-y-6 animate-fade-in-up">
-            {/* Language */}
-            <Card title="Language" subtitle="Select your preferred display language">
-                <div>
-                    <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wide mb-2">
-                        Display Language
-                    </label>
-                    <select
-                        value={region.language}
-                        onChange={(e) => update('language', e.target.value)}
-                        className="w-full max-w-md px-4 py-2.5 bg-white dark:bg-[#111827] border border-slate-200 dark:border-white/10 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none dark:text-white"
-                    >
-                        <option value="en">English (US)</option>
-                        <option value="en-gb">English (UK)</option>
-                        <option value="es">Español</option>
-                        <option value="fr">Français</option>
-                        <option value="de">Deutsch</option>
-                        <option value="it">Italiano</option>
-                        <option value="pt">Português</option>
-                        <option value="ru">Русский</option>
-                        <option value="zh">中文 (简体)</option>
-                        <option value="ja">日本語</option>
-                        <option value="ko">한국어</option>
-                        <option value="ar">العربية</option>
-                        <option value="hi">हिन्दी</option>
-                    </select>
-                    <p className="text-xs text-slate-400 dark:text-slate-500 mt-2">
-                        Only English is fully supported. Other languages are in progress.
-                    </p>
-                </div>
+        <div className="space-y-4">
+            <Card title="Language" subtitle="Display language for the interface">
+                <label className={labelClass}>Display Language</label>
+                <select value={region.language} onChange={e => update('language', e.target.value)} className={`${selectClass} max-w-xs`}>
+                    <option value="en">English (US)</option>
+                    <option value="en-gb">English (UK)</option>
+                    <option value="es">Español</option>
+                    <option value="fr">Français</option>
+                    <option value="de">Deutsch</option>
+                    <option value="it">Italiano</option>
+                    <option value="pt">Português</option>
+                    <option value="ru">Русский</option>
+                    <option value="zh">中文 (简体)</option>
+                    <option value="ja">日本語</option>
+                    <option value="ko">한국어</option>
+                    <option value="hi">हिन्दी</option>
+                </select>
+                <p className="text-[11px] text-gray-400 mt-2">Only English is fully supported. Others coming soon.</p>
             </Card>
 
-            {/* Timezone */}
             <Card title="Timezone" subtitle="Set your local timezone for accurate timestamps">
-                <div className="space-y-4">
-                    {detectedTimezone && (
-                        <div className="flex items-start gap-3 p-3 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg">
-                            <Globe2 className="text-indigo-600 dark:text-indigo-400 mt-0.5" size={16} />
-                            <div>
-                                <div className="text-sm font-bold text-indigo-900 dark:text-indigo-300">Detected Timezone</div>
-                                <div className="text-xs text-indigo-700 dark:text-indigo-400 mt-0.5">{detectedTimezone}</div>
-                            </div>
-                        </div>
-                    )}
-                    <div>
-                        <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wide mb-2">
-                            Timezone
-                        </label>
-                        <select
-                            value={region.timezone}
-                            onChange={(e) => update('timezone', e.target.value)}
-                            className="w-full max-w-md px-4 py-2.5 bg-white dark:bg-[#111827] border border-slate-200 dark:border-white/10 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none dark:text-white"
-                        >
-                            <option value="auto">Auto-detect ({detectedTimezone || 'Unknown'})</option>
-                            <option value="America/New_York">Eastern Time (ET)</option>
-                            <option value="America/Chicago">Central Time (CT)</option>
-                            <option value="America/Denver">Mountain Time (MT)</option>
-                            <option value="America/Los_Angeles">Pacific Time (PT)</option>
-                            <option value="Europe/London">London (GMT/BST)</option>
-                            <option value="Europe/Paris">Paris (CET)</option>
-                            <option value="Europe/Berlin">Berlin (CET)</option>
-                            <option value="Asia/Dubai">Dubai (GST)</option>
-                            <option value="Asia/Kolkata">India (IST)</option>
-                            <option value="Asia/Shanghai">Shanghai (CST)</option>
-                            <option value="Asia/Tokyo">Tokyo (JST)</option>
-                            <option value="Australia/Sydney">Sydney (AEDT)</option>
-                        </select>
+                {detectedTimezone && (
+                    <div className="flex items-center gap-2 mb-3 px-3 py-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                        <Globe2 size={12} className="text-blue-600 dark:text-blue-400 flex-shrink-0" />
+                        <span className="text-[12px] text-blue-700 dark:text-blue-300 font-medium">Detected: {detectedTimezone}</span>
                     </div>
-                </div>
+                )}
+                <label className={labelClass}>Timezone</label>
+                <select value={region.timezone} onChange={e => update('timezone', e.target.value)} className={`${selectClass} max-w-xs`}>
+                    <option value="auto">Auto-detect ({detectedTimezone || 'Unknown'})</option>
+                    <option value="America/New_York">Eastern Time (ET)</option>
+                    <option value="America/Chicago">Central Time (CT)</option>
+                    <option value="America/Denver">Mountain Time (MT)</option>
+                    <option value="America/Los_Angeles">Pacific Time (PT)</option>
+                    <option value="Europe/London">London (GMT/BST)</option>
+                    <option value="Europe/Paris">Paris (CET)</option>
+                    <option value="Europe/Berlin">Berlin (CET)</option>
+                    <option value="Asia/Dubai">Dubai (GST)</option>
+                    <option value="Asia/Kolkata">India (IST)</option>
+                    <option value="Asia/Shanghai">Shanghai (CST)</option>
+                    <option value="Asia/Tokyo">Tokyo (JST)</option>
+                    <option value="Australia/Sydney">Sydney (AEDT)</option>
+                </select>
             </Card>
 
-            {/* Date & Time Format */}
-            <Card title="Date & Time Format" subtitle="Customize how timestamps appear throughout the app">
-                <div className="space-y-4">
-                    <div>
-                        <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wide mb-2">
-                            Date Format
-                        </label>
-                        <select
-                            value={region.dateFormat}
-                            onChange={(e) => update('dateFormat', e.target.value)}
-                            className="w-full max-w-md px-4 py-2.5 bg-white dark:bg-[#111827] border border-slate-200 dark:border-white/10 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none dark:text-white"
-                        >
-                            <option value="MM/DD/YYYY">MM/DD/YYYY</option>
-                            <option value="DD/MM/YYYY">DD/MM/YYYY</option>
-                            <option value="YYYY-MM-DD">YYYY-MM-DD (ISO 8601)</option>
-                            <option value="DD MMM YYYY">DD MMM YYYY</option>
-                        </select>
-                    </div>
-
-                    <div className="flex items-center gap-3 p-3 bg-slate-50 dark:bg-white/5 rounded-lg">
-                        <span className="text-xs text-slate-500 dark:text-slate-400">Preview:</span>
-                        <span className="text-sm font-bold text-slate-800 dark:text-white font-mono">{previewDate()}</span>
-                    </div>
+            <Card title="Date Format" subtitle="Customize timestamps across the app">
+                <label className={labelClass}>Format</label>
+                <select value={region.dateFormat} onChange={e => update('dateFormat', e.target.value)} className={`${selectClass} max-w-xs`}>
+                    <option value="MM/DD/YYYY">MM/DD/YYYY</option>
+                    <option value="DD/MM/YYYY">DD/MM/YYYY</option>
+                    <option value="YYYY-MM-DD">YYYY-MM-DD (ISO 8601)</option>
+                    <option value="DD MMM YYYY">DD MMM YYYY</option>
+                </select>
+                <div className="flex items-center gap-2 mt-3 px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg inline-flex">
+                    <span className="text-[11px] text-gray-400">Preview:</span>
+                    <span className="text-[12.5px] font-bold text-gray-800 dark:text-gray-100 font-mono">{previewDate()}</span>
                 </div>
             </Card>
 
             {hasChanges && (
                 <div className="flex justify-end">
-                    <Button onClick={handleSave} disabled={saving} isLoading={saving} icon={<Check size={16} />}>
-                        Save Settings
-                    </Button>
+                    <button
+                        onClick={handleSave}
+                        disabled={saving}
+                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-[12.5px] font-semibold rounded-lg transition-colors disabled:opacity-50"
+                    >
+                        <Check size={13} />
+                        {saving ? 'Saving…' : 'Save Settings'}
+                    </button>
                 </div>
             )}
         </div>

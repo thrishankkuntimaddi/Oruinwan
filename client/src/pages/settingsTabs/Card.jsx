@@ -1,31 +1,23 @@
 import React from 'react';
-import SharedCard from '../../shared/components/ui/Card';
 
 /**
- * Reusable Card component for Settings tabs
- * Wraps the shared standardized Card component
- * @param {object} props - Component props
- * @param {React.ReactNode} props.children - Card content
- * @param {string} props.title - Card title
- * @param {string} props.subtitle - Card subtitle
- * @param {string} props.className - Additional CSS classes
+ * Card — Notes-style sharp card (no soft shadows, sharp borders)
  */
-const Card = ({ children, title, subtitle, action, className = "" }) => (
-    <SharedCard className={`transition-shadow duration-300 ${className}`} hover={true} noPadding={false}>
+const Card = ({ title, subtitle, action, children, className = '' }) => (
+    <div className={`bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden ${className}`}>
         {(title || subtitle || action) && (
-            <div className="flex items-start justify-between pb-4 border-b border-secondary-100 dark:border-secondary-800 mb-6">
-                <SharedCard.Header
-                    title={title}
-                    subtitle={subtitle}
-                    className=""
-                />
-                {action && <div className="flex-shrink-0 ml-4">{action}</div>}
+            <div className="flex items-start justify-between px-5 py-3.5 border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
+                <div>
+                    {title && <h3 className="text-[13px] font-bold text-gray-900 dark:text-white">{title}</h3>}
+                    {subtitle && <p className="text-[11.5px] text-gray-500 dark:text-gray-400 mt-0.5">{subtitle}</p>}
+                </div>
+                {action && <div className="flex-shrink-0 ml-4 mt-0.5">{action}</div>}
             </div>
         )}
-        <SharedCard.Body>
+        <div className="px-5 py-4">
             {children}
-        </SharedCard.Body>
-    </SharedCard>
+        </div>
+    </div>
 );
 
 export default Card;
