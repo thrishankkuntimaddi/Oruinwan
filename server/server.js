@@ -283,6 +283,13 @@ app.use("/api/companies", require("./src/features/company-registration/registrat
 app.use("/api/companies", require("./src/features/employees/employee.routes"));
 app.use("/api/companies", require("./src/features/domain-verification/domain.routes"));
 app.use("/api/departments", require("./src/features/departments/departments.routes"));
+// Phase 3 — People Management + Phase 5 — Company Updates Feed
+app.use("/api/company", require("./src/features/people/people.routes"));
+app.use("/api/company", require("./src/features/company-updates/updates.routes"));
+// Phase 6 — Company Analytics
+app.use("/api/company", require("./src/features/company-analytics/analytics.routes"));
+
+
 app.use("/api/workspaces", require("./src/features/workspaces/workspaces.routes"));
 app.use("/api/platform/support", require("./src/features/support/platform-support.routes"));
 app.use("/api/internal", require("./src/features/internal-messaging/messaging.routes"));

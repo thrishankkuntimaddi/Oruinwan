@@ -5,10 +5,13 @@ const WorkspaceSchema = new mongoose.Schema({
   company: { type: mongoose.Schema.Types.ObjectId, ref: "Company", default: null },
 
   // Workspace type
+  // ARCH-FIX: expanded enum — team (persistent hub), project (time-bounded),
+  // department (mirrors org dept), personal (single-user)
+  // 'company' retained for backward-compat with existing documents
   type: {
     type: String,
-    enum: ["company", "personal"],
-    default: "company"
+    enum: ["team", "project", "department", "personal", "company"],
+    default: "team"
   },
 
   // Department association (for company workspaces)

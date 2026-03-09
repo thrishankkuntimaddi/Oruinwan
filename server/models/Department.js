@@ -22,6 +22,12 @@ const DepartmentSchema = new mongoose.Schema({
     // Associated workspaces
     workspaces: [{ type: mongoose.Schema.Types.ObjectId, ref: "Workspace" }],
 
+    // Phase 4 — Hybrid Workspace Assignment
+    // The one workspace every new member auto-joins when added to this department.
+    // Set to the bootstrapped workspace at creation time.
+    // Can be updated later via PATCH /api/departments/:id (admin only).
+    defaultWorkspaceId: { type: mongoose.Schema.Types.ObjectId, ref: "Workspace", default: null },
+
     // Metadata
     metadata: { type: mongoose.Schema.Types.Mixed },
 

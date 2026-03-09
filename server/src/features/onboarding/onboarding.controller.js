@@ -143,7 +143,12 @@ exports.createEmployee = async (req, res) => {
             employeeCategory: employeeCategory || 'Full-time',
             departments: departments,
             managedDepartments: role === 'manager' ? departments : [],
-            assignedWorkspaces: workspaces, // Workspaces admin assigned
+            // ARCH-FIX: assignedWorkspaces removed (dual-write bug). Write to workspaces[] only.
+            workspaces: workspaces.map(wsId => ({
+                workspace: wsId,
+                role: 'member',
+                joinedAt: new Date()
+            })),
             verified: true, // Admin-created users are pre-verified
             accountStatus: 'active',
             lastLoginAt: null // Used to detect first login

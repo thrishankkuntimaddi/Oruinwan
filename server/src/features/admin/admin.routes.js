@@ -865,7 +865,17 @@ router.post('/employees/:id/assign-workspace', requireAuth, requireAdmin, async 
       return res.status(404).json({ message: 'Employee not found' });
     }
 
-    employee.assignedWorkspaces = workspaceIds;
+    // ARCH-FIX: was employee.assignedWorkspaces = workspaceIds (field removed — dual-write bug).
+    // Rebuild workspaces[] — preserve existing memberships for workspaces not in the new list,
+    // add new entries for workspaces that aren't already in the array.
+    const existingIds = employee.workspaces.map(w => w.workspace.toString());
+    const newEntries = workspaceIds
+      .filter(id => !existingIds.includes(id.toString()))
+      .map(id => ({ workspace: id, role: 'member', joinedAt: new Date() }));
+    employee.workspaces = [
+      ...employee.workspaces.filter(w => workspaceIds.map(String).includes(w.workspace.toString())),
+      ...newEntries
+    ];
     await employee.save();
 
     res.json({ message: 'Workspace assignment updated', employee });

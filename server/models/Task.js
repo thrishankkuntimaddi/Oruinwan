@@ -12,8 +12,12 @@ const mongoose = require("mongoose");
 const TaskSchema = new mongoose.Schema({
     // ============ IDENTIFICATION ============
     company: { type: mongoose.Schema.Types.ObjectId, ref: "Company", default: null },
-    workspace: { type: mongoose.Schema.Types.ObjectId, ref: "Workspace", required: true },
-    project: { type: String, default: null },
+
+    // ARCH-FIX: workspace is no longer required — personal tasks have workspace: null
+    workspace: { type: mongoose.Schema.Types.ObjectId, ref: "Workspace", default: null },
+
+    // ARCH-FIX: project promoted from String to ObjectId ref for relational integrity
+    project: { type: mongoose.Schema.Types.ObjectId, ref: "Project", default: null },
 
     // Jira-style issue key: auto-assigned by IssueKeyCounter, e.g. "CHT-7"
     issueKey: { type: String, default: null, index: true },
@@ -23,6 +27,19 @@ const TaskSchema = new mongoose.Schema({
         type: String,
         enum: ['task', 'subtask', 'bug', 'epic'],
         default: 'task',
+        required: true
+    },
+
+    // ============ TASK SCOPE CLASSIFICATION ============
+    // ARCH-FIX: taskType defines where the task lives in the hierarchy
+    // personal  → workspace:null, visibility:'private', company required
+    // workspace → workspace required, project:null
+    // channel   → workspace required, channel required
+    // project   → workspace required, project required
+    taskType: {
+        type: String,
+        enum: ['personal', 'workspace', 'channel', 'project'],
+        default: 'workspace',
         required: true
     },
 
@@ -145,6 +162,34 @@ const TaskSchema = new mongoose.Schema({
     toObject: { virtuals: true }
 });
 
+// ============ SCHEMA-LEVEL VALIDATION (taskType invariants) ============
+TaskSchema.pre('validate', function (next) {
+    const { taskType, workspace, project, channel, visibility } = this;
+
+    if (taskType === 'personal') {
+        if (workspace) {
+            return next(new Error('Personal tasks must not have a workspace.'));
+        }
+        if (visibility !== 'private') {
+            this.visibility = 'private';
+        }
+    }
+
+    if (taskType === 'workspace' && !workspace) {
+        return next(new Error('Workspace tasks require a workspace.'));
+    }
+
+    if (taskType === 'channel' && (!workspace || !channel)) {
+        return next(new Error('Channel tasks require both a workspace and a channel.'));
+    }
+
+    if (taskType === 'project' && (!workspace || !project)) {
+        return next(new Error('Project tasks require both a workspace and a project.'));
+    }
+
+    next();
+});
+
 // ============ INDEXES ============
 TaskSchema.index({ workspace: 1, status: 1, deleted: 1 });
 TaskSchema.index({ workspace: 1, visibility: 1, status: 1 });
@@ -157,6 +202,10 @@ TaskSchema.index({ type: 1, workspace: 1 });
 TaskSchema.index({ dueDate: 1, status: 1 });
 TaskSchema.index({ project: 1 });
 TaskSchema.index({ workspace: 1, createdAt: -1, status: 1 }); // For dashboard activity queries
+// ARCH-FIX: company-scoped compound indexes (critical for tenant isolation queries)
+TaskSchema.index({ company: 1, workspace: 1, status: 1 });   // workspace tasks scoped to company
+TaskSchema.index({ company: 1, taskType: 1, status: 1 });    // personal + typed task queries
+TaskSchema.index({ taskType: 1, createdBy: 1, status: 1 });  // My Tasks view (personal + workspace)
 
 // ============ HELPER METHODS ============
 

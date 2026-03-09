@@ -95,10 +95,10 @@ const UserSchema = new mongoose.Schema(
     // A bare isCoOwner:true flag was not scoped to a company, meaning if a co-owner of
     // Company A ever joined Company B, their elevated privileges would carry over.
     // Now stores the specific companyId they co-own — middleware checks companyId match.
+    // ARCH-FIX: coOwnerOf is the scoped reference — stores the specific companyId they co-own.
+    // Middleware checks companyId match before granting co-owner privileges.
+    // isCoOwner boolean was removed (deprecated — was not company-scoped, security risk).
     coOwnerOf: { type: mongoose.Schema.Types.ObjectId, ref: 'Company', default: null },
-    // DEPRECATED: isCoOwner boolean kept for backward-compatibility reads during migration.
-    // New code must use coOwnerOf. Remove after migration is complete.
-    isCoOwner: { type: Boolean, default: false },
 
     // Permissions override (optional granular control)
     permissions: {
@@ -124,15 +124,12 @@ const UserSchema = new mongoose.Schema(
     // Departments
     departments: [{ type: mongoose.Schema.Types.ObjectId, ref: "Department" }],
 
-    // Workspace Memberships
+    // Workspace Memberships — single source of truth (assignedWorkspaces removed: dual-write bug)
     workspaces: [{
       workspace: { type: mongoose.Schema.Types.ObjectId, ref: "Workspace" },
       role: { type: String, enum: ["owner", "admin", "member"], default: "member" },
       joinedAt: { type: Date, default: Date.now }
     }],
-
-    // Assigned Workspaces (IDs for quick lookup)
-    assignedWorkspaces: [{ type: mongoose.Schema.Types.ObjectId, ref: "Workspace" }],
 
     // Personal workspace for personal users
     personalWorkspace: { type: mongoose.Schema.Types.ObjectId, ref: "Workspace", default: null },
