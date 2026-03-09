@@ -41,13 +41,42 @@ function registerPresenceHandlers(io, socket) {
     });
 
     // Workspace presence
-    socket.on('workspace:join', (workspaceId) => {
+    socket.on('workspace:join', async (workspaceId) => {
         if (!workspaceId) return;
         socket.join(`workspace:${workspaceId}`);
         io.to(`workspace:${workspaceId}`).emit('workspace:member_online', {
             userId: socket.user.id,
             timestamp: new Date()
         });
+
+        // Notify other workspace members that this user is active
+        // (throttled: only fires if user joined the workspace in the last 5 minutes)
+        try {
+            const User = require('../../../models/User');
+            const user = await User.findById(socket.user.id).select('username createdAt workspaces').lean();
+            if (user) {
+                const Workspace = require('../../../models/Workspace');
+                const ws = await Workspace.findById(workspaceId).select('members').lean();
+                if (ws && ws.members) {
+                    const memberIds = (ws.members || []).map(m => (m.user || m).toString());
+                    const recipientIds = memberIds.filter(id => id !== socket.user.id.toString());
+
+                    // Only fire notification if this user joined the workspace in the last 10 min
+                    const joinedRecently = user.createdAt && (Date.now() - new Date(user.createdAt).getTime()) < 10 * 60 * 1000;
+                    if (joinedRecently && recipientIds.length > 0) {
+                        const notifService = require('../../features/notifications/notificationService');
+                        await notifService.memberJoined(io, {
+                            newUserId: socket.user.id,
+                            newUsername: user.username || 'Someone',
+                            workspaceId,
+                            recipientIds,
+                        });
+                    }
+                }
+            }
+        } catch (err) {
+            // Non-fatal — don't crash the socket handler
+        }
     });
 
     socket.on('workspace:leave', (workspaceId) => {

@@ -24,6 +24,8 @@ import NotesPanel from "./components/layout/panels/NotesPanel";
 import UpdatesPanel from "./components/layout/panels/UpdatesPanel";
 import MeetingsPanel from "./components/layout/panels/MeetingsPanel";
 import { HuddleProvider } from "./contexts/HuddleContext";
+import { NotificationsProvider } from "./contexts/NotificationsContext";
+import NotificationsPage from "./pages/NotificationsPage";
 
 // Pages (Protected)
 import Home from "./pages/SidebarComp/Home";
@@ -165,11 +167,13 @@ function App() {
                             element={
                               <RequireAuth>
                                 <WorkspaceProvider>
-                                  <RequireWorkspace>
-                                    <MainLayout sidePanel={<HomePanel />}>
-                                      <Home />
-                                    </MainLayout>
-                                  </RequireWorkspace>
+                                  <NotificationsProvider>
+                                    <RequireWorkspace>
+                                      <MainLayout sidePanel={<HomePanel />}>
+                                        <Home />
+                                      </MainLayout>
+                                    </RequireWorkspace>
+                                  </NotificationsProvider>
                                 </WorkspaceProvider>
                               </RequireAuth>
                             }
@@ -181,11 +185,13 @@ function App() {
                             element={
                               <RequireAuth>
                                 <WorkspaceProvider>
-                                  <RequireWorkspace>
-                                    <MainLayout sidePanel={<HomePanel />}>
-                                      <Home />
-                                    </MainLayout>
-                                  </RequireWorkspace>
+                                  <NotificationsProvider>
+                                    <RequireWorkspace>
+                                      <MainLayout sidePanel={<HomePanel />}>
+                                        <Home />
+                                      </MainLayout>
+                                    </RequireWorkspace>
+                                  </NotificationsProvider>
                                 </WorkspaceProvider>
                               </RequireAuth>
                             }
@@ -245,11 +251,13 @@ function App() {
                             element={
                               <RequireAuth>
                                 <WorkspaceProvider>
-                                  <RequireWorkspace>
-                                    <MainLayout sidePanel={<ChannelsPanel />}>
-                                      <Home />
-                                    </MainLayout>
-                                  </RequireWorkspace>
+                                  <NotificationsProvider>
+                                    <RequireWorkspace>
+                                      <MainLayout sidePanel={<ChannelsPanel />}>
+                                        <Home />
+                                      </MainLayout>
+                                    </RequireWorkspace>
+                                  </NotificationsProvider>
                                 </WorkspaceProvider>
                               </RequireAuth>
                             }
@@ -261,11 +269,13 @@ function App() {
                             element={
                               <RequireAuth>
                                 <WorkspaceProvider>
-                                  <RequireWorkspace>
-                                    <MainLayout sidePanel={<MessagesPanel />}>
-                                      <Messages />
-                                    </MainLayout>
-                                  </RequireWorkspace>
+                                  <NotificationsProvider>
+                                    <RequireWorkspace>
+                                      <MainLayout sidePanel={<MessagesPanel />}>
+                                        <Messages />
+                                      </MainLayout>
+                                    </RequireWorkspace>
+                                  </NotificationsProvider>
                                 </WorkspaceProvider>
                               </RequireAuth>
                             }
@@ -392,6 +402,24 @@ function App() {
                                   <RequireWorkspace>
                                     <HuddleRouteWrapper />
                                   </RequireWorkspace>
+                                </WorkspaceProvider>
+                              </RequireAuth>
+                            }
+                          />
+
+                          {/* Notifications Page */}
+                          <Route
+                            path="/workspace/:workspaceId/notifications"
+                            element={
+                              <RequireAuth>
+                                <WorkspaceProvider>
+                                  <NotificationsProvider>
+                                    <RequireWorkspace>
+                                      <MainLayout>
+                                        <NotificationsPage />
+                                      </MainLayout>
+                                    </RequireWorkspace>
+                                  </NotificationsProvider>
                                 </WorkspaceProvider>
                               </RequireAuth>
                             }

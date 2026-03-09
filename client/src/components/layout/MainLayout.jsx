@@ -1,26 +1,63 @@
 import React, { useState, useRef, useEffect } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import IconSidebar from "./IconSidebar";
 import ProfileMenu from "../SidebarComp/ProfileSidebar";
 import ChttrixAIChat from "../ai/ChttrixAIChat/ChttrixAIChat";
 import UniversalSearch from "../common/UniversalSearch";
 import { useWorkspace } from "../../contexts/WorkspaceContext";
 import { useUniversalSearch } from "../../hooks/useUniversalSearch";
-import { Bot, BookOpen, Command, Bug, Sparkles, Search, MessageCircle, X, Loader2, Menu, Bell, CircleHelp, AtSign, UserPlus, Check } from "lucide-react";
+import { useNotifications } from "../../contexts/NotificationsContext";
+import { Bot, BookOpen, Command, Bug, Sparkles, Search, MessageCircle, X, Loader2, Menu, Bell, CircleHelp, AtSign, UserPlus, Check, Trash2, ExternalLink } from "lucide-react";
 
-// --- Workspace Notification Panel (self-contained) ---
-const WS_MOCK_NOTIFS = [
-    { id: 1, icon: AtSign, color: 'text-indigo-600 bg-indigo-50', title: 'You were mentioned', body: '@you in #general — "Can you review the PR?"', time: '2m ago', read: false },
-    { id: 2, icon: UserPlus, color: 'text-emerald-600 bg-emerald-50', title: 'New member joined', body: 'Alex joined the Design workspace', time: '20m ago', read: false },
-    { id: 3, icon: Bell, color: 'text-violet-600 bg-violet-50', title: 'Channel update', body: '#announcements — New pinned message', time: '1h ago', read: true },
-];
+// Icon map for notification types
+const NOTIF_ICONS = {
+    mention: { Icon: AtSign, color: 'text-indigo-600 bg-indigo-50 dark:bg-indigo-900/30' },
+    dm: { Icon: MessageCircle, color: 'text-sky-600 bg-sky-50 dark:bg-sky-900/30' },
+    task_assigned: { Icon: Check, color: 'text-emerald-600 bg-emerald-50 dark:bg-emerald-900/30' },
+    task_comment: { Icon: MessageCircle, color: 'text-yellow-600 bg-yellow-50 dark:bg-yellow-900/30' },
+    member_joined: { Icon: UserPlus, color: 'text-emerald-600 bg-emerald-50 dark:bg-emerald-900/30' },
+    channel_pinned: { Icon: Bell, color: 'text-violet-600 bg-violet-50 dark:bg-violet-900/30' },
+    huddle_started: { Icon: Bell, color: 'text-red-500 bg-red-50 dark:bg-red-900/30' },
+    schedule_created: { Icon: Bell, color: 'text-orange-600 bg-orange-50 dark:bg-orange-900/30' },
+    reaction: { Icon: Bell, color: 'text-pink-600 bg-pink-50 dark:bg-pink-900/30' },
+};
+
+function timeAgo(dateStr) {
+    const diff = Date.now() - new Date(dateStr).getTime();
+    const m = Math.floor(diff / 60000);
+    if (m < 1) return 'just now';
+    if (m < 60) return `${m}m ago`;
+    const h = Math.floor(m / 60);
+    if (h < 24) return `${h}h ago`;
+    return `${Math.floor(h / 24)}d ago`;
+}
 
 const WorkspaceNotificationPanel = () => {
     const [open, setOpen] = useState(false);
-    const [notifs, setNotifs] = useState(WS_MOCK_NOTIFS);
-    const unread = notifs.filter(n => !n.read).length;
-    const markAllRead = () => setNotifs(prev => prev.map(n => ({ ...n, read: true })));
-    const dismiss = (id) => setNotifs(prev => prev.filter(n => n.id !== id));
+    const navigate = useNavigate();
+    const { activeWorkspace } = useWorkspace();
+
+    // Gracefully degrade if context not available (e.g. outside workspace route)
+    let notifCtx = null;
+    try { notifCtx = useNotifications(); } catch (_) { }
+
+    const notifications = notifCtx?.notifications || [];
+    const unreadCount = notifCtx?.unreadCount || 0;
+    const loading = notifCtx?.loading || false;
+    const markAllRead = notifCtx?.markAllRead || (() => { });
+    const dismiss = notifCtx?.dismiss || (() => { });
+    const markRead = notifCtx?.markRead || (() => { });
+
+    // Show only the most recent 8 in the dropdown
+    const preview = notifications.slice(0, 8);
+
+    const handleClickNotif = (n) => {
+        if (!n.read) markRead(n._id);
+        if (n.link && activeWorkspace?.id) {
+            navigate(`/workspace/${activeWorkspace.id}${n.link}`);
+        }
+        setOpen(false);
+    };
 
     return (
         <div className="relative">
@@ -30,9 +67,9 @@ const WorkspaceNotificationPanel = () => {
                 title="Notifications"
             >
                 <Bell size={20} strokeWidth={2} />
-                {unread > 0 && (
+                {unreadCount > 0 && (
                     <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 flex items-center justify-center rounded-full bg-indigo-600 text-white text-[9px] font-bold px-1">
-                        {unread}
+                        {unreadCount > 99 ? '99+' : unreadCount}
                     </span>
                 )}
             </button>
@@ -42,43 +79,63 @@ const WorkspaceNotificationPanel = () => {
             {open && (
                 <div className="absolute top-10 right-0 w-80 bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 z-[100] overflow-hidden"
                     style={{ animation: 'wsFadeIn 0.15s cubic-bezier(.4,0,.2,1)' }}>
+
                     {/* Header */}
-                    <div className="flex items-center justify-between px-3 py-2 bg-gradient-to-r from-indigo-600 to-purple-600">
+                    <div className="flex items-center justify-between px-3 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600">
                         <div className="flex items-center gap-2 text-white">
                             <Bell size={14} />
                             <span className="text-xs font-bold">Notifications</span>
-                            {unread > 0 && <span className="bg-white/25 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full">{unread} new</span>}
+                            {unreadCount > 0 && <span className="bg-white/25 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full">{unreadCount} new</span>}
                         </div>
-                        {unread > 0 && (
-                            <button onClick={markAllRead} className="flex items-center gap-1 text-white/80 hover:text-white text-[10px] font-semibold">
-                                <Check size={10} /> All read
-                            </button>
-                        )}
+                        <div className="flex items-center gap-2">
+                            {unreadCount > 0 && (
+                                <button onClick={markAllRead} className="flex items-center gap-1 text-white/80 hover:text-white text-[10px] font-semibold" title="Mark all read">
+                                    <Check size={10} /> All read
+                                </button>
+                            )}
+                        </div>
                     </div>
 
                     {/* List */}
-                    <div className="max-h-72 overflow-y-auto divide-y divide-gray-100 dark:divide-gray-700">
-                        {notifs.length === 0 ? (
+                    <div className="max-h-80 overflow-y-auto divide-y divide-gray-100 dark:divide-gray-700">
+                        {loading && notifications.length === 0 ? (
+                            <div className="flex items-center justify-center py-8 text-gray-400">
+                                <Loader2 size={18} className="animate-spin" />
+                            </div>
+                        ) : preview.length === 0 ? (
                             <div className="flex flex-col items-center py-10 text-gray-400">
                                 <Bell size={28} className="mb-2 opacity-30" />
                                 <p className="text-xs font-medium">All caught up!</p>
+                                <p className="text-[10px] mt-0.5 text-gray-300">No new notifications</p>
                             </div>
-                        ) : notifs.map(n => {
-                            const Icon = n.icon;
+                        ) : preview.map(n => {
+                            const { Icon, color } = NOTIF_ICONS[n.type] || NOTIF_ICONS.channel_pinned;
                             return (
-                                <div key={n.id} className={`flex items-start gap-3 px-3 py-2.5 group transition-colors ${n.read ? 'bg-white dark:bg-gray-800' : 'bg-indigo-50/60 dark:bg-indigo-900/10'} hover:bg-gray-50 dark:hover:bg-gray-700/50`}>
-                                    <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${n.color}`}>
+                                <div
+                                    key={n._id}
+                                    onClick={() => handleClickNotif(n)}
+                                    className={`flex items-start gap-3 px-3 py-2.5 group transition-colors cursor-pointer
+                                        ${n.read ? 'bg-white dark:bg-gray-800' : 'bg-indigo-50/60 dark:bg-indigo-900/10'}
+                                        hover:bg-gray-50 dark:hover:bg-gray-700/50`}
+                                >
+                                    <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${color}`}>
                                         <Icon size={14} />
                                     </div>
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center gap-1.5">
-                                            <p className={`text-xs font-semibold truncate ${n.read ? 'text-gray-700' : 'text-gray-900 dark:text-gray-100'}`}>{n.title}</p>
+                                            <p className={`text-xs font-semibold truncate ${n.read ? 'text-gray-600 dark:text-gray-300' : 'text-gray-900 dark:text-gray-100'}`}>
+                                                {n.title}
+                                            </p>
                                             {!n.read && <span className="flex-shrink-0 w-1.5 h-1.5 rounded-full bg-indigo-500" />}
                                         </div>
-                                        <p className="text-[10px] text-gray-500 truncate mt-0.5">{n.body}</p>
-                                        <p className="text-[9px] text-gray-400 mt-0.5 font-medium">{n.time}</p>
+                                        {n.body && <p className="text-[10px] text-gray-500 dark:text-gray-400 truncate mt-0.5">{n.body}</p>}
+                                        <p className="text-[9px] text-gray-400 mt-0.5 font-medium">{timeAgo(n.createdAt)}</p>
                                     </div>
-                                    <button onClick={() => dismiss(n.id)} className="flex-shrink-0 p-0.5 text-gray-300 hover:text-gray-500 opacity-0 group-hover:opacity-100 transition-all">
+                                    <button
+                                        onClick={e => { e.stopPropagation(); dismiss(n._id); }}
+                                        className="flex-shrink-0 p-0.5 text-gray-300 hover:text-gray-500 opacity-0 group-hover:opacity-100 transition-all"
+                                        title="Dismiss"
+                                    >
                                         <X size={11} />
                                     </button>
                                 </div>
@@ -87,8 +144,22 @@ const WorkspaceNotificationPanel = () => {
                     </div>
 
                     {/* Footer */}
-                    <div className="border-t border-gray-100 dark:border-gray-700 px-3 py-2 bg-gray-50 dark:bg-gray-900 text-center">
-                        <button className="text-[10px] text-indigo-600 font-bold hover:underline">View all notifications</button>
+                    <div className="border-t border-gray-100 dark:border-gray-700 px-3 py-2 bg-gray-50 dark:bg-gray-900 flex items-center justify-between">
+                        <button
+                            onClick={() => { setOpen(false); navigate(`/workspace/${activeWorkspace?.id}/notifications`); }}
+                            className="text-[10px] text-indigo-600 dark:text-indigo-400 font-bold hover:underline"
+                        >
+                            View all notifications
+                        </button>
+                        {notifications.length > 0 && (
+                            <button
+                                onClick={() => notifCtx?.clearAll?.()}
+                                className="flex items-center gap-1 text-[10px] text-gray-400 hover:text-red-500 transition-colors"
+                                title="Clear all"
+                            >
+                                <Trash2 size={10} /> Clear all
+                            </button>
+                        )}
                     </div>
                 </div>
             )}

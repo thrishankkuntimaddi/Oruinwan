@@ -334,6 +334,9 @@ app.use("/api/v2/devices", require("./src/features/devices/devices.routes"));
 // Security Audit Log (Phase 4A: observability)
 app.use("/api/v2/security", require("./src/features/security/security.routes"));
 
+// Notifications (user inbox)
+app.use('/api/notifications', require('./src/features/notifications/notifications.routes'));
+
 // Tasks (Migrated from legacy)
 app.use("/api/v2/tasks", require("./src/features/tasks/tasks.routes"));
 
@@ -394,6 +397,9 @@ io.use(async (socket, next) => {
 
 io.on("connection", async (socket) => {
   logger.debug("Socket connected:", socket.user.id);
+
+  // Each user joins their own private room for targeted notifications
+  socket.join(`user:${socket.user.id}`);
 
   // ✅ Set user online status
   try {
@@ -468,6 +474,26 @@ app.post('/api/scheduled-meetings', requireAuth, async (req, res) => {
 
     // Broadcast to workspace so all HomePanel sidebars refresh
     req.io.to(`workspace:${workspaceId}`).emit('schedule:created', { meeting: populated });
+
+    // Create notifications for all workspace members
+    try {
+      const notifService = require('./src/features/notifications/notificationService');
+      const WorkspaceModel = require('./src/features/workspaces/workspace.model');
+      const ws = await WorkspaceModel.findById(workspaceId).select('members').lean();
+      if (ws && ws.members) {
+        const recipientIds = ws.members
+          .map(m => (m.user || m).toString())
+          .filter(id => id !== req.user.sub.toString());
+        await notifService.scheduleCreated(req.io, {
+          recipientIds,
+          workspaceId,
+          title: meeting.title,
+          scheduledMeetingId: meeting._id,
+        });
+      }
+    } catch (notifErr) {
+      logger.error('Notification error on schedule create:', notifErr.message);
+    }
 
     res.status(201).json({ meeting: populated });
   } catch (err) {

@@ -480,6 +480,27 @@ function registerMessageHandlers(io, socket) {
                     clientTempId
                 });
 
+                // DM notification for the recipient
+                try {
+                    const notifService = require('../../features/notifications/notificationService');
+                    const DMSession = require('../../../models/DMSession');
+                    const dm = await DMSession.findById(sessionId).select('participants workspaceId').lean();
+                    if (dm) {
+                        const recipientId = dm.participants.find(p => p.toString() !== socket.user.id.toString());
+                        if (recipientId) {
+                            await notifService.dmReceived(io, {
+                                recipientId,
+                                senderUsername: serverMessage.sender?.username || 'Someone',
+                                workspaceId: data.workspaceId,
+                                dmSessionId: sessionId,
+                                snippet: (serverMessage.text || '').slice(0, 80),
+                            });
+                        }
+                    }
+                } catch (notifErr) {
+                    logger.error('[send-message] DM notification error:', notifErr.message);
+                }
+
                 logger.socket(`✅ DM message sent: ${serverMessage._id} in dm:${sessionId}`);
 
             } else {
