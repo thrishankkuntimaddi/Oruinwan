@@ -296,20 +296,36 @@ async function processSetupStep({ companyId, userId, step, data, files }) {
             let employees = [];
 
             if (files.employeeFile && files.employeeFile[0]) {
-                // Parse Excel/CSV
+                // Parse Excel/CSV — supports both new 10-col and old 5-col formats
                 const wb = XLSX.read(files.employeeFile[0].buffer, { type: 'buffer' });
                 const ws = wb.Sheets[wb.SheetNames[0]];
                 const rows = XLSX.utils.sheet_to_json(ws, { header: 1 });
+                const dataRows = rows.slice(1).filter(r => r[2] || r[1]); // email at col 2 (new) or col 1 (old)
 
-                // Skip header row, map columns
-                const dataRows = rows.slice(1).filter(r => r[1]); // require email
-                employees = dataRows.map(r => ({
-                    name: String(r[0] || '').trim(),
-                    email: String(r[1] || '').trim().toLowerCase(),
-                    phone: String(r[2] || '').trim(),
-                    role: String(r[3] || 'member').trim().toLowerCase(),
-                    department: String(r[4] || '').trim()
-                }));
+                employees = dataRows.map(r => {
+                    // New 10-column format: First Name(0), Last Name(1), Email(2), PersonalEmail(3),
+                    //   JobTitle(4), JoiningDate(5), Mobile(6), CorpId(7), SystemRole(8), Dept(9)
+                    const isNewFormat = String(r[2] || '').includes('@');
+                    if (isNewFormat) {
+                        return {
+                            name: `${String(r[0] || '').trim()} ${String(r[1] || '').trim()}`.trim(),
+                            email: String(r[2] || '').trim().toLowerCase(),
+                            phone: String(r[6] || '').trim(),
+                            role: String(r[8] || 'member').trim().toLowerCase(),
+                            department: String(r[9] || '').trim(),
+                            jobTitle: String(r[4] || '').trim(),
+                            corporateId: String(r[7] || '').trim(),
+                        };
+                    }
+                    // Old 5-column fallback: Name(0), Email(1), Phone(2), Role(3), Dept(4)
+                    return {
+                        name: String(r[0] || '').trim(),
+                        email: String(r[1] || '').trim().toLowerCase(),
+                        phone: String(r[2] || '').trim(),
+                        role: String(r[3] || 'member').trim().toLowerCase(),
+                        department: String(r[4] || '').trim(),
+                    };
+                }).filter(e => e.email);
             } else if (data.invites && Array.isArray(data.invites)) {
                 employees = data.invites.filter(i => i.email);
             }

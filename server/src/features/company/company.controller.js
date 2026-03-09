@@ -327,20 +327,24 @@ exports.handleSetup = (req, res) => {
  */
 exports.downloadTemplate = async (req, res) => {
     try {
-        // Build sample workbook
         const wb = XLSX.utils.book_new();
-        const rows = [
-            ['Full Name', 'Personal Email', 'Phone', 'Role', 'Department'],
-            ['John Smith', 'john.smith@gmail.com', '+911234567890', 'member', 'Engineering'],
-            ['Sarah Johnson', 'sarah.j@outlook.com', '+911234567891', 'manager', 'Marketing'],
-            ['Raj Patel', 'raj.patel@yahoo.com', '+911234567892', 'admin', 'Operations'],
+        const headers = [
+            'First Name', 'Last Name', 'Email', 'Personal Email',
+            'Job Title', 'Joining Date', 'Mobile Number', 'Corporate ID', 'System Role', 'Department'
         ];
-        const ws = XLSX.utils.aoa_to_sheet(rows);
+        const samples = [
+            ['Karthik', 'Murugan', 'karthik.murugan@venkatech.com', 'karthik.personal@gmail.com', 'Engineering Manager', '2026-03-10', '9876543213', 'EMP001', 'manager', 'Engineering'],
+            ['Priya', 'Krishnan', 'priya.krishnan@venkatech.com', 'priya.personal@gmail.com', 'Product Lead', '2026-03-10', '9876543214', 'EMP002', 'member', 'Product'],
+            ['Aravind', 'Selvam', 'aravind.selvam@venkatech.com', 'aravind.personal@gmail.com', 'Software Engineer', '2026-03-10', '9876543215', 'EMP003', 'member', 'Engineering'],
+        ];
 
-        // Style header row widths
-        ws['!cols'] = [{ wch: 20 }, { wch: 28 }, { wch: 18 }, { wch: 12 }, { wch: 18 }];
+        const ws = XLSX.utils.aoa_to_sheet([headers, ...samples]);
+        ws['!cols'] = [
+            { wch: 13 }, { wch: 18 }, { wch: 36 }, { wch: 32 },
+            { wch: 22 }, { wch: 13 }, { wch: 15 }, { wch: 10 }, { wch: 12 }, { wch: 16 }
+        ];
+
         XLSX.utils.book_append_sheet(wb, ws, 'Employees');
-
         const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
 
         res.setHeader('Content-Disposition', 'attachment; filename="chttrix_team_template.xlsx"');
