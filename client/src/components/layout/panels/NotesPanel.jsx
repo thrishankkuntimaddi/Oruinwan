@@ -3,23 +3,24 @@ import { useNavigate, useLocation, useParams } from "react-router-dom";
 import {
     Plus, Search, Star, Archive, MoreHorizontal,
     ChevronRight, ChevronDown, ArchiveRestore,
-    ArrowUpDown, X, BookOpen, Hash, Layers,
-    StickyNote, FileText, Trash2, FolderPlus,
-    FolderOpen, Move, Check
+    ArrowUpDown, BookOpen, Layers, Hash,
+    FileText, Trash2, FolderPlus, Lightbulb,
+    FolderOpen, Move, Users, ClipboardList,
+    FolderKanban, Cpu, Megaphone, StickyNote
 } from "lucide-react";
 import api from "../../../services/api";
 import { useNotes } from "../../../contexts/NotesContext";
 import NoteTemplateModal from "../../../pages/SidebarComp/notesComponents/ui/NoteTemplateModal";
 
-// ─── Note types ───────────────────────────────────────────────────────────────
+// ─── Note types (Lucide icon components) ──────────────────────────────────────
 const NOTE_TYPES = [
-    { id: "note", emoji: "📄", label: "Document" },
-    { id: "brainstorm", emoji: "🧠", label: "Brainstorm" },
-    { id: "meeting", emoji: "📋", label: "Meeting Notes" },
-    { id: "sop", emoji: "🗒️", label: "SOP" },
-    { id: "projectspec", emoji: "🗂️", label: "Project Spec" },
-    { id: "techdesign", emoji: "🛠️", label: "Tech Design" },
-    { id: "announcement", emoji: "📢", label: "Announcement" },
+    { id: "note", Icon: FileText, color: "text-blue-500", label: "Document" },
+    { id: "brainstorm", Icon: Lightbulb, color: "text-amber-500", label: "Brainstorm" },
+    { id: "meeting", Icon: Users, color: "text-emerald-500", label: "Meeting Notes" },
+    { id: "sop", Icon: ClipboardList, color: "text-orange-500", label: "SOP" },
+    { id: "projectspec", Icon: FolderKanban, color: "text-cyan-500", label: "Project Spec" },
+    { id: "techdesign", Icon: Cpu, color: "text-slate-500", label: "Tech Design" },
+    { id: "announcement", Icon: Megaphone, color: "text-rose-500", label: "Announcement" },
 ];
 
 // ─── Canvas hook ──────────────────────────────────────────────────────────────
@@ -175,11 +176,26 @@ const NotesPanel = () => {
     // ── Workspace sub-filter: "all" | "favorites" ────────────────────────────
     const [wsFilter, setWsFilter] = useState("all");
 
-    // ── Groups (local, stored in note.tags[0]) ────────────────────────────────
-    const groups = [...new Set(
-        activeNotes.flatMap(n => n.tags || []).filter(Boolean)
-    )];
-    const [activeGroup, setActiveGroup] = useState(null); // null = "All"
+    // ── Groups ─ persisted in localStorage so empty groups survive refresh ──────────
+    const GROUPS_KEY = `chttrix_note_groups_${workspaceId}`;
+    const [groups, setGroups] = useState(() => {
+        try { return JSON.parse(localStorage.getItem(GROUPS_KEY) || '[]'); } catch { return []; }
+    });
+
+    // Keep groups in sync: any tag used on a note that isn't in groups list gets added
+    useEffect(() => {
+        const tagGroups = [...new Set(activeNotes.flatMap(n => n.tags || []).filter(Boolean))];
+        setGroups(prev => {
+            const merged = [...new Set([...prev, ...tagGroups])];
+            if (merged.length !== prev.length) {
+                localStorage.setItem(GROUPS_KEY, JSON.stringify(merged));
+                return merged;
+            }
+            return prev;
+        });
+    }, [activeNotes, GROUPS_KEY]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    const [activeGroup, setActiveGroup] = useState(null); // null = show all
     const [showGroupInput, setShowGroupInput] = useState(false);
     const [newGroupName, setNewGroupName] = useState("");
 
@@ -257,10 +273,17 @@ const NotesPanel = () => {
 
     const totalCanvas = canvasChannels.reduce((s, ch) => s + ch.canvasTabs.length, 0);
 
-    // ── Group create ──────────────────────────────────────────────────────────
+    // ── Group create ───────────────────────────────────────────────────
     const handleCreateGroup = () => {
         const name = newGroupName.trim();
         if (!name) { setShowGroupInput(false); return; }
+        // Persist group even before any notes are added to it
+        setGroups(prev => {
+            if (prev.includes(name)) return prev;
+            const next = [...prev, name];
+            localStorage.setItem(GROUPS_KEY, JSON.stringify(next));
+            return next;
+        });
         setActiveGroup(name);
         setNewGroupName("");
         setShowGroupInput(false);
@@ -325,7 +348,7 @@ const NotesPanel = () => {
             >
                 {isActive && <span className="absolute left-0 top-2 bottom-2 w-[3px] bg-blue-500 rounded-full" />}
                 <div className={`flex items-start gap-2.5 px-3 py-2.5 ${isActive ? "pl-4" : ""}`}>
-                    <span className="text-[13px] mt-0.5 flex-shrink-0">{typeConf.emoji}</span>
+                    <typeConf.Icon size={14} className={`mt-1 flex-shrink-0 ${typeConf.color}`} />
                     <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between gap-1">
                             <span className={`text-[12.5px] font-semibold leading-snug line-clamp-1
@@ -445,44 +468,60 @@ const NotesPanel = () => {
                     <>
                         {/* ── Filter bar: All | Favorites | + Group ── */}
                         {/* ── Filter bar: All | Starred | group pills | + ── */}
-                        <div className="px-3 pb-2.5 flex items-center gap-1.5 shrink-0">
+                        <div className="px-3 pb-2.5 flex items-center gap-2 shrink-0">
                             {/* Scrollable pill strip */}
-                            <div className="flex items-center gap-1.5 overflow-x-auto flex-1 min-w-0 no-scrollbar pb-0.5">
-                                {[
-                                    { id: "all", label: "All", count: activeNotes.length },
-                                    { id: "favorites", label: "⭐ Starred", count: activeNotes.filter(n => n.isPinned).length },
-                                ].map(f => (
-                                    <button key={f.id} onClick={() => { setWsFilter(f.id); setActiveGroup(null); }}
-                                        className={`flex-shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold transition-all
-                                            ${wsFilter === f.id && !activeGroup
-                                                ? "bg-blue-600 text-white shadow-sm"
-                                                : "bg-gray-100 dark:bg-gray-800 text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700"}`}>
-                                        {f.label}
-                                        {f.count > 0 && (
-                                            <span className={`text-[9.5px] ${wsFilter === f.id && !activeGroup ? "text-blue-100" : "text-gray-400"}`}>{f.count}</span>
-                                        )}
-                                    </button>
-                                ))}
+                            <div className="flex items-center gap-2 overflow-x-auto flex-1 min-w-0 no-scrollbar">
+                                {/* All pill */}
+                                <button
+                                    onClick={() => { setWsFilter("all"); setActiveGroup(null); }}
+                                    className={`flex-shrink-0 flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-[12px] font-bold transition-all border
+                        ${wsFilter === "all" && !activeGroup
+                                            ? "bg-blue-600 text-white border-blue-600 shadow-sm"
+                                            : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:border-gray-300"}`}
+                                >
+                                    All
+                                    <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full tabular-nums
+                        ${wsFilter === "all" && !activeGroup ? "bg-blue-500 text-white" : "bg-gray-100 dark:bg-gray-700 text-gray-400"}`}>
+                                        {activeNotes.length}
+                                    </span>
+                                </button>
 
-                                {/* Group pills — appear next to Starred, scroll with the row */}
+                                {/* Starred pill */}
+                                <button
+                                    onClick={() => { setWsFilter("favorites"); setActiveGroup(null); }}
+                                    className={`flex-shrink-0 flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-[12px] font-bold transition-all border
+                        ${wsFilter === "favorites" && !activeGroup
+                                            ? "bg-amber-500 text-white border-amber-500 shadow-sm"
+                                            : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:border-gray-300"}`}
+                                >
+                                    <Star size={11} className={wsFilter === "favorites" && !activeGroup ? "fill-current" : ""} />
+                                    Starred
+                                </button>
+
+                                {/* Group pills — inline, same weight as All/Starred */}
                                 {groups.map(g => (
-                                    <button key={g} onClick={() => setActiveGroup(activeGroup === g ? null : g)}
-                                        className={`flex-shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold transition-all
-                                            ${activeGroup === g
-                                                ? "bg-indigo-600 text-white shadow-sm"
-                                                : "bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100"}`}>
-                                        <FolderOpen size={9} /> {g}
+                                    <button key={g}
+                                        onClick={() => setActiveGroup(activeGroup === g ? null : g)}
+                                        className={`flex-shrink-0 flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-[12px] font-bold transition-all border
+                            ${activeGroup === g
+                                                ? "bg-indigo-600 text-white border-indigo-600 shadow-sm"
+                                                : "bg-white dark:bg-gray-800 text-indigo-600 dark:text-indigo-400 border-indigo-200 dark:border-indigo-800 hover:border-indigo-400"}`}
+                                    >
+                                        <FolderOpen size={11} /> {g}
                                     </button>
                                 ))}
                             </div>
 
-                            {/* + create group — always visible, pinned right */}
+                            {/* + create group — pinned right */}
                             <button
                                 onClick={() => setShowGroupInput(v => !v)}
-                                className="flex-shrink-0 flex items-center justify-center w-6 h-6 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                                className={`flex-shrink-0 flex items-center justify-center w-7 h-7 rounded-lg border transition-colors
+                    ${showGroupInput
+                                        ? "border-blue-500 bg-blue-50 dark:bg-blue-900/30 text-blue-600"
+                                        : "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-500 hover:border-gray-300 hover:text-gray-700"}`}
                                 title="Create group"
                             >
-                                <Plus size={12} strokeWidth={2.5} />
+                                <Plus size={13} strokeWidth={2.5} />
                             </button>
                         </div>
 
@@ -638,7 +677,7 @@ const NotesPanel = () => {
                                             ${isOpen ? "bg-blue-50 dark:bg-blue-950/30 text-blue-700" : "text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/60"}`}
                                         >
                                             {isOpen ? <ChevronDown size={10} /> : <ChevronRight size={10} />}
-                                            <span className="text-[13px]">{t.emoji}</span>
+                                            <t.Icon size={13} className={`flex-shrink-0 ${isOpen ? "text-blue-500" : t.color}`} />
                                             <span className={`flex-1 text-[12px] font-medium ${isOpen ? "text-blue-700 dark:text-blue-400" : ""}`}>{t.label}</span>
                                             {cnt > 0 && (
                                                 <span className={`text-[10px] px-1.5 py-0.5 rounded tabular-nums font-semibold
@@ -676,7 +715,7 @@ const NotesPanel = () => {
                                         <div key={note.id}
                                             className="group flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer"
                                             onClick={() => navigate(`/workspace/${workspaceId}/notes/${note.id}`)}>
-                                            <span className="text-[12px] opacity-50 flex-shrink-0">{typeConf.emoji}</span>
+                                            <typeConf.Icon size={13} className={`flex-shrink-0 opacity-50 ${typeConf.color}`} />
                                             <span className="flex-1 text-[12px] text-gray-400 truncate">{note.title || "Untitled"}</span>
                                             <button onClick={e => { e.stopPropagation(); toggleArchive(note.id); }}
                                                 className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-blue-600 transition-all" title="Restore">

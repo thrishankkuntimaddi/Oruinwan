@@ -49,13 +49,15 @@ const { logAction } = require('../../../utils/historyLogger');
 async function getNotes(userId, filters = {}) {
     const { workspaceId, type } = filters;
 
-    // Base query: owned OR shared, not archived
+    // Base query: owned OR shared
+    // NOTE: we return ALL notes (including archived) so the client can
+    // split them into activeNotes / archivedNotes. isArchived filtering
+    // happens in NotesContext on the frontend.
     const query = {
         $or: [
             { owner: userId },      // Notes owned by user
             { sharedWith: userId }  // Notes shared with user
-        ],
-        isArchived: false
+        ]
     };
 
     // Workspace filter

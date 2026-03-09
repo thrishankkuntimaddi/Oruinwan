@@ -28,18 +28,18 @@ import VersionHistoryPanel from "./notesComponents/ui/VersionHistoryPanel";
 // Icons
 import {
     Sparkles, Share2, Check, Trash2, MoreHorizontal, Copy, Download,
-    Info, Clock, Tag, X, Plus, ChevronDown, History, GripVertical, Users,
-    Star, Archive
+    Info, Clock, Tag, X, Plus, History, GripVertical, Users,
+    Star, Archive, FileText, Lightbulb, ClipboardList, FolderKanban, Cpu, Megaphone, StickyNote
 } from "lucide-react";
 
 const NOTE_TYPE_CONFIG = {
-    note: { emoji: '📄', label: 'Document', color: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' },
-    brainstorm: { emoji: '🧠', label: 'Brainstorm', color: 'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400' },
-    meeting: { emoji: '📋', label: 'Meeting', color: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' },
-    sop: { emoji: '📋', label: 'SOP', color: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' },
-    projectspec: { emoji: '🗂', label: 'Project Spec', color: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400' },
-    techdesign: { emoji: '🛠', label: 'Tech Design', color: 'bg-slate-100 text-slate-700 dark:bg-slate-900/30 dark:text-slate-400' },
-    announcement: { emoji: '📢', label: 'Announcement', color: 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400' },
+    note: { Icon: FileText, label: 'Document', color: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' },
+    brainstorm: { Icon: Lightbulb, label: 'Brainstorm', color: 'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400' },
+    meeting: { Icon: Users, label: 'Meeting', color: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' },
+    sop: { Icon: ClipboardList, label: 'SOP', color: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' },
+    projectspec: { Icon: FolderKanban, label: 'Project Spec', color: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400' },
+    techdesign: { Icon: Cpu, label: 'Tech Design', color: 'bg-slate-100 text-slate-700 dark:bg-slate-900/30 dark:text-slate-400' },
+    announcement: { Icon: Megaphone, label: 'Announcement', color: 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400' },
 };
 const DEFAULT_TYPE = NOTE_TYPE_CONFIG.note;
 
@@ -289,15 +289,89 @@ const Notes = () => {
         showToast("Note duplicated", "success");
     };
 
-    // ── PDF download ──────────────────────────────────────────────────────────
+    // ── PDF download ── full fidelity across all block types ──────────────────
     const handleDownloadPDF = () => {
-        const textContent = blocks.filter(b => b.type === 'text').map(b => `<p style="white-space:pre-wrap;margin-bottom:12px;">${(b.content || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</p>`).join('');
-        const imageContent = blocks.filter(b => b.type === 'image' && b.content).map(b => `<img src="${b.content}" style="max-width:100%;margin-bottom:12px;border-radius:8px;" />`).join('');
-        const headingsContent = blocks.filter(b => b.type === 'heading').map(b => `<h${b.meta?.level || 2} style="margin:16px 0 8px;">${(b.content || '').replace(/&/g, '&amp;')}</h${b.meta?.level || 2}>`).join('');
+        const esc = (s) => (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
-        const printWindow = window.open('', '_blank');
-        printWindow.document.write(`<!DOCTYPE html><html><head><title>${title || 'Untitled Note'}</title><style>body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:800px;margin:40px auto;padding:0 20px;color:#111}h1{font-size:32px;font-weight:700;margin-bottom:8px}.meta{color:#888;font-size:13px;margin-bottom:24px}.tags{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:24px}.tag{background:#eff6ff;color:#1d4ed8;padding:2px 10px;border-radius:20px;font-size:12px}@media print{body{margin:0}}</style></head><body><h1>${(title || 'Untitled Note').replace(/&/g, '&amp;')}</h1><div class="meta">Last edited: ${new Date(note?.updatedAt).toLocaleString()}</div>${tags.length ? `<div class="tags">${tags.map(t => `<span class="tag">#${t}</span>`).join('')}</div>` : ''}${headingsContent}${textContent}${imageContent}<script>window.onload=()=>{window.print();window.onafterprint=()=>window.close()}<\/script></body></html>`);
-        printWindow.document.close();
+        const blockHtml = blocks.map(b => {
+            switch (b.type) {
+                case 'text':
+                    return `<div class="block-text">${b.content || ''}</div>`;
+                case 'heading': {
+                    const lvl = b.meta?.level || 2;
+                    return `<h${lvl} class="block-heading">${esc(b.content)}</h${lvl}>`;
+                }
+                case 'code':
+                    return `<pre class="block-code"><code>${esc(b.content)}</code></pre>`;
+                case 'callout':
+                    return `<div class="block-callout">${esc(b.content)}</div>`;
+                case 'divider':
+                    return `<hr class="block-divider">${b.content ? `<p class="divider-label">${esc(b.content)}</p>` : ''}`;
+                case 'checklist': {
+                    let items = [];
+                    try { items = JSON.parse(b.content); } catch { }
+                    return `<ul class="block-checklist">${items.map(it =>
+                        `<li class="${it.done ? 'done' : ''}"><span class="cb">${it.done ? '☑' : '☐'}</span> ${esc(it.text)}</li>`
+                    ).join('')}</ul>`;
+                }
+                case 'toggle':
+                    return `<details class="block-toggle" open><summary>${esc(b.meta?.title || 'Toggle')}</summary><p>${esc(b.content)}</p></details>`;
+                case 'table': {
+
+                    let tdata = { headers: [], rows: [] };
+                    try { tdata = JSON.parse(b.content); } catch { }
+                    const hdrs = (tdata.headers || []).map(h => `<th>${esc(h)}</th>`).join('');
+                    const rows = (tdata.rows || []).map(r =>
+                        `<tr>${(r || []).map(c => `<td>${esc(c)}</td>`).join('')}</tr>`
+                    ).join('');
+                    return `<table class="block-table"><thead><tr>${hdrs}</tr></thead><tbody>${rows}</tbody></table>`;
+                }
+                case 'image':
+                    return b.content ? `<img src="${b.content}" class="block-image" />` : '';
+                default:
+                    return '';
+            }
+        }).join('\n');
+
+        const tagHtml = (note.tags || []).map(t => `<span class="tag">#${esc(t)}</span>`).join('');
+
+        const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${esc(title) || 'Untitled Note'}</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 800px; margin: 40px auto; padding: 0 24px; color: #111; font-size: 15px; line-height: 1.7; }
+  h1.title { font-size: 36px; font-weight: 800; margin-bottom: 6px; }
+  .meta { color: #888; font-size: 12px; margin-bottom: 16px; }
+  .tags { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 24px; }
+  .tag { background: #eff6ff; color: #1d4ed8; padding: 2px 10px; border-radius: 20px; font-size: 12px; font-weight: 500; }
+  .block-text { margin-bottom: 12px; white-space: pre-wrap; }
+  .block-heading { margin: 20px 0 8px; font-weight: 700; }
+  h1.block-heading { font-size: 28px; } h2.block-heading { font-size: 22px; } h3.block-heading { font-size: 18px; }
+  .block-code { background: #f8fafc; border: 1px solid #e2e8f0; border-left: 4px solid #6366f1; padding: 14px 16px; font-family: 'Menlo', monospace; font-size: 13px; white-space: pre-wrap; margin-bottom: 14px; border-radius: 4px; overflow-x: auto; }
+  .block-callout { background: #fefce8; border-left: 4px solid #eab308; padding: 12px 16px; border-radius: 4px; margin-bottom: 14px; }
+  .block-divider { border: none; border-top: 2px solid #e5e7eb; margin: 20px 0; }
+  .divider-label { text-align: center; color: #9ca3af; font-size: 12px; margin-top: -10px; background: white; display: inline-block; padding: 0 8px; }
+  .block-checklist { list-style: none; margin-bottom: 14px; }
+  .block-checklist li { padding: 3px 0; display: flex; align-items: flex-start; gap: 8px; }
+  .block-checklist li.done { color: #9ca3af; text-decoration: line-through; }
+  .cb { font-size: 16px; flex-shrink: 0; }
+  .block-toggle { border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px 14px; margin-bottom: 14px; }
+  .block-toggle summary { font-weight: 600; cursor: pointer; margin-bottom: 6px; }
+  .block-table { width: 100%; border-collapse: collapse; margin-bottom: 14px; font-size: 14px; }
+  .block-table th { background: #f8fafc; font-weight: 600; text-align: left; padding: 8px 12px; border: 1px solid #e2e8f0; }
+  .block-table td { padding: 8px 12px; border: 1px solid #e2e8f0; }
+  .block-image { max-width: 100%; border-radius: 8px; margin-bottom: 14px; }
+  @media print { body { margin: 0; } }
+</style></head><body>
+<h1 class="title">${esc(title) || 'Untitled Note'}</h1>
+<p class="meta">Last edited: ${new Date(note?.updatedAt).toLocaleString()}</p>
+${tagHtml ? `<div class="tags">${tagHtml}</div>` : ''}
+${blockHtml}
+<script>window.onload=()=>{window.print();window.onafterprint=()=>window.close()}<\/script>
+</body></html>`;
+
+        const win = window.open('', '_blank');
+        win.document.write(html);
+        win.document.close();
         setShowMenu(false);
     };
 
@@ -409,9 +483,10 @@ const Notes = () => {
                 {/* ── Toolbar ── */}
                 <div className="h-14 px-8 flex items-center justify-between border-b border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shrink-0 z-10 relative">
                     <div className="flex items-center gap-3">
-                        {/* Note type badge */}
-                        <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold ${typeConf.color}`}>
-                            {typeConf.emoji} {typeConf.label}
+                        {/* Note type badge — Lucide icon */}
+                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold ${typeConf.color}`}>
+                            <typeConf.Icon size={12} />
+                            {typeConf.label}
                         </span>
                         <div className="flex items-center gap-1 text-xs text-gray-400 dark:text-gray-500">
                             <Clock size={12} />

@@ -152,6 +152,29 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
     // Track whether we've already applied the openTabId from location.state
     const appliedOpenTabId = useRef(false);
 
+    // ── Auto-open canvas tab when navigated from Notes panel ─────────────────
+    // NotesPanel navigates with: navigate(`/channel/${id}`, { state: { openTabId } })
+    // We watch `tabs` so we can apply the state once tabs have loaded from the API.
+    useEffect(() => {
+        const openTabId = location.state?.openTabId;
+        if (!openTabId || appliedOpenTabId.current) return;
+        if (tabs.length === 0) return; // wait until tabs are fetched
+
+        const match = tabs.find(t => t._id === openTabId);
+        if (match) {
+            appliedOpenTabId.current = true;
+            setActiveTab(match._id);   // select the specific canvas document
+        }
+    }, [tabs, location.state]);
+
+    // Reset the applied flag when the channel changes so a new openTabId can be consumed
+    useEffect(() => {
+        appliedOpenTabId.current = false;
+    }, [chat?.id]);
+
+
+
+
     // Modal state (consolidated)
     const [activeModal, setActiveModal] = useState(null);
     // Track which message is being forwarded (used by ForwardMessageModal)

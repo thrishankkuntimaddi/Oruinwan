@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, ArrowRight, FileText, Zap, Layers, ClipboardList } from 'lucide-react';
+import { X, ArrowRight, FileText, Zap, Layers, ClipboardList, Lightbulb, Users, FolderKanban, Cpu, Megaphone, StickyNote } from 'lucide-react';
 
 // ─────────────────────────────────────────────
 // Template Definitions — all pre-filled with realistic dummy data
@@ -8,7 +8,7 @@ export const TEMPLATES = [
     /* ───── Quick Start ───── */
     {
         id: 'blank', category: 'quick',
-        icon: '✦', color: '#0f172a', accent: '#334155',
+        TypeIcon: StickyNote, iconColor: '#64748b', color: '#0f172a', accent: '#334155',
         label: 'Blank Note',
         tag: 'EMPTY',
         desc: 'Start from a clean slate with no structure.',
@@ -20,7 +20,7 @@ export const TEMPLATES = [
     /* ───── Project Templates ───── */
     {
         id: 'projectspec', category: 'project',
-        icon: '🗂', color: '#0369a1', accent: '#0284c7',
+        TypeIcon: FolderKanban, iconColor: '#7dd3fc', color: '#0369a1', accent: '#0284c7',
         label: 'Project Spec',
         tag: 'PLANNING',
         desc: 'Goals, scope, timeline, and open questions.',
@@ -39,7 +39,7 @@ export const TEMPLATES = [
     },
     {
         id: 'techdesign', category: 'project',
-        icon: '🛠', color: '#1e293b', accent: '#334155',
+        TypeIcon: Cpu, iconColor: '#94a3b8', color: '#1e293b', accent: '#334155',
         label: 'Tech Design',
         tag: 'ENGINEERING',
         desc: 'Architecture decisions, API endpoints, and risk mitigations.',
@@ -58,7 +58,7 @@ export const TEMPLATES = [
     },
     {
         id: 'brainstorm', category: 'project',
-        icon: '🧠', color: '#4c1d95', accent: '#6d28d9',
+        TypeIcon: Lightbulb, iconColor: '#c4b5fd', color: '#4c1d95', accent: '#6d28d9',
         label: 'Brainstorm',
         tag: 'IDEATION',
         desc: 'Capture every idea fast — refine and group later.',
@@ -85,7 +85,7 @@ export const TEMPLATES = [
     /* ───── Meeting & Ops ───── */
     {
         id: 'meeting', category: 'meeting',
-        icon: '📋', color: '#065f46', accent: '#059669',
+        TypeIcon: Users, iconColor: '#6ee7b7', color: '#065f46', accent: '#059669',
         label: 'Meeting Notes',
         tag: 'MEETING',
         desc: 'Date, attendees, agenda, and action items.',
@@ -117,7 +117,7 @@ export const TEMPLATES = [
     },
     {
         id: 'sop', category: 'meeting',
-        icon: '🗒️', color: '#92400e', accent: '#d97706',
+        TypeIcon: ClipboardList, iconColor: '#fcd34d', color: '#92400e', accent: '#d97706',
         label: 'SOP',
         tag: 'PROCESS',
         desc: 'Standard operating procedure with step-by-step toggles.',
@@ -136,7 +136,7 @@ export const TEMPLATES = [
     },
     {
         id: 'announcement', category: 'meeting',
-        icon: '📢', color: '#9f1239', accent: '#e11d48',
+        TypeIcon: Megaphone, iconColor: '#fda4af', color: '#9f1239', accent: '#e11d48',
         label: 'Announcement',
         tag: 'COMMS',
         desc: 'Draft a structured update with what, why, and next steps.',
@@ -162,7 +162,7 @@ export const TEMPLATES = [
     /* ───── Documents ───── */
     {
         id: 'document', category: 'docs',
-        icon: '📝', color: '#1d4ed8', accent: '#3b82f6',
+        TypeIcon: FileText, iconColor: '#93c5fd', color: '#1d4ed8', accent: '#3b82f6',
         label: 'Document',
         tag: 'DOCUMENT',
         desc: 'Structured document with overview, details, and next steps.',
@@ -306,9 +306,9 @@ const NoteTemplateModal = ({ onSelect, onClose }) => {
                                             />
                                             <div className="relative z-10 flex items-start justify-between">
                                                 <div>
-                                                    <span className="text-[10px] font-bold tracking-widest text-white/50 block mb-1.5 font-mono">{tmpl.tag}</span>
+                                                    <span className="text-[10px] font-bold tracking-widest text-white/50 block mb-2 font-mono">{tmpl.tag}</span>
                                                     <div className="flex items-center gap-2">
-                                                        <span className="text-xl leading-none">{tmpl.icon}</span>
+                                                        <tmpl.TypeIcon size={18} className="flex-shrink-0" style={{ color: tmpl.iconColor }} />
                                                         <h4 className="text-[14px] font-bold text-white leading-tight">{tmpl.label}</h4>
                                                     </div>
                                                 </div>
