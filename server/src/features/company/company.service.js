@@ -386,16 +386,15 @@ async function bulkInviteEmployees(companyId, companyDomain, employees) {
             // Create the user
             const newUser = await User.create({
                 username,
-                name: emp.name || username,
                 email: emp.email,
                 phone: emp.phone || undefined,
-                password: hashedPw,
+                passwordHash: hashedPw,         // ← correct field name
+                userType: 'company',             // ← company employee
                 companyId,
                 companyRole,
                 departments: deptId ? [deptId] : [],
+                verified: true,                  // ← pre-verified (they were invited)
                 accountStatus: 'active',
-                isEmailVerified: false,
-                mustChangePassword: true
             });
 
             // Send welcome email
