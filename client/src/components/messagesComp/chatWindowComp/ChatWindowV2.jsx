@@ -7,8 +7,8 @@
 // but business logic MUST remain here unless explicitly migrated.
 
 
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useChatSocket, useConversation, useMessageActions } from '../../../hooks';
 import Header from './header/header.jsx';
 import ChannelTabs from './tabs/ChannelTabs.jsx';
@@ -57,6 +57,7 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
     const currentUserId = user?.sub || user?._id;
     const { showToast } = useToast();
     const navigate = useNavigate();
+    const location = useLocation();
     const { refreshContacts } = useContacts();
 
     // Phase 7.7 — Huddle (only active for channels)
@@ -148,6 +149,8 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
     // Canvas/Tabs state
     const [activeTab, setActiveTab] = useState('chat');
     const [tabs, setTabs] = useState([]);
+    // Track whether we've already applied the openTabId from location.state
+    const appliedOpenTabId = useRef(false);
 
     // Modal state (consolidated)
     const [activeModal, setActiveModal] = useState(null);
@@ -992,9 +995,21 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
         }
     }, [chat, fetchTabs]);
 
+    // ── Open a specific canvas tab when navigated from Notes panel ──
+    // location.state.openTabId is set by NotesPanel when clicking a canvas doc
+    useEffect(() => {
+        const openTabId = location?.state?.openTabId;
+        if (!openTabId || appliedOpenTabId.current) return;
+        if (tabs.length === 0) return; // wait until tabs are loaded
+        const tab = tabs.find(t => t._id === openTabId);
+        if (tab) {
+            setActiveTab(openTabId);
+            appliedOpenTabId.current = true;
+            // Clear the state so back-navigation doesn't re-open the tab
+            window.history.replaceState({}, '');
+        }
+    }, [location?.state?.openTabId, tabs]);
 
-
-    // Handle thread open
     const handleThreadOpen = useCallback((message) => {
         setActiveThread(message);
     }, []);

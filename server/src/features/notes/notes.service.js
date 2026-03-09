@@ -113,7 +113,7 @@ async function createNote(userId, noteData, io, req) {
     const {
         title,
         content,
-        type = 'personal',
+        type = 'note',
         workspaceId,
         sharedWith = [],
         tags = []
@@ -145,9 +145,9 @@ async function createNote(userId, noteData, io, req) {
         }
 
         companyId = workspace.company;
-    } else if (type !== 'personal') {
-        // Non-personal notes REQUIRE workspace
-        const error = new Error('Workspace ID required for non-personal notes');
+    } else {
+        // All notes require workspace (workspace is REQUIRED on Note model)
+        const error = new Error('Workspace ID is required');
         error.statusCode = 400;
         throw error;
     }
@@ -240,6 +240,8 @@ async function updateNote(userId, noteId, updates, io, _req) {
         'sharedWith',
         'isPublic',
         'isPinned',
+        'isArchived',
+        'archivedAt',
         'tags'
     ];
 
@@ -524,17 +526,20 @@ async function removeAttachment(userId, noteId, attachmentId, _req) {
         throw error;
     }
 
-    // Delete file from storage
-    const path = require('path');
-    const fs = require('fs');
-    const filePath = path.join(__dirname, '../../../', attachment.url);
-
-    if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath);
+    // Delete file from storage (local fallback — GCS files are handled by URL)
+    try {
+        const path = require('path');
+        const fs = require('fs');
+        const filePath = path.join(__dirname, '../../../', attachment.url);
+        if (fs.existsSync(filePath)) {
+            fs.unlinkSync(filePath);
+        }
+    } catch (_fsErr) {
+        // Ignore FS errors for GCS-backed URLs
     }
 
-    // Remove from database
-    attachment.remove();
+    // Remove from database (use pull — attachment.remove() is deprecated in Mongoose 6+)
+    note.attachments.pull({ _id: attachmentId });
     await note.save();
 
     return { message: 'Attachment deleted successfully' };

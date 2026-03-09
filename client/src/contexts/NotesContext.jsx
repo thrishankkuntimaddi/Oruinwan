@@ -20,17 +20,16 @@ export const NotesProvider = ({ children }) => {
     const [searchQuery, setSearchQuery] = useState("");
     const [activeTagFilter, setActiveTagFilter] = useState(null);
 
+    // Nav state — drives sidebar section & note list filtering
+    const [selectedSection, setSelectedSection] = useState("all");
+
     // Debounce timer for auto-save
     const saveTimerRef = useRef({});
 
     // Version history — stored in MongoDB, loaded per-note on demand
-    const [noteVersions, setNoteVersions] = useState({});  // { [noteId]: [{ title, content, savedAt }] }
-    const versionSaveTimer = useRef({});  // debounce timers per noteId
+    const [noteVersions, setNoteVersions] = useState({});
+    const versionSaveTimer = useRef({});
 
-    /**
-     * Load versions for a specific note from the DB.
-     * Called by Notes.jsx whenever the active note ID changes.
-     */
     const loadVersions = useCallback(async (noteId) => {
         if (!noteId) return;
         try {
@@ -38,26 +37,18 @@ export const NotesProvider = ({ children }) => {
             const versions = res.data.versions || [];
             setNoteVersions(prev => ({ ...prev, [noteId]: versions }));
         } catch (e) {
-            // Silently ignore — versions are non-critical
             console.warn('Failed to load versions for', noteId, e?.message);
         }
     }, []);
 
-    /**
-     * Persist a new version snapshot to MongoDB.
-     * Debounced: won't call API more than once per 10 seconds for the same note.
-     * Deduplication: skips identical content.
-     */
     const addVersion = useCallback((noteId, snapshot) => {
-        // Optimistic local update
         setNoteVersions(prev => {
             const existing = prev[noteId] || [];
             const last = existing[existing.length - 1];
-            if (last && last.content === snapshot.content) return prev; // identical — skip
+            if (last && last.content === snapshot.content) return prev;
             return { ...prev, [noteId]: [...existing, { ...snapshot, savedAt: new Date().toISOString() }].slice(-50) };
         });
 
-        // Debounced DB write (10s)
         if (versionSaveTimer.current[noteId]) clearTimeout(versionSaveTimer.current[noteId]);
         versionSaveTimer.current[noteId] = setTimeout(async () => {
             try {
@@ -73,14 +64,12 @@ export const NotesProvider = ({ children }) => {
         }, 10000);
     }, []);
 
-    // Helper to extract workspaceId from current location
     const getWorkspaceId = useCallback(() => {
         if (workspaceId) return workspaceId;
         const match = location.pathname.match(/\/workspace\/([^/]+)/);
         return match ? match[1] : null;
     }, [location.pathname, workspaceId]);
 
-    // Load notes from backend
     const loadNotes = useCallback(async () => {
         try {
             const wsId = getWorkspaceId();
@@ -89,12 +78,10 @@ export const NotesProvider = ({ children }) => {
                 setLoading(false);
                 return;
             }
-
             setLoading(true);
             const response = await api.get(`/api/notes?workspaceId=${wsId}`);
 
-            // Map backend notes to frontend format
-            const mappedNotes = response.data.notes.map(note => ({
+            const mapNote = (note) => ({
                 id: note._id,
                 title: note.title || "",
                 content: note.content || "",
@@ -104,11 +91,12 @@ export const NotesProvider = ({ children }) => {
                 sharedWith: note.sharedWith || [],
                 isPublic: note.isPublic || false,
                 isPinned: note.isPinned || false,
+                isArchived: note.isArchived || false,
                 tags: note.tags || [],
                 type: note.type || "note"
-            }));
+            });
 
-            setNotes(mappedNotes);
+            setNotes(response.data.notes.map(mapNote));
         } catch (error) {
             console.error("Failed to load notes:", error);
             showToast("Failed to load notes", "error");
@@ -118,16 +106,15 @@ export const NotesProvider = ({ children }) => {
         }
     }, [getWorkspaceId, showToast]);
 
-    // Load notes when workspace changes
     useEffect(() => {
         loadNotes();
     }, [loadNotes]);
 
-    // WebSocket listeners for note events
+    // WebSocket listeners
     useEffect(() => {
         if (!socket) return;
 
-        const mapNoteToFrontend = (note) => ({
+        const mapNote = (note) => ({
             id: note._id,
             title: note.title || "",
             content: note.content || "",
@@ -137,49 +124,35 @@ export const NotesProvider = ({ children }) => {
             sharedWith: note.sharedWith || [],
             isPublic: note.isPublic || false,
             isPinned: note.isPinned || false,
+            isArchived: note.isArchived || false,
             tags: note.tags || [],
             type: note.type || "note"
         });
 
         const handleNoteCreated = (note) => {
-
             setNotes(prev => {
                 if (prev.some(n => n.id === note._id)) return prev;
-                // Only add if belongs to current workspace view (or no workspace view)
-                // If we are in "All My Notes" (no workspaceId in URL) we show it.
-                // If we are in a workspace, ensure note matches.
-                // But simplified: Just add it, filtering usually happens on render or derived state if strictly needed,
-                // but here 'notes' is main state.
-                // Let's check workspace match if possible.
                 const currentWsId = getWorkspaceId();
                 if (currentWsId && note.workspace && note.workspace !== currentWsId) return prev;
-
-                return [mapNoteToFrontend(note), ...prev];
+                return [mapNote(note), ...prev];
             });
         };
 
         const handleNoteUpdated = (note) => {
-
-            setNotes(prev => prev.map(n =>
-                n.id === note._id ? mapNoteToFrontend(note) : n
-            ));
+            setNotes(prev => prev.map(n => n.id === note._id ? mapNote(note) : n));
         };
 
         const handleNoteDeleted = (data) => {
-
             setNotes(prev => prev.filter(n => n.id !== data.noteId));
         };
 
         const handleNoteShared = (note) => {
-
             showToast(`Note shared with you: ${note.title}`, "info");
             setNotes(prev => {
                 if (prev.some(n => n.id === note._id)) {
-                    // Update existing
-                    return prev.map(n => n.id === note._id ? mapNoteToFrontend(note) : n);
+                    return prev.map(n => n.id === note._id ? mapNote(note) : n);
                 }
-                // Add new
-                return [mapNoteToFrontend(note), ...prev];
+                return [mapNote(note), ...prev];
             });
         };
 
@@ -200,10 +173,7 @@ export const NotesProvider = ({ children }) => {
     const addNote = useCallback(async (noteTitle = "Untitled Note", noteType = "note") => {
         try {
             const wsId = getWorkspaceId();
-            if (!wsId) {
-                showToast("Please select a workspace first", "error");
-                return null;
-            }
+            if (!wsId) { showToast("Please select a workspace first", "error"); return null; }
 
             const response = await api.post("/api/notes", {
                 title: noteTitle,
@@ -222,16 +192,14 @@ export const NotesProvider = ({ children }) => {
                 sharedWith: response.data.note.sharedWith || [],
                 isPublic: response.data.note.isPublic || false,
                 isPinned: response.data.note.isPinned || false,
+                isArchived: response.data.note.isArchived || false,
                 tags: response.data.note.tags || [],
                 type: response.data.note.type || "note"
             };
 
             setNotes(prev => [newNote, ...prev]);
-
-            // Navigate to new note
             navigate(`/workspace/${wsId}/notes/${newNote.id}`);
             showToast("Note created", "success");
-
             return newNote;
         } catch (error) {
             console.error("Failed to create note:", error);
@@ -242,26 +210,17 @@ export const NotesProvider = ({ children }) => {
 
     // Update note with debounce
     const updateNote = useCallback(async (id, updates) => {
-        // Optimistically update UI
         setNotes(prev => prev.map(note =>
             note.id === id ? { ...note, ...updates, updatedAt: new Date().toISOString() } : note
         ));
 
-        // Clear existing timer for this note
-        if (saveTimerRef.current[id]) {
-            clearTimeout(saveTimerRef.current[id]);
-        }
-
-        // Set new timer for auto-save (1 second debounce)
+        if (saveTimerRef.current[id]) clearTimeout(saveTimerRef.current[id]);
         saveTimerRef.current[id] = setTimeout(async () => {
             try {
                 await api.put(`/api/notes/${id}`, updates);
-                // Silently succeed - no toast needed for auto-save
             } catch (error) {
                 console.error("Failed to update note:", error);
                 showToast("Failed to save changes", "error");
-
-                // Reload note from backend on error
                 loadNotes();
             } finally {
                 delete saveTimerRef.current[id];
@@ -269,33 +228,48 @@ export const NotesProvider = ({ children }) => {
         }, 1000);
     }, [showToast, loadNotes]);
 
-    // Delete note
+    // Delete note (soft delete → archive)
     const deleteNote = useCallback(async (id) => {
         try {
             await api.delete(`/api/notes/${id}`);
-
             setNotes(prev => prev.filter(n => n.id !== id));
-
             const wsId = getWorkspaceId();
-            if (wsId) {
-                navigate(`/workspace/${wsId}/notes`);
-            }
-
-            showToast("Note deleted", "success");
+            if (wsId) navigate(`/workspace/${wsId}/notes`);
+            // Toast is shown by the calling component (Notes.jsx) to avoid duplication
         } catch (error) {
             console.error("Failed to delete note:", error);
             showToast("Failed to delete note", "error");
         }
     }, [getWorkspaceId, navigate, showToast]);
 
-    // Share note with users
+    // Toggle pin / favorite
+    const togglePin = useCallback(async (id) => {
+        const note = notes.find(n => n.id === id);
+        if (!note) return;
+        const newVal = !note.isPinned;
+        await updateNote(id, { isPinned: newVal });
+        showToast(newVal ? "Added to Favorites" : "Removed from Favorites", "success");
+    }, [notes, updateNote, showToast]);
+
+    // Toggle archive (isArchived flag)
+    const toggleArchive = useCallback(async (id) => {
+        const note = notes.find(n => n.id === id);
+        if (!note) return;
+        const newVal = !note.isArchived;
+        await updateNote(id, { isArchived: newVal });
+        showToast(newVal ? "Note archived" : "Note restored", "success");
+        // If archiving the currently-open note, go back to notes root
+        if (newVal && location.pathname.includes(id)) {
+            const wsId = getWorkspaceId();
+            if (wsId) navigate(`/workspace/${wsId}/notes`);
+        }
+    }, [notes, updateNote, showToast, location.pathname, getWorkspaceId, navigate]);
+
+    // Share note
     const shareNote = useCallback(async (id, userIds) => {
         try {
             await api.post(`/api/notes/${id}/share`, { userIds });
-
-            // Reload notes to get updated sharedWith
             await loadNotes();
-
             showToast("Note shared successfully", "success");
         } catch (error) {
             console.error("Failed to share note:", error);
@@ -303,9 +277,23 @@ export const NotesProvider = ({ children }) => {
         }
     }, [loadNotes, showToast]);
 
-    // Filter notes by search query and active tag
-    const filteredNotes = notes.filter(note => {
-        const matchesSearch = note.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    // Derived: all non-archived notes (base for most views)
+    const activeNotes = notes.filter(n => !n.isArchived);
+    const archivedNotes = notes.filter(n => n.isArchived);
+
+    // Apply section filter
+    const sectionFiltered = (() => {
+        if (selectedSection === "favorites") return activeNotes.filter(n => n.isPinned);
+        if (selectedSection === "recents") return [...activeNotes].sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt)).slice(0, 10);
+        if (selectedSection === "archive") return archivedNotes;
+        if (selectedSection !== "all") return activeNotes.filter(n => n.type === selectedSection);
+        return activeNotes;
+    })();
+
+    // Apply search + tag filter on top
+    const filteredNotes = sectionFiltered.filter(note => {
+        const matchesSearch = !searchQuery ||
+            note.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
             note.content.toLowerCase().includes(searchQuery.toLowerCase());
         const matchesTag = !activeTagFilter || (note.tags && note.tags.includes(activeTagFilter));
         return matchesSearch && matchesTag;
@@ -315,16 +303,22 @@ export const NotesProvider = ({ children }) => {
         <NotesContext.Provider value={{
             notes: filteredNotes,
             allNotes: notes,
+            activeNotes,
+            archivedNotes,
             loading,
             addNote,
             updateNote,
             deleteNote,
+            togglePin,
+            toggleArchive,
             shareNote,
             searchQuery,
             setSearchQuery,
             refreshNotes: loadNotes,
             activeTagFilter,
             setActiveTagFilter,
+            selectedSection,
+            setSelectedSection,
             noteVersions,
             addVersion,
             loadVersions,
@@ -333,4 +327,3 @@ export const NotesProvider = ({ children }) => {
         </NotesContext.Provider>
     );
 };
-

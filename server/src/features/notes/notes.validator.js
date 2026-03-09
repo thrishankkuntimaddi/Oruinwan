@@ -35,21 +35,21 @@ function validateCreateNote(data) {
         errors.push('Content must be a string');
     }
 
-    if (data.content && data.content.length > 10000) {
-        errors.push('Content must not exceed 10000 characters');
+    if (data.content && data.content.length > 500000) {
+        errors.push('Content must not exceed 500000 characters');
     }
 
-    // Type validation
+    // Type validation — must match Note model enum
     if (data.type) {
-        const validTypes = ['personal', 'note', 'meeting', 'documentation'];
+        const validTypes = ['note', 'meeting', 'documentation', 'brainstorm', 'sop', 'projectspec', 'techdesign', 'announcement'];
         if (!validTypes.includes(data.type)) {
             errors.push(`Invalid type. Must be one of: ${validTypes.join(', ')}`);
         }
     }
 
-    // Workspace validation
-    if (data.type && data.type !== 'personal' && !data.workspaceId) {
-        errors.push('Workspace ID required for non-personal notes');
+    // Workspace is always required
+    if (!data.workspaceId) {
+        errors.push('Workspace ID is required');
     }
 
     // sharedWith validation
@@ -92,8 +92,8 @@ function validateUpdateNote(data) {
         if (typeof data.content !== 'string') {
             errors.push('Content must be a string');
         }
-        if (data.content && data.content.length > 10000) {
-            errors.push('Content must not exceed 10000 characters');
+        if (data.content && data.content.length > 500000) {
+            errors.push('Content must not exceed 500000 characters');
         }
     }
 
@@ -110,6 +110,11 @@ function validateUpdateNote(data) {
     // isPinned validation (if provided)
     if (data.isPinned !== undefined && typeof data.isPinned !== 'boolean') {
         errors.push('isPinned must be a boolean');
+    }
+
+    // isArchived validation (if provided)
+    if (data.isArchived !== undefined && typeof data.isArchived !== 'boolean') {
+        errors.push('isArchived must be a boolean');
     }
 
     // tags validation (if provided)

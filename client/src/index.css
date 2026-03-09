@@ -191,6 +191,15 @@ body,
   scrollbar-width: thin;
 }
 
+/* Hide scrollbar but keep scroll functionality (used for horizontal pill strips) */
+.no-scrollbar {
+  scrollbar-width: none;        /* Firefox */
+  -ms-overflow-style: none;     /* IE/Edge */
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;                /* Chrome/Safari */
+}
+
 @keyframes blink {
 
   0%,

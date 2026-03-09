@@ -28,7 +28,8 @@ import VersionHistoryPanel from "./notesComponents/ui/VersionHistoryPanel";
 // Icons
 import {
     Sparkles, Share2, Check, Trash2, MoreHorizontal, Copy, Download,
-    Info, Clock, Tag, X, Plus, ChevronDown, History, GripVertical, Users
+    Info, Clock, Tag, X, Plus, ChevronDown, History, GripVertical, Users,
+    Star, Archive
 } from "lucide-react";
 
 const NOTE_TYPE_CONFIG = {
@@ -46,7 +47,7 @@ const Notes = () => {
     const { workspaceId, id } = useParams();
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
-    const { notes, updateNote, deleteNote, addNote, shareNote, loading, noteVersions, addVersion, loadVersions } = useNotes();
+    const { allNotes, notes, updateNote, deleteNote, addNote, shareNote, loading, noteVersions, addVersion, loadVersions, togglePin, toggleArchive } = useNotes();
     const { showToast } = useToast();
 
     // Navigate from universal search
@@ -55,7 +56,9 @@ const Notes = () => {
         if (noteIdParam && noteIdParam !== id) navigate(`/workspace/${workspaceId}/notes/${noteIdParam}`, { replace: true });
     }, [searchParams, id, workspaceId, navigate]);
 
-    const note = notes.find(n => n.id === id);
+    // IMPORTANT: Use allNotes (not filteredNotes) so the note resolves regardless of
+    // which section/type filter is active in the sidebar.
+    const note = (allNotes || notes).find(n => n.id === id);
 
     // ── Editor State ──────────────────────────────────────────────────────────
     const [title, setTitle] = useState("");
@@ -443,6 +446,27 @@ const Notes = () => {
                             title="Version history"
                         >
                             <History size={16} />
+                        </button>
+
+                        {/* Pin / Favorite */}
+                        <button
+                            onClick={() => togglePin && togglePin(id)}
+                            className={`p-2 rounded-lg transition-colors ${note.isPinned
+                                ? 'text-amber-500 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20'
+                                : 'text-gray-400 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20'
+                                }`}
+                            title={note.isPinned ? 'Remove from Favorites' : 'Add to Favorites'}
+                        >
+                            <Star size={16} className={note.isPinned ? 'fill-current' : ''} />
+                        </button>
+
+                        {/* Archive */}
+                        <button
+                            onClick={() => toggleArchive && toggleArchive(id)}
+                            className="p-2 text-gray-400 hover:text-violet-600 hover:bg-violet-50 dark:hover:bg-violet-900/20 rounded-lg transition-colors"
+                            title="Archive note"
+                        >
+                            <Archive size={16} />
                         </button>
 
                         {/* Delete */}
