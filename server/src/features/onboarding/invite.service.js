@@ -140,6 +140,14 @@ async function acceptInvite(rawToken, password) {
     }
 
     if (user.accountStatus === 'active') {
+        // S-11 SECURITY FIX: Unconditionally clear invite token even on the already-active
+        // path — prevents token re-use if a race condition or alternate activation path
+        // left the token populated without clearing it.
+        if (user.inviteToken || user.inviteTokenExpiry) {
+            user.inviteToken = null;
+            user.inviteTokenExpiry = null;
+            await user.save();
+        }
         // Idempotent — already activated (double-click, etc.)
         return { user: _safeUser(user), alreadyActive: true };
     }

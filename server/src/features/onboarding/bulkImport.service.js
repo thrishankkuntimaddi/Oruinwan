@@ -41,7 +41,8 @@ const BULK_BLOCKED_ROLES = ['owner'];
 // ============================================================================
 
 function _makeJobId() {
-    return `bjob_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
+    // S-13: 16 bytes = 128-bit entropy (upgraded from 4 bytes / 32-bit)
+    return `bjob_${Date.now()}_${crypto.randomBytes(16).toString('hex')}`;
 }
 
 const _delay = ms => new Promise(r => setTimeout(r, ms));

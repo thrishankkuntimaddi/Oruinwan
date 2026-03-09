@@ -14,13 +14,19 @@ const express = require('express');
 const router = express.Router();
 const notesController = require('./notes.controller');
 const requireAuth = require('../../../middleware/auth');
+// S-04: requireCompanyMember added for defence-in-depth tenant isolation.
+// Ensures company membership is validated at the route layer, not just service layer.
+const requireCompanyMember = require('../../shared/middleware/requireCompanyMember');
 
 // ============================================================================
 // MIDDLEWARE
 // ============================================================================
 
-// All routes require authentication
+// All routes require authentication and company membership (S-04)
+// requireAuth      → validates JWT token
+// requireCompanyMember → DB read: validates companyId + accountStatus, attaches req.companyId
 router.use(requireAuth);
+router.use(requireCompanyMember);
 
 // ============================================================================
 // ROUTES

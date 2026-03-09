@@ -1,88 +1,103 @@
-// server/routes/workspaces.js
-const express = require("express");
+// server/src/features/workspaces/workspaces.routes.js
+//
+// S-01 SECURITY HARDENING: All workspace-mutating routes now include the full
+// middleware chain:
+//   requireAuth           → validates JWT token
+//   requireCompanyMember  → validates company membership, attaches req.companyId + req.companyRole
+//   requireWorkspaceMember→ validates workspace membership + company isolation (cross-tenant guard)
+//   enforceRoleCeiling    → enforces EffectiveRole = MIN(companyRole, workspaceRole)
+//                           with optional { minRole } to gate admin/owner-only operations
+//
+// Previously all routes had only `auth` (bare JWT check), leaving admin-only
+// operations (suspend, change-role, remove, delete) accessible to any authenticated user.
+
+const express = require('express');
 const router = express.Router();
-const workspaceController = require("./workspace.controller");
-const workspaceAdminController = require("./workspace-admin.controller");
-const auth = require("../../shared/middleware/auth");
+const workspaceController = require('./workspace.controller');
+const workspaceAdminController = require('./workspace-admin.controller');
 
-// Create workspace (personal or company)
-router.post("/", auth, workspaceController.createWorkspace);
-router.post("/create", auth, workspaceController.createWorkspace); // Alias for client compatibility
+// S-01: Use the Phase 1 shared middleware stack
+const requireAuth = require('../../shared/middleware/auth');
+const requireCompanyMember = require('../../shared/middleware/requireCompanyMember');
+const requireWorkspaceMember = require('../../shared/middleware/requireWorkspaceMember');
+const enforceRoleCeiling = require('../../shared/middleware/enforceRoleCeiling');
 
-// IMPORTANT: Specific routes MUST come BEFORE parameterized routes
-// Get MY workspaces (only workspaces I'm a member of)
-router.get("/my", auth, workspaceController.listMyWorkspaces);
+// ── Middleware gate aliases ────────────────────────────────────────────────────
 
-// Get invite details (for preview before joining)
-router.get("/invite/:token", workspaceController.getInviteDetails);
+// Any authenticated company member who is also a workspace member
+const memberGate = [requireAuth, requireCompanyMember, requireWorkspaceMember];
+
+// Workspace admin or higher (company ceiling applied)
+const adminGate = [...memberGate, enforceRoleCeiling({ minRole: 'admin' })];
+
+// ── PUBLIC / lightly guarded routes ───────────────────────────────────────────
+
+// Create workspace — requireAuth + requireCompanyMember only (no workspace yet)
+router.post('/', requireAuth, requireCompanyMember, workspaceController.createWorkspace);
+router.post('/create', requireAuth, requireCompanyMember, workspaceController.createWorkspace); // Alias
+
+// List MY workspaces — must be a company member
+router.get('/my', requireAuth, requireCompanyMember, workspaceController.listMyWorkspaces);
+
+// Get invite details (public — token is the credential)
+router.get('/invite/:token', workspaceController.getInviteDetails);
 
 // Join workspace via invite
-router.post("/join", auth, workspaceController.joinWorkspace);
+router.post('/join', requireAuth, requireCompanyMember, workspaceController.joinWorkspace);
 
-// Get workspace members (for DM filtering)
-router.get("/:workspaceId/members", auth, workspaceController.getWorkspaceMembers);
+// ── WORKSPACE-MEMBER ROUTES (S-01: requireWorkspaceMember + cross-tenant guard) ──
 
-// Get ALL workspace members including current user (for settings modal)
-router.get("/:workspaceId/all-members", auth, workspaceController.getAllWorkspaceMembers);
+// Get workspace members — S-01: was requireAuth only, now full memberGate
+router.get('/:workspaceId/members', ...memberGate, workspaceController.getWorkspaceMembers);
 
-// Get workspace channels
-router.get("/:workspaceId/channels", auth, workspaceController.getWorkspaceChannels);
+// Get ALL workspace members (for settings modal) — S-01: was requireAuth only
+router.get('/:workspaceId/all-members', ...memberGate, workspaceController.getAllWorkspaceMembers);
 
-// Create channel in workspace
-router.post("/:workspaceId/channels", auth, workspaceController.createWorkspaceChannel);
+// Get workspace channels — S-01: was requireAuth only
+router.get('/:workspaceId/channels', ...memberGate, workspaceController.getWorkspaceChannels);
 
-// 🔒 ADMIN-ONLY: Invite management
-// Invite to workspace (email or link)
-router.post("/:id/invite", auth, workspaceController.inviteToWorkspace);
+// Create channel in workspace — S-01: admin ceiling added
+router.post('/:workspaceId/channels', ...adminGate, workspaceController.createWorkspaceChannel);
 
-// Get all invites for workspace (admin-only)
-router.get("/:workspaceId/invites", auth, workspaceAdminController.getWorkspaceInvites);
+// Workspace statistics — member access
+router.get('/:workspaceId/stats', ...memberGate, workspaceController.getWorkspaceStats);
 
-// Revoke invite (admin-only)
-router.post("/:workspaceId/invites/:inviteId/revoke", auth, workspaceAdminController.revokeInvite);
+// ── ADMIN-ONLY ROUTES (S-01: enforceRoleCeiling({ minRole: 'admin' })) ────────
 
-// Resend invite (admin-only)
-router.post("/:workspaceId/invites/:inviteId/resend", auth, workspaceAdminController.resendInvite);
+// Invite management
+// S-01: was requireAuth only — now adminGate
+router.post('/:workspaceId/invite', ...adminGate, workspaceController.inviteToWorkspace);
+// Legacy alias with :id param (kept for backward compat)
+router.post('/:id/invite', ...adminGate, workspaceController.inviteToWorkspace);
 
-// 🔒 ADMIN-ONLY: Bulk invitation operations
-// Bulk revoke invites (admin-only)
-router.post("/:workspaceId/invites/bulk-revoke", auth, workspaceAdminController.bulkRevokeInvites);
+router.get('/:workspaceId/invites', ...adminGate, workspaceAdminController.getWorkspaceInvites);
+router.post('/:workspaceId/invites/:inviteId/revoke', ...adminGate, workspaceAdminController.revokeInvite);
+router.post('/:workspaceId/invites/:inviteId/resend', ...adminGate, workspaceAdminController.resendInvite);
+router.post('/:workspaceId/invites/bulk-revoke', ...adminGate, workspaceAdminController.bulkRevokeInvites);
+router.delete('/:workspaceId/invites/bulk-delete', ...adminGate, workspaceAdminController.bulkDeleteInvites);
+router.post('/:workspaceId/invites/cleanup-expired', ...adminGate, workspaceAdminController.cleanupExpiredInvites);
 
-// Bulk delete invites (admin-only) - only expired/revoked
-router.delete("/:workspaceId/invites/bulk-delete", auth, workspaceAdminController.bulkDeleteInvites);
+// Member management — S-01: was requireAuth only for all of these
+router.post('/:workspaceId/members/:userId/suspend', ...adminGate, workspaceAdminController.suspendMember);
+router.post('/:workspaceId/members/:userId/restore', ...adminGate, workspaceAdminController.restoreMember);
+router.post('/:workspaceId/members/:userId/change-role', ...adminGate, workspaceAdminController.changeRole);
+router.post('/:workspaceId/remove-member', ...adminGate, workspaceAdminController.removeMember);
 
-// Cleanup all expired invites (admin-only)
-router.post("/:workspaceId/invites/cleanup-expired", auth, workspaceAdminController.cleanupExpiredInvites);
+// ── ADMIN/OWNER-ONLY WORKSPACE MANAGEMENT ────────────────────────────────────
 
-// 🔒 ADMIN-ONLY: Member management
-// Suspend member (admin-only)
-router.post("/:workspaceId/members/:userId/suspend", auth, workspaceAdminController.suspendMember);
+// Rename workspace — S-01: was requireAuth only
+router.put('/:id/rename', requireAuth, requireCompanyMember, enforceRoleCeiling({ minRole: 'admin' }), workspaceController.renameWorkspace);
 
-// Restore suspended member (admin-only)
-router.post("/:workspaceId/members/:userId/restore", auth, workspaceAdminController.restoreMember);
+// Update workspace settings — S-01: was requireAuth only
+router.put('/:id', requireAuth, requireCompanyMember, enforceRoleCeiling({ minRole: 'admin' }), workspaceController.updateWorkspace);
 
-// Change member role (admin-only)
-router.post("/:workspaceId/members/:userId/change-role", auth, workspaceAdminController.changeRole);
+// Delete workspace (OWNER ONLY) — S-01: was requireAuth only
+// IMPORTANT: Must come BEFORE GET /:companyId to avoid route conflicts
+router.delete('/:id', requireAuth, requireCompanyMember, enforceRoleCeiling({ minRole: 'owner' }), workspaceController.deleteWorkspace);
 
-// Remove member from workspace (admin-only)
-router.post("/:workspaceId/remove-member", auth, workspaceAdminController.removeMember);
+// ── COMPANY-SCOPED LIST ───────────────────────────────────────────────────────
 
-// 🔒 OWNER-ONLY: Delete workspace
-// IMPORTANT: This MUST come BEFORE GET /:companyId to avoid route conflicts
-router.delete("/:id", auth, workspaceController.deleteWorkspace);
-
-// 🔒 ADMIN/OWNER-ONLY: Rename workspace
-router.put("/:id/rename", auth, workspaceController.renameWorkspace);
-
-// 🔒 ADMIN/OWNER-ONLY: Update workspace settings
-router.put("/:id", auth, workspaceController.updateWorkspace);
-
-// Get workspace statistics
-router.get("/:id/stats", auth, workspaceController.getWorkspaceStats);
-
-// Get workspaces by company (legacy/company-specific)
-// This MUST be after /my, specific routes, and DELETE to avoid matching workspace IDs as companyId
-router.get("/:companyId", auth, workspaceController.listWorkspaces);
+// Get workspaces by company — must be after all specific routes to avoid collisions
+router.get('/:companyId', requireAuth, requireCompanyMember, workspaceController.listWorkspaces);
 
 module.exports = router;
-

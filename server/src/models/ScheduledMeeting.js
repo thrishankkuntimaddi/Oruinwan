@@ -4,11 +4,22 @@
  * Persists scheduled meetings created from the ScheduleMeetingModal
  * or HomePanel. Scoped to a workspace so the HomePanel sidebar can
  * query upcoming meetings across all channels.
+ *
+ * SECURITY (S-02): companyId added for multi-tenant isolation.
+ * All queries must include companyId to prevent cross-tenant access.
  */
 const mongoose = require('mongoose');
 
 const scheduledMeetingSchema = new mongoose.Schema(
     {
+        // S-02: Tenant isolation — every meeting is scoped to a company.
+        // Required so that GET/PATCH/DELETE can never cross tenant boundaries.
+        companyId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'Company',
+            required: true,
+            index: true,
+        },
         workspaceId: {
             type: mongoose.Schema.Types.ObjectId,
             ref: 'Workspace',
@@ -70,7 +81,7 @@ const scheduledMeetingSchema = new mongoose.Schema(
     { timestamps: true }
 );
 
-// Index for quickly fetching upcoming meetings
-scheduledMeetingSchema.index({ workspaceId: 1, startTime: 1, status: 1 });
+// S-02: Compound index — all tenant-scoped queries use companyId first
+scheduledMeetingSchema.index({ companyId: 1, workspaceId: 1, startTime: 1, status: 1 });
 
 module.exports = mongoose.model('ScheduledMeeting', scheduledMeetingSchema);

@@ -449,13 +449,31 @@ io.on("connection", async (socket) => {
 const ScheduledMeeting = require('./src/models/ScheduledMeeting');
 
 // GET /api/scheduled-meetings?workspaceId=xxx  — upcoming meetings
+// S-02 SECURITY FIX: companyId filter added. Query resolves user's companyId from DB
+// and validates workspace ownership before returning meetings (prevents cross-tenant reads).
 app.get('/api/scheduled-meetings', requireAuth, async (req, res) => {
   try {
     const { workspaceId, limit = 10 } = req.query;
     if (!workspaceId) return res.status(400).json({ message: 'workspaceId required' });
 
+    // S-02: Resolve companyId from DB (JWT payload only carries `sub`)
+    const User = require('./models/User');
+    const dbUser = await User.findById(req.user.sub).select('companyId').lean();
+    if (!dbUser || !dbUser.companyId) {
+      return res.status(403).json({ message: 'Company membership required' });
+    }
+    const companyId = dbUser.companyId;
+
+    // S-02: Verify workspace belongs to this company (cross-tenant guard)
+    const WorkspaceModel = require('./src/features/workspaces/workspace.model');
+    const ws = await WorkspaceModel.findOne({ _id: workspaceId, company: companyId }).select('_id').lean();
+    if (!ws) {
+      return res.status(403).json({ message: 'Access denied' });
+    }
+
     const now = new Date();
     const meetings = await ScheduledMeeting.find({
+      companyId,          // S-02: tenant-scoped query
       workspaceId,
       startTime: { $gte: now },
       status: { $in: ['scheduled', 'live'] },
@@ -473,6 +491,7 @@ app.get('/api/scheduled-meetings', requireAuth, async (req, res) => {
 });
 
 // POST /api/scheduled-meetings  — create a new scheduled meeting
+// S-02 SECURITY FIX: companyId resolved from DB and validated. Stored on the document.
 app.post('/api/scheduled-meetings', requireAuth, async (req, res) => {
   try {
     const { workspaceId, channelId, dmSessionId, title, startTime, duration, meetingLink, participants } = req.body;
@@ -480,7 +499,23 @@ app.post('/api/scheduled-meetings', requireAuth, async (req, res) => {
       return res.status(400).json({ message: 'workspaceId, title, and startTime are required' });
     }
 
+    // S-02: Resolve and validate companyId
+    const User = require('./models/User');
+    const dbUser = await User.findById(req.user.sub).select('companyId').lean();
+    if (!dbUser || !dbUser.companyId) {
+      return res.status(403).json({ message: 'Company membership required' });
+    }
+    const companyId = dbUser.companyId;
+
+    // S-02: Verify workspace belongs to caller's company before creating
+    const WorkspaceModel = require('./src/features/workspaces/workspace.model');
+    const ws = await WorkspaceModel.findOne({ _id: workspaceId, company: companyId }).select('_id members').lean();
+    if (!ws) {
+      return res.status(403).json({ message: 'Access denied' });
+    }
+
     const meeting = await ScheduledMeeting.create({
+      companyId,          // S-02: stored for tenant isolation on all future queries
       workspaceId,
       channelId: channelId || null,
       dmSessionId: dmSessionId || null,
@@ -501,8 +536,6 @@ app.post('/api/scheduled-meetings', requireAuth, async (req, res) => {
     // Create notifications for all workspace members
     try {
       const notifService = require('./src/features/notifications/notificationService');
-      const WorkspaceModel = require('./src/features/workspaces/workspace.model');
-      const ws = await WorkspaceModel.findById(workspaceId).select('members').lean();
       if (ws && ws.members) {
         const recipientIds = ws.members
           .map(m => (m.user || m).toString())
@@ -526,6 +559,7 @@ app.post('/api/scheduled-meetings', requireAuth, async (req, res) => {
 });
 
 // PATCH /api/scheduled-meetings/:id  — update status (cancel/complete/live)
+// S-02 SECURITY FIX: meeting.companyId checked before allowing update.
 app.patch('/api/scheduled-meetings/:id', requireAuth, async (req, res) => {
   try {
     const { status } = req.body;
@@ -534,13 +568,20 @@ app.patch('/api/scheduled-meetings/:id', requireAuth, async (req, res) => {
       return res.status(400).json({ message: 'Invalid status' });
     }
 
-    const meeting = await ScheduledMeeting.findByIdAndUpdate(
-      req.params.id,
-      { status },
-      { new: true }
-    ).populate('createdBy', 'username firstName lastName avatarUrl');
-
+    // S-02: Load meeting first to verify tenant ownership
+    const meeting = await ScheduledMeeting.findById(req.params.id);
     if (!meeting) return res.status(404).json({ message: 'Meeting not found' });
+
+    // S-02: Check caller's companyId matches meeting's companyId
+    const User = require('./models/User');
+    const dbUser = await User.findById(req.user.sub).select('companyId').lean();
+    if (!dbUser || !meeting.companyId || dbUser.companyId.toString() !== meeting.companyId.toString()) {
+      return res.status(403).json({ message: 'Access denied' });
+    }
+
+    meeting.status = status;
+    await meeting.save();
+    await meeting.populate('createdBy', 'username firstName lastName avatarUrl');
 
     req.io.to(`workspace:${meeting.workspaceId}`).emit('schedule:updated', { meeting });
 
@@ -552,10 +593,20 @@ app.patch('/api/scheduled-meetings/:id', requireAuth, async (req, res) => {
 });
 
 // DELETE /api/scheduled-meetings/:id
+// S-02 SECURITY FIX: meeting.companyId checked before allowing deletion.
 app.delete('/api/scheduled-meetings/:id', requireAuth, async (req, res) => {
   try {
-    const meeting = await ScheduledMeeting.findByIdAndDelete(req.params.id);
+    // S-02: Load meeting first to verify tenant ownership before deleting
+    const meeting = await ScheduledMeeting.findById(req.params.id);
     if (!meeting) return res.status(404).json({ message: 'Meeting not found' });
+
+    const User = require('./models/User');
+    const dbUser = await User.findById(req.user.sub).select('companyId').lean();
+    if (!dbUser || !meeting.companyId || dbUser.companyId.toString() !== meeting.companyId.toString()) {
+      return res.status(403).json({ message: 'Access denied' });
+    }
+
+    await meeting.deleteOne();
 
     req.io.to(`workspace:${meeting.workspaceId}`).emit('schedule:deleted', { meetingId: meeting._id });
 

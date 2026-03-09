@@ -44,9 +44,11 @@ const requireOwner = async (req, res, next) => {
 
         console.log('[REQUIRE_OWNER] Checking owner role for user:', req.user.email, 'Role:', req.user.companyRole);
 
-        // SECURITY FIX (BUG-4): Check coOwnerOf is scoped to THIS company, not a global flag
-        const isCoOwnerHere = (req.user.coOwnerOf && req.user.companyId &&
-            req.user.coOwnerOf.toString() === req.user.companyId.toString()) || req.user.isCoOwner;
+        // S-05 SECURITY FIX: Only scoped coOwner check — global isCoOwner flag removed.
+        // A global boolean is unsafe in multi-tenant: one flag would grant owner access
+        // across ALL companies. Only match coOwnerOf to THIS request's companyId.
+        const isCoOwnerHere = req.user.coOwnerOf && req.user.companyId &&
+            req.user.coOwnerOf.toString() === req.user.companyId.toString();
         if (req.user.companyRole === 'owner' || isCoOwnerHere) {
             console.log('[REQUIRE_OWNER] Access granted');
             next();
@@ -82,8 +84,9 @@ const requireAdmin = async (req, res, next) => {
         }
 
         const adminRoles = ['owner', 'admin'];
-        const isCoOwnerHere = (req.user.coOwnerOf && req.user.companyId &&
-            req.user.coOwnerOf.toString() === req.user.companyId.toString()) || req.user.isCoOwner;
+        // S-05 SECURITY FIX: Scoped coOwner check only — global isCoOwner flag removed.
+        const isCoOwnerHere = req.user.coOwnerOf && req.user.companyId &&
+            req.user.coOwnerOf.toString() === req.user.companyId.toString();
         if (adminRoles.includes(req.user.companyRole) || isCoOwnerHere) {
             next();
         } else {
@@ -104,8 +107,9 @@ const requireDepartmentManager = async (req, res, next) => {
         const departmentId = req.params.id || req.params.departmentId;
 
         // Owners and Admins explicitly have access to all departments
-        const isCoOwnerHere = (req.user.coOwnerOf && req.user.companyId &&
-            req.user.coOwnerOf.toString() === req.user.companyId.toString()) || req.user.isCoOwner;
+        // S-05 SECURITY FIX: Scoped coOwner check only — global isCoOwner flag removed.
+        const isCoOwnerHere = req.user.coOwnerOf && req.user.companyId &&
+            req.user.coOwnerOf.toString() === req.user.companyId.toString();
         if (['owner', 'admin'].includes(req.user.companyRole) || isCoOwnerHere) {
             return next();
         }
@@ -139,8 +143,9 @@ const requireDepartmentManager = async (req, res, next) => {
 const canCreateWorkspace = async (req, res, next) => {
     try {
         // 1. Owner/Admin -> Always allow
-        const isCoOwnerHere = (req.user.coOwnerOf && req.user.companyId &&
-            req.user.coOwnerOf.toString() === req.user.companyId.toString()) || req.user.isCoOwner;
+        // S-05 SECURITY FIX: Scoped coOwner check only — global isCoOwner flag removed.
+        const isCoOwnerHere = req.user.coOwnerOf && req.user.companyId &&
+            req.user.coOwnerOf.toString() === req.user.companyId.toString();
         if (['owner', 'admin'].includes(req.user.companyRole) || isCoOwnerHere) {
             return next();
         }
@@ -184,8 +189,9 @@ const requireManager = async (req, res, next) => {
         }
 
         const managerRoles = ['owner', 'admin', 'manager'];
-        const isCoOwnerHere = (req.user.coOwnerOf && req.user.companyId &&
-            req.user.coOwnerOf.toString() === req.user.companyId.toString()) || req.user.isCoOwner;
+        // S-05 SECURITY FIX: Scoped coOwner check only — global isCoOwner flag removed.
+        const isCoOwnerHere = req.user.coOwnerOf && req.user.companyId &&
+            req.user.coOwnerOf.toString() === req.user.companyId.toString();
         if (managerRoles.includes(req.user.companyRole) || isCoOwnerHere) {
             next();
         } else {

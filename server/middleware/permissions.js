@@ -4,6 +4,8 @@ const Company = require("../models/Company");
 const Workspace = require("../models/Workspace");
 const Channel = require("../src/features/channels/channel.model.js");
 const User = require("../models/User");
+// S-09: Used for guest DM shared-workspace validation
+const WorkspaceModel = require("../src/features/workspaces/workspace.model");
 
 /**
  * Check if user belongs to a company
@@ -203,6 +205,32 @@ exports.validateDMAccess = async (req, res, next) => {
             if (sender.companyId !== recipient.companyId) {
                 return res.status(403).json({
                     message: "Personal and company users cannot DM each other"
+                });
+            }
+        }
+
+        // S-09 SECURITY FIX: Guest DM restriction.
+        // Guests must share at least one active workspace with the recipient.
+        // This prevents guests from messaging company members they have never worked with.
+        if (sender.companyRole === 'guest') {
+            const senderWorkspaces = await WorkspaceModel.find({
+                'members.user': sender._id,
+                'members.status': 'active',
+                isActive: true,
+            }).select('_id').lean();
+
+            const senderWsIds = new Set(senderWorkspaces.map(w => w._id.toString()));
+
+            const sharedWorkspace = await WorkspaceModel.findOne({
+                _id: { $in: [...senderWsIds] },
+                'members.user': recipient._id,
+                'members.status': 'active',
+                isActive: true,
+            }).lean();
+
+            if (!sharedWorkspace) {
+                return res.status(403).json({
+                    message: "Guests can only DM users they share a workspace with."
                 });
             }
         }

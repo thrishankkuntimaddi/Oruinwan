@@ -191,33 +191,50 @@ function registerChatHandlers(io, socket) {
     // ==================== POLL HANDLERS (ISOLATED) ====================
     // Polls are a separate feature and do NOT interfere with messaging
 
-    // Poll created - broadcast to channel (room membership implicitly enforced
-    // because the poll was created via authenticated HTTP POST, not socket)
+    // Poll created - broadcast to channel
+    // S-08 SECURITY FIX: Room-presence guard added. A socket must have joined the channel
+    // room (via membership-checked chat:join) before broadcasting poll events.
+    // Without this check any authenticated socket could inject poll events into any channel.
     socket.on('poll:created', (data) => {
         const { channelId, poll } = data;
+        const roomName = `channel:${channelId}`;
+        if (!socket.rooms.has(roomName)) {
+            console.warn(`\uD83D\uDEAB [poll:created] User ${socket.user.id} not in room ${roomName} \u2014 blocked`);
+            socket.emit('error', { message: 'Not a member of this channel' });
+            return;
+        }
         console.log(`\uD83D\uDCCA New poll created in channel:${channelId} by user:${socket.user.id}`);
-        io.to(`channel:${channelId}`).emit('poll:new', poll);
+        io.to(roomName).emit('poll:new', poll);
     });
 
     // Poll voted - broadcast updated poll to channel
     socket.on('poll:voted', (data) => {
         const { channelId, poll } = data;
+        const roomName = `channel:${channelId}`;
+        // S-08 SECURITY FIX: Room-presence guard
+        if (!socket.rooms.has(roomName)) return;
         console.log(`\u2705 Poll ${poll._id} voted by user:${socket.user.id}`);
-        io.to(`channel:${channelId}`).emit('poll:update', poll);
+        io.to(roomName).emit('poll:update', poll);
     });
 
     // Poll deleted - broadcast removal to channel
     socket.on('poll:deleted', (data) => {
         const { channelId, pollId } = data;
+        const roomName = `channel:${channelId}`;
+        // S-08 SECURITY FIX: Room-presence guard
+        if (!socket.rooms.has(roomName)) return;
         console.log(`\uD83D\uDDD1\uFE0F Poll ${pollId} deleted from channel:${channelId}`);
-        io.to(`channel:${channelId}`).emit('poll:removed', { pollId });
+        io.to(roomName).emit('poll:removed', { pollId });
     });
 
     // Poll closed - broadcast update to channel
     socket.on('poll:closed', (data) => {
         const { channelId, poll } = data;
+        const roomName = `channel:${channelId}`;
+        // S-08 SECURITY FIX: Room-presence guard
+        if (!socket.rooms.has(roomName)) return;
         console.log(`\uD83D\uDD12 Poll ${poll._id} closed in channel:${channelId}`);
-        io.to(`channel:${channelId}`).emit('poll:update', poll);
+        io.to(roomName).emit('poll:update', poll);
     });
 
     // SECURITY FIX (M-2): The 'conversation:event' handler has been moved EXCLUSIVELY

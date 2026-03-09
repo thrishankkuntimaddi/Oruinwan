@@ -109,10 +109,16 @@ async function resolveDeptId(deptName, companyId) {
 // SCIM ROLE NORMALISATION
 // ============================================================================
 
+// S-06 SECURITY FIX: Explicitly block owner-role provisioning via SCIM.
+// The SCIM_ROLE_MAP below would silently demote 'owner' to 'admin', but we
+// reject early so the attempt is audited and the caller receives a clear error
+// rather than silent demotion (which could mask IdP misconfiguration).
+const SCIM_BLOCKED_ROLES = ['owner'];
+
 // Map common SCIM titles/groups → companyRoles
 // Falls back to 'member' if unmapped
 const SCIM_ROLE_MAP = {
-    owner: 'admin',   // SCIM cannot assign 'owner'
+    owner: 'admin',   // Fallback (should not reach here after SCIM_BLOCKED_ROLES check)
     admin: 'admin',
     manager: 'manager',
     member: 'member',
@@ -157,8 +163,21 @@ exports.createUser = async (req, res) => {
 
         if (!email) return scimError(res, 400, 'userName (email) is required');
 
+        // S-06 SECURITY FIX: Hard-reject owner role before normalisation.
+        // This prevents IdP misconfiguration from silently creating owner accounts.
+        const rawScimRole = (body.roles?.[0]?.value || '').toLowerCase();
+        if (SCIM_BLOCKED_ROLES.includes(rawScimRole)) {
+            logSecurityEvent({
+                companyId,
+                eventType: 'scim_owner_role_blocked',
+                outcome: 'blocked',
+                metadata: { email, attemptedRole: rawScimRole, provider: req.scimToken.provider },
+            });
+            return scimError(res, 400, `Role '${rawScimRole}' cannot be provisioned via SCIM. Maximum assignable role is 'admin'.`);
+        }
+
         // Role ceiling — SCIM acts with 'admin' ceiling
-        const companyRole = normaliseRole(scimRole);
+        const companyRole = normaliseRole(rawScimRole);
         if (!ASSIGNABLE_ROLES['admin'].includes(companyRole) && companyRole !== 'admin') {
             return scimError(res, 400, `Role '${companyRole}' cannot be assigned via SCIM`);
         }
@@ -258,9 +277,20 @@ exports.updateUser = async (req, res) => {
                     user.accountStatus = active ? 'active' : 'suspended';
                 }
 
-                // Role
+                // Role — with S-06 owner block
                 if (path === 'roles' && Array.isArray(val)) {
-                    const newRole = normaliseRole(val[0]?.value);
+                    const rawRole = (val[0]?.value || '').toLowerCase();
+                    // S-06 SECURITY FIX: Block owner role assignment in updates too
+                    if (SCIM_BLOCKED_ROLES.includes(rawRole)) {
+                        logSecurityEvent({
+                            companyId,
+                            eventType: 'scim_owner_role_blocked',
+                            outcome: 'blocked',
+                            metadata: { userId, attemptedRole: rawRole, provider: req.scimToken.provider },
+                        });
+                        return scimError(res, 400, `Role '${rawRole}' cannot be assigned via SCIM.`);
+                    }
+                    const newRole = normaliseRole(rawRole);
                     if (ASSIGNABLE_ROLES['admin'].includes(newRole) || newRole === 'admin') {
                         user.companyRole = newRole;
                     }
