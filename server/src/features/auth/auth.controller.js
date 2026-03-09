@@ -198,7 +198,53 @@ exports.signup = async (req, res) => {
       reportsTo: assignedManager
     });
 
+    // ==================== ASSIGN RANDOM AVATAR ====================
+    // Ensure no user ever starts with a blank profile picture.
+    // Pick from the same 100-avatar professional library used in the Settings picker.
+    const AVATAR_POOL = [
+      // Illustrated — lorelei-neutral
+      ['lorelei-neutral', 'Alexandra'], ['lorelei-neutral', 'Jordan'], ['lorelei-neutral', 'Morgan'],
+      ['lorelei-neutral', 'Cameron'], ['lorelei-neutral', 'Avery'], ['lorelei-neutral', 'Quinn'],
+      ['lorelei-neutral', 'Riley'], ['lorelei-neutral', 'Reese'], ['lorelei-neutral', 'Sage'],
+      ['lorelei-neutral', 'Emery'], ['lorelei-neutral', 'Parker'], ['lorelei-neutral', 'Hayden'],
+      ['lorelei-neutral', 'Finley'], ['lorelei-neutral', 'River'], ['lorelei-neutral', 'Kendall'],
+      // Notion-style — notionists-neutral
+      ['notionists-neutral', 'Atlas'], ['notionists-neutral', 'Cleo'], ['notionists-neutral', 'Darwin'],
+      ['notionists-neutral', 'Elliot'], ['notionists-neutral', 'Fable'], ['notionists-neutral', 'Glen'],
+      ['notionists-neutral', 'Haven'], ['notionists-neutral', 'Inigo'], ['notionists-neutral', 'Jules'],
+      ['notionists-neutral', 'Knox'], ['notionists-neutral', 'Lael'], ['notionists-neutral', 'Maren'],
+      ['notionists-neutral', 'Noel'], ['notionists-neutral', 'Orion'], ['notionists-neutral', 'Piper'],
+      // Minimal — micah
+      ['micah', 'Adam'], ['micah', 'Benjamin'], ['micah', 'Charles'], ['micah', 'Daniel'],
+      ['micah', 'Edward'], ['micah', 'Francis'], ['micah', 'George'], ['micah', 'Hannah'],
+      ['micah', 'Isabelle'], ['micah', 'Julian'], ['micah', 'Katrina'], ['micah', 'Leonard'],
+      ['micah', 'Margaret'], ['micah', 'Nathan'], ['micah', 'Olivia'],
+      // Geometric — identicon
+      ['identicon', 'Alpha01'], ['identicon', 'Beta02'], ['identicon', 'Gamma03'], ['identicon', 'Delta04'],
+      ['identicon', 'Epsilon05'], ['identicon', 'Zeta06'], ['identicon', 'Eta07'], ['identicon', 'Theta08'],
+      ['identicon', 'Iota09'], ['identicon', 'Kappa10'], ['identicon', 'Lambda11'], ['identicon', 'Mu12'],
+      ['identicon', 'Nu13'], ['identicon', 'Xi14'], ['identicon', 'Omicron15'],
+      // Abstract — rings
+      ['rings', 'Cobalt'], ['rings', 'Crimson'], ['rings', 'Dune'], ['rings', 'Eclipse'],
+      ['rings', 'Flux'], ['rings', 'Granite'], ['rings', 'Horizon'], ['rings', 'Indigo'],
+      ['rings', 'Jasper'], ['rings', 'Lunar'], ['rings', 'Marble'], ['rings', 'Nordic'],
+      ['rings', 'Onyx'], ['rings', 'Prism'],
+      // Shapes
+      ['shapes', 'Apex'], ['shapes', 'Bolt'], ['shapes', 'Core'], ['shapes', 'Drive'],
+      ['shapes', 'Edge'], ['shapes', 'Forge'], ['shapes', 'Grid'], ['shapes', 'Hub'],
+      ['shapes', 'Ion'], ['shapes', 'Jolt'], ['shapes', 'Key'], ['shapes', 'Link'],
+      ['shapes', 'Matrix'], ['shapes', 'Node'],
+      // Classic — miniavs
+      ['miniavs', 'Prof1'], ['miniavs', 'Prof2'], ['miniavs', 'Prof3'], ['miniavs', 'Prof4'],
+      ['miniavs', 'Prof5'], ['miniavs', 'Prof6'], ['miniavs', 'Prof7'], ['miniavs', 'Prof8'],
+      ['miniavs', 'Prof9'], ['miniavs', 'Prof10'], ['miniavs', 'Prof11'], ['miniavs', 'Prof12'],
+      ['miniavs', 'Prof13'], ['miniavs', 'Prof14'], ['miniavs', 'Prof15'], ['miniavs', 'Prof16'],
+    ];
+    const [style, seed] = AVATAR_POOL[Math.floor(Math.random() * AVATAR_POOL.length)];
+    user.profilePicture = `https://api.dicebear.com/7.x/${style}/svg?seed=${encodeURIComponent(seed)}&size=200`;
+
     await saveWithRetry(user);
+
 
     // ==================== WORKSPACE ASSIGNMENT ====================
 
