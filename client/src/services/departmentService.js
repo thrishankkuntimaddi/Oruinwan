@@ -4,7 +4,9 @@ import api from './api';
 
 // Get all departments for a company
 export const getDepartments = async (companyId) => {
-    const response = await api.get(`/api/departments/${companyId}`);
+    // Phase 2: company is inferred from middleware (req.companyId)
+    // companyId param kept for backward-compat call sites but NOT sent in URL
+    const response = await api.get('/api/departments');
     return response.data;
 };
 
@@ -16,7 +18,7 @@ export const createDepartment = async (companyId, name, description = '') => {
 
 // Update department
 export const updateDepartment = async (departmentId, data) => {
-    const response = await api.put(`/api/departments/${departmentId}`, data);
+    const response = await api.patch(`/api/departments/${departmentId}`, data);
     return response.data;
 };
 
@@ -32,15 +34,21 @@ export const getDepartmentMembers = async (departmentId) => {
     return response.data;
 };
 
-// Assign user to department
+// Assign user to department (Phase 2: PATCH with action:'add')
 export const assignUserToDepartment = async (userId, departmentId) => {
-    const response = await api.post(`/api/departments/${departmentId}/members`, { userId });
+    const response = await api.patch(`/api/departments/${departmentId}/members`, {
+        userIds: [userId],
+        action: 'add',
+    });
     return response.data;
 };
 
-// Remove user from department
+// Remove user from department (Phase 2: PATCH with action:'remove')
 export const removeUserFromDepartment = async (userId, departmentId) => {
-    const response = await api.delete(`/api/departments/${departmentId}/members/${userId}`);
+    const response = await api.patch(`/api/departments/${departmentId}/members`, {
+        userIds: [userId],
+        action: 'remove',
+    });
     return response.data;
 };
 
