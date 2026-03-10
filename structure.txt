@@ -1,34 +1,27 @@
 /Users/thrishankkuntimaddi/Documents/Chttrix/ChttrixCollab
-├── DEPLOYMENT.md
 ├── README.md
 ├── client
-│   ├── build
-│   │   ├── ChttrixAI-animation.mp4
-│   │   ├── assets
-│   │   │   ├── ChttrixLogo-dark.svg
-│   │   │   ├── ChttrixLogo-light.svg
-│   │   │   ├── ChttrixLogo.svg
-│   │   │   ├── index-DR-Z-h4t.js
-│   │   │   └── index-QqILg0pO.css
-│   │   ├── default-avatar.svg
-│   │   ├── favicon.ico
-│   │   ├── hover-animation.mp4
-│   │   ├── index.html
-│   │   └── manifest.json
 │   ├── index.html
 │   ├── jsconfig.json
 │   ├── package.json
 │   ├── public
 │   │   ├── ChttrixAI-animation.mp4
+│   │   ├── Screenshot 2026-01-11 at 3.53.36 PM.png
 │   │   ├── assets
+│   │   │   ├── Background.jpg
+│   │   │   ├── ChttrixAI-logo.png
+│   │   │   ├── ChttrixFavico.png
 │   │   │   ├── ChttrixLogo-dark.svg
 │   │   │   ├── ChttrixLogo-light.svg
 │   │   │   └── ChttrixLogo.svg
+│   │   ├── chttrix-logo.jpg
 │   │   ├── default-avatar.svg
 │   │   ├── favicon.ico
+│   │   ├── favicon.png
 │   │   ├── hover-animation.mp4
 │   │   ├── index.html
-│   │   └── manifest.json
+│   │   ├── manifest.json
+│   │   └── venkatech_team.xlsx
 │   ├── src
 │   │   ├── App.js
 │   │   ├── __tests__
@@ -146,6 +139,7 @@
 │   │   │   │   │   ├── chatWindow.css
 │   │   │   │   │   ├── footer
 │   │   │   │   │   │   ├── Footer.jsx
+│   │   │   │   │   │   ├── VoiceRecorder.jsx
 │   │   │   │   │   │   ├── attachMenu.jsx
 │   │   │   │   │   │   ├── emojiPicker.jsx
 │   │   │   │   │   │   └── footerInput.jsx
@@ -158,7 +152,12 @@
 │   │   │   │   │   ├── hooks
 │   │   │   │   │   │   ├── useCanvasActions.js
 │   │   │   │   │   │   ├── useHeaderActions.js
+│   │   │   │   │   │   ├── useHuddle.js
+│   │   │   │   │   │   ├── useLinkPreview.js
 │   │   │   │   │   │   └── useMessageInput.js
+│   │   │   │   │   ├── huddle
+│   │   │   │   │   │   ├── HuddleOverlay.jsx
+│   │   │   │   │   │   └── HuddleParticipants.jsx
 │   │   │   │   │   ├── messages
 │   │   │   │   │   │   ├── ChannelMessageItem.jsx
 │   │   │   │   │   │   ├── DMMessageItem.jsx
@@ -172,15 +171,26 @@
 │   │   │   │   │   │   ├── messagesContainer.jsx
 │   │   │   │   │   │   ├── reactionBadges.jsx
 │   │   │   │   │   │   ├── reactionPicker.jsx
-│   │   │   │   │   │   └── replyPreview.jsx
+│   │   │   │   │   │   ├── replyPreview.jsx
+│   │   │   │   │   │   └── types
+│   │   │   │   │   │       ├── ContactMessage.jsx
+│   │   │   │   │   │       ├── FileMessage.jsx
+│   │   │   │   │   │       ├── ImageMessage.jsx
+│   │   │   │   │   │       ├── LinkPreviewMessage.jsx
+│   │   │   │   │   │       ├── MeetingMessage.jsx
+│   │   │   │   │   │       ├── PollMessage.jsx
+│   │   │   │   │   │       ├── VideoMessage.jsx
+│   │   │   │   │   │       └── VoiceMessage.jsx
 │   │   │   │   │   ├── modals
 │   │   │   │   │   │   ├── BlockUserDialog.jsx
+│   │   │   │   │   │   ├── ContactPickerModal.jsx
 │   │   │   │   │   │   ├── CreatePollModal.jsx
 │   │   │   │   │   │   ├── DeleteChatDialog.jsx
 │   │   │   │   │   │   ├── ForwardMessageModal.jsx
 │   │   │   │   │   │   ├── MemberListModal.jsx
 │   │   │   │   │   │   ├── MessageInfoModal.jsx
 │   │   │   │   │   │   ├── PollCreationModal.jsx
+│   │   │   │   │   │   ├── ScheduleMeetingModal.jsx
 │   │   │   │   │   │   ├── ThreadsViewModal.jsx
 │   │   │   │   │   │   ├── contactInfoModal.jsx
 │   │   │   │   │   │   └── contactShareModal.jsx
@@ -236,7 +246,8 @@
 │   │   │   │   ├── TaskRow.jsx
 │   │   │   │   ├── TaskTable.jsx
 │   │   │   │   ├── TaskTabs.jsx
-│   │   │   │   └── TransferRequestModal.jsx
+│   │   │   │   ├── TransferRequestModal.jsx
+│   │   │   │   └── WorkspaceTaskDetailPanel.jsx
 │   │   │   └── workspace
 │   │   │       ├── ProfileQuickSettings.jsx
 │   │   │       └── settings
@@ -252,7 +263,9 @@
 │   │   │   ├── CompanyContext.jsx
 │   │   │   ├── ContactsContext.jsx
 │   │   │   ├── DepartmentContext.jsx
+│   │   │   ├── HuddleContext.jsx
 │   │   │   ├── NotesContext.jsx
+│   │   │   ├── NotificationsContext.jsx
 │   │   │   ├── SocketContext.jsx
 │   │   │   ├── TasksContext.jsx
 │   │   │   ├── ThemeContext.js
@@ -267,6 +280,7 @@
 │   │   │   ├── useForm.js
 │   │   │   ├── useMessageActions.js
 │   │   │   ├── useOfflineRecovery.js
+│   │   │   ├── useScheduledMeetings.js
 │   │   │   ├── useUniversalSearch.js
 │   │   │   └── useUsers.js
 │   │   ├── index.css
@@ -314,6 +328,7 @@
 │   │   │   │   ├── TeamLoad.jsx
 │   │   │   │   ├── UnassignedEmployees.jsx
 │   │   │   │   └── index.jsx
+│   │   │   ├── NotificationsPage.jsx
 │   │   │   ├── OwnerDashboard
 │   │   │   │   ├── ActivityHealth.jsx
 │   │   │   │   ├── AdminsManagement.jsx
@@ -437,6 +452,7 @@
 │   │   │   │   ├── AdvancedTab.jsx
 │   │   │   │   ├── AppearanceTab.jsx
 │   │   │   │   ├── Card.jsx
+│   │   │   │   ├── ImageCropEditor.jsx
 │   │   │   │   ├── NotificationsTab.jsx
 │   │   │   │   ├── PrivacyTab.jsx
 │   │   │   │   ├── ProfileTab.jsx
@@ -501,6 +517,7 @@
 │   │       ├── deviceId.js
 │   │       ├── e2ee-test.js
 │   │       ├── encryptionUtils.js
+│   │       ├── gcsProxy.js
 │   │       ├── logger.js
 │   │       ├── tokenUtils.js
 │   │       └── uploadHelpers.js
@@ -554,6 +571,9 @@
 │   │   ├── Note.js
 │   │   ├── Permission.js
 │   │   ├── PlatformSession.js
+│   │   ├── Project.js
+│   │   ├── ScimToken.js
+│   │   ├── SecurityEvent.js
 │   │   ├── SupportMessage.js
 │   │   ├── SupportTicket.js
 │   │   ├── Task.js
@@ -647,10 +667,18 @@
 │   │   │   │   ├── settings.controller.js
 │   │   │   │   ├── settings.routes.js
 │   │   │   │   └── settings.service.js
+│   │   │   ├── company-analytics
+│   │   │   │   ├── analytics.routes.js
+│   │   │   │   └── analytics.service.js
 │   │   │   ├── company-registration
 │   │   │   │   ├── registration.controller.js
 │   │   │   │   ├── registration.routes.js
 │   │   │   │   └── registration.service.js
+│   │   │   ├── company-updates
+│   │   │   │   ├── updates.controller.js
+│   │   │   │   ├── updates.routes.js
+│   │   │   │   ├── updates.service.js
+│   │   │   │   └── updates.validation.js
 │   │   │   ├── crypto
 │   │   │   │   ├── identity.controller.js
 │   │   │   │   └── identity.routes.js
@@ -658,6 +686,9 @@
 │   │   │   │   ├── dashboard.controller.js
 │   │   │   │   └── dashboard.routes.js
 │   │   │   ├── departments
+│   │   │   │   ├── department.controller.js
+│   │   │   │   ├── department.service.js
+│   │   │   │   ├── department.validation.js
 │   │   │   │   └── departments.routes.js
 │   │   │   ├── devices
 │   │   │   │   ├── devices.controller.js
@@ -675,6 +706,10 @@
 │   │   │   │   ├── favorites.routes.js
 │   │   │   │   ├── favorites.service.js
 │   │   │   │   └── favorites.validator.js
+│   │   │   ├── integration
+│   │   │   │   ├── hr-sync.service.js
+│   │   │   │   ├── integration.routes.js
+│   │   │   │   └── scim.controller.js
 │   │   │   ├── internal-messaging
 │   │   │   │   ├── messaging.controller.js
 │   │   │   │   └── messaging.routes.js
@@ -682,10 +717,7 @@
 │   │   │   │   ├── managers.controller.js
 │   │   │   │   └── managers.routes.js
 │   │   │   ├── messages
-│   │   │   │   ├── message.controller.js
-│   │   │   │   ├── message.model.js
-│   │   │   │   ├── message.routes.js
-│   │   │   │   └── messages.routes.js
+│   │   │   │   └── message.model.js
 │   │   │   ├── notes
 │   │   │   │   ├── notes.activity.js
 │   │   │   │   ├── notes.controller.js
@@ -694,9 +726,21 @@
 │   │   │   │   ├── notes.routes.js
 │   │   │   │   ├── notes.service.js
 │   │   │   │   └── notes.validator.js
+│   │   │   ├── notifications
+│   │   │   │   ├── notificationService.js
+│   │   │   │   └── notifications.routes.js
 │   │   │   ├── onboarding
+│   │   │   │   ├── BulkOnboardingJob.js
+│   │   │   │   ├── bulkImport.service.js
+│   │   │   │   ├── invite.service.js
 │   │   │   │   ├── onboarding.controller.js
-│   │   │   │   └── onboarding.routes.js
+│   │   │   │   ├── onboarding.routes.js
+│   │   │   │   └── onboarding.service.js
+│   │   │   ├── people
+│   │   │   │   ├── people.controller.js
+│   │   │   │   ├── people.routes.js
+│   │   │   │   ├── people.service.js
+│   │   │   │   └── people.validation.js
 │   │   │   ├── polls
 │   │   │   │   ├── poll.controller.js
 │   │   │   │   ├── poll.model.js
@@ -706,7 +750,8 @@
 │   │   │   │   └── search.routes.js
 │   │   │   ├── security
 │   │   │   │   ├── security.controller.js
-│   │   │   │   └── security.routes.js
+│   │   │   │   ├── security.routes.js
+│   │   │   │   └── security.service.js
 │   │   │   ├── status
 │   │   │   │   ├── status.controller.js
 │   │   │   │   ├── status.routes.js
@@ -717,6 +762,7 @@
 │   │   │   │   ├── platform.controller.js
 │   │   │   │   └── support.routes.js
 │   │   │   ├── tasks
+│   │   │   │   ├── issue-key-counter.model.js
 │   │   │   │   ├── tasks.activity.js
 │   │   │   │   ├── tasks.controller.js
 │   │   │   │   ├── tasks.notifications.js
@@ -735,6 +781,8 @@
 │   │   │       ├── workspace.controller.js
 │   │   │       └── workspaces.routes.js
 │   │   ├── models
+│   │   │   ├── Notification.js
+│   │   │   ├── ScheduledMeeting.js
 │   │   │   ├── SecurityAuditEvent.js
 │   │   │   ├── UserCryptoState.js
 │   │   │   └── UserDeviceSession.js
@@ -760,17 +808,27 @@
 │   │   │   │   ├── identity.controller.js
 │   │   │   │   ├── identity.routes.js
 │   │   │   │   └── identity.service.js
+│   │   │   ├── linkPreview
+│   │   │   │   ├── linkPreview.controller.js
+│   │   │   │   ├── linkPreview.routes.js
+│   │   │   │   └── linkPreview.service.js
 │   │   │   ├── messages
 │   │   │   │   ├── README.md
 │   │   │   │   ├── __tests__
 │   │   │   │   │   └── messages.service.test.js
+│   │   │   │   ├── dmActions.controller.js
+│   │   │   │   ├── dmActions.routes.js
 │   │   │   │   ├── index.js
 │   │   │   │   ├── messages.controller.js
 │   │   │   │   ├── messages.routes.js
 │   │   │   │   └── messages.service.js
-│   │   │   └── threads
-│   │   │       ├── threads.controller.js
-│   │   │       └── threads.routes.js
+│   │   │   ├── threads
+│   │   │   │   ├── threads.controller.js
+│   │   │   │   └── threads.routes.js
+│   │   │   └── uploads
+│   │   │       ├── upload.controller.js
+│   │   │       ├── upload.routes.js
+│   │   │       └── upload.service.js
 │   │   ├── scripts
 │   │   │   └── rotateServerKEK.js
 │   │   ├── services
@@ -784,8 +842,11 @@
 │   │   │   │   └── otp.controller.js
 │   │   │   ├── middleware
 │   │   │   │   ├── auth.js
+│   │   │   │   ├── enforceRoleCeiling.js
 │   │   │   │   ├── permissionMiddleware.js
 │   │   │   │   ├── permissions.js
+│   │   │   │   ├── requireCompanyMember.js
+│   │   │   │   ├── requireWorkspaceMember.js
 │   │   │   │   └── validate.js
 │   │   │   ├── routes
 │   │   │   │   └── otp.routes.js
@@ -795,8 +856,11 @@
 │   │   │   │   ├── upload.controller.js
 │   │   │   │   └── upload.routes.js
 │   │   │   └── utils
+│   │   │       ├── companyQueryFilter.js
+│   │   │       ├── companyRole.js
 │   │   │       ├── errorHandler.js
-│   │   │       └── responseHelper.js
+│   │   │       ├── responseHelper.js
+│   │   │       └── rooms.js
 │   │   ├── socket
 │   │   │   ├── handlers
 │   │   │   │   ├── admin.socket.js
@@ -806,13 +870,22 @@
 │   │   │   │   ├── polls.socket.js
 │   │   │   │   └── presence.socket.js
 │   │   │   ├── index.js
+│   │   │   ├── roomConventions.js
 │   │   │   └── services
 │   │   │       └── socketEmitter.js
 │   │   └── uploads
 │   │       └── verification_docs
+│   │           ├── 1770023102367_WhatsApp_Image_2026-01-27_at_07.55.03_(2).jpeg
+│   │           ├── 1770023275271_WhatsApp_Image_2026-01-27_at_07.55.03.jpeg
+│   │           ├── 1770040095495_WhatsApp_Image_2026-01-19_at_11.53.40.jpeg
+│   │           ├── 1773031798932_Screenshot_2026-03-04_at_3.42.02_PM.png
+│   │           ├── 1773034823820_Screenshot_2026-03-04_at_3.42.02_PM.png
+│   │           ├── 1773035532646_thrishank_kuntimaddi_resume_(2).pdf
+│   │           └── 1773126192606_client_secret_900848971315-md8jtu2f2lrdlun4djogf6i119p3343r.apps.googleusercontent.com.json
 │   ├── test-otp-save.js
 │   ├── uploads
 │   │   └── verification_docs
+│   │       └── 1769495278735_WhatsApp_Image_2026-01-19_at_11.53.40_(1).jpeg
 │   ├── utils
 │   │   ├── aiActions.js
 │   │   ├── analyticsService.js
@@ -843,6 +916,10 @@
 │   └── verify-architecture-audit.sh
 ├── structure.txt
 ├── studies
+│   ├── DEPLOYMENT.md
+│   ├── channel_audit.md.resolved
+│   ├── chttrix_auth_security_audit.md.resolved
+│   ├── chttrix_phase2_audit.md.resolved
 │   ├── security_audit_report.md
 │   ├── system_design_evaluation.md
 │   └── technical_audit.md
