@@ -18,12 +18,14 @@
 //   - Department names resolved via pre-loaded map; unresolved → warning, not error
 
 const crypto = require('crypto');
+const bcrypt = require('bcryptjs');
 const XLSX = require('xlsx');
 const User = require('../../../models/User');
 const Company = require('../../../models/Company');
 const Department = require('../../../models/Department');
 const BulkOnboardingJob = require('./BulkOnboardingJob');
 const { onboardIndividual, ASSIGNABLE_ROLES } = require('./onboarding.service');
+const sendEmail = require('../../../utils/sendEmail');
 
 // ============================================================================
 // CONSTANTS
@@ -46,6 +48,80 @@ function _makeJobId() {
 }
 
 const _delay = ms => new Promise(r => setTimeout(r, ms));
+
+/**
+ * Generate a random temporary password: 12 chars, mixed case + digits + symbol.
+ */
+function _generateTempPassword() {
+    const upper = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+    const lower = 'abcdefghjkmnpqrstuvwxyz';
+    const digits = '23456789';
+    const symbols = '@#$!';
+    const all = upper + lower + digits + symbols;
+    let pwd = [
+        upper[Math.floor(Math.random() * upper.length)],
+        lower[Math.floor(Math.random() * lower.length)],
+        digits[Math.floor(Math.random() * digits.length)],
+        symbols[Math.floor(Math.random() * symbols.length)],
+    ];
+    for (let i = 4; i < 12; i++) pwd.push(all[Math.floor(Math.random() * all.length)]);
+    // Shuffle
+    return pwd.sort(() => Math.random() - 0.5).join('');
+}
+
+/**
+ * Send a welcome email to the employee's personal email with their
+ * work (login) email address and temporary password.
+ */
+async function _sendWelcomeEmail({ toEmail, name, workEmail, companyName, tempPassword }) {
+    const loginUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/login`;
+    const html = `
+<div style="font-family:'Segoe UI',sans-serif;max-width:560px;margin:0 auto;background:#fff;border-radius:12px;border:1px solid #e5e7eb;overflow:hidden">
+  <div style="background:linear-gradient(135deg,#4f46e5,#7c3aed);padding:28px 32px">
+    <h1 style="color:#fff;margin:0;font-size:22px;font-weight:700">Chttrix</h1>
+    <p style="color:rgba(255,255,255,.8);margin:6px 0 0;font-size:14px">Team Collaboration Platform</p>
+  </div>
+  <div style="padding:32px">
+    <h2 style="color:#111827;font-size:20px;margin:0 0 12px">Welcome to ${companyName}, ${name}! 🎉</h2>
+    <p style="color:#374151;line-height:1.6">
+      Your Chttrix account has been created. Use the credentials below to log in.
+    </p>
+    <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:20px;margin:24px 0">
+      <p style="margin:0 0 10px;color:#6b7280;font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:.05em">Your Login Credentials</p>
+      <table style="width:100%;border-collapse:collapse">
+        <tr>
+          <td style="padding:8px 0;color:#6b7280;font-size:14px;width:110px">Work Email</td>
+          <td style="padding:8px 0;color:#111827;font-size:14px;font-weight:700">${workEmail}</td>
+        </tr>
+        <tr>
+          <td style="padding:8px 0;color:#6b7280;font-size:14px">Password</td>
+          <td style="padding:8px 0;font-size:16px;font-weight:700;color:#4f46e5;letter-spacing:.08em;font-family:monospace">${tempPassword}</td>
+        </tr>
+      </table>
+    </div>
+    <a href="${loginUrl}"
+       style="display:inline-block;background:#4f46e5;color:#fff;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:700;font-size:15px">
+      Log In to Chttrix →
+    </a>
+    <p style="color:#9ca3af;font-size:13px;margin-top:24px">
+      <strong>Please change your password</strong> after your first login.<br>
+      If you didn't expect this email, contact your company administrator.
+    </p>
+  </div>
+</div>`;
+
+    try {
+        await sendEmail({
+            to: toEmail,
+            subject: `Your Chttrix login credentials — ${companyName}`,
+            html,
+        });
+        return { sent: true };
+    } catch (err) {
+        console.warn('[BULK] Welcome email failed for', toEmail, '—', err.message);
+        return { sent: false, reason: err.message };
+    }
+}
 
 /**
  * Pre-load a companyName → ObjectId map for all active departments in the company.
@@ -87,6 +163,7 @@ function _parseFile(buffer) {
                     firstName: String(r[0] || '').trim(),
                     lastName: String(r[1] || '').trim(),
                     email: String(r[2] || '').trim().toLowerCase(),
+                    personalEmail: String(r[3] || '').trim().toLowerCase(), // ← col D: personal email
                     jobTitle: String(r[4] || '').trim(),
                     joiningDate: r[5] ? new Date(r[5]) : null,
                     role: String(r[8] || 'member').trim().toLowerCase(),
@@ -164,6 +241,10 @@ async function _processJobBatches(jobId, rows, companyId, requesterRole, invited
             { $set: { status: 'processing', startedAt: new Date() } }
         );
 
+        // Fetch company name once for use in welcome emails
+        const company = await Company.findById(companyId).select('name').lean();
+        const companyName = company?.name || 'your company';
+
         for (let i = 0; i < rows.length; i += BATCH_SIZE) {
             const batch = rows.slice(i, i + BATCH_SIZE);
 
@@ -193,21 +274,39 @@ async function _processJobBatches(jobId, rows, companyId, requesterRole, invited
                         }
                     }
 
-                    // Core: onboardIndividual (creates user, runs assignMembers, sends invite)
+                    // Generate temp password for bulk import flow
+                    const tempPassword = _generateTempPassword();
+                    const passwordHash = await bcrypt.hash(tempPassword, 10);
+
+                    // Core: onboardIndividual (creates user, runs assignMembers)
+                    // We pass the work email as the primary email (login identifier)
                     await onboardIndividual({
                         companyId,
                         requesterRole,
                         invitedBy,
-                        email: row.email,
+                        email: row.email,                           // work email — login ID
+                        personalEmail: row.personalEmail || '',     // personal email — notification target
                         firstName: row.firstName || row.email.split('@')[0],
                         lastName: row.lastName || '',
                         companyRole: resolvedRole,
                         departmentIds,
                         jobTitle: row.jobTitle || '',
                         joiningDate: row.joiningDate || null,
+                        bulkTempPasswordHash: passwordHash,        // pre-hashed — skip invite token flow
                     });
 
-                    results.push({ email: row.email, name: `${row.firstName} ${row.lastName}`.trim(), status: 'created' });
+                    // Send welcome email to PERSONAL email (fall back to work email if missing)
+                    const notifyEmail = row.personalEmail || row.email;
+                    const fullName = `${row.firstName || ''} ${row.lastName || ''}`.trim() || row.email;
+                    await _sendWelcomeEmail({
+                        toEmail: notifyEmail,
+                        name: fullName,
+                        workEmail: row.email,
+                        companyName,
+                        tempPassword,
+                    });
+
+                    results.push({ email: row.email, name: fullName, status: 'created' });
                     createdCount++;
 
                 } catch (err) {

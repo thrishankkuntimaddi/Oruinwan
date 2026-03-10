@@ -104,13 +104,21 @@ const CompanySetup = () => {
             const wb = XLSX.read(buffer);
             const ws = wb.Sheets[wb.SheetNames[0]];
             const rows = XLSX.utils.sheet_to_json(ws, { header: 1 });
-            const data = rows.slice(1).filter(r => r[1]).map(r => ({
-                name: String(r[0] || '').trim(),
-                email: String(r[1] || '').trim(),
-                phone: String(r[2] || '').trim(),
-                role: String(r[3] || 'member').trim().toLowerCase(),
-                department: String(r[4] || '').trim(),
-            }));
+            // 10-col format: A=First Name B=Last Name C=Work Email D=Pers.Email
+            //                E=Job Title F=Join Date G=Mobile H=Corp ID I=Role J=Department
+            const data = rows.slice(1)
+                .filter(r => r[2] && String(r[2]).includes('@'))   // need work email in col C
+                .map(r => ({
+                    name:         `${String(r[0] || '').trim()} ${String(r[1] || '').trim()}`.trim(),
+                    email:        String(r[2] || '').trim().toLowerCase(),   // C: Work email
+                    personalEmail:String(r[3] || '').trim().toLowerCase(),   // D: Personal email
+                    jobTitle:     String(r[4] || '').trim(),                 // E
+                    joiningDate:  String(r[5] || '').trim(),                 // F
+                    phone:        String(r[6] || '').trim(),                 // G: Mobile ← was broken
+                    corporateId:  String(r[7] || '').trim(),                 // H
+                    role:         String(r[8] || 'member').trim().toLowerCase(), // I
+                    department:   String(r[9] || '').trim(),                 // J
+                }));
             setParsedEmployees(data);
             showToast(`Parsed ${data.length} employee records`, 'success');
         } catch {
@@ -401,7 +409,7 @@ const CompanySetup = () => {
                                                             <table className="w-full text-xs">
                                                                 <thead className="bg-white dark:bg-slate-900 sticky top-0">
                                                                     <tr>
-                                                                        {['Name', 'Email', 'Phone', 'Role', 'Dept'].map(h => (
+                                                                    {['Name', 'Work Email', 'Mobile', 'Role', 'Dept'].map(h => (
                                                                             <th key={h} className="text-left px-3 py-2 text-[10px] font-bold text-slate-400 uppercase">{h}</th>
                                                                         ))}
                                                                     </tr>

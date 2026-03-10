@@ -1,11 +1,13 @@
 // client/src/components/company/EmployeeActionsMenu.jsx
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
+import ReactDOM from 'react-dom';
 import { MoreVertical, UserX, UserCheck, Trash2, Building, Award } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import api from '../../services/api';
 
 const EmployeeActionsMenu = ({ employee, departments = [], onUpdate }) => {
     const [isOpen, setIsOpen] = useState(false);
+    const [menuPos, setMenuPos] = useState({ top: 0, right: 0, openUpward: false });
     const [showSuspendModal, setShowSuspendModal] = useState(false);
     const [showRemoveModal, setShowRemoveModal] = useState(false);
     const [showDepartmentModal, setShowDepartmentModal] = useState(false);
@@ -15,6 +17,19 @@ const EmployeeActionsMenu = ({ employee, departments = [], onUpdate }) => {
     const [selectedRole, setSelectedRole] = useState(employee.companyRole);
     const [managedDepts, setManagedDepts] = useState(employee.managedDepartments?.map(d => d._id || d) || []);
     const [loading, setLoading] = useState(false);
+    const btnRef = useRef(null);
+
+    // Close on scroll or resize
+    useEffect(() => {
+        if (!isOpen) return;
+        const close = () => setIsOpen(false);
+        window.addEventListener('scroll', close, true);
+        window.addEventListener('resize', close);
+        return () => {
+            window.removeEventListener('scroll', close, true);
+            window.removeEventListener('resize', close);
+        };
+    }, [isOpen]);
 
     const canSuspend = employee.companyRole !== 'owner' && employee.accountStatus === 'active';
     const canActivate = employee.accountStatus === 'suspended';
@@ -132,89 +147,120 @@ const EmployeeActionsMenu = ({ employee, departments = [], onUpdate }) => {
         <>
             <div className="relative">
                 <button
-                    onClick={() => setIsOpen(!isOpen)}
+                    ref={btnRef}
+                    onClick={() => {
+                        if (btnRef.current) {
+                            const rect = btnRef.current.getBoundingClientRect();
+                            const MENU_HEIGHT = 220; // estimated
+                            const spaceBelow = window.innerHeight - rect.bottom;
+                            const openUpward = spaceBelow < MENU_HEIGHT;
+                            setMenuPos({
+                                // position from right edge of viewport
+                                right: window.innerWidth - rect.right,
+                                top: openUpward ? undefined : rect.bottom + 6,
+                                bottom: openUpward ? window.innerHeight - rect.top + 6 : undefined,
+                                openUpward,
+                            });
+                        }
+                        setIsOpen(prev => !prev);
+                    }}
                     className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
                     title="Actions"
                 >
                     <MoreVertical className="w-5 h-5 text-gray-600 dark:text-gray-400" />
                 </button>
-
-                {isOpen && (
-                    <>
-                        <div
-                            className="fixed inset-0 z-10"
-                            onClick={() => setIsOpen(false)}
-                        />
-                        <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-20">
-                            <div className="py-2">
-                                {canActivate && (
-                                    <button
-                                        onClick={() => {
-                                            handleActivate();
-                                            setIsOpen(false);
-                                        }}
-                                        className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-3 text-green-600 dark:text-green-400"
-                                    >
-                                        <UserCheck className="w-4 h-4" />
-                                        Activate Employee
-                                    </button>
-                                )}
-
-                                {canSuspend && (
-                                    <button
-                                        onClick={() => {
-                                            setShowSuspendModal(true);
-                                            setIsOpen(false);
-                                        }}
-                                        className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-3 text-orange-600 dark:text-orange-400"
-                                    >
-                                        <UserX className="w-4 h-4" />
-                                        Suspend Employee
-                                    </button>
-                                )}
-
-                                <button
-                                    onClick={() => {
-                                        setShowDepartmentModal(true);
-                                        setIsOpen(false);
-                                    }}
-                                    className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-3 text-gray-700 dark:text-gray-300"
-                                >
-                                    <Building className="w-4 h-4" />
-                                    Assign Departments
-                                </button>
-
-                                <button
-                                    onClick={() => {
-                                        setShowRoleModal(true);
-                                        setIsOpen(false);
-                                    }}
-                                    className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-3 text-gray-700 dark:text-gray-300"
-                                >
-                                    <Award className="w-4 h-4" />
-                                    Change Role
-                                </button>
-
-                                {canRemove && (
-                                    <>
-                                        <div className="border-t border-gray-200 dark:border-gray-700 my-2" />
-                                        <button
-                                            onClick={() => {
-                                                setShowRemoveModal(true);
-                                                setIsOpen(false);
-                                            }}
-                                            className="w-full px-4 py-2 text-left text-sm hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-3 text-red-600 dark:text-red-400"
-                                        >
-                                            <Trash2 className="w-4 h-4" />
-                                            Remove Employee
-                                        </button>
-                                    </>
-                                )}
-                            </div>
-                        </div>
-                    </>
-                )}
             </div>
+
+            {/* Portal dropdown — rendered at document.body to escape overflow-hidden */}
+            {isOpen && ReactDOM.createPortal(
+                <>
+                    {/* Backdrop */}
+                    <div
+                        className="fixed inset-0 z-[9998]"
+                        onClick={() => setIsOpen(false)}
+                    />
+                    {/* Menu */}
+                    <div
+                        style={{
+                            position: 'fixed',
+                            right: menuPos.right,
+                            top: menuPos.openUpward ? undefined : menuPos.top,
+                            bottom: menuPos.openUpward ? menuPos.bottom : undefined,
+                            zIndex: 9999,
+                            minWidth: '224px',
+                        }}
+                        className="bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700"
+                        onClick={e => e.stopPropagation()}
+                    >
+                        <div className="py-2">
+                            {canActivate && (
+                                <button
+                                    onClick={() => {
+                                        handleActivate();
+                                        setIsOpen(false);
+                                    }}
+                                    className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-3 text-green-600 dark:text-green-400"
+                                >
+                                    <UserCheck className="w-4 h-4" />
+                                    Activate Employee
+                                </button>
+                            )}
+
+                            {canSuspend && (
+                                <button
+                                    onClick={() => {
+                                        setShowSuspendModal(true);
+                                        setIsOpen(false);
+                                    }}
+                                    className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-3 text-orange-600 dark:text-orange-400"
+                                >
+                                    <UserX className="w-4 h-4" />
+                                    Suspend Employee
+                                </button>
+                            )}
+
+                            <button
+                                onClick={() => {
+                                    setShowDepartmentModal(true);
+                                    setIsOpen(false);
+                                }}
+                                className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-3 text-gray-700 dark:text-gray-300"
+                            >
+                                <Building className="w-4 h-4" />
+                                Assign Departments
+                            </button>
+
+                            <button
+                                onClick={() => {
+                                    setShowRoleModal(true);
+                                    setIsOpen(false);
+                                }}
+                                className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-3 text-gray-700 dark:text-gray-300"
+                            >
+                                <Award className="w-4 h-4" />
+                                Change Role
+                            </button>
+
+                            {canRemove && (
+                                <>
+                                    <div className="border-t border-gray-200 dark:border-gray-700 my-2" />
+                                    <button
+                                        onClick={() => {
+                                            setShowRemoveModal(true);
+                                            setIsOpen(false);
+                                        }}
+                                        className="w-full px-4 py-2 text-left text-sm hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-3 text-red-600 dark:text-red-400"
+                                    >
+                                        <Trash2 className="w-4 h-4" />
+                                        Remove Employee
+                                    </button>
+                                </>
+                            )}
+                        </div>
+                    </div>
+                </>,
+                document.body
+            )}
 
             {/* Suspend Modal */}
             {showSuspendModal && (

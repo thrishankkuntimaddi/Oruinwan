@@ -342,9 +342,11 @@ exports.downloadTemplate = async (req, res) => {
             'Department'    // J – Team name
         ];
         const samples = [
-            ['Karthik',  'Murugan',  'karthik.murugan@venkatech.com',  'karthik@gmail.com',   'Engineering Manager', '2026-03-10', '9876543213', 'EMP001', 'manager', 'Engineering'],
-            ['Priya',    'Krishnan', 'priya.krishnan@venkatech.com',   'priya@gmail.com',     'Product Lead',        '2026-03-10', '9876543214', 'EMP002', 'member',  'Product'],
-            ['Aravind',  'Selvam',   'aravind.selvam@venkatech.com',   'aravind@gmail.com',   'Software Engineer',   '2026-03-10', '9876543215', 'EMP003', 'member',  'Engineering'],
+            ['Aarav',  'Sharma',  'aarav.sharma@kt.com',  'kthrishank.9@gmail.com',   'Software Engineer',    '2024-06-10', '9876543210', 'KT1001', 'admin',   'Engineering'],
+            ['Neha',   'Reddy',   'neha.reddy@kt.com',    'kthrishank10@gmail.com',   'Engineering Manager',  '2023-03-15', '9876543211', 'KT1002', 'manager', 'Engineering'],
+            ['Rohan',  'Mehta',   'rohan.mehta@kt.com',   'tkuntimaddi@gmail.com',    'Engineering Manager',  '2023-07-21', '9876543212', 'KT1003', 'manager', 'Engineering'],
+            ['Isha',   'Kapoor',  'isha.kapoor@kt.com',   'kuntimaddit@gmail.com',    'Backend Engineer',     '2024-01-05', '9876543213', 'KT1004', 'member',  'Engineering'],
+            ['Vikram', 'Nair',    'vikram.nair@kt.com',   'kthrishank2003@gmail.com', 'Frontend Engineer',    '2024-02-11', '9876543214', 'KT1005', 'member',  'Engineering'],
         ];
 
         const ws = XLSX.utils.aoa_to_sheet([headers, ...samples]);

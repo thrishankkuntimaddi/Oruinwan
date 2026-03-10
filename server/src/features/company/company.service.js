@@ -101,7 +101,10 @@ async function updateCompany(companyId, updates) {
  * @returns {Promise<Array>} List of company members
  */
 async function getCompanyMembers(companyId) {
-    const members = await User.find({ companyId })
+    const members = await User.find({
+        companyId,
+        accountStatus: { $ne: 'removed' }, // ← exclude soft-deleted employees
+    })
         .select([
             'username', 'email', 'companyEmail',  // email = login/personal, companyEmail = company-provided
             'profilePicture', 'companyRole',

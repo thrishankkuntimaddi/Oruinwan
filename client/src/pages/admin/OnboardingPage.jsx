@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
     UserPlus, Upload, FileText, ChevronRight, Users, Play, DownloadCloud, X,
     Download, Eye, CheckCircle, AlertCircle, FileSpreadsheet, ArrowLeft,
@@ -138,7 +138,7 @@ const BulkImportModal = ({ onClose }) => {
             );
 
             const { jobId, total } = res.data;
-            setProgress({ processed: 0, total });
+            setProgress({ processed: 0, total: total || 0 });
 
             // Poll for job completion
             const interval = setInterval(async () => {
@@ -148,14 +148,15 @@ const BulkImportModal = ({ onClose }) => {
                         { withCredentials: true }
                     );
                     const job = statusRes.data.job;
-                    setProgress({ processed: job.processed, total: job.total });
+                    // DB model fields: processedRows / totalRows / createdCount / skippedCount / errorCount
+                    setProgress({ processed: job.processedRows, total: job.totalRows });
 
-                    if (job.status === 'done') {
+                    if (job.status === 'done' || job.status === 'failed') {
                         clearInterval(interval);
                         setResult({
-                            created: job.created,
-                            skipped: job.skipped,
-                            errors: job.errors || [],
+                            created: job.createdCount ?? 0,
+                            skipped: job.skippedCount ?? 0,
+                            errors:  job.results?.filter(r => r.status === 'error') || [],
                         });
                         setPhase('done');
                     }

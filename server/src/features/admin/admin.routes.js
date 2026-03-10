@@ -693,11 +693,14 @@ router.get('/employees', requireAuth, requireAdmin, async (req, res) => {
       return res.status(403).json({ message: 'User not part of a company' });
     }
 
-    const employees = await User.find({ companyId: user.companyId._id })
-      .populate('departments')
-      .populate('managedDepartments')
-      .select('-passwordHash -refreshTokens')
-      .sort({ createdAt: -1 });
+    const employees = await User.find({
+        companyId: user.companyId._id,
+        accountStatus: { $ne: 'removed' }, // hide soft-deleted employees
+    })
+        .populate('departments')
+        .populate('managedDepartments')
+        .select('-passwordHash -refreshTokens')
+        .sort({ createdAt: -1 });
 
     res.json(employees);
   } catch (error) {
@@ -758,7 +761,7 @@ router.put('/employees/:id/activate', requireAuth, requireAdmin, async (req, res
   }
 });
 
-// DELETE /api/admin/employees/:id - Remove employee (soft delete)
+// DELETE /api/admin/employees/:id - Permanently remove employee from company
 router.delete('/employees/:id', requireAuth, requireAdmin, async (req, res) => {
   try {
     const employee = await User.findById(req.params.id);
@@ -771,12 +774,25 @@ router.delete('/employees/:id', requireAuth, requireAdmin, async (req, res) => {
       return res.status(403).json({ message: 'Cannot remove company owner' });
     }
 
-    employee.accountStatus = 'removed';
-    employee.deactivatedAt = new Date();
+    const employeeId = employee._id;
+    const Department = require('../../../models/Department');
+    const Workspace = require('../../../models/Workspace');
 
-    await employee.save();
+    // 1. Remove from all Department.members[] and Department.managers[]
+    // 2. Remove from all Workspace.members[]
+    await Promise.all([
+      Department.updateMany({ members: employeeId }, { $pull: { members: employeeId } }),
+      Department.updateMany({ managers: employeeId }, { $pull: { managers: employeeId } }),
+      Workspace.updateMany(
+        { 'members.user': employeeId },
+        { $pull: { members: { user: employeeId } } }
+      ),
+    ]);
 
-    res.json({ message: 'Employee removed successfully' });
+    // 3. Hard delete the user document permanently
+    await User.findByIdAndDelete(employeeId);
+
+    res.json({ message: 'Employee permanently removed from company' });
   } catch (error) {
     console.error('Error removing employee:', error);
     res.status(500).json({ message: 'Server error' });

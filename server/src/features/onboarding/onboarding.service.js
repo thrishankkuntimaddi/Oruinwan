@@ -128,6 +128,7 @@ async function onboardIndividual(params) {
         requesterRole,
         invitedBy,
         email,
+        personalEmail = '',        // personal email — notifications go here in bulk flow
         firstName,
         lastName,
         companyRole = 'member',
@@ -135,6 +136,7 @@ async function onboardIndividual(params) {
         additionalWorkspaceIds = [],
         jobTitle,
         joiningDate,
+        bulkTempPasswordHash = null, // when set: bulk import flow — skip invite token
     } = params;
 
     // 1. Role ceiling check
@@ -179,58 +181,53 @@ async function onboardIndividual(params) {
         joinedAt: new Date(),
     }));
 
-    // 6. Create User record with accountStatus:'invited', no password
+    // 6. Create User record
+    const isBulkImport = !!bulkTempPasswordHash;
     const user = new User({
         username: `${firstName} ${lastName}`.trim(),
         email: normalizedEmail,
-        passwordHash: null,                  // set when invite is accepted
+        personalEmail: personalEmail ? personalEmail.toLowerCase().trim() : undefined,
+        passwordHash: isBulkImport ? bulkTempPasswordHash : null,
         userType: 'company',
         companyId,
         companyRole,
         jobTitle: jobTitle || null,
         joiningDate: joiningDate || new Date(),
-        departments: departmentIds,          // Phase 4 will sync these on accept
+        departments: departmentIds,
         workspaces: workspaceMemberships,
-        verified: false,
-        accountStatus: 'invited',
+        verified: isBulkImport,                    // bulk = already verified
+        accountStatus: isBulkImport ? 'active' : 'invited', // bulk = active from day 1
+        inviteEmailStatus: isBulkImport ? 'sent' : 'pending',
     });
 
     await user.save();
 
-    // 7. Phase 4: call department.service.assignMembers() for each department
-    //    This handles:
-    //      - Department.members[] ← user._id
-    //      - User.departments[]   ← departmentId
-    //      - Workspace auto-join  ← department.defaultWorkspaceId (if set)
+    // 7. Phase 4: dept assignment
     if (departmentIds.length > 0) {
         const { assignMembers } = require('../departments/department.service');
         for (const deptId of departmentIds) {
             try {
                 await assignMembers(deptId, companyId, [user._id.toString()], 'add');
             } catch (err) {
-                // Non-fatal — user is created, department join logged as warning
                 console.warn('[ONBOARDING] assignMembers warning:', deptId, err.message);
             }
         }
     }
 
-    // 8. Generate SHA-256 invite token → stored on User
-    const rawToken = await createInviteToken(user); // mutates user doc
-
-    // 9. Send magic-link email
-    const emailResult = await sendInviteEmail(normalizedEmail, company.name, rawToken, {
-        name: `${firstName} ${lastName}`.trim(),
-        jobTitle: jobTitle || '',
-    });
-
-    // 10. Update email status on user
-    user.inviteEmailStatus = emailResult.sent ? 'sent' : 'failed';
-    await user.save();
+    // 8. For individual (non-bulk) flow: generate invite token and send magic-link
+    if (!isBulkImport) {
+        const rawToken = await createInviteToken(user);
+        const emailResult = await sendInviteEmail(normalizedEmail, company.name, rawToken, {
+            name: `${firstName} ${lastName}`.trim(),
+            jobTitle: jobTitle || '',
+        });
+        user.inviteEmailStatus = emailResult.sent ? 'sent' : 'failed';
+        await user.save();
+    }
 
     return {
         userId: user._id,
-        emailSent: emailResult.sent,
-        // inviteId is the user._id (no separate Invite model in this flow)
+        emailSent: true,
     };
 }
 

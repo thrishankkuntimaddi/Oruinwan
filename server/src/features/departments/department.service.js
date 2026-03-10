@@ -17,13 +17,23 @@ const Channel = require('../channels/channel.model.js');
  * Get all active departments for a company.
  */
 async function getDepartments(companyId) {
-    return Department.find({ company: companyId, isActive: true })
+    const depts = await Department.find({ company: companyId, isActive: true })
         .populate('head', 'username email profilePicture')
         .populate('managers', 'username email profilePicture')
-        .populate('members', 'username email profilePicture companyRole')
+        .populate({
+            path: 'members',
+            select: 'username email profilePicture companyRole accountStatus',
+            match: { accountStatus: { $ne: 'removed' } },
+        })
         .populate('workspaces', 'name description type')
         .sort({ name: 1 })
         .lean();
+
+    // Safety: strip any null slots Mongoose inserts when match filters someone out
+    return depts.map(d => ({
+        ...d,
+        members: (d.members || []).filter(Boolean),
+    }));
 }
 
 /**
@@ -33,7 +43,11 @@ async function getDepartmentById(departmentId, companyId) {
     const dept = await Department.findOne({ _id: departmentId, company: companyId, isActive: true })
         .populate('head', 'username email profilePicture')
         .populate('managers', 'username email profilePicture companyRole')
-        .populate('members', 'username email profilePicture companyRole departments')
+        .populate({
+            path: 'members',
+            select: 'username email profilePicture companyRole departments accountStatus',
+            match: { accountStatus: { $ne: 'removed' } },
+        })
         .populate('workspaces', 'name description type')
         .lean();
 
@@ -42,6 +56,9 @@ async function getDepartmentById(departmentId, companyId) {
         err.status = 404;
         throw err;
     }
+
+    // Strip null slots Mongoose inserts when match filters someone out
+    dept.members = (dept.members || []).filter(Boolean);
     return dept;
 }
 
