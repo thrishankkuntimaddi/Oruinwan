@@ -46,6 +46,7 @@ const WorkspaceSettingsModal = ({ showSettingsModal, setShowSettingsModal, setSh
     const [members, setMembers] = useState([]);
     const [loadingMembers, setLoadingMembers] = useState(true);
     const [openMemberDropdown, setOpenMemberDropdown] = useState(null);
+    const [memberActionLoading, setMemberActionLoading] = useState({});
 
     // Stats State (for General and Billing tabs)
     const [stats, setStats] = useState(null);
@@ -60,10 +61,12 @@ const WorkspaceSettingsModal = ({ showSettingsModal, setShowSettingsModal, setSh
 
         setLoadingStats(true);
         try {
+            // Route uses :workspaceId param
             const response = await api.get(`/api/workspaces/${activeWorkspace.id}/stats`);
             setStats(response.data);
         } catch (error) {
-            console.error('Error fetching stats:', error);
+            // Stats are non-critical — don't crash the modal
+            console.warn('Stats not available:', error?.response?.status);
         } finally {
             setLoadingStats(false);
         }
@@ -76,13 +79,30 @@ const WorkspaceSettingsModal = ({ showSettingsModal, setShowSettingsModal, setSh
         setLoadingMembers(true);
         try {
             const response = await api.get(`/api/workspaces/${activeWorkspace.id}/members`);
-            setMembers(response.data);
+            // Backend returns { members: [...] } — extract the array and normalise to the
+            // shape that MembersTab expects (name, avatar, id, status, role, isCurrentUser)
+            const raw = response.data?.members || response.data || [];
+            const currentUserId = activeWorkspace?.currentUserId;
+            const normalised = raw.map(m => ({
+                id: m._id || m.id,
+                name: m.username || m.name || m.email || 'Unknown',
+                email: m.email,
+                avatar: m.profilePicture || m.avatar || null,
+                status: m.isOnline ? 'online' : 'offline',
+                memberStatus: m.status || 'active',
+                role: m.role || 'member',
+                isCurrentUser: currentUserId
+                    ? String(m._id || m.id) === String(currentUserId)
+                    : false,
+            }));
+            setMembers(normalised);
         } catch (error) {
             console.error('Error fetching members:', error);
         } finally {
             setLoadingMembers(false);
         }
-    }, [activeWorkspace?.id]);
+    }, [activeWorkspace?.id, activeWorkspace?.currentUserId]);
+
 
     // Initialize state when workspace changes
     useEffect(() => {
@@ -206,6 +226,7 @@ const WorkspaceSettingsModal = ({ showSettingsModal, setShowSettingsModal, setSh
                             isAdmin={isAdmin}
                             members={members}
                             loadingMembers={loadingMembers}
+                            memberActionLoading={memberActionLoading}
                             openMemberDropdown={openMemberDropdown}
                             setOpenMemberDropdown={setOpenMemberDropdown}
                             fetchMembers={fetchMembers}

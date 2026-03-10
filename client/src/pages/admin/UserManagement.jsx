@@ -85,8 +85,10 @@ const UserManagement = () => {
         if (searchQuery) {
             const q = searchQuery.toLowerCase();
             result = result.filter(m =>
-                m.username.toLowerCase().includes(q) ||
-                m.email.toLowerCase().includes(q)
+                m.username?.toLowerCase().includes(q) ||
+                m.email?.toLowerCase().includes(q) ||
+                m.companyEmail?.toLowerCase().includes(q) ||
+                m.jobTitle?.toLowerCase().includes(q)
             );
         }
 
@@ -447,7 +449,18 @@ const UserManagement = () => {
                                                 )}
                                                 <div>
                                                     <div className="font-bold text-slate-800 dark:text-white text-sm">{member.username}</div>
-                                                    <div className="text-xs text-slate-400 dark:text-gray-500">{member.email}</div>
+                                                    {member.jobTitle && (
+                                                        <div className="text-xs text-indigo-500 dark:text-indigo-400 font-medium">{member.jobTitle}</div>
+                                                    )}
+                                                    {/* Company email = primary; personal email shown below if different */}
+                                                    <div className="text-xs text-slate-400 dark:text-gray-500 truncate">
+                                                        {member.companyEmail || member.email}
+                                                    </div>
+                                                    {member.companyEmail && member.email && member.companyEmail !== member.email && (
+                                                        <div className="text-xs text-slate-300 dark:text-gray-600 truncate">
+                                                            {member.email}
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </div>
                                         </td>

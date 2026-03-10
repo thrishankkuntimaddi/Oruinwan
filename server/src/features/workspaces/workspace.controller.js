@@ -36,25 +36,28 @@ exports.createWorkspace = async (req, res) => {
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    // Determine workspace type
-    const isPersonalWorkspace = !companyId;
+    // IMPORTANT: Always derive the company from the authenticated user's DB record.
+    // We intentionally do NOT trust req.body.companyId as the source of truth:
+    //   1. The /me endpoint returns companyId as a populated Company object, so if the
+    //      frontend sends it back, String(companyId) = "[object Object]" — a mismatch.
+    //   2. Security: a client should never be able to claim membership of a different company.
+    // The raw ObjectId is always correct on the DB record fetched by User.findById above.
+    const resolvedCompanyId = user.companyId ? String(user.companyId) : null;
 
-    // If company workspace, verify user belongs to company
-    if (companyId) {
-      if (String(user.companyId) !== String(companyId)) {
-        return res.status(403).json({ message: "Not a company member" });
-      }
+    // Determine workspace type — based on DB record, not client payload
+    const isCompanyWorkspace = !!resolvedCompanyId;
+    const isPersonalWorkspace = !isCompanyWorkspace;
 
-      // Check if user has permission to create workspaces
+    // If company workspace, verify the user has permission to create workspaces
+    if (isCompanyWorkspace) {
       const role = user.companyRole;
       if (!role || (role !== "admin" && role !== "owner" && role !== "manager")) {
         return res.status(403).json({ message: "Only company admins/managers may create workspaces" });
       }
     }
 
-    // LIMIT CHECK: Personal users can only CREATE up to 3 workspaces
-    // We check userType from the user object we just fetched
-    if (user.userType === 'personal') {
+    // LIMIT CHECK: Only for personal (non-company) users
+    if (isPersonalWorkspace) {
       const ownedWorkspacesCount = await Workspace.countDocuments({ createdBy: userId });
       if (ownedWorkspacesCount >= 3) {
         return res.status(403).json({
@@ -78,7 +81,7 @@ exports.createWorkspace = async (req, res) => {
 
     // Create workspace with icon and color
     const workspace = await Workspace.create({
-      company: companyId || null,
+      company: resolvedCompanyId || null,
       type: isPersonalWorkspace ? "personal" : "company",
       name: name.trim(),
       description: description || "",
@@ -99,7 +102,7 @@ exports.createWorkspace = async (req, res) => {
     const creationDate = new Date();
     const generalChannel = await Channel.create({
       workspace: workspace._id,
-      company: companyId || null,
+      company: resolvedCompanyId || null,
       name: "general",
       description: "General discussion",
       isPrivate: false,
@@ -115,7 +118,7 @@ exports.createWorkspace = async (req, res) => {
 
     const announcementsChannel = await Channel.create({
       workspace: workspace._id,
-      company: companyId || null,
+      company: resolvedCompanyId || null,
       name: "announcements",
       description: "Announcements and updates",
       isPrivate: false,
@@ -265,7 +268,8 @@ exports.listWorkspaces = async (req, res) => {
  */
 exports.getWorkspaceMembers = async (req, res) => {
   try {
-    const workspaceId = req.params.id;
+    // Support both :workspaceId (new routes) and :id (legacy routes)
+    const workspaceId = req.params.workspaceId || req.params.id;
     const userId = req.user.sub;
 
     const workspace = await Workspace.findById(workspaceId)
@@ -281,7 +285,7 @@ exports.getWorkspaceMembers = async (req, res) => {
       return res.status(403).json({ message: "Not a workspace member" });
     }
 
-    // Format members with user data
+    // Format members — normalise to the shape expected by the settings modal
     const formattedMembers = workspace.members.map(m => ({
       _id: m.user._id,
       username: m.user.username,
@@ -291,6 +295,7 @@ exports.getWorkspaceMembers = async (req, res) => {
       isOnline: m.user.isOnline,
       profile: m.user.profile,
       role: m.role,
+      status: m.status || 'active',
       joinedAt: m.joinedAt
     }));
 
@@ -1173,7 +1178,7 @@ exports.updateWorkspace = async (req, res) => {
  */
 exports.getWorkspaceStats = async (req, res) => {
   try {
-    const { id } = req.params;
+    const id = req.params.workspaceId || req.params.id;
     const userId = req.user?.sub;
 
     const workspace = await Workspace.findById(id).populate('createdBy', 'username email');

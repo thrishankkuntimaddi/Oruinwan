@@ -1,10 +1,10 @@
-// client/src/pages/admin/WorkspacesManagement.jsx
-import React, { useState, useEffect, useCallback } from 'react';
-import { Globe, Users, Calendar, MoreVertical, Plus, Search, Filter, Rocket, Briefcase, Zap, Palette, Trophy, Target, Flame, Microscope, Shield, Lightbulb, Sparkles } from 'lucide-react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { Globe, Users, Calendar, MoreVertical, Plus, Search, Filter, Rocket, Briefcase, Zap, Palette, Trophy, Target, Flame, Microscope, Shield, Lightbulb, Sparkles, UserPlus, X } from 'lucide-react';
 import { useToast } from '../../contexts/ToastContext';
 import { useAuth } from '../../contexts/AuthContext';
 import api from '../../services/api';
 import CreateWorkspaceModal from '../workspaceSelectComponents/CreateWorkspaceModal';
+import WorkspaceMembersModal from './WorkspaceMembersModal';
 
 // ── Icon helper — same pattern used in WorkspaceSelect.jsx ──────────────────
 const ICON_MAP = {
@@ -53,6 +53,24 @@ const WorkspacesManagement = () => {
     const [nameError, setNameError] = useState('');
     const [termsAccepted, setTermsAccepted] = useState(false);
     const [creating, setCreating] = useState(false);
+
+    // ⋮ Dropdown state
+    const [openMenuId, setOpenMenuId] = useState(null);
+    const menuRef = useRef(null);
+
+    // Member management state
+    const [membersWorkspace, setMembersWorkspace] = useState(null);
+
+    // Close menu on outside click
+    useEffect(() => {
+        const handler = (e) => {
+            if (menuRef.current && !menuRef.current.contains(e.target)) {
+                setOpenMenuId(null);
+            }
+        };
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+    }, []);
 
     // ── Fetch workspaces ─────────────────────────────────────────────────────
     const fetchWorkspaces = useCallback(async () => {
@@ -246,9 +264,27 @@ const WorkspacesManagement = () => {
                                                     </span>
                                                 </div>
                                             </div>
-                                            <button className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
-                                                <MoreVertical size={18} className="text-gray-400" />
-                                            </button>
+
+                                            {/* ⋮ Dropdown Menu */}
+                                            <div className="relative" ref={openMenuId === workspace._id ? menuRef : null}>
+                                                <button
+                                                    onClick={e => { e.stopPropagation(); setOpenMenuId(openMenuId === workspace._id ? null : workspace._id); }}
+                                                    className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                                                >
+                                                    <MoreVertical size={18} className="text-gray-400" />
+                                                </button>
+                                                {openMenuId === workspace._id && (
+                                                    <div className="absolute right-0 top-full mt-1 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl z-50 overflow-hidden">
+                                                        <button
+                                                            onClick={e => { e.stopPropagation(); setMembersWorkspace(workspace); setOpenMenuId(null); }}
+                                                            className="w-full flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+                                                        >
+                                                            <UserPlus size={15} />
+                                                            Manage Members
+                                                        </button>
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
 
                                         {/* Description */}
@@ -299,6 +335,21 @@ const WorkspacesManagement = () => {
                 getIconComponent={getIconComponent}
                 user={user}
             />
+
+            {/* Manage Members Modal */}
+            {membersWorkspace && (
+                <WorkspaceMembersModal
+                    workspace={membersWorkspace}
+                    onClose={() => setMembersWorkspace(null)}
+                    onMemberCountChange={(count) => {
+                        setWorkspaces(prev => prev.map(w =>
+                            String(w._id) === String(membersWorkspace._id)
+                                ? { ...w, memberCount: count }
+                                : w
+                        ));
+                    }}
+                />
+            )}
         </div>
     );
 };

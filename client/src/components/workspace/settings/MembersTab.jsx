@@ -12,7 +12,7 @@ const MembersTab = ({
     isAdmin,
     members,
     loadingMembers,
-    memberActionLoading,
+    memberActionLoading = {}, // default to empty object — never crashes on memberActionLoading[id]
     openMemberDropdown,
     setOpenMemberDropdown,
     fetchMembers,

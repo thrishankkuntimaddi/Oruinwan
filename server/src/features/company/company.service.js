@@ -102,7 +102,13 @@ async function updateCompany(companyId, updates) {
  */
 async function getCompanyMembers(companyId) {
     const members = await User.find({ companyId })
-        .select('username email profilePicture companyRole createdAt lastLoginAt isOnline departments workspaces')
+        .select([
+            'username', 'email', 'companyEmail',  // email = login/personal, companyEmail = company-provided
+            'profilePicture', 'companyRole',
+            'jobTitle', 'phone', 'corporateId',
+            'accountStatus', 'createdAt', 'lastLoginAt', 'isOnline',
+            'departments', 'workspaces'
+        ].join(' '))
         .populate('departments', 'name')
         .populate('workspaces.workspace', 'name')
         .lean();
@@ -303,29 +309,44 @@ async function processSetupStep({ companyId, userId, step, data, files }) {
                 const dataRows = rows.slice(1).filter(r => r[2] || r[1]); // email at col 2 (new) or col 1 (old)
 
                 employees = dataRows.map(r => {
-                    // New 10-column format: First Name(0), Last Name(1), Email(2), PersonalEmail(3),
-                    //   JobTitle(4), JoiningDate(5), Mobile(6), CorpId(7), SystemRole(8), Dept(9)
+                    // 10-column Excel format:
+                    // A(0): First Name  B(1): Last Name  C(2): Work Email  D(3): Personal Email
+                    // E(4): Job Title  F(5): Join Date  G(6): Mobile  H(7): Corp ID
+                    // I(8): Role  J(9): Department
                     const isNewFormat = String(r[2] || '').includes('@');
                     if (isNewFormat) {
                         return {
                             name: `${String(r[0] || '').trim()} ${String(r[1] || '').trim()}`.trim(),
-                            email: String(r[2] || '').trim().toLowerCase(),
+                            companyEmail: String(r[2] || '').trim().toLowerCase(),  // C: Work email
+                            personalEmail: String(r[3] || '').trim().toLowerCase(), // D: Personal email
+                            jobTitle: String(r[4] || '').trim(),
+                            joiningDate: String(r[5] || '').trim(),
                             phone: String(r[6] || '').trim(),
+                            corporateId: String(r[7] || '').trim(),
                             role: String(r[8] || 'member').trim().toLowerCase(),
                             department: String(r[9] || '').trim(),
-                            jobTitle: String(r[4] || '').trim(),
-                            corporateId: String(r[7] || '').trim(),
                         };
                     }
                     // Old 5-column fallback: Name(0), Email(1), Phone(2), Role(3), Dept(4)
                     return {
                         name: String(r[0] || '').trim(),
-                        email: String(r[1] || '').trim().toLowerCase(),
+                        companyEmail: String(r[1] || '').trim().toLowerCase(),
+                        personalEmail: '',
                         phone: String(r[2] || '').trim(),
                         role: String(r[3] || 'member').trim().toLowerCase(),
                         department: String(r[4] || '').trim(),
                     };
-                }).filter(e => e.email);
+                }).filter(e => e.companyEmail);
+
+                // Validate that companyEmail belongs to company domain (if domain set)
+                const company = await Company.findById(companyId);
+                if (company?.domain) {
+                    employees = employees.map(e => ({
+                        ...e,
+                        // Flag if work email doesn't match company domain — still import but note it
+                        domainMismatch: !e.companyEmail.endsWith(`@${company.domain}`)
+                    }));
+                }
             } else if (data.invites && Array.isArray(data.invites)) {
                 employees = data.invites.filter(i => i.email);
             }
@@ -376,8 +397,25 @@ async function bulkInviteEmployees(companyId, companyDomain, employees) {
 
     for (const emp of employees) {
         try {
-            // Skip if email already registered
-            const existingUser = await User.findOne({ email: emp.email });
+            // companyEmail = work email (column C)
+            // loginEmail   = personal email (column D) || work email as fallback
+            const companyEmailVal = emp.companyEmail || emp.email || '';
+            const loginEmail = (emp.personalEmail || companyEmailVal).toLowerCase();
+            const credentialEmail = emp.personalEmail || companyEmailVal; // where credentials are sent
+
+            if (!companyEmailVal && !loginEmail) {
+                results.errors.push({ name: emp.name, error: 'No email provided' });
+                continue;
+            }
+
+            // Skip if companyEmail OR login email already registered
+            const existingUser = await User.findOne({
+                $or: [
+                    { companyEmail: companyEmailVal },
+                    { email: loginEmail },
+                    { email: companyEmailVal }
+                ]
+            });
             if (existingUser) {
                 results.skipped++;
                 continue;
@@ -394,36 +432,43 @@ async function bulkInviteEmployees(companyId, companyDomain, employees) {
             const validRoles = ['owner', 'admin', 'manager', 'member', 'guest'];
             const companyRole = validRoles.includes(emp.role) ? emp.role : 'member';
 
-            // Create username from name
-            const baseUsername = (emp.name || emp.email.split('@')[0])
+            // Create username from name or work email local part
+            const namePart = (emp.name || companyEmailVal.split('@')[0])
                 .toLowerCase().replace(/\s+/g, '.').replace(/[^a-z0-9.]/g, '');
-            const username = `${baseUsername}_${Math.random().toString(36).slice(2, 6)}`;
+            const username = `${namePart}_${Math.random().toString(36).slice(2, 6)}`;
 
             // Create the user
+            // email = login email (personal if provided, else work email)
+            // companyEmail = the work/company email
             const newUser = await User.create({
                 username,
-                email: emp.email,
+                email: loginEmail,                       // login credential
+                companyEmail: companyEmailVal,           // company-provided work email
                 phone: emp.phone || undefined,
-                passwordHash: hashedPw,         // ← correct field name
-                userType: 'company',             // ← company employee
+                jobTitle: emp.jobTitle || undefined,
+                corporateId: emp.corporateId || undefined,
+                passwordHash: hashedPw,
+                userType: 'company',
                 companyId,
                 companyRole,
                 departments: deptId ? [deptId] : [],
-                verified: true,                  // ← pre-verified (they were invited)
+                verified: true,
                 accountStatus: 'active',
             });
 
-            // Send welcome email
+            // Send welcome email to personal/credential email
             await sendWelcomeEmail({
-                to: emp.email,
+                to: credentialEmail,
                 name: emp.name || username,
                 companyName: company.name,
+                companyEmail: companyEmailVal,  // show them their work email in the email
+                loginEmail,
                 tempPassword
             });
 
             results.created++;
         } catch (err) {
-            results.errors.push({ email: emp.email, error: err.message });
+            results.errors.push({ name: emp.name, error: err.message });
         }
     }
 
@@ -437,7 +482,7 @@ function generateTempPassword() {
     return pw;
 }
 
-async function sendWelcomeEmail({ to, name, companyName, tempPassword }) {
+async function sendWelcomeEmail({ to, name, companyName, companyEmail, loginEmail, tempPassword }) {
     try {
         const transporter = nodemailer.createTransport({
             host: process.env.SMTP_HOST || 'smtp.gmail.com',
@@ -461,7 +506,8 @@ async function sendWelcomeEmail({ to, name, companyName, tempPassword }) {
 
                         <div style="background: #f1f5f9; border-radius: 12px; padding: 20px; margin-bottom: 24px;">
                             <p style="margin: 0 0 8px; font-size: 13px; color: #64748b; font-weight: bold; letter-spacing: 0.05em; text-transform: uppercase;">Your Login Details</p>
-                            <p style="margin: 4px 0; color: #1e293b;"><strong>Email:</strong> ${to}</p>
+                            ${companyEmail ? `<p style="margin: 4px 0; color: #1e293b;"><strong>Work Email:</strong> ${companyEmail}</p>` : ''}
+                            <p style="margin: 4px 0; color: #1e293b;"><strong>Login Email:</strong> ${loginEmail || to}</p>
                             <p style="margin: 4px 0; color: #1e293b;"><strong>Temporary Password:</strong> <code style="background: #e2e8f0; padding: 2px 8px; border-radius: 4px; font-size: 16px; font-weight: bold; letter-spacing: 0.1em;">${tempPassword}</code></p>
                         </div>
 

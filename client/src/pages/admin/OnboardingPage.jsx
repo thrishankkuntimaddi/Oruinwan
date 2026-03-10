@@ -266,7 +266,7 @@ const BulkImportModal = ({ onClose }) => {
                         <div className="flex items-center gap-2 p-3 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
                             <AlertCircle size={13} className="text-amber-500 shrink-0" />
                             <p className="text-xs text-amber-700 dark:text-amber-400">
-                                Each employee will receive a welcome email with a temporary password.
+                                Credentials (temp password) are sent to the <strong>Personal Email</strong> (col D). The Work Email (col C) is stored as the company email on their profile.
                             </p>
                         </div>
                     </div>
