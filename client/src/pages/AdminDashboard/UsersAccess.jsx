@@ -1,7 +1,9 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { UserPlus, Upload } from 'lucide-react';
 
 const UsersAccess = ({ data }) => {
+    const navigate = useNavigate();
     const stats = data?.stats || {
         total: 0,
         active: 0,
@@ -21,10 +23,14 @@ const UsersAccess = ({ data }) => {
                     <p className="text-xs text-slate-500 dark:text-gray-500">People management & roles</p>
                 </div>
                 <div className="flex gap-2">
-                    <button className="text-xs font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-3 py-1.5 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors flex items-center gap-1">
+                    <button
+                        onClick={() => navigate('/admin/people')}
+                        className="text-xs font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-3 py-1.5 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors flex items-center gap-1">
                         <UserPlus size={14} /> Invite
                     </button>
-                    <button className="text-xs font-bold text-slate-600 dark:text-gray-400 bg-slate-100 dark:bg-gray-800 px-3 py-1.5 rounded-lg hover:bg-slate-200 dark:hover:bg-gray-700 transition-colors flex items-center gap-1">
+                    <button
+                        onClick={() => navigate('/admin/onboard')}
+                        className="text-xs font-bold text-slate-600 dark:text-gray-400 bg-slate-100 dark:bg-gray-800 px-3 py-1.5 rounded-lg hover:bg-slate-200 dark:hover:bg-gray-700 transition-colors flex items-center gap-1">
                         <Upload size={14} /> Import
                     </button>
                 </div>
@@ -82,7 +88,9 @@ const UsersAccess = ({ data }) => {
                                 </div>
                             ))
                         )}
-                        <button className="w-full mt-2 text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:bg-slate-50 dark:hover:bg-gray-700 py-1.5 rounded transition-colors">
+                        <button
+                            onClick={() => navigate('/admin/people')}
+                            className="w-full mt-2 text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:bg-slate-50 dark:hover:bg-gray-700 py-1.5 rounded transition-colors">
                             Manage All Users &rarr;
                         </button>
                     </div>

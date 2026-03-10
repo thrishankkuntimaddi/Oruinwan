@@ -1,14 +1,23 @@
 import React from 'react';
-import { Briefcase, Lock } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Briefcase, Lock, Globe, ArrowRight } from 'lucide-react';
 
 const WorkspacesAccess = ({ data }) => {
+    const navigate = useNavigate();
     const workspaces = data?.workspaces || [];
 
     return (
         <section>
-            <div className="mb-4">
-                <h3 className="text-sm font-bold text-slate-700 dark:text-gray-300 uppercase tracking-wide">Workspaces Access</h3>
-                <p className="text-xs text-slate-500 dark:text-gray-500">Environment visibility & management</p>
+            <div className="flex items-center justify-between mb-4">
+                <div>
+                    <h3 className="text-sm font-bold text-slate-700 dark:text-gray-300 uppercase tracking-wide">Workspaces Access</h3>
+                    <p className="text-xs text-slate-500 dark:text-gray-500">Environment visibility & management</p>
+                </div>
+                <button
+                    onClick={() => navigate('\/admin\/workspaces')}
+                    className="text-xs font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-3 py-1.5 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors flex items-center gap-1">
+                    <ArrowRight size={14} /> Manage
+                </button>
             </div>
 
             <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-slate-200 dark:border-gray-700 overflow-hidden">
@@ -31,7 +40,10 @@ const WorkspacesAccess = ({ data }) => {
                             </thead>
                             <tbody className="divide-y divide-slate-100 dark:divide-gray-700">
                                 {workspaces.slice(0, 5).map((ws) => (
-                                    <tr key={ws._id} className="hover:bg-slate-50 dark:hover:bg-gray-700/30 transition-colors group">
+                                    <tr
+                                        key={ws._id}
+                                        onClick={() => navigate('/admin/workspaces')}
+                                        className="hover:bg-slate-50 dark:hover:bg-gray-700/30 transition-colors group cursor-pointer">
                                         <td className="px-6 py-4">
                                             <div className="font-bold text-slate-900 dark:text-white flex items-center gap-2">
                                                 <Briefcase size={16} className="text-slate-400" />
@@ -60,9 +72,11 @@ const WorkspacesAccess = ({ data }) => {
                                         </td>
                                         <td className="px-6 py-4">
                                             <div className="flex items-center gap-2">
-                                                {/* Simulate visibility icons - backend might not send this yet */}
-                                                <Lock size={14} className="text-slate-400" />
-                                                <span className="text-xs text-slate-600 dark:text-gray-300">Private</span>
+                                                {ws.settings?.isPrivate === false ? (
+                                                    <><Globe size={14} className="text-green-500" /><span className="text-xs text-slate-600 dark:text-gray-300">Public</span></>
+                                                ) : (
+                                                    <><Lock size={14} className="text-slate-400" /><span className="text-xs text-slate-600 dark:text-gray-300">Private</span></>
+                                                )}
                                             </div>
                                         </td>
                                         <td className="px-6 py-4 text-center">

@@ -18,12 +18,12 @@ router.get('/users-access', requireAuth, requireAdmin, async (req, res) => {
         const companyId = user.companyId;
 
         const [total, active, pending, suspended, blocked, guests] = await Promise.all([
-            User.countDocuments({ companyId }),
+            User.countDocuments({ companyId, accountStatus: { $ne: 'removed' } }),
             User.countDocuments({ companyId, accountStatus: 'active' }),
             User.countDocuments({ companyId, accountStatus: 'pending' }),
             User.countDocuments({ companyId, accountStatus: 'suspended' }),
             User.countDocuments({ companyId, accountStatus: 'blocked' }),
-            User.countDocuments({ companyId, companyRole: 'guest' })
+            User.countDocuments({ companyId, companyRole: 'guest', accountStatus: { $ne: 'removed' } })
         ]);
 
         // Get recent invites (last 7 days)
@@ -75,11 +75,12 @@ router.get('/departments', requireAuth, requireAdmin, async (req, res) => {
             .populate('managers', 'username email')
             .lean();
 
-        // Attach user count to each department
+        // Attach user count to each department (exclude removed users)
         for (const dept of departments) {
             dept.userCount = await User.countDocuments({
                 companyId,
-                departments: dept._id
+                departments: dept._id,
+                accountStatus: { $ne: 'removed' },
             });
         }
 

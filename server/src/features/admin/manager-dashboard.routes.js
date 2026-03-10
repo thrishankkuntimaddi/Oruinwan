@@ -15,14 +15,12 @@ const { requireManager } = require('../../../middleware/permissionMiddleware');
 router.get('/my-workspaces', requireAuth, requireManager, async (req, res) => {
     try {
         const userId = req.user.sub || req.user._id;
+        const user = await User.findById(userId).select('workspaces companyId').lean();
 
-        // Find workspaces where user is manager or owner
-        const workspaces = await Workspace.find({
-            $or: [
-                { 'members': { $elemMatch: { user: userId, role: 'owner' } } },
-                { 'members': { $elemMatch: { user: userId, role: 'admin' } } }
-            ]
-        })
+        // Get all workspace IDs the user is a member of
+        const workspaceIds = (user.workspaces || []).map(w => w.workspace);
+
+        const workspaces = await Workspace.find({ _id: { $in: workspaceIds } })
             .populate('members.user', 'username email profilePicture')
             .lean();
 
@@ -42,8 +40,7 @@ router.get('/my-workspaces', requireAuth, requireManager, async (req, res) => {
             ]);
 
             workspace.memberCount = workspace.members.length;
-            workspace.projectCount = 0; // Placeholder for future project model
-            workspace.status = 'active';
+            workspace.status = workspace.isArchived ? 'archived' : 'active';
             workspace.activity = {
                 messages: messageCount,
                 tasksTotal: taskCount,
@@ -66,33 +63,32 @@ router.get('/my-workspaces', requireAuth, requireManager, async (req, res) => {
 router.get('/team-load', requireAuth, requireManager, async (req, res) => {
     try {
         const userId = req.user.sub || req.user._id;
+        const user = await User.findById(userId).select('companyId workspaces').lean();
+        const companyId = user.companyId;
 
-        // Get manager's workspaces
-        const managerWorkspaces = await Workspace.find({
-            $or: [
-                { 'members': { $elemMatch: { user: userId, role: 'owner' } } },
-                { 'members': { $elemMatch: { user: userId, role: 'admin' } } }
-            ]
-        });
+        // Collect all workspaceIds the manager is in
+        const workspaceIds = (user.workspaces || []).map(w => w.workspace);
 
-        // Collect all team member IDs
+        // Collect all team member IDs from those workspaces (company-isolated)
+        const workspaceDocs = await Workspace.find({ _id: { $in: workspaceIds } }).select('members');
         const teamMemberIds = new Set();
-        managerWorkspaces.forEach(ws => {
+        workspaceDocs.forEach(ws => {
             ws.members.forEach(m => teamMemberIds.add(m.user.toString()));
         });
 
+        // Only include users from same company
         const teamMembers = await User.find({
-            _id: { $in: Array.from(teamMemberIds) }
+            _id: { $in: Array.from(teamMemberIds) },
+            companyId,
+            accountStatus: { $ne: 'removed' },
         })
-            .select('username email profilePicture')
+            .select('username email profilePicture companyRole jobTitle isOnline')
             .lean();
 
         // Get task load for each member
         for (const member of teamMembers) {
             const [workspaces, activeTasks] = await Promise.all([
-                Workspace.find({
-                    'members.user': member._id
-                }).select('name'),
+                Workspace.find({ 'members.user': member._id }).select('name'),
                 Task.countDocuments({
                     assignedTo: member._id,
                     status: { $in: ['todo', 'in_progress', 'review'] }
@@ -104,15 +100,10 @@ router.get('/team-load', requireAuth, requireManager, async (req, res) => {
             member.workload = activeTasks > 10 ? 'high' : activeTasks > 5 ? 'medium' : 'low';
         }
 
-        // Categorize
         const overloaded = teamMembers.filter(m => m.workload === 'high');
         const idle = teamMembers.filter(m => m.activeTasks === 0);
 
-        res.json({
-            teamMembers,
-            overloaded,
-            idle
-        });
+        res.json({ teamMembers, overloaded, idle });
     } catch (error) {
         console.error('Manager Dashboard Team Load Error:', error);
         res.status(500).json({ message: 'Server error' });
@@ -175,16 +166,17 @@ router.get('/dashboard/metrics/:departmentId', requireAuth, requireManager, asyn
         const userId = req.user.sub || req.user._id;
         const { departmentId } = req.params;
 
-        // Verify manager has access to this department
+        // Verify manager has access: either in managedDepartments[] or in Department.managers[]
         const manager = await User.findById(userId);
-        if (!manager.managedDepartments || !manager.managedDepartments.map(d => d.toString()).includes(departmentId)) {
-            return res.status(403).json({ message: 'Access denied: You do not manage this department' });
-        }
+        const dept = await Department.findById(departmentId).populate('head', 'username email').lean();
+        if (!dept) return res.status(404).json({ message: 'Department not found' });
 
-        // Get department details
-        const department = await Department.findById(departmentId).populate('head', 'username email').lean();
-        if (!department) {
-            return res.status(404).json({ message: 'Department not found' });
+        const inManagedDepts = (manager.managedDepartments || []).map(d => d.toString()).includes(departmentId);
+        const inDeptManagers = (dept.managers || []).map(d => d.toString()).includes(userId.toString());
+        const isHead = dept.head && dept.head._id && dept.head._id.toString() === userId.toString();
+
+        if (!inManagedDepts && !inDeptManagers && !isHead) {
+            return res.status(403).json({ message: 'Access denied: You do not manage this department' });
         }
 
         // Get team metrics

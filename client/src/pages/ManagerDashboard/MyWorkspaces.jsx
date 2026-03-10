@@ -1,7 +1,9 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Briefcase } from 'lucide-react';
 
 const MyWorkspaces = ({ data }) => {
+    const navigate = useNavigate();
     const workspaces = data?.workspaces || [];
 
     return (
@@ -52,7 +54,9 @@ const MyWorkspaces = ({ data }) => {
                                 </div>
 
                                 <div>
-                                    <button className="px-4 py-2 text-sm font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors">
+                                    <button
+                                        onClick={() => navigate('/workspaces')}
+                                        className="px-4 py-2 text-sm font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors">
                                         Manage
                                     </button>
                                 </div>

@@ -77,15 +77,15 @@ const ManagerOverview = () => {
         );
     }
 
-    // Use demo data if metrics are null/empty
+    // Use real data from API, fall back to zeros (not fake demo values)
     const displayMetrics = metrics || {
-        team: { total: 15, active: 12, pending: 2, managers: 1 },
-        activity: { messagesThisWeek: 245, tasksThisWeek: 18, meetingsThisWeek: 5 },
+        team: { total: 0, active: 0, pending: 0, managers: 0 },
+        activity: { messagesThisWeek: 0, tasksThisWeek: 0, meetingsThisWeek: 0 },
         department: {
-            name: selectedDepartment?.name || 'Loading...',
-            description: 'Demo data - actual metrics will load from backend',
-            head: { username: 'Department Manager', email: 'manager@example.com' },
-            createdAt: new Date()
+            name: selectedDepartment?.name || '—',
+            description: '',
+            head: null,
+            createdAt: null
         }
     };
 

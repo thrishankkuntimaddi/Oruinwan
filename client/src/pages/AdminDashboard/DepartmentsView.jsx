@@ -1,7 +1,9 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Building, Users } from 'lucide-react';
 
 const DepartmentsView = ({ data }) => {
+    const navigate = useNavigate();
     const departments = data?.departments || [];
 
     return (
@@ -11,7 +13,9 @@ const DepartmentsView = ({ data }) => {
                     <h3 className="text-sm font-bold text-slate-700 dark:text-gray-300 uppercase tracking-wide">Departments</h3>
                     <p className="text-xs text-slate-500 dark:text-gray-500">Organizational structure & headcount</p>
                 </div>
-                <button className="text-xs font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-3 py-1.5 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors">
+                <button
+                    onClick={() => navigate('/admin/departments')}
+                    className="text-xs font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-3 py-1.5 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors">
                     Manage Departments
                 </button>
             </div>
