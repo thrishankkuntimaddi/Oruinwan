@@ -163,23 +163,41 @@ async function searchContacts(workspaceId, userId, searchRegex) {
             return [];
         }
 
-        // Find users in the same company
-        const contacts = await User.find({
-            company: workspace.company,
-            _id: { $ne: userId }, // Exclude current user
-            $or: [
-                { username: searchRegex },
-                { email: searchRegex }
-            ]
-        })
-            .select("username email profilePicture isOnline userStatus")
+        // Build query — personal workspaces have no company, so search all users in the workspace members list
+        let userQuery;
+        if (workspace.company) {
+            // Company workspace: search all users in the same company
+            userQuery = {
+                companyId: workspace.company, // ✅ correct field name on User model
+                _id: { $ne: userId },
+                $or: [
+                    { username: searchRegex },
+                    { name: searchRegex },
+                    { email: searchRegex }
+                ]
+            };
+        } else {
+            // Personal workspace: search workspace members directly
+            const memberIds = (workspace.members || []).map(m => m.user || m).filter(Boolean);
+            userQuery = {
+                _id: { $in: memberIds, $ne: userId },
+                $or: [
+                    { username: searchRegex },
+                    { name: searchRegex },
+                    { email: searchRegex }
+                ]
+            };
+        }
+
+        const contacts = await User.find(userQuery)
+            .select("username name email profilePicture isOnline userStatus")
             .limit(10)
             .lean();
 
         return contacts.map(user => ({
             id: user._id,
             type: "contact",
-            name: user.username,
+            name: user.username || user.name || user.email,
             email: user.email,
             profilePicture: user.profilePicture,
             isOnline: user.isOnline || false,
@@ -257,7 +275,7 @@ async function searchMessages(workspaceId, userId, searchRegex) {
                     name: parentName
                 },
                 createdAt: msg.createdAt,
-                preview: truncateText(msg.text, 100)
+                preview: truncateText(stripMarkdown(msg.text), 120)
             };
         });
     } catch (err) {
@@ -270,8 +288,54 @@ async function searchMessages(workspaceId, userId, searchRegex) {
  * Truncate text to specified length with ellipsis
  */
 function truncateText(text, maxLength) {
-    if (text.length <= maxLength) return text;
+    if (!text || text.length <= maxLength) return text || '';
     return text.substring(0, maxLength) + "...";
+}
+
+/**
+ * Strip markdown syntax for clean previews
+ * Handles bold (**x** / __x__), italic (*x* / _x_), code (`x`), strikethrough (~~x~~)
+ */
+function stripMarkdown(text) {
+    if (!text || typeof text !== 'string') return '';
+    return text
+        .replace(/\*\*([^*]+)\*\*/g, '$1')         // **bold**
+        .replace(/__([^_]+)__/g, '$1')              // __bold__
+        .replace(/\*([^*]+)\*/g, '$1')              // *italic*
+        .replace(/_([^_]+)_/g, '$1')                // _italic_
+        .replace(/~~([^~]+)~~/g, '$1')              // ~~strike~~
+        .replace(/`([^`]+)`/g, '$1')                // `code`
+        .replace(/!?\[([^\]]+)\]\([^)]+\)/g, '$1') // [link](url) or ![img](url)
+        .replace(/^#{1,6}\s/gm, '')                 // # heading
+        .replace(/\n+/g, ' ')                       // newlines → space
+        .trim();
+}
+
+/**
+ * Extract plain text from Slate.js rich content (stored as JSON array of nodes)
+ */
+function plainTextFromSlate(content) {
+    if (!content) return '';
+    if (typeof content === 'string') {
+        try {
+            const parsed = JSON.parse(content);
+            if (Array.isArray(parsed)) return extractSlateText(parsed);
+        } catch {
+            return stripMarkdown(content);
+        }
+        return stripMarkdown(content);
+    }
+    if (Array.isArray(content)) return extractSlateText(content);
+    return String(content);
+}
+
+function extractSlateText(nodes) {
+    if (!Array.isArray(nodes)) return '';
+    return nodes.map(node => {
+        if (node.text !== undefined) return node.text;          // leaf node
+        if (node.children) return extractSlateText(node.children); // element
+        return '';
+    }).join(' ').replace(/\s+/g, ' ').trim();
 }
 
 /**
@@ -306,29 +370,31 @@ async function searchTasks(workspaceId, userId, searchRegex) {
             .limit(10) // Limit to 10 task results
             .lean();
 
-        // Format results
-        return tasks.map(task => ({
-            id: task._id,
-            type: "task",
-            title: task.title,
-            description: truncateText(task.description || "", 100),
-            status: task.status,
-            priority: task.priority,
-            dueDate: task.dueDate,
-            visibility: task.visibility,
-            createdBy: {
-                id: task.createdBy._id,
-                name: task.createdBy.username,
-                profilePicture: task.createdBy.profilePicture
-            },
-            assignedTo: task.assignedTo?.map(user => ({
-                id: user._id,
-                name: user.username,
-                profilePicture: user.profilePicture
-            })) || [],
-            tags: task.tags || [],
-            createdAt: task.createdAt
-        }));
+        // Format results — guard against null populated refs (e.g. deleted users)
+        return tasks
+            .filter(task => task.createdBy != null)
+            .map(task => ({
+                id: task._id,
+                type: "task",
+                title: task.title,
+                description: truncateText(task.description || "", 100),
+                status: task.status,
+                priority: task.priority,
+                dueDate: task.dueDate,
+                visibility: task.visibility,
+                createdBy: {
+                    id: task.createdBy._id,
+                    name: task.createdBy.username,
+                    profilePicture: task.createdBy.profilePicture
+                },
+                assignedTo: (task.assignedTo || []).filter(u => u != null).map(user => ({
+                    id: user._id,
+                    name: user.username,
+                    profilePicture: user.profilePicture
+                })),
+                tags: task.tags || [],
+                createdAt: task.createdAt
+            }));
     } catch (err) {
         logger.error("Search tasks error:", err);
         return [];
@@ -365,23 +431,25 @@ async function searchNotes(workspaceId, userId, searchRegex) {
             .limit(10) // Limit to 10 note results
             .lean();
 
-        // Format results
-        return notes.map(note => ({
-            id: note._id,
-            type: "note",
-            title: note.title,
-            preview: truncateText(note.content || "", 100),
-            noteType: note.type,
-            isPublic: note.isPublic,
-            isPinned: note.isPinned,
-            owner: {
-                id: note.owner._id,
-                name: note.owner.username,
-                profilePicture: note.owner.profilePicture
-            },
-            tags: note.tags || [],
-            createdAt: note.createdAt
-        }));
+        // Format results — guard against null populated owner (deleted users)
+        return notes
+            .filter(note => note.owner != null)
+            .map(note => ({
+                id: note._id,
+                type: "note",
+                title: note.title,
+                preview: truncateText(plainTextFromSlate(note.content), 120),
+                noteType: note.type,
+                isPublic: note.isPublic,
+                isPinned: note.isPinned,
+                owner: {
+                    id: note.owner._id,
+                    name: note.owner.username,
+                    profilePicture: note.owner.profilePicture
+                },
+                tags: note.tags || [],
+                createdAt: note.createdAt
+            }));
     } catch (err) {
         logger.error("Search notes error:", err);
         return [];

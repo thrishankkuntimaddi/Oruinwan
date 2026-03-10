@@ -249,7 +249,22 @@ router.post('/reject-company/:id', requireSuperAdmin, async (req, res) => {
 // router.get('/audit-logs', requireSuperAdmin, platformController.getAuditLogs);
 
 // Active Companies (Multi-Tenant View)
-// router.get('/active-companies', requireSuperAdmin, platformController.getActiveCompanies);
+router.get('/active-companies', requireSuperAdmin, async (req, res) => {
+  try {
+    const companies = await Company.find({ verificationStatus: 'verified' })
+      .populate({
+        path: 'admins.user',
+        select: 'username name email personalEmail jobTitle'
+      })
+      .sort({ createdAt: -1 })
+      .lean();
+
+    res.json(companies);
+  } catch (err) {
+    console.error('❌ Error fetching active companies:', err);
+    res.status(500).json({ message: 'Server Error' });
+  }
+});
 
 // Support Tickets (Platform Admin View)
 // router.get('/tickets', requireSuperAdmin, platformController.getAllTickets);

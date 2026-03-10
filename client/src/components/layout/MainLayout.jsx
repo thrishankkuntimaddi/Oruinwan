@@ -451,14 +451,21 @@ const MainLayout = ({ children, sidePanel }) => {
                             {/* Backdrop */}
                             <div
                                 className="fixed inset-0 z-[80]"
-                                onClick={() => setShowUniversalSearch(false)}
+                                onClick={() => {
+                                    setShowUniversalSearch(false);
+                                    clearSearch();
+                                }}
                             />
                             <UniversalSearch
                                 workspaceId={activeWorkspace.id}
-                                onClose={() => setShowUniversalSearch(false)}
+                                onClose={() => {
+                                    setShowUniversalSearch(false);
+                                    clearSearch();
+                                }}
                                 results={results}
                                 loading={loading}
                                 query={query}
+                                clearSearch={clearSearch}
                             />
                         </>
                     )}
