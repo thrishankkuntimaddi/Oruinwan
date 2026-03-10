@@ -20,6 +20,7 @@ const BulkImportModal = ({ onClose }) => {
     const [result, setResult] = useState(null);
     const [showColGuide, setShowColGuide] = useState(false);
     const [progress, setProgress] = useState({ processed: 0, total: 0 });
+    const [companyDomain, setCompanyDomain] = useState('');  // e.g. "kt.com"
 
 
     const companyId =
@@ -27,6 +28,18 @@ const BulkImportModal = ({ onClose }) => {
         (typeof user?.companyId === 'string'
             ? user.companyId
             : user?.companyId?._id || user?.companyId?.toString());
+
+    // ── Fetch company domain on mount ──────────────────────────────────────────
+    useEffect(() => {
+        if (!companyId) return;
+        axios.get(
+            `${import.meta.env.VITE_BACKEND_URL}/api/companies/${companyId}`,
+            { withCredentials: true }
+        ).then(res => {
+            const domain = res.data?.company?.domain || res.data?.domain || '';
+            setCompanyDomain(domain.toLowerCase().replace(/^@/, ''));
+        }).catch(() => { /* non-fatal — validation will just be skipped */ });
+    }, [companyId]);
 
     // ── template download ──────────────────────────────────────────────────────
     const downloadTemplate = async () => {
@@ -56,27 +69,45 @@ const BulkImportModal = ({ onClose }) => {
             const wb = XLSX.read(await file.arrayBuffer());
             const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1 });
             const data = rows.slice(1)
-                .filter(r => r[2] || r[1])   // email at col 2 (new) or col 1 (old)
+                .filter(r => r[2] || r[1])   // need at least a work email (col C) or old email (col B)
                 .map(r => {
+                    // Detect 10-column format by checking col C for an @
                     const isNewFormat = String(r[2] || '').includes('@');
                     if (isNewFormat) {
+                        // 10-col: A=FirstName B=LastName C=WorkEmail D=PersonalEmail E=JobTitle
+                        //         F=JoinDate G=Mobile H=CorpID I=Role J=Department
                         return {
-                            name: `${String(r[0] || '').trim()} ${String(r[1] || '').trim()}`.trim(),
-                            email: String(r[2] || '').trim().toLowerCase(),
-                            phone: String(r[6] || '').trim(),
-                            role: String(r[8] || 'member').trim().toLowerCase(),
-                            department: String(r[9] || '').trim(),
+                            name:         `${String(r[0] || '').trim()} ${String(r[1] || '').trim()}`.trim(),
+                            companyEmail: String(r[2] || '').trim().toLowerCase(),  // C: Work email
+                            personalEmail:String(r[3] || '').trim().toLowerCase(),  // D: Personal email
+                            jobTitle:     String(r[4] || '').trim(),                // E
+                            joiningDate:  String(r[5] || '').trim(),                // F
+                            phone:        String(r[6] || '').trim(),                // G
+                            corporateId:  String(r[7] || '').trim(),                // H
+                            role:         String(r[8] || 'member').trim().toLowerCase(), // I
+                            department:   String(r[9] || '').trim(),                // J
                         };
                     }
+                    // Old 5-col fallback: Name Email Phone Role Dept
                     return {
-                        name: String(r[0] || '').trim(),
-                        email: String(r[1] || '').trim().toLowerCase(),
-                        phone: String(r[2] || '').trim(),
-                        role: String(r[3] || 'member').trim().toLowerCase(),
-                        department: String(r[4] || '').trim(),
+                        name:         String(r[0] || '').trim(),
+                        companyEmail: String(r[1] || '').trim().toLowerCase(),
+                        personalEmail:'',
+                        phone:        String(r[2] || '').trim(),
+                        role:         String(r[3] || 'member').trim().toLowerCase(),
+                        department:   String(r[4] || '').trim(),
                     };
                 })
-                .filter(e => e.email);
+                .filter(e => e.companyEmail);
+
+            // Domain validation — flag rows where work email domain ≠ company domain
+            if (companyDomain) {
+                data.forEach(emp => {
+                    const emailDomain = emp.companyEmail.split('@')[1] || '';
+                    emp.domainError = emailDomain !== companyDomain;
+                });
+            }
+
             if (!data.length) { showToast('No valid rows found in file', 'error'); return; }
             setParsedRows(data);
             setPhase('preview');
@@ -288,29 +319,64 @@ const BulkImportModal = ({ onClose }) => {
                             </button>
                         </div>
 
-                        {/* table preview */}
                         <div className="rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
-                            <div className="flex items-center gap-2 px-3 py-2 bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
-                                <Eye size={12} className="text-slate-400" />
-                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                                    Preview — {parsedRows.length > 10 ? `showing first 10 of ${parsedRows.length}` : `${parsedRows.length} rows`}
-                                </p>
+                            <div className="flex items-center justify-between gap-2 px-3 py-2 bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
+                                <div className="flex items-center gap-2">
+                                    <Eye size={12} className="text-slate-400" />
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                                        Preview — {parsedRows.length > 10 ? `showing first 10 of ${parsedRows.length}` : `${parsedRows.length} rows`}
+                                    </p>
+                                </div>
+                                {companyDomain && (() => {
+                                    const errCount = parsedRows.filter(r => r.domainError).length;
+                                    return errCount > 0 ? (
+                                        <span className="text-[10px] font-bold text-red-500 bg-red-50 dark:bg-red-900/30 px-2 py-0.5 rounded-full">
+                                            {errCount} wrong domain
+                                        </span>
+                                    ) : (
+                                        <span className="text-[10px] font-bold text-green-600 bg-green-50 dark:bg-green-900/30 px-2 py-0.5 rounded-full">
+                                            ✓ All @{companyDomain}
+                                        </span>
+                                    );
+                                })()}
                             </div>
                             <div className="overflow-x-auto max-h-56 overflow-y-auto">
                                 <table className="w-full text-xs">
                                     <thead className="bg-white dark:bg-slate-900 sticky top-0 border-b border-slate-100 dark:border-slate-800">
                                         <tr>
-                                            {['#', 'Name', 'Email', 'Phone', 'Role', 'Department'].map(h => (
+                                            {['#', 'Name', 'Work Email', 'Pers. Email', 'Job Title', 'Phone', 'Role', 'Dept'].map(h => (
                                                 <th key={h} className="text-left px-3 py-2 text-[10px] font-bold text-slate-400 uppercase whitespace-nowrap">{h}</th>
                                             ))}
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                                         {parsedRows.slice(0, 10).map((emp, i) => (
-                                            <tr key={i} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                                            <tr key={i} className={`transition-colors ${
+                                                emp.domainError
+                                                    ? 'bg-red-50/60 dark:bg-red-900/20 hover:bg-red-50 dark:hover:bg-red-900/30'
+                                                    : 'hover:bg-slate-50 dark:hover:bg-slate-800/50'
+                                            }`}>
                                                 <td className="px-3 py-2 text-slate-400">{i + 1}</td>
                                                 <td className="px-3 py-2 font-semibold text-slate-700 dark:text-slate-200 whitespace-nowrap">{emp.name || '—'}</td>
-                                                <td className="px-3 py-2 text-slate-500 dark:text-slate-400">{emp.email}</td>
+                                                <td className="px-3 py-2">
+                                                    {emp.domainError ? (
+                                                        <span className="flex items-center gap-1">
+                                                            <span className="text-red-500 font-medium">{emp.companyEmail}</span>
+                                                            <span className="text-[9px] font-bold text-red-500 bg-red-100 dark:bg-red-900/40 px-1.5 py-0.5 rounded-full whitespace-nowrap">
+                                                                ⚠ must be @{companyDomain}
+                                                            </span>
+                                                        </span>
+                                                    ) : (
+                                                        <span className="text-slate-600 dark:text-slate-300">{emp.companyEmail || '—'}</span>
+                                                    )}
+                                                </td>
+                                                <td className="px-3 py-2">
+                                                    {emp.personalEmail
+                                                        ? <span className="text-indigo-500 dark:text-indigo-400">{emp.personalEmail}</span>
+                                                        : <span className="text-slate-300 dark:text-slate-600">—</span>
+                                                    }
+                                                </td>
+                                                <td className="px-3 py-2 text-slate-500 dark:text-slate-400">{emp.jobTitle || '—'}</td>
                                                 <td className="px-3 py-2 text-slate-500 dark:text-slate-400">{emp.phone || '—'}</td>
                                                 <td className="px-3 py-2">
                                                     <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${roleBadge(emp.role)}`}>
@@ -329,15 +395,36 @@ const BulkImportModal = ({ onClose }) => {
                             <p className="text-center text-xs text-slate-400">… and {parsedRows.length - 10} more rows not shown</p>
                         )}
 
+                        {/* Domain error banner */}
+                        {companyDomain && parsedRows.some(r => r.domainError) && (
+                            <div className="flex items-start gap-2 p-3 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
+                                <AlertCircle size={14} className="text-red-500 shrink-0 mt-0.5" />
+                                <p className="text-xs text-red-700 dark:text-red-400">
+                                    <strong>{parsedRows.filter(r => r.domainError).length} row(s)</strong> have a work email that doesn't match your company domain
+                                    &nbsp;<strong>@{companyDomain}</strong>. Fix the file and re-upload.
+                                </p>
+                            </div>
+                        )}
+
                         <div className="flex gap-3 pt-1">
                             <button onClick={() => { setPhase('upload'); setExcelFile(null); setParsedRows([]); }}
                                 className="flex-1 py-3 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 text-sm font-bold rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
                                 Change File
                             </button>
-                            <button onClick={handleSubmit}
-                                className="flex-1 py-3 bg-green-600 hover:bg-green-700 text-white text-sm font-bold rounded-xl shadow-lg shadow-green-500/20 transition-all hover:-translate-y-0.5 flex items-center justify-center gap-2">
-                                <Users size={16} /> Import {parsedRows.length} Employees
-                            </button>
+                            {(() => {
+                                const domainErrors = parsedRows.filter(r => r.domainError).length;
+                                return domainErrors > 0 ? (
+                                    <button disabled
+                                        className="flex-1 py-3 bg-red-100 dark:bg-red-900/30 text-red-500 dark:text-red-400 text-sm font-bold rounded-xl cursor-not-allowed flex items-center justify-center gap-2">
+                                        <AlertCircle size={16} /> Fix {domainErrors} domain error{domainErrors !== 1 ? 's' : ''} first
+                                    </button>
+                                ) : (
+                                    <button onClick={handleSubmit}
+                                        className="flex-1 py-3 bg-green-600 hover:bg-green-700 text-white text-sm font-bold rounded-xl shadow-lg shadow-green-500/20 transition-all hover:-translate-y-0.5 flex items-center justify-center gap-2">
+                                        <Users size={16} /> Import {parsedRows.length} Employees
+                                    </button>
+                                );
+                            })()}
                         </div>
                     </div>
                 )}

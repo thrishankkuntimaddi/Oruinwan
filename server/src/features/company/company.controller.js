@@ -328,20 +328,29 @@ exports.handleSetup = (req, res) => {
 exports.downloadTemplate = async (req, res) => {
     try {
         const wb = XLSX.utils.book_new();
+        // Headers MUST match the column guide A-J exactly
         const headers = [
-            'First Name', 'Last Name', 'Email', 'Personal Email',
-            'Job Title', 'Joining Date', 'Mobile Number', 'Corporate ID', 'System Role', 'Department'
+            'First Name',   // A
+            'Last Name',    // B
+            'Email',        // C – Work email (company domain) — Required
+            'Pers. Email',  // D – Personal email (credentials sent here)
+            'Job Title',    // E
+            'Join Date',    // F – YYYY-MM-DD
+            'Mobile',       // G – Phone no. — Required
+            'Corp ID',      // H – e.g. EMP001
+            'Role',         // I – member/admin/manager
+            'Department'    // J – Team name
         ];
         const samples = [
-            ['Karthik', 'Murugan', 'karthik.murugan@venkatech.com', 'karthik.personal@gmail.com', 'Engineering Manager', '2026-03-10', '9876543213', 'EMP001', 'manager', 'Engineering'],
-            ['Priya', 'Krishnan', 'priya.krishnan@venkatech.com', 'priya.personal@gmail.com', 'Product Lead', '2026-03-10', '9876543214', 'EMP002', 'member', 'Product'],
-            ['Aravind', 'Selvam', 'aravind.selvam@venkatech.com', 'aravind.personal@gmail.com', 'Software Engineer', '2026-03-10', '9876543215', 'EMP003', 'member', 'Engineering'],
+            ['Karthik',  'Murugan',  'karthik.murugan@venkatech.com',  'karthik@gmail.com',   'Engineering Manager', '2026-03-10', '9876543213', 'EMP001', 'manager', 'Engineering'],
+            ['Priya',    'Krishnan', 'priya.krishnan@venkatech.com',   'priya@gmail.com',     'Product Lead',        '2026-03-10', '9876543214', 'EMP002', 'member',  'Product'],
+            ['Aravind',  'Selvam',   'aravind.selvam@venkatech.com',   'aravind@gmail.com',   'Software Engineer',   '2026-03-10', '9876543215', 'EMP003', 'member',  'Engineering'],
         ];
 
         const ws = XLSX.utils.aoa_to_sheet([headers, ...samples]);
         ws['!cols'] = [
-            { wch: 13 }, { wch: 18 }, { wch: 36 }, { wch: 32 },
-            { wch: 22 }, { wch: 13 }, { wch: 15 }, { wch: 10 }, { wch: 12 }, { wch: 16 }
+            { wch: 12 }, { wch: 14 }, { wch: 36 }, { wch: 28 },
+            { wch: 22 }, { wch: 12 }, { wch: 14 }, { wch: 10 }, { wch: 10 }, { wch: 16 }
         ];
 
         XLSX.utils.book_append_sheet(wb, ws, 'Employees');
@@ -355,3 +364,4 @@ exports.downloadTemplate = async (req, res) => {
         return res.status(500).json({ message: 'Server error' });
     }
 };
+
