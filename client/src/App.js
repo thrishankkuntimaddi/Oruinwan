@@ -34,6 +34,7 @@ import MyTasks from "./pages/SidebarComp/MyTasks";
 import Notes from "./pages/SidebarComp/Notes";
 import Updates from "./pages/SidebarComp/Updates";
 import Meetings from "./pages/SidebarComp/Meetings";
+import AppsPage from "./pages/apps/AppsPage";
 import WorkspaceSelect from "./pages/WorkspaceSelect";
 import FeatureShowcase from "./pages/FeatureShowcase";
 
@@ -388,6 +389,22 @@ function App() {
                                   <RequireWorkspace>
                                     <MainLayout sidePanel={<UpdatesPanel />}>
                                       <Updates />
+                                    </MainLayout>
+                                  </RequireWorkspace>
+                                </WorkspaceProvider>
+                              </RequireAuth>
+                            }
+                          />
+
+                          {/* Apps & Integrations */}
+                          <Route
+                            path="/workspace/:workspaceId/apps"
+                            element={
+                              <RequireAuth>
+                                <WorkspaceProvider>
+                                  <RequireWorkspace>
+                                    <MainLayout>
+                                      <AppsPage />
                                     </MainLayout>
                                   </RequireWorkspace>
                                 </WorkspaceProvider>

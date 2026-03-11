@@ -14,6 +14,7 @@ import InviteTab from "./channelManagementComponents/InviteTab";
 import RemoveMemberModal from "./channelManagementComponents/RemoveMemberModal";
 import PromoteAdminModal from "./channelManagementComponents/PromoteAdminModal";
 import DemoteAdminModal from "./channelManagementComponents/DemoteAdminModal";
+import IntegrationsTab from "./channelManagementComponents/IntegrationsTab";
 
 export default function ChannelManagementModal({ channel, onClose, currentUserId, initialTab = "members" }) {
     const { workspaceId } = useParams();
@@ -407,6 +408,10 @@ export default function ChannelManagementModal({ channel, onClose, currentUserId
                                 onInvite={handleInvite}
                                 loading={loading}
                             />
+                        )}
+
+                        {activeTab === "integrations" && (
+                            <IntegrationsTab />
                         )}
                     </div>
                 </div>

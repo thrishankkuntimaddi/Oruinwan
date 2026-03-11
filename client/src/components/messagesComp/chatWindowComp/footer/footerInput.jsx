@@ -8,6 +8,8 @@ import { Button } from "../../../../shared/components/ui";
 import ReplyPreview from "../messages/replyPreview";
 import MentionAutocomplete from "./MentionAutocomplete";
 import { useMentionAutocomplete } from "../../../../hooks/useMentionAutocomplete";
+import SlashCommandMenu from "../../../../components/chat/slash/SlashCommandMenu";
+import SlashCommandPreview from "../../../../components/chat/slash/SlashCommandPreview";
 
 const turndownService = new TurndownService({
   headingStyle: "atx",
@@ -85,6 +87,37 @@ export default function FooterInput({
     extractMentionText,
     closeSuggestions,
   } = useMentionAutocomplete(members);
+
+  // ── Slash command system (new full-featured component) ────────────────────
+  const [showSlashMenu, setShowSlashMenu] = useState(false);
+  const [slashQuery, setSlashQuery] = useState("");
+  const [previewCommand, setPreviewCommand] = useState(null);
+
+  const insertSlashCommand = useCallback((cmd) => {
+    if (!editableRef.current) return;
+    editableRef.current.focus();
+    const selection = window.getSelection();
+    if (selection && selection.rangeCount > 0) {
+      const range = selection.getRangeAt(0);
+      const textNode = editableRef.current.firstChild;
+      if (textNode && textNode.nodeType === Node.TEXT_NODE) {
+        range.setStart(textNode, 0);
+        range.setEnd(textNode, textNode.length);
+        range.deleteContents();
+      } else {
+        editableRef.current.innerHTML = "";
+      }
+    }
+    document.execCommand("insertText", false, `${cmd.command} `);
+    const html = editableRef.current.innerHTML || "";
+    setHasText(true);
+    onChange({ target: { value: html } });
+    setShowSlashMenu(false);
+    setSlashQuery("");
+    // Keep preview open after selection so user sees what the command does
+    setPreviewCommand(cmd);
+  }, [onChange]);
+  // ─────────────────────────────────────────────────────────────────────────────
 
   // ─── KEY FIX: track content in a ref, NOT in state ───────────────────────────
   // We NEVER set editableRef.current.innerHTML from parent state while the user
@@ -166,10 +199,19 @@ export default function FooterInput({
     const html = e.currentTarget.innerHTML;
     const text = stripTags(html).trim();
     setHasText(text.length > 0);
-    // Sync upward for parent state (used for send button, not for re-rendering input)
     onChange({ target: { value: html } });
-    // Check for @mention trigger
     handleMentionInput();
+    // Slash command detection
+    if (text.startsWith("/")) {
+      setSlashQuery(text);
+      setShowSlashMenu(true);
+      // Clear preview when user is still typing
+      setPreviewCommand(null);
+    } else {
+      setShowSlashMenu(false);
+      setSlashQuery("");
+      if (!text) setPreviewCommand(null);
+    }
   }, [onChange, handleMentionInput]);
 
   /* ---------------------------------------------------------
@@ -181,44 +223,39 @@ export default function FooterInput({
     const html = el.innerHTML || '';
     const textContent = stripTags(html).trim();
     if (!textContent || blocked || disabled) return;
-
-    // Close any open mention suggestions
     closeSuggestions();
-
-    // Extract plaintext for mention parsing (includes @mention chip text)
-    // This is sent as mentionText alongside the encrypted payload
     const mentionText = extractMentionText(editableRef);
-
     let markdown;
     const hasFormatting = /<(ul|ol|b|strong|i|em|a )/.test(html);
     if (!hasFormatting) {
-      // Fast path: innerText natively preserves every newline the user sees.
-      // Chrome returns \n\n between <div> blocks — collapse to single \n so
-      // remarkBreaks renders tight <br> spacing, not paragraph gaps.
       markdown = el.innerText.trim().replace(/\n{2,}/g, '\n');
     } else {
-      // Has lists / bold / italic — convert via Turndown
       markdown = turndownService.turndown(normaliseEditorHtml(html)).trim();
     }
-
     if (!markdown) return;
-
-    // Pass mentionText as metadata alongside the message content
-    // The parent's onSend handler should forward it to the API as a separate field
     onSend(markdown, { mentionText });
-
-    // Clear DOM directly (do NOT rely on React to re-render the input)
-    if (editableRef.current) {
-      editableRef.current.innerHTML = "";
-    }
+    if (editableRef.current) editableRef.current.innerHTML = "";
     setHasText(false);
     setNewMessage("");
+    // Clear slash preview on send
+    setShowSlashMenu(false);
+    setPreviewCommand(null);
   }, [blocked, disabled, onSend, setNewMessage, closeSuggestions, extractMentionText]);
 
   /* ---------------------------------------------------------
       KEYBOARD — Enter to send, Shift+Enter for newline
   --------------------------------------------------------- */
   const handleKeyDown = useCallback((e) => {
+    // Delegate keyboard events to SlashCommandMenu when open
+    if (showSlashMenu) {
+      const consumed = SlashCommandMenu.handleKey?.(e);
+      if (consumed) return;
+    }
+    // Close slash menu on Escape
+    if (e.key === 'Escape') {
+      if (showSlashMenu) { setShowSlashMenu(false); return; }
+      if (previewCommand) { setPreviewCommand(null); return; }
+    }
     // Let mention autocomplete consume arrow keys / Tab / Enter / Escape first
     if (showSuggestions) {
       const consumed = handleMentionKeyDown(e);
@@ -234,7 +271,7 @@ export default function FooterInput({
       e.preventDefault();
       handleSend();
     }
-  }, [handleSend, showSuggestions, handleMentionKeyDown, suggestions, selectedIndex, selectSuggestion]);
+  }, [handleSend, showSuggestions, handleMentionKeyDown, suggestions, selectedIndex, selectSuggestion, showSlashMenu, previewCommand]);
 
   /* ---------------------------------------------------------
       EMOJI PICK — insert at cursor position
@@ -253,6 +290,14 @@ export default function FooterInput({
       {/* WhatsApp-style reply preview bar */}
       {replyingTo && (
         <ReplyPreview replyingTo={replyingTo} onCancel={onCancelReply} />
+      )}
+
+      {/* Slash command preview — shown after command selection */}
+      {previewCommand && !showSlashMenu && (
+        <SlashCommandPreview
+          command={previewCommand}
+          onClose={() => setPreviewCommand(null)}
+        />
       )}
 
       <div className={`
@@ -307,15 +352,6 @@ export default function FooterInput({
 
         {/* Rich Text Input — uncontrolled div, no html= binding */}
         <div className="w-full px-3 py-2 text-sm max-h-[30vh] overflow-y-auto overflow-x-hidden custom-scrollbar min-h-[4rem] relative">
-          {/* @mention autocomplete dropdown */}
-          {showSuggestions && (
-            <MentionAutocomplete
-              suggestions={suggestions}
-              selectedIndex={selectedIndex}
-              onSelect={(member) => selectSuggestion(member, editableRef)}
-              onClose={closeSuggestions}
-            />
-          )}
           <div
             ref={editableRef}
             contentEditable={!blocked && !disabled}
@@ -331,6 +367,30 @@ export default function FooterInput({
             </div>
           )}
         </div>
+
+        {/* @mention autocomplete dropdown — anchored with same pattern as slash menu */}
+        {showSuggestions && (
+          <div className="absolute bottom-full left-0 right-0 z-[60] mb-1">
+            <MentionAutocomplete
+              suggestions={suggestions}
+              selectedIndex={selectedIndex}
+              onSelect={(member) => selectSuggestion(member, editableRef)}
+              onClose={closeSuggestions}
+            />
+          </div>
+        )}
+
+        {/* Slash command dropdown — outside overflow container so it's not clipped */}
+        {showSlashMenu && (
+          <div className="absolute bottom-full left-0 right-0 z-[60] mb-1">
+            <SlashCommandMenu
+              query={slashQuery}
+              onSelect={insertSlashCommand}
+              onClose={() => { setShowSlashMenu(false); setPreviewCommand(null); }}
+              onPreviewChange={setPreviewCommand}
+            />
+          </div>
+        )}
 
         {/* Link Input Popover */}
         {showLinkInput && (

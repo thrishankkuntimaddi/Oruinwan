@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import { useWorkspace } from "../../contexts/WorkspaceContext";
-import { Home, MessageSquare, CheckSquare, FileText, Newspaper, Hash, Rocket, Briefcase, Zap, Palette, Microscope, Globe, Shield, TrendingUp, Lightbulb, Flame, Target, Trophy, Video, Settings } from "lucide-react";
+import { Home, MessageSquare, CheckSquare, FileText, Newspaper, Hash, Rocket, Briefcase, Zap, Palette, Microscope, Globe, Shield, TrendingUp, Lightbulb, Flame, Target, Trophy, Video, Settings, Puzzle } from "lucide-react";
 import { Avatar } from "../../shared/components/ui";
 
 const IconSidebar = ({ onProfileClick }) => {
@@ -65,6 +65,7 @@ const IconSidebar = ({ onProfileClick }) => {
         { icon: <CheckSquare size={20} strokeWidth={2} />, path: "/tasks", label: "Tasks" },
         { icon: <FileText size={20} strokeWidth={2} />, path: "/notes", label: "Notes" },
         { icon: <Video size={20} strokeWidth={2} />, path: "/huddles", label: "Huddles" },
+        { icon: <Puzzle size={20} strokeWidth={2} />, path: "/apps", label: "Apps" },
         // Only show Updates for company users
         ...(user?.userType === "company" ? [
             { icon: <Newspaper size={20} strokeWidth={2} />, path: "/updates", label: "Updates" }

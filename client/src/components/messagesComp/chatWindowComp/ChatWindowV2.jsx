@@ -1161,7 +1161,18 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
     }, [forwardingMessageId, actions, conversation.events, workspaceId]);
 
     // Get channel members for join markers (channels only)
-    const channelMembers = chat?.members || [];
+    // Normalize to flat {_id, username, profilePicture} shape for @mention autocomplete
+    // chat.members items are shaped as { user: {_id, username, profilePicture}, joinedAt, role }
+    const channelMembers = (chat?.members || []).map(m => {
+        const user = m.user || m; // support both nested and flat shapes
+        return {
+            _id: user._id || user.userId || m.userId,
+            username: user.username || user.name || '',
+            profilePicture: user.profilePicture || user.avatar || null,
+            name: user.name || user.username || '',
+        };
+    }).filter(m => m.username); // drop any entries without a resolvable username
+
     const userJoinedAt = conversationType === 'channel'
         ? chat?.members?.find(m => (m.user?._id || m.user) === currentUserId)?.joinedAt
         : null;

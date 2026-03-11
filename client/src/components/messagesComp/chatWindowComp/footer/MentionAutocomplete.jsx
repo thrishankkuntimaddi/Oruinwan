@@ -29,7 +29,7 @@ export default function MentionAutocomplete({ suggestions, selectedIndex, onSele
 
     return (
         <div
-            className="absolute bottom-full left-0 mb-2 w-64 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl z-50 overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-150"
+            className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl z-[60] overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-150"
             onMouseDown={(e) => e.preventDefault()} // Prevent blur on click
         >
             {/* Header */}

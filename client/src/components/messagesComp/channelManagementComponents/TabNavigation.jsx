@@ -25,6 +25,13 @@ export default function TabNavigation({ activeTab, onTabChange, isAdmin }) {
                     Invite People
                 </button>
             )}
+            <button
+                onClick={() => onTabChange("integrations")}
+                className={`py-3 px-4 text-sm font-medium border-b-2 transition-colors flex items-center gap-1.5 ${activeTab === "integrations" ? "border-blue-600 text-blue-600 dark:text-blue-400" : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"}`}
+            >
+                🔌 Integrations
+            </button>
         </div>
     );
 }
+
