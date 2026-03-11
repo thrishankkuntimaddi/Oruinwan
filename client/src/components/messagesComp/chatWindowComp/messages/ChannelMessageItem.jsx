@@ -392,7 +392,12 @@ function ChannelMessageItem({
                 )}
                 {/* Edit badge with history popover */}
                 {msg.editedAt && !msg.isDeleted && (
-                    <EditedBadge editHistory={msg.editHistory} editedAt={msg.editedAt} />
+                    <EditedBadge
+                        editHistory={msg.editHistory}
+                        editedAt={msg.editedAt}
+                        conversationId={msg.channel || msg.channelId || msg.conversationId}
+                        conversationType={msg.channel || msg.channelId ? 'channel' : 'dm'}
+                    />
                 )}
 
                 {/* Phase 7.5 — Link preview card */}
@@ -620,7 +625,7 @@ export default ChannelMessageItem;
 // ── EditedBadge ──────────────────────────────────────────────────────────────
 // Shows "(edited)" next to a message. If editHistory has entries, clicking opens
 // a popover listing all previous versions with timestamps.
-function EditedBadge({ editHistory = [], editedAt }) {
+function EditedBadge({ editHistory = [], editedAt, conversationId, conversationType }) {
     const [open, setOpen] = useState(false);
     const ref = useRef(null);
     const hasHistory = editHistory.length > 0;
@@ -676,7 +681,19 @@ function EditedBadge({ editHistory = [], editedAt }) {
                                     {' · '}{formatTs(entry.editedAt)}
                                 </div>
                                 <div className="text-xs text-gray-700 dark:text-gray-300 line-clamp-3 whitespace-pre-wrap break-words">
-                                    {entry.text || <span className="italic text-gray-400">[encrypted]</span>}
+                                    {entry.isEncrypted && entry.ciphertext ? (
+                                        <EncryptedMessage
+                                            ciphertext={entry.ciphertext}
+                                            messageIv={entry.messageIv}
+                                            conversationId={conversationId}
+                                            conversationType={conversationType || 'channel'}
+                                            parentMessageId={null}
+                                        />
+                                    ) : entry.text ? (
+                                        entry.text
+                                    ) : (
+                                        <span className="italic text-gray-400">No content</span>
+                                    )}
                                 </div>
                             </div>
                         ))}
