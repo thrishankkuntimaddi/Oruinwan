@@ -3,9 +3,12 @@ import { useNavigate, useLocation, useParams } from "react-router-dom";
 import {
     Video, Calendar, Clock, Users, ChevronRight, Hash,
     Plus, Mic, PhoneOutgoing, MoreHorizontal, Radio, History,
+    ExternalLink,
 } from "lucide-react";
 import { useHuddleContext } from "../../../contexts/HuddleContext";
 import { useToast } from "../../../contexts/ToastContext";
+import { useScheduledMeetings } from "../../../hooks/useScheduledMeetings";
+import ScheduleMeetingModal from "../../messagesComp/chatWindowComp/modals/ScheduleMeetingModal";
 
 // ── Section Header (same pattern as TasksPanel) ───────────────────────────
 const SectionHeader = ({ label, isOpen, onClick, count }) => (
@@ -135,6 +138,11 @@ const MeetingsPanel = () => {
         activeWorkspaceHuddles,
     } = useHuddleContext();
 
+    // Scheduled meetings (REST + real-time socket)
+    const { meetings, createMeeting, cancelMeeting } = useScheduledMeetings(workspaceId);
+    const [showScheduleModal, setShowScheduleModal] = useState(false);
+    const [expandedScheduled, setExpandedScheduled] = useState(true);
+
     const activeTab = new URLSearchParams(location.search).get("tab") || "upcoming";
     const [expanded, setExpanded] = useState({ live: true, workspace: true, history: true });
     const [starting, setStarting] = useState(false);
@@ -161,6 +169,26 @@ const MeetingsPanel = () => {
         setSelectedHuddle(huddleData);
     };
 
+    const handleScheduleMeeting = useCallback(async (payload) => {
+        try {
+            await createMeeting(payload);
+            showToast("Meeting scheduled!", "success");
+            setShowScheduleModal(false);
+        } catch (err) {
+            showToast(err?.response?.data?.message || "Failed to schedule meeting", "error");
+            throw err;
+        }
+    }, [createMeeting, showToast]);
+
+    const handleCancelMeeting = useCallback(async (meetingId) => {
+        try {
+            await cancelMeeting(meetingId);
+            showToast("Meeting cancelled", "info");
+        } catch {
+            showToast("Failed to cancel meeting", "error");
+        }
+    }, [cancelMeeting, showToast]);
+
     const totalLive = (active ? 1 : 0) + activeWorkspaceHuddles.length;
 
     return (
@@ -184,8 +212,8 @@ const MeetingsPanel = () => {
                         )}
                     </button>
                     <button
-                        onClick={() => showToast("Schedule modal coming soon", "info")}
-                        title="Schedule for Later"
+                        onClick={() => setShowScheduleModal(true)}
+                        title="Schedule a Meeting"
                         className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-colors"
                     >
                         <Calendar size={18} />
@@ -303,22 +331,93 @@ const MeetingsPanel = () => {
                             </>
                         )}
 
-                        {/* Empty state */}
-                        {!active && activeWorkspaceHuddles.length === 0 && (
+                        {/* Upcoming Scheduled Meetings */}
+                        {meetings.length > 0 && (
+                            <>
+                                <SectionHeader
+                                    label="Scheduled"
+                                    count={meetings.length}
+                                    isOpen={expandedScheduled}
+                                    onClick={() => setExpandedScheduled(p => !p)}
+                                />
+                                {expandedScheduled && meetings.map(m => {
+                                    const start = new Date(m.startTime);
+                                    const timeStr = start.toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+                                    const isLive = m.status === 'live';
+                                    return (
+                                        <div
+                                            key={m._id}
+                                            className="mx-3 mb-1.5 p-3 rounded-xl border bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700/50 hover:shadow-md hover:border-gray-200 dark:hover:border-gray-700 transition-all group relative overflow-hidden"
+                                        >
+                                            <div className={`absolute left-0 top-0 bottom-0 w-1 rounded-l-xl ${isLive ? 'bg-gradient-to-b from-red-500 to-pink-500' : 'bg-gradient-to-b from-blue-500 to-indigo-500'}`} />
+                                            <div className="pl-2">
+                                                <div className="flex items-start justify-between mb-1">
+                                                    <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate flex-1 mr-2">{m.title}</p>
+                                                    {isLive && (
+                                                        <span className="flex items-center gap-1 px-1.5 py-0.5 bg-red-50 dark:bg-red-900/20 text-red-600 text-[9px] font-bold rounded-full border border-red-100 shrink-0">
+                                                            <span className="relative flex h-1.5 w-1.5"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" /><span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-red-500" /></span>
+                                                            LIVE
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <div className="flex items-center gap-1.5 text-[10px] text-gray-400 mb-2">
+                                                    <Clock size={9} />
+                                                    <span>{timeStr}</span>
+                                                    <span>·</span>
+                                                    <span>{m.duration} min</span>
+                                                    {m.createdBy && (
+                                                        <><span>·</span><span className="text-gray-500">{m.createdBy.username || m.createdBy.firstName}</span></>
+                                                    )}
+                                                </div>
+                                                <div className="flex gap-2">
+                                                    {m.meetingLink && (
+                                                        <a
+                                                            href={m.meetingLink}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="flex items-center gap-1 text-[10px] font-semibold text-indigo-600 dark:text-indigo-400 hover:underline"
+                                                        >
+                                                            <ExternalLink size={9} /> Join
+                                                        </a>
+                                                    )}
+                                                    <button
+                                                        onClick={() => handleCancelMeeting(m._id)}
+                                                        className="text-[10px] text-gray-400 hover:text-red-500 transition-colors ml-auto opacity-0 group-hover:opacity-100"
+                                                    >
+                                                        Cancel
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </>
+                        )}
+
+                        {/* Empty state — only when no live huddles AND no scheduled meetings */}
+                        {!active && activeWorkspaceHuddles.length === 0 && meetings.length === 0 && (
                             <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
                                 <div className="w-12 h-12 rounded-full bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center mb-3">
                                     <Video size={20} className="text-indigo-500" />
                                 </div>
                                 <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">No active huddles</p>
                                 <p className="text-xs text-gray-400 mb-4">Start an instant huddle or schedule one</p>
-                                <button
-                                    onClick={handleStartInstant}
-                                    disabled={starting}
-                                    className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-lg transition-colors shadow-sm shadow-indigo-500/30 disabled:opacity-60"
-                                >
-                                    <Plus size={13} />
-                                    {starting ? "Starting..." : "Start Instant Huddle"}
-                                </button>
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={handleStartInstant}
+                                        disabled={starting}
+                                        className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-lg transition-colors shadow-sm shadow-indigo-500/30 disabled:opacity-60"
+                                    >
+                                        <Plus size={13} />
+                                        {starting ? "Starting..." : "Instant Huddle"}
+                                    </button>
+                                    <button
+                                        onClick={() => setShowScheduleModal(true)}
+                                        className="flex items-center gap-2 px-4 py-2 border border-indigo-300 dark:border-indigo-700 text-indigo-600 dark:text-indigo-400 text-xs font-semibold rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors"
+                                    >
+                                        <Calendar size={13} /> Schedule
+                                    </button>
+                                </div>
                             </div>
                         )}
                     </>
@@ -384,6 +483,16 @@ const MeetingsPanel = () => {
                     )}
                 </div>
             </div>
+
+            {/* Schedule Meeting Modal */}
+            {showScheduleModal && (
+                <ScheduleMeetingModal
+                    onSchedule={handleScheduleMeeting}
+                    onClose={() => setShowScheduleModal(false)}
+                    conversationId={null}
+                    conversationType={null}
+                />
+            )}
         </div>
     );
 };

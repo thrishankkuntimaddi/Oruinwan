@@ -518,7 +518,9 @@ app.get('/api/scheduled-meetings', requireAuth, async (req, res) => {
 });
 
 // POST /api/scheduled-meetings  — create a new scheduled meeting
-// S-02 SECURITY FIX: companyId resolved from DB and validated. Stored on the document.
+// PERSONAL ACCOUNT FIX: companyId is optional — personal accounts don't have one.
+// Security is enforced via workspace membership check (must be member of the workspace).
+// When companyId is available (company accounts), it is stored for S-02 tenant isolation.
 app.post('/api/scheduled-meetings', requireAuth, async (req, res) => {
   try {
     const { workspaceId, channelId, dmSessionId, title, startTime, duration, meetingLink, participants } = req.body;
@@ -526,23 +528,23 @@ app.post('/api/scheduled-meetings', requireAuth, async (req, res) => {
       return res.status(400).json({ message: 'workspaceId, title, and startTime are required' });
     }
 
-    // S-02: Resolve and validate companyId
+    // Resolve caller's companyId (may be null for personal accounts)
     const User = require('./models/User');
     const dbUser = await User.findById(req.user.sub).select('companyId').lean();
-    if (!dbUser || !dbUser.companyId) {
-      return res.status(403).json({ message: 'Company membership required' });
-    }
-    const companyId = dbUser.companyId;
+    if (!dbUser) return res.status(401).json({ message: 'User not found' });
+    const companyId = dbUser.companyId || null;
 
-    // S-02: Verify workspace belongs to caller's company before creating
+    // Verify caller is a member of the workspace (primary access control)
     const WorkspaceModel = require('./src/features/workspaces/workspace.model');
-    const ws = await WorkspaceModel.findOne({ _id: workspaceId, company: companyId }).select('_id members').lean();
-    if (!ws) {
-      return res.status(403).json({ message: 'Access denied' });
-    }
+    let wsQuery = { _id: workspaceId, 'members.user': req.user.sub };
+    // For company accounts: additionally scope to their company to prevent cross-tenant access
+    if (companyId) wsQuery.company = companyId;
+
+    const ws = await WorkspaceModel.findOne(wsQuery).select('_id members').lean();
+    if (!ws) return res.status(403).json({ message: 'Access denied' });
 
     const meeting = await ScheduledMeeting.create({
-      companyId,          // S-02: stored for tenant isolation on all future queries
+      companyId,          // null for personal accounts, ObjectId for company accounts
       workspaceId,
       channelId: channelId || null,
       dmSessionId: dmSessionId || null,

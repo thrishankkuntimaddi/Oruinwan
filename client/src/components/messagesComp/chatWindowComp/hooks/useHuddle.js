@@ -8,7 +8,7 @@
  * ICE candidates; no media ever passes through the server.
  *
  * Usage:
- *   const huddle = useHuddle({ channelId, currentUser, socket });
+ *   const huddle = useHuddle({ channelId, dmId, currentUser, socket });
  *   // huddle.active, huddle.huddleId, huddle.participants, huddle.muted
  *   // huddle.startHuddle(), huddle.joinHuddle(id), huddle.leaveHuddle()
  *   // huddle.toggleMute()
@@ -21,7 +21,7 @@ const ICE_SERVERS = [
     { urls: 'stun:stun1.l.google.com:19302' },
 ];
 
-export function useHuddle({ channelId, currentUser, socket }) {
+export function useHuddle({ channelId, dmId, workspaceId, currentUser, socket }) {
     const [active, setActive] = useState(false);
     const [huddleId, setHuddleId] = useState(null);
     const [participants, setParticipants] = useState([]); // [{ userId, username, audioEnabled, stream? }]
@@ -102,17 +102,28 @@ export function useHuddle({ channelId, currentUser, socket }) {
     // ── Public API ─────────────────────────────────────────────────────────
 
     const startHuddle = useCallback(async () => {
-        if (!socket || !channelId || !currentUser) return;
+        if (!socket || (!channelId && !dmId && !workspaceId) || !currentUser) return;
 
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
             localStreamRef.current = stream;
 
             const id = uuidv4();
-            socket.emit('huddle:start', { channelId, huddleId: id });
+            socket.emit('huddle:start', {
+                channelId: channelId || undefined,
+                dmId: dmId || undefined,
+                workspaceId: workspaceId || undefined,
+                huddleId: id,
+            });
 
-            // Immediately join own huddle
-            socket.emit('huddle:join', { huddleId: id, channelId, audioEnabled: true });
+            // Immediately self-join
+            socket.emit('huddle:join', {
+                huddleId: id,
+                channelId: channelId || undefined,
+                dmId: dmId || undefined,
+                workspaceId: workspaceId || undefined,
+                audioEnabled: true,
+            });
 
             setHuddleId(id);
             setActive(true);
@@ -127,16 +138,22 @@ export function useHuddle({ channelId, currentUser, socket }) {
             console.error('[useHuddle] Failed to get microphone:', err);
             throw err;
         }
-    }, [socket, channelId, currentUser]);
+    }, [socket, channelId, dmId, workspaceId, currentUser]);
 
     const joinHuddle = useCallback(async (id) => {
-        if (!socket || !channelId || !currentUser) return;
+        if (!socket || (!channelId && !dmId && !workspaceId) || !currentUser) return;
 
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
             localStreamRef.current = stream;
 
-            socket.emit('huddle:join', { huddleId: id, channelId, audioEnabled: true });
+            socket.emit('huddle:join', {
+                huddleId: id,
+                channelId: channelId || undefined,
+                dmId: dmId || undefined,
+                workspaceId: workspaceId || undefined,
+                audioEnabled: true,
+            });
             setHuddleId(id);
             setActive(true);
             setMuted(false);
@@ -154,16 +171,21 @@ export function useHuddle({ channelId, currentUser, socket }) {
             console.error('[useHuddle] Failed to get microphone:', err);
             throw err;
         }
-    }, [socket, channelId, currentUser]);
+    }, [socket, channelId, dmId, workspaceId, currentUser]);
 
     const leaveHuddle = useCallback(() => {
         if (!socket || !huddleId) return;
-        socket.emit('huddle:leave', { huddleId, channelId });
+        socket.emit('huddle:leave', {
+            huddleId,
+            channelId: channelId || undefined,
+            dmId: dmId || undefined,
+            workspaceId: workspaceId || undefined,
+        });
         cleanupAll();
         setActive(false);
         setHuddleId(null);
         setParticipants([]);
-    }, [socket, huddleId, channelId, cleanupAll]);
+    }, [socket, huddleId, channelId, dmId, workspaceId, cleanupAll]);
 
     const toggleMute = useCallback(() => {
         if (!localStreamRef.current || !socket || !huddleId) return;

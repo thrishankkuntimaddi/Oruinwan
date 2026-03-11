@@ -60,9 +60,10 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
     const location = useLocation();
     const { refreshContacts } = useContacts();
 
-    // Phase 7.7 — Huddle (only active for channels)
+    // Phase 7.7 — Huddle (channels use channelId; DMs use dmId)
     const huddle = useHuddle({
         channelId: chat?.type === 'channel' ? chat?.id : null,
+        dmId: chat?.type === 'dm' ? chat?.id : null,
         currentUser: user,
         socket: rawSocket,
     });
@@ -1194,10 +1195,10 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
                 onShowThreadsView={handleShowThreadsView}
                 isThreadsOnly={showThreadsOnly}
                 onShowMemberList={handleShowMemberList}
-                // Phase 7.7 — Huddle: toggle start/leave
+                // Phase 7.7 — Huddle: channels start/leave, DMs start voice huddle
                 onStartHuddle={chat?.type === 'channel'
                     ? (huddle.active ? huddle.leaveHuddle : huddle.startHuddle)
-                    : undefined}
+                    : (huddle.active ? huddle.leaveHuddle : huddle.startHuddle)}
                 huddleActive={huddle.active}
             />
 
@@ -1360,8 +1361,8 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
                     onClose={() => setShowMeetingModal(false)}
                 />
             )}
-            {/* Phase 7.7 — Huddle overlay (fixed bottom-left, channel only) */}
-            {chat?.type === 'channel' && (
+            {/* Phase 7.7 — Huddle overlay (fixed bottom-left, for channels and DMs) */}
+            {(chat?.type === 'channel' || chat?.type === 'dm') && (
                 <HuddleOverlay
                     active={huddle.active}
                     participants={huddle.participants}

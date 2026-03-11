@@ -21,11 +21,9 @@ export function HuddleProvider({ workspaceId, children }) {
     const { socket } = useSocket();
     const { user: currentUser } = useAuth();
 
-    // The huddle hook — workspace-level instant huddles use a special channel id
-    const instantChannelId = workspaceId ? `workspace-${workspaceId}` : null;
-
+    // Workspace-level instant huddles go through workspaceId (not a fake channelId)
     const huddle = useHuddle({
-        channelId: instantChannelId,
+        workspaceId: workspaceId || null,
         currentUser,
         socket,
     });

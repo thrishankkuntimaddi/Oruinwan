@@ -1,11 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
     Mic, MicOff, Video, VideoOff, Monitor, Phone,
     Users, MessageSquare, Grid, Signal, Settings, Hand,
-    Radio, Plus, Play,
+    Radio, Plus, Play, Calendar,
 } from 'lucide-react';
 import { useHuddleContext } from '../../contexts/HuddleContext';
 import { useToast } from '../../contexts/ToastContext';
+import { useScheduledMeetings } from '../../hooks/useScheduledMeetings';
+import ScheduleMeetingModal from '../../components/messagesComp/chatWindowComp/modals/ScheduleMeetingModal';
+import { useParams } from 'react-router-dom';
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 function formatTime(seconds) {
@@ -67,7 +70,7 @@ const ParticipantCard = ({ participant, isLocal, colorIdx }) => {
 };
 
 // ── Landing / No Huddle Selected View ─────────────────────────────────────
-const LandingView = ({ onStart, starting }) => (
+const LandingView = ({ onStart, onSchedule, starting }) => (
     <div className="h-full flex flex-col items-center justify-center text-center px-8 bg-gray-50 dark:bg-gray-950">
         {/* Ambient blobs */}
         <div className="absolute inset-0 pointer-events-none overflow-hidden">
@@ -105,8 +108,11 @@ const LandingView = ({ onStart, starting }) => (
                         </>
                     )}
                 </button>
-                <button className="flex items-center justify-center gap-2 w-full px-6 py-3 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 font-medium rounded-2xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-all text-sm">
-                    <Play size={14} />
+                <button
+                    onClick={onSchedule}
+                    className="flex items-center justify-center gap-2 w-full px-6 py-3 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 font-medium rounded-2xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-all text-sm"
+                >
+                    <Calendar size={14} />
                     Schedule for Later
                 </button>
             </div>
@@ -319,6 +325,7 @@ const ConnectingView = () => (
 // ── Main Component ─────────────────────────────────────────────────────────
 const Meetings = () => {
     const { showToast } = useToast();
+    const { workspaceId } = useParams();
 
     const {
         active,
@@ -330,6 +337,9 @@ const Meetings = () => {
         leaveHuddle,
         toggleMute,
     } = useHuddleContext();
+
+    const { createMeeting } = useScheduledMeetings(workspaceId);
+    const [showScheduleModal, setShowScheduleModal] = useState(false);
 
     const [starting, setStarting] = useState(false);
     const [connecting, setConnecting] = useState(false);
@@ -365,31 +375,68 @@ const Meetings = () => {
         setIsScreenSharing(false);
     };
 
+    const handleSchedule = useCallback(async (payload) => {
+        try {
+            await createMeeting(payload);
+            showToast("Meeting scheduled!", "success");
+            setShowScheduleModal(false);
+        } catch (err) {
+            showToast(err?.response?.data?.message || "Failed to schedule meeting", "error");
+            throw err;
+        }
+    }, [createMeeting, showToast]);
+
     // Show connecting animation briefly
     if (connecting) return <ConnectingView />;
 
     // Active huddle in this context — show the room
     if (active && selectedHuddle) {
         return (
-            <ActiveRoom
-                huddle={selectedHuddle}
-                participants={participants}
-                muted={muted}
-                isVideoOff={isVideoOff}
-                isScreenSharing={isScreenSharing}
-                onToggleMute={toggleMute}
-                onToggleVideo={() => setIsVideoOff(v => !v)}
-                onToggleScreen={() => {
-                    setIsScreenSharing(s => !s);
-                    showToast(isScreenSharing ? "Screen sharing stopped" : "Screen sharing started", "info");
-                }}
-                onLeave={handleLeave}
-            />
+            <>
+                <ActiveRoom
+                    huddle={selectedHuddle}
+                    participants={participants}
+                    muted={muted}
+                    isVideoOff={isVideoOff}
+                    isScreenSharing={isScreenSharing}
+                    onToggleMute={toggleMute}
+                    onToggleVideo={() => setIsVideoOff(v => !v)}
+                    onToggleScreen={() => {
+                        setIsScreenSharing(s => !s);
+                        showToast(isScreenSharing ? "Screen sharing stopped" : "Screen sharing started", "info");
+                    }}
+                    onLeave={handleLeave}
+                />
+                {showScheduleModal && (
+                    <ScheduleMeetingModal
+                        onSchedule={handleSchedule}
+                        onClose={() => setShowScheduleModal(false)}
+                        conversationId={null}
+                        conversationType={null}
+                    />
+                )}
+            </>
         );
     }
 
     // Landing view
-    return <LandingView onStart={handleStart} starting={starting} />;
+    return (
+        <>
+            <LandingView
+                onStart={handleStart}
+                onSchedule={() => setShowScheduleModal(true)}
+                starting={starting}
+            />
+            {showScheduleModal && (
+                <ScheduleMeetingModal
+                    onSchedule={handleSchedule}
+                    onClose={() => setShowScheduleModal(false)}
+                    conversationId={null}
+                    conversationType={null}
+                />
+            )}
+        </>
+    );
 };
 
 export default Meetings;

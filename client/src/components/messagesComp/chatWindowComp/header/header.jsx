@@ -233,11 +233,14 @@ export default function Header({
               {chat.type === "dm" && (
                 <>
                   <button
-                    title="Voice Call (Coming Soon)"
-                    onClick={() => showToast?.("🔧 Voice calls coming soon!", "info")}
-                    className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-green-600 dark:hover:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 rounded transition-colors"
+                    title={huddleActive ? "Leave Voice Call" : "Start Voice Call"}
+                    onClick={() => onStartHuddle ? onStartHuddle() : showToast?.("🔧 Voice calls coming soon!", "info")}
+                    className={`p-1.5 rounded transition-colors ${huddleActive
+                      ? 'text-green-500 bg-green-50 dark:bg-green-900/30 animate-pulse'
+                      : 'text-gray-400 dark:text-gray-500 hover:text-green-600 dark:hover:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20'
+                    }`}
                   >
-                    <Phone size={16} />
+                    {huddleActive ? <PhoneOff size={16} /> : <Phone size={16} />}
                   </button>
                   <button
                     title="Video Call (Coming Soon)"

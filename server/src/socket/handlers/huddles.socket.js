@@ -16,85 +16,139 @@
 function registerHuddleHandlers(io, socket) {
 
     /**
-     * Start a huddle in a channel
+     * Start a huddle in a channel, DM, or workspace (instant huddle)
+     * data: { channelId?, dmId?, workspaceId?, huddleId }
      */
     socket.on('huddle:start', async (data) => {
-        const { channelId, huddleId } = data;
+        const { channelId, dmId, workspaceId, huddleId } = data;
 
-        if (!channelId || !huddleId) {
-            socket.emit('error', { message: 'Missing channelId or huddleId' });
+        if (!huddleId) {
+            socket.emit('error', { message: 'Missing huddleId' });
+            return;
+        }
+        if (!channelId && !dmId && !workspaceId) {
+            socket.emit('error', { message: 'Missing channelId, dmId, or workspaceId' });
             return;
         }
 
-        // SECURITY: Verify channel membership before announcing huddle start.
-        // Any user knowing a channelId could previously push huddle:started into
-        // any channel room without being a member.
         try {
-            const Channel = require('../../features/channels/channel.model');
-            const channel = await Channel.findById(channelId).select('members');
-            if (!channel || !channel.isMember(socket.user.id)) {
-                console.warn(`🚫 [huddle:start] User ${socket.user.id} denied — not a member of channel:${channelId}`);
-                socket.emit('error', { message: 'Not a member of this channel' });
-                return;
+            if (channelId) {
+                // Channel huddle — verify channel membership
+                const Channel = require('../../features/channels/channel.model');
+                const channel = await Channel.findById(channelId).select('members');
+                if (!channel || !channel.isMember(socket.user.id)) {
+                    socket.emit('error', { message: 'Not a member of this channel' });
+                    return;
+                }
+                io.to(`channel:${channelId}`).emit('huddle:started', {
+                    huddleId, channelId,
+                    startedBy: { _id: socket.user.id, username: socket.user.username || 'Unknown' },
+                    timestamp: new Date()
+                });
+
+            } else if (dmId) {
+                // DM huddle — verify DM participation
+                const DMSession = require('../../features/chatlist/dmSession.model');
+                const dm = await DMSession.findById(dmId).select('participants');
+                const participants = dm?.participants?.map?.(p => String(p._id || p)) || [];
+                if (!dm || !participants.includes(String(socket.user.id))) {
+                    socket.emit('error', { message: 'Not a participant of this DM' });
+                    return;
+                }
+                io.to(`dm:${dmId}`).emit('huddle:started', {
+                    huddleId, dmId,
+                    startedBy: { _id: socket.user.id, username: socket.user.username || 'Unknown' },
+                    timestamp: new Date()
+                });
+
+            } else if (workspaceId) {
+                // Workspace instant huddle (from Meetings page) — verify workspace membership
+                const WorkspaceModel = require('../../features/workspaces/workspace.model');
+                const ws = await WorkspaceModel.findOne({
+                    _id: workspaceId,
+                    'members.user': socket.user.id
+                }).select('_id').lean();
+                if (!ws) {
+                    socket.emit('error', { message: 'Not a member of this workspace' });
+                    return;
+                }
+                io.to(`workspace:${workspaceId}`).emit('huddle:started', {
+                    huddleId, workspaceId,
+                    startedBy: { _id: socket.user.id, username: socket.user.username || 'Unknown' },
+                    timestamp: new Date()
+                });
             }
         } catch (err) {
-            console.error('[huddle:start] Channel membership check failed:', err);
-            socket.emit('error', { message: 'Failed to verify channel membership' });
-            return;
+            console.error('[huddle:start] Membership check failed:', err);
+            socket.emit('error', { message: 'Failed to verify membership' });
         }
-
-        // Notify channel that huddle started
-        io.to(`channel:${channelId}`).emit('huddle:started', {
-            huddleId,
-            channelId,
-            startedBy: {
-                _id: socket.user.id,
-                username: socket.user.username || 'Unknown'
-            },
-            timestamp: new Date()
-        });
     });
 
     /**
-     * Join a huddle
+     * Join a huddle (channel, DM, or workspace)
+     * data: { huddleId, channelId?, dmId?, workspaceId?, audioEnabled? }
      */
     socket.on('huddle:join', async (data) => {
-        const { huddleId, channelId, audioEnabled = true } = data;
+        const { huddleId, channelId, dmId, workspaceId, audioEnabled = true } = data;
 
         if (!huddleId) {
             socket.emit('error', { message: 'Missing huddleId' });
             return;
         }
 
-        // SECURITY FIX (BUG-7): Verify channel membership before joining huddle room.
-        // Previously any authenticated user knowing a huddleId could join without validation.
-        // Huddles are tied to channels — you must be a channel member to attend.
+        // SECURITY: Must provide at least one scope for membership verification
+        if (!channelId && !dmId && !workspaceId) {
+            socket.emit('error', { message: 'channelId, dmId, or workspaceId required to join a huddle' });
+            return;
+        }
+
+        // Verify membership based on scope
         if (channelId) {
             try {
                 const Channel = require('../../features/channels/channel.model');
                 const channel = await Channel.findById(channelId).select('members');
                 if (!channel || !channel.isMember(socket.user.id)) {
-                    console.warn(`\uD83D\uDEAB [huddle:join] User ${socket.user.id} denied — not a member of channel:${channelId}`);
                     socket.emit('error', { message: 'Not a member of this channel' });
                     return;
                 }
             } catch (err) {
-                console.error('[huddle:join] Channel membership check failed:', err);
                 socket.emit('error', { message: 'Failed to verify channel membership' });
                 return;
             }
-        } else {
-            // No channelId provided — deny join (cannot verify authorization without it)
-            console.warn(`\uD83D\uDEAB [huddle:join] User ${socket.user.id} denied — no channelId provided for huddle:${huddleId}`);
-            socket.emit('error', { message: 'channelId required to join a huddle' });
-            return;
+        } else if (dmId) {
+            try {
+                const DMSession = require('../../features/chatlist/dmSession.model');
+                const dm = await DMSession.findById(dmId).select('participants');
+                const participants = dm?.participants?.map?.(p => String(p._id || p)) || [];
+                if (!dm || !participants.includes(String(socket.user.id))) {
+                    socket.emit('error', { message: 'Not a participant of this DM' });
+                    return;
+                }
+            } catch (err) {
+                socket.emit('error', { message: 'Failed to verify DM membership' });
+                return;
+            }
+        } else if (workspaceId) {
+            try {
+                const WorkspaceModel = require('../../features/workspaces/workspace.model');
+                const ws = await WorkspaceModel.findOne({
+                    _id: workspaceId,
+                    'members.user': socket.user.id
+                }).select('_id').lean();
+                if (!ws) {
+                    socket.emit('error', { message: 'Not a member of this workspace' });
+                    return;
+                }
+            } catch (err) {
+                socket.emit('error', { message: 'Failed to verify workspace membership' });
+                return;
+            }
         }
 
-        // Join huddle room
+        // All checks passed — join huddle room
         socket.join(`huddle:${huddleId}`);
 
-
-        // Broadcast to huddle participants
+        // Broadcast to huddle participants that someone joined
         io.to(`huddle:${huddleId}`).emit('huddle:joined', {
             huddleId,
             userId: socket.user.id,
@@ -103,12 +157,13 @@ function registerHuddleHandlers(io, socket) {
             timestamp: new Date()
         });
 
-        // Notify channel
+        // Notify the originating room (so non-participants see the join)
         if (channelId) {
-            io.to(`channel:${channelId}`).emit('huddle:participant_joined', {
-                huddleId,
-                userId: socket.user.id
-            });
+            io.to(`channel:${channelId}`).emit('huddle:participant_joined', { huddleId, userId: socket.user.id });
+        } else if (dmId) {
+            io.to(`dm:${dmId}`).emit('huddle:participant_joined', { huddleId, userId: socket.user.id });
+        } else if (workspaceId) {
+            io.to(`workspace:${workspaceId}`).emit('huddle:participant_joined', { huddleId, userId: socket.user.id });
         }
     });
 
@@ -116,13 +171,11 @@ function registerHuddleHandlers(io, socket) {
      * Leave a huddle
      */
     socket.on('huddle:leave', (data) => {
-        const { huddleId, channelId } = data;
+        const { huddleId, channelId, dmId, workspaceId } = data;
 
         if (!huddleId) return;
 
-        // Leave huddle room
         socket.leave(`huddle:${huddleId}`);
-
 
         // Broadcast to remaining participants
         io.to(`huddle:${huddleId}`).emit('huddle:left', {
@@ -131,14 +184,16 @@ function registerHuddleHandlers(io, socket) {
             timestamp: new Date()
         });
 
-        // Notify channel
+        // Notify originating room
         if (channelId) {
-            io.to(`channel:${channelId}`).emit('huddle:participant_left', {
-                huddleId,
-                userId: socket.user.id
-            });
+            io.to(`channel:${channelId}`).emit('huddle:participant_left', { huddleId, userId: socket.user.id });
+        } else if (dmId) {
+            io.to(`dm:${dmId}`).emit('huddle:participant_left', { huddleId, userId: socket.user.id });
+        } else if (workspaceId) {
+            io.to(`workspace:${workspaceId}`).emit('huddle:participant_left', { huddleId, userId: socket.user.id });
         }
     });
+
 
     /**
      * End a huddle
