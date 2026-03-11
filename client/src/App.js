@@ -97,7 +97,7 @@ import OwnerSecurity from './pages/OwnerDashboard/OwnerSecurity'; // NEW - Dedic
 // import ManagerDashboard from "./pages/ManagerDashboard"; // Unused
 import ManagerOverview from "./components/manager/ManagerOverview";
 // import ManagerWorkspaces from "./components/manager/ManagerWorkspaces";
-// import ManagerProjects from "./components/manager/ManagerProjects"; // NEW
+import ManagerProjects from "./components/manager/ManagerProjects"; // NEW
 // import ManagerLocation from "./components/manager/ManagerLocation"; // NEW - Unused
 import ManagerTasks from "./components/manager/ManagerTasks";
 import ManagerReports from "./components/manager/ManagerReports";
@@ -591,8 +591,8 @@ function App() {
                             <Route path="reports" element={<ManagerReports />} />
                             <Route path="settings" element={<ManagerSettings />} />
 
-                            {/* New Manager Routes */}
-                            {/* <Route path="projects" element={<ManagerProjects />} /> */}
+                            {/* Manager sub-routes */}
+                            <Route path="projects" element={<ManagerProjects />} />
                             <Route path="unassigned" element={<UnassignedMembers />} /> {/* Distinct Component */}
                           </Route>
 

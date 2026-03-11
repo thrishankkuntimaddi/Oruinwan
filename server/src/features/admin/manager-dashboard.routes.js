@@ -219,10 +219,10 @@ router.get('/dashboard/metrics/:departmentId', requireAuth, requireManager, asyn
                 meetingsThisWeek: 0 // Placeholder - add when meetings model exists
             },
             department: {
-                name: department.name,
-                description: department.description,
-                head: department.head,
-                createdAt: department.createdAt
+                name: dept.name,
+                description: dept.description,
+                head: dept.head,
+                createdAt: dept.createdAt
             }
         };
 
@@ -370,6 +370,133 @@ router.get('/dashboard/reports/:departmentId', requireAuth, requireManager, asyn
         });
     } catch (error) {
         console.error('Manager Dashboard Reports Error:', error);
+        res.status(500).json({ message: 'Server error', error: error.message });
+    }
+});
+
+/**
+ * GET /api/manager/tasks/:departmentId
+ * Get all tasks assigned to members of a department, grouped by status
+ */
+router.get('/tasks/:departmentId', requireAuth, requireManager, async (req, res) => {
+    try {
+        const { departmentId } = req.params;
+        const userId = req.user.sub || req.user._id;
+
+        // Get all department member IDs
+        const members = await User.find({
+            departments: departmentId,
+            accountStatus: { $ne: 'removed' }
+        }).select('_id');
+        const memberIds = members.map(m => m._id);
+
+        // Also include tasks created by the manager themselves
+        memberIds.push(userId);
+
+        // Fetch all tasks for these users (non-deleted)
+        const allTasks = await Task.find({
+            $or: [
+                { assignedTo: { $in: memberIds } },
+                { createdBy: { $in: memberIds } }
+            ],
+            deleted: { $ne: true }
+        })
+            .populate('assignedTo', 'username email profilePicture')
+            .populate('createdBy', 'username email')
+            .sort({ createdAt: -1 })
+            .lean();
+
+        // Group by status
+        const now = new Date();
+        const tasks = {
+            open: allTasks.filter(t => ['backlog', 'todo'].includes(t.status)),
+            inProgress: allTasks.filter(t => ['in_progress', 'review', 'blocked'].includes(t.status)),
+            completed: allTasks.filter(t => t.status === 'done'),
+            overdue: allTasks.filter(t =>
+                t.dueDate && new Date(t.dueDate) < now && !['done', 'cancelled'].includes(t.status)
+            )
+        };
+
+        res.json({ tasks, total: allTasks.length });
+    } catch (error) {
+        console.error('Manager Tasks GET Error:', error);
+        res.status(500).json({ message: 'Server error', error: error.message });
+    }
+});
+
+/**
+ * POST /api/manager/tasks/:departmentId
+ * Create a new task for a department
+ */
+router.post('/tasks/:departmentId', requireAuth, requireManager, async (req, res) => {
+    try {
+        const userId = req.user.sub || req.user._id;
+        const { title, description, priority, dueDate, assignedTo } = req.body;
+
+        if (!title?.trim()) {
+            return res.status(400).json({ message: 'Task title is required' });
+        }
+
+        const user = await User.findById(userId).select('companyId').lean();
+
+        const task = new Task({
+            title: title.trim(),
+            description: description || '',
+            priority: priority || 'medium',
+            dueDate: dueDate || null,
+            assignedTo: assignedTo || [],
+            createdBy: userId,
+            company: user?.companyId || null,
+            status: 'todo',
+            taskType: 'personal',
+            visibility: 'private',
+            deleted: false
+        });
+
+        await task.save();
+        await task.populate('assignedTo', 'username email profilePicture');
+        await task.populate('createdBy', 'username email');
+
+        res.status(201).json({ task, message: 'Task created successfully' });
+    } catch (error) {
+        console.error('Manager Tasks POST Error:', error);
+        res.status(500).json({ message: 'Server error', error: error.message });
+    }
+});
+
+/**
+ * PATCH /api/manager/tasks/:taskId/status
+ * Update the status of a task
+ */
+router.patch('/tasks/:taskId/status', requireAuth, requireManager, async (req, res) => {
+    try {
+        const { taskId } = req.params;
+        const { status } = req.body;
+
+        const validStatuses = ['backlog', 'todo', 'in_progress', 'review', 'blocked', 'done', 'cancelled'];
+
+        // Map frontend status names to schema values
+        const statusMap = { 'in-progress': 'in_progress', 'done': 'done', 'open': 'todo' };
+        const normalizedStatus = statusMap[status] || status;
+
+        if (!validStatuses.includes(normalizedStatus)) {
+            return res.status(400).json({ message: `Invalid status: ${status}` });
+        }
+
+        const task = await Task.findByIdAndUpdate(
+            taskId,
+            {
+                status: normalizedStatus,
+                ...(normalizedStatus === 'done' ? { completedAt: new Date() } : {})
+            },
+            { new: true }
+        ).populate('assignedTo', 'username email profilePicture');
+
+        if (!task) return res.status(404).json({ message: 'Task not found' });
+
+        res.json({ task, message: 'Task status updated' });
+    } catch (error) {
+        console.error('Manager Tasks PATCH Error:', error);
         res.status(500).json({ message: 'Server error', error: error.message });
     }
 });

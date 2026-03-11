@@ -55,7 +55,7 @@ const MyWorkspaces = ({ data }) => {
 
                                 <div>
                                     <button
-                                        onClick={() => navigate('/workspaces')}
+                                        onClick={() => navigate(`/workspace/${ws._id}/home`)}
                                         className="px-4 py-2 text-sm font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors">
                                         Manage
                                     </button>
