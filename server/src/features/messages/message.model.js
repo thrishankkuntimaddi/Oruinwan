@@ -151,8 +151,11 @@ const MessageSchema = new mongoose.Schema({
   editedAt: { type: Date, default: null },
   // Full edit history — each entry is a snapshot of the message before the edit
   editHistory: [{
-    text: { type: String, default: '' },     // plaintext snapshot (or '[encrypted]' for E2EE)
-    editedAt: { type: Date, default: Date.now }
+    text:       { type: String, default: null },     // plaintext snapshot (plaintext edits)
+    ciphertext: { type: String, default: null },     // old encrypted payload (E2EE edits)
+    messageIv:  { type: String, default: null },     // IV for the old ciphertext
+    isEncrypted:{ type: Boolean, default: false },   // true ↔ this snapshot is E2EE
+    editedAt:   { type: Date, default: Date.now }
   }],
   isDeleted: { type: Boolean, default: false },    // Soft delete flag (universal)
   version: { type: Number, default: 1 },           // Increments on each edit

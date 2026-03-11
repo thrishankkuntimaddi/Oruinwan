@@ -51,6 +51,8 @@ function DMMessageItem({
     const isSelected = selectedIds?.has(msg.id) || false;
     const [showToolbar, setShowToolbar] = useState(false);
     const [showReactionPicker, setShowReactionPicker] = useState(false);
+    const [menuPos, setMenuPos] = useState(null);
+    const [reactionPos, setReactionPos] = useState(null);
     const reactionPickerRef = useRef(null);
 
     // Edit state
@@ -416,14 +418,32 @@ function DMMessageItem({
                 {/* Reaction Picker */}
                 <div className="relative" ref={reactionPickerRef}>
                     <button
-                        onClick={() => setShowReactionPicker(!showReactionPicker)}
+                        onClick={(e) => {
+                            const rect = e.currentTarget.getBoundingClientRect();
+                            const spaceBelow = window.innerHeight - rect.bottom;
+                            setReactionPos({
+                                right: window.innerWidth - rect.right,
+                                openUp: spaceBelow < 320,
+                                top: rect.bottom + 4,
+                                bottom: window.innerHeight - rect.top + 4,
+                            });
+                            setShowReactionPicker(v => !v);
+                        }}
                         className={`p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 ${showReactionPicker ? "text-blue-600 dark:text-blue-400" : "text-gray-400 dark:text-gray-500"}`}
                         title="React"
                     >
                         <Smile size={14} />
                     </button>
-                    {showReactionPicker && (
-                        <div className="absolute right-0 top-full mt-1 z-50">
+                    {showReactionPicker && reactionPos && (
+                        <div
+                            className="fixed z-[999]"
+                            style={{
+                                right: reactionPos.right,
+                                ...(reactionPos.openUp
+                                    ? { bottom: reactionPos.bottom }
+                                    : { top: reactionPos.top })
+                            }}
+                        >
                             <ReactionPicker
                                 onSelect={(emoji) => {
                                     toggleReaction(emoji);
@@ -437,9 +457,31 @@ function DMMessageItem({
                 <button onClick={() => forwardMessage && forwardMessage(msg.id)} className="p-1 text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded" title="Forward"><Share size={14} /></button>
 
                 <div className="relative">
-                    <button onClick={(e) => toggleMsgMenu(e, msg.id)} className={`p-1 rounded ${openMsgMenuId === msg.id ? "bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100" : "text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700"}`} title="More"><MoreHorizontal size={14} /></button>
-                    {openMsgMenuId === msg.id && (
-                        <div className="absolute right-0 top-full mt-1 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl py-1 z-50 text-sm animate-fade-in">
+                    <button
+                        onClick={(e) => {
+                            const rect = e.currentTarget.getBoundingClientRect();
+                            const spaceBelow = window.innerHeight - rect.bottom;
+                            setMenuPos({
+                                right: window.innerWidth - rect.right,
+                                openUp: spaceBelow < 260,
+                                top: rect.bottom + 4,
+                                bottom: window.innerHeight - rect.top + 4,
+                            });
+                            toggleMsgMenu(e, msg.id);
+                        }}
+                        className={`p-1 rounded ${openMsgMenuId === msg.id ? "bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100" : "text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700"}`}
+                        title="More"
+                    ><MoreHorizontal size={14} /></button>
+                    {openMsgMenuId === msg.id && menuPos && (
+                        <div
+                            className="fixed z-[999] w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl py-1 text-sm animate-fade-in"
+                            style={{
+                                right: menuPos.right,
+                                ...(menuPos.openUp
+                                    ? { bottom: menuPos.bottom }
+                                    : { top: menuPos.top })
+                            }}
+                        >
                             <button onClick={() => { copyMessage(msg.id); toggleMsgMenu({ stopPropagation: () => { } }, null); }} className="w-full text-left px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2 text-gray-700 dark:text-gray-300"><Copy size={14} /> Copy text</button>
                             <button onClick={() => { replyToMessage(msg.id); toggleMsgMenu({ stopPropagation: () => { } }, null); }} className="w-full text-left px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2 text-gray-700 dark:text-gray-300"><MessageSquare size={14} /> Reply</button>
                             <button onClick={async () => { try { await api.post(`/api/v2/messages/${msg._id || msg.id}/pin`, { pin: !msg.isPinned }); } catch (err) { console.error('[DMMessageItem] Pin toggle failed:', err); } toggleMsgMenu({ stopPropagation: () => { } }, null); }} className="w-full text-left px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2 text-gray-700 dark:text-gray-300"><Pin size={14} /> {msg.isPinned ? "Unpin message" : "Pin message"}</button>
