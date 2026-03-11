@@ -21,7 +21,7 @@ import ChannelsPanel from "./components/layout/panels/ChannelsPanel";
 import MessagesPanel from "./components/layout/panels/MessagesPanel";
 import TasksPanel from "./components/layout/panels/TasksPanel";
 import NotesPanel from "./components/layout/panels/NotesPanel";
-import UpdatesPanel from "./components/layout/panels/UpdatesPanel";
+
 import MeetingsPanel from "./components/layout/panels/MeetingsPanel";
 import { HuddleProvider } from "./contexts/HuddleContext";
 import { NotificationsProvider } from "./contexts/NotificationsContext";
@@ -380,23 +380,23 @@ function App() {
                             }
                           />
 
-                          {/* Updates */}
-                          <Route
-                            path="/workspace/:workspaceId/updates"
-                            element={
-                              <RequireAuth>
-                                <WorkspaceProvider>
-                                  <RequireWorkspace>
-                                    <MainLayout sidePanel={<UpdatesPanel />}>
-                                      <Updates />
-                                    </MainLayout>
-                                  </RequireWorkspace>
-                                </WorkspaceProvider>
-                              </RequireAuth>
-                            }
-                          />
+                           {/* Updates — self-contained layout with its own filter sidebar */}
+                           <Route
+                             path="/workspace/:workspaceId/updates"
+                             element={
+                               <RequireAuth>
+                                 <WorkspaceProvider>
+                                   <RequireWorkspace>
+                                     <MainLayout>
+                                       <Updates />
+                                     </MainLayout>
+                                   </RequireWorkspace>
+                                 </WorkspaceProvider>
+                               </RequireAuth>
+                             }
+                           />
 
-                          {/* Apps & Integrations */}
+                           {/* Apps & Integrations */}
                           <Route
                             path="/workspace/:workspaceId/apps"
                             element={
