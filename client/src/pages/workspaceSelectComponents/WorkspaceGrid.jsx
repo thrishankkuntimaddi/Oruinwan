@@ -1,15 +1,9 @@
 import React from 'react';
-import { User, ArrowRight, Plus, Shield } from 'lucide-react';
+import { User, ArrowRight, Plus, Shield, Lock } from 'lucide-react';
 
 /**
  * WorkspaceGrid - Displays grid of existing workspaces + "Create New" card
  * Pure presentational component - all interactions delegated to parent via props
- * 
- * @param {Array} workspaces - Array of workspace objects
- * @param {function} onWorkspaceClick - Callback when clicking workspace (workspaceId)
- * @param {function} onCreateClick - Callback when clicking "Create New"
- * @param {function} getIconComponent - Helper to get icon component from icon name
- * @param {Object} user - User object for checking plan limits
  */
 const WorkspaceGrid = ({
     workspaces,
@@ -21,6 +15,10 @@ const WorkspaceGrid = ({
     // Check limits: Personal users can only create 3 workspaces
     const ownedWorkspacesCount = workspaces.filter(ws => ws.isOwner).length;
     const isLimitReached = user?.userType === 'personal' && ownedWorkspacesCount >= 3;
+
+    // Company members (role: 'member') cannot create workspaces
+    const isCompanyMember = user?.companyRole === 'member' && user?.userType !== 'personal';
+    const companyName = user?.companyName || 'your company';
 
     return (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -63,38 +61,60 @@ const WorkspaceGrid = ({
                 );
             })}
 
-            {/* New Workspace Card */}
-            <button
-                onClick={() => {
-                    if (!isLimitReached) onCreateClick();
-                }}
-                disabled={isLimitReached}
-                className={`group relative flex flex-col items-center justify-center h-64 border-2 border-dashed rounded-2xl transition-all duration-300 ${isLimitReached
-                    ? 'border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 cursor-not-allowed opacity-70'
-                    : 'border-slate-300 dark:border-slate-600 hover:border-indigo-400 dark:hover:border-indigo-600 hover:bg-indigo-50/50 dark:hover:bg-indigo-900/20'
-                    }`}
-            >
-                <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-4 transition-colors ${isLimitReached
-                    ? 'bg-slate-100 dark:bg-slate-800 text-slate-400'
-                    : 'bg-slate-100 text-slate-400 group-hover:bg-indigo-100 group-hover:text-indigo-600'
-                    }`}>
-                    {isLimitReached ? <Shield size={32} /> : <Plus size={32} />}
+            {/* New Workspace Card — locked for company members */}
+            {isCompanyMember ? (
+                <div className="group relative flex flex-col items-center justify-center h-64 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-2xl bg-slate-50 dark:bg-slate-800/50 cursor-not-allowed select-none overflow-hidden">
+                    {/* Subtle lock bg pattern */}
+                    <div className="absolute inset-0 bg-gradient-to-br from-slate-100/60 to-slate-50/60 dark:from-slate-800/60 dark:to-slate-900/60" />
+                    <div className="relative z-10 flex flex-col items-center px-6 text-center">
+                        <div className="w-14 h-14 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center mb-4 border border-slate-200 dark:border-slate-600">
+                            <Lock size={22} className="text-slate-400 dark:text-slate-500" />
+                        </div>
+                        <span className="font-bold text-base text-slate-500 dark:text-slate-400 mb-1">
+                            Create Workspace
+                        </span>
+                        <span className="text-xs text-slate-400 dark:text-slate-500 leading-relaxed mb-3">
+                            Only admins &amp; owners can create workspaces in <span className="font-semibold text-slate-500 dark:text-slate-400">{companyName}</span>.
+                        </span>
+                        <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-indigo-500 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-3 py-1.5 rounded-full border border-indigo-100 dark:border-indigo-800">
+                            <Shield size={11} />
+                            Contact your Admin or Owner
+                        </span>
+                    </div>
                 </div>
-                <span className={`font-bold text-lg ${isLimitReached
-                    ? 'text-slate-400 dark:text-slate-500'
-                    : 'text-slate-600 dark:text-slate-300 group-hover:text-indigo-700 dark:group-hover:text-indigo-400'
-                    }`}>
-                    {isLimitReached ? 'Plan Limit Reached' : 'Create New Workspace'}
-                </span>
-                <span className={`text-sm mt-1 px-4 text-center ${isLimitReached
-                    ? 'text-slate-400 dark:text-slate-600'
-                    : 'text-slate-400 dark:text-slate-500 group-hover:text-indigo-500 dark:group-hover:text-indigo-400'
-                    }`}>
-                    {isLimitReached
-                        ? 'You have reached the limit of 3 workspaces on the personal plan.'
-                        : 'Start a new project or team'}
-                </span>
-            </button>
+            ) : (
+                <button
+                    onClick={() => {
+                        if (!isLimitReached) onCreateClick();
+                    }}
+                    disabled={isLimitReached}
+                    className={`group relative flex flex-col items-center justify-center h-64 border-2 border-dashed rounded-2xl transition-all duration-300 ${isLimitReached
+                        ? 'border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 cursor-not-allowed opacity-70'
+                        : 'border-slate-300 dark:border-slate-600 hover:border-indigo-400 dark:hover:border-indigo-600 hover:bg-indigo-50/50 dark:hover:bg-indigo-900/20'
+                        }`}
+                >
+                    <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-4 transition-colors ${isLimitReached
+                        ? 'bg-slate-100 dark:bg-slate-800 text-slate-400'
+                        : 'bg-slate-100 text-slate-400 group-hover:bg-indigo-100 group-hover:text-indigo-600'
+                        }`}>
+                        {isLimitReached ? <Shield size={32} /> : <Plus size={32} />}
+                    </div>
+                    <span className={`font-bold text-lg ${isLimitReached
+                        ? 'text-slate-400 dark:text-slate-500'
+                        : 'text-slate-600 dark:text-slate-300 group-hover:text-indigo-700 dark:group-hover:text-indigo-400'
+                        }`}>
+                        {isLimitReached ? 'Plan Limit Reached' : 'Create New Workspace'}
+                    </span>
+                    <span className={`text-sm mt-1 px-4 text-center ${isLimitReached
+                        ? 'text-slate-400 dark:text-slate-600'
+                        : 'text-slate-400 dark:text-slate-500 group-hover:text-indigo-500 dark:group-hover:text-indigo-400'
+                        }`}>
+                        {isLimitReached
+                            ? 'You have reached the limit of 3 workspaces on the personal plan.'
+                            : 'Start a new project or team'}
+                    </span>
+                </button>
+            )}
         </div>
     );
 };
