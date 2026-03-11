@@ -21,6 +21,7 @@ const OwnerSecurity = () => {
     const [securityData, setSecurityData] = useState(null);
     const [activeSessions, setActiveSessions] = useState([]);
     const [securityEvents, setSecurityEvents] = useState([]);
+    const [emailDomain, setEmailDomain] = useState(null);
 
     const fetchData = useCallback(async () => {
         try {
@@ -33,6 +34,7 @@ const OwnerSecurity = () => {
             setSecurityData(security);
             setActiveSessions(sessionsRes.data.sessions || []);
             setSecurityEvents(eventsRes.data.events || []);
+            if (security?.emailDomain) setEmailDomain(security.emailDomain);
         } catch (error) {
             console.error("Error fetching security data:", error);
             showToast("Failed to load security data", "error");
@@ -403,7 +405,7 @@ const OwnerSecurity = () => {
                                     </div>
                                     <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
                                         <Eye size={12} />
-                                        <span>@techcorp.com only</span>
+                                        <span>{emailDomain ? `@${emailDomain} only` : 'Not configured'}</span>
                                     </div>
                                 </div>
                             </div>

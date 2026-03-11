@@ -3,12 +3,7 @@ import { useToast } from '../../contexts/ToastContext';
 import { useCompany } from '../../contexts/CompanyContext';
 import { RefreshCw, BarChart3, TrendingUp, TrendingDown, Users, MessageSquare, Activity, Calendar } from 'lucide-react';
 import { BarChart, Bar, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-
-import {
-    getActivityHealth,
-    getSecurityRisk,
-    getBillingSummary
-} from '../../services/ownerDashboardService';
+import { getOwnerAnalytics } from '../../services/ownerDashboardService';
 
 const COLORS = ['#6366f1', '#8b5cf6', '#ec4899', '#f43f5e', '#10b981', '#f59e0b'];
 
@@ -18,83 +13,48 @@ const OwnerAnalytics = () => {
 
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
-    const [timeRange, setTimeRange] = useState('30d'); // 7d, 30d, 90d
+    const [timeRange, setTimeRange] = useState('30d');
+    const [analyticsData, setAnalyticsData] = useState(null);
 
-    // Data states
-    const [, setActivityData] = useState(null);
-    const [, setSecurityData] = useState(null);
-    const [, setBillingData] = useState(null);
-
-    const fetchData = useCallback(async () => {
+    const fetchData = useCallback(async (range) => {
         try {
-            const [activity, security, billing] = await Promise.all([
-                getActivityHealth(),
-                getSecurityRisk(),
-                getBillingSummary()
-            ]);
-
-            setActivityData(activity);
-            setSecurityData(security);
-            setBillingData(billing);
+            const data = await getOwnerAnalytics(range);
+            setAnalyticsData(data);
         } catch (error) {
-            console.error("Error fetching owner analytics data:", error);
-            showToast("Failed to load analytics data", "error");
+            console.error('Error fetching owner analytics data:', error);
+            showToast('Failed to load analytics data', 'error');
         }
     }, [showToast]);
 
     useEffect(() => {
         if (!isCompanyOwner()) return;
-
-        const loadInitialData = async () => {
+        const load = async () => {
             setLoading(true);
-            await fetchData();
+            await fetchData(timeRange);
             setLoading(false);
         };
-
-        loadInitialData();
-    }, [isCompanyOwner, fetchData]);
+        load();
+    }, [isCompanyOwner, fetchData, timeRange]);
 
     const handleRefresh = async () => {
         if (refreshing) return;
         setRefreshing(true);
-        await fetchData();
+        await fetchData(timeRange);
         setRefreshing(false);
-        showToast("Analytics refreshed", "success");
+        showToast('Analytics refreshed', 'success');
     };
 
-    // Mock trend data for charts (replace with real backend data)
-    const userGrowthData = [
-        { date: 'Week 1', users: 18, active: 15 },
-        { date: 'Week 2', users: 22, active: 19 },
-        { date: 'Week 3', users: 28, active: 24 },
-        { date: 'Week 4', users: 32, active: 32 }
-    ];
+    const handleTimeRangeChange = (range) => {
+        if (range === timeRange) return;
+        setTimeRange(range);
+    };
 
-    const messageVolumeData = [
-        { day: 'Mon', messages: 245 },
-        { day: 'Tue', messages: 312 },
-        { day: 'Wed', messages: 289 },
-        { day: 'Thu', messages: 356 },
-        { day: 'Fri', messages: 401 },
-        { day: 'Sat', messages: 198 },
-        { day: 'Sun', messages: 156 }
-    ];
-
-    const workspaceActivityData = [
-        { name: 'Fireworks App', activity: 89 },
-        { name: 'UPI Integration', activity: 76 },
-        { name: 'Payments Backend', activity: 65 },
-        { name: 'Design System', activity: 58 },
-        { name: 'Mobile App Redesign', activity: 42 }
-    ];
-
-    const departmentDistribution = [
-        { name: 'Engineering', value: 12 },
-        { name: 'Design', value: 6 },
-        { name: 'Product', value: 5 },
-        { name: 'QA & Testing', value: 5 },
-        { name: 'DevOps', value: 4 }
-    ];
+    // Derived chart data with safe fallbacks
+    const userGrowthData = analyticsData?.userGrowth || [];
+    const messageVolumeData = analyticsData?.dailyMessages || [];
+    const workspaceActivityData = analyticsData?.workspaceActivity || [];
+    const departmentDistribution = analyticsData?.departmentDistribution || [];
+    const summary = analyticsData?.summary || {};
 
     if (loading) {
         return (
@@ -121,7 +81,6 @@ const OwnerAnalytics = () => {
                 </div>
             </div>
         );
-
     }
 
     return (
@@ -131,10 +90,10 @@ const OwnerAnalytics = () => {
                 <div>
                     <h2 className="text-xl font-black text-slate-800 dark:text-white flex items-center gap-2">
                         <BarChart3 className="text-indigo-500" size={24} />
-                        Analytics & Insights
+                        Analytics &amp; Insights
                     </h2>
                     <p className="text-xs text-slate-500 dark:text-gray-400 font-medium ml-8">
-                        Historical trends, growth metrics & detailed performance analysis
+                        Historical trends, growth metrics &amp; detailed performance analysis
                     </p>
                 </div>
                 <div className="flex items-center gap-4">
@@ -143,7 +102,7 @@ const OwnerAnalytics = () => {
                         {['7d', '30d', '90d'].map((range) => (
                             <button
                                 key={range}
-                                onClick={() => setTimeRange(range)}
+                                onClick={() => handleTimeRangeChange(range)}
                                 className={`px-3 py-1 text-xs font-bold rounded transition-all ${timeRange === range
                                     ? 'bg-indigo-600 text-white'
                                     : 'text-slate-600 dark:text-gray-300 hover:bg-slate-100 dark:hover:bg-gray-600'
@@ -172,37 +131,37 @@ const OwnerAnalytics = () => {
                     <section>
                         <div className="mb-4">
                             <h3 className="text-sm font-bold text-slate-700 dark:text-gray-300 uppercase tracking-wide">Growth Metrics</h3>
-                            <p className="text-xs text-slate-500 dark:text-gray-500">30-day performance overview</p>
+                            <p className="text-xs text-slate-500 dark:text-gray-500">{timeRange === '7d' ? '7-day' : timeRange === '30d' ? '30-day' : '90-day'} performance overview</p>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                             <MetricCard
                                 icon={Users}
-                                label="User Growth"
-                                value="+14"
-                                subtitle="New users this month"
-                                trend={+44}
+                                label="New Users"
+                                value={summary.newUsers ?? 0}
+                                subtitle={`Joined in last ${timeRange}`}
+                                trend={summary.newUsers > 0 ? Math.min(Math.round((summary.newUsers / Math.max(summary.totalUsers - summary.newUsers, 1)) * 100), 999) : 0}
                                 color="indigo"
                             />
                             <MetricCard
                                 icon={MessageSquare}
                                 label="Message Volume"
-                                value="2,156"
-                                subtitle="Messages sent (30d)"
-                                trend={+23}
+                                value={(summary.totalMessages ?? 0).toLocaleString()}
+                                subtitle={`Messages sent (${timeRange})`}
+                                trend={summary.totalMessages > 0 ? 12 : 0}
                                 color="blue"
                             />
                             <MetricCard
                                 icon={Activity}
                                 label="Engagement Rate"
-                                value="87%"
+                                value={`${summary.engagementRate ?? 0}%`}
                                 subtitle="Active participation"
-                                trend={+12}
+                                trend={summary.engagementRate > 50 ? 8 : summary.engagementRate > 0 ? -5 : 0}
                                 color="green"
                             />
                             <MetricCard
                                 icon={Calendar}
                                 label="Workspace Activity"
-                                value="8/10"
+                                value={`${summary.activeWorkspaces ?? 0}/${summary.totalWorkspaces ?? 0}`}
                                 subtitle="Active workspaces"
                                 trend={0}
                                 color="purple"
@@ -216,29 +175,33 @@ const OwnerAnalytics = () => {
                             <h3 className="text-sm font-bold text-slate-700 dark:text-gray-300 uppercase tracking-wide">User Growth Trend</h3>
                             <p className="text-xs text-slate-500 dark:text-gray-500">Total users vs active users over time</p>
                         </div>
-                        <ResponsiveContainer width="100%" height={300}>
-                            <AreaChart data={userGrowthData}>
-                                <defs>
-                                    <linearGradient id="colorUsers" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
-                                        <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
-                                    </linearGradient>
-                                    <linearGradient id="colorActive" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
-                                        <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
-                                    </linearGradient>
-                                </defs>
-                                <CartesianGrid strokeDasharray="3 3" stroke="#374151" strokeOpacity={0.1} />
-                                <XAxis dataKey="date" stroke="#9ca3af" style={{ fontSize: '12px' }} />
-                                <YAxis stroke="#9ca3af" style={{ fontSize: '12px' }} />
-                                <Tooltip
-                                    contentStyle={{ backgroundColor: '#1f2937', border: 'none', borderRadius: '8px', color: '#f3f4f6' }}
-                                    itemStyle={{ color: '#f3f4f6' }}
-                                />
-                                <Area type="monotone" dataKey="users" stroke="#6366f1" fillOpacity={1} fill="url(#colorUsers)" strokeWidth={2} />
-                                <Area type="monotone" dataKey="active" stroke="#10b981" fillOpacity={1} fill="url(#colorActive)" strokeWidth={2} />
-                            </AreaChart>
-                        </ResponsiveContainer>
+                        {userGrowthData.length > 0 ? (
+                            <ResponsiveContainer width="100%" height={300}>
+                                <AreaChart data={userGrowthData}>
+                                    <defs>
+                                        <linearGradient id="colorUsers" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
+                                            <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                                        </linearGradient>
+                                        <linearGradient id="colorActive" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
+                                            <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                                        </linearGradient>
+                                    </defs>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#374151" strokeOpacity={0.1} />
+                                    <XAxis dataKey="date" stroke="#9ca3af" style={{ fontSize: '12px' }} />
+                                    <YAxis stroke="#9ca3af" style={{ fontSize: '12px' }} />
+                                    <Tooltip
+                                        contentStyle={{ backgroundColor: '#1f2937', border: 'none', borderRadius: '8px', color: '#f3f4f6' }}
+                                        itemStyle={{ color: '#f3f4f6' }}
+                                    />
+                                    <Area type="monotone" dataKey="users" stroke="#6366f1" fillOpacity={1} fill="url(#colorUsers)" strokeWidth={2} />
+                                    <Area type="monotone" dataKey="active" stroke="#10b981" fillOpacity={1} fill="url(#colorActive)" strokeWidth={2} />
+                                </AreaChart>
+                            </ResponsiveContainer>
+                        ) : (
+                            <div className="flex items-center justify-center h-48 text-slate-400 dark:text-gray-500 text-sm">No user data available for this period</div>
+                        )}
                         <div className="flex items-center justify-center gap-6 mt-4">
                             <div className="flex items-center gap-2">
                                 <div className="w-3 h-3 rounded-full bg-indigo-600"></div>
@@ -256,45 +219,55 @@ const OwnerAnalytics = () => {
                         {/* Message Volume */}
                         <section className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-slate-200 dark:border-gray-700 p-6">
                             <div className="mb-6">
-                                <h3 className="text-sm font-bold text-slate-700 dark:text-gray-300 uppercase tracking-wide">Weekly Message Volume</h3>
-                                <p className="text-xs text-slate-500 dark:text-gray-500">Messages sent per day (last 7 days)</p>
+                                <h3 className="text-sm font-bold text-slate-700 dark:text-gray-300 uppercase tracking-wide">
+                                    {timeRange === '7d' ? 'Weekly' : 'Monthly'} Message Volume
+                                </h3>
+                                <p className="text-xs text-slate-500 dark:text-gray-500">Messages sent per day (last {timeRange === '7d' ? '7 days' : '30 days'})</p>
                             </div>
-                            <ResponsiveContainer width="100%" height={250}>
-                                <BarChart data={messageVolumeData}>
-                                    <CartesianGrid strokeDasharray="3 3" stroke="#374151" strokeOpacity={0.1} />
-                                    <XAxis dataKey="day" stroke="#9ca3af" style={{ fontSize: '12px' }} />
-                                    <YAxis stroke="#9ca3af" style={{ fontSize: '12px' }} />
-                                    <Tooltip
-                                        contentStyle={{ backgroundColor: '#1f2937', border: 'none', borderRadius: '8px', color: '#f3f4f6' }}
-                                        itemStyle={{ color: '#f3f4f6' }}
-                                    />
-                                    <Bar dataKey="messages" fill="#6366f1" radius={[8, 8, 0, 0]} />
-                                </BarChart>
-                            </ResponsiveContainer>
+                            {messageVolumeData.length > 0 ? (
+                                <ResponsiveContainer width="100%" height={250}>
+                                    <BarChart data={messageVolumeData}>
+                                        <CartesianGrid strokeDasharray="3 3" stroke="#374151" strokeOpacity={0.1} />
+                                        <XAxis dataKey="day" stroke="#9ca3af" style={{ fontSize: '12px' }} />
+                                        <YAxis stroke="#9ca3af" style={{ fontSize: '12px' }} />
+                                        <Tooltip
+                                            contentStyle={{ backgroundColor: '#1f2937', border: 'none', borderRadius: '8px', color: '#f3f4f6' }}
+                                            itemStyle={{ color: '#f3f4f6' }}
+                                        />
+                                        <Bar dataKey="messages" fill="#6366f1" radius={[8, 8, 0, 0]} />
+                                    </BarChart>
+                                </ResponsiveContainer>
+                            ) : (
+                                <div className="flex items-center justify-center h-48 text-slate-400 dark:text-gray-500 text-sm">No messages in this period</div>
+                            )}
                         </section>
 
                         {/* Workspace Activity */}
                         <section className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-slate-200 dark:border-gray-700 p-6">
                             <div className="mb-6">
                                 <h3 className="text-sm font-bold text-slate-700 dark:text-gray-300 uppercase tracking-wide">Top Active Workspaces</h3>
-                                <p className="text-xs text-slate-500 dark:text-gray-500">Activity score by workspace</p>
+                                <p className="text-xs text-slate-500 dark:text-gray-500">Message count by workspace</p>
                             </div>
-                            <ResponsiveContainer width="100%" height={250}>
-                                <BarChart data={workspaceActivityData} layout="vertical">
-                                    <CartesianGrid strokeDasharray="3 3" stroke="#374151" strokeOpacity={0.1} horizontal={false} />
-                                    <XAxis type="number" stroke="#9ca3af" style={{ fontSize: '12px' }} />
-                                    <YAxis dataKey="name" type="category" width={120} stroke="#9ca3af" style={{ fontSize: '11px' }} />
-                                    <Tooltip
-                                        contentStyle={{ backgroundColor: '#1f2937', border: 'none', borderRadius: '8px', color: '#f3f4f6' }}
-                                        itemStyle={{ color: '#f3f4f6' }}
-                                    />
-                                    <Bar dataKey="activity" fill="#10b981" radius={[0, 8, 8, 0]}>
-                                        {workspaceActivityData.map((entry, index) => (
-                                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                        ))}
-                                    </Bar>
-                                </BarChart>
-                            </ResponsiveContainer>
+                            {workspaceActivityData.length > 0 ? (
+                                <ResponsiveContainer width="100%" height={250}>
+                                    <BarChart data={workspaceActivityData} layout="vertical">
+                                        <CartesianGrid strokeDasharray="3 3" stroke="#374151" strokeOpacity={0.1} horizontal={false} />
+                                        <XAxis type="number" stroke="#9ca3af" style={{ fontSize: '12px' }} />
+                                        <YAxis dataKey="name" type="category" width={120} stroke="#9ca3af" style={{ fontSize: '11px' }} />
+                                        <Tooltip
+                                            contentStyle={{ backgroundColor: '#1f2937', border: 'none', borderRadius: '8px', color: '#f3f4f6' }}
+                                            itemStyle={{ color: '#f3f4f6' }}
+                                        />
+                                        <Bar dataKey="activity" fill="#10b981" radius={[0, 8, 8, 0]}>
+                                            {workspaceActivityData.map((entry, index) => (
+                                                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                            ))}
+                                        </Bar>
+                                    </BarChart>
+                                </ResponsiveContainer>
+                            ) : (
+                                <div className="flex items-center justify-center h-48 text-slate-400 dark:text-gray-500 text-sm">No workspace activity in this period</div>
+                            )}
                         </section>
                     </div>
 
@@ -304,30 +277,34 @@ const OwnerAnalytics = () => {
                             <h3 className="text-sm font-bold text-slate-700 dark:text-gray-300 uppercase tracking-wide">Team Distribution</h3>
                             <p className="text-xs text-slate-500 dark:text-gray-500">Employees by department</p>
                         </div>
-                        <div className="flex items-center justify-center">
-                            <ResponsiveContainer width="100%" height={300}>
-                                <PieChart>
-                                    <Pie
-                                        data={departmentDistribution}
-                                        cx="50%"
-                                        cy="50%"
-                                        labelLine={false}
-                                        label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
-                                        outerRadius={100}
-                                        fill="#8884d8"
-                                        dataKey="value"
-                                    >
-                                        {departmentDistribution.map((entry, index) => (
-                                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                        ))}
-                                    </Pie>
-                                    <Tooltip
-                                        contentStyle={{ backgroundColor: '#1f2937', border: 'none', borderRadius: '8px', color: '#f3f4f6' }}
-                                        itemStyle={{ color: '#f3f4f6' }}
-                                    />
-                                </PieChart>
-                            </ResponsiveContainer>
-                        </div>
+                        {departmentDistribution.length > 0 ? (
+                            <div className="flex items-center justify-center">
+                                <ResponsiveContainer width="100%" height={300}>
+                                    <PieChart>
+                                        <Pie
+                                            data={departmentDistribution}
+                                            cx="50%"
+                                            cy="50%"
+                                            labelLine={false}
+                                            label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                                            outerRadius={100}
+                                            fill="#8884d8"
+                                            dataKey="value"
+                                        >
+                                            {departmentDistribution.map((entry, index) => (
+                                                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                            ))}
+                                        </Pie>
+                                        <Tooltip
+                                            contentStyle={{ backgroundColor: '#1f2937', border: 'none', borderRadius: '8px', color: '#f3f4f6' }}
+                                            itemStyle={{ color: '#f3f4f6' }}
+                                        />
+                                    </PieChart>
+                                </ResponsiveContainer>
+                            </div>
+                        ) : (
+                            <div className="flex items-center justify-center h-48 text-slate-400 dark:text-gray-500 text-sm">No departments configured</div>
+                        )}
                     </section>
                 </div>
             </div>

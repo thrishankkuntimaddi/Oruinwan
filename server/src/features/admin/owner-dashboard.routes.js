@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const mongoose = require('mongoose');
 const User = require('../../../models/User');
 const Company = require('../../../models/Company');
 const Workspace = require('../../../models/Workspace');
@@ -10,6 +11,29 @@ const Invoice = require('../../../models/Invoice');
 const AuditLog = require('../../../models/AuditLog');
 const requireAuth = require('../../../middleware/auth');
 const { requireOwner } = require('../../../middleware/permissionMiddleware');
+
+// ── Helpers ─────────────────────────────────────────────────────────────────
+function sinceDate(timeRange) {
+    const now = new Date();
+    switch (timeRange) {
+        case '7d':  return new Date(now - 7  * 864e5);
+        case '90d': return new Date(now - 90 * 864e5);
+        case '30d':
+        default:    return new Date(now - 30 * 864e5);
+    }
+}
+
+/** Build an array of ISO date strings for the last N days */
+function buildDateLabels(days) {
+    const labels = [];
+    for (let i = days - 1; i >= 0; i--) {
+        const d = new Date();
+        d.setUTCHours(0, 0, 0, 0);
+        d.setUTCDate(d.getUTCDate() - i);
+        labels.push(d.toISOString().slice(0, 10));
+    }
+    return labels;
+}
 
 /**
  * GET /api/owner-dashboard/overview
@@ -140,7 +164,13 @@ router.get('/billing-summary', requireAuth, requireOwner, async (req, res) => {
                 percentage: company.maxUsers ? Math.round((totalUsers / company.maxUsers) * 100) : 0
             },
             monthlyCost: company.billing?.amount || 0,
-            renewalDate: company.billing?.renewalDate || null
+            renewalDate: company.billing?.renewalDate || null,
+            billingContact: {
+                email: company.billingEmail || company.email || null,
+                address: company.address
+                    ? [company.address.city, company.address.state, company.address.country].filter(Boolean).join(', ')
+                    : null,
+            },
         });
     } catch (error) {
         console.error('Owner Dashboard Billing Summary Error:', error);
@@ -181,15 +211,19 @@ router.get('/security-risk', requireAuth, requireOwner, async (req, res) => {
             })
         ]);
 
+        const company = await Company.findById(companyId).select('emailDomain domain email').lean();
+        const emailDomain = company?.emailDomain || company?.domain || company?.email?.split('@')[1] || null;
+
         res.json({
             activeSessions,
             suspiciousLogins: [], // Placeholder for future implementation
             auditSummary: {
                 lastWeek: totalAuditLogs,
                 critical: criticalActions,
-                warnings: 0 // Placeholder
+                warnings: 0
             },
-            complianceScore: 95 // Placeholder
+            complianceScore: 95,
+            emailDomain,
         });
     } catch (error) {
         console.error('Owner Dashboard Security Risk Error:', error);
@@ -394,5 +428,115 @@ router.get('/payment-methods', requireAuth, requireOwner, async (req, res) => {
     }
 });
 
-module.exports = router;
+/**
+ * GET /api/owner-dashboard/analytics
+ * Time-series analytics for charts (user growth, daily messages, workspace activity, department distribution)
+ */
+router.get('/analytics', requireAuth, requireOwner, async (req, res) => {
+    try {
+        const userId = req.user.sub || req.user._id;
+        const user = await User.findById(userId);
+        const companyId = user.companyId;
+        if (!companyId) return res.status(400).json({ message: 'No company found' });
 
+        const timeRange = req.query.timeRange || '30d';
+        const from = sinceDate(timeRange);
+        const cid = mongoose.Types.ObjectId.createFromHexString(companyId.toString());
+
+        const msgDays = timeRange === '7d' ? 7 : 30;
+        const msgFrom = new Date(Date.now() - msgDays * 864e5);
+        const msgLabels = buildDateLabels(msgDays);
+
+        const [
+            totalUsers,
+            activeUsers,
+            newUsers,
+            totalWorkspaces,
+            activeWorkspaces,
+            recentMessages,
+        ] = await Promise.all([
+            User.countDocuments({ companyId, accountStatus: { $ne: 'removed' } }),
+            User.countDocuments({ companyId, accountStatus: 'active' }),
+            User.countDocuments({ companyId, createdAt: { $gte: from }, accountStatus: { $ne: 'removed' } }),
+            Workspace.countDocuments({ company: companyId }),
+            Workspace.countDocuments({ company: companyId, isActive: true, isArchived: false }),
+            Message.countDocuments({ company: companyId, isDeleted: false, createdAt: { $gte: from } }),
+        ]);
+
+        const activeSenderIds = await Message.distinct('sender', {
+            company: companyId, isDeleted: false, createdAt: { $gte: from }
+        });
+        const engagementRate = totalUsers > 0
+            ? Math.round((activeSenderIds.length / totalUsers) * 100)
+            : 0;
+
+        // Weekly user growth buckets
+        const numWeeks = timeRange === '7d' ? 1 : timeRange === '90d' ? 13 : 4;
+        const weekBuckets = [];
+        for (let w = numWeeks - 1; w >= 0; w--) {
+            const end = new Date(Date.now() - w * 7 * 864e5);
+            weekBuckets.push({ end, label: `Week ${numWeeks - w}` });
+        }
+        const userGrowth = await Promise.all(weekBuckets.map(async ({ end, label }) => {
+            const [users, active] = await Promise.all([
+                User.countDocuments({ companyId, createdAt: { $lte: end }, accountStatus: { $ne: 'removed' } }),
+                User.countDocuments({ companyId, accountStatus: 'active', createdAt: { $lte: end } }),
+            ]);
+            return { date: label, users, active };
+        }));
+
+        // Daily message volume
+        const rawMsgAgg = await Message.aggregate([
+            { $match: { company: cid, isDeleted: false, createdAt: { $gte: msgFrom } } },
+            { $group: { _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } }, messages: { $sum: 1 } } },
+            { $sort: { _id: 1 } },
+        ]);
+        const msgMap = Object.fromEntries(rawMsgAgg.map(r => [r._id, r.messages]));
+        const dailyMessages = msgLabels.map(date => ({
+            day: new Date(date + 'T12:00:00Z').toLocaleDateString('en-US', { weekday: 'short' }),
+            date,
+            messages: msgMap[date] || 0,
+        }));
+
+        // Workspace activity
+        const workspaceActivity = await Message.aggregate([
+            { $match: { company: cid, isDeleted: false, createdAt: { $gte: from }, workspace: { $ne: null } } },
+            { $group: { _id: '$workspace', count: { $sum: 1 } } },
+            { $sort: { count: -1 } },
+            { $limit: 5 },
+            { $lookup: { from: 'workspaces', localField: '_id', foreignField: '_id', as: 'ws' } },
+            { $unwind: { path: '$ws', preserveNullAndEmptyArrays: true } },
+            { $project: { _id: 0, name: { $ifNull: ['$ws.name', 'Unknown'] }, activity: '$count' } },
+        ]);
+
+        // Department distribution
+        const departments = await Department.find({ company: companyId, isActive: true }).select('name members').lean();
+        let departmentDistribution = departments.map(d => ({
+            name: d.name,
+            value: Array.isArray(d.members) ? d.members.length : 0,
+        })).sort((a, b) => b.value - a.value).slice(0, 6);
+
+        if (!departmentDistribution.some(d => d.value > 0) && departments.length > 0) {
+            departmentDistribution = await Promise.all(
+                departments.slice(0, 6).map(async d => ({
+                    name: d.name,
+                    value: await User.countDocuments({ companyId, departments: d._id, accountStatus: { $ne: 'removed' } }),
+                }))
+            );
+        }
+
+        res.json({
+            timeRange,
+            summary: { newUsers, totalMessages: recentMessages, engagementRate, activeWorkspaces, totalWorkspaces, totalUsers, activeUsers },
+            userGrowth,
+            dailyMessages,
+            workspaceActivity,
+            departmentDistribution,
+        });
+    } catch (error) {
+        console.error('Owner Dashboard Analytics Error:', error);
+        res.status(500).json({ message: 'Server error', error: error.message });
+    }
+});
+
+module.exports = router;

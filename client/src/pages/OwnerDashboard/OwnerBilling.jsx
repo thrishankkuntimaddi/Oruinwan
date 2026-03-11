@@ -389,12 +389,18 @@ const OwnerBilling = () => {
                             <div className="space-y-3">
                                 <div className="flex items-center justify-between text-sm">
                                     <span className="text-gray-600 dark:text-gray-400">Email</span>
-                                    <span className="font-medium text-gray-900 dark:text-white">billing@techcorp.com</span>
+                                    <span className="font-medium text-gray-900 dark:text-white">
+                                        {billingData?.billingContact?.email || 'Not configured'}
+                                    </span>
                                 </div>
-                                <div className="flex items-center justify-between text-sm">
-                                    <span className="text-gray-600 dark:text-gray-400">Address</span>
-                                    <span className="font-medium text-gray-900 dark:text-white">San Francisco, CA</span>
-                                </div>
+                                {billingData?.billingContact?.address && (
+                                    <div className="flex items-center justify-between text-sm">
+                                        <span className="text-gray-600 dark:text-gray-400">Address</span>
+                                        <span className="font-medium text-gray-900 dark:text-white">
+                                            {billingData.billingContact.address}
+                                        </span>
+                                    </div>
+                                )}
                                 <button className="w-full mt-2 py-2 text-sm text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg font-medium transition-colors">
                                     Update Details
                                 </button>
