@@ -7,6 +7,7 @@ const Workspace = require("../models/Workspace");
 const User = require("../models/User");
 const logger = require("../utils/logger");
 const messagesService = require("../src/modules/messages/messages.service");
+const ROOMS = require("../src/shared/utils/rooms");
 // Phase 7.7 — Huddle signaling
 const registerHuddleHandlers = require("../src/socket/handlers/huddles.socket");
 
@@ -19,13 +20,17 @@ module.exports = async function registerChatHandlers(io, socket) {
   // ✅ JOIN USER-SPECIFIC ROOM for targeted events
   socket.join(`user_${userId}`);
 
-  // ✅ JOIN COMPANY ROOM (Auto-join)
+  // ✅ JOIN COMPANY ROOM + COMPANY UPDATES ROOM (Auto-join)
   try {
     const user = await User.findById(userId).select('companyId');
     if (user && user.companyId) {
-      const companyRoom = `company_${user.companyId.toString()}`;
+      const companyId = user.companyId.toString();
+      const companyRoom = `company_${companyId}`;
       socket.join(companyRoom);
-      // console.log(`📢 User ${userId} auto-joined ${companyRoom}`);
+      // Auto-join company updates room so all users receive real-time update events
+      const updatesRoom = ROOMS.companyUpdates(companyId);
+      socket.join(updatesRoom);
+      logger.debug(`✅ [AUTO-JOIN] User ${userId} joined ${companyRoom} and ${updatesRoom}`);
     }
   } catch (err) {
     console.error("Error auto-joining company room:", err);
@@ -234,6 +239,35 @@ module.exports = async function registerChatHandlers(io, socket) {
       logger.error("Error joining workspace room:", err);
       socket.emit("join-error", { event: "join-workspace", code: "SERVER_ERROR", message: "Failed to join workspace room" });
     }
+  });
+
+  /* ----------------------------------------------------
+     JOIN COMPANY UPDATES ROOM (for the Updates feed)
+  ---------------------------------------------------- */
+  socket.on("join-company-updates", async (companyId) => {
+    try {
+      if (!companyId) return;
+
+      // Security: verify the user belongs to this company
+      const user = await User.findById(userId).select('companyId').lean();
+      if (!user || user.companyId?.toString() !== companyId.toString()) {
+        logger.error(`[SECURITY] Unauthorized join-company-updates by user ${userId}`);
+        return;
+      }
+
+      const room = ROOMS.companyUpdates(companyId);
+      socket.join(room);
+      logger.info(`✅ [join-company-updates] User ${userId} joined ${room}`);
+    } catch (err) {
+      logger.error("Error joining company-updates room:", err);
+    }
+  });
+
+  socket.on("leave-company-updates", (companyId) => {
+    if (!companyId) return;
+    const room = ROOMS.companyUpdates(companyId);
+    socket.leave(room);
+    logger.debug(`[leave-company-updates] User ${userId} left ${room}`);
   });
 
   /* ----------------------------------------------------
