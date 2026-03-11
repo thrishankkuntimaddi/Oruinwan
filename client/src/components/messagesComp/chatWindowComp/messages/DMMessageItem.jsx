@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import api from '../../../../services/api';
 import { Smile, MessageSquare, Share, MoreHorizontal, Pin, Copy, Trash2, Info, Pencil, Check, X } from "lucide-react";
+import { getAvatarUrl } from '../../../../utils/avatarUtils';
 import ReactionPicker from "./reactionPicker";
 import ReactMarkdown from "react-markdown";
 import remarkBreaks from "remark-breaks";
@@ -65,8 +66,8 @@ function DMMessageItem({
     }, [msg.text, msg.decryptedContent, isEditing]);
 
 
-    // Avatar Logic
-    const avatarUrl = msg.senderAvatar || null;
+    // Avatar Logic — always produce a colorful avatar via DiceBear when no real photo
+    const avatarUrl = msg.senderAvatar || getAvatarUrl({ username: msg.senderName, _id: senderId });
     const initial = msg.senderName ? msg.senderName.charAt(0).toUpperCase() : "?";
 
     useEffect(() => {
@@ -222,6 +223,7 @@ function DMMessageItem({
             <div className="flex-shrink-0 pt-0.5">
                 <Avatar
                     src={avatarUrl}
+                    username={msg.senderName}
                     fallback={initial}
                     alt={msg.senderName}
                     size="sm"

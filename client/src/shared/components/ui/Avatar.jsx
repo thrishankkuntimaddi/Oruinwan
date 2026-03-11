@@ -1,6 +1,17 @@
 import React, { useState } from 'react';
+import { getAvatarUrl } from '../../../utils/avatarUtils';
 
-const Avatar = ({ src, alt, fallback, size = "md", className = "", status, ...props }) => {
+/**
+ * Avatar component.
+ * Props:
+ *   src       – real profile picture URL (optional)
+ *   username  – used to generate a deterministic DiceBear avatar when src is absent
+ *   alt       – image alt / fallback initials seed
+ *   fallback  – explicit initials seed (takes priority over alt)
+ *   size      – 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl'
+ *   status    – 'online' | 'offline' | 'busy' | 'away'
+ */
+const Avatar = ({ src, username, alt, fallback, size = "md", className = "", status, ...props }) => {
     const [error, setError] = useState(false);
 
     const sizes = {
@@ -24,19 +35,28 @@ const Avatar = ({ src, alt, fallback, size = "md", className = "", status, ...pr
         return name.substring(0, 2).toUpperCase();
     };
 
+    // Determine the effective image source:
+    // 1. Real photo (src) — highest priority
+    // 2. DiceBear auto-avatar seeded on username or alt
+    // 3. Initials text fallback (only if no username either)
+    const seed = username || alt || fallback;
+    const autoAvatarSrc = seed ? getAvatarUrl({ username: seed }) : null;
+    const effectiveSrc = (!error && src) ? src : (!error && autoAvatarSrc ? null : null);
+    const imgSrc = src && !error ? src : (autoAvatarSrc && !error ? autoAvatarSrc : null);
+
     return (
-        <div className={`relative inline-block ${className}`}>
+        <div className={`relative inline-block rounded-full ${className}`}>
             <div className={`relative overflow-hidden rounded-full bg-secondary-200 dark:bg-secondary-700 flex items-center justify-center text-secondary-600 dark:text-secondary-200 font-medium ${sizes[size]}`}>
-                {src && !error ? (
+                {imgSrc ? (
                     <img
-                        src={src}
-                        alt={alt || "Avatar"}
+                        src={imgSrc}
+                        alt={alt || username || "Avatar"}
                         className="h-full w-full object-cover"
                         onError={() => setError(true)}
                         {...props}
                     />
                 ) : (
-                    <span>{fallback ? getInitials(fallback) : getInitials(alt)}</span>
+                    <span>{fallback ? getInitials(fallback) : getInitials(alt || username)}</span>
                 )}
             </div>
             {status && (
@@ -47,3 +67,4 @@ const Avatar = ({ src, alt, fallback, size = "md", className = "", status, ...pr
 };
 
 export default Avatar;
+

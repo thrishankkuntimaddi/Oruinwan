@@ -471,7 +471,10 @@ async function editMessage(messageId, userId, { text, ciphertext, messageIv } = 
         // Save a history snapshot first — store '[encrypted]' since we don't have the plaintext
         message.editHistory = message.editHistory || [];
         message.editHistory.push({
-            text: '[encrypted]',
+            text: null,
+            ciphertext: message.payload?.ciphertext || null,
+            messageIv: message.payload?.messageIv || null,
+            isEncrypted: true,
             editedAt: message.editedAt || message.updatedAt || new Date()
         });
         message.markModified('editHistory');

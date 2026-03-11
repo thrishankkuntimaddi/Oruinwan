@@ -4,6 +4,8 @@
 import React, { useState, useEffect } from 'react';
 import ChannelMessageItem from '../chatWindowComp/messages/ChannelMessageItem';
 import DMMessageItem from '../chatWindowComp/messages/DMMessageItem';
+import { getAvatarUrl } from '../../../utils/avatarUtils';
+
 
 /**
  * Renders a message event
@@ -160,10 +162,12 @@ function MessageEvent({
         lastReplyAt: event.lastReplyAt || event.payload?.lastReplyAt,
         parentId: event.parentId || event.payload?.parentId,
         senderName: event.sender?.username || event.payload?.sender?.username || 'Unknown',
-        senderAvatar: event.sender?.profilePicture
-            || event.payload?.sender?.profilePicture
-            || event.backend?.sender?.profilePicture
-            || null,
+        senderAvatar: getAvatarUrl(
+            event.sender
+            || event.payload?.sender
+            || event.backend?.sender
+            || { username: event.sender?.username || 'user' }
+        ),
         timestamp: event.createdAt || event.payload?.createdAt,
         ts: event.createdAt || event.payload?.createdAt,
         isRead: (event.readBy || event.payload?.readBy)?.some(r => (r.user?._id || r.user || r._id || r) === currentUserId),
@@ -175,6 +179,8 @@ function MessageEvent({
         deletedByName: event.payload?.deletedByName || event.deletedByName || null,
         // Edit fields
         editedAt: event.payload?.editedAt || event.editedAt || null,
+        // ✅ FIX: Expose editHistory so EditedBadge in ChannelMessageItem can render the history popover
+        editHistory: event.editHistory || event.payload?.editHistory || [],
         // ✅ Expose decryptedContent so DMMessageItem memo can detect text changes
         decryptedContent: event.decryptedContent || messageText || null,
         // Channel context (for axios calls in ChannelMessageItem)

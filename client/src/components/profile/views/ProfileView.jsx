@@ -1,5 +1,6 @@
 import React from 'react';
 import { ChevronLeft, Trash2, CheckCircle2, AlertCircle, Plus } from 'lucide-react';
+import { getAvatarUrl } from '../../../utils/avatarUtils';
 
 /**
  * ProfileView Component
@@ -35,7 +36,7 @@ const ProfileView = ({
             <div className="p-4 overflow-y-auto space-y-5 flex-1 custom-scrollbar">
                 <div className="flex justify-center">
                     <div className="relative group" title="Profile Picture Upload - Coming Soon">
-                        <div className="w-20 h-20 rounded-full bg-gray-300 bg-cover bg-center shadow-md border-4 border-white" style={{ backgroundImage: `url(${user?.profilePicture || "https://ui-avatars.com/api/?name=" + user?.username})` }}></div>
+                        <div className="w-20 h-20 rounded-full bg-gray-300 bg-cover bg-center shadow-md border-4 border-white" style={{ backgroundImage: `url(${getAvatarUrl(user)})` }}></div>
                         <div className="absolute inset-0 bg-black/30 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                             <span className="text-white text-xs font-bold">Change</span>
                         </div>

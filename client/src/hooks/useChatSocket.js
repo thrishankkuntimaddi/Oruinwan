@@ -262,16 +262,20 @@ export function useChatSocket(conversationId, conversationType, eventHandler) {
                 } catch (_) { /* leave null */ }
             }
 
-            if (!newDecryptedContent) return; // Nothing to update
-
+            // ✅ FIX: Always emit the update even if decryption failed —
+            // editHistory and editedAt still need to be propagated so the history popover works.
             eventHandlerRef.current?.({
                 type: 'message-updated',
                 payload: {
                     messageId: msgId,
                     updates: {
-                        text: newDecryptedContent,
-                        decryptedContent: newDecryptedContent,
+                        ...(newDecryptedContent && {
+                            text: newDecryptedContent,
+                            decryptedContent: newDecryptedContent,
+                        }),
                         editedAt: data.editedAt,
+                        // ✅ FIX: Pass editHistory from the server document so the history popover works
+                        editHistory: data.editHistory || [],
                         // Carry new encrypted payload so the event is consistent
                         ...(data.payload?.ciphertext && {
                             payload: {

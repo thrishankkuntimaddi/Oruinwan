@@ -12,6 +12,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useToast } from '../../contexts/ToastContext';
 import { useCompany } from '../../contexts/CompanyContext';
+import { getAvatarUrl } from '../../utils/avatarUtils';
 
 const ProfileQuickSettings = ({ onClose }) => {
     const { user, updateProfile, logout } = useAuth();
@@ -72,16 +73,12 @@ const ProfileQuickSettings = ({ onClose }) => {
             {/* User Header */}
             <div className="text-center">
                 <div className="relative inline-block mb-4">
-                    <div className="w-20 h-20 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-2xl font-black shadow-lg">
-                        {user?.profilePicture ? (
-                            <img
-                                src={user.profilePicture}
-                                alt="Profile"
-                                className="w-full h-full rounded-full object-cover"
-                            />
-                        ) : (
-                            <span>{user?.username?.charAt(0)?.toUpperCase() || 'U'}</span>
-                        )}
+                    <div className="w-20 h-20 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-2xl font-black shadow-lg overflow-hidden">
+                        <img
+                            src={getAvatarUrl(user)}
+                            alt="Profile"
+                            className="w-full h-full rounded-full object-cover"
+                        />
                     </div>
                     <button
                         onClick={() => setView('edit')}
@@ -215,12 +212,8 @@ const ProfileQuickSettings = ({ onClose }) => {
                 {/* Profile Picture */}
                 <div className="flex justify-center">
                     <div className="relative group">
-                        <div className="w-20 h-20 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-2xl font-black">
-                            {user?.profilePicture ? (
-                                <img src={user.profilePicture} alt="Profile" className="w-full h-full rounded-full object-cover" />
-                            ) : (
-                                <span>{user?.username?.charAt(0)?.toUpperCase() || 'U'}</span>
-                            )}
+                        <div className="w-20 h-20 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-2xl font-black overflow-hidden">
+                            <img src={getAvatarUrl(user)} alt="Profile" className="w-full h-full rounded-full object-cover" />
                         </div>
                         <button className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                             <Camera size={20} className="text-white" />

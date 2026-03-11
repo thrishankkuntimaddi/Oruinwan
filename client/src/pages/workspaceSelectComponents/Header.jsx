@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { CircleHelp, Search, BookOpen, Command, Bug, Sparkles, Shield, Briefcase, Settings, LogOut, Bell, Check, UserPlus, MessageSquare, AtSign, X, Bot } from 'lucide-react';
+import { getAvatarUrl } from '../../utils/avatarUtils';
 
 // --- NotificationPanel (self-contained) ---
 const MOCK_NOTIFS = [
@@ -190,20 +191,31 @@ const Header = ({
                     {/* Profile Button - Desktop (Full) */}
                     <button
                         onClick={onProfileClick}
-                        className="text-right hidden sm:block hover:bg-slate-50 px-3 py-2 rounded-lg transition-colors"
+                        className="hidden sm:flex items-center gap-2.5 hover:bg-slate-50 px-3 py-2 rounded-lg transition-colors"
                         title="View Profile"
                     >
-                        <div className="text-sm font-bold text-slate-800 dark:text-slate-200">{user?.username || 'User'}</div>
-                        <div className="text-xs text-slate-500">{user?.email}</div>
+                        <img
+                            src={getAvatarUrl(user)}
+                            alt={user?.username || 'User'}
+                            className="w-8 h-8 rounded-full object-cover ring-2 ring-slate-200 dark:ring-slate-700 flex-shrink-0"
+                        />
+                        <div className="text-left">
+                            <div className="text-sm font-bold text-slate-800 dark:text-slate-200 leading-tight">{user?.username || 'User'}</div>
+                            <div className="text-xs text-slate-500 leading-tight">{user?.email}</div>
+                        </div>
                     </button>
 
-                    {/* Profile Button - Mobile (Avatar/Initials) */}
+                    {/* Profile Button - Mobile (Avatar only) */}
                     <button
                         onClick={onProfileClick}
-                        className="sm:hidden w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center text-indigo-700 dark:text-indigo-300 font-bold text-xs border border-indigo-200 dark:border-indigo-800"
+                        className="sm:hidden"
                         title="View Profile"
                     >
-                        {user?.username?.charAt(0).toUpperCase() || 'U'}
+                        <img
+                            src={getAvatarUrl(user)}
+                            alt={user?.username || 'U'}
+                            className="w-8 h-8 rounded-full object-cover ring-2 ring-indigo-200"
+                        />
                     </button>
 
                     {/* Divider */}

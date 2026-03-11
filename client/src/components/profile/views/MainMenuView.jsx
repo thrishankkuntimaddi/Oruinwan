@@ -1,5 +1,6 @@
 import React from 'react';
 import { Settings, HelpCircle, LogOut, ChevronRight } from 'lucide-react';
+import { getAvatarUrl } from '../../../utils/avatarUtils';
 
 /**
  * MainMenuView Component
@@ -14,7 +15,7 @@ const MainMenuView = ({ user, status, onStatusChange, onNavigate, onLogout }) =>
                     onClick={() => onNavigate("profile")}
                     className="flex items-center gap-3 mb-3 cursor-pointer p-2 -mx-2 rounded-lg hover:bg-white dark:hover:bg-gray-800 hover:shadow-sm transition-all group"
                 >
-                    <div className="w-12 h-12 rounded-full bg-gray-300 bg-cover bg-center shadow-sm border-2 border-white group-hover:border-blue-100 transition-colors flex-shrink-0" style={{ backgroundImage: `url(${user?.profilePicture || "https://ui-avatars.com/api/?name=" + user?.username})` }}></div>
+                    <div className="w-12 h-12 rounded-full bg-gray-300 bg-cover bg-center shadow-sm border-2 border-white group-hover:border-blue-100 transition-colors flex-shrink-0" style={{ backgroundImage: `url(${getAvatarUrl(user)})` }}></div>
                     <div className="min-w-0 flex-1">
                         <div className="font-bold text-gray-900 dark:text-white text-base truncate group-hover:text-blue-600 transition-colors">{user?.username}</div>
                         <div className="text-xs text-gray-500 dark:text-gray-400 truncate">{user?.email}</div>

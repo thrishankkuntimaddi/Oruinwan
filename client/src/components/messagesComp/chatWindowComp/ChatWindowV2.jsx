@@ -403,6 +403,8 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
                         ...(updates.lastReplyAt !== undefined && { lastReplyAt: updates.lastReplyAt }),
                         ...(updates.text !== undefined && { text: updates.text }),
                         ...(updates.editedAt !== undefined && { editedAt: updates.editedAt }),
+                        // ✅ FIX: propagate editHistory so the history popover works
+                        ...(updates.editHistory !== undefined && { editHistory: updates.editHistory }),
                         // E2EE: propagate new ciphertext if present
                         ...(updates.payload?.ciphertext && {
                             ciphertext: updates.payload.ciphertext,
@@ -422,6 +424,8 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
                         }),
                         // ✅ Also hoist editedAt to top-level for DMMessageItem memo check
                         ...(updates.editedAt !== undefined && { editedAt: updates.editedAt }),
+                        // ✅ FIX: Hoist editHistory to top-level so EditedBadge in ChannelMessageItem finds it
+                        ...(updates.editHistory !== undefined && { editHistory: updates.editHistory }),
                         payload: payloadPatch
                     });
 

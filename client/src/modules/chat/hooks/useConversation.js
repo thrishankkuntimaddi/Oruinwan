@@ -202,7 +202,13 @@ export function useConversation({ conversationId, type, workspaceId, currentUser
         const handleEdited = (updated) => {
             setMessages(prev => prev.map(m =>
                 (m.id === updated._id || m.id === updated.id)
-                    ? { ...m, text: updated.text, editedAt: updated.editedAt }
+                    ? {
+                        ...m,
+                        text: updated.text,
+                        editedAt: updated.editedAt,
+                        // ✅ FIX: propagate the full editHistory array so the history popover shows content
+                        editHistory: updated.editHistory || m.editHistory || [],
+                    }
                     : m
             ));
         };

@@ -5,6 +5,7 @@ import {
     Hash, UserCheck, LogOut, UserPlus, UserMinus, Shield, ShieldOff,
     PenLine, FileText, Lock, PinIcon, Eraser, History
 } from "lucide-react";
+import { getAvatarUrl } from '../../../../utils/avatarUtils';
 import ReactionPicker from "./reactionPicker";
 import ReactMarkdown from "react-markdown";
 import remarkBreaks from "remark-breaks";
@@ -63,8 +64,8 @@ function ChannelMessageItem({
     const [isEditing, setIsEditing] = useState(false);
     const [editText, setEditText] = useState(msg.decryptedContent || msg.text || '');
 
-    // Avatar Logic
-    const avatarUrl = msg.senderAvatar || null;
+    // Avatar Logic — always use a colorful avatar; fall back to DiceBear when no photo set
+    const avatarUrl = msg.senderAvatar || getAvatarUrl({ username: msg.senderName, _id: senderId });
     const initial = msg.senderName ? msg.senderName.charAt(0).toUpperCase() : "?";
 
     useEffect(() => {
