@@ -42,6 +42,8 @@ async function createMessage(messageData, io = null) {
         contact = null,
         meeting = null,
         linkPreview = null,
+        // Mention parsing — plaintext sent alongside ciphertext, never stored as message content
+        mentionText = '',
     } = messageData;
 
     // ============================================================
@@ -142,10 +144,80 @@ async function createMessage(messageData, io = null) {
         io.to(room).emit('new-message', messageObject);
     }
 
+    // ============================================================
+    // MENTION PROCESSING — fire-and-forget, never delays delivery
+    // Parse mentionText (plaintext) to find @username handles,
+    // resolve to user IDs, store on message, and send notifications.
+    // ============================================================
+    if (mentionText && company) {
+        (async () => {
+            try {
+                const { extractMentions } = require('../../utils/mentionParser');
+                const notificationService = require('../../features/notifications/notificationService');
+                const Channel = require('../../features/channels/channel.model.js');
+
+                const { mentionedUserIds, isHere, isChannel } = await extractMentions(
+                    mentionText,
+                    company,
+                    sender
+                );
+
+                if (mentionedUserIds.length > 0) {
+                    // Persist mentions array on the message document
+                    await Message.findByIdAndUpdate(message._id, {
+                        $set: { mentions: mentionedUserIds }
+                    });
+
+                    // Send a notification to each mentioned user
+                    // notificationService.mention() already exists — zero changes needed
+                    let channelName = 'a channel';
+                    let channelId = channel || null;
+                    if (channel) {
+                        try {
+                            const channelDoc = await Channel.findById(channel).select('name').lean();
+                            if (channelDoc) channelName = channelDoc.name;
+                        } catch (_) { /* non-critical */ }
+                    }
+
+                    const senderDoc = message.sender;
+                    const senderUsername = senderDoc?.username || 'Someone';
+                    // Truncate mentionText for notification snippet (max 60 chars)
+                    const snippet = mentionText.length > 60
+                        ? mentionText.slice(0, 57) + '...'
+                        : mentionText;
+
+                    await Promise.allSettled(
+                        mentionedUserIds.map(userId =>
+                            notificationService.mention(io, {
+                                mentionedUserId: userId,
+                                senderUsername,
+                                workspaceId: workspace,
+                                channelName,
+                                channelId,
+                                snippet,
+                            })
+                        )
+                    );
+
+                    console.log(`[createMessage] 📣 Mention notifications sent to ${mentionedUserIds.length} user(s)`);
+                }
+
+                // @here / @channel — log for now, bulk notify in a future phase
+                if (isHere || isChannel) {
+                    console.log(`[createMessage] 📢 @${isHere ? 'here' : 'channel'} detected — bulk notify not yet implemented`);
+                }
+            } catch (mentionErr) {
+                console.error('[createMessage] Mention processing error (non-fatal):', mentionErr.message);
+            }
+        })();
+    }
+
     return message;
 }
 
+
 // ==================== MESSAGE RETRIEVAL ====================
+
 
 /**
  * Fetch messages with cursor-based pagination
@@ -396,6 +468,14 @@ async function editMessage(messageId, userId, { text, ciphertext, messageIv } = 
 
     if (ciphertext && messageIv) {
         // E2EE edit: update the encrypted payload so batchDecryptMessages sees new text on reload
+        // Save a history snapshot first — store '[encrypted]' since we don't have the plaintext
+        message.editHistory = message.editHistory || [];
+        message.editHistory.push({
+            text: '[encrypted]',
+            editedAt: message.editedAt || message.updatedAt || new Date()
+        });
+        message.markModified('editHistory');
+
         message.payload = {
             ...(message.payload || {}),
             ciphertext,
@@ -404,7 +484,14 @@ async function editMessage(messageId, userId, { text, ciphertext, messageIv } = 
         };
         message.markModified('payload');
     } else if (text) {
-        // Plaintext fallback (legacy/DM without key)
+        // Plaintext fallback: save current text to history before overwriting
+        message.editHistory = message.editHistory || [];
+        message.editHistory.push({
+            text: message.text || '',
+            editedAt: message.editedAt || message.updatedAt || new Date()
+        });
+        message.markModified('editHistory');
+
         message.text = text;
     }
 

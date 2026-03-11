@@ -2,10 +2,11 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import axios from "axios";
 import { formatTime as fmtTime } from "./helpers/helpers";
 import { useToast } from "../../../contexts/ToastContext";
-import { Smile, X } from "lucide-react";
+import { Smile, X, Bell, BellOff } from "lucide-react";
 import FooterInput from "./footer/footerInput";
 import { API_BASE } from "../../../services/api";
 import { encryptMessageForSending, batchDecryptMessages } from "../../../services/messageEncryptionService";
+import { useThreadFollow } from "../../../hooks/useThreadFollow";
 
 export default function ThreadPanel({ parentMessage, channelId, conversationType = 'channel', onClose, socket, currentUserId, showHeader = true, className = "" }) {
     const { showToast } = useToast();
@@ -18,11 +19,18 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
     const [loading, setLoading] = useState(false);
     const [sending, setSending] = useState(false);
     const [parentExpanded, setParentExpanded] = useState(false);
+    // Bootstrap follow status from getThread response (avoids extra round-trip)
+    const [initialFollowStatus, setInitialFollowStatus] = useState({ following: false, followerCount: 0 });
     const repliesEndRef = useRef(null);
 
 
 
     const formatTime = (iso) => fmtTime(iso);
+
+    // Thread follow state — bootstrapped from getThread response
+    const messageId = parentMessage._id || parentMessage.id;
+    const { following, followerCount, toggle: toggleFollow, loading: followLoading, markAsFollowing } =
+        useThreadFollow(messageId, initialFollowStatus);
 
     // Update local state if prop changes
     useEffect(() => {
@@ -132,6 +140,10 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
             // Update state with decrypted data
             if (decryptedParent) setParentMessageState(decryptedParent);
             setReplies(decryptedReplies);
+            // Bootstrap follow status from the API response (no extra round-trip)
+            if (res.data.followStatus) {
+                setInitialFollowStatus(res.data.followStatus);
+            }
         } catch (err) {
             console.error("Load thread failed:", err);
         } finally {
@@ -374,6 +386,9 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
             setReplies((prev) =>
                 prev.map((r) => (r._id === tempId ? decryptedServerReply : r))
             );
+
+            // Auto-follow: instantly reflect follow state after sending a reply
+            markAsFollowing();
         } catch (err) {
             console.error("[THREAD][SEND][E2EE] Send reply failed:", err);
             showToast(err.response?.data?.message || "Failed to send reply", "error");
@@ -417,13 +432,30 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
                                 <h3 className="font-bold text-gray-800 dark:text-gray-100 text-sm">Thread</h3>
                                 <span className="text-xs text-gray-400">#{parentMessageState?.channelId?.name || "discussion"}</span>
                             </div>
-                            <button
-                                onClick={onClose}
-                                className="p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400 transition-colors"
-                                title="Close"
-                            >
-                                <X size={18} />
-                            </button>
+                            <div className="flex items-center gap-1">
+                                {/* Follow / Unfollow toggle */}
+                                <button
+                                    onClick={toggleFollow}
+                                    disabled={followLoading}
+                                    title={following ? `Unfollow thread (${followerCount} follower${followerCount !== 1 ? 's' : ''})` : 'Follow thread to get reply notifications'}
+                                    className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium transition-colors ${
+                                        following
+                                            ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-800/60'
+                                            : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
+                                    } ${followLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                >
+                                    {following
+                                        ? <><BellOff size={13} /> <span>Following{followerCount > 0 ? ` (${followerCount})` : ''}</span></>
+                                        : <><Bell size={13} /> <span>Follow</span></>}
+                                </button>
+                                <button
+                                    onClick={onClose}
+                                    className="p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400 transition-colors"
+                                    title="Close"
+                                >
+                                    <X size={18} />
+                                </button>
+                            </div>
                         </div>
                     )}
 

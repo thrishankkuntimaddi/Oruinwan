@@ -87,8 +87,7 @@ const isProduction = process.env.NODE_ENV === 'production';
 const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:5173',         // Vite dev server default port
-  'https://chttrix.vercel.app',   // production frontend
-  process.env.FRONTEND_URL,       // dynamic: covers Vercel preview + staging URLs
+  process.env.FRONTEND_URL,       // covers production + preview + staging URLs
 ].filter(Boolean); // remove undefined/null if FRONTEND_URL is not set
 
 console.log('🌐 CORS allowed origins:', allowedOrigins);
@@ -259,10 +258,7 @@ app.use("/api/admin", require("./middleware/auth"), require("./src/features/admi
 // New: /api/company/onboarding — requireAuth + requireCompanyMember + requireCompanyRole('admin')
 app.use("/api/company/onboarding", require("./src/features/onboarding/onboarding.routes"));
 
-// Phase 2 — Company Communication Layer
-app.use("/api/company", require("./src/features/company-updates/updates.routes"));    // /api/company/updates
-app.use("/api/company", require("./src/features/company-analytics/analytics.routes")); // /api/company/analytics/*
-
+// Phase 2 — Company Communication Layer (canonical mounts at lines 313-316 below)
 // Phase 3 — Company Security Layer
 app.use("/api/company", require("./src/features/security/security.routes")); // /api/company/security/*, /api/company/audit-logs
 

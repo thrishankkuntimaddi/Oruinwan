@@ -153,7 +153,9 @@ const CentralContentView = ({
                             linkPreview={linkPreview}
                             linkPreviewLoading={linkPreviewLoading}
                             onDismissPreview={onDismissPreview}
+                            members={channelMembers || []}
                         />
+
                     </div>
                 </>
             ) : activeTab === 'tasks' ? (

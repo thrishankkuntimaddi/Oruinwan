@@ -9,6 +9,7 @@ import SystemEventItem from '../SystemEventItem';
 import MeetingEvent from './MeetingEvent';
 import JoinMarker from '../chatWindowComp/messages/JoinMarker';
 import { Loader2, Lock, Hash } from 'lucide-react';
+import logger from '../../../utils/logger';
 
 // ⚠️ PURE RENDERING COMPONENT
 // This component receives ALL business logic as props (actions, callbacks).
@@ -212,7 +213,10 @@ function ConversationStream({
     const groupedEvents = useMemo(() => {
         const grouped = {};
         mergedEvents.forEach(event => {
-            const date = new Date(event.createdAt || event.payload?.createdAt);
+            const raw = event.createdAt || event.payload?.createdAt;
+            const date = new Date(raw);
+            // Bug fix: skip events with no valid timestamp to avoid "Invalid Date" group headers
+            if (!raw || isNaN(date.getTime())) return;
             const dateKey = date.toLocaleDateString('en-US', {
                 weekday: 'long',
                 year: 'numeric',
@@ -309,7 +313,7 @@ function ConversationStream({
                 );
 
             default:
-                console.warn('Unknown event type:', event.type);
+                logger.warn('[ConversationStream] Unknown event type:', event.type);
                 return null;
         }
     };
@@ -371,7 +375,7 @@ function ConversationStream({
                     ) : (
                         <div style={{ textAlign: 'center', padding: '0.5rem' }}>
                             <button
-                                onClick={onLoadMore}
+                            onClick={() => onLoadMore?.()}
                                 className="text-blue-500 hover:underline"
                                 style={{
                                     background: 'none',
@@ -560,16 +564,36 @@ function ConversationStream({
 
             {/* Empty state when no messages and not loading */}
             {events.length === 0 && !loading && (
-                <div
-                    style={{
-                        textAlign: 'center',
-                        padding: '3rem',
-                        color: 'var(--text-muted)'
-                    }}
-                >
-                    <p>No messages yet. Start the conversation!</p>
+                <div className="flex-1 flex flex-col items-center justify-center py-16 px-6 text-center select-none">
+                    {/* Icon badge */}
+                    <div style={{
+                        width: 64, height: 64, borderRadius: 18,
+                        background: conversationType === 'channel'
+                            ? 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)'
+                            : 'linear-gradient(135deg, #3b82f6 0%, #06b6d4 100%)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        marginBottom: '1rem', boxShadow: '0 4px 16px rgba(99,102,241,0.25)',
+                    }}>
+                        {conversationType === 'channel'
+                            ? <Hash size={30} strokeWidth={2.5} color="#fff" />
+                            : <span style={{ fontSize: 28 }}>💬</span>
+                        }
+                    </div>
+                    <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: '0 0 0.4rem', color: 'var(--text-primary, #111827)' }}>
+                        {conversationType === 'channel'
+                            ? (channelName ? `Start of #${channelName.replace(/^#+/, '')}` : 'No messages yet')
+                            : 'No messages yet'
+                        }
+                    </h3>
+                    <p style={{ fontSize: '0.875rem', color: 'var(--text-muted, #6b7280)', maxWidth: 300, margin: '0 auto 1.25rem', lineHeight: 1.6 }}>
+                        {conversationType === 'channel'
+                            ? 'This is the very beginning of this channel. Be the first to say something!'
+                            : 'Send a message to start the conversation.'
+                        }
+                    </p>
                 </div>
             )}
+
 
             {/* Auto-scroll anchor */}
             <div ref={bottomRef} />

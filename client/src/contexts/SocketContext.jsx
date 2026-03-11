@@ -377,11 +377,11 @@ export const SocketProvider = ({ children }) => {
         };
     }, [socket]);
 
-    // Broadcast Update events
+    // Broadcast Update events (company:update:* namespace from company-updates service)
     useEffect(() => {
         if (!socket) return;
 
-        const events = ['update-created', 'update-updated', 'update-deleted'];
+        const events = ['company:update:created', 'company:update:deleted', 'company:update:reacted'];
 
         events.forEach(event => {
             socket.on(event, (data) => {

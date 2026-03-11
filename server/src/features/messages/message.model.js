@@ -125,6 +125,16 @@ const MessageSchema = new mongoose.Schema({
   reactions: [ReactionSchema],
   readBy: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
 
+  // Mention tracking — populated server-side from mentionText (never from ciphertext)
+  // Optional and backward-compatible: old messages default to []
+  mentions: [{ type: mongoose.Schema.Types.ObjectId, ref: "User", default: [] }],
+
+  // Thread followers — users who receive reply notifications for this thread
+  // Optional, additive, backward-compatible. Only set on parent messages.
+  followers: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+
+
+
   // Pinning
   isPinned: { type: Boolean, default: false },
   pinnedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
@@ -139,6 +149,11 @@ const MessageSchema = new mongoose.Schema({
 
   // Edit tracking
   editedAt: { type: Date, default: null },
+  // Full edit history — each entry is a snapshot of the message before the edit
+  editHistory: [{
+    text: { type: String, default: '' },     // plaintext snapshot (or '[encrypted]' for E2EE)
+    editedAt: { type: Date, default: Date.now }
+  }],
   isDeleted: { type: Boolean, default: false },    // Soft delete flag (universal)
   version: { type: Number, default: 1 },           // Increments on each edit
 }, { timestamps: true });

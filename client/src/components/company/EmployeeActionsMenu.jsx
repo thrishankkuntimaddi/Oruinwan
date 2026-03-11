@@ -5,7 +5,8 @@ import { MoreVertical, UserX, UserCheck, Trash2, Building, Award } from 'lucide-
 import { toast } from 'react-hot-toast';
 import api from '../../services/api';
 
-const EmployeeActionsMenu = ({ employee, departments = [], onUpdate }) => {
+// viewerRole: the companyRole of the currently logged-in user
+const EmployeeActionsMenu = ({ employee, departments = [], onUpdate, viewerRole = 'member' }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [menuPos, setMenuPos] = useState({ top: 0, right: 0, openUpward: false });
     const [showSuspendModal, setShowSuspendModal] = useState(false);
@@ -31,9 +32,19 @@ const EmployeeActionsMenu = ({ employee, departments = [], onUpdate }) => {
         };
     }, [isOpen]);
 
-    const canSuspend = employee.companyRole !== 'owner' && employee.accountStatus === 'active';
-    const canActivate = employee.accountStatus === 'suspended';
-    const canRemove = employee.companyRole !== 'owner' && employee.accountStatus !== 'removed';
+    const viewerIsAdminOrAbove = viewerRole === 'owner' || viewerRole === 'admin';
+    const viewerIsOwner = viewerRole === 'owner';
+
+    // Target-based guards
+    const canSuspend = employee.companyRole !== 'owner' && employee.accountStatus === 'active' && viewerIsAdminOrAbove;
+    const canActivate = employee.accountStatus === 'suspended' && viewerIsAdminOrAbove;
+    const canRemove = employee.companyRole !== 'owner' && employee.accountStatus !== 'removed' && viewerIsAdminOrAbove;
+
+    // Viewer can change roles only if they are admin/owner AND the target is not an equal/higher rank
+    const targetRank = { owner: 3, admin: 2, manager: 1, member: 0, guest: 0 };
+    const viewerRank = targetRank[viewerRole] ?? 0;
+    const employeeRank = targetRank[employee.companyRole] ?? 0;
+    const canChangeRole = viewerIsAdminOrAbove && viewerRank > employeeRank;
 
     const handleSuspend = async () => {
         if (!suspensionReason.trim()) {
@@ -219,27 +230,31 @@ const EmployeeActionsMenu = ({ employee, departments = [], onUpdate }) => {
                                 </button>
                             )}
 
-                            <button
-                                onClick={() => {
-                                    setShowDepartmentModal(true);
-                                    setIsOpen(false);
-                                }}
-                                className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-3 text-gray-700 dark:text-gray-300"
-                            >
-                                <Building className="w-4 h-4" />
-                                Assign Departments
-                            </button>
+                            {viewerIsAdminOrAbove && (
+                                <button
+                                    onClick={() => {
+                                        setShowDepartmentModal(true);
+                                        setIsOpen(false);
+                                    }}
+                                    className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-3 text-gray-700 dark:text-gray-300"
+                                >
+                                    <Building className="w-4 h-4" />
+                                    Assign Departments
+                                </button>
+                            )}
 
-                            <button
-                                onClick={() => {
-                                    setShowRoleModal(true);
-                                    setIsOpen(false);
-                                }}
-                                className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-3 text-gray-700 dark:text-gray-300"
-                            >
-                                <Award className="w-4 h-4" />
-                                Change Role
-                            </button>
+                            {canChangeRole && (
+                                <button
+                                    onClick={() => {
+                                        setShowRoleModal(true);
+                                        setIsOpen(false);
+                                    }}
+                                    className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-3 text-gray-700 dark:text-gray-300"
+                                >
+                                    <Award className="w-4 h-4" />
+                                    Change Role
+                                </button>
+                            )}
 
                             {canRemove && (
                                 <>
@@ -392,15 +407,16 @@ const EmployeeActionsMenu = ({ employee, departments = [], onUpdate }) => {
                                 Role
                             </label>
                             <select
-                                value={selectedRole}
-                                onChange={(e) => setSelectedRole(e.target.value)}
-                                className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
-                            >
-                                <option value="member">Employee</option>
-                                <option value="guest">Guest</option>
-                                <option value="manager">Manager</option>
-                                <option value="admin">Admin</option>
-                            </select>
+                            value={selectedRole}
+                            onChange={(e) => setSelectedRole(e.target.value)}
+                            className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                        >
+                            <option value="member">Employee</option>
+                            <option value="guest">Guest</option>
+                            <option value="manager">Manager</option>
+                            {/* Only owners can promote to admin; admins cannot create peer admins */}
+                            {viewerIsOwner && <option value="admin">Admin</option>}
+                        </select>
                         </div>
 
                         {selectedRole === 'manager' && (

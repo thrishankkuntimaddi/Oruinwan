@@ -1,14 +1,16 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { useBlogs } from "../../contexts/BlogsContext";
-import { Heart, MessageCircle, MoreHorizontal, Send, User, Image as ImageIcon, Flag, Link as LinkIcon, Video, Trash2 } from "lucide-react";
+import { useUpdates } from "../../contexts/UpdatesContext";
+import { Heart, MessageCircle, MoreHorizontal, Send, User, Image as ImageIcon, Flag, Link as LinkIcon, Video, Trash2, Megaphone, Lock } from "lucide-react";
 import { useToast } from "../../contexts/ToastContext";
+import { usePermissions } from "../../hooks/usePermissions";
 
 const Updates = () => {
   const navigate = useNavigate();
   const { workspaceId } = useParams();
-  const { posts, addPost, likePost, deletePost } = useBlogs();
+  const { posts, addPost, likePost, deletePost, loading } = useUpdates();
   const { showToast } = useToast();
+  const { canPostUpdates, companyRole } = usePermissions();
 
   const [newPostTitle, setNewPostTitle] = useState("");
   const [newPostContent, setNewPostContent] = useState("");
@@ -49,11 +51,9 @@ const Updates = () => {
     setTimeout(() => {
       addPost({
         title: newPostTitle,
-        content: newPostContent,
+        content: newPostContent,  // ✅ matches backend 'content' field
         tags: tags,
         context: "general",
-        // workspace: "Engineering", // Removed to rely on dynamic context
-        image: null // Placeholder for image logic
       });
       setNewPostTitle("");
       setNewPostContent("");
@@ -119,51 +119,63 @@ const Updates = () => {
       <div className="flex-1 overflow-y-auto custom-scrollbar">
         <div className="max-w-2xl mx-auto py-8 px-4 space-y-6">
 
-          {/* Create Post Widget */}
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-4">
-            <div className="flex gap-4">
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold shrink-0">
-                Y
-              </div>
-              <div className="flex-1 space-y-3">
-                <input
-                  type="text"
-                  placeholder="Title (optional)"
-                  className="w-full font-bold text-gray-800 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 border-none focus:ring-0 p-0 text-lg outline-none bg-transparent"
-                  value={newPostTitle}
-                  onChange={(e) => setNewPostTitle(e.target.value)}
-                />
-                <textarea
-                  placeholder="Share an achievement, project update, or mention @someone..."
-                  className="w-full bg-gray-50 dark:bg-gray-700/50 border-none rounded-xl p-3 focus:ring-2 focus:ring-blue-500/20 outline-none resize-none text-gray-700 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 min-h-[100px]"
-                  value={newPostContent}
-                  onChange={(e) => setNewPostContent(e.target.value)}
-                />
-                <div className="flex justify-between items-center">
-                  <div className="flex gap-2">
-                    <button className="p-2 text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors" title="Add Photo">
-                      <ImageIcon size={20} />
-                    </button>
-                    <button className="p-2 text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors" title="Add Video">
-                      <Video size={20} />
+          {/* Create Post Widget — only for manager and above */}
+          {canPostUpdates ? (
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+              <div className="flex gap-4">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold shrink-0">
+                  {(companyRole?.charAt(0) || 'U').toUpperCase()}
+                </div>
+                <div className="flex-1 space-y-3">
+                  <input
+                    type="text"
+                    placeholder="Title (optional)"
+                    className="w-full font-bold text-gray-800 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 border-none focus:ring-0 p-0 text-lg outline-none bg-transparent"
+                    value={newPostTitle}
+                    onChange={(e) => setNewPostTitle(e.target.value)}
+                  />
+                  <textarea
+                    placeholder="Share an achievement, project update, or mention @someone..."
+                    className="w-full bg-gray-50 dark:bg-gray-700/50 border-none rounded-xl p-3 focus:ring-2 focus:ring-blue-500/20 outline-none resize-none text-gray-700 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 min-h-[100px]"
+                    value={newPostContent}
+                    onChange={(e) => setNewPostContent(e.target.value)}
+                  />
+                  <div className="flex justify-between items-center">
+                    <div className="flex gap-2">
+                      <button className="p-2 text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors" title="Add Photo">
+                        <ImageIcon size={20} />
+                      </button>
+                      <button className="p-2 text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors" title="Add Video">
+                        <Video size={20} />
+                      </button>
+                    </div>
+                    <button
+                      onClick={handlePost}
+                      disabled={!newPostContent.trim() || isPosting}
+                      className={`px-4 py-2 rounded-lg font-medium text-sm transition-all flex items-center gap-2
+                              ${!newPostContent.trim() || isPosting
+                          ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                          : "bg-blue-600 text-white hover:bg-blue-700 shadow-md shadow-blue-500/20"
+                        }
+                          `}
+                    >
+                      {isPosting ? "Posting..." : <>Post Update <Send size={14} /></>}
                     </button>
                   </div>
-                  <button
-                    onClick={handlePost}
-                    disabled={!newPostContent.trim() || isPosting}
-                    className={`px-4 py-2 rounded-lg font-medium text-sm transition-all flex items-center gap-2
-                            ${!newPostContent.trim() || isPosting
-                        ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                        : "bg-blue-600 text-white hover:bg-blue-700 shadow-md shadow-blue-500/20"
-                      }
-                        `}
-                  >
-                    {isPosting ? "Posting..." : <>Post Update <Send size={14} /></>}
-                  </button>
                 </div>
               </div>
             </div>
-          </div>
+          ) : (
+            /* Read-only notice for members and guests */
+            <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center flex-shrink-0">
+                <Lock size={16} className="text-gray-400" />
+              </div>
+              <p className="text-sm text-gray-400 dark:text-gray-500">
+                Only managers and above can post company updates.
+              </p>
+            </div>
+          )}
 
           {/* Feed Divider */}
           <div className="flex items-center gap-4">
@@ -171,6 +183,28 @@ const Updates = () => {
             <span className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider">Latest Updates</span>
             <div className="h-px bg-gray-200 dark:bg-gray-700 flex-1" />
           </div>
+
+          {/* Loading skeleton while fetching posts */}
+          {loading && posts.length === 0 && (
+            <div className="animate-pulse space-y-4">
+              {[1, 2, 3].map(i => (
+                <div key={i} className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+                  <div className="flex gap-3 mb-4">
+                    <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 flex-shrink-0" />
+                    <div className="flex-1 space-y-2 pt-1">
+                      <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-32" />
+                      <div className="h-2.5 bg-gray-100 dark:bg-gray-700/60 rounded w-52" />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4" />
+                    <div className="h-3.5 bg-gray-100 dark:bg-gray-700/60 rounded w-full" />
+                    <div className="h-3.5 bg-gray-100 dark:bg-gray-700/60 rounded w-5/6" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
 
           {/* Posts Feed */}
           {posts.map((post) => (
@@ -289,9 +323,16 @@ const Updates = () => {
             </div>
           ))}
 
-          {posts.length === 0 && (
-            <div className="text-center py-10 text-gray-400">
-              <p>No updates yet. Be the first to share something!</p>
+          {/* Empty state */}
+          {posts.length === 0 && !loading && (
+            <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
+              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center mb-4 shadow-lg shadow-blue-500/25">
+                <Megaphone size={28} className="text-white" />
+              </div>
+              <h3 className="text-base font-bold text-gray-800 dark:text-white mb-1">No updates posted</h3>
+              <p className="text-sm text-gray-400 dark:text-gray-500 max-w-xs leading-relaxed">
+                Be the first to share a company update, achievement, or announcement.
+              </p>
             </div>
           )}
 

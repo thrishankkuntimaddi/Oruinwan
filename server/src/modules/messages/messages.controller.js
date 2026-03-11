@@ -34,6 +34,7 @@ exports.sendDirectMessage = async (req, res) => {
             messageIv,
             isEncrypted,
             clientTempId,
+            mentionText = '',   // plaintext for mention parsing (never stored as content)
             // Phase-7 fields
             type = 'message',
             poll = null,
@@ -123,6 +124,7 @@ exports.sendDirectMessage = async (req, res) => {
                 messageIv,
                 isEncrypted,
                 clientTempId,
+                mentionText,
                 // Phase-7
                 poll,
                 contact,
@@ -361,6 +363,7 @@ exports.sendChannelMessage = async (req, res) => {
             messageIv,
             isEncrypted,
             clientTempId,
+            mentionText = '',   // plaintext for mention parsing (never stored as content)
             // Phase-7 fields
             type = 'message',
             poll = null,
@@ -410,6 +413,7 @@ exports.sendChannelMessage = async (req, res) => {
                 messageIv,
                 isEncrypted,
                 clientTempId,
+                mentionText,
                 // Phase-7
                 poll,
                 contact,

@@ -831,6 +831,7 @@ export default function TasksTab({ channelId, channelName, workspaceId: workspac
     const [tasks, setTasks] = useState([]);
     const [members, setMembers] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [fetchError, setFetchError] = useState(null);
     const [showModal, setShowModal] = useState(false);
     const [selected, setSelected] = useState(null);
     const [filter, setFilter] = useState('all');
@@ -840,17 +841,19 @@ export default function TasksTab({ channelId, channelName, workspaceId: workspac
         if (!channelId || !workspaceId) { setLoading(false); return; }
         try {
             setLoading(true);
+            setFetchError(null);
             const res = await api.get('/api/v2/tasks', { params: { workspaceId } });
             const mine = (res.data.tasks || []).filter(t => {
-                // Include channel tasks belonging to this channel
                 const inChannel = t.channel && (t.channel._id === channelId || t.channel === channelId);
-                // Also include private tasks where the current user is assignee, linked to this channel via createdIn
                 const assignedHere = !t.channel && Array.isArray(t.assignedTo) &&
                     t.assignedTo.some(a => (a._id || a) === currentUserId);
                 return inChannel || assignedHere;
             });
             setTasks(mine);
-        } catch { setTasks([]); }
+        } catch (err) {
+            setTasks([]);
+            setFetchError(err?.response?.data?.message || 'Could not load tasks. Check your connection and try again.');
+        }
         finally { setLoading(false); }
     }, [channelId, workspaceId]);
 
@@ -1035,6 +1038,22 @@ export default function TasksTab({ channelId, channelName, workspaceId: workspac
                     <Plus size={13} strokeWidth={2.5} /> Create
                 </button>
             </div>
+
+            {/* ── Error Banner ── */}
+            {fetchError && (
+                <div className="flex items-center justify-between gap-3 mx-4 mt-3 px-4 py-3 rounded-sm bg-red-50 border border-red-200 text-sm">
+                    <div className="flex items-center gap-2 text-red-700">
+                        <AlertTriangle size={15} className="text-red-500 flex-shrink-0" />
+                        <span>{fetchError}</span>
+                    </div>
+                    <button
+                        onClick={loadTasks}
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-red-600 bg-white border border-red-200 rounded-sm hover:bg-red-50 transition-colors flex-shrink-0"
+                    >
+                        <RotateCcw size={12} /> Retry
+                    </button>
+                </div>
+            )}
 
             {/* ── 5-Column Board + optional detail panel ── */}
             <div className="flex-1 min-h-0 flex overflow-hidden">

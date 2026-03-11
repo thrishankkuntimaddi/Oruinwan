@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Globe, Users, Calendar, MoreVertical, Plus, Search, Filter, Rocket, Briefcase, Zap, Palette, Trophy, Target, Flame, Microscope, Shield, Lightbulb, Sparkles, UserPlus, X } from 'lucide-react';
+import { Globe, Users, Calendar, MoreVertical, Plus, Search, Filter, Rocket, Briefcase, Zap, Palette, Trophy, Target, Flame, Microscope, Shield, Lightbulb, Sparkles, UserPlus, X, EyeOff } from 'lucide-react';
 import { useToast } from '../../contexts/ToastContext';
 import { useAuth } from '../../contexts/AuthContext';
 import api from '../../services/api';
 import CreateWorkspaceModal from '../workspaceSelectComponents/CreateWorkspaceModal';
 import WorkspaceMembersModal from './WorkspaceMembersModal';
+import { usePermissions } from '../../hooks/usePermissions';
 
 // ── Icon helper — same pattern used in WorkspaceSelect.jsx ──────────────────
 const ICON_MAP = {
@@ -39,6 +40,7 @@ const DEFAULT_CREATE_DATA = {
 const WorkspacesManagement = () => {
     const { showToast } = useToast();
     const { user } = useAuth();
+    const { canManageWorkspace } = usePermissions();
 
     // List state
     const [workspaces, setWorkspaces] = useState([]);
@@ -165,17 +167,22 @@ const WorkspacesManagement = () => {
                         Workspaces Management
                     </h2>
                     <p className="text-xs text-slate-500 dark:text-gray-400 font-medium ml-8">
-                        Manage all company workspaces
+                        {canManageWorkspace ? 'Manage all company workspaces' : 'View-only — contact an admin to make changes'}
                     </p>
                 </div>
-                {/* ✅ FIX: onClick wired to open the Create Workspace modal */}
-                <button
-                    onClick={handleOpenModal}
-                    className="px-4 py-2 bg-indigo-600 text-white text-sm font-bold rounded-lg hover:bg-indigo-700 transition-colors shadow-md hover:shadow-lg flex items-center gap-2"
-                >
-                    <Plus size={16} />
-                    Create Workspace
-                </button>
+                {canManageWorkspace ? (
+                    <button
+                        onClick={handleOpenModal}
+                        className="px-4 py-2 bg-indigo-600 text-white text-sm font-bold rounded-lg hover:bg-indigo-700 transition-colors shadow-md hover:shadow-lg flex items-center gap-2"
+                    >
+                        <Plus size={16} />
+                        Create Workspace
+                    </button>
+                ) : (
+                    <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-700 text-xs font-semibold text-gray-500 dark:text-gray-400">
+                        <EyeOff size={13} /> View Only
+                    </span>
+                )}
             </header>
 
             {/* Content */}
@@ -275,13 +282,19 @@ const WorkspacesManagement = () => {
                                                 </button>
                                                 {openMenuId === workspace._id && (
                                                     <div className="absolute right-0 top-full mt-1 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl z-50 overflow-hidden">
-                                                        <button
-                                                            onClick={e => { e.stopPropagation(); setMembersWorkspace(workspace); setOpenMenuId(null); }}
-                                                            className="w-full flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
-                                                        >
-                                                            <UserPlus size={15} />
-                                                            Manage Members
-                                                        </button>
+                                                        {canManageWorkspace ? (
+                                                            <button
+                                                                onClick={e => { e.stopPropagation(); setMembersWorkspace(workspace); setOpenMenuId(null); }}
+                                                                className="w-full flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+                                                            >
+                                                                <UserPlus size={15} />
+                                                                Manage Members
+                                                            </button>
+                                                        ) : (
+                                                            <p className="px-4 py-3 text-xs text-gray-400 dark:text-gray-500 italic">
+                                                                No actions available
+                                                            </p>
+                                                        )}
                                                     </div>
                                                 )}
                                             </div>

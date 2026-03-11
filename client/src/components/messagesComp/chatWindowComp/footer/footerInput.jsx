@@ -6,6 +6,8 @@ import VoiceRecorder from "./VoiceRecorder";
 import TurndownService from "turndown";
 import { Button } from "../../../../shared/components/ui";
 import ReplyPreview from "../messages/replyPreview";
+import MentionAutocomplete from "./MentionAutocomplete";
+import { useMentionAutocomplete } from "../../../../hooks/useMentionAutocomplete";
 
 const turndownService = new TurndownService({
   headingStyle: "atx",
@@ -63,6 +65,7 @@ export default function FooterInput({
   disabled = false,
   replyingTo = null,
   onCancelReply,
+  members = [],       // workspace/channel member list for @mention autocomplete
 }) {
   const emojiRef = useRef(null);
   const attachRef = useRef(null);
@@ -70,6 +73,18 @@ export default function FooterInput({
 
   // Track whether the input has content for the Send button
   const [hasText, setHasText] = useState(false);
+
+  // @mention autocomplete
+  const {
+    showSuggestions,
+    suggestions,
+    selectedIndex,
+    handleMentionInput,
+    handleMentionKeyDown,
+    selectSuggestion,
+    extractMentionText,
+    closeSuggestions,
+  } = useMentionAutocomplete(members);
 
   // ─── KEY FIX: track content in a ref, NOT in state ───────────────────────────
   // We NEVER set editableRef.current.innerHTML from parent state while the user
@@ -153,7 +168,9 @@ export default function FooterInput({
     setHasText(text.length > 0);
     // Sync upward for parent state (used for send button, not for re-rendering input)
     onChange({ target: { value: html } });
-  }, [onChange]);
+    // Check for @mention trigger
+    handleMentionInput();
+  }, [onChange, handleMentionInput]);
 
   /* ---------------------------------------------------------
       SEND
@@ -164,6 +181,13 @@ export default function FooterInput({
     const html = el.innerHTML || '';
     const textContent = stripTags(html).trim();
     if (!textContent || blocked || disabled) return;
+
+    // Close any open mention suggestions
+    closeSuggestions();
+
+    // Extract plaintext for mention parsing (includes @mention chip text)
+    // This is sent as mentionText alongside the encrypted payload
+    const mentionText = extractMentionText(editableRef);
 
     let markdown;
     const hasFormatting = /<(ul|ol|b|strong|i|em|a )/.test(html);
@@ -179,7 +203,9 @@ export default function FooterInput({
 
     if (!markdown) return;
 
-    onSend(markdown);
+    // Pass mentionText as metadata alongside the message content
+    // The parent's onSend handler should forward it to the API as a separate field
+    onSend(markdown, { mentionText });
 
     // Clear DOM directly (do NOT rely on React to re-render the input)
     if (editableRef.current) {
@@ -187,17 +213,28 @@ export default function FooterInput({
     }
     setHasText(false);
     setNewMessage("");
-  }, [blocked, disabled, onSend, setNewMessage]);
+  }, [blocked, disabled, onSend, setNewMessage, closeSuggestions, extractMentionText]);
 
   /* ---------------------------------------------------------
       KEYBOARD — Enter to send, Shift+Enter for newline
   --------------------------------------------------------- */
   const handleKeyDown = useCallback((e) => {
+    // Let mention autocomplete consume arrow keys / Tab / Enter / Escape first
+    if (showSuggestions) {
+      const consumed = handleMentionKeyDown(e);
+      if (consumed) {
+        e.preventDefault();
+        if ((e.key === 'Enter' || e.key === 'Tab') && suggestions.length > 0) {
+          selectSuggestion(suggestions[selectedIndex] || suggestions[0], editableRef);
+        }
+        return;
+      }
+    }
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSend();
     }
-  }, [handleSend]);
+  }, [handleSend, showSuggestions, handleMentionKeyDown, suggestions, selectedIndex, selectSuggestion]);
 
   /* ---------------------------------------------------------
       EMOJI PICK — insert at cursor position
@@ -270,6 +307,15 @@ export default function FooterInput({
 
         {/* Rich Text Input — uncontrolled div, no html= binding */}
         <div className="w-full px-3 py-2 text-sm max-h-[30vh] overflow-y-auto overflow-x-hidden custom-scrollbar min-h-[4rem] relative">
+          {/* @mention autocomplete dropdown */}
+          {showSuggestions && (
+            <MentionAutocomplete
+              suggestions={suggestions}
+              selectedIndex={selectedIndex}
+              onSelect={(member) => selectSuggestion(member, editableRef)}
+              onClose={closeSuggestions}
+            />
+          )}
           <div
             ref={editableRef}
             contentEditable={!blocked && !disabled}

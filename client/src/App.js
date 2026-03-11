@@ -8,7 +8,7 @@ import { NotesProvider } from "./contexts/NotesContext";
 import { TasksProvider } from "./contexts/TasksContext";
 import { ToastProvider } from "./contexts/ToastContext";
 import { ThemeProvider } from "./contexts/ThemeContext";
-import { BlogsProvider } from "./contexts/BlogsContext"; // ✅ Fix import path
+import { UpdatesProvider } from "./contexts/UpdatesContext";
 import { SocketProvider } from "./contexts/SocketContext"; // ✅ Add real-time support
 import { CompanyProvider } from "./contexts/CompanyContext";
 import { DepartmentProvider } from "./contexts/DepartmentContext";
@@ -121,6 +121,7 @@ import ScrollToTop from "./components/ScrollToTop"; // Fix scroll position on ro
 // E2EE Password Unlock
 import PasswordUnlockModal from "./components/security/PasswordUnlockModal";
 import { useAuth } from "./contexts/AuthContext";
+import AppErrorBoundary from "./shared/components/ui/AppErrorBoundary";
 
 
 function App() {
@@ -136,16 +137,17 @@ function App() {
                 <DepartmentProvider>
                   <NotesProvider>
                     <TasksProvider>
-                      <BlogsProvider>
-                        <Routes>
+                      <UpdatesProvider>
+                          <AppErrorBoundary label="App">
+                            <Routes>
 
-                          {/* PROTECTED AREA (requires login) */}
+                              {/* PROTECTED AREA (requires login) */}
 
-                          {/* Redirect /personal/workspace to /workspaces to prevent white screen */}
-                          <Route
-                            path="/personal/workspace"
-                            element={<Navigate to="/workspaces" replace />}
-                          />
+                              {/* Redirect /personal/workspace to /workspaces to prevent white screen */}
+                              <Route
+                                path="/personal/workspace"
+                                element={<Navigate to="/workspaces" replace />}
+                              />
 
                           {/* Workspace Selection - Must select workspace first */}
                           <Route
@@ -617,11 +619,12 @@ function App() {
                             }
                           />
 
-                        </Routes>
+                            </Routes>
+                          </AppErrorBoundary>
 
                         {/* 🔐 Global Password Unlock Modal (E2EE) - Renders across all routes */}
                         <GlobalPasswordUnlockModal />
-                      </BlogsProvider>
+                      </UpdatesProvider>
                     </TasksProvider>
                   </NotesProvider>
                 </DepartmentProvider>

@@ -3,7 +3,7 @@ import api from '../../../../services/api';
 import {
     Smile, MessageSquare, Share, MoreHorizontal, Pin, Copy, Trash2, Info, Pencil, Check, X,
     Hash, UserCheck, LogOut, UserPlus, UserMinus, Shield, ShieldOff,
-    PenLine, FileText, Lock, PinIcon, Eraser
+    PenLine, FileText, Lock, PinIcon, Eraser, History
 } from "lucide-react";
 import ReactionPicker from "./reactionPicker";
 import ReactMarkdown from "react-markdown";
@@ -21,6 +21,8 @@ import ContactMessage from "./types/ContactMessage";
 import LinkPreviewMessage from "./types/LinkPreviewMessage";
 // Phase 7.6 — Meeting card
 import MeetingMessage from "./types/MeetingMessage";
+// Mentions — highlight @username chips
+import { wrapMentions, mentionRenderer } from '../../../../utils/renderWithMentions';
 
 /* ---------------------------------------------------------
    CHANNEL MessageItem Component (Slack Style)
@@ -368,9 +370,10 @@ function ChannelMessageItem({
                                     ),
                                     ul: ({ node, ...props }) => <ul {...props} className="list-disc list-inside ml-1" />,
                                     ol: ({ node, ...props }) => <ol {...props} className="list-decimal list-inside ml-1" />,
+                                    del: mentionRenderer(msg.senderName),
                                 }}
                             >
-                                {msg.text}
+                                {wrapMentions(msg.text)}
                             </ReactMarkdown>
                         ) : msg.payload?.isEncrypted ? (
                             <EncryptedMessage
@@ -386,9 +389,9 @@ function ChannelMessageItem({
 
                     </div>
                 )}
-                {/* Edit badge — outside text div so it sits flush below/next to text, not wrapped inside pre-wrap */}
+                {/* Edit badge with history popover */}
                 {msg.editedAt && !msg.isDeleted && (
-                    <span className="text-xs text-gray-400 italic"> (edited)</span>
+                    <EditedBadge editHistory={msg.editHistory} editedAt={msg.editedAt} />
                 )}
 
                 {/* Phase 7.5 — Link preview card */}
@@ -612,3 +615,73 @@ export default ChannelMessageItem;
         prevProps.threadCounts?.[prevProps.msg.id] === nextProps.threadCounts?.[nextProps.msg.id]
     );
 }); */
+
+// ── EditedBadge ──────────────────────────────────────────────────────────────
+// Shows "(edited)" next to a message. If editHistory has entries, clicking opens
+// a popover listing all previous versions with timestamps.
+function EditedBadge({ editHistory = [], editedAt }) {
+    const [open, setOpen] = useState(false);
+    const ref = useRef(null);
+    const hasHistory = editHistory.length > 0;
+
+    // Close when clicking outside
+    useEffect(() => {
+        if (!open) return;
+        const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+    }, [open]);
+
+    const formatTs = (ts) => {
+        if (!ts) return '';
+        const d = new Date(ts);
+        return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' at ' +
+               d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+    };
+
+    return (
+        <span className="relative inline-flex items-center" ref={ref}>
+            <button
+                onClick={() => hasHistory && setOpen(v => !v)}
+                className={`text-xs italic ml-1 flex items-center gap-1 transition-colors ${
+                    hasHistory
+                        ? 'text-indigo-400 hover:text-indigo-500 cursor-pointer'
+                        : 'text-gray-400 cursor-default'
+                }`}
+                title={hasHistory ? 'View edit history' : `Edited ${formatTs(editedAt)}`}
+            >
+                <History size={10} />
+                (edited)
+            </button>
+
+            {open && hasHistory && (
+                <div className="absolute bottom-full left-0 mb-2 w-72 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 z-50 overflow-hidden">
+                    <div className="px-3 py-2 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
+                        <span className="text-xs font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
+                            <History size={12} /> Edit History
+                        </span>
+                        <button
+                            onClick={() => setOpen(false)}
+                            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                        >
+                            <X size={12} />
+                        </button>
+                    </div>
+                    <div className="max-h-48 overflow-y-auto">
+                        {[...editHistory].reverse().map((entry, i) => (
+                            <div key={i} className="px-3 py-2 border-b border-gray-50 dark:border-gray-700/50 last:border-0">
+                                <div className="text-[10px] text-gray-400 dark:text-gray-500 mb-0.5">
+                                    {i === 0 ? 'Most recent previous version' : `Version ${editHistory.length - i}`}
+                                    {' · '}{formatTs(entry.editedAt)}
+                                </div>
+                                <div className="text-xs text-gray-700 dark:text-gray-300 line-clamp-3 whitespace-pre-wrap break-words">
+                                    {entry.text || <span className="italic text-gray-400">[encrypted]</span>}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+        </span>
+    );
+}

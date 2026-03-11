@@ -17,6 +17,8 @@ import ContactMessage from "./types/ContactMessage";
 import LinkPreviewMessage from "./types/LinkPreviewMessage";
 // Phase 7.6 — Meeting card
 import MeetingMessage from "./types/MeetingMessage";
+// Mentions — highlight @username chips
+import { wrapMentions, mentionRenderer } from '../../../../utils/renderWithMentions';
 
 /* ---------------------------------------------------------
    DM MessageItem Component (Matches Channel/Slack Style Exactly)
@@ -348,9 +350,10 @@ function DMMessageItem({
                                     ),
                                     ul: ({ node, ...props }) => <ul {...props} className="list-disc list-inside ml-1" />,
                                     ol: ({ node, ...props }) => <ol {...props} className="list-decimal list-inside ml-1" />,
+                                    del: mentionRenderer(msg.senderName),
                                 }}
                             >
-                                {msg.text}
+                                {wrapMentions(msg.text)}
                             </ReactMarkdown>
                         ) : msg.payload?.isEncrypted ? (
                             <EncryptedMessage

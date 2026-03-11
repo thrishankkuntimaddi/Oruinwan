@@ -1,9 +1,9 @@
 import React from "react";
 import { Layout, User, Bell, Hash, Zap, Search } from "lucide-react";
-import { useBlogs } from "../../../contexts/BlogsContext";
+import { useUpdates } from "../../../contexts/UpdatesContext";
 
 const UpdatesPanel = () => {
-    const { activeFilter, setActiveFilter } = useBlogs();
+    const { activeFilter, setActiveFilter } = useUpdates();
 
     const filters = [
         { id: "all", label: "Team Pulse", icon: Zap },

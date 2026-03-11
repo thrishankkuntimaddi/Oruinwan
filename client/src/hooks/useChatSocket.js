@@ -18,6 +18,7 @@ export function useChatSocket(conversationId, conversationType, eventHandler) {
     const eventHandlerRef = useRef(eventHandler); // Changed from onEventRef
     // eslint-disable-next-line no-unused-vars
     const lastEventHashRef = useRef(new Set()); // Track processed event hashes (reserved for deduplication)
+    const wasDisconnectedRef = useRef(false);  // ← STABILITY: track disconnect for missed-message recovery
 
 
 
@@ -132,9 +133,23 @@ export function useChatSocket(conversationId, conversationType, eventHandler) {
         // Re-join room when socket connects/reconnects (auto-join effect handles initial join)
         const handleConnect = () => {
             joinConversation();
+            // If we previously disconnected, notify the parent so it can re-fetch
+            // any messages that arrived while the socket was offline.
+            if (wasDisconnectedRef.current) {
+                wasDisconnectedRef.current = false;
+                eventHandlerRef.current?.({
+                    type: 'reconnect',
+                    payload: { conversationId }
+                });
+            }
+        };
+
+        const handleDisconnect = () => {
+            wasDisconnectedRef.current = true;
         };
 
         socket.on('connect', handleConnect);
+        socket.on('disconnect', handleDisconnect);
 
         // ==================== MESSAGE EVENTS ====================
 
@@ -441,6 +456,7 @@ export function useChatSocket(conversationId, conversationType, eventHandler) {
 
             // Remove connect listener
             socket.off('connect', handleConnect);
+            socket.off('disconnect', handleDisconnect);
 
             // Leave room on unmount
             leaveConversation();

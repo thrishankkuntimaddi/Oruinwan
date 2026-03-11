@@ -152,6 +152,24 @@ async function scheduleCreated(io, { recipientIds, workspaceId, title, scheduled
     });
 }
 
+/**
+ * Notify all thread followers (except the sender) when a new reply is posted.
+ *
+ * @param {object} io
+ * @param {{ followerIds: string[], senderUsername: string, workspaceId: string, channelId: string|null, channelName: string, parentMessageId: string }} opts
+ */
+async function threadReply(io, { followerIds, senderUsername, workspaceId, channelId, channelName, parentMessageId }) {
+    if (!followerIds || followerIds.length === 0) return;
+    return createMany(io, followerIds, {
+        workspaceId,
+        type: 'thread_reply',
+        title: `${senderUsername} replied to a thread`,
+        body: channelName ? `in #${channelName}` : 'View thread',
+        link: channelId ? `/channel/${channelId}` : null,
+        meta: { senderUsername, channelId, channelName, parentMessageId },
+    });
+}
+
 module.exports = {
     create,
     createMany,
@@ -163,4 +181,5 @@ module.exports = {
     channelPinned,
     huddleStarted,
     scheduleCreated,
+    threadReply,
 };

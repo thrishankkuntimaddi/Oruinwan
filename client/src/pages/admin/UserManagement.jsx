@@ -1,5 +1,3 @@
-
-
 import React, { useState, useEffect } from 'react';
 import { Search, Mail, BarChart2, Briefcase } from 'lucide-react';
 import { useCompany } from '../../contexts/CompanyContext';
@@ -9,6 +7,7 @@ import { workspaceService } from '../../services/workspaceService';
 import { InviteUserModal } from '../../components/company';
 import EmployeeActionsMenu from '../../components/company/EmployeeActionsMenu';
 import { useToast } from '../../contexts/ToastContext';
+import { usePermissions } from '../../hooks/usePermissions';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
 
 const COLORS = ['#6366f1', '#8b5cf6', '#ec4899', '#f43f5e', '#10b981', '#f59e0b'];
@@ -16,6 +15,7 @@ const COLORS = ['#6366f1', '#8b5cf6', '#ec4899', '#f43f5e', '#10b981', '#f59e0b'
 const UserManagement = () => {
     const { company } = useCompany();
     const { showToast } = useToast();
+    const { canInviteUsers, canSuspendUsers, companyRole } = usePermissions();
     const [allMembers, setAllMembers] = useState([]);
     const [filteredMembers, setFilteredMembers] = useState([]);
     const [departments, setDepartments] = useState([]);
@@ -226,12 +226,14 @@ const UserManagement = () => {
                     >
                         <BarChart2 size={20} />
                     </button>
-                    <button
-                        onClick={() => setIsInviteModalOpen(true)}
-                        className="px-4 py-2 bg-indigo-600 text-white text-sm font-bold rounded-lg hover:bg-indigo-700 transition-colors shadow-sm flex items-center gap-2"
-                    >
-                        <Mail size={16} /> Invite People
-                    </button>
+                    {canInviteUsers && (
+                        <button
+                            onClick={() => setIsInviteModalOpen(true)}
+                            className="px-4 py-2 bg-indigo-600 text-white text-sm font-bold rounded-lg hover:bg-indigo-700 transition-colors shadow-sm flex items-center gap-2"
+                        >
+                            <Mail size={16} /> Invite People
+                        </button>
+                    )}
                 </div>
             </header>
 
@@ -354,7 +356,7 @@ const UserManagement = () => {
                     </div>
 
                     <div className="flex items-center gap-3">
-                        {selectedUsers.length > 0 && (
+                        {selectedUsers.length > 0 && canSuspendUsers && (
                             <div className="flex items-center gap-2 bg-indigo-50 dark:bg-indigo-900/30 px-3 py-1.5 rounded-lg border border-indigo-100 dark:border-indigo-800 animate-fadeIn transition-colors">
                                 <span className="text-xs font-bold text-indigo-700 dark:text-indigo-400">{selectedUsers.length} selected</span>
                                 <button
@@ -493,11 +495,14 @@ const UserManagement = () => {
                                             </div>
                                         </td>
                                         <td className="px-6 py-4 text-right">
-                                            <EmployeeActionsMenu
-                                                employee={member}
-                                                departments={departments}
-                                                onUpdate={fetchData}
-                                            />
+                                            {canSuspendUsers && (
+                                                <EmployeeActionsMenu
+                                                    employee={member}
+                                                    departments={departments}
+                                                    onUpdate={fetchData}
+                                                    viewerRole={companyRole}
+                                                />
+                                            )}
                                         </td>
                                     </tr>
                                 ))

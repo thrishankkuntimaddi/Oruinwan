@@ -1,6 +1,7 @@
 // server/src/modules/threads/threads.controller.js
 const Message = require("../../features/messages/message.model.js");
 const Channel = require("../../features/channels/channel.model.js");
+const { followThread, unfollowThread, getFollowStatus, getFollowerIds } = require('./threads.service');
 
 /**
  * Get all active threads for a channel
@@ -67,7 +68,7 @@ exports.getThread = async (req, res) => {
         const { messageId } = req.params;
         const userId = req.user.sub;
 
-        // Get the parent message first
+        // Get the parent message first — include followers for client follow-status bootstrap
         const parentMessage = await Message.findById(messageId)
             .populate("sender", "_id username profilePicture")
             .lean();
@@ -77,12 +78,7 @@ exports.getThread = async (req, res) => {
         }
 
         // Check if user has access to this message
-        // For DMs: user must be sender or participant
-        // For channels: user must be a member (we'll check via Channel model)
         if (parentMessage.dm) {
-            // DM message
-            const _isSender = String(parentMessage.sender._id || parentMessage.sender) === String(userId);
-            // For DM, check if user is a participant in the DMSession
             const DMSession = require("../../../models/DMSession");
             const dmSession = await DMSession.findById(parentMessage.dm);
 
@@ -90,7 +86,6 @@ exports.getThread = async (req, res) => {
                 return res.status(403).json({ message: "Access denied" });
             }
         } else if (parentMessage.channel) {
-            // Channel message - check membership
             const Channel = require("../../features/channels/channel.model.js");
             const channel = await Channel.findById(parentMessage.channel);
 
@@ -102,13 +97,22 @@ exports.getThread = async (req, res) => {
         // Get all replies to this message
         const replies = await Message.find({ parentId: messageId })
             .populate("sender", "_id username profilePicture")
-            .sort({ createdAt: 1 }) // Oldest first for threads
+            .sort({ createdAt: 1 })
             .lean();
+
+        // Compute follow status for the requesting user
+        const followerStrings = (parentMessage.followers || []).map(String);
+        const isFollowing = followerStrings.includes(String(userId));
 
         return res.json({
             parent: parentMessage,
             replies,
             count: replies.length,
+            // Follow metadata — clients use this to bootstrap the UI without a second request
+            followStatus: {
+                following: isFollowing,
+                followerCount: followerStrings.length,
+            },
         });
     } catch (err) {
         console.error("GET THREAD ERROR:", err);
@@ -150,10 +154,10 @@ exports.postThreadReply = async (req, res) => {
                 isEncrypted: true
             },
             parentId: messageId,
-            readBy: [userId], // Sender has read it (array of ObjectIds)
+            readBy: [userId],
             workspace: parentMessage.workspace,
             company: parentMessage.company,
-            clientTempId // Store optimistic ID if provided
+            clientTempId
         };
 
         // Set context (DM or channel)
@@ -187,7 +191,7 @@ exports.postThreadReply = async (req, res) => {
                 ? `channel:${parentMessage.channel}`
                 : `dm:${parentMessage.dm}`;
 
-            // ✅ THREAD AWARENESS: Emit thread:created on FIRST reply only
+            // Emit thread:created on FIRST reply only
             if (updatedParent.replyCount === 1) {
                 io.to(roomName).emit("thread:created", {
                     parentMessageId: messageId,
@@ -200,39 +204,78 @@ exports.postThreadReply = async (req, res) => {
             }
 
             if (parentMessage.channel) {
-                // Broadcast thread-reply to channel for thread panel updates
                 io.to(`channel:${parentMessage.channel}`).emit("thread-reply", {
                     parentId: messageId,
                     reply: reply.toObject(),
-                    clientTempId // ✅ Include for optimistic UI reconciliation
+                    clientTempId
                 });
 
-                // Broadcast message-updated to update reply count in main chat
                 io.to(`channel:${parentMessage.channel}`).emit("message-updated", {
                     messageId: messageId,
-                    updates: {
-                        replyCount: updatedParent.replyCount
-                    },
+                    updates: { replyCount: updatedParent.replyCount },
                     fullMessage: updatedParent
                 });
             } else if (parentMessage.dm) {
-                // Send to DM session room
                 io.to(`dm:${parentMessage.dm}`).emit("thread-reply", {
                     parentId: messageId,
                     reply: reply.toObject(),
-                    clientTempId // ✅ Include for optimistic UI reconciliation
+                    clientTempId
                 });
 
-                // Broadcast message-updated to update reply count in main chat
                 io.to(`dm:${parentMessage.dm}`).emit("message-updated", {
                     messageId: messageId,
-                    updates: {
-                        replyCount: updatedParent.replyCount
-                    },
+                    updates: { replyCount: updatedParent.replyCount },
                     fullMessage: updatedParent
                 });
             }
         }
+
+        // ==================================================================
+        // THREAD FOLLOW — Auto-follow sender + notify existing followers
+        // Fire-and-forget: never delays the HTTP response
+        // ==================================================================
+        (async () => {
+            try {
+                const notificationService = require('../../features/notifications/notificationService');
+
+                // 1. Auto-follow: add the replier to followers (idempotent)
+                await Message.findByIdAndUpdate(messageId, {
+                    $addToSet: { followers: userId }
+                });
+
+                // 2. Collect all current followers (after auto-follow) and exclude sender
+                const allFollowers = await getFollowerIds(messageId);
+                const recipientIds = allFollowers.filter(id => id !== String(userId));
+
+                if (recipientIds.length === 0) return;
+
+                // 3. Resolve channel name for notification body
+                let channelName = null;
+                if (parentMessage.channel) {
+                    try {
+                        const channelDoc = await Channel.findById(parentMessage.channel).select('name').lean();
+                        channelName = channelDoc?.name || null;
+                    } catch (_) { /* non-critical */ }
+                }
+
+                const senderUsername = reply.sender?.username || 'Someone';
+
+                // 4. Send thread_reply notifications to all followers except sender
+                await notificationService.threadReply(io, {
+                    followerIds: recipientIds,
+                    senderUsername,
+                    workspaceId: parentMessage.workspace,
+                    channelId: parentMessage.channel ? String(parentMessage.channel) : null,
+                    channelName,
+                    parentMessageId: String(messageId),
+                });
+
+                console.log(`[THREADS] 🔔 thread_reply notifications → ${recipientIds.length} follower(s)`);
+            } catch (followErr) {
+                console.error('[THREADS] Follow/notify error (non-fatal):', followErr.message);
+            }
+        })();
+
         return res.status(201).json({ reply });
     } catch (err) {
         console.error("POST THREAD REPLY ERROR:", err);
@@ -241,18 +284,68 @@ exports.postThreadReply = async (req, res) => {
 };
 
 /**
- * Get thread count for a message (how many replies)
+ * Get thread reply count for a message
  * GET /api/messages/:messageId/thread-count
  */
 exports.getThreadCount = async (req, res) => {
     try {
         const { messageId } = req.params;
-
         const count = await Message.countDocuments({ parentId: messageId });
-
         return res.json({ count });
     } catch (err) {
         console.error("GET THREAD COUNT ERROR:", err);
         return res.status(500).json({ message: "Server error" });
+    }
+};
+
+// ==================================================================
+// FOLLOW / UNFOLLOW ENDPOINTS
+// ==================================================================
+
+/**
+ * Follow a thread
+ * POST /api/threads/:messageId/follow
+ */
+exports.followThread = async (req, res) => {
+    try {
+        const { messageId } = req.params;
+        const userId = req.user.sub;
+        const result = await followThread(messageId, userId);
+        return res.json(result);
+    } catch (err) {
+        const status = err.status || 500;
+        return res.status(status).json({ message: err.message });
+    }
+};
+
+/**
+ * Unfollow a thread
+ * DELETE /api/threads/:messageId/follow
+ */
+exports.unfollowThread = async (req, res) => {
+    try {
+        const { messageId } = req.params;
+        const userId = req.user.sub;
+        const result = await unfollowThread(messageId, userId);
+        return res.json(result);
+    } catch (err) {
+        const status = err.status || 500;
+        return res.status(status).json({ message: err.message });
+    }
+};
+
+/**
+ * Get follow status for the current user on a thread
+ * GET /api/threads/:messageId/follow
+ */
+exports.getFollowStatus = async (req, res) => {
+    try {
+        const { messageId } = req.params;
+        const userId = req.user.sub;
+        const result = await getFollowStatus(messageId, userId);
+        return res.json(result);
+    } catch (err) {
+        const status = err.status || 500;
+        return res.status(status).json({ message: err.message });
     }
 };
