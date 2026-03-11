@@ -451,6 +451,23 @@ io.on("connection", async (socket) => {
   }
 
   registerChatHandlers(io, socket);
+
+  // ── PLATFORM SUPPORT ROOMS ──────────────────────────────────────────────
+  // Every authenticated user auto-joins their own personal support room.
+  // This enables ChttrixAdmin to send DMs directly to individual users.
+  socket.join(`user-support:${socket.user.id}`);
+  logger.debug(`[SUPPORT] User ${socket.user.id} joined user-support:${socket.user.id}`);
+
+  // Auto-join platform-admins room for chttrix admins
+  try {
+    const dbUser = await User.findById(socket.user.id).select('roles').lean();
+    if (dbUser?.roles?.includes('platform-admin') || dbUser?.roles?.includes('chttrix_admin')) {
+      socket.join('platform-admins');
+      logger.debug(`[SUPPORT] Platform admin ${socket.user.id} joined platform-admins room`);
+    }
+  } catch (err) {
+    logger.error('[SUPPORT] Auto platform-admin room join error:', err);
+  }
 });
 
 // ---------------------------------------------------------

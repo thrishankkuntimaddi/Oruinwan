@@ -1,206 +1,271 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import axios from 'axios';
-import { useParams } from 'react-router-dom';
-import { Send, Search, Circle, MessageSquare, ArrowLeft } from 'lucide-react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { Send, Search, Circle, MessageSquare, ArrowLeft, CheckCheck, Building2 } from 'lucide-react';
 import { useToast } from '../../../../contexts/ToastContext';
+import io from 'socket.io-client';
 
 const PlatformChat = () => {
-    const { companyId } = useParams();
-    const [companies, setCompanies] = useState([]);
-    const [selectedCompany, setSelectedCompany] = useState(null);
+    const { userId } = useParams(); // /chttrix-admin/dm/user/:userId
+    const navigate = useNavigate();
+    const [users, setUsers] = useState([]);
+    const [selectedUser, setSelectedUser] = useState(null);
     const [messages, setMessages] = useState([]);
     const [input, setInput] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
+    const [sending, setSending] = useState(false);
     const messagesEndRef = useRef(null);
+    const socketRef = useRef(null);
     const { showToast } = useToast();
 
-    // Define functions before useEffects that use them
-    const fetchCompanies = async () => {
+    // Fetch users list with last message + unread count
+    const fetchUsers = useCallback(async () => {
         try {
-            const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/admin/active-companies`, {
+            const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/admin/dm-users`, {
                 withCredentials: true
             });
-            setCompanies(res.data);
+            setUsers(res.data || []);
         } catch (err) {
-            console.error('Failed to fetch companies:', err);
-        }
-    };
-
-    const fetchMessages = useCallback(async (compId) => {
-        try {
-            const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/admin/dm/${compId}`, {
-                withCredentials: true
-            });
-            setMessages(res.data);
-        } catch (err) {
-            console.error('Failed to fetch messages:', err);
-            showToast('Failed to load messages', 'error');
+            console.error('Failed to fetch DM users:', err);
+            showToast('Failed to load users', 'error');
         }
     }, [showToast]);
 
-    useEffect(() => {
-        fetchCompanies();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
+    // Fetch messages for a specific user
+    const fetchMessages = useCallback(async (uid) => {
+        try {
+            const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/admin/dm/user/${uid}`, {
+                withCredentials: true
+            });
+            setMessages(Array.isArray(res.data) ? res.data : []);
+        } catch (err) {
+            console.error('Failed to fetch messages:', err);
+        }
     }, []);
 
+    // Setup socket — listen for platform-message events from all users
     useEffect(() => {
-        if (companyId && companies.length > 0) {
-            const company = companies.find(c => c._id === companyId);
-            if (company) {
-                setSelectedCompany(company);
-                fetchMessages(companyId);
+        socketRef.current = io(import.meta.env.VITE_BACKEND_URL, { withCredentials: true });
+
+        socketRef.current.on('platform-message', (message) => {
+            // Append if it's for the currently selected user (sender or receiver matches)
+            setMessages(prev => {
+                const alreadyExists = prev.some(m => m._id === message._id);
+                if (alreadyExists) return prev;
+                return [...prev, message];
+            });
+            scrollToBottom();
+            // Refresh sidebar counts
+            fetchUsers();
+        });
+
+        return () => {
+            if (socketRef.current) socketRef.current.disconnect();
+        };
+    }, [fetchUsers]);
+
+    useEffect(() => {
+        fetchUsers();
+    }, [fetchUsers]);
+
+    // Select user from URL param
+    useEffect(() => {
+        if (userId && users.length > 0) {
+            const found = users.find(u => u._id === userId);
+            if (found) {
+                setSelectedUser(found);
+                fetchMessages(userId);
             }
         }
-    }, [companyId, companies, fetchMessages]);
+    }, [userId, users, fetchMessages]);
 
     useEffect(() => {
         scrollToBottom();
     }, [messages]);
 
+    const selectUser = (user) => {
+        setSelectedUser(user);
+        setMessages([]);
+        fetchMessages(user._id);
+        navigate(`/chttrix-admin/dm/user/${user._id}`, { replace: true });
+    };
+
     const sendMessage = async (e) => {
         e.preventDefault();
-        if (!input.trim() || !selectedCompany) return;
+        if (!input.trim() || !selectedUser || sending) return;
 
+        setSending(true);
         try {
             const res = await axios.post(
-                `${import.meta.env.VITE_BACKEND_URL}/api/admin/dm/${selectedCompany._id}`,
+                `${import.meta.env.VITE_BACKEND_URL}/api/admin/dm/user/${selectedUser._id}`,
                 { message: input },
                 { withCredentials: true }
             );
             setMessages(prev => [...prev, res.data]);
             setInput('');
             scrollToBottom();
+            fetchUsers(); // refresh sidebar
         } catch (err) {
             console.error('Failed to send message:', err);
             showToast('Failed to send message', 'error');
+        } finally {
+            setSending(false);
         }
     };
 
     const scrollToBottom = () => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 50);
     };
 
-    const filteredCompanies = companies.filter(c =>
-        c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        c.domain?.toLowerCase().includes(searchTerm.toLowerCase())
+    const filteredUsers = users.filter(u =>
+        u.username?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        u.companyName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        u.email?.toLowerCase().includes(searchTerm.toLowerCase())
     );
+
+    const isPlatformMsg = (msg) => msg.senderRole === 'platform';
+    const formatTime = (date) => new Date(date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+    const roleColors = {
+        owner: 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400',
+        admin: 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400',
+        manager: 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400',
+    };
 
     return (
         <div className="h-[calc(100vh-140px)] flex gap-6">
-            {/* Companies List */}
-            <div className={`${selectedCompany ? 'hidden md:flex' : 'flex'} w-full md:w-80 flex-col bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 overflow-hidden`}>
-                {/* Header */}
-                <div className="p-6 border-b border-gray-100 dark:border-gray-700">
-                    <h2 className="text-xl font-black text-gray-900 dark:text-white mb-4">Company Chats</h2>
+            {/* Users List */}
+            <div className={`${selectedUser ? 'hidden md:flex' : 'flex'} w-full md:w-80 flex-col bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 overflow-hidden`}>
+                <div className="p-5 border-b border-gray-100 dark:border-gray-700">
+                    <h2 className="text-lg font-black text-gray-900 dark:text-white mb-3">Direct Messages</h2>
                     <div className="relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={15} />
                         <input
                             type="text"
-                            placeholder="Search companies..."
+                            placeholder="Search users or companies..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full pl-10 pr-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900"
+                            className="w-full pl-9 pr-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900"
                         />
                     </div>
                 </div>
 
-                {/* Companies List */}
-                <div className="flex-1 overflow-y-auto">
-                    {filteredCompanies.map(company => (
+                <div className="flex-1 overflow-y-auto custom-scrollbar">
+                    {filteredUsers.length === 0 ? (
+                        <div className="p-8 text-center">
+                            <p className="text-gray-400 text-sm">No company users found</p>
+                        </div>
+                    ) : filteredUsers.map(user => (
                         <button
-                            key={company._id}
-                            onClick={() => {
-                                setSelectedCompany(company);
-                                fetchMessages(company._id);
-                            }}
-                            className={`w-full p-4 border-b border-gray-50 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-all text-left ${selectedCompany?._id === company._id
+                            key={user._id}
+                            onClick={() => selectUser(user)}
+                            className={`w-full p-4 border-b border-gray-50 dark:border-gray-700/50 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-all text-left ${selectedUser?._id === user._id
                                 ? 'bg-indigo-50 dark:bg-indigo-900/20 border-l-4 border-l-indigo-600'
                                 : 'border-l-4 border-l-transparent'
                                 }`}
                         >
                             <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 bg-indigo-100 dark:bg-indigo-900/30 rounded-xl flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-bold">
-                                    {company.name.charAt(0)}
+                                <div className="relative flex-shrink-0">
+                                    <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center text-white font-bold text-sm">
+                                        {user.username?.charAt(0).toUpperCase()}
+                                    </div>
+                                    {user.isOnline && (
+                                        <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 border-2 border-white dark:border-gray-800 rounded-full" />
+                                    )}
+                                    {user.unreadCount > 0 && (
+                                        <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center">
+                                            {user.unreadCount > 9 ? '9+' : user.unreadCount}
+                                        </span>
+                                    )}
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                    <p className="font-bold text-gray-900 dark:text-white truncate">{company.name}</p>
-                                    <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                                        {company.domain || 'No domain'}
-                                    </p>
+                                    <div className="flex items-center gap-2 mb-0.5">
+                                        <p className="font-bold text-gray-900 dark:text-white text-sm truncate">{user.username}</p>
+                                        <span className={`text-[9px] font-black uppercase px-1.5 py-0.5 rounded flex-shrink-0 ${roleColors[user.companyRole] || roleColors.admin}`}>
+                                            {user.companyRole}
+                                        </span>
+                                    </div>
+                                    <div className="flex items-center gap-1">
+                                        <Building2 size={10} className="text-gray-400 flex-shrink-0" />
+                                        <p className="text-xs text-gray-400 truncate">{user.companyName}</p>
+                                    </div>
+                                    {user.lastMessage && (
+                                        <p className="text-xs text-gray-400 truncate mt-0.5">{user.lastMessage.content}</p>
+                                    )}
                                 </div>
-                                {/* Online status indicator - can be enhanced with socket.io */}
-                                <Circle size={8} className="text-green-500 fill-green-500" />
                             </div>
                         </button>
                     ))}
-                    {filteredCompanies.length === 0 && (
-                        <div className="p-8 text-center text-gray-400 text-sm">
-                            No companies found
-                        </div>
-                    )}
                 </div>
             </div>
 
             {/* Chat Window */}
-            {selectedCompany ? (
+            {selectedUser ? (
                 <div className="flex-1 flex flex-col bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 overflow-hidden">
                     {/* Chat Header */}
-                    <div className="p-6 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50">
-                        <div className="flex items-center gap-4">
-                            <button
-                                onClick={() => setSelectedCompany(null)}
-                                className="md:hidden p-2 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg"
-                            >
-                                <ArrowLeft size={20} />
-                            </button>
-                            <div className="w-12 h-12 bg-indigo-100 dark:bg-indigo-900/30 rounded-xl flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-bold text-lg">
-                                {selectedCompany.name.charAt(0)}
+                    <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50 flex items-center gap-4">
+                        <button
+                            onClick={() => { setSelectedUser(null); navigate('/chttrix-admin/dm', { replace: true }); }}
+                            className="md:hidden p-2 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg"
+                        >
+                            <ArrowLeft size={20} />
+                        </button>
+                        <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center text-white font-bold">
+                            {selectedUser.username?.charAt(0).toUpperCase()}
+                        </div>
+                        <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                                <h3 className="font-bold text-gray-900 dark:text-white">{selectedUser.username}</h3>
+                                <span className={`text-[9px] font-black uppercase px-1.5 py-0.5 rounded ${roleColors[selectedUser.companyRole] || roleColors.admin}`}>
+                                    {selectedUser.companyRole}
+                                </span>
                             </div>
-                            <div className="flex-1">
-                                <h3 className="font-bold text-gray-900 dark:text-white text-lg">
-                                    {selectedCompany.name}
-                                </h3>
-                                <p className="text-sm text-gray-500 dark:text-gray-400">
-                                    {selectedCompany.admins[0]?.user?.username || 'Admin'}
-                                </p>
+                            <div className="flex items-center gap-1 mt-0.5">
+                                <Building2 size={11} className="text-gray-400" />
+                                <p className="text-xs text-gray-500 dark:text-gray-400">{selectedUser.companyName}</p>
                             </div>
-                            <div className="flex items-center gap-2 text-xs text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-900/30 px-3 py-1 rounded-full font-bold">
-                                <Circle size={6} className="fill-green-600" />
-                                Online
-                            </div>
+                        </div>
+                        <div className={`flex items-center gap-1.5 text-xs px-3 py-1 rounded-full font-bold border ${selectedUser.isOnline
+                            ? 'text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 border-green-100 dark:border-green-900/30'
+                            : 'text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600'
+                        }`}>
+                            <Circle size={6} className={selectedUser.isOnline ? 'fill-green-600 dark:fill-green-400' : 'fill-gray-400'} />
+                            {selectedUser.isOnline ? 'Online' : 'Offline'}
                         </div>
                     </div>
 
                     {/* Messages */}
-                    <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-gray-50/30 dark:bg-gray-900/20">
+                    <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-gray-50/40 dark:bg-gray-900/20 custom-scrollbar">
                         {messages.length === 0 ? (
                             <div className="h-full flex items-center justify-center text-gray-400 flex-col gap-3">
-                                <MessageSquare size={48} className="opacity-20" />
-                                <p>No messages yet. Start the conversation!</p>
+                                <div className="w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
+                                    <MessageSquare size={28} className="opacity-40" />
+                                </div>
+                                <p className="font-semibold text-gray-500">No messages yet. Start the conversation!</p>
                             </div>
                         ) : (
                             messages.map((msg, index) => {
-                                const isAdmin = msg.sender?.roles?.includes('chttrix_admin');
+                                const isAdmin = isPlatformMsg(msg);
+                                const senderInitial = msg.sender?.username?.charAt(0).toUpperCase() || (isAdmin ? 'C' : selectedUser.username?.charAt(0).toUpperCase());
                                 return (
-                                    <div key={index} className={`flex gap-3 ${isAdmin ? 'flex-row-reverse' : ''}`}>
+                                    <div key={msg._id || index} className={`flex gap-3 ${isAdmin ? 'flex-row-reverse' : ''}`}>
                                         <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${isAdmin
                                             ? 'bg-indigo-600 text-white'
-                                            : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
-                                            }`}>
-                                            {msg.sender?.username?.charAt(0) || 'U'}
+                                            : 'bg-gradient-to-br from-indigo-400 to-purple-500 text-white'
+                                        }`}>
+                                            {senderInitial}
                                         </div>
-                                        <div className={`max-w-[70%] p-4 rounded-2xl ${isAdmin
-                                            ? 'bg-indigo-600 text-white rounded-tr-none'
-                                            : 'bg-white dark:bg-gray-700 border border-gray-100 dark:border-gray-600 text-gray-800 dark:text-gray-200 rounded-tl-none'
+                                        <div className={`max-w-[70%] flex flex-col gap-1 ${isAdmin ? 'items-end' : 'items-start'}`}>
+                                            <div className={`px-4 py-3 rounded-2xl text-sm leading-relaxed ${isAdmin
+                                                ? 'bg-indigo-600 text-white rounded-tr-none'
+                                                : 'bg-white dark:bg-gray-700 border border-gray-100 dark:border-gray-600 text-gray-800 dark:text-gray-200 rounded-tl-none shadow-sm'
                                             }`}>
-                                            <p className="text-sm">{msg.message || msg.text}</p>
-                                            <p className={`text-[10px] mt-2 ${isAdmin ? 'text-indigo-200' : 'text-gray-400'
-                                                }`}>
-                                                {new Date(msg.createdAt).toLocaleTimeString([], {
-                                                    hour: '2-digit',
-                                                    minute: '2-digit'
-                                                })}
-                                            </p>
+                                                {msg.content}
+                                            </div>
+                                            <div className={`flex items-center gap-1 text-[10px] text-gray-400 ${isAdmin ? 'flex-row-reverse' : ''}`}>
+                                                <span>{formatTime(msg.createdAt)}</span>
+                                                {isAdmin && <CheckCheck size={11} className="text-indigo-300" />}
+                                            </div>
                                         </div>
                                     </div>
                                 );
@@ -216,24 +281,28 @@ const PlatformChat = () => {
                                 type="text"
                                 value={input}
                                 onChange={(e) => setInput(e.target.value)}
-                                placeholder="Type a message..."
-                                className="flex-1 px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900 text-gray-900 dark:text-white"
+                                placeholder={`Message ${selectedUser.username}...`}
+                                className="flex-1 px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900 text-sm text-gray-900 dark:text-white"
                             />
                             <button
                                 type="submit"
-                                disabled={!input.trim()}
-                                className="px-6 py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-all flex items-center gap-2"
+                                disabled={!input.trim() || sending}
+                                className="px-5 py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 disabled:bg-gray-300 dark:disabled:bg-gray-700 disabled:cursor-not-allowed transition-all flex items-center gap-2"
                             >
-                                <Send size={18} />
+                                {sending ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <Send size={16} />}
                             </button>
                         </div>
                     </form>
                 </div>
             ) : (
-                <div className="hidden md:flex flex-1 bg-gray-50 dark:bg-gray-800/50 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700 items-center justify-center text-gray-400 flex-col gap-4">
-                    <MessageSquare size={64} className="opacity-20" />
-                    <p className="font-bold text-lg">Select a company to start chatting</p>
-                    <p className="text-sm">Choose from the list on the left</p>
+                <div className="hidden md:flex flex-1 bg-white dark:bg-gray-800 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700 items-center justify-center text-gray-400 flex-col gap-4">
+                    <div className="w-20 h-20 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
+                        <MessageSquare size={36} className="opacity-30" />
+                    </div>
+                    <div className="text-center">
+                        <p className="font-bold text-lg text-gray-600 dark:text-gray-300">Select a user to start chatting</p>
+                        <p className="text-sm text-gray-400 mt-1">Choose from owners, admins, or managers on the left</p>
+                    </div>
                 </div>
             )}
         </div>

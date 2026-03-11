@@ -34,10 +34,45 @@ router.patch('/messages/:messageId/read', requireAuth, platformSupportController
 =============================== */
 
 /**
+ * @route   GET /api/platform/support/messages/me
+ * @desc    Get MY support conversation messages (current user's 1:1 with platform admin)
+ * @access  Private (company owner/admin)
+ */
+router.get('/messages/me', requireAuth, async (req, res) => {
+    try {
+        const userId = req.user.sub || req.user._id;
+        if (!userId) return res.status(401).json({ message: 'Authentication required' });
+
+        // Find this user's support ticket (scoped by creatorId)
+        const ticket = await require('../../../models/SupportTicket').findOne({
+            creatorId: userId,
+            subject: 'Live Chat Support'
+        }).sort({ createdAt: -1 }).lean();
+
+        if (!ticket) {
+            return res.json({ messages: [] });
+        }
+
+        const messages = await require('../../../models/SupportMessage').find({
+            ticket: ticket._id,
+            deletedAt: null
+        })
+            .populate('sender', 'username email profilePicture')
+            .sort({ createdAt: 1 })
+            .lean();
+
+        return res.json({ messages });
+    } catch (error) {
+        console.error('GET MY MESSAGES ERROR:', error);
+        return res.status(500).json({ message: 'Server error' });
+    }
+});
+
+/**
  * @route   GET /api/platform/support/messages/:companyId
  * @desc    Get all support messages for a company (across all tickets)
  * @access  Private (company admin)
- * @deprecated Use /tickets/:ticketId/messages instead
+ * @deprecated Use /messages/me instead
  */
 router.get('/messages/:companyId', requireAuth, platformSupportController.getMessages);
 

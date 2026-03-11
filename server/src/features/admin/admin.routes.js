@@ -458,47 +458,178 @@ router.get('/broadcast/history', requireSuperAdmin, async (req, res) => {
 // ================================================================================
 // DIRECT MESSAGES ROUTES
 // ================================================================================
+// PER-USER DM ROUTES (ChttrixAdmin ↔ individual company owner/admin)
+// ================================================================================
 
-// GET /api/admin/dm/:companyId - Get messages with company
-router.get('/dm/:companyId', requireSuperAdmin, async (req, res) => {
+const SupportMessage = require('../../../models/SupportMessage');
+const SupportTicket = require('../../../models/SupportTicket');
+const UserModel = require('../../../models/User');
+
+/**
+ * GET /api/admin/dm-users
+ * List all company owners and admins with their last message + unread count
+ */
+router.get('/dm-users', requireSuperAdmin, async (req, res) => {
   try {
-    // TODO: Implement DM message storage
-    // For now, return empty array
-    // In production, create a Message model for admin-company DMs
-    res.json([]);
+    // Fetch all company users (owners + admins)
+    const users = await UserModel.find({
+      companyId: { $exists: true, $ne: null },
+      companyRole: { $in: ['owner', 'admin'] }
+    })
+      .select('username email profilePicture companyRole companyId isOnline')
+      .populate('companyId', 'name')
+      .lean();
+
+    // Enrich with last message + unread count per user
+    const enriched = await Promise.all(users.map(async (user) => {
+      // Find this user's support ticket
+      const ticket = await SupportTicket.findOne({
+        creatorId: user._id,
+        subject: 'Live Chat Support'
+      }).sort({ createdAt: -1 }).select('_id').lean();
+
+      let lastMessage = null;
+      let unreadCount = 0;
+
+      if (ticket) {
+        lastMessage = await SupportMessage.findOne({ ticket: ticket._id, deletedAt: null })
+          .sort({ createdAt: -1 })
+          .select('content createdAt senderRole')
+          .lean();
+
+        unreadCount = await SupportMessage.countDocuments({
+          ticket: ticket._id,
+          senderRole: 'company',
+          deletedAt: null,
+          readBy: { $size: 0 }
+        });
+      }
+
+      return {
+        _id: user._id,
+        username: user.username,
+        email: user.email,
+        profilePicture: user.profilePicture,
+        companyRole: user.companyRole,
+        companyName: user.companyId?.name || 'Unknown Company',
+        isOnline: user.isOnline || false,
+        lastMessage: lastMessage ? { content: lastMessage.content, createdAt: lastMessage.createdAt } : null,
+        unreadCount
+      };
+    }));
+
+    // Sort: users with messages first, then by latest message
+    enriched.sort((a, b) => {
+      if (!a.lastMessage && !b.lastMessage) return 0;
+      if (!a.lastMessage) return 1;
+      if (!b.lastMessage) return -1;
+      return new Date(b.lastMessage.createdAt) - new Date(a.lastMessage.createdAt);
+    });
+
+    res.json(enriched);
   } catch (err) {
-    console.error('Error fetching DM messages:', err);
+    console.error('Error fetching DM users:', err);
     res.status(500).json({ message: 'Server Error' });
   }
 });
 
-// POST /api/admin/dm/:companyId - Send message to company
-router.post('/dm/:companyId', requireSuperAdmin, async (req, res) => {
+/**
+ * GET /api/admin/dm/user/:userId
+ * Get all messages in the 1:1 conversation between ChttrixAdmin and a specific company user
+ */
+router.get('/dm/user/:userId', requireSuperAdmin, async (req, res) => {
   try {
+    const { userId } = req.params;
+
+    // Find the ticket created by this user
+    const ticket = await SupportTicket.findOne({
+      creatorId: userId,
+      subject: 'Live Chat Support'
+    }).sort({ createdAt: -1 }).lean();
+
+    if (!ticket) {
+      return res.json([]);
+    }
+
+    const messages = await SupportMessage.find({
+      ticket: ticket._id,
+      deletedAt: null
+    })
+      .populate('sender', 'username email profilePicture roles companyRole')
+      .sort({ createdAt: 1 })
+      .lean();
+
+    res.json(messages);
+  } catch (err) {
+    console.error('Error fetching DM messages for user:', err);
+    res.status(500).json({ message: 'Server Error' });
+  }
+});
+
+/**
+ * POST /api/admin/dm/user/:userId
+ * Platform admin sends a message to a specific company user
+ */
+router.post('/dm/user/:userId', requireSuperAdmin, async (req, res) => {
+  try {
+    const { userId } = req.params;
     const { message } = req.body;
 
-    // TODO: Implement DM message storage
-    // For now, just log and return success
-    // In production, save to Message collection
+    if (!message?.trim()) {
+      return res.status(400).json({ message: 'Message content is required' });
+    }
 
-    const newMessage = {
-      sender: { _id: req.user.sub, username: 'Admin', roles: ['chttrix_admin'] },
-      message,
-      createdAt: new Date()
-    };
+    // Find the target user to get their companyId
+    const targetUser = await UserModel.findById(userId).select('companyId').lean();
+    if (!targetUser) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Find or create this user's support ticket (scoped by creatorId)
+    let ticket = await SupportTicket.findOne({
+      creatorId: userId,
+      subject: 'Live Chat Support',
+      status: { $in: ['open', 'in-progress'] }
+    }).sort({ createdAt: -1 });
+
+    if (!ticket) {
+      ticket = await SupportTicket.create({
+        companyId: targetUser.companyId,
+        creatorId: userId,
+        subject: 'Live Chat Support',
+        description: 'Ongoing support conversation',
+        status: 'open',
+        priority: 'medium'
+      });
+    }
+
+    const newMessage = await SupportMessage.create({
+      ticket: ticket._id,
+      company: targetUser.companyId,
+      sender: req.user.sub,
+      senderRole: 'platform',
+      content: message.trim()
+    });
+
+    await newMessage.populate('sender', 'username email profilePicture roles');
 
     // Log audit
     await AuditLog.create({
       userId: req.user.sub,
       action: 'admin_message_sent',
-      resource: 'Company',
-      resourceId: req.params.companyId,
-      description: `Admin sent message to company`
+      resource: 'User',
+      resourceId: userId,
+      description: `Platform admin sent support message to user`
     });
+
+    // Emit directly to the user's personal support room
+    if (req.app.get('io')) {
+      req.app.get('io').to(`user-support:${userId}`).emit('platform-message', newMessage);
+    }
 
     res.json(newMessage);
   } catch (err) {
-    console.error('Error sending DM:', err);
+    console.error('Error sending DM to user:', err);
     res.status(500).json({ message: 'Server Error' });
   }
 });

@@ -37,8 +37,13 @@ const ContactAdmin = () => {
                 withCredentials: true
             });
 
+            // Platform admin replies arrive via user-support:{userId} room
+            // The server auto-joins every user to this room on connect — no manual join needed
             socketRef.current.on('platform-message', (message) => {
-                setMessages(prev => [...prev, message]);
+                setMessages(prev => {
+                    const alreadyExists = prev.some(m => m._id === message._id);
+                    return alreadyExists ? prev : [...prev, message];
+                });
             });
 
             return () => {
@@ -49,18 +54,18 @@ const ContactAdmin = () => {
         }
     }, [user, activeTab]);
 
-    const fetchMessages = useCallback(async () => {
-        if (!company?._id) return;
+    const fetchMessages = useCallback(async (showLoading = true) => {
+        if (!user) return;
         try {
-            setLoadingMessages(true);
+            if (showLoading) setLoadingMessages(true);
+            // Fetch only MY messages — each user has their own 1:1 with platform admin
             const response = await axios.get(
-                `${import.meta.env.VITE_BACKEND_URL}/api/platform/support/messages/${company._id}`,
+                `${import.meta.env.VITE_BACKEND_URL}/api/platform/support/messages/me`,
                 { withCredentials: true }
             );
             setMessages(response.data.messages || []);
         } catch (error) {
             console.error('Error fetching messages:', error);
-            showToast('Failed to load messages', 'error');
         } finally {
             setLoadingMessages(false);
         }
@@ -83,12 +88,15 @@ const ContactAdmin = () => {
         }
     }, [company?._id, showToast]);
 
-    // Fetch chat messages
+    // Fetch MY messages + poll every 10s as real-time fallback
     useEffect(() => {
-        if (activeTab === 'chat' && company?._id) {
-            fetchMessages();
+        if (activeTab === 'chat' && user) {
+            fetchMessages(true);
+            const interval = setInterval(() => fetchMessages(false), 10000);
+            return () => clearInterval(interval);
         }
-    }, [activeTab, company?._id, fetchMessages]);
+    }, [activeTab, user, fetchMessages]);
+
 
     // Fetch tickets
     useEffect(() => {
@@ -233,24 +241,37 @@ const ContactAdmin = () => {
                                 </div>
                             ) : (
                                 <>
-                                    {messages.map((msg, idx) => (
-                                        <div
-                                            key={idx}
-                                            className={`flex ${msg.sender === user._id ? 'justify-end' : 'justify-start'} animate-slideIn`}
-                                        >
+                                    {messages.map((msg, idx) => {
+                                        // senderRole: 'company' = owner sent it  |  'platform' = admin reply
+                                        const isOwn = msg.senderRole === 'company';
+                                        const isAdminReply = msg.senderRole === 'platform';
+                                        return (
                                             <div
-                                                className={`max-w-md px-5 py-3.5 rounded-2xl shadow-sm ${msg.sender === user._id
-                                                    ? 'bg-indigo-600 text-white rounded-br-none'
-                                                    : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-700 rounded-bl-none'
-                                                    }`}
+                                                key={msg._id || idx}
+                                                className={`flex ${isOwn ? 'justify-end' : 'justify-start'} animate-slideIn`}
                                             >
-                                                <p className="text-sm leading-relaxed">{msg.content}</p>
-                                                <p className={`text-[10px] mt-1.5 font-medium ${msg.sender === user._id ? 'text-indigo-200' : 'text-gray-400 dark:text-gray-500'}`}>
-                                                    {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                                </p>
+                                                {!isOwn && (
+                                                    <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-white text-xs font-bold mr-2 flex-shrink-0 self-end">
+                                                        C
+                                                    </div>
+                                                )}
+                                                <div
+                                                    className={`max-w-md px-5 py-3.5 rounded-2xl shadow-sm ${isOwn
+                                                        ? 'bg-indigo-600 text-white rounded-br-none'
+                                                        : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-700 rounded-bl-none'
+                                                        }`}
+                                                >
+                                                    {isAdminReply && (
+                                                        <p className="text-[10px] font-bold text-indigo-500 dark:text-indigo-300 mb-1 uppercase tracking-wide">Chttrix Support</p>
+                                                    )}
+                                                    <p className="text-sm leading-relaxed">{msg.content}</p>
+                                                    <p className={`text-[10px] mt-1.5 font-medium ${isOwn ? 'text-indigo-200' : 'text-gray-400 dark:text-gray-500'}`}>
+                                                        {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                    </p>
+                                                </div>
                                             </div>
-                                        </div>
-                                    ))}
+                                        );
+                                    })}
                                     <div ref={messagesEndRef} />
                                 </>
                             )}

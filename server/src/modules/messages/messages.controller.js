@@ -764,18 +764,23 @@ exports.pinMessage = async (req, res) => {
             if (dmSession) {
                 isDMParticipant = dmSession.participants.some(p => String(p) === String(userId));
             }
-        } else if (!isSender && message.channel) {
+        } else if (message.channel) {
+            // Channel context — any channel member may pin/unpin
             const Channel = require('../../features/channels/channel.model');
-            const channel = await Channel.findById(message.channel).select('admins createdBy').lean();
+            const channel = await Channel.findById(message.channel).select('members admins createdBy isDefault').lean();
             if (channel) {
-                const adminIds = (channel.admins || []).map(id => id.toString());
-                isChannelAdmin = adminIds.includes(userId.toString()) ||
+                isChannelAdmin = channel.isDefault || // default (general) channel — everyone implicitly
+                    (channel.members || []).some(m => {
+                        const memberId = m.user?.toString() || m.toString();
+                        return memberId === userId.toString();
+                    }) ||
+                    (channel.admins || []).map(id => id.toString()).includes(userId.toString()) ||
                     channel.createdBy?.toString() === userId.toString();
             }
         }
 
         if (!isSender && !isChannelAdmin && !isDMParticipant) {
-            return res.status(403).json({ message: 'Only the message sender, a DM participant, or a channel admin can pin messages' });
+            return res.status(403).json({ message: 'You must be a channel member to pin messages' });
         }
 
         message.isPinned = pin;

@@ -167,7 +167,7 @@ const ChttrixAdminDashboard = () => {
                         <Route path="tickets" element={<SupportTickets />} />
                         <Route path="broadcast" element={<Broadcast />} />
                         <Route path="dm" element={<PlatformChat />} />
-                        <Route path="dm/:companyId" element={<PlatformChat />} />
+                        <Route path="dm/user/:userId" element={<PlatformChat />} />
                         <Route path="billing" element={<Billing />} />
                         <Route path="health" element={<SystemHealth />} />
                         <Route path="settings" element={<AdminSettings />} />

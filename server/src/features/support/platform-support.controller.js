@@ -211,12 +211,13 @@ exports.sendMessage = async (req, res) => {
 
         console.log('[PLATFORM SUPPORT] Message created successfully:', message._id);
 
-        // Emit socket event to platform admins
+        // Emit socket event in real-time
         if (req.app.get('io')) {
-            req.app.get('io').to('platform-admins').emit('platform-message', {
-                ticketId: ticket._id,
-                message
-            });
+            const io = req.app.get('io');
+            // Echo back to the sender's own room (so their UI updates instantly)
+            io.to(`user-support:${req.user.sub}`).emit('platform-message', message);
+            // Notify platform admins panel
+            io.to('platform-admins').emit('platform-message', message);
         }
 
         return res.status(201).json({ message });
