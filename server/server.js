@@ -326,6 +326,8 @@ app.use("/api/support", require("./src/features/support/support.routes"));
 app.use("/api/managers", require("./src/features/managers/managers.routes"));
 app.use("/api/analytics", require("./src/features/analytics/analytics.routes"));
 app.use("/api/ai", require("./src/features/ai/ai.routes"));
+// Unified Activity Stream — workspace feed + personal history
+app.use("/api/activity", require("./src/features/activity/activity.routes"));
 // Notes & Tasks - Direct registration (no proxy needed)
 app.use("/api/notes", require("./src/features/notes/notes.routes")); // Direct routing, Phase 5 E2EE ready
 app.use("/api/tasks", require("./src/features/tasks/tasks.routes")); // Direct routing, simplified architecture

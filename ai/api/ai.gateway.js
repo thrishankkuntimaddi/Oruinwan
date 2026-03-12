@@ -1,29 +1,28 @@
 /**
  * ai/api/ai.gateway.js
  *
- * AI Gateway — Sub-Phase A8: AI Layer Isolation
+ * AI Gateway — Phase 3B: Canonical AI Execution Layer
  *
- * This file is the central gateway for all AI operations in the Chttrix platform.
+ * This is the single source of truth for all AI logic in the Chttrix platform.
+ * The server's ai.controller.js is now a thin HTTP transport delegate that calls
+ * this gateway with plain data objects and returns the result to the client.
  *
- * Architecture (current):
- *   client → server routes → ai.gateway.js → server/src/features/ai/ai.controller.js
- *
- * Architecture (future):
- *   client → server routes → ai.gateway.js → AI orchestrator / agents / memory
+ * Canonical Architecture (Phase 3B):
+ *   client
+ *     ↓ HTTP
+ *   server route  (/api/ai/*)
+ *     ↓ delegate
+ *   server/src/features/ai/ai.controller.js  ← thin transport only, no AI logic
+ *     ↓ plain data
+ *   ai/api/ai.gateway.js                     ← YOU ARE HERE — all AI logic lives here
+ *     ↓ (future: route through orchestrator)
+ *   ai/orchestrator/ → ai/agents/ → LLM provider (Gemini / OpenAI / etc.)
  *
  * DESIGN RULES:
- *   - No dependency on Express, HTTP request objects, or route handlers.
+ *   - No dependency on Express or HTTP request/response objects.
  *   - Accepts plain data payloads and context objects only.
- *   - Acts as a pure service layer proxy until the AI subsystem is extracted.
- *
- * NOTE ON PROXYING:
- *   The existing controller functions are Express handlers that read from req/res.
- *   Rather than passing fake request objects (anti-pattern), this gateway calls the
- *   underlying Gemini SDK and utility functions directly — the same logic the
- *   controller uses — so that it remains framework-agnostic.
- *
- *   This approach keeps the gateway clean and ready to route through the orchestrator
- *   in a future phase without any Express coupling.
+ *   - Framework-agnostic — fully testable without an HTTP server.
+ *   - All future AI capabilities (agents, memory, tools) plug in here.
  */
 
 'use strict';
@@ -40,7 +39,7 @@ const {
   getUserChannels,
   createTaskForUser,
   getCurrentWorkspace,
-} = require('../../server/src/utils/aiActions');
+} = require('../../server/utils/aiActions');
 
 const apiKey = process.env.GEMINI_API_KEY;
 
@@ -197,7 +196,7 @@ async function _executeFunction(functionCall, userId, workspaceId, reqContext) {
  *
  * @returns {Promise<{ text: string, actionsExecuted?: Array }>}
  */
-export async function chat(payload, context) {
+async function chat(payload, context) {
   // TODO (A9+): route through AI orchestrator instead of calling Gemini directly.
 
   const { message, history = [], workspaceId } = payload;
@@ -271,7 +270,7 @@ export async function chat(payload, context) {
  *
  * @returns {Promise<{ summary: string }>}
  */
-export async function summarize(payload, _context) {
+async function summarize(payload, _context) {
   // TODO (A9+): route through AI orchestrator instead of calling Gemini directly.
 
   const { text } = payload;
@@ -301,7 +300,7 @@ export async function summarize(payload, _context) {
  *
  * @returns {Promise<{ title: string, description: string, priority: string }>}
  */
-export async function generateTask(payload, _context) {
+async function generateTask(payload, _context) {
   // TODO (A9+): route through AI orchestrator instead of calling Gemini directly.
 
   const { context } = payload;
@@ -331,3 +330,9 @@ Do not include markdown formatting.`;
     };
   }
 }
+
+// ---------------------------------------------------------------------------
+// Exports
+// ---------------------------------------------------------------------------
+
+module.exports = { chat, summarize, generateTask };

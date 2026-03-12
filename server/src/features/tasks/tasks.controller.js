@@ -15,6 +15,7 @@
 
 const tasksService = require('./tasks.service');
 const validator = require('./tasks.validator');
+const activityService = require('../activity/activity.service');
 
 // ============================================================================
 // HELPER: Error Response Handler
@@ -102,6 +103,20 @@ async function createTask(req, res) {
         }
 
         const result = await tasksService.createTask(userId, taskData, req.io, req);
+
+        // Emit activity event — fire-and-forget, never blocks response
+        activityService.emit(req, {
+            type: 'task',
+            subtype: 'created',
+            actor: userId,
+            workspaceId: taskData.workspaceId || null,
+            payload: {
+                taskId: result.task?._id || result._id,
+                title: taskData.title,
+                priority: taskData.priority || 'medium',
+            },
+        }).catch(() => {});
+
         return res.status(201).json(result);
     } catch (error) {
         console.error('CREATE_TASK ERROR:', error);
@@ -129,6 +144,17 @@ async function updateTask(req, res) {
         }
 
         const result = await tasksService.updateTask(userId, taskId, updates, req.io, req);
+
+        // Emit activity — subtype 'completed' when status flips to done
+        const subtype = updates.status === 'completed' ? 'completed' : 'updated';
+        activityService.emit(req, {
+            type: 'task',
+            subtype,
+            actor: userId,
+            workspaceId: updates.workspaceId || null,
+            payload: { taskId, title: updates.title, status: updates.status },
+        }).catch(() => {});
+
         return res.json(result);
     } catch (error) {
         console.error('UPDATE_TASK ERROR:', error);

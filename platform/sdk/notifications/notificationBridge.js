@@ -327,7 +327,7 @@ function unsubscribePushNotifications() {
 // 6. Exports
 // ---------------------------------------------------------------------------
 
-module.exports = {
+export {
   /** The detected runtime platform — exposed for diagnostics only. */
   PLATFORM,
 

@@ -10,6 +10,9 @@ const messagesService = require("../src/modules/messages/messages.service");
 const ROOMS = require("../src/shared/utils/rooms");
 // Phase 7.7 — Huddle signaling
 const registerHuddleHandlers = require("../src/socket/handlers/huddles.socket");
+// Unified Activity Stream — fire-and-forget side effects
+const activityService = require("../src/features/activity/activity.service");
+const { ACTIVITY_TYPES, ACTIVITY_SUBTYPES } = require("../../platform/sdk/events/activityEvents");
 
 module.exports = async function registerChatHandlers(io, socket) {
   const userId = socket.user.id; // extracted from JWT
@@ -400,6 +403,20 @@ module.exports = async function registerChatHandlers(io, socket) {
         clientTempId,
       });
 
+      // ── Unified Activity Stream ── fire-and-forget, never blocks ──────────
+      activityService.emitWithIo(io, {
+        type:        ACTIVITY_TYPES.MESSAGE,
+        subtype:     ACTIVITY_SUBTYPES.SENT,
+        actor:       userId,
+        workspaceId: workspaceId || null,
+        payload: {
+          context:   channelId ? 'channel' : 'dm',
+          contextId: channelId || actualDMSessionId,
+          preview:   (text || '').substring(0, 120),
+        },
+      }).catch(() => {});
+      // ─────────────────────────────────────────────────────────────────────
+
     } catch (err) {
       console.error("❌ [SOCKET] ERROR in send-message handler:", err);
       console.error("❌ [SOCKET] Stack trace:", err.stack);
@@ -549,6 +566,16 @@ module.exports = async function registerChatHandlers(io, socket) {
         emoji,
         reactions: updated.reactions,
       });
+
+      // ── Unified Activity Stream ── fire-and-forget ─────────────────────
+      activityService.emitWithIo(io, {
+        type:    ACTIVITY_TYPES.REACTION,
+        subtype: ACTIVITY_SUBTYPES.ADDED,
+        actor:   userId,
+        payload: { messageId, emoji },
+      }).catch(() => {});
+      // ───────────────────────────────────────────────────────────────────
+
     } catch (err) {
       logger.error("ADD REACTION ERROR:", err);
       socket.emit("reaction-error", { messageId, error: err.message });

@@ -15,6 +15,7 @@
 
 const notesService = require('./notes.service');
 const validator = require('./notes.validator');
+const activityService = require('../activity/activity.service');
 
 // ============================================================================
 // HELPER: Error Response Handler
@@ -75,6 +76,16 @@ async function createNote(req, res) {
         }
 
         const result = await notesService.createNote(userId, noteData, req.io, req);
+
+        // Emit activity event — fire-and-forget
+        activityService.emit(req, {
+            type: 'note',
+            subtype: 'created',
+            actor: userId,
+            workspaceId: noteData.workspaceId || null,
+            payload: { noteId: result.note?._id || result._id, title: noteData.title },
+        }).catch(() => {});
+
         return res.status(201).json(result);
     } catch (error) {
         console.error('CREATE_NOTE ERROR:', error);
@@ -102,6 +113,16 @@ async function updateNote(req, res) {
         }
 
         const result = await notesService.updateNote(userId, noteId, updates, req.io, req);
+
+        // Emit activity event — fire-and-forget
+        activityService.emit(req, {
+            type: 'note',
+            subtype: 'updated',
+            actor: userId,
+            workspaceId: updates.workspaceId || null,
+            payload: { noteId, title: updates.title },
+        }).catch(() => {});
+
         return res.json(result);
     } catch (error) {
         console.error('UPDATE_NOTE ERROR:', error);
