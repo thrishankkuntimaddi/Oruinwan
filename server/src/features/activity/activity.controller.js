@@ -18,7 +18,7 @@
 
 const mongoose = require('mongoose');
 const ActivityEvent = require('../../models/ActivityEvent');
-const { ACTIVITY_TYPES } = require('../../../../../platform/sdk/events/activityEvents');
+const { ACTIVITY_TYPES } = require('../../../../platform/sdk/events/activityEvents');
 
 const VALID_TYPES = Object.values(ACTIVITY_TYPES);
 

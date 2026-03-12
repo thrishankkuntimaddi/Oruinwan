@@ -18,7 +18,7 @@
 
 'use strict';
 
-const { SOCKET_EVENTS } = require('../../../../../platform/sdk/events/activityEvents');
+const { SOCKET_EVENTS } = require('../../../../platform/sdk/events/activityEvents');
 const logger = require('../../../utils/logger');
 
 // ============================================================================

@@ -15,7 +15,7 @@
 'use strict';
 
 const activityService = require('../activity/activity.service');
-const { ACTIVITY_TYPES, ACTIVITY_SUBTYPES } = require('../../../../../platform/sdk/events/activityEvents');
+const { ACTIVITY_TYPES, ACTIVITY_SUBTYPES } = require('../../../../platform/sdk/events/activityEvents');
 
 // ============================================================================
 // HELPERS
