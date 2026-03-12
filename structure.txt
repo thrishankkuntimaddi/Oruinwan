@@ -1,5 +1,10 @@
 /Users/thrishankkuntimaddi/Documents/Chttrix/ChttrixCollab
 ├── README.md
+├── ai
+│   ├── agents
+│   ├── api
+│   ├── memory
+│   └── orchestrator
 ├── client
 │   ├── index.html
 │   ├── jsconfig.json
@@ -47,8 +52,24 @@
 │   │   │   ├── ai
 │   │   │   │   └── ChttrixAIChat
 │   │   │   │       └── ChttrixAIChat.jsx
+│   │   │   ├── apps
+│   │   │   │   ├── InstallIntegrationModal.jsx
+│   │   │   │   ├── IntegrationCard.jsx
+│   │   │   │   ├── IntegrationDetailsModal.jsx
+│   │   │   │   ├── mock
+│   │   │   │   │   └── mockIntegrations.js
+│   │   │   │   └── modals
+│   │   │   │       ├── CreateGitHubIssueModal.jsx
+│   │   │   │       ├── CreateJiraTicketModal.jsx
+│   │   │   │       └── IntegrationActionModal.jsx
 │   │   │   ├── auth
 │   │   │   │   └── FirstLoginPasswordModal.jsx
+│   │   │   ├── chat
+│   │   │   │   └── slash
+│   │   │   │       ├── SlashCommandItem.jsx
+│   │   │   │       ├── SlashCommandMenu.jsx
+│   │   │   │       ├── SlashCommandPreview.jsx
+│   │   │   │       └── mockSlashCommands.js
 │   │   │   ├── common
 │   │   │   │   └── UniversalSearch.jsx
 │   │   │   ├── company
@@ -102,6 +123,7 @@
 │   │   │   │   ├── ManagerContactAdmin.jsx
 │   │   │   │   ├── ManagerLocation.jsx
 │   │   │   │   ├── ManagerOverview.jsx
+│   │   │   │   ├── ManagerProjects.jsx
 │   │   │   │   ├── ManagerReports.jsx
 │   │   │   │   ├── ManagerSettings.jsx
 │   │   │   │   ├── ManagerSidebar.jsx
@@ -125,6 +147,7 @@
 │   │   │   │   ├── SystemEventItem.jsx
 │   │   │   │   ├── channelManagementComponents
 │   │   │   │   │   ├── DemoteAdminModal.jsx
+│   │   │   │   │   ├── IntegrationsTab.jsx
 │   │   │   │   │   ├── InviteTab.jsx
 │   │   │   │   │   ├── MembersTab.jsx
 │   │   │   │   │   ├── ModalHeader.jsx
@@ -139,6 +162,7 @@
 │   │   │   │   │   ├── chatWindow.css
 │   │   │   │   │   ├── footer
 │   │   │   │   │   │   ├── Footer.jsx
+│   │   │   │   │   │   ├── MentionAutocomplete.jsx
 │   │   │   │   │   │   ├── VoiceRecorder.jsx
 │   │   │   │   │   │   ├── attachMenu.jsx
 │   │   │   │   │   │   ├── emojiPicker.jsx
@@ -270,6 +294,7 @@
 │   │   │   ├── TasksContext.jsx
 │   │   │   ├── ThemeContext.js
 │   │   │   ├── ToastContext.jsx
+│   │   │   ├── UpdatesContext.jsx
 │   │   │   └── WorkspaceContext.jsx
 │   │   ├── hooks
 │   │   │   ├── index.js
@@ -278,9 +303,12 @@
 │   │   │   ├── useChatSocket.js
 │   │   │   ├── useConversation.js
 │   │   │   ├── useForm.js
+│   │   │   ├── useMentionAutocomplete.js
 │   │   │   ├── useMessageActions.js
 │   │   │   ├── useOfflineRecovery.js
+│   │   │   ├── usePermissions.js
 │   │   │   ├── useScheduledMeetings.js
+│   │   │   ├── useThreadFollow.js
 │   │   │   ├── useUniversalSearch.js
 │   │   │   └── useUsers.js
 │   │   ├── index.css
@@ -388,6 +416,7 @@
 │   │   │   │   ├── DepartmentManagement.jsx
 │   │   │   │   ├── OnboardingPage.jsx
 │   │   │   │   ├── UserManagement.jsx
+│   │   │   │   ├── WorkspaceMembersModal.jsx
 │   │   │   │   ├── WorkspacesManagement.jsx
 │   │   │   │   ├── platform
 │   │   │   │   │   └── views
@@ -413,6 +442,8 @@
 │   │   │   │           ├── Notifications.jsx
 │   │   │   │           ├── Security.jsx
 │   │   │   │           └── UserDefaults.jsx
+│   │   │   ├── apps
+│   │   │   │   └── AppsPage.jsx
 │   │   │   ├── auth
 │   │   │   │   └── utils
 │   │   │   │       └── formValidation.js
@@ -499,6 +530,7 @@
 │   │   │       ├── design-system
 │   │   │       ├── layout
 │   │   │       └── ui
+│   │   │           ├── AppErrorBoundary.jsx
 │   │   │           ├── Avatar.jsx
 │   │   │           ├── Badge.jsx
 │   │   │           ├── Button.jsx
@@ -508,10 +540,12 @@
 │   │   │           ├── LoadingScreen.jsx
 │   │   │           ├── Modal.jsx
 │   │   │           ├── Toast.jsx
+│   │   │           ├── UIStates.jsx
 │   │   │           └── index.js
 │   │   └── utils
 │   │       ├── apiClient.js
 │   │       ├── apiHelpers.js
+│   │       ├── avatarUtils.js
 │   │       ├── crypto.js
 │   │       ├── cryptoIdentity.js
 │   │       ├── deviceId.js
@@ -519,13 +553,29 @@
 │   │       ├── encryptionUtils.js
 │   │       ├── gcsProxy.js
 │   │       ├── logger.js
+│   │       ├── renderWithMentions.js
 │   │       ├── tokenUtils.js
 │   │       └── uploadHelpers.js
 │   ├── tailwind.config.js
 │   └── vite.config.js
+├── desktop
+│   ├── electron
+│   ├── package.json
+│   └── renderer
+├── expansion
+│   ├── architecture_report.md.resolved
+│   └── chttrix_multiplatform_architecture.md.resolved
+├── mobile
+│   ├── package.json
+│   └── src
 ├── nixpacks.toml
 ├── package-lock.json
 ├── package.json
+├── platform
+│   ├── constants
+│   ├── package.json
+│   ├── sdk
+│   └── types
 ├── postcss.config.js
 ├── railway.json
 ├── server
@@ -591,10 +641,12 @@
 │   │   └── v1-to-v2-proxy.js
 │   ├── scripts
 │   │   ├── auditChannelKeys.js
+│   │   ├── backfill-avatars.js
 │   │   ├── check-thread-channels.js
 │   │   ├── checkChannelData.js
 │   │   ├── checkUnhealthyChannels.js
 │   │   ├── cleanupBrokenDMSessions.js
+│   │   ├── cleanupKtCompany.js
 │   │   ├── clearBillingData.js
 │   │   ├── createChttrixAdmin.js
 │   │   ├── deleteNonDefaultChannels.js
@@ -824,7 +876,8 @@
 │   │   │   │   └── messages.service.js
 │   │   │   ├── threads
 │   │   │   │   ├── threads.controller.js
-│   │   │   │   └── threads.routes.js
+│   │   │   │   ├── threads.routes.js
+│   │   │   │   └── threads.service.js
 │   │   │   └── uploads
 │   │   │       ├── upload.controller.js
 │   │   │       ├── upload.routes.js
@@ -873,19 +926,22 @@
 │   │   │   ├── roomConventions.js
 │   │   │   └── services
 │   │   │       └── socketEmitter.js
-│   │   └── uploads
-│   │       └── verification_docs
-│   │           ├── 1770023102367_WhatsApp_Image_2026-01-27_at_07.55.03_(2).jpeg
-│   │           ├── 1770023275271_WhatsApp_Image_2026-01-27_at_07.55.03.jpeg
-│   │           ├── 1770040095495_WhatsApp_Image_2026-01-19_at_11.53.40.jpeg
-│   │           ├── 1773031798932_Screenshot_2026-03-04_at_3.42.02_PM.png
-│   │           ├── 1773034823820_Screenshot_2026-03-04_at_3.42.02_PM.png
-│   │           ├── 1773035532646_thrishank_kuntimaddi_resume_(2).pdf
-│   │           └── 1773126192606_client_secret_900848971315-md8jtu2f2lrdlun4djogf6i119p3343r.apps.googleusercontent.com.json
+│   │   ├── uploads
+│   │   │   └── verification_docs
+│   │   │       ├── 1770023102367_WhatsApp_Image_2026-01-27_at_07.55.03_(2).jpeg
+│   │   │       ├── 1770023275271_WhatsApp_Image_2026-01-27_at_07.55.03.jpeg
+│   │   │       ├── 1770040095495_WhatsApp_Image_2026-01-19_at_11.53.40.jpeg
+│   │   │       ├── 1773031798932_Screenshot_2026-03-04_at_3.42.02_PM.png
+│   │   │       ├── 1773034823820_Screenshot_2026-03-04_at_3.42.02_PM.png
+│   │   │       ├── 1773035532646_thrishank_kuntimaddi_resume_(2).pdf
+│   │   │       ├── 1773126192606_client_secret_900848971315-md8jtu2f2lrdlun4djogf6i119p3343r.apps.googleusercontent.com.json
+│   │   │       ├── 1773152453726_client_secret_900848971315-md8jtu2f2lrdlun4djogf6i119p3343r.apps.googleusercontent.com.json
+│   │   │       ├── 1773152494393_client_secret_900848971315-md8jtu2f2lrdlun4djogf6i119p3343r.apps.googleusercontent.com.json
+│   │   │       ├── 1773152567523_thrishank_kuntimaddi_resume_(1).pdf
+│   │   │       └── 1773222728117_chttrix_team_template_(5).xlsx
+│   │   └── utils
+│   │       └── mentionParser.js
 │   ├── test-otp-save.js
-│   ├── uploads
-│   │   └── verification_docs
-│   │       └── 1769495278735_WhatsApp_Image_2026-01-19_at_11.53.40_(1).jpeg
 │   ├── utils
 │   │   ├── aiActions.js
 │   │   ├── analyticsService.js
@@ -920,9 +976,12 @@
 │   ├── channel_audit.md.resolved
 │   ├── chttrix_auth_security_audit.md.resolved
 │   ├── chttrix_phase2_audit.md.resolved
+│   ├── chttrix_technical_roadmap.md.resolved
 │   ├── security_audit_report.md
 │   ├── system_design_evaluation.md
 │   └── technical_audit.md
 ├── update-structure.sh
 ├── vercel.json
 └── verify-security.sh
+
+194 directories, 791 files

@@ -1,0 +1,519 @@
+# Chttrix Collaboration Platform — Architecture Audit Report
+
+**Date:** March 12, 2026  
+**Auditor Role:** Principal Software Architect  
+**Scope:** Pre-restructuring system analysis  
+**Audience:** Engineering leadership, platform team
+
+---
+
+## 1. Repository Structure Overview
+
+The repository is a **monorepo** with two primary applications sharing a single Git history. There is no dedicated workspace tooling (Nx, Turborepo, Lerna); the root [package.json](file:///Users/thrishankkuntimaddi/Documents/Chttrix/ChttrixCollab/package.json) coordinates a simple concurrent-dev startup.
+
+```
+ChttrixCollab/
+├── client/               React + Vite web application
+│   └── src/
+│       ├── components/   Feature UI components (deeply nested by domain)
+│       ├── contexts/     React context providers (global state)
+│       ├── hooks/        Custom reusable hooks
+│       ├── modules/      Experimental modular decomposition (chat module)
+│       ├── pages/        Route-level page components
+│       ├── services/     API service layer (axios wrappers)
+│       ├── shared/       Design-system primitives (Avatar, Button, Modal, etc.)
+│       └── utils/        Low-level utilities (crypto, token, deviceId, logger)
+│
+├── server/               Node.js + Express backend
+│   ├── server.js         Single monolithic entrypoint (819 lines)
+│   ├── socket/index.js   Socket.IO event handler (775 lines)
+│   ├── middleware/        Auth, permissions, validation
+│   ├── models/           Legacy Mongoose models (flat)
+│   ├── routes/           V1→V2 compatibility proxy
+│   └── src/
+│       ├── features/     Domain-driven feature modules (controller/routes/service)
+│       ├── modules/      Cross-cutting technical modules (messages, encryption, threads)
+│       ├── models/       V2 Mongoose models
+│       ├── shared/       Shared utilities (rooms, OTP, upload)
+│       └── socket/       Socket sub-handlers (huddles)
+│
+├── expansion/            Scratch/planning directory
+└── studies/              Research notes
+```
+
+### Key Architectural Patterns
+
+| Pattern | Location | Notes |
+|---|---|---|
+| Domain-driven features | `server/src/features/` | controller + routes + service per domain |
+| Context-based global state | `client/src/contexts/` | 13 context providers |
+| Service-layer API abstraction | `client/src/services/` | thin wrappers around axios |
+| Dual-model architecture | `server/models/` (legacy) + `server/src/models/` (V2) | migration in progress |
+| V1→V2 route proxy | `server/routes/v1-to-v2-proxy.js` | backwards-compat shim |
+
+---
+
+## 2. Web Client Architecture
+
+### 2.1 Folder Structure
+
+The React application uses a **feature-domain component organization**, grouped under `src/components/` by functional area (`messagesComp`, `tasksComp`, `admin`, `manager`, `company`, `layout`, etc.). Pages are in `src/pages/` mirroring the same domain groupings. There is a nascent `src/modules/chat/` directory attempting a stricter modular decomposition — a prototype of the desired future architecture.
+
+### 2.2 State Management
+
+State management is **entirely React Context API** — no Redux or Zustand in use.
+
+| Context | Responsibility |
+|---|---|
+| `AuthContext` | User identity, access/refresh tokens, encryption-ready state |
+| `SocketContext` | Socket.IO instance, event listener registry |
+| `WorkspaceContext` | Active workspace state |
+| `HuddleContext` | Huddle/meeting session state |
+| `NotesContext` | Notes data |
+| `TasksContext` | Task data |
+| `CompanyContext` | Company-wide data |
+| `DepartmentContext` | Department data |
+| `ContactsContext` | Contact book |
+| `NotificationsContext` | In-app notification feed |
+| `ThemeContext` | Light/dark theme |
+| `ToastContext` | App-wide toast notifications |
+| `BlogsContext` | Blog/update feed |
+
+**Observation:** 13 contexts create a deeply nested provider tree in `App.js`. Without memoization discipline, re-renders cascade across the tree. This is the primary maintainability risk on the client side.
+
+### 2.3 API Communication Layer
+
+**Primary client:** `src/services/api.js`  
+- Axios instance with `baseURL = VITE_BACKEND_URL || 'http://localhost:8080'`
+- **Request interceptor:** Attaches `Authorization: Bearer <accessToken>` from `localStorage`
+- **Response interceptor:** Handles 401 → silent token refresh → retry queue; dispatches `auth:force-logout` custom event on failure; also reads `x-access-token` header for inline server-side refresh
+
+**Secondary client:** `src/utils/apiClient.js`  
+- Native `fetch` wrapper for device-tracked calls
+- Attaches `X-Device-ID` header alongside the bearer token
+- Handles `403 DEVICE_REVOKED` responses
+
+**Domain service files** (26 services in `src/services/`) wrap the axios instance with domain-specific calls. `api.js` is the single axios instance that almost all services import — a good pattern.
+
+### 2.4 Socket Communication
+
+**Entry point:** `src/contexts/SocketContext.jsx`
+
+Architecture:
+- Socket is created with `autoConnect: false` on user login/load, then connected explicitly after encryption initialization completes (Phase 1 isolation)
+- Reconnection logic built-in: 5 attempts, 1s delay, 10s timeout
+- On `connect_error` due to authentication failure, the socket context itself retries the token refresh before reconnecting
+- A **fan-out listener registry pattern** is used: `SocketContext` subscribes to all socket events centrally and dispatches them to registered listener callbacks via `useRef` arrays (`channelListenersRef`, `messageListenersRef`, etc.)
+
+**Socket event categories:**
+- Channel events: `channel-created/updated/deleted`, `invited-to-channel`, `removed-from-channel`, `admin-assigned/demoted`, etc.
+- Message events: `new-message`, `new-dm-session`, `message-deleted/pinned/unpinned`, `read-update`, `reaction-added/removed`, `reconnected`
+- Workspace events: `workspace-joined/created/updated/deleted`
+- Task events: `task-created/updated/deleted/assigned/removed`
+- Note events: `note-created/updated/deleted/shared`
+- Update events: `company:update:created/deleted/reacted`
+- Notification events: `notification:new`
+
+**Key files:** `src/hooks/useChatSocket.js`, `src/hooks/useConversation.js`, `src/modules/chat/hooks/useRealtimeEvents.js`
+
+### 2.5 Authentication Flow
+
+```
+Login (email/password)
+  → POST /api/auth/login → {accessToken, refreshToken, user}
+  → Store accessToken in localStorage, refreshToken in localStorage
+  → Initialize encryption (Phase 1 identity keys via identityKeyService)
+  → SocketContext creates socket instance, waits for connectSocket() call
+  → AuthContext runs auto-repair of conversation keys (fire-and-forget)
+  → Token auto-refresh setInterval every 10 minutes
+  
+Page Reload / App Start
+  → AuthContext.loadUser() tries localStorage token → /api/auth/me
+  → If 401: silentRefresh() via httpOnly cookie + body refresh token
+  → On success: restore user state + re-initialize encryption
+  
+OAuth (Google)
+  → OAuthSuccess.jsx handles redirect token exchange
+  → OAuthPasswordSetup.jsx for first-time OAuth users
+```
+
+**Token storage:** Access token in `localStorage`; refresh token in both `localStorage` (body fallback for cross-origin) and `httpOnly` cookie (primary).
+
+### 2.6 Encryption Usage
+
+End-to-end encryption is a **substantial, first-class subsystem** with its own lifecycle:
+
+**Key Hierarchy:**
+```
+User Password
+  → PBKDF2-SHA256 (100,000 iterations, 16-byte salt)
+  → UMEK (User Master Encryption Key, AES-256-GCM)
+    → Encrypts Identity Private Key (stored on server as encrypted blob)
+      → Identity Key Pair (ECDH or ECDSA for key exchange)
+        → Conversation Keys (per-channel/DM, AES-256-GCM)
+          → Thread Keys (derived via HKDF from conversation key + parentMessageId)
+            → Message encryption/decryption
+```
+
+**Key files:**
+- `src/utils/crypto.js` — Core Web Crypto API primitives (AES-GCM, PBKDF2, HKDF, encoding)
+- `src/utils/cryptoIdentity.js` — Identity key pair management
+- `src/utils/encryptionUtils.js` — High-level encryption helpers
+- `src/services/identityKeyService.js` — Identity key initialization and recovery
+- `src/services/conversationKeyService.js` — Per-conversation key management
+- `src/services/messageEncryptionService.js` — Message-level encrypt/decrypt
+- `src/services/keyManagement.js` — Key storage and retrieval (IndexedDB via internal service)
+- `src/services/clientKeyDistribution.js` — Distributes keys to new members
+
+**Client-server E2EE interaction:** The server holds encrypted blobs (never plaintext keys); the server's `SERVER_KEK` (AES-256 server key encryption key) is used only to re-wrap workspace keys, not to decrypt messages.
+
+### 2.7 AI Integration Points
+
+- **`src/components/ai/ChttrixAIChat/ChttrixAIChat.jsx`** — Chat UI panel
+- **`src/services/aiService.js`** — Client-side service calls `/api/ai/chat`, `/api/ai/summarize`, `/api/ai/generate-task`
+- **Notes module** — `src/pages/SidebarComp/notesComponents/ui/AIPanel.jsx` provides AI assistance within note editing
+
+The AI integration is currently **stateless and request-driven** (no streaming). Conversation history is passed with each request from the client.
+
+---
+
+## 3. Backend Architecture
+
+### 3.1 Routing Architecture
+
+**Entrypoint:** `server/server.js` (819 lines)
+
+The server registers **40+ route mounts** directly in `server.js`. The routing follows two generations:
+
+**Legacy (V1) routes** — flat mount at `/api/`:
+```
+/api/auth, /api/admin, /api/channels, /api/polls, /api/chat,
+/api/workspaces, /api/users, /api/notes, /api/tasks, /api/dashboard, etc.
+```
+
+**Modular (V2) routes** — clean domain-driven mount at `/api/v2/`:
+```
+/api/v2/messages, /api/v2/dm, /api/v2/encryption, /api/v2/identity,
+/api/v2/conversations, /api/v2/crypto, /api/v2/devices, /api/v2/security,
+/api/v2/tasks, /api/v2/notes, /api/v2/favorites, /api/v2/status,
+/api/v2/admin, /api/v2/audit, /api/v2/uploads, /api/v2/link-preview
+```
+
+A **V1→V2 compatibility proxy** (`routes/v1-to-v2-proxy.js`) exists for backward compatibility during migration.
+
+**Inline routes in server.js:** `GET/POST/PATCH/DELETE /api/scheduled-meetings` — not yet moved to a feature module.
+
+### 3.2 Service Layer
+
+`server/src/features/` follows a consistent pattern:
+
+```
+features/<domain>/
+  ├── <domain>.routes.js       Express router
+  ├── <domain>.controller.js   Request/response handlers
+  ├── <domain>.service.js      Business logic
+  ├── <domain>.model.js        (if co-located; otherwise in /models/)
+  └── <domain>.validator.js    Input validation
+```
+
+Notable domains: `auth`, `channels`, `chat`, `company`, `company-registration`, `company-updates`, `company-analytics`, `crypto`, `departments`, `devices`, `employees`, `favorites`, `integration`, `notes`, `notifications`, `onboarding`, `people`, `polls`, `search`, `security`, `tasks`, `updates`, `users`, `workspaces`, `managers`, `admin`, `analytics`, `audit`, `ai`, `status`, `support`.
+
+### 3.3 Middleware Structure
+
+| Middleware | File | Purpose |
+|---|---|---|
+| `requireAuth` | `middleware/auth.js` | JWT verification + silent refresh via cookie |
+| `requireOwner` | `middleware/permissionMiddleware.js` | Owner-role gate |
+| `requireAdmin` | `middleware/permissionMiddleware.js` | Admin-role gate |
+| `requireManager` | `middleware/permissionMiddleware.js` | Manager-role gate |
+| `sanitizeInput` | `middleware/validate.js` | MongoDB injection prevention ($-operator stripping) |
+| `passport.initialize()` | `config/passport.js` | Google OAuth |
+| `helmet()` | inline | Security headers |
+| `cors()` | inline | Origin whitelist |
+| `rateLimit()` | inline | Auth endpoint protection (20 req/min production) |
+| `refreshLimiter` | inline | Dedicated `/refresh` rate limiter (60 req/min) |
+
+Mount-level middleware is applied at the router mount for defence-in-depth (e.g., `requireAdmin` at `/api/admin-dashboard` mount level in addition to per-route guards).
+
+### 3.4 Authentication Flow (Backend)
+
+```
+POST /api/auth/login
+  → Validates credentials
+  → Signs accessToken (JWT, 15min, ACCESS_TOKEN_SECRET)
+  → Signs refreshToken (JWT, rotated, REFRESH_TOKEN_SECRET)
+  → Stores refresh token hash in User.refreshTokens[] array
+  → Sets httpOnly cookie "jwt" + returns tokens in body
+
+middleware/auth.js (per request)
+  → Reads Bearer token from Authorization header
+  → Verifies with ACCESS_TOKEN_SECRET
+  → If TokenExpiredError: falls through to refresh cookie path
+  → If refresh cookie valid: auto-issues new accessToken
+  → Sets x-access-token response header for client pickup
+  → Attaches decoded payload to req.user
+
+Socket.IO middleware (server.js)
+  → Reads token from socket.handshake.auth.token
+  → Verifies JWT, attaches socket.user = { id: decoded.sub }
+  → Rejects with "Authentication failed" on any error
+```
+
+### 3.5 Socket Server Implementation
+
+**Configuration:** Socket.IO server attached to the HTTP server with optional Redis adapter (enabled when `REDIS_URL` environment variable is set — supports horizontal scaling).
+
+**`server/socket/index.js`** (775 lines) — primary handler `registerChatHandlers(io, socket)`:
+
+**Room naming convention:**
+```
+user:<userId>           — personal targeted events (notifications)
+user_<userId>           — personal targeted events (messages/DMs) [inconsistent]
+channel:<channelId>     — channel broadcast
+dm:<dmSessionId>        — DM broadcast
+workspace:<workspaceId> — workspace-wide events
+company_<companyId>     — company-wide events
+company:updates:<id>    — company updates feed
+platform-admins         — chttrix admin targeting
+user-support:<id>       — support DM targeting
+```
+
+> ⚠️ **Room naming inconsistency noted:** Two parallel patterns exist — `user:X` (colon) and `user_X` (underscore). This is a known technical debt from the channel system KI.
+
+**Event handlers registered:** `join-dm`, `join-channel`, `chat:join`, `join-workspace`, `join-company-updates`, `send-message`, `mark-chat-read`, `message-read`, `typing`, `add-reaction`, `remove-reaction`, `delete-message`, `pin-message`, `unpin-message`, `disconnect`
+
+**Session restoration on reconnect:** On every connection, the server auto-rejoins the user to all their DM and channel rooms by querying the database, then emits `reconnected` to sync the client.
+
+**Huddle handler:** `src/socket/handlers/huddles.socket.js` is registered separately via `registerHuddleHandlers(io, socket)`.
+
+### 3.6 Encryption Logic (Backend)
+
+**Server-side E2EE infrastructure:**
+- `server/src/modules/encryption/` — E2EE route handlers
+- `server/src/modules/conversations/` — Conversation key management, repair, crypto utilities
+  - `conversationKeys.service.js` — Key storage and retrieval
+  - `conversationKeys.crypto.js` — Key wrapping/unwrapping
+  - `serverKEK.crypto.js` — Server Key Encryption Key operations (AES-256, re-wrapping only)
+  - `cryptoUtils.js` — Shared crypto helpers
+- `server/src/modules/identity/` — User identity public key registry
+- `server/src/features/crypto/identity.controller.js` — UMEK-based recovery endpoints
+- `server/models/ConversationKey.js`, `UserIdentityKey.js`, `encryption.js` — Key storage models
+- `server/migrations/add-e2ee-support.js` — Schema migration for E2EE fields
+
+**Server role:** The server is a **key distribution server, not a decryption server**. It stores encrypted blobs (private keys wrapped in UMEK, conversation keys wrapped per-user). It never has access to plaintext keys or messages.
+
+### 3.7 AI Service Integration
+
+**Controller:** `server/src/features/ai/ai.controller.js`
+
+- Uses `@google/generative-ai` SDK with **Gemini 2.0 Flash Exp** model
+- Implements **function calling** (tool use): the AI can invoke `send_message_to_channel`, `send_message_to_all_general_channels`, `get_user_channels`, `create_task`, `get_current_workspace`
+- Three endpoints: `chat`, `summarize`, `generateTask`
+- AI actions execute server-side, giving Gemini real write access to the platform (send messages, create tasks)
+- Auth is enforced: `req.user.sub` is passed to all AI action executors
+
+---
+
+## 4. Cross-System Dependencies
+
+### 4.1 Client ↔ Server Coupling Map
+
+| Concern | Client Component | Server Component | Coupling Type |
+|---|---|---|---|
+| Auth tokens | `AuthContext`, `api.js` | `auth.routes.js`, `middleware/auth.js` | **Tight** — token format, storage keys, refresh protocol |
+| Socket connection | `SocketContext` | `server.js` (io config), `socket/index.js` | **Tight** — event names, room names, auth handshake |
+| E2EE key exchange | `identityKeyService`, `conversationKeyService` | `modules/conversations/`, `modules/identity/` | **Tight** — API contract + cryptographic protocol |
+| Message sending | `useChatSocket`, `socket/index.js` | `socket/index.js`, `messages.service.js` | **Tight** — socket event schema |
+| API calls | `services/*.js` | `src/features/*/` routes | **Moderate** — REST endpoints, versioned |
+| AI chat | `aiService.js`, `ChttrixAIChat.jsx` | `ai.controller.js` | **Moderate** — simple request/response |
+
+### 4.2 Real-Time Event Contract
+
+The socket event naming is an **implicit contract** between client and server. Events are currently defined as string literals scattered across:
+- `client/src/contexts/SocketContext.jsx` (listener registration)
+- `server/socket/index.js` (emitters)
+- `server/src/features/*/` controllers (secondary emitters via `req.io`)
+
+There is no single source of truth (enum, constants file, or schema) for event names.
+
+### 4.3 Auth Token Coupling
+
+The access token is stored in `localStorage.accessToken` and the refresh token in `localStorage.refreshToken`. Both the `api.js` interceptor and `SocketContext` independently read from `localStorage`. The `AuthContext` manages the proactive refresh lifecycle. This creates three independent token readers that must stay in sync — a fragile arrangement.
+
+### 4.4 Encryption Coupling
+
+The E2EE subsystem is the most tightly coupled cross-system component:
+- Client **must** initialize identity keys (`identityKeyService`) before the socket is connected (`SocketContext` respects this via `autoConnect: false`)
+- The server's `SERVER_KEK` is a cryptographic coupling point — changing it requires re-wrapping all stored workspace keys
+- The `AuthContext.login()` calls `identityKeyService.initializeIdentityKeys()` inline — the auth and encryption lifecycles are merged
+
+---
+
+## 5. Refactor Risk Assessment
+
+### 🔴 High Risk
+
+**1. E2EE / Cryptographic Subsystem**  
+- Spans 8+ client service files, 3+ server modules, 5+ Mongoose models
+- Lifecycle is interleaved with auth (login triggers key init, logout triggers key clear)
+- Key hierarchy has tight cryptographic dependencies — any schema change requires migration
+- Moving to a shared `platform/` SDK requires careful API boundary design
+- **Risk level: Critical** — breakage silently corrupts or exposes data
+
+**2. Socket.IO Layer**  
+- `socket/index.js` (775 lines) is a single file with all message and room logic inline
+- Two room naming patterns exist (`user:X` vs `user_X`) — any rename risks missed emitters
+- The socket auth middleware in `server.js` is inline and not unit-testable
+- `SocketContext` on the client handles connection, reconnection, token refresh, and event fan-out in one file
+- **Risk level: High** — any restructuring risks real-time data loss or ghost rooms
+
+**3. Auth Middleware**  
+- `middleware/auth.js` is imported directly by 30+ route mounts via `require('./middleware/auth')`
+- The token refresh logic inside the middleware (auto-refresh on 401) is tightly coupled to the User model's `refreshTokens` array shape
+- **Risk level: High** — breaking this breaks all authenticated routes
+
+### 🟡 Medium Risk
+
+**4. `server.js` Monolith**  
+- 819 lines handling: middleware setup, CORS, Socket.IO init, Redis adapter, all route registrations, inline scheduled-meeting CRUD, graceful shutdown, and process crash guards
+- Moving routes to their own modules is safe incrementally, but the Socket.IO setup and Redis adapter init are entangled with the HTTP server lifecycle
+- **Risk level: Medium** — extractable but requires careful sequencing
+
+**5. `AuthContext.jsx`**  
+- 531 lines managing: user state, token state, encryption state, login, logout, silent refresh, proactive token timer, force-logout event listener, encryption unlock
+- Deeply consumed by practically every component in the app
+- **Risk level: Medium** — any breakage impacts every authenticated page
+
+**6. Cross-Version Route Coexistence**  
+- V1 and V2 routes are live simultaneously; the proxy layer (`v1-to-v2-proxy.js`) is a bridging shim
+- Removing V1 routes before clients migrate = 404 cascades
+- **Risk level: Medium** — requires careful deprecation tracking
+
+### 🟢 Lower Risk
+
+**7. AI Service** — Stateless, minimal backend coupling, easy to extract  
+**8. Notes/Tasks/Updates** — Well-isolated feature modules in V2 pattern  
+**9. Design System Primitives** (`shared/components/ui/`) — No business logic, trivial to share
+
+---
+
+## 6. Candidates for Platform SDK (`platform/`)
+
+The following are strong candidates for extraction into a shared `platform/` SDK, ordered by priority:
+
+### Tier 1 — Extract First (highest reuse, lowest risk)
+
+| Module | Current Location | Why Extract |
+|---|---|---|
+| `crypto.js` | `client/src/utils/` | Pure functions, Web Crypto API, zero framework dependency. Needed by web, desktop, mobile |
+| `cryptoIdentity.js` + `encryptionUtils.js` | `client/src/utils/` | Companion to crypto.js |
+| `tokenUtils.js` | `client/src/utils/` | Trivial but shared logic for localStorage token management |
+| `deviceId.js` | `client/src/utils/` | Device fingerprinting, needed by all clients |
+| `logger.js` (client) | `client/src/utils/` | Uniform logging interface |
+
+### Tier 2 — Extract After Auth Stabilization
+
+| Module | Current Location | Why Extract |
+|---|---|---|
+| `api.js` (axios instance + interceptors) | `client/src/services/` | API base URL, auth headers, refresh logic — identical need on desktop |
+| `apiClient.js` (device-tracked fetch) | `client/src/utils/` | Device ID injection pattern shared across clients |
+| Socket client setup (connection config, reconnect, auth) | `SocketContext.jsx` (partial) | Connection logic is platform-agnostic; React-specific state wiring stays |
+| Socket event name constants | scattered literals | Should be a shared `events.js` constants file |
+| API endpoint constants | scattered string literals | Should be a shared `endpoints.js` constants file |
+
+### Tier 3 — Extract With E2EE Refactor
+
+| Module | Current Location | Why Extract |
+|---|---|---|
+| `identityKeyService.js` | `client/src/services/` | Core to E2EE; needed by all clients |
+| `conversationKeyService.js` | `client/src/services/` | Key distribution protocol |
+| `messageEncryptionService.js` | `client/src/services/` | Needed wherever messages are sent/received |
+| `keyManagement.js` | `client/src/services/` | IndexedDB key store abstraction (platform-specific impl, shared interface) |
+
+---
+
+## 7. Architectural Observations
+
+### 7.1 Scalability
+
+**Strengths:**
+- Redis adapter for Socket.IO is pre-wired — adding `REDIS_URL` enables horizontal scaling with zero code changes
+- MongoDB with Mongoose provides horizontal scale-out path
+- Health check endpoint (`/api/health`) with DB status is production-ready
+- Graceful shutdown handles SIGTERM/SIGINT correctly (Socket.IO → HTTP drain → MongoDB disconnect)
+
+**Weaknesses:**
+- The single `server.js` entrypoint is a deployment bottleneck — there is no service separation, so all features scale together
+- Socket event emitters scattered across controllers (`req.io.emit(...)`) makes it impossible to run API servers without full Socket.IO
+- No message queue (Redis pub/sub, BullMQ, Kafka) — background jobs run in-process via `setInterval`
+
+### 7.2 Maintainability
+
+**Strengths:**
+- The V2 feature-domain pattern (controller/service/routes per domain) is well-executed and easy to navigate
+- Defence-in-depth middleware mounting pattern is notable and secure
+- Inline comments document security decisions and legacy debt clearly
+
+**Weaknesses:**
+- `server.js` is a 819-line god file — the single most urgent structural improvement needed
+- `socket/index.js` is a 775-line monolith with all socket events inline
+- 13 React context providers creates a render-cascade risk and makes state tracing difficult
+- The dual model location (`server/models/` legacy + `server/src/models/` V2) creates confusion about the authoritative source
+- Multiple fix scripts (`fix-all-legacy-imports.js`, `fix-model-imports.js`, etc.) in the server root indicate a recently completed codemod — these should be cleaned up
+
+### 7.3 Code Organization
+
+**Client:** The `src/components/` directory is well-organized by feature domain but very deeply nested (7+ levels in some cases). The nascent `src/modules/chat/` represents the desired future — self-contained, with its own `components/`, `hooks/`, `encryption/`, and `types/` — but has not been rolled out to other features.
+
+**Server:** The `src/features/` pattern is mature and consistent. The remaining inconsistency is between `server/models/` (legacy, ~28 models) and `server/src/models/` (V2, 5 models). Consolidation is needed.
+
+### 7.4 Technical Debt
+
+| Item | Severity | Notes |
+|---|---|---|
+| Room naming inconsistency (`user:X` vs `user_X`) | High | Confirmed existing bug from KI |
+| `server.js` monolith (819 lines) | High | All route registrations, Socket.IO init, inline handlers |
+| No socket event constants file | High | String literals are the only contract |
+| Dual model directories | Medium | `server/models/` + `server/src/models/` |
+| `socket/index.js` 775-line monolith | Medium | All message/room logic in one function |
+| `SocketContext` commented-out code | Medium | `channel:user-joined` listener disabled for "PHASE 1" — unclear if it will be restored |
+| Legacy fix scripts in server root | Low | `fix-*.js` files should be deleted after verifying migration is complete |
+| Inline scheduled-meetings CRUD in `server.js` | Low | Should be extracted to a feature module |
+| `WorkspaceSettingsModal.jsx.backup` | Low | Backup file committed to source |
+
+---
+
+## 8. Refactor Readiness Score
+
+### **Score: 6 / 10**
+
+### Rationale
+
+**What makes this a 6 and not lower:**
+- The V2 domain-driven architecture in `server/src/features/` is solid and provides a clear blueprint for the `platform/` SDK extraction
+- The cryptographic utilities (`crypto.js`) are already written as pure, framework-agnostic functions — trivially extractable
+- Redis scaling is pre-wired; infrastructure capability exists
+- The V1→V2 migration pattern is already proven in-house — the team knows how to run a gradual migration without breaking production
+- Security posture is strong (input sanitization, rate limiting, defence-in-depth middleware, proper token rotation)
+- Graceful shutdown, health checks, and structured logging indicate production maturity
+
+**What prevents a higher score:**
+- **`server.js` monolith** — Route registration, Socket.IO lifecycle, inline handlers, and process management are all in one file. This must be decomposed before the server can cleanly support the new `platform/` architecture
+- **`socket/index.js` monolith** — Moving the socket layer to a shared SDK is currently impractical without first decomposing this file into domain-specific socket handlers
+- **E2EE lifecycle coupling with Auth** — The encryption subsystem is woven into `AuthContext.login()`. Extracting it to `platform/` requires designing a clean initialization interface
+- **No event name constants** — The socket contract is invisible; any restructuring risks silent regressions
+- **13 context providers** — Client state architecture needs consolidation before mobile/desktop clients share business logic (mobile React Native doesn't benefit from React Context)
+- **Dual model structure** — Completing the model consolidation is a prerequisite for cleanly defining the data contract for the shared SDK
+
+### Recommended Pre-Restructuring Steps (Before Platform SDK)
+
+1. **Decompose `server.js`** — Extract route registration to a `router.js`, extract Socket.IO setup to `socket/server.js`
+2. **Create a socket event constants file** — `server/src/shared/constants/socketEvents.js` imported by both the server emitters and client listeners
+3. **Consolidate model directories** — Migrate all remaining models from `server/models/` into `server/src/models/`
+4. **Decompose `socket/index.js`** — Break into domain handlers (`messages.socket.js`, `channels.socket.js`, `workspace.socket.js`, etc.)
+5. **Extract crypto utilities** — Move `client/src/utils/crypto.js` and companions to `platform/crypto/` immediately — zero risk, high value
+6. **Document the E2EE initialization contract** — Formalize the interface between auth and encryption initialization before SDK extraction
+
+---
+
+*This report is based on static analysis of the repository as of March 12, 2026. No code was modified.*
