@@ -575,6 +575,12 @@
 │   ├── constants
 │   ├── package.json
 │   ├── sdk
+│   │   ├── api
+│   │   │   └── apiClient.js
+│   │   ├── auth
+│   │   │   └── tokenManager.js
+│   │   └── socket
+│   │       └── socketClient.js
 │   └── types
 ├── postcss.config.js
 ├── railway.json
@@ -984,4 +990,4 @@
 ├── vercel.json
 └── verify-security.sh
 
-194 directories, 791 files
+197 directories, 794 files
