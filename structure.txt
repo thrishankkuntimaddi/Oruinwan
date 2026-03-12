@@ -573,12 +573,19 @@
 ├── package.json
 ├── platform
 │   ├── constants
+│   │   ├── apiVersions.js
+│   │   ├── encryptionConstants.js
+│   │   └── socketEvents.js
 │   ├── package.json
 │   ├── sdk
 │   │   ├── api
 │   │   │   └── apiClient.js
 │   │   ├── auth
 │   │   │   └── tokenManager.js
+│   │   ├── crypto
+│   │   │   ├── e2ee.js
+│   │   │   ├── identityKey.js
+│   │   │   └── keyStorage.js
 │   │   └── socket
 │   │       └── socketClient.js
 │   └── types
@@ -990,4 +997,4 @@
 ├── vercel.json
 └── verify-security.sh
 
-197 directories, 794 files
+198 directories, 800 files

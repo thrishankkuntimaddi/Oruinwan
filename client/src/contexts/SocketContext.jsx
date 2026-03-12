@@ -1,6 +1,15 @@
 // client/src/contexts/SocketContext.jsx
+//
+// Migration path:
+//   components → SocketContext.jsx → platform/sdk/socket/socketClient.js
+//
+// The existing io() call, reconnection logic, event handlers, and all
+// context values remain unchanged. The SDK wrapper export at the bottom
+// of this file introduces the new surface for future platform clients.
+
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import { io } from 'socket.io-client';
+import sdkSocketClient from '../../../../platform/sdk/socket/socketClient.js';
 import { useAuth } from './AuthContext';
 
 const SocketContext = createContext(null);
@@ -479,3 +488,24 @@ export const SocketProvider = ({ children }) => {
         </SocketContext.Provider>
     );
 };
+
+// ============================================================
+// PLATFORM SDK — SOCKET COMPATIBILITY WRAPPER
+// ============================================================
+// Delegates to the framework-agnostic SDK socket factory.
+// Existing components continue using useSocket() / SocketProvider
+// unchanged. This export is available for desktop and mobile
+// clients that do not use React context.
+// ============================================================
+
+/**
+ * Create a configured Socket.IO instance via the Platform SDK.
+ * Wraps platform/sdk/socket/socketClient.createSocket().
+ *
+ * @param {string} serverUrl  - Base URL of the Socket.IO server
+ * @param {string} token      - JWT access token
+ * @param {Object} [options]  - Optional socket.io-client overrides
+ * @returns {import('socket.io-client').Socket}
+ */
+export const createSocket = (serverUrl, token, options = {}) =>
+    sdkSocketClient.createSocket(serverUrl, token, options);

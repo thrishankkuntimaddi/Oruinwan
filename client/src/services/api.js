@@ -1,5 +1,14 @@
 // client/src/services/api.js
+//
+// Migration path:
+//   services → api.js (this file) → platform/sdk/api/apiClient.js
+//
+// The existing axios instance, interceptors, and all original exports are kept
+// intact. The SDK wrapper block at the bottom of this file introduces the new
+// surface that future phases (and platform clients) will consume.
+
 import axios from 'axios';
+import sdkApiClient from '../../../../platform/sdk/api/apiClient.js';
 
 // Export API_BASE so components can import it instead of redefining
 export const API_BASE = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080';
@@ -216,3 +225,33 @@ export const pollApi = {
         return api.patch(`/api/polls/${pollId}/close`);
     }
 };
+
+// ============================================================
+// PLATFORM SDK — COMPATIBILITY WRAPPERS
+// ============================================================
+// These exports delegate to the framework-agnostic SDK client.
+// They allow new code and future platform clients (desktop, mobile)
+// to call the SDK surface while the existing services continue to
+// use the axios-based `api` default export above.
+//
+// The axios system remains the primary transport for the web app
+// until a later phase replaces it end-to-end.
+// ============================================================
+
+/** SDK-backed GET — framework-agnostic */
+export const sdkGet = (url, opts) => sdkApiClient.get(url, opts);
+
+/** SDK-backed POST — framework-agnostic */
+export const sdkPost = (url, body, opts) => sdkApiClient.post(url, body, opts);
+
+/** SDK-backed PUT — framework-agnostic */
+export const sdkPut = (url, body, opts) => sdkApiClient.put(url, body, opts);
+
+/** SDK-backed PATCH — framework-agnostic */
+export const sdkPatch = (url, body, opts) => sdkApiClient.patch(url, body, opts);
+
+/** SDK-backed DELETE — framework-agnostic */
+export const sdkDelete = (url, opts) => sdkApiClient.delete(url, opts);
+
+/** SDK-backed generic request — framework-agnostic */
+export const request = (method, url, body, opts) => sdkApiClient.request(method, url, body, opts);

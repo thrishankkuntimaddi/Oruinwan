@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!--
+      Content-Security-Policy:
+      - default-src 'self' — restricts most resources to same origin
+      - frame-src http://localhost:5173 — allows the iframe to load the web client
+      - script-src 'none' — no inline or external scripts in this shell page
+      This file is a temporary shell and will be replaced once the web build is bundled.
+    -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; frame-src http://localhost:5173; script-src 'none';"
+    />
+    <title>Chttrix</title>
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: #0f1117; /* matches the Chttrix dark theme */
+      }
+
+      iframe#app-frame {
+        display: block;
+        width: 100%;
+        height: 100%;
+        border: none;
+      }
+    </style>
+  </head>
+  <body>
+    <!--
+      Temporary renderer shell.
+      Loads the Chttrix web application inside a full-viewport iframe.
+      This file will be superseded once the bundled web build is embedded directly.
+    -->
+    <iframe
+      id="app-frame"
+      src="http://localhost:5173"
+      title="Chttrix Web Client"
+      allow="clipboard-read; clipboard-write; microphone; camera"
+    ></iframe>
+  </body>
+</html>
