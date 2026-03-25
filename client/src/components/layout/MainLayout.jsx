@@ -397,7 +397,7 @@ const MainLayout = ({ children, sidePanel }) => {
             )}
 
             {/* 1. Top Utility Bar (Full Width) */}
-            <div className="h-12 flex items-center justify-between px-2 sm:px-4 bg-white dark:bg-gray-900 flex-shrink-0 z-[60] relative shadow-sm dark:shadow-gray-800">
+            <div className="h-12 flex items-center justify-between px-2 sm:px-4 bg-white dark:bg-gray-900 flex-shrink-0 z-[60] relative border-b border-gray-200 dark:border-gray-800">
                 {/* Left: Menu Button (Mobile) & Spacer */}
                 <div className="w-10 sm:w-20 flex items-center">
                     <button
@@ -573,7 +573,7 @@ const MainLayout = ({ children, sidePanel }) => {
                     ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
                     md:flex
                 `}>
-                    <div className="flex h-full h-full shadow-2xl md:shadow-none">
+                    <div className="flex h-full shadow-2xl md:shadow-none">
                         <IconSidebar onProfileClick={() => setShowProfile(true)} />
 
                         {/* B. Middle Left: Side Panel (Inside drawer on mobile, static on desktop) */}
@@ -616,7 +616,7 @@ const MainLayout = ({ children, sidePanel }) => {
                                 style={{ width: window.innerWidth < 768 ? '100%' : aiWidth }}
                                 className={`
                                     fixed md:static inset-y-0 right-0 z-[70]
-                                    bg-white dark:bg-gray-900 flex flex-col shadow-xl md:shadow-none
+                                    bg-white dark:bg-gray-900 flex flex-col shadow-xl md:shadow-none md:border-l border-gray-200 dark:border-gray-800
                                     ${window.innerWidth < 768 ? (showAI ? 'translate-x-0' : 'translate-x-full') : ''}
                                 `}
                             >

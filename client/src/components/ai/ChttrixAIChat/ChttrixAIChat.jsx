@@ -352,7 +352,7 @@ const ChttrixAIChat = ({ onClose, isSidebar = false }) => {
       )}
 
       {/* --- Header --- */}
-      <div className="flex justify-between items-center px-4 py-3 shadow-sm bg-white dark:bg-gray-900 sticky top-0 z-10">
+      <div className="flex justify-between items-center px-4 h-16 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 sticky top-0 z-10">
         <div className="flex items-center gap-3">
           <div className="relative">
             <img src="/assets/ChttrixAI-logo.png" alt="AI" className="w-6 h-6 rounded-md object-cover" />
