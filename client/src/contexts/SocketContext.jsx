@@ -9,7 +9,7 @@
 
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import { io } from 'socket.io-client';
-import sdkSocketClient from '../../../../platform/sdk/socket/socketClient.js';
+import sdkSocketClient from '@platform/sdk/socket/socketClient.js';
 import { useAuth } from './AuthContext';
 
 const SocketContext = createContext(null);

@@ -6,7 +6,7 @@
 // Migration path:
 //   client code → tokenUtils.js (this file) → platform/sdk/auth/tokenManager.js
 
-import sdkTokenManager from '../../../../platform/sdk/auth/tokenManager.js';
+import sdkTokenManager from '@platform/sdk/auth/tokenManager.js';
 
 // ─── Re-exports: SDK names ────────────────────────────────────────────────────
 // Expose the full SDK surface so any new code can use canonical names directly.

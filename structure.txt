@@ -3,6 +3,9 @@
 ├── ai
 │   ├── agents
 │   ├── api
+│   │   └── ai.gateway.js
+│   ├── events
+│   │   └── activityEvent.js
 │   ├── memory
 │   └── orchestrator
 ├── client
@@ -560,8 +563,11 @@
 │   └── vite.config.js
 ├── desktop
 │   ├── electron
+│   │   ├── main.js
+│   │   └── preload.js
 │   ├── package.json
 │   └── renderer
+│       └── index.html
 ├── expansion
 │   ├── architecture_report.md.resolved
 │   └── chttrix_multiplatform_architecture.md.resolved
@@ -586,8 +592,16 @@
 │   │   │   ├── e2ee.js
 │   │   │   ├── identityKey.js
 │   │   │   └── keyStorage.js
-│   │   └── socket
-│   │       └── socketClient.js
+│   │   ├── events
+│   │   │   └── activityEvents.js
+│   │   ├── notifications
+│   │   │   └── notificationBridge.js
+│   │   ├── socket
+│   │   │   └── socketClient.js
+│   │   └── sync
+│   │       ├── conflictResolver.js
+│   │       ├── offlineQueue.js
+│   │       └── syncEngine.js
 │   └── types
 ├── postcss.config.js
 ├── railway.json
@@ -691,6 +705,10 @@
 │   │   ├── config
 │   │   │   └── passport.js
 │   │   ├── features
+│   │   │   ├── activity
+│   │   │   │   ├── activity.controller.js
+│   │   │   │   ├── activity.routes.js
+│   │   │   │   └── activity.service.js
 │   │   │   ├── admin
 │   │   │   │   ├── admin-dashboard.routes.js
 │   │   │   │   ├── admin.controller.js
@@ -846,6 +864,7 @@
 │   │   │       ├── workspace.controller.js
 │   │   │       └── workspaces.routes.js
 │   │   ├── models
+│   │   │   ├── ActivityEvent.js
 │   │   │   ├── Notification.js
 │   │   │   ├── ScheduledMeeting.js
 │   │   │   ├── SecurityAuditEvent.js
@@ -997,4 +1016,4 @@
 ├── vercel.json
 └── verify-security.sh
 
-198 directories, 800 files
+203 directories, 814 files

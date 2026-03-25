@@ -8,7 +8,7 @@
 // surface that future phases (and platform clients) will consume.
 
 import axios from 'axios';
-import sdkApiClient from '../../../../platform/sdk/api/apiClient.js';
+import sdkApiClient from '@platform/sdk/api/apiClient.js';
 
 // Export API_BASE so components can import it instead of redefining
 export const API_BASE = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080';
