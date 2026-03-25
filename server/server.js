@@ -305,6 +305,14 @@ app.use("/api/companies", require("./src/features/company-registration/registrat
 app.use("/api/companies", require("./src/features/employees/employee.routes"));
 app.use("/api/companies", require("./src/features/domain-verification/domain.routes"));
 app.use("/api/departments", require("./src/features/departments/departments.routes"));
+
+// ── WORKSPACE COLLABORATION EXTENSIONS ──────────────────────────────────────
+// Phase 2: Workspace Management + Org Structure + Permissions
+app.use("/api/workspace-templates", require("./src/features/workspace-templates/workspace-templates.routes"));
+app.use("/api/teams", require("./src/features/teams/teams.routes"));
+app.use("/api/companies", require("./src/features/company-org/org-chart.routes"));
+// ─────────────────────────────────────────────────────────────────────────────
+
 // Phase 3 — People Management + Phase 5 — Company Updates Feed
 app.use("/api/company", require("./src/features/people/people.routes"));
 app.use("/api/company", require("./src/features/company-updates/updates.routes"));

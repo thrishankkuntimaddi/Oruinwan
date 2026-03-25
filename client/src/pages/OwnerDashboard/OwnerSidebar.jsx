@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import {
     LayoutDashboard, Users, Settings,
     Globe, LogOut, Building, Shield, Activity, CreditCard,
-    UserPlus, HelpCircle, Briefcase
+    UserPlus, HelpCircle, Briefcase, GitBranch, LayoutTemplate, Lock, UsersRound
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -36,6 +36,15 @@ const OwnerSidebar = () => {
                 { path: '/owner/departments', label: 'Departments', icon: Building },
                 { path: '/owner/users', label: 'People', icon: Users },
                 { path: '/owner/onboard', label: 'Onboard', icon: UserPlus },
+            ]
+        },
+        {
+            group: 'COLLABORATION',
+            items: [
+                { path: '/owner/teams', label: 'Teams', icon: UsersRound },
+                { path: '/owner/org-chart', label: 'Org Chart', icon: GitBranch },
+                { path: '/owner/workspace-templates', label: 'WS Templates', icon: LayoutTemplate },
+                { path: '/owner/workspace-permissions', label: 'WS Permissions', icon: Lock },
             ]
         },
         {

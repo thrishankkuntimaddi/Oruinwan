@@ -32,6 +32,9 @@ router.get('/:companyId', auditController.getCompanyAuditLogs);
 // GET /api/v2/audit/:companyId/export - Export audit logs (CSV or JSON)
 router.get('/:companyId/export', auditController.exportAuditLogs);
 
+// GET /api/v2/audit/:companyId/compliance - Compliance-filtered audit log view
+router.get('/:companyId/compliance', auditController.getComplianceLogs);
+
 // ============================================================================
 // EXPORT
 // ============================================================================

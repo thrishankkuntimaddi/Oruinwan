@@ -67,7 +67,30 @@ async function exportAuditLogs(req, res) {
 // EXPORTS
 // ============================================================================
 
+/**
+ * GET /api/v2/audit/:companyId/compliance
+ * Compliance-filtered audit log view
+ */
+async function getComplianceLogs(req, res) {
+    try {
+        const { companyId } = req.params;
+        const filters = {
+            page: req.query.page,
+            limit: req.query.limit,
+            userId: req.query.userId,
+            startDate: req.query.startDate,
+            endDate: req.query.endDate
+        };
+        const result = await auditService.getComplianceLogs(companyId, filters);
+        return res.json(result);
+    } catch (error) {
+        console.error('Get Compliance Logs Error:', error);
+        return res.status(500).json({ message: 'Server error fetching compliance logs' });
+    }
+}
+
 module.exports = {
     getCompanyAuditLogs,
-    exportAuditLogs
+    exportAuditLogs,
+    getComplianceLogs
 };

@@ -2,7 +2,8 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
-    Globe, LogOut, Building, BarChart3, ChevronUp, User, HelpCircle, UserPlus, Shield, LayoutDashboard, Users, Settings
+    Globe, LogOut, Building, BarChart3, ChevronUp, User, HelpCircle, UserPlus, Shield, LayoutDashboard, Users, Settings,
+    GitBranch, LayoutTemplate, Lock, UsersRound
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -30,6 +31,15 @@ const AdminSidebar = () => {
                 { path: '/admin/workspaces', label: 'Workspaces', icon: Globe },
                 { path: '/admin/users', label: 'People', icon: Users },
                 { path: '/admin/onboard', label: 'Onboard', icon: UserPlus },
+            ]
+        },
+        {
+            group: 'COLLABORATION',
+            items: [
+                { path: '/admin/teams', label: 'Teams', icon: UsersRound },
+                { path: '/admin/org-chart', label: 'Org Chart', icon: GitBranch },
+                { path: '/admin/workspace-templates', label: 'WS Templates', icon: LayoutTemplate },
+                { path: '/admin/workspace-permissions', label: 'WS Permissions', icon: Lock },
             ]
         },
         {

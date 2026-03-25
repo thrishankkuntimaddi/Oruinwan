@@ -87,6 +87,12 @@ import WorkspacesManagement from "./pages/admin/WorkspacesManagement"; // NEW - 
 import AuditSecurityPage from "./pages/admin/AuditSecurityPage"; // NEW - Audit & Security
 import AdminSettingsLimited from "./pages/admin/AdminSettingsLimited"; // NEW - Limited settings for admins
 
+// Workspace Collaboration Extensions (Phase 2)
+import TeamsManagement from "./pages/admin/TeamsManagement";
+import OrgChartPage from "./pages/admin/OrgChartPage";
+import WorkspaceTemplates from "./pages/admin/WorkspaceTemplates";
+import WorkspacePermissions from "./pages/admin/WorkspacePermissions";
+
 // Dashboard Pages
 import AdminDashboard from "./pages/AdminDashboard";
 import ManagerLayout from "./components/layout/ManagerLayout.jsx";
@@ -563,6 +569,12 @@ function App() {
                             <Route path="/owner/users" element={<UserManagement />} />
                             <Route path="/owner/onboard" element={<OnboardingPage />} />
                             <Route path="/owner/settings" element={<CompanySettings />} />
+
+                            {/* Workspace Collaboration Extensions */}
+                            <Route path="/owner/teams" element={<TeamsManagement />} />
+                            <Route path="/owner/org-chart" element={<OrgChartPage />} />
+                            <Route path="/owner/workspace-templates" element={<WorkspaceTemplates />} />
+                            <Route path="/owner/workspace-permissions" element={<WorkspacePermissions />} />
                           </Route>
 
                           {/* ADMIN DASHBOARD & TOOLS - Admin + Owner */}
@@ -587,6 +599,12 @@ function App() {
                             <Route path="/admin/settings" element={<AdminSettingsLimited />} />
                             <Route path="/admin/profile" element={<AdminProfile />} />
                             <Route path="/contact-admin" element={<ContactAdmin />} />
+
+                            {/* Workspace Collaboration Extensions */}
+                            <Route path="/admin/teams" element={<TeamsManagement />} />
+                            <Route path="/admin/org-chart" element={<OrgChartPage />} />
+                            <Route path="/admin/workspace-templates" element={<WorkspaceTemplates />} />
+                            <Route path="/admin/workspace-permissions" element={<WorkspacePermissions />} />
                           </Route>
 
                           {/* MANAGER DASHBOARD - Manager + Admin + Owner */}

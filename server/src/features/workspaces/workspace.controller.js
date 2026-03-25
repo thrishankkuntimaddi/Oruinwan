@@ -1215,3 +1215,292 @@ exports.getWorkspaceStats = async (req, res) => {
     return res.status(500).json({ message: "Server error" });
   }
 };
+
+// ─────────────────────────────────────────────────────────────────────────────
+// WORKSPACE MANAGEMENT EXTENSIONS (additive — Phase 2 features)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Clone a workspace — copies structure (channels) but NOT messages or members.
+ * POST /api/workspaces/:id/clone
+ */
+exports.cloneWorkspace = async (req, res) => {
+  try {
+    const sourceId = req.params.id;
+    const userId = req.user?.sub;
+    const { name, description, includeMembership = false } = req.body;
+
+    if (!name) return res.status(400).json({ message: 'New workspace name is required' });
+
+    const source = await Workspace.findById(sourceId);
+    if (!source) return res.status(404).json({ message: 'Source workspace not found' });
+
+    const isMember = source.members.some(m => String(m.user) === String(userId));
+    if (!isMember) return res.status(403).json({ message: 'Not a workspace member' });
+
+    const memberData = source.members.find(m => String(m.user) === String(userId));
+    if (memberData.role !== 'admin' && memberData.role !== 'owner') {
+      return res.status(403).json({ message: 'Admin access required to clone' });
+    }
+
+    const user = await User.findById(userId);
+
+    // Resolve companyId from DB record (same secure pattern as createWorkspace)
+    const resolvedCompanyId = user.companyId ? String(user.companyId) : null;
+
+    // Check name uniqueness for this user
+    const existing = await Workspace.findOne({ name: name.trim(), createdBy: userId });
+    if (existing) return res.status(400).json({ message: 'Workspace name already exists in your account' });
+
+    // Create cloned workspace
+    const cloneMembers = includeMembership
+      ? source.members.map(m => ({ user: m.user, role: m.role, status: 'active', joinedAt: new Date() }))
+      : [{ user: userId, role: 'owner' }];
+
+    const clone = await Workspace.create({
+      company: resolvedCompanyId || null,
+      type: source.type,
+      name: name.trim(),
+      description: description || source.description,
+      icon: source.icon,
+      color: source.color,
+      rules: source.rules || '',
+      createdBy: userId,
+      members: cloneMembers,
+      settings: { ...source.settings.toObject() }
+    });
+
+    // Copy channel structure (no messages, no members from source)
+    const sourceChannels = await Channel.find({ workspace: sourceId }).lean();
+    const clonedChannelIds = [];
+
+    for (const ch of sourceChannels) {
+      const newChannel = await Channel.create({
+        workspace: clone._id,
+        company: resolvedCompanyId || null,
+        name: ch.name,
+        description: ch.description || '',
+        isPrivate: ch.isPrivate,
+        isDefault: ch.isDefault,
+        createdBy: userId,
+        members: [{ user: userId, joinedAt: new Date() }],
+        systemEvents: [{ type: 'channel_created', userId, timestamp: new Date() }]
+      });
+      clonedChannelIds.push(newChannel._id);
+    }
+
+    clone.defaultChannels = clonedChannelIds.slice(0, 2);
+    await clone.save();
+
+    // Add clone to creator's workspaces
+    user.workspaces.push({ workspace: clone._id, role: 'owner' });
+    await user.save();
+
+    const io = req.app?.get('io');
+    if (io) {
+      io.to(`user:${userId}`).emit('workspace-cloned', { workspaceId: clone._id, name: clone.name });
+    }
+
+    return res.status(201).json({
+      message: 'Workspace cloned successfully',
+      workspace: {
+        id: clone._id,
+        name: clone.name,
+        icon: clone.icon,
+        color: clone.color,
+        channelsCopied: clonedChannelIds.length
+      }
+    });
+  } catch (err) {
+    return handleError(res, err, 'CLONE WORKSPACE ERROR');
+  }
+};
+
+/**
+ * Export workspace as JSON snapshot (structure only).
+ * GET /api/workspaces/:id/export
+ */
+exports.exportWorkspace = async (req, res) => {
+  try {
+    const workspaceId = req.params.id;
+    const userId = req.user?.sub;
+
+    const workspace = await Workspace.findById(workspaceId);
+    if (!workspace) return res.status(404).json({ message: 'Workspace not found' });
+
+    const isMember = workspace.members.some(m => String(m.user) === String(userId));
+    if (!isMember) return res.status(403).json({ message: 'Not a workspace member' });
+
+    const channels = await Channel.find({ workspace: workspaceId })
+      .select('name description isPrivate isDefault')
+      .lean();
+
+    const snapshot = {
+      exportedAt: new Date().toISOString(),
+      exportedBy: userId,
+      version: '1.0',
+      workspace: {
+        name: workspace.name,
+        description: workspace.description,
+        icon: workspace.icon,
+        color: workspace.color,
+        rules: workspace.rules || '',
+        type: workspace.type,
+        settings: workspace.settings
+      },
+      channels: channels.map(c => ({
+        name: c.name,
+        description: c.description,
+        isPrivate: c.isPrivate,
+        isDefault: c.isDefault
+      }))
+    };
+
+    res.setHeader('Content-Disposition', `attachment; filename="workspace-${workspace.name.replace(/\s+/g, '-')}-export.json"`);
+    res.setHeader('Content-Type', 'application/json');
+    return res.json(snapshot);
+  } catch (err) {
+    return handleError(res, err, 'EXPORT WORKSPACE ERROR');
+  }
+};
+
+/**
+ * Import a workspace from a JSON snapshot.
+ * POST /api/workspaces/import
+ */
+exports.importWorkspace = async (req, res) => {
+  try {
+    const userId = req.user?.sub;
+    const { snapshot } = req.body;
+
+    if (!snapshot || !snapshot.workspace) {
+      return res.status(400).json({ message: 'Valid workspace snapshot is required' });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    const resolvedCompanyId = user.companyId ? String(user.companyId) : null;
+
+    if (!resolvedCompanyId) {
+      // Personal accounts: check limit
+      const owned = await Workspace.countDocuments({ createdBy: userId });
+      if (owned >= 3) {
+        return res.status(403).json({ message: 'Free plan limit: max 3 workspaces', isLimitReached: true });
+      }
+    }
+
+    const { workspace: ws, channels = [] } = snapshot;
+    const name = (ws.name || 'Imported Workspace').trim();
+
+    // Uniqueness check
+    const existing = await Workspace.findOne({ name, createdBy: userId });
+    if (existing) return res.status(400).json({ message: 'Workspace name already exists — rename before importing' });
+
+    const imported = await Workspace.create({
+      company: resolvedCompanyId || null,
+      type: ws.type || 'team',
+      name,
+      description: ws.description || '',
+      icon: ws.icon || '📁',
+      color: ws.color || '#2563eb',
+      rules: ws.rules || '',
+      createdBy: userId,
+      members: [{ user: userId, role: 'owner' }],
+      settings: ws.settings || {}
+    });
+
+    const createdChannelIds = [];
+    for (const ch of channels) {
+      if (!ch.name) continue;
+      const channel = await Channel.create({
+        workspace: imported._id,
+        company: resolvedCompanyId || null,
+        name: ch.name,
+        description: ch.description || '',
+        isPrivate: !!ch.isPrivate,
+        isDefault: !!ch.isDefault,
+        createdBy: userId,
+        members: [{ user: userId, joinedAt: new Date() }],
+        systemEvents: [{ type: 'channel_created', userId, timestamp: new Date() }]
+      });
+      createdChannelIds.push(channel._id);
+    }
+
+    imported.defaultChannels = createdChannelIds.filter((_, i) => channels[i]?.isDefault).slice(0, 2);
+    await imported.save();
+
+    user.workspaces.push({ workspace: imported._id, role: 'owner' });
+    await user.save();
+
+    return res.status(201).json({
+      message: 'Workspace imported successfully',
+      workspace: { id: imported._id, name: imported.name, icon: imported.icon, color: imported.color }
+    });
+  } catch (err) {
+    return handleError(res, err, 'IMPORT WORKSPACE ERROR');
+  }
+};
+
+/**
+ * Get detailed workspace analytics.
+ * GET /api/workspaces/:workspaceId/analytics
+ */
+exports.getWorkspaceAnalytics = async (req, res) => {
+  try {
+    const workspaceId = req.params.workspaceId;
+    const userId = req.user?.sub;
+
+    const workspace = await Workspace.findById(workspaceId);
+    if (!workspace) return res.status(404).json({ message: 'Workspace not found' });
+
+    const isMember = workspace.members.some(m => String(m.user) === String(userId));
+    if (!isMember) return res.status(403).json({ message: 'Not a workspace member' });
+
+    const [channelCount, messageCount, taskCount, noteCount] = await Promise.all([
+      Channel.countDocuments({ workspace: workspaceId }),
+      Message.countDocuments({ workspace: workspaceId }),
+      Task.countDocuments({ workspace: workspaceId }),
+      Note.countDocuments({ workspace: workspaceId })
+    ]);
+
+    // Member growth: group members by joinedAt month
+    const memberGrowth = workspace.members.reduce((acc, m) => {
+      if (!m.joinedAt) return acc;
+      const key = new Date(m.joinedAt).toISOString().slice(0, 7); // YYYY-MM
+      acc[key] = (acc[key] || 0) + 1;
+      return acc;
+    }, {});
+
+    // Role breakdown
+    const roleBreakdown = workspace.members.reduce((acc, m) => {
+      acc[m.role] = (acc[m.role] || 0) + 1;
+      return acc;
+    }, {});
+
+    // Activity score (simple composite)
+    const activityScore = Math.min(100, Math.round(
+      (messageCount / 10) * 0.4 +
+      (taskCount / 5) * 0.3 +
+      (noteCount / 5) * 0.2 +
+      (channelCount * 3) * 0.1
+    ));
+
+    return res.json({
+      workspace: { id: workspace._id, name: workspace.name, createdAt: workspace.createdAt },
+      summary: {
+        memberCount: workspace.members.length,
+        channelCount,
+        messageCount,
+        taskCount,
+        noteCount,
+        activityScore
+      },
+      memberGrowth,
+      roleBreakdown,
+      lastActivityAt: workspace.lastActivityAt
+    });
+  } catch (err) {
+    return handleError(res, err, 'GET WORKSPACE ANALYTICS ERROR');
+  }
+};

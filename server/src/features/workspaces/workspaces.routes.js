@@ -154,9 +154,28 @@ const requireWorkspaceOwner = (req, res, next) => {
 };
 router.delete('/:id', ...memberGatePersonal, requireWorkspaceOwner, workspaceController.deleteWorkspace);
 
+// ── WORKSPACE PERMISSIONS & FEATURE TOGGLES ──────────────────────────────────
+// MUST be before /:companyId to prevent Express matching 'permissions' as a companyId
+const workspacePermissionsRouter = require('../workspace-permissions/workspace-permissions.routes');
+router.use('/:id', workspacePermissionsRouter);
+
+// ── WORKSPACE MANAGEMENT EXTENSIONS ─────────────────────────────────────────
+
+// Clone a workspace — admin/owner only
+router.post('/:id/clone', ...adminGatePersonal, workspaceController.cloneWorkspace);
+
+// Export workspace as JSON snapshot — any member
+router.get('/:id/export', ...memberGatePersonal, workspaceController.exportWorkspace);
+
+// Import workspace from JSON snapshot — auth only (personal + company)
+router.post('/import', requireAuth, workspaceController.importWorkspace);
+
+// Workspace detailed analytics — any member
+router.get('/:workspaceId/analytics', ...memberGatePersonal, workspaceController.getWorkspaceAnalytics);
+
 // ── COMPANY-SCOPED LIST ───────────────────────────────────────────────────────
 
-// Get workspaces by company — must be after all specific routes to avoid collisions
+// Get workspaces by company — must be LAST among GET /:param routes to avoid collisions
 router.get('/:companyId', requireAuth, requireCompanyMember, workspaceController.listWorkspaces);
 
 module.exports = router;
