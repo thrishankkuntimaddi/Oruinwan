@@ -499,16 +499,6 @@ const HomePanel = ({ title }) => {
                                 <Loader size={12} className="animate-spin" />
                                 <span className="text-xs">Loading...</span>
                             </div>
-                        ) : scheduledMeetings.length === 0 ? (
-                            <div className="px-5 py-2">
-                                <p className="text-xs text-gray-400 dark:text-gray-500">No upcoming meetings</p>
-                                <button
-                                    onClick={() => setShowScheduleModal(true)}
-                                    className="mt-1 text-xs text-indigo-500 hover:text-indigo-600 dark:text-indigo-400 font-medium flex items-center gap-1"
-                                >
-                                    <Plus size={10} /> Schedule one
-                                </button>
-                            </div>
                         ) : (
                             scheduledMeetings.map(meeting => (
                                 <div
