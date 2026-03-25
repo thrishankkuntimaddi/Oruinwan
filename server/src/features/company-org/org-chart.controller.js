@@ -2,7 +2,7 @@
 // Builds a hierarchical org chart tree for a company.
 // Structure: Company → Departments → Teams + Members
 const Department = require('../../../models/Department');
-const Team = require('../../../models/Team');
+const Team = require('../../models/Team');
 const User = require('../../../models/User');
 const Company = require('../../../models/Company');
 const { handleError } = require('../../../utils/responseHelpers');

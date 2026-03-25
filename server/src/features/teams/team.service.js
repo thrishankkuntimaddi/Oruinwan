@@ -1,6 +1,6 @@
 // server/src/features/teams/team.service.js
 // Teams Business Logic — company-isolated, no HTTP references
-const Team = require('../../../models/Team');
+const Team = require('../../models/Team');
 const User = require('../../../models/User');
 const Department = require('../../../models/Department');
 

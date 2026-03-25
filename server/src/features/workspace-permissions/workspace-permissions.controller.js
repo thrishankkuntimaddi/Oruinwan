@@ -1,5 +1,5 @@
 // server/src/features/workspace-permissions/workspace-permissions.controller.js
-const WorkspacePermission = require('../../../models/WorkspacePermission');
+const WorkspacePermission = require('../../models/WorkspacePermission');
 const Workspace = require('../../../models/Workspace');
 const { handleError } = require('../../../utils/responseHelpers');
 

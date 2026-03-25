@@ -1,5 +1,5 @@
 // server/src/features/workspace-templates/workspace-templates.controller.js
-const WorkspaceTemplate = require('../../../models/WorkspaceTemplate');
+const WorkspaceTemplate = require('../../models/WorkspaceTemplate');
 const Workspace = require('../../../models/Workspace');
 const Channel = require('../channels/channel.model');
 const { handleError } = require('../../../utils/responseHelpers');
