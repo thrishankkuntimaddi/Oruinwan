@@ -397,7 +397,7 @@ const MainLayout = ({ children, sidePanel }) => {
             )}
 
             {/* 1. Top Utility Bar (Full Width) */}
-            <div className="h-12 flex items-center justify-between px-2 sm:px-4 bg-white dark:bg-gray-900 flex-shrink-0 z-[60] relative border-b border-gray-200 dark:border-gray-800">
+            <div className="h-10 flex items-center justify-between px-2 sm:px-3 bg-white dark:bg-gray-900 flex-shrink-0 z-[60] relative border-b border-gray-200 dark:border-gray-800">
                 {/* Left: Menu Button (Mobile) & Spacer */}
                 <div className="w-10 sm:w-20 flex items-center">
                     <button
@@ -492,7 +492,7 @@ const MainLayout = ({ children, sidePanel }) => {
                         {showHelp && (
                             <>
                                 <div className="fixed inset-0 z-[90]" onClick={() => setShowHelp(false)}></div>
-                                <div className="absolute top-10 right-0 w-64 bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl rounded-xl shadow-2xl border border-gray-200/60 dark:border-gray-700/60 z-[100] overflow-hidden animate-fade-in origin-top-right ring-1 ring-black/5">
+                                <div className="absolute top-9 right-0 w-64 bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl rounded-lg shadow-lg border border-gray-200/60 dark:border-gray-700/60 z-[100] overflow-hidden animate-fade-in origin-top-right ring-1 ring-black/5">
                                     {/* Minimal Header */}
                                     <div className="px-3 py-2 border-b border-gray-100 dark:border-gray-700/50 flex items-center justify-between bg-gray-50/50 dark:bg-gray-900/50">
                                         <span className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Support</span>
