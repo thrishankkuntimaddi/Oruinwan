@@ -326,6 +326,8 @@ app.use("/api/support", require("./src/features/support/support.routes"));
 app.use("/api/managers", require("./src/features/managers/managers.routes"));
 app.use("/api/analytics", require("./src/features/analytics/analytics.routes"));
 app.use("/api/ai", require("./src/features/ai/ai.routes"));
+// Phase 4 — Smart Reply + Auto Translate
+app.use("/api/ai", requireAuth, require("./src/features/ai/smartReply.routes"));
 // Unified Activity Stream — workspace feed + personal history
 app.use("/api/activity", require("./src/features/activity/activity.routes"));
 // Notes & Tasks - Direct registration (no proxy needed)
@@ -349,6 +351,8 @@ app.use("/api/v2/encryption", require("./src/modules/encryption/encryption.route
 
 // Threads (messaging threads)
 app.use("/api/threads", require("./src/modules/threads/threads.routes"));
+// Phase 3 — Thread Resolve + AI Summary
+app.use("/api/threads/v2", requireAuth, require("./src/modules/threads/threadsV2.routes"));
 
 // Identity & Public Key Management
 app.use("/api/v2/identity", require("./src/modules/identity/identity.routes"));
@@ -376,6 +380,10 @@ app.use("/api/v2/notes", require("./src/features/notes/notes.routes"));
 
 // Favorites (Migrated from legacy)
 app.use("/api/v2/favorites", require("./src/features/favorites/favorites.routes"));
+
+// Phase 1 — Message Bookmarks & Reminders
+app.use("/api/messages", requireAuth, require("./src/features/messages/bookmark.routes"));
+app.use("/api", requireAuth, require("./src/features/reminders/reminders.routes"));
 
 // Phase 7.5 — Link Preview (SSRF-safe OG scraper)
 app.use("/api/v2/link-preview", require("./src/modules/linkPreview/linkPreview.routes"));
@@ -716,6 +724,10 @@ mongoose
   .connect(process.env.MONGO_URI)
   .then(() => {
     logger.success("MongoDB Connected ✔");
+
+    // Phase 1 — Start reminders cron (after DB is connected)
+    const { startRemindersCron } = require('./src/features/reminders/reminders.cron');
+    startRemindersCron(io);
 
     httpServer.listen(PORT, () => {
       logger.success(`Server (Express + Socket.IO) running on port ${PORT}`);

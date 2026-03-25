@@ -20,6 +20,8 @@
 
 // ─── From client/src/utils/crypto.js ─────────────────────────────────────────
 
+console.log("🔥 PLATFORM CRYPTO USED");
+
 export {
     // Key generation
     generateWorkspaceKey,

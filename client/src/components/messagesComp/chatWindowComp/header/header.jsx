@@ -21,6 +21,7 @@ import {
   Megaphone,
   Radio,
   PhoneOff,
+  Bookmark,
 } from "lucide-react";
 import ConfirmationModal from "../../../../shared/components/ui/ConfirmationModal";
 import { Avatar, Input } from "../../../../shared/components/ui";
@@ -60,6 +61,8 @@ export default function Header({
   // Phase 7.7 — Huddle
   onStartHuddle,
   huddleActive = false,
+  // Phase 1 — Bookmarks
+  onShowBookmarks,
 }) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showClearChatConfirm, setShowClearChatConfirm] = useState(false);
@@ -294,6 +297,17 @@ export default function Header({
                     }`}
                 >
                   <MessageSquare size={16} />
+                </button>
+              )}
+
+              {/* Phase 1 — Bookmarks Button */}
+              {onShowBookmarks && (
+                <button
+                  title="Saved / Bookmarked messages"
+                  onClick={onShowBookmarks}
+                  className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-yellow-500 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 rounded transition-colors"
+                >
+                  <Bookmark size={16} />
                 </button>
               )}
 

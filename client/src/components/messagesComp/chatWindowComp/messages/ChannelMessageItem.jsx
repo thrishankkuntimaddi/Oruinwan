@@ -48,6 +48,11 @@ function ChannelMessageItem({
     threadCounts,
     channelMembers,
     isAdmin = false, // Admin check for pin permissions
+    // Phase 1 — Bookmarks, Reminders, Edit History
+    onRemind,
+    onShowHistory,
+    isBookmarked = false,
+    onBookmarkToggle,
 }) {
     // TEMPORARY FIX: Fallback to msg.replyCount if threadCounts missing
     const count = (threadCounts && threadCounts[msg.id]) || msg.replyCount || 0;
@@ -609,6 +614,71 @@ function ChannelMessageItem({
                             )}
 
                             <div className="border-t border-gray-100 dark:border-gray-700 my-1" />
+
+                            {/* Phase 1 — Bookmark */}
+                            <button
+                                onClick={async () => {
+                                    try {
+                                        await api.post(`/api/messages/${msg._id || msg.id}/bookmark`);
+                                        onBookmarkToggle?.(msg._id || msg.id);
+                                    } catch { /* silent */ }
+                                    toggleMsgMenu({ stopPropagation: () => {} }, null);
+                                }}
+                                className={`w-full text-left px-4 py-2 flex items-center gap-2 transition-colors ${
+                                    isBookmarked
+                                        ? 'text-yellow-500 hover:bg-yellow-50 dark:hover:bg-yellow-900/20'
+                                        : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+                                }`}
+                            >
+                                🔖 {isBookmarked ? 'Remove Bookmark' : 'Save / Bookmark'}
+                            </button>
+
+                            {/* Phase 1 — Remind Me */}
+                            {onRemind && (
+                                <button
+                                    onClick={() => {
+                                        onRemind(msg._id || msg.id);
+                                        toggleMsgMenu({ stopPropagation: () => {} }, null);
+                                    }}
+                                    className="w-full text-left px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2 text-gray-700 dark:text-gray-300"
+                                >
+                                    🔔 Remind Me
+                                </button>
+                            )}
+
+                            {/* Phase 1 — Edit History */}
+                            {onShowHistory && msg.editHistory?.length > 0 && (
+                                <button
+                                    onClick={() => {
+                                        onShowHistory(msg);
+                                        toggleMsgMenu({ stopPropagation: () => {} }, null);
+                                    }}
+                                    className="w-full text-left px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2 text-gray-700 dark:text-gray-300"
+                                >
+                                    📜 Edit History
+                                </button>
+                            )}
+
+                            {/* Phase 4 — Auto Translate */}
+                            {msg.text && (
+                                <button
+                                    onClick={async () => {
+                                        toggleMsgMenu({ stopPropagation: () => {} }, null);
+                                        try {
+                                            const res = await api.post('/api/ai/translate', {
+                                                text: msg.text,
+                                                targetLanguage: navigator.language?.split('-')[0] === 'en' ? 'Spanish' : 'English'
+                                            });
+                                            if (res.data.translated) {
+                                                alert(`🌐 Translation:\n\n${res.data.translated}`);
+                                            }
+                                        } catch { /* silent */ }
+                                    }}
+                                    className="w-full text-left px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2 text-gray-700 dark:text-gray-300"
+                                >
+                                    🌐 Translate
+                                </button>
+                            )}
 
                             {/* Delete options */}
                             {(isMe || isAdmin) && (

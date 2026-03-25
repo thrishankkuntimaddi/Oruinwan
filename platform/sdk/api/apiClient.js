@@ -12,6 +12,8 @@
 
 import { getAccessToken } from '../auth/tokenManager.js';
 
+console.log("🔥 PLATFORM API CLIENT USED");
+
 // ─── Default Headers ──────────────────────────────────────────────────────────
 
 const DEFAULT_HEADERS = {

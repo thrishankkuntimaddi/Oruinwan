@@ -8,7 +8,6 @@
 // of this file introduces the new surface for future platform clients.
 
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
-import { io } from 'socket.io-client';
 import sdkSocketClient from '@platform/sdk/socket/socketClient.js';
 import { useAuth } from './AuthContext';
 
@@ -23,7 +22,7 @@ export const useSocket = () => {
 };
 
 export const SocketProvider = ({ children }) => {
-    const [socket, setSocket] = useState(null);
+    const socketRef = useRef(null);
     const [isConnected, setIsConnected] = useState(false);
     const { user } = useAuth();
 
@@ -40,28 +39,20 @@ export const SocketProvider = ({ children }) => {
     useEffect(() => {
         const token = localStorage.getItem('accessToken');
         if (!token || !user) {
-            // User logged out — clear socket state
-            setSocket(null);
+            // User logged out — clear socket ref
+            socketRef.current = null;
             setIsConnected(false);
             return;
         }
 
         const API_BASE = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080';
 
-        // Create socket instance without auto-connecting
-        const socketInstance = io(API_BASE, {
-            auth: { token },
-            // ✅ Specify transports - try websocket first, then polling
-            transports: ['websocket', 'polling'],
-            withCredentials: true,
-            reconnection: true,
-            reconnectionAttempts: 5,
-            reconnectionDelay: 1000,
-            timeout: 10000,
-            autoConnect: false // ← Prevent auto-connect
-        });
+        // ✅ Create socket instance via Platform SDK (autoConnect: false by default)
+        const socketInstance = sdkSocketClient.createSocket(API_BASE, token);
+        console.log('🧠 SOCKET CREATED', socketInstance);
 
         socketInstance.on('connect', () => {
+            console.log('✅ SOCKET CONNECTED', socketInstance.id);
             setIsConnected(true);
 
             // ✅ Join workspace room to receive workspace-wide events
@@ -76,7 +67,8 @@ export const SocketProvider = ({ children }) => {
         });
 
         socketInstance.on('connect_error', async (error) => {
-            console.error('❌ Socket connection error:', error.message, error);
+            console.error('❌ SOCKET ERROR', error.message);
+            console.error('❌ Socket connection error (detail):', error);
             setIsConnected(false);
 
             // If authentication failed, try to refresh the token
@@ -114,8 +106,8 @@ export const SocketProvider = ({ children }) => {
             }
         });
 
-        // Store socket instance
-        setSocket(socketInstance);
+        // Store socket instance in ref (synchronous — no async state update race)
+        socketRef.current = socketInstance;
 
         // ⏸️ PHASE 1 ISOLATION: Socket connection disabled during login
         // Socket should be connected EXPLICITLY after Phase 1 (identity keys) complete
@@ -125,7 +117,7 @@ export const SocketProvider = ({ children }) => {
             if (socketInstance.connected) {
                 socketInstance.disconnect();
             }
-            setSocket(null);
+            socketRef.current = null;
             setIsConnected(false);
         };
     }, [user]); // Re-initialize socket when user changes (login/logout)
@@ -133,14 +125,14 @@ export const SocketProvider = ({ children }) => {
     // ✅ Explicit socket connection function
     // Call this from components AFTER identity keys are loaded
     const connectSocket = useCallback(() => {
-        if (socket && !socket.connected) {
-            socket.connect();
-        } else if (socket?.connected) {
+        if (socketRef.current && !socketRef.current.connected) {
+            socketRef.current.connect();
         }
-    }, [socket]);
+    }, []);
 
     // Broadcast channel events to all registered listeners
     useEffect(() => {
+        const socket = socketRef.current;
         if (!socket) return;
 
         socket.on('channel-created', (data) => {
@@ -261,10 +253,11 @@ export const SocketProvider = ({ children }) => {
             socket.off('tab-deleted');
             // socket.off('channel:user-joined'); // Already disabled
         };
-    }, [socket]);
+    }, [isConnected]);
 
     // Broadcast message events
     useEffect(() => {
+        const socket = socketRef.current;
         if (!socket) return;
 
         socket.on('new-message', (data) => {
@@ -316,10 +309,11 @@ export const SocketProvider = ({ children }) => {
             socket.off('reaction-removed');
             socket.off('reconnected');
         };
-    }, [socket]);
+    }, [isConnected]);
 
     // Broadcast workspace events
     useEffect(() => {
+        const socket = socketRef.current;
         if (!socket) return;
 
         socket.on('workspace-joined', (data) => {
@@ -348,10 +342,11 @@ export const SocketProvider = ({ children }) => {
             socket.off('workspace-updated');
             socket.off('workspace-deleted');
         };
-    }, [socket]);
+    }, [isConnected]);
 
     // Broadcast Task events
     useEffect(() => {
+        const socket = socketRef.current;
         if (!socket) return;
 
         const events = ['task-created', 'task-updated', 'task-deleted', 'task-assigned', 'task-removed'];
@@ -366,10 +361,11 @@ export const SocketProvider = ({ children }) => {
         return () => {
             events.forEach(event => socket.off(event));
         };
-    }, [socket]);
+    }, [isConnected]);
 
     // Broadcast Note events
     useEffect(() => {
+        const socket = socketRef.current;
         if (!socket) return;
 
         const events = ['note-created', 'note-updated', 'note-deleted', 'note-shared'];
@@ -384,10 +380,11 @@ export const SocketProvider = ({ children }) => {
         return () => {
             events.forEach(event => socket.off(event));
         };
-    }, [socket]);
+    }, [isConnected]);
 
     // Broadcast Update events (company:update:* namespace from company-updates service)
     useEffect(() => {
+        const socket = socketRef.current;
         if (!socket) return;
 
         const events = ['company:update:created', 'company:update:deleted', 'company:update:reacted'];
@@ -402,10 +399,11 @@ export const SocketProvider = ({ children }) => {
         return () => {
             events.forEach(event => socket.off(event));
         };
-    }, [socket]);
+    }, [isConnected]);
 
     // Broadcast Notification events (targeted per-user push)
     useEffect(() => {
+        const socket = socketRef.current;
         if (!socket) return;
 
         const onNotification = (data) => {
@@ -417,7 +415,7 @@ export const SocketProvider = ({ children }) => {
         return () => {
             socket.off('notification:new', onNotification);
         };
-    }, [socket]);
+    }, [isConnected]);
 
     // Register/unregister listeners (using refs to avoid stale closures)
     const addChannelListener = useCallback((callback) => {
@@ -470,7 +468,7 @@ export const SocketProvider = ({ children }) => {
     }, []);
 
     const value = {
-        socket,
+        socket: socketRef.current,
         isConnected,
         addChannelListener,
         addMessageListener,

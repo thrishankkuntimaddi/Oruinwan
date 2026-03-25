@@ -86,7 +86,11 @@ const CentralContentView = ({
     onOpenCanvas,
 
     // Reply callback — set by ChatWindowV2 via enhancedActions
-    onReply
+    onReply,
+
+    // Phase 2/4 — feature flags (optional, default off for DMs)
+    showScreenRecord = false,
+    showSmartReply = false,
 }) => {
     return (
         <div className="chat-content" style={{ display: 'flex', flex: 1, overflow: 'hidden', minHeight: 0, backgroundColor: 'var(--bg-primary)' }}>
@@ -154,6 +158,14 @@ const CentralContentView = ({
                             linkPreviewLoading={linkPreviewLoading}
                             onDismissPreview={onDismissPreview}
                             members={channelMembers || []}
+                            showSmartReply={showSmartReply}
+                            showScreenRecord={showScreenRecord}
+                            recentMessages={
+                                (conversation.events || []).slice(-5).map(e => ({
+                                    sender: e.sender?.username || e.sender,
+                                    text: e.text || e.payload?.text || ''
+                                })).filter(e => e.text)
+                            }
                         />
 
                     </div>

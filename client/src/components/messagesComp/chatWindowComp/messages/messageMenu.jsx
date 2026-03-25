@@ -1,6 +1,9 @@
 // src/components/messageComp/chatWindow/messages/messageMenu.jsx
+// Phase 1 — Enhanced with Bookmark, Remind Me, and Edit History actions
+
 import React, { useState } from "react";
 import IntegrationActionModal from "../../../../components/apps/modals/IntegrationActionModal";
+import api from "../../../../services/api";
 
 const EMOJI_SHORTCUTS = ["👍", "❤️", "😂", "😊", "🔥", "🙏"];
 
@@ -13,10 +16,27 @@ export default function MessageMenu({
   copyMessage,
   deleteMessage,
   infoMessage,
+  // Phase 1 additions
+  onBookmark,
+  onRemind,
+  onShowHistory,
+  isBookmarked = false,
 }) {
-  const [integrationModal, setIntegrationModal] = useState(null); // { title, integration, emoji, description, confirmLabel }
+  const [integrationModal, setIntegrationModal] = useState(null);
+  const [bookmarkPending, setBookmarkPending] = useState(false);
 
   const openIntegration = (config) => setIntegrationModal(config);
+
+  const handleBookmark = async () => {
+    if (bookmarkPending) return;
+    setBookmarkPending(true);
+    try {
+      await api.post(`/api/messages/${msg.id}/bookmark`);
+      onBookmark?.(msg.id);
+    } catch { /* silent */ } finally {
+      setBookmarkPending(false);
+    }
+  };
 
   return (
     <>
@@ -34,6 +54,39 @@ export default function MessageMenu({
         <button className="w-full text-left px-3 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg text-gray-700 dark:text-gray-300 transition-colors" onClick={() => replyToMessage(msg.id)}>↩️ Reply</button>
         <button className="w-full text-left px-3 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg text-gray-700 dark:text-gray-300 transition-colors" onClick={() => forwardMessage(msg.id)}>➡️ Forward</button>
         <button className="w-full text-left px-3 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg text-gray-700 dark:text-gray-300 transition-colors" onClick={() => copyMessage(msg.id)}>📋 Copy</button>
+
+        {/* Phase 1: Bookmark */}
+        <button
+          className={`w-full text-left px-3 py-1.5 rounded-lg transition-colors ${isBookmarked
+            ? "text-yellow-600 hover:bg-yellow-50 dark:hover:bg-yellow-900/20"
+            : "text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+            }`}
+          onClick={handleBookmark}
+          disabled={bookmarkPending}
+        >
+          {isBookmarked ? "🔖 Remove Bookmark" : "🔖 Save / Bookmark"}
+        </button>
+
+        {/* Phase 1: Remind Me */}
+        {onRemind && (
+          <button
+            className="w-full text-left px-3 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg text-gray-700 dark:text-gray-300 transition-colors"
+            onClick={() => onRemind(msg.id)}
+          >
+            🔔 Remind Me
+          </button>
+        )}
+
+        {/* Phase 1: Edit History */}
+        {onShowHistory && msg?.editHistory?.length > 0 && (
+          <button
+            className="w-full text-left px-3 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg text-gray-700 dark:text-gray-300 transition-colors"
+            onClick={() => onShowHistory(msg)}
+          >
+            📜 Edit History
+          </button>
+        )}
+
         <button className="w-full text-left px-3 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg text-gray-700 dark:text-gray-300 transition-colors" onClick={() => deleteMessage(msg.id)}>🗑️ Delete</button>
         <button className="w-full text-left px-3 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg text-gray-700 dark:text-gray-300 transition-colors" onClick={() => infoMessage(msg.id)}>ℹ️ Info</button>
 
@@ -75,4 +128,3 @@ export default function MessageMenu({
     </>
   );
 }
-

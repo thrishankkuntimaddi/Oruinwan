@@ -10,6 +10,8 @@ import MentionAutocomplete from "./MentionAutocomplete";
 import { useMentionAutocomplete } from "../../../../hooks/useMentionAutocomplete";
 import SlashCommandMenu from "../../../../components/chat/slash/SlashCommandMenu";
 import SlashCommandPreview from "../../../../components/chat/slash/SlashCommandPreview";
+import SmartReplySuggestions from "./SmartReplySuggestions";
+import ScreenRecorder from "./ScreenRecorder";
 
 const turndownService = new TurndownService({
   headingStyle: "atx",
@@ -68,6 +70,9 @@ export default function FooterInput({
   replyingTo = null,
   onCancelReply,
   members = [],       // workspace/channel member list for @mention autocomplete
+  recentMessages = [], // Phase 4 — last N messages for smart reply
+  showSmartReply = false, // Phase 4 — enable smart reply chips
+  showScreenRecord = false, // Phase 2 — enable screen recorder button
 }) {
   const emojiRef = useRef(null);
   const attachRef = useRef(null);
@@ -292,6 +297,22 @@ export default function FooterInput({
         <ReplyPreview replyingTo={replyingTo} onCancel={onCancelReply} />
       )}
 
+      {/* Phase 4 — Smart Reply Suggestions */}
+      {showSmartReply && recentMessages.length > 0 && (
+        <SmartReplySuggestions
+          recentMessages={recentMessages}
+          enabled={showSmartReply}
+          onSelect={(text) => {
+            if (!editableRef.current) return;
+            editableRef.current.focus();
+            document.execCommand('insertText', false, text);
+            const html = editableRef.current.innerHTML || '';
+            setHasText(true);
+            onChange({ target: { value: html } });
+          }}
+        />
+      )}
+
       {/* Slash command preview — shown after command selection */}
       {previewCommand && !showSlashMenu && (
         <SlashCommandPreview
@@ -493,6 +514,14 @@ export default function FooterInput({
                   />
                 )}
               </>
+            )}
+
+            {/* Phase 2 — Screen Recorder button */}
+            {showScreenRecord && (
+              <ScreenRecorder
+                disabled={blocked || disabled}
+                onSend={(attachment) => onSendAttachment?.(attachment)}
+              />
             )}
 
             {/* Send */}

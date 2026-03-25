@@ -147,6 +147,9 @@ const MessageSchema = new mongoose.Schema({
   isDeletedUniversally: { type: Boolean, default: false },
   hiddenFor: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }], // Local deletions only
 
+  // Bookmarks — users who have saved this message
+  bookmarkedBy: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+
   // Edit tracking
   editedAt: { type: Date, default: null },
   // Full edit history — each entry is a snapshot of the message before the edit

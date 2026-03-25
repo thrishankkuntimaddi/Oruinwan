@@ -30,6 +30,10 @@ import CreatePollModal from './modals/CreatePollModal.jsx';
 import ContactPickerModal from './modals/ContactPickerModal.jsx';
 // Phase 7.6 — Meeting Scheduler
 import ScheduleMeetingModal from './modals/ScheduleMeetingModal.jsx';
+// Phase 1 — Bookmarks, Reminders, Edit History
+import BookmarksPanel from './panels/BookmarksPanel.jsx';
+import ReminderPicker from './modals/ReminderPicker.jsx';
+import EditHistoryModal from './modals/EditHistoryModal.jsx';
 
 // Custom hooks
 import useHeaderActions from './hooks/useHeaderActions.js';
@@ -188,6 +192,10 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
     const [showContactModal, setShowContactModal] = useState(false);
     // Phase 7.6 — Meeting scheduler modal
     const [showMeetingModal, setShowMeetingModal] = useState(false);
+    // Phase 1 — Bookmarks, Reminders, Edit History
+    const [showBookmarks, setShowBookmarks] = useState(false);
+    const [reminderMsgId, setReminderMsgId] = useState(null);
+    const [historyMsg, setHistoryMsg] = useState(null);
 
     // Header UI state
     const [showSearch, setShowSearch] = useState(false);
@@ -1083,7 +1091,11 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
             } catch (err) {
                 console.error('[ChatWindowV2] Failed to fetch message info:', err);
             }
-        }
+        },
+        // Phase 1 — Remind Me: open ReminderPicker for this message
+        onRemind: (messageId) => setReminderMsgId(messageId),
+        // Phase 1 — Edit History: open EditHistoryModal for this message
+        onShowHistory: (msg) => setHistoryMsg(msg),
     }), [actions, handleSend]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // Handle confirmed forward: re-encrypt the plaintext per target and post as a new message
@@ -1215,6 +1227,7 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
                     ? (huddle.active ? huddle.leaveHuddle : huddle.startHuddle)
                     : (huddle.active ? huddle.leaveHuddle : huddle.startHuddle)}
                 huddleActive={huddle.active}
+                onShowBookmarks={() => setShowBookmarks(true)}
             />
 
             {/* Canvas Tabs (channels only) */}
@@ -1317,6 +1330,10 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
                 onRenameTab={handleRenameTab}
                 onShareTab={handleShareTab}
                 onOpenCanvas={setActiveTab}
+
+                // Phase 2/4 — enable rich composition features for channels
+                showSmartReply={chat?.type === 'channel'}
+                showScreenRecord={chat?.type === 'channel'}
             />
 
             {/* Error Display */}

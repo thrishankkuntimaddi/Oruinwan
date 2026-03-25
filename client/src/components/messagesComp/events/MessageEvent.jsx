@@ -199,6 +199,8 @@ function MessageEvent({
             || event.backend?.dm?._id || event.backend?.dm
             || event.dm?._id || event.dm
             || null,
+        // Phase 1 — Bookmarks
+        bookmarkedBy: event.bookmarkedBy || event.payload?.bookmarkedBy || [],
     };
 
 
@@ -276,8 +278,18 @@ function MessageEvent({
             currentUserId={currentUserId}
             onOpenThread={handleThreadOpen}
             threadCounts={threadCounts} // ✅ Forward threadCounts
-            channelMembers={[]}
+        channelMembers={[]}
             isAdmin={false}
+            onRemind={actions.onRemind}
+            onShowHistory={actions.onShowHistory}
+            isBookmarked={
+                Array.isArray(enrichedMessage.bookmarkedBy)
+                    ? enrichedMessage.bookmarkedBy.some(
+                        id => String(id?._id || id) === String(currentUserId)
+                      )
+                    : false
+            }
+            onBookmarkToggle={() => {/* local refresh handled by BookmarksPanel */}}
         />
     );
 }
