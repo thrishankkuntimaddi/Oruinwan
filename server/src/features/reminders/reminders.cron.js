@@ -2,7 +2,7 @@
 // Phase 1 — Message Reminders cron job
 // Runs every 60 seconds; fires socket event to user for due reminders.
 
-const MessageReminder = require('../../../models/MessageReminder');
+const MessageReminder = require('../messages/MessageReminder');
 const Message = require('../messages/message.model');
 const logger = require('../../../utils/logger');
 

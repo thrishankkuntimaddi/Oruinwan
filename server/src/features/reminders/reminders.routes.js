@@ -7,7 +7,7 @@
 const express = require('express');
 const router = express.Router();
 const requireAuth = require('../../shared/middleware/auth');
-const MessageReminder = require('../../../models/MessageReminder');
+const MessageReminder = require('../messages/MessageReminder');
 const Message = require('../messages/message.model');
 
 // ─── Create/update a reminder ─────────────────────────────────────────────────
