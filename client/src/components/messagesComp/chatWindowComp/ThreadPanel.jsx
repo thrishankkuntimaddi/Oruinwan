@@ -485,21 +485,25 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
                                 {parentMessageState && (
                                     <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-800 bg-blue-50/20 dark:bg-blue-900/10">
                                         <div className="flex items-start gap-2">
-                                            <div
-                                                className="h-7 w-7 bg-gray-200 rounded-md flex-shrink-0 bg-cover bg-center shadow-sm"
-                                                style={{
-                                                    backgroundImage: parentMessageState.sender?.profilePicture || parentMessageState.senderAvatar || parentMessageState.senderId?.profilePicture
-                                                        ? `url(${parentMessageState.sender?.profilePicture || parentMessageState.senderAvatar || parentMessageState.senderId?.profilePicture})`
-                                                        : 'none',
-                                                    backgroundColor: !(parentMessageState.sender?.profilePicture || parentMessageState.senderAvatar || parentMessageState.senderId?.profilePicture)
-                                                        ? '#6366f1' : undefined
-                                                }}
-                                            >
-                                                {!(parentMessageState.sender?.profilePicture || parentMessageState.senderAvatar || parentMessageState.senderId?.profilePicture) && (
-                                                    <div className="w-full h-full flex items-center justify-center text-white text-xs font-bold">
-                                                        {(parentMessageState.senderName || 'U').charAt(0).toUpperCase()}
-                                                    </div>
-                                                )}
+                                            <div className="h-7 w-7 rounded-full flex-shrink-0 overflow-hidden shadow-sm">
+                                                <img
+                                                    src={getAvatarUrl(
+                                                        parentMessageState.sender
+                                                        || parentMessageState.senderId
+                                                        || { username: parentMessageState.senderName || 'user' }
+                                                    )}
+                                                    alt={parentMessageState.sender?.username || parentMessageState.senderName || 'User'}
+                                                    className="w-full h-full object-cover rounded-full"
+                                                    onError={(e) => {
+                                                        const name = parentMessageState.sender?.username || parentMessageState.senderName || 'U';
+                                                        e.target.style.display = 'none';
+                                                        e.target.parentNode.style.backgroundColor = '#6366f1';
+                                                        e.target.parentNode.style.display = 'flex';
+                                                        e.target.parentNode.style.alignItems = 'center';
+                                                        e.target.parentNode.style.justifyContent = 'center';
+                                                        e.target.parentNode.innerHTML = `<span style="color:white;font-weight:700;font-size:11px">${name.charAt(0).toUpperCase()}</span>`;
+                                                    }}
+                                                />
                                             </div>
                                             <div className="flex-1 min-w-0">
                                                 <div className="flex items-baseline gap-2">

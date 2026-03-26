@@ -4,6 +4,7 @@ import ThreadPanel from '../ThreadPanel';
 import api from '../../../../services/api';
 import { formatTime } from '../helpers/helpers';
 import { batchDecryptMessages } from '../../../../services/messageEncryptionService';
+import { getAvatarUrl } from '../../../../utils/avatarUtils';
 
 export default function ThreadsTab({ channelId, currentUserId, socket }) {
     const [threads, setThreads] = useState([]);
@@ -208,17 +209,19 @@ export default function ThreadsTab({ channelId, currentUserId, socket }) {
                                     }`}
                             >
                                 {/* Avatar */}
-                                {thread.sender?.profilePicture ? (
-                                    <img
-                                        src={thread.sender.profilePicture}
-                                        alt={thread.sender?.username || 'User'}
-                                        className="w-7 h-7 rounded-full object-cover flex-shrink-0 border border-gray-200 dark:border-gray-700"
-                                    />
-                                ) : (
-                                    <div className="w-7 h-7 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-[11px] font-bold text-white flex-shrink-0">
-                                        {(thread.sender?.username || thread.senderName || '?').charAt(0).toUpperCase()}
-                                    </div>
-                                )}
+                                <img
+                                    src={getAvatarUrl(thread.sender || { username: thread.senderName || '?' })}
+                                    alt={thread.sender?.username || thread.senderName || 'User'}
+                                    className="w-7 h-7 rounded-full object-cover flex-shrink-0 border border-gray-200 dark:border-gray-700"
+                                    onError={(e) => {
+                                        const name = thread.sender?.username || thread.senderName || '?';
+                                        e.target.style.display = 'none';
+                                        const div = document.createElement('div');
+                                        div.className = 'w-7 h-7 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-[11px] font-bold text-white flex-shrink-0';
+                                        div.textContent = name.charAt(0).toUpperCase();
+                                        e.target.parentNode.insertBefore(div, e.target);
+                                    }}
+                                />
 
                                 {/* Content */}
                                 <div className="flex-1 min-w-0">
