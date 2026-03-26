@@ -37,6 +37,14 @@ const LoginPage = () => {
         return;
       }
 
+      // NOTE: Bulk-import temp-password users are handled by RequireAuth which
+      // intercepts every protected route. No redirect needed here — adding one
+      // creates a competing navigate() that fights RequireAuth's <Navigate> and
+      // causes the Chrome "Throttling navigation" infinite loop.
+      if (user.isTemporaryPassword === true && user.passwordInitialized === false) {
+        return; // Let RequireAuth bounce them to /setup-password
+      }
+
       // Check if user is Chttrix platform admin
       const isChttrixAdmin = user.roles && user.roles.includes('chttrix_admin');
       const isOwner = user.companyRole === 'owner';
@@ -50,6 +58,8 @@ const LoginPage = () => {
       }
     }
   }, [user, loading, navigate]);
+
+
 
   if (loading) {
     return (

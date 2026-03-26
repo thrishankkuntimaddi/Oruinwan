@@ -42,10 +42,11 @@ import FeatureShowcase from "./pages/FeatureShowcase";
 import LoginPage from "./pages/LoginPageComp/LoginPage";
 import ForgotPassword from "./pages/LoginPageComp/ForgotPassword";
 import ResetPassword from "./pages/LoginPageComp/ResetPassword";
-import OAuthPasswordSetup from "./pages/LoginPageComp/OAuthPasswordSetup";
+// OAuthPasswordSetup import removed — /setup-password is now the mandatory company first-login gate
 import VerifyEmail from "./pages/VerifyEmail";
 import OAuthSuccess from "./pages/LoginPageComp/OAuthSuccess";
 import SetPassword from "./pages/SetPassword";
+import SetupPassword from "./pages/SetupPassword";
 import ReactivationFlow from "./pages/ReactivationFlow";
 import Settings from "./pages/Settings";
 import AcceptInvite from "./pages/AcceptInvite";
@@ -509,7 +510,6 @@ function App() {
                           <Route path="/join-workspace" element={<JoinWorkspace />} />
                           <Route path="/forgot-password" element={<ForgotPassword />} />
                           <Route path="/reset-password" element={<ResetPassword />} />
-                          <Route path="/setup-password" element={<OAuthPasswordSetup />} />
                           <Route path="/verify-email" element={<VerifyEmail />} />
                           <Route path="/oauth-success" element={<OAuthSuccess />} />
                           <Route path="/reactivate" element={<ReactivationFlow />} />
@@ -519,6 +519,15 @@ function App() {
                             element={
                               <RequireAuth>
                                 <SetPassword />
+                              </RequireAuth>
+                            }
+                          />
+                          {/* Mandatory first-login password setup for bulk-imported company users */}
+                          <Route
+                            path="/setup-password"
+                            element={
+                              <RequireAuth>
+                                <SetupPassword />
                               </RequireAuth>
                             }
                           />

@@ -723,7 +723,10 @@ exports.login = async (req, res) => {
       companyRole: user.companyRole,
       profilePicture: user.profilePicture,
       userStatus: user.userStatus,
-      preferences: user.preferences
+      preferences: user.preferences,
+      // Temporary password flags — needed by frontend for gating
+      isTemporaryPassword: user.isTemporaryPassword || false,
+      passwordInitialized: user.passwordInitialized !== false, // safe default = true for existing users
     };
 
     const response = {
@@ -754,6 +757,16 @@ exports.login = async (req, res) => {
         response.redirectTo = "/pending-verification";
       }
     }
+
+    // ─── TEMPORARY PASSWORD GATE ─────────────────────────────────────────────
+    // If the user was bulk-imported and hasn't set their own password yet,
+    // override the redirect to force them through the mandatory setup page.
+    // The access token is still issued so they can call /setup-temp-password.
+    if (user.isTemporaryPassword && !user.passwordInitialized) {
+      response.redirectTo = '/setup-password';
+      response.requiresPasswordSetup = true;
+    }
+    // ─────────────────────────────────────────────────────────────────────────
 
     return res.json(response);
 
@@ -1995,6 +2008,73 @@ exports.skipPassword = async (req, res) => {
 // ----------------------------------------------------
 // Legacy routes expect 'setOAuthPassword' but modular uses 'setPassword'
 exports.setOAuthPassword = exports.setPassword;
+
+// ----------------------------------------------------
+// SETUP TEMPORARY PASSWORD (Bulk-Import First Login)
+// POST /api/auth/setup-temp-password  (requireAuth)
+//
+// Called by the mandatory SetupPassword page shown to bulk-imported users
+// on their first login. Replaces the temporary password with the user's chosen
+// password and marks passwordInitialized = true / isTemporaryPassword = false.
+// After this, the temporary password from the welcome email no longer works.
+// ----------------------------------------------------
+exports.setupTempPassword = async (req, res) => {
+  console.log('\uD83D\uDD04 [MODULAR AUTH] Function invoked: setupTempPassword');
+  try {
+    const { password } = req.body;
+    const userId = req.user.sub;
+
+    if (!password) {
+      return res.status(400).json({ message: 'Password is required' });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Guard: only allow if user is in the temporary-password state.
+    // If passwordInitialized is already true the temp-password gate has been
+    // passed — reject the call to prevent accidental re-use of this endpoint.
+    if (!user.isTemporaryPassword || user.passwordInitialized) {
+      return res.status(400).json({
+        message: 'Password setup is not required for this account. Use the regular password-change flow.'
+      });
+    }
+
+    // Password strength validation (same rules as updatePassword)
+    const strong =
+      password.length >= 8 &&
+      /[A-Z]/.test(password) &&
+      /\d/.test(password) &&
+      /[^A-Za-z0-9]/.test(password);
+
+    if (!strong) {
+      return res.status(400).json({
+        message: 'Password must be at least 8 characters with an uppercase letter, a number, and a special character.'
+      });
+    }
+
+    // Hash and save the new password
+    user.passwordHash = await bcrypt.hash(password, 12);
+    user.isTemporaryPassword = false;  // temp password is now invalidated
+    user.passwordInitialized = true;   // user has set their own password
+    user.passwordSetAt = new Date();
+
+    await saveWithRetry(user);
+
+    console.log(`\u2705 [SETUP TEMP PW] Password initialized for user: ${user.email}`);
+
+    return res.json({
+      message: 'Password set successfully. You can now log in with your new password.',
+      passwordInitialized: true,
+    });
+
+  } catch (_err) {
+    return handleError(res, _err, 'SETUP TEMP PASSWORD ERROR');
+  }
+};
+
 
 // ----------------------------------------------------
 // OAUTH CALLBACKS & HELPERS (Phase 2D Extraction)

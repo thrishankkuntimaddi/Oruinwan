@@ -198,6 +198,9 @@ async function onboardIndividual(params) {
         verified: isBulkImport,                    // bulk = already verified
         accountStatus: isBulkImport ? 'active' : 'invited', // bulk = active from day 1
         inviteEmailStatus: isBulkImport ? 'sent' : 'pending',
+        // Temporary password flags — only set for bulk import flow
+        isTemporaryPassword: isBulkImport,          // must change on first login
+        passwordInitialized: !isBulkImport,         // false = password setup required
     });
 
     await user.save();

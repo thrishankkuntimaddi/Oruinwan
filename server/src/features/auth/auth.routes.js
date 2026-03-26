@@ -29,7 +29,8 @@ const {
   setPrimaryEmail,
   deleteEmail,
   deactivateAccount,
-  verifyReactivationOTP
+  verifyReactivationOTP,
+  setupTempPassword,
 } = require("./auth.controller");
 
 const requireAuth = require("../../shared/middleware/auth");
@@ -51,6 +52,7 @@ router.put("/me/password", requireAuth, updatePassword);
 router.post("/me/set-password", requireAuth, setPassword); // For OAuth users
 router.post("/oauth/set-password", requireAuth, setPassword); // Alias for backward compatibility
 router.post("/oauth/skip-password", requireAuth, skipPassword); // Skip password setup for OAuth users
+router.post("/setup-temp-password", requireAuth, setupTempPassword); // Mandatory first-login setup for bulk-imported users
 
 // PROFILE PICTURE ROUTES
 const multer = require('multer');
