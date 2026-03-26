@@ -296,27 +296,50 @@ exports.resolveDMSession = async (req, res) => {
             return res.status(403).json({ message: 'Target user is not a member of this workspace' });
         }
 
+        // Sort participants so [A,B] === [B,A] for consistent index matching
+        const sortedParticipants = [
+            new mongoose.Types.ObjectId(currentUserId),
+            new mongoose.Types.ObjectId(otherUserId)
+        ].sort((a, b) => a.toString().localeCompare(b.toString()));
+
         // Find existing DM session
         let dmSession = await DMSession.findOne({
             workspace: workspaceId,
             participants: {
-                $all: [
-                    new mongoose.Types.ObjectId(currentUserId),
-                    new mongoose.Types.ObjectId(otherUserId)
-                ],
+                $all: sortedParticipants,
                 $size: 2
             }
         });
 
-        // If not exist, create new DM session + conversation key
+        // If not exist, create new DM session atomically (prevents E11000 race)
         if (!dmSession) {
-            dmSession = await DMSession.create({
-                workspace: workspaceId,
-                // ✅ FIX: Include company so messages get the correct company field
-                company: workspace.company || null,
-                participants: [currentUserId, otherUserId],
-                createdAt: new Date()
-            });
+            try {
+                dmSession = await DMSession.findOneAndUpdate(
+                    {
+                        workspace: workspaceId,
+                        participants: { $all: sortedParticipants, $size: 2 }
+                    },
+                    {
+                        $setOnInsert: {
+                            workspace: workspaceId,
+                            company: workspace.company || null,
+                            participants: sortedParticipants,
+                            createdAt: new Date()
+                        }
+                    },
+                    { upsert: true, new: true }
+                );
+            } catch (upsertErr) {
+                if (upsertErr.code === 11000) {
+                    dmSession = await DMSession.findOne({
+                        workspace: workspaceId,
+                        participants: { $all: sortedParticipants, $size: 2 }
+                    });
+                    if (!dmSession) throw upsertErr;
+                } else {
+                    throw upsertErr;
+                }
+            }
 
             // Create conversation key for DM (E2EE bootstrapping)
             await conversationKeysService.bootstrapConversationKey({

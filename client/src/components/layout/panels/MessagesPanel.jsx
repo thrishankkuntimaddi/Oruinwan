@@ -109,11 +109,31 @@ const MessagesPanel = ({ title }) => {
         return matchesSearch && matchesFilter;
     });
 
-    const handleStartDM = (selectedUser) => {
+    const handleStartDM = async (selectedUser) => {
         setShowCreateDM(false);
-        // Navigate to the "new" DM route with the target user's ID
-        navigate(`/workspace/${workspaceId}/messages/dm/${selectedUser._id || selectedUser.id}`);
+        const targetUserId = selectedUser._id || selectedUser.id;
+        if (!targetUserId || !workspaceId) return;
+
+        try {
+            // Resolve (or create) the DM session + E2EE keys BEFORE navigating
+            // This is the same pattern used by Home.jsx and ensures non-owners can
+            // start DMs with each other without hitting duplicate key errors.
+            const resolveRes = await api.get(
+                `/api/v2/messages/workspace/${workspaceId}/dm/resolve/${targetUserId}`
+            );
+            if (resolveRes.data?.success) {
+                const sessionId = resolveRes.data.dmSessionId;
+                navigate(`/workspace/${workspaceId}/messages/dm/${sessionId}`);
+            } else {
+                // Fallback: navigate with userId and let the auto-resolve handle it
+                navigate(`/workspace/${workspaceId}/messages/dm/${targetUserId}`);
+            }
+        } catch (err) {
+            console.error('[MessagesPanel] Failed to resolve DM session:', err);
+            showToast('Could not start conversation. Please try again.', 'error');
+        }
     };
+
 
     const handleBroadcast = () => {
         setShowBroadcast(true);

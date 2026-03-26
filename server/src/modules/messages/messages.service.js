@@ -325,10 +325,19 @@ async function fetchMessages(query, options = {}) {
  * @returns {Promise<Object>} DM session document
  */
 async function findOrCreateDMSession(userId1, userId2, workspaceId) {
-    // Find existing session
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // CRITICAL: Always sort participants so the pair [A,B] === [B,A].
+    // The MongoDB unique multikey index on { workspace, participants } only
+    // prevents duplicates when the stored array is identical. By sorting, we
+    // guarantee the stored array is always in the same order, making the index
+    // work correctly and preventing E11000 errors when either user initiates.
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    const sortedParticipants = [String(userId1), String(userId2)].sort();
+
+    // Find existing session using $all + $size (order-independent)
     let dmSession = await DMSession.findOne({
         workspace: workspaceId,
-        participants: { $all: [userId1, userId2], $size: 2 }
+        participants: { $all: sortedParticipants, $size: 2 }
     });
 
     if (!dmSession) {
@@ -338,34 +347,60 @@ async function findOrCreateDMSession(userId1, userId2, workspaceId) {
             throw new Error('Workspace not found');
         }
 
-        // Create new DM session
-        dmSession = await DMSession.create({
-            workspace: workspaceId,
-            company: workspace.company || null,
-            participants: [userId1, userId2],
-            lastMessageAt: new Date()
-        });
+        // ── Atomic findOneAndUpdate with upsert ────────────────────────────
+        // Using upsert prevents a race condition where two concurrent requests
+        // both find no session and both try to create one (E11000).
+        // The filter uses the sorted participants array for consistent matching.
+        try {
+            dmSession = await DMSession.findOneAndUpdate(
+                {
+                    workspace: workspaceId,
+                    participants: { $all: sortedParticipants, $size: 2 }
+                },
+                {
+                    $setOnInsert: {
+                        workspace: workspaceId,
+                        company: workspace.company || null,
+                        participants: sortedParticipants,
+                        lastMessageAt: new Date()
+                    }
+                },
+                { upsert: true, new: true }
+            );
+        } catch (upsertErr) {
+            // Handle race condition: another request just created the session
+            if (upsertErr.code === 11000) {
+                dmSession = await DMSession.findOne({
+                    workspace: workspaceId,
+                    participants: { $all: sortedParticipants, $size: 2 }
+                });
+                if (!dmSession) throw upsertErr;
+            } else {
+                throw upsertErr;
+            }
+        }
 
         // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
         // DM E2EE: Bootstrap conversation key at creation (same as channels)
         // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-        // CRITICAL: DMs must have encryption keys before any messages can be sent
-        // This mirrors the channel pattern: bootstrapConversationKey({ conversationType: 'channel', ... })
         console.log(`🔐 [DM][E2EE] Bootstrapping conversation key for new DM session ${dmSession._id}`);
 
         try {
             await conversationKeysService.bootstrapConversationKey({
                 conversationId: dmSession._id,
-                conversationType: 'dm',  // DM-specific type
+                conversationType: 'dm',
                 workspaceId: workspaceId,
-                members: [userId1, userId2]  // Both participants
+                members: sortedParticipants
             });
             console.log(`✅ [DM][E2EE] Conversation key created for DM ${dmSession._id}`);
         } catch (keyError) {
-            console.error(`❌ [DM][E2EE] Failed to create conversation key for DM ${dmSession._id}:`, keyError);
-            // Note: DMSession exists but without encryption keys
-            // Frontend will fail gracefully with E2EE enforcement
-            throw new Error('Failed to initialize DM encryption: ' + keyError.message);
+            // If key already exists (idempotent), that's fine — log and continue
+            if (keyError.message && keyError.message.includes('already exists')) {
+                console.log(`ℹ️ [DM][E2EE] Conversation key already exists for DM ${dmSession._id}`);
+            } else {
+                console.error(`❌ [DM][E2EE] Failed to create conversation key for DM ${dmSession._id}:`, keyError);
+                throw new Error('Failed to initialize DM encryption: ' + keyError.message);
+            }
         }
     } else {
         // Update last message time
