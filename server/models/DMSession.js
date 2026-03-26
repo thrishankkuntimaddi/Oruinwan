@@ -126,14 +126,15 @@ const DMSessionSchema = new mongoose.Schema(
 
 /* ---------- Indexes ---------- */
 
-// Prevent duplicate DM sessions in same workspace
-DMSessionSchema.index(
-  { workspace: 1, participants: 1 },
-  { unique: true }
-);
+// Index for fast lookup by workspace + participants pair
+// NOTE: NOT unique — a multikey unique index on an array field would block
+// creating any DM where either participant already exists in another DM
+// in the same workspace. Application-level findOne-before-create handles dedup.
+DMSessionSchema.index({ workspace: 1, participants: 1 });
 
 // Optional company-level lookup
 DMSessionSchema.index({ company: 1, participants: 1 });
+
 
 /* ---------- Safety Guard ---------- */
 
