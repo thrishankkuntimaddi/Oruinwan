@@ -311,45 +311,49 @@ exports.resolveDMSession = async (req, res) => {
             }
         });
 
-        // If not exist, create new DM session atomically (prevents E11000 race)
+        let isNewSession = false;
+
+        // If not exist, create new DM session safely
         if (!dmSession) {
             try {
-                dmSession = await DMSession.findOneAndUpdate(
-                    {
-                        workspace: workspaceId,
-                        participants: { $all: sortedParticipants, $size: 2 }
-                    },
-                    {
-                        $setOnInsert: {
-                            workspace: workspaceId,
-                            company: workspace.company || null,
-                            participants: sortedParticipants,
-                            createdAt: new Date()
-                        }
-                    },
-                    { upsert: true, new: true }
-                );
-            } catch (upsertErr) {
-                if (upsertErr.code === 11000) {
+                dmSession = await DMSession.create({
+                    workspace: workspaceId,
+                    company: workspace.company || null,
+                    participants: sortedParticipants,
+                    createdAt: new Date()
+                });
+                isNewSession = true;
+            } catch (createErr) {
+                // Race condition: another request just created the session — fetch it
+                if (createErr.code === 11000) {
                     dmSession = await DMSession.findOne({
                         workspace: workspaceId,
                         participants: { $all: sortedParticipants, $size: 2 }
                     });
-                    if (!dmSession) throw upsertErr;
+                    if (!dmSession) throw createErr; // genuine error, re-throw
+                    isNewSession = false;
                 } else {
-                    throw upsertErr;
+                    throw createErr;
                 }
             }
+        }
 
-            // Create conversation key for DM (E2EE bootstrapping)
-            await conversationKeysService.bootstrapConversationKey({
-                conversationId: dmSession._id,
-                conversationType: 'dm',
-                workspaceId: workspaceId,
-                members: [currentUserId, otherUserId]
-            });
-
-            console.log(`✅ [MESSAGES:MODULAR][RESOLVE_DM] Created new DM session ${dmSession._id} with keys`);
+        // Bootstrap E2EE keys ONLY for newly created sessions
+        // (idempotent: bootstrapConversationKey skips if key already exists)
+        if (isNewSession) {
+            try {
+                await conversationKeysService.bootstrapConversationKey({
+                    conversationId: dmSession._id,
+                    conversationType: 'dm',
+                    workspaceId: workspaceId,
+                    members: [String(currentUserId), String(otherUserId)]
+                });
+                console.log(`✅ [MESSAGES:MODULAR][RESOLVE_DM] Created new DM session ${dmSession._id} with keys`);
+            } catch (keyErr) {
+                // Non-blocking: session exists even if key bootstrap fails
+                // Client will retry key fetch when opening the chat
+                console.error(`⚠️ [MESSAGES:MODULAR][RESOLVE_DM] Key bootstrap failed (non-fatal):`, keyErr.message);
+            }
         } else {
             console.log(`✅ [MESSAGES:MODULAR][RESOLVE_DM] Found existing DM session ${dmSession._id}`);
         }
