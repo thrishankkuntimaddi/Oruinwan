@@ -209,6 +209,13 @@ const UserSchema = new mongoose.Schema(
     // Password Skip Flag (for OAuth users who chose to skip password setup)
     passwordSkipped: { type: Boolean, default: false },
 
+    // Temporary Password Flags (for bulk-imported company users)
+    // isTemporaryPassword: true  — user was created with a system-generated password
+    // passwordInitialized: false — user has NOT yet set their own password
+    // Both default to false so all existing users are treated as fully initialized.
+    isTemporaryPassword: { type: Boolean, default: false },
+    passwordInitialized: { type: Boolean, default: false },
+
     // Last Login Method Tracking
     lastLoginMethod: { type: String, enum: ['oauth', 'password', null], default: null },
     lastLoginMethodAt: { type: Date, default: null },
