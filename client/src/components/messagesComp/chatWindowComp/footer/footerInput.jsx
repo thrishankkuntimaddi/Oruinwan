@@ -291,7 +291,7 @@ export default function FooterInput({
   }, [onChange, onPickEmoji]);
 
   return (
-    <div className="px-4 py-4 bg-white dark:bg-gray-900 relative">
+    <div className="px-4 py-3 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 shrink-0 relative">
       {/* WhatsApp-style reply preview bar */}
       {replyingTo && (
         <ReplyPreview replyingTo={replyingTo} onCancel={onCancelReply} />

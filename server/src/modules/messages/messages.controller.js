@@ -1212,3 +1212,189 @@ exports.getMessageInfo = async (req, res) => {
         return handleError(res, err, 'GET MESSAGE INFO ERROR');
     }
 };
+
+// ===========================================================================
+// PHASE-8: REMINDERS
+// ===========================================================================
+
+const reminderService = require('../../features/messages/reminder.service');
+
+/**
+ * POST /api/v2/messages/:messageId/reminder
+ * Body: { remindAt: ISO-string, note?: string }
+ */
+exports.scheduleReminder = async (req, res) => {
+    try {
+        const userId     = req.user.sub;
+        const { messageId } = req.params;
+        const { remindAt, note = '' } = req.body;
+
+        if (!remindAt) return res.status(400).json({ message: 'remindAt is required' });
+
+        const reminder = await reminderService.scheduleReminder(userId, messageId, remindAt, note);
+        return res.status(201).json({ success: true, reminder });
+    } catch (err) {
+        const status = err.status || 500;
+        return res.status(status).json({ message: err.message });
+    }
+};
+
+/**
+ * GET /api/v2/messages/reminders
+ * Returns pending reminders for the authenticated user.
+ */
+exports.getUserReminders = async (req, res) => {
+    try {
+        const userId = req.user.sub;
+        const reminders = await reminderService.getUserReminders(userId);
+        return res.json({ reminders });
+    } catch (err) {
+        return handleError(res, err, 'GET REMINDERS ERROR');
+    }
+};
+
+/**
+ * DELETE /api/v2/messages/reminders/:reminderId
+ */
+exports.cancelReminder = async (req, res) => {
+    try {
+        const userId = req.user.sub;
+        const { reminderId } = req.params;
+        await reminderService.cancelReminder(reminderId, userId);
+        return res.json({ success: true });
+    } catch (err) {
+        const status = err.status || 500;
+        return res.status(status).json({ message: err.message });
+    }
+};
+
+// ===========================================================================
+// PHASE-8: CHECKLIST TOGGLE
+// ===========================================================================
+
+/**
+ * POST /api/v2/messages/:messageId/checklist/:itemIdx
+ */
+exports.checklistToggle = async (req, res) => {
+    try {
+        const userId     = req.user.sub;
+        const { messageId, itemIdx } = req.params;
+        const io = req.app?.get('io');
+
+        const checklist = await messagesService.checklistToggle(
+            messageId,
+            parseInt(itemIdx, 10),
+            userId,
+            io
+        );
+        return res.json({ checklist });
+    } catch (err) {
+        const status = err.status || 500;
+        return res.status(status).json({ message: err.message });
+    }
+};
+
+// ===========================================================================
+// PHASE-8: MESSAGE DIFF (edit history)
+// ===========================================================================
+
+/**
+ * GET /api/v2/messages/:messageId/diff
+ */
+exports.getMessageDiff = async (req, res) => {
+    try {
+        const userId = req.user.sub;
+        const { messageId } = req.params;
+        const diff = await messagesService.getMessageDiff(messageId, userId);
+        return res.json(diff);
+    } catch (err) {
+        const status = err.status || 500;
+        return res.status(status).json({ message: err.message });
+    }
+};
+
+// ===========================================================================
+// PHASE-8: CONVERT MESSAGE → TASK
+// ===========================================================================
+
+/**
+ * POST /api/v2/messages/:messageId/convert-task
+ * Body: { title?, description?, dueDate?, priority?, workspaceId?, projectId? }
+ */
+exports.convertToTask = async (req, res) => {
+    try {
+        const userId     = req.user.sub;
+        const { messageId } = req.params;
+        const taskData   = req.body || {};
+        const io = req.app?.get('io');
+
+        const task = await messagesService.convertToTask(messageId, userId, taskData, io);
+        return res.status(201).json({ task });
+    } catch (err) {
+        const status = err.status || 500;
+        return res.status(status).json({ message: err.message });
+    }
+};
+
+// ===========================================================================
+// PHASE-8: AI MESSAGING — Smart Replies, Translation, Thread Summary
+// ===========================================================================
+
+const aiMessagingService = require('../../modules/ai/ai-messaging.service');
+
+/**
+ * POST /api/v2/messages/ai/suggestions
+ * Body: { messageText, messageId?, contextMessages? }
+ */
+exports.getSmartReplies = async (req, res) => {
+    try {
+        const { messageText, messageId, contextMessages = [] } = req.body;
+        if (!messageText) return res.status(400).json({ message: 'messageText is required' });
+
+        const suggestions = await aiMessagingService.getSmartReplies(
+            messageText,
+            messageId || null,
+            contextMessages
+        );
+        return res.json({ suggestions });
+    } catch (err) {
+        return res.status(500).json({ message: 'AI suggestions unavailable', error: err.message });
+    }
+};
+
+/**
+ * POST /api/v2/messages/ai/translate
+ * Body: { text, targetLang, messageId? }
+ */
+exports.translateMessage = async (req, res) => {
+    try {
+        const { text, targetLang, messageId } = req.body;
+        if (!text || !targetLang) {
+            return res.status(400).json({ message: 'text and targetLang are required' });
+        }
+        const result = await aiMessagingService.translateMessage(text, targetLang, messageId);
+        return res.json(result);
+    } catch (err) {
+        return res.status(500).json({ message: 'Translation unavailable', error: err.message });
+    }
+};
+
+/**
+ * POST /api/v2/messages/ai/thread-summary
+ * Body: { parentMessageId, replies: [{ text, senderName }], parentText? }
+ */
+exports.getThreadSummary = async (req, res) => {
+    try {
+        const { parentMessageId, replies = [], parentText = '' } = req.body;
+        if (!parentMessageId) return res.status(400).json({ message: 'parentMessageId is required' });
+
+        const summary = await aiMessagingService.summarizeThread(
+            parentMessageId,
+            replies,
+            parentText
+        );
+        return res.json({ summary });
+    } catch (err) {
+        return res.status(500).json({ message: 'Thread summary unavailable', error: err.message });
+    }
+};

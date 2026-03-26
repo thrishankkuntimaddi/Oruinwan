@@ -57,6 +57,20 @@ const WorkspaceSchema = new mongoose.Schema({
   // Activity tracking
   lastActivityAt: { type: Date, default: Date.now },
 
+  // Workspace OS extensions
+  templateId: { type: mongoose.Schema.Types.ObjectId, ref: 'WorkspaceTemplate', default: null },
+  clonedFrom: { type: mongoose.Schema.Types.ObjectId, ref: 'Workspace', default: null },
+  exportedAt: { type: Date, default: null },
+
+  // Cached analytics snapshot (updated by analytics service on demand)
+  analyticsCache: {
+    totalMessages: { type: Number, default: 0 },
+    totalTasks: { type: Number, default: 0 },
+    totalFiles: { type: Number, default: 0 },
+    activeMembers7d: { type: Number, default: 0 },
+    lastComputedAt: { type: Date, default: null }
+  },
+
   // Status
   isActive: { type: Boolean, default: true },
   isArchived: { type: Boolean, default: false },

@@ -349,3 +349,81 @@ exports.getFollowStatus = async (req, res) => {
         return res.status(status).json({ message: err.message });
     }
 };
+
+// ==================================================================
+// PHASE-8: THREAD RESOLUTION + AI SUMMARIZATION
+// ==================================================================
+
+/**
+ * Resolve or reopen a thread (toggle)
+ * POST /api/threads/:messageId/resolve
+ */
+exports.resolveThread = async (req, res) => {
+    try {
+        const { messageId } = req.params;
+        const userId = req.user.sub;
+        const io = req.app?.get('io');
+
+        const messagesService = require('../messages/messages.service');
+        const result = await messagesService.resolveThread(messageId, userId, io);
+        return res.json(result);
+    } catch (err) {
+        const status = err.status || 500;
+        return res.status(status).json({ message: err.message });
+    }
+};
+
+/**
+ * AI-generate a summary of a thread
+ * GET /api/threads/:messageId/summary
+ * Fetches all replies, decodes plaintext (skips encrypted), and calls AI service.
+ */
+exports.summarizeThread = async (req, res) => {
+    try {
+        const { messageId } = req.params;
+        const userId = req.user.sub;
+
+        // 1. Get parent message
+        const parentMsg = await Message.findById(messageId)
+            .select('text payload channel dm workspace')
+            .lean();
+        if (!parentMsg) return res.status(404).json({ message: 'Thread not found' });
+
+        // 2. Authorization check
+        if (parentMsg.dm) {
+            const DMSession = require('../../../models/DMSession');
+            const dm = await DMSession.findById(parentMsg.dm).select('participants').lean();
+            if (!dm || !dm.participants.map(String).includes(String(userId))) {
+                return res.status(403).json({ message: 'Access denied' });
+            }
+        } else if (parentMsg.channel) {
+            const channelDoc = await Channel.findById(parentMsg.channel).lean();
+            if (!channelDoc || !channelDoc.members.map(m => String(m.user || m)).includes(String(userId))) {
+                return res.status(403).json({ message: 'Access denied' });
+            }
+        }
+
+        // 3. Fetch replies (plaintext only — skip encrypted ones)
+        const replies = await Message.find({ parentId: messageId })
+            .select('text sender')
+            .populate('sender', 'username')
+            .sort({ createdAt: 1 })
+            .lean();
+
+        const replyObjs = replies
+            .filter(r => r.text) // only plaintext messages for summary
+            .map(r => ({ text: r.text, senderName: r.sender?.username || 'User' }));
+
+        const parentText = parentMsg.text || '';
+
+        // 4. Summarize via AI service
+        const aiMessagingService = require('../../modules/ai/ai-messaging.service');
+        const summary = await aiMessagingService.summarizeThread(messageId, replyObjs, parentText);
+
+        return res.json({ summary, replyCount: replies.length });
+    } catch (err) {
+        console.error('[THREADS] summarizeThread error:', err);
+        return res.status(500).json({ message: 'Thread summary failed', error: err.message });
+    }
+};
+

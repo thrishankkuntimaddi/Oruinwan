@@ -190,7 +190,10 @@ const requireAuth = require("./middleware/auth");
 // Defence-in-depth: role is enforced here so any new route added to these files
 // is automatically protected, even if the developer forgets to add per-route middleware.
 const { requireOwner, requireAdmin, requireManager } = require("./middleware/permissionMiddleware");
-app.use('/uploads', requireAuth, express.static(path.join(__dirname, 'uploads')));
+// GAP 1 FIX: Serve local upload fallback files publicly so browser can load
+// file preview URLs (e.g. <img src="/uploads/files/uuid.png">) without auth headers.
+// UUIDs in filenames prevent enumeration; no sensitive data is exposed.
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // ---------------------------------------------------------
 // SOCKET.IO SETUP (MUST BE BEFORE ROUTES)
@@ -321,6 +324,15 @@ app.use("/api/company", require("./src/features/company-analytics/analytics.rout
 
 
 app.use("/api/workspaces", require("./src/features/workspaces/workspaces.routes"));
+
+// ── WORKSPACE OS CORE ────────────────────────────────────────────────────────
+// Clone / Export / Import / Analytics (additive — does not touch existing workspace routes)
+app.use("/api/workspace-os", require("./src/features/workspace-os/workspace-os.routes"));
+// Role × Module Permission Matrix + Feature Toggles + Audit Log reader
+app.use("/api/permissions", require("./src/features/permissions/permissions.routes"));
+// Immutable Compliance Log reader (admin-only)
+app.use("/api/compliance-logs", require("./src/features/compliance/compliance.routes"));
+// ─────────────────────────────────────────────────────────────────────────────
 app.use("/api/platform/support", require("./src/features/support/platform-support.routes"));
 app.use("/api/internal", require("./src/features/internal-messaging/messaging.routes"));
 // V1 COMPATIBILITY LAYER - Proxies v1 calls to v2 controllers (DELETE after client migration)
@@ -407,6 +419,11 @@ app.use("/api/v2/audit", require("./src/features/audit/audit.routes"));
 
 // Phase 7.1: File / Image / Video Uploads (GCS via ADC)
 app.use("/api/v2/uploads", require("./src/modules/uploads/upload.routes"));
+
+// ── FILE MANAGEMENT + KNOWLEDGE SYSTEM ───────────────────────────────────────
+app.use("/api/v2/files", require("./src/features/files/files.routes"));
+app.use("/api/v2/knowledge", require("./src/features/knowledge/knowledge.routes"));
+// ─────────────────────────────────────────────────────────────────────────────
 
 // ============================================================================
 // 📦 V1 ROUTES (LEGACY - TO BE MIGRATED)

@@ -779,6 +779,62 @@ module.exports = async function registerChatHandlers(io, socket) {
   });
 
   /* ----------------------------------------------------
+     KNOWLEDGE PAGE PRESENCE
+  ---------------------------------------------------- */
+  socket.on("knowledge:join", ({ pageId }) => {
+    if (!pageId) return;
+    socket.join(`knowledge:${pageId}`);
+    // Notify others in the room that this user joined
+    socket.to(`knowledge:${pageId}`).emit("knowledge:presence", {
+      pageId,
+      userId,
+      action: "joined",
+    });
+  });
+
+  socket.on("knowledge:leave", ({ pageId }) => {
+    if (!pageId) return;
+    socket.leave(`knowledge:${pageId}`);
+    socket.to(`knowledge:${pageId}`).emit("knowledge:presence", {
+      pageId,
+      userId,
+      action: "left",
+    });
+  });
+
+  socket.on("knowledge:cursor", ({ pageId, position }) => {
+    if (!pageId) return;
+    socket.to(`knowledge:${pageId}`).emit("knowledge:cursors", {
+      pageId,
+      userId,
+      position,
+    });
+  });
+
+  /* ----------------------------------------------------
+     FILE ROOM (for comment presence)
+  ---------------------------------------------------- */
+  socket.on("file:join", ({ fileId }) => {
+    if (!fileId) return;
+    socket.join(`file:${fileId}`);
+    socket.to(`file:${fileId}`).emit("file:presence", {
+      fileId,
+      userId,
+      action: "viewing",
+    });
+  });
+
+  socket.on("file:leave", ({ fileId }) => {
+    if (!fileId) return;
+    socket.leave(`file:${fileId}`);
+    socket.to(`file:${fileId}`).emit("file:presence", {
+      fileId,
+      userId,
+      action: "left",
+    });
+  });
+
+  /* ----------------------------------------------------
      DISCONNECT
   ---------------------------------------------------- */
   socket.on("disconnect", async () => {

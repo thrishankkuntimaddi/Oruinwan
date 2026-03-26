@@ -1,11 +1,15 @@
 // client/src/components/messagesComp/events/MessageEvent.jsx
 // Wrapper for message type events - reuses existing message components
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import ChannelMessageItem from '../chatWindowComp/messages/ChannelMessageItem';
 import DMMessageItem from '../chatWindowComp/messages/DMMessageItem';
 import { getAvatarUrl } from '../../../utils/avatarUtils';
+import ChecklistMessage from '../ChecklistMessage';
+import TranslateToggle from '../TranslateToggle';
 
+// Lazy-load diff viewer (only needed when user clicks "edited")
+const MessageDiffViewer = lazy(() => import('../MessageDiffViewer'));
 
 /**
  * Renders a message event
@@ -31,6 +35,7 @@ function MessageEvent({
     setOpenMsgMenuId,
     threadCounts = {} // ✅ Add threadCounts prop
 }) {
+    const [showDiff, setShowDiff] = useState(false);
     // NEW SCHEMA: event IS the message, event.payload contains text/attachments
     // FALLBACK: Support both new (payload.text) and old (direct text) structures
     // FIX: Handle double-nested payload (event.payload.payload.text)
@@ -201,8 +206,17 @@ function MessageEvent({
             || null,
         // Phase 1 — Bookmarks
         bookmarkedBy: event.bookmarkedBy || event.payload?.bookmarkedBy || [],
+        // Phase-8 — Checklist
+        checklist: event.checklist || event.payload?.checklist || [],
+        // Phase-8 — Thread resolution
+        resolvedThreadAt: event.resolvedThreadAt || event.payload?.resolvedThreadAt || null,
+        resolvedBy:       event.resolvedBy || event.payload?.resolvedBy || null,
+        // Phase-8 — Inline task link
+        linkedTaskId: event.linkedTaskId || event.payload?.linkedTaskId || null,
     };
 
+    // Phase-8: open diff viewer when user clicks "(edited)" badge
+    const handleShowHistory = () => setShowDiff(true);
 
     // Common handlers
     const handleAddReaction = (emoji) => {
@@ -234,10 +248,60 @@ function MessageEvent({
         onThreadOpen?.(enrichedMessage);
     };
 
-    // Render appropriate message component
+    const renderChecklist = msgType === 'checklist' && enrichedMessage.checklist?.length > 0;
+    const plainText = enrichedMessage.text || enrichedMessage.decryptedContent || '';
+
     if (isDM) {
         return (
-            <DMMessageItem
+            <>
+                <DMMessageItem
+                    msg={enrichedMessage}
+                    selectMode={false}
+                    selectedIds={new Set()}
+                    toggleSelect={() => { }}
+                    openMsgMenuId={openMsgMenuId}
+                    toggleMsgMenu={toggleMsgMenu}
+                    formatTime={(ts) => new Date(ts).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+                    addReaction={handleAddReaction}
+                    pinMessage={handlePin}
+                    replyToMessage={(id) => onReply?.(enrichedMessage)}
+                    forwardMessage={handleForward}
+                    copyMessage={() => { }}
+                    deleteMessage={(id, scope) => handleDelete(scope)}
+                    infoMessage={(id) => actions.infoMessage?.(id, enrichedMessage.decryptedContent || enrichedMessage.text)}
+                    currentUserId={currentUserId}
+                    onOpenThread={handleThreadOpen}
+                    threadCounts={threadCounts}
+                />
+                {renderChecklist && (
+                    <div style={{ paddingLeft: 52, paddingRight: 16, paddingBottom: 4 }}>
+                        <ChecklistMessage
+                            messageId={enrichedMessage._id}
+                            checklist={enrichedMessage.checklist}
+                        />
+                    </div>
+                )}
+                {!enrichedMessage.isEncrypted && plainText && (
+                    <div style={{ paddingLeft: 52, paddingRight: 16 }}>
+                        <TranslateToggle messageId={enrichedMessage._id} text={plainText} />
+                    </div>
+                )}
+                {showDiff && (
+                    <Suspense fallback={null}>
+                        <MessageDiffViewer
+                            messageId={enrichedMessage._id}
+                            currentText={plainText}
+                            onClose={() => setShowDiff(false)}
+                        />
+                    </Suspense>
+                )}
+            </>
+        );
+    }
+
+    return (
+        <>
+            <ChannelMessageItem
                 msg={enrichedMessage}
                 selectMode={false}
                 selectedIds={new Set()}
@@ -254,43 +318,43 @@ function MessageEvent({
                 infoMessage={(id) => actions.infoMessage?.(id, enrichedMessage.decryptedContent || enrichedMessage.text)}
                 currentUserId={currentUserId}
                 onOpenThread={handleThreadOpen}
-                threadCounts={threadCounts} // ✅ Forward threadCounts
+                threadCounts={threadCounts}
+                channelMembers={[]}
+                isAdmin={false}
+                onRemind={actions.onRemind}
+                onShowHistory={handleShowHistory}   // Phase-8: opens diff viewer
+                isBookmarked={
+                    Array.isArray(enrichedMessage.bookmarkedBy)
+                        ? enrichedMessage.bookmarkedBy.some(
+                            id => String(id?._id || id) === String(currentUserId)
+                        )
+                        : false
+                }
+                onBookmarkToggle={() => { /* local refresh handled by BookmarksPanel */ }}
             />
-        );
-    }
-
-    return (
-        <ChannelMessageItem
-            msg={enrichedMessage}
-            selectMode={false}
-            selectedIds={new Set()}
-            toggleSelect={() => { }}
-            openMsgMenuId={openMsgMenuId}
-            toggleMsgMenu={toggleMsgMenu}
-            formatTime={(ts) => new Date(ts).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
-            addReaction={handleAddReaction}
-            pinMessage={handlePin}
-            replyToMessage={(id) => onReply?.(enrichedMessage)}
-            forwardMessage={handleForward}
-            copyMessage={() => { }}
-            deleteMessage={(id, scope) => handleDelete(scope)}
-            infoMessage={(id) => actions.infoMessage?.(id, enrichedMessage.decryptedContent || enrichedMessage.text)}
-            currentUserId={currentUserId}
-            onOpenThread={handleThreadOpen}
-            threadCounts={threadCounts} // ✅ Forward threadCounts
-        channelMembers={[]}
-            isAdmin={false}
-            onRemind={actions.onRemind}
-            onShowHistory={actions.onShowHistory}
-            isBookmarked={
-                Array.isArray(enrichedMessage.bookmarkedBy)
-                    ? enrichedMessage.bookmarkedBy.some(
-                        id => String(id?._id || id) === String(currentUserId)
-                      )
-                    : false
-            }
-            onBookmarkToggle={() => {/* local refresh handled by BookmarksPanel */}}
-        />
+            {renderChecklist && (
+                <div style={{ paddingLeft: 56, paddingRight: 16, paddingBottom: 4 }}>
+                    <ChecklistMessage
+                        messageId={enrichedMessage._id}
+                        checklist={enrichedMessage.checklist}
+                    />
+                </div>
+            )}
+            {!enrichedMessage.isEncrypted && plainText && (
+                <div style={{ paddingLeft: 56, paddingRight: 16 }}>
+                    <TranslateToggle messageId={enrichedMessage._id} text={plainText} />
+                </div>
+            )}
+            {showDiff && (
+                <Suspense fallback={null}>
+                    <MessageDiffViewer
+                        messageId={enrichedMessage._id}
+                        currentText={plainText}
+                        onClose={() => setShowDiff(false)}
+                    />
+                </Suspense>
+            )}
+        </>
     );
 }
 

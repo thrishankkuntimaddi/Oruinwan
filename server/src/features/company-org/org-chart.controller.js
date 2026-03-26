@@ -6,6 +6,7 @@ const Team = require('../../models/Team');
 const User = require('../../../models/User');
 const Company = require('../../../models/Company');
 const { handleError } = require('../../../utils/responseHelpers');
+const AuditLog = require('../../../models/AuditLog');
 
 /**
  * GET /api/companies/:id/org-chart
@@ -96,5 +97,85 @@ exports.getOrgChart = async (req, res) => {
     });
   } catch (err) {
     return handleError(res, err, 'ORG CHART ERROR');
+  }
+};
+
+/**
+ * GET /api/companies/:id/employees
+ * Paginated, searchable employee directory for a company.
+ * Query: search, dept, role, status, page, limit
+ */
+exports.getEmployeeDirectory = async (req, res) => {
+  try {
+    const companyId = req.params.id;
+    const userId = req.user?.sub;
+
+    // Verify requester belongs to this company
+    const dbUser = await User.findById(userId).select('companyId').lean();
+    if (!dbUser || String(dbUser.companyId) !== String(companyId)) {
+      return res.status(403).json({ message: 'Access denied' });
+    }
+
+    const {
+      search = '',
+      dept,
+      role,
+      status = 'active',
+      page = 1,
+      limit = 50
+    } = req.query;
+
+    const filter = { companyId, accountStatus: { $in: ['active', 'invited', 'pending'] } };
+    if (status && status !== 'all') filter.accountStatus = status;
+    if (role) filter.companyRole = role;
+
+    // Department filter — look up users who are members of that dept
+    if (dept) {
+      const deptDoc = await Department.findById(dept).select('members').lean();
+      if (deptDoc) filter._id = { $in: deptDoc.members };
+    }
+
+    // Full-text search on username / email / firstName / lastName
+    if (search.trim()) {
+      const regex = new RegExp(search.trim(), 'i');
+      filter.$or = [
+        { username: regex },
+        { email: regex },
+        { firstName: regex },
+        { lastName: regex }
+      ];
+    }
+
+    const cap = Math.min(parseInt(limit), 200);
+    const skip = (parseInt(page) - 1) * cap;
+
+    const [employees, total] = await Promise.all([
+      User.find(filter)
+        .select('username email firstName lastName profilePicture companyRole accountStatus isOnline lastLoginAt departments phone')
+        .sort({ firstName: 1, lastName: 1 })
+        .skip(skip)
+        .limit(cap)
+        .lean(),
+      User.countDocuments(filter)
+    ]);
+
+    // Attach department names in a single query
+    const deptIds = [...new Set(employees.flatMap(e => e.departments || []).map(String))];
+    const depts = deptIds.length
+      ? await Department.find({ _id: { $in: deptIds } }).select('name').lean()
+      : [];
+    const deptMap = Object.fromEntries(depts.map(d => [String(d._id), d.name]));
+
+    const enriched = employees.map(e => ({
+      ...e,
+      departmentNames: (e.departments || []).map(id => deptMap[String(id)] || 'Unknown')
+    }));
+
+    return res.json({
+      employees: enriched,
+      pagination: { page: parseInt(page), limit: cap, total, pages: Math.ceil(total / cap) }
+    });
+  } catch (err) {
+    return handleError(res, err, 'EMPLOYEE DIRECTORY ERROR');
   }
 };

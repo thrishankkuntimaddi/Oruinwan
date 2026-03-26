@@ -704,6 +704,153 @@ async function removeReaction(messageId, userId, emoji, io) {
     return message;
 }
 
+// ==================== PHASE-8 EXTENSIONS ====================
+
+/**
+ * Toggle a checklist item checked/unchecked.
+ *
+ * @param {string} messageId
+ * @param {number} itemIndex   Zero-based index of the item in message.checklist[]
+ * @param {string} userId
+ * @param {Object} io
+ * @returns {Promise<Array>}  Updated checklist array
+ */
+async function checklistToggle(messageId, itemIndex, userId, io) {
+    const message = await Message.findById(messageId);
+    if (!message) throw Object.assign(new Error('Message not found'), { status: 404 });
+    if (message.type !== 'checklist') throw Object.assign(new Error('Message is not a checklist'), { status: 400 });
+
+    const item = message.checklist[itemIndex];
+    if (!item) throw Object.assign(new Error('Checklist item not found'), { status: 404 });
+
+    const nowChecked = !item.checked;
+    message.checklist[itemIndex].checked   = nowChecked;
+    message.checklist[itemIndex].checkedBy  = nowChecked ? userId : null;
+    message.checklist[itemIndex].checkedAt  = nowChecked ? new Date() : null;
+    message.markModified('checklist');
+    await message.save();
+
+    const room = message.channel ? `channel:${message.channel}` : `dm:${message.dm}`;
+    if (io) {
+        io.to(room).emit('message:checklist_updated', {
+            messageId,
+            itemIndex,
+            checklist: message.checklist,
+        });
+    }
+
+    return message.checklist;
+}
+
+/**
+ * Resolve or reopen a thread (toggle).
+ *
+ * @param {string} messageId  Parent message _id
+ * @param {string} userId
+ * @param {Object} io
+ * @returns {Promise<Object>}  { resolved, resolvedThreadAt, resolvedBy }
+ */
+async function resolveThread(messageId, userId, io) {
+    const message = await Message.findById(messageId).select(
+        'channel dm resolvedThreadAt resolvedBy'
+    );
+    if (!message) throw Object.assign(new Error('Message not found'), { status: 404 });
+
+    const isNowResolved = !message.resolvedThreadAt; // toggle
+    message.resolvedThreadAt = isNowResolved ? new Date() : null;
+    message.resolvedBy       = isNowResolved ? userId : null;
+    await message.save();
+
+    const room = message.channel ? `channel:${message.channel}` : `dm:${message.dm}`;
+    if (io) {
+        io.to(room).emit('thread:resolved', {
+            messageId,
+            resolved:          isNowResolved,
+            resolvedBy:        isNowResolved ? userId : null,
+            resolvedThreadAt:  message.resolvedThreadAt,
+        });
+    }
+
+    return {
+        resolved:         isNowResolved,
+        resolvedThreadAt: message.resolvedThreadAt,
+        resolvedBy:       message.resolvedBy,
+    };
+}
+
+/**
+ * Convert a message into a Task document.
+ *
+ * @param {string} messageId
+ * @param {string} userId        Creator of the task
+ * @param {Object} taskData      { title, description, dueDate, priority, workspaceId, projectId }
+ * @param {Object} io
+ * @returns {Promise<Object>}    Created task document
+ */
+async function convertToTask(messageId, userId, taskData, io) {
+    const message = await Message.findById(messageId)
+        .populate('sender', 'username')
+        .lean();
+    if (!message) throw Object.assign(new Error('Message not found'), { status: 404 });
+    if (message.linkedTaskId) throw Object.assign(new Error('Message is already linked to a task'), { status: 409 });
+
+    const Task = require('../../../models/Task');
+
+    const task = await Task.create({
+        title:            taskData.title || `Task from message by ${message.sender?.username || 'user'}`,
+        description:      taskData.description || message.text || '[Converted from message]',
+        dueDate:          taskData.dueDate || null,
+        priority:         taskData.priority || 'medium',
+        status:           'todo',
+        workspace:        taskData.workspaceId || message.workspace,
+        project:          taskData.projectId   || null,
+        createdBy:        userId,
+        assignees:        taskData.assignees   || [userId],
+        sourceMessageId:  message._id,        // back-link to originating message
+    });
+
+    // Link the task back to the message
+    await Message.findByIdAndUpdate(messageId, { $set: { linkedTaskId: task._id } });
+
+    if (io) {
+        const room = message.channel ? `channel:${message.channel}` : `dm:${message.dm}`;
+        io.to(room).emit('message:task_created', {
+            messageId,
+            taskId:    task._id,
+            taskTitle: task.title,
+        });
+    }
+
+    return task;
+}
+
+/**
+ * Return the full edit history array for a message (for diff viewing).
+ *
+ * @param {string} messageId
+ * @param {string} userId   — must be a member of the channel/DM to view
+ * @returns {Promise<Object>}  { currentText, editHistory }
+ */
+async function getMessageDiff(messageId, userId) {
+    const message = await Message.findById(messageId)
+        .select('text payload editHistory editedAt version isDeleted channel dm sender')
+        .lean();
+    if (!message) throw Object.assign(new Error('Message not found'), { status: 404 });
+
+    return {
+        messageId,
+        version:     message.version    || 1,
+        editedAt:    message.editedAt   || null,
+        currentText: message.text       || (message.payload?.isEncrypted ? '[Encrypted]' : ''),
+        editHistory: (message.editHistory || []).map((h, i) => ({
+            version:     i + 1,
+            text:        h.text       || (h.isEncrypted ? '[Encrypted]' : null),
+            isEncrypted: h.isEncrypted || false,
+            editedAt:    h.editedAt,
+        })),
+    };
+}
+
 // ==================== EXPORTS ====================
 
 module.exports = {
@@ -714,5 +861,10 @@ module.exports = {
     editMessage,
     deleteMessage,
     addReaction,
-    removeReaction
+    removeReaction,
+    // Phase-8
+    checklistToggle,
+    resolveThread,
+    convertToTask,
+    getMessageDiff,
 };

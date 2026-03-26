@@ -21,6 +21,8 @@ import ChannelsPanel from "./components/layout/panels/ChannelsPanel";
 import MessagesPanel from "./components/layout/panels/MessagesPanel";
 import TasksPanel from "./components/layout/panels/TasksPanel";
 import NotesPanel from "./components/layout/panels/NotesPanel";
+import FilesPanel from "./components/layout/panels/FilesPanel";
+import KnowledgePanel from "./components/layout/panels/KnowledgePanel";
 
 import MeetingsPanel from "./components/layout/panels/MeetingsPanel";
 import { HuddleProvider } from "./contexts/HuddleContext";
@@ -35,6 +37,9 @@ import Notes from "./pages/SidebarComp/Notes";
 import Updates from "./pages/SidebarComp/Updates";
 import Meetings from "./pages/SidebarComp/Meetings";
 import AppsPage from "./pages/apps/AppsPage";
+import FileLibrary from "./pages/SidebarComp/FileLibrary";
+import KnowledgePage from "./pages/SidebarComp/KnowledgePage";
+import KnowledgeGraph from "./pages/SidebarComp/KnowledgeGraph";
 import WorkspaceSelect from "./pages/WorkspaceSelect";
 import FeatureShowcase from "./pages/FeatureShowcase";
 
@@ -93,6 +98,13 @@ import TeamsManagement from "./pages/admin/TeamsManagement";
 import OrgChartPage from "./pages/admin/OrgChartPage";
 import WorkspaceTemplates from "./pages/admin/WorkspaceTemplates";
 import WorkspacePermissions from "./pages/admin/WorkspacePermissions";
+
+// Workspace OS Core (new pages)
+import EmployeeDirectoryPage from "./pages/workspace-os/EmployeeDirectoryPage";
+import PermissionMatrixPage from "./pages/workspace-os/PermissionMatrixPage";
+import AuditLogViewer from "./pages/workspace-os/AuditLogViewer";
+import ComplianceLogViewer from "./pages/workspace-os/ComplianceLogViewer";
+
 
 // Dashboard Pages
 import AdminDashboard from "./pages/AdminDashboard";
@@ -388,6 +400,80 @@ function App() {
                           />
 
                            {/* Updates — self-contained layout with its own filter sidebar */}
+                           
+                           {/* ── FILE MANAGEMENT ── */}
+                           <Route
+                             path="/workspace/:workspaceId/files"
+                             element={
+                               <RequireAuth>
+                                 <WorkspaceProvider>
+                                   <RequireWorkspace>
+                                     <MainLayout sidePanel={<FilesPanel />}>
+                                       <FileLibrary />
+                                     </MainLayout>
+                                   </RequireWorkspace>
+                                 </WorkspaceProvider>
+                               </RequireAuth>
+                             }
+                           />
+                           <Route
+                             path="/workspace/:workspaceId/files/:id"
+                             element={
+                               <RequireAuth>
+                                 <WorkspaceProvider>
+                                   <RequireWorkspace>
+                                     <MainLayout sidePanel={<FilesPanel />}>
+                                       <FileLibrary />
+                                     </MainLayout>
+                                   </RequireWorkspace>
+                                 </WorkspaceProvider>
+                               </RequireAuth>
+                             }
+                           />
+
+                           {/* ── KNOWLEDGE BASE ── */}
+                           <Route
+                             path="/workspace/:workspaceId/knowledge"
+                             element={
+                               <RequireAuth>
+                                 <WorkspaceProvider>
+                                   <RequireWorkspace>
+                                     <MainLayout sidePanel={<KnowledgePanel />}>
+                                       <KnowledgePage />
+                                     </MainLayout>
+                                   </RequireWorkspace>
+                                 </WorkspaceProvider>
+                               </RequireAuth>
+                             }
+                           />
+                           <Route
+                             path="/workspace/:workspaceId/knowledge/graph"
+                             element={
+                               <RequireAuth>
+                                 <WorkspaceProvider>
+                                   <RequireWorkspace>
+                                     <MainLayout sidePanel={<KnowledgePanel />}>
+                                       <KnowledgeGraph />
+                                     </MainLayout>
+                                   </RequireWorkspace>
+                                 </WorkspaceProvider>
+                               </RequireAuth>
+                             }
+                           />
+                           <Route
+                             path="/workspace/:workspaceId/knowledge/:id"
+                             element={
+                               <RequireAuth>
+                                 <WorkspaceProvider>
+                                   <RequireWorkspace>
+                                     <MainLayout sidePanel={<KnowledgePanel />}>
+                                       <KnowledgePage />
+                                     </MainLayout>
+                                   </RequireWorkspace>
+                                 </WorkspaceProvider>
+                               </RequireAuth>
+                             }
+                           />
                            <Route
                              path="/workspace/:workspaceId/updates"
                              element={
@@ -584,6 +670,12 @@ function App() {
                             <Route path="/owner/org-chart" element={<OrgChartPage />} />
                             <Route path="/owner/workspace-templates" element={<WorkspaceTemplates />} />
                             <Route path="/owner/workspace-permissions" element={<WorkspacePermissions />} />
+
+                            {/* Workspace OS Core — Governance */}
+                            <Route path="/owner/employees" element={<EmployeeDirectoryPage />} />
+                            <Route path="/owner/permission-matrix" element={<PermissionMatrixPage />} />
+                            <Route path="/owner/audit-logs" element={<AuditLogViewer />} />
+                            <Route path="/owner/compliance-logs" element={<ComplianceLogViewer />} />
                           </Route>
 
                           {/* ADMIN DASHBOARD & TOOLS - Admin + Owner */}

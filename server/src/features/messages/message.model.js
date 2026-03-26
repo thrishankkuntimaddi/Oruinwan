@@ -5,6 +5,17 @@ const ReactionSchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: "User" }
 }, { _id: false });
 
+/**
+ * Checklist item — used when type === 'checklist'
+ */
+const ChecklistItemSchema = new mongoose.Schema({
+  text:       { type: String, required: true },
+  checked:    { type: Boolean, default: false },
+  checkedBy:  { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+  checkedAt:  { type: Date, default: null },
+  order:      { type: Number, default: 0 },
+}, { _id: true });
+
 const AttachmentSchema = new mongoose.Schema({
   type: { type: String, enum: ['image', 'video', 'file', 'audio', 'voice'], required: true },
   url: String,
@@ -27,15 +38,17 @@ const MessageSchema = new mongoose.Schema({
   type: {
     type: String,
     enum: [
-      'message',   // standard text / encrypted
-      'system',    // auto-generated system event pill
-      'poll',      // Phase-7.3
-      'file',      // Phase-7.1
-      'image',     // Phase-7.1
-      'video',     // Phase-7.1
-      'voice',     // Phase-7.2
-      'contact',   // Phase-7.4
-      'meeting',   // Phase-7.6
+      'message',          // standard text / encrypted
+      'system',           // auto-generated system event pill
+      'poll',             // Phase-7.3
+      'file',             // Phase-7.1
+      'image',            // Phase-7.1
+      'video',            // Phase-7.1
+      'voice',            // Phase-7.2
+      'contact',          // Phase-7.4
+      'meeting',          // Phase-7.6
+      'checklist',        // Phase-8 interactive checklist
+      'screen_recording', // Phase-8 screen capture
     ],
     default: 'message'
   },
@@ -134,6 +147,18 @@ const MessageSchema = new mongoose.Schema({
   followers: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
 
 
+
+  // ── Phase-8: Checklist (type === 'checklist') ──────────────────────────────
+  checklist: [ChecklistItemSchema],
+
+  // ── Phase-8: Thread resolution ──────────────────────────────────────────────
+  // Set when a thread parent is marked as resolved
+  resolvedThreadAt: { type: Date, default: null },
+  resolvedBy:       { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+
+  // ── Phase-8: Inline task link ───────────────────────────────────────────────
+  // Populated when message has been converted to a Task document
+  linkedTaskId: { type: mongoose.Schema.Types.ObjectId, ref: 'Task', default: null },
 
   // Pinning
   isPinned: { type: Boolean, default: false },

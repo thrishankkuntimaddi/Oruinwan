@@ -15,4 +15,9 @@ router.post('/chat', auth, aiController.chat);
 router.post('/summarize', auth, aiController.summarize);
 router.post('/generate-task', auth, aiController.generateTask);
 
+// Phase 3 — document summarisation + semantic re-ranking
+router.post('/summarize-document', auth, aiController.summarizeDocument);
+router.post('/semantic-search',    auth, aiController.semanticSearch);
+router.get('/cache-stats',         auth, aiController.cacheStats);
+
 module.exports = router;

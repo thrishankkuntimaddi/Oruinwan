@@ -8,4 +8,8 @@ const requireCompanyMember = require('../../shared/middleware/requireCompanyMemb
 // GET /api/companies/:id/org-chart — any company member can view
 router.get('/org-chart', requireAuth, requireCompanyMember, ctrl.getOrgChart);
 
+// GET /api/companies/:id/employees — paginated employee directory
+router.get('/employees', requireAuth, requireCompanyMember, ctrl.getEmployeeDirectory);
+
 module.exports = router;
+

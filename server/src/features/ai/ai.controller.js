@@ -20,6 +20,7 @@
 
 const gateway = require('../../../../ai/api/ai.gateway');
 const activityService = require('../../features/activity/activity.service');
+const aiSummarizer = require('./ai.summarizer.service');
 
 // ---------------------------------------------------------------------------
 // POST /api/ai/chat
@@ -108,4 +109,48 @@ exports.generateTask = async (req, res) => {
     console.error('❌ [AI Controller] generateTask error:', error);
     return res.status(500).json({ message: 'Task Generation Failed', error: error.message });
   }
+};
+
+// ---------------------------------------------------------------------------
+// POST /api/ai/summarize-document
+// Summarise any raw text or document content with TTL caching.
+// ---------------------------------------------------------------------------
+exports.summarizeDocument = async (req, res) => {
+  try {
+    const { text, title, type, noCache } = req.body;
+    if (!text) return res.status(400).json({ message: 'text is required' });
+
+    const result = await aiSummarizer.summarizeDocument(text, { title, type, noCache });
+    return res.status(200).json(result);
+  } catch (error) {
+    console.error('❌ [AI Controller] summarizeDocument error:', error);
+    return res.status(500).json({ message: 'Summarization failed', error: error.message });
+  }
+};
+
+// ---------------------------------------------------------------------------
+// POST /api/ai/semantic-search
+// Re-rank candidate docs by semantic relevance to query.
+// ---------------------------------------------------------------------------
+exports.semanticSearch = async (req, res) => {
+  try {
+    const { query, docs, topK, noCache } = req.body;
+    if (!query) return res.status(400).json({ message: 'query is required' });
+    if (!Array.isArray(docs) || docs.length === 0) {
+      return res.status(400).json({ message: 'docs must be a non-empty array' });
+    }
+
+    const result = await aiSummarizer.semanticSearch(query, docs, { topK, noCache });
+    return res.status(200).json(result);
+  } catch (error) {
+    console.error('❌ [AI Controller] semanticSearch error:', error);
+    return res.status(500).json({ message: 'Semantic search failed', error: error.message });
+  }
+};
+
+// ---------------------------------------------------------------------------
+// GET /api/ai/cache-stats  (admin/debug — returns in-memory cache metrics)
+// ---------------------------------------------------------------------------
+exports.cacheStats = async (_req, res) => {
+  return res.status(200).json(aiSummarizer.cacheStats());
 };

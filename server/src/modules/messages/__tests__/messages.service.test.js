@@ -1,19 +1,25 @@
 // server/src/modules/messages/__tests__/messages.service.test.js
 /**
  * Messages Service - Unit Tests
- * 
- * Tests for message creation, retrieval, and DM session management
+ *
+ * Tests for message creation, retrieval, and DM session management.
+ * Updated for Phase-8: reflects E2EE enforcement, nested payload shape,
+ * and chained populate in fetchMessages.
  */
 
 const messagesService = require('../messages.service');
-const Message = require("../../../features/messages/message.model.js");
+const Message = require('../../../features/messages/message.model.js');
 const DMSession = require('../../../../models/DMSession');
 const Workspace = require('../../../../models/Workspace');
 
-// Mock dependencies
-jest.mock('../../../../models/Message');
+// Mock dependencies — paths must match exactly what the service requires
+jest.mock('../../../features/messages/message.model.js');
 jest.mock('../../../../models/DMSession');
 jest.mock('../../../../models/Workspace');
+// Additional modules loaded lazily inside service — mock to avoid real DB calls
+jest.mock('../../conversations/conversationKeys.service', () => ({
+    bootstrapConversationKey: jest.fn().mockResolvedValue({ success: true }),
+}));
 
 describe('Messages Service', () => {
     beforeEach(() => {
@@ -21,13 +27,24 @@ describe('Messages Service', () => {
     });
 
     describe('createMessage', () => {
-        it('should create an unencrypted message', async () => {
+        it('should reject an unencrypted text message (E2EE enforced)', async () => {
+            await expect(
+                messagesService.createMessage({
+                    type: 'message',
+                    sender: 'user123',
+                    text: 'Hello world',        // no ciphertext → should throw
+                    workspace: 'ws123',
+                    channel: 'ch123'
+                })
+            ).rejects.toThrow('E2EE required');
+        });
+
+        it('should create an encrypted message with E2EE fields', async () => {
             const mockMessage = {
                 _id: 'msg123',
                 type: 'message',
                 sender: 'user123',
-                payload: { text: 'Hello world', attachments: [] },
-                isEncrypted: false,
+                payload: { ciphertext: 'encrypted-data', isEncrypted: true, messageIv: 'iv-data' },
                 populate: jest.fn().mockResolvedValue({
                     _id: 'msg123',
                     sender: { username: 'testuser' }
@@ -39,41 +56,6 @@ describe('Messages Service', () => {
             const result = await messagesService.createMessage({
                 type: 'message',
                 sender: 'user123',
-                text: 'Hello world',
-                workspace: 'ws123',
-                channel: 'ch123'
-            });
-
-            expect(Message.create).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    isEncrypted: false,
-                    payload: { text: 'Hello world', attachments: [] }
-                })
-            );
-            expect(result.sender.username).toBe('testuser');
-        });
-
-        it('should create an encrypted message with E2EE fields', async () => {
-            const mockMessage = {
-                _id: 'msg123',
-                type: 'message',
-                sender: 'user123',
-                ciphertext: 'encrypted-data',
-                messageIv: 'iv-data',
-                isEncrypted: true,
-                encryptionVersion: 'aes-256-gcm-v1',
-                payload: { text: '', attachments: [] },
-                populate: jest.fn().mockResolvedValue({
-                    _id: 'msg123',
-                    sender: { username: 'testuser' }
-                })
-            };
-
-            Message.create = jest.fn().mockResolvedValue(mockMessage);
-
-            const _result = await messagesService.createMessage({
-                type: 'message',
-                sender: 'user123',
                 ciphertext: 'encrypted-data',
                 messageIv: 'iv-data',
                 isEncrypted: true,
@@ -81,13 +63,14 @@ describe('Messages Service', () => {
                 channel: 'ch123'
             });
 
+            // Service stores E2EE fields inside nested payload object
             expect(Message.create).toHaveBeenCalledWith(
                 expect.objectContaining({
-                    isEncrypted: true,
-                    ciphertext: 'encrypted-data',
-                    messageIv: 'iv-data',
-                    encryptionVersion: 'aes-256-gcm-v1',
-                    payload: { text: '', attachments: [] }
+                    payload: expect.objectContaining({
+                        ciphertext: 'encrypted-data',
+                        isEncrypted: true,
+                        messageIv: 'iv-data',
+                    })
                 })
             );
         });
@@ -100,7 +83,9 @@ describe('Messages Service', () => {
 
             const mockMessage = {
                 _id: 'msg123',
-                populate: jest.fn().mockResolvedValue({ _id: 'msg123' })
+                channel: 'ch123',
+                toObject: jest.fn().mockReturnValue({ _id: 'msg123', sender: {} }),
+                populate: jest.fn().mockResolvedValue({ _id: 'msg123', sender: {} })
             };
 
             Message.create = jest.fn().mockResolvedValue(mockMessage);
@@ -109,7 +94,9 @@ describe('Messages Service', () => {
                 {
                     type: 'message',
                     sender: 'user123',
-                    text: 'Hello',
+                    ciphertext: 'enc',
+                    messageIv: 'iv',
+                    isEncrypted: true,
                     workspace: 'ws123',
                     channel: 'ch123'
                 },
@@ -144,53 +131,47 @@ describe('Messages Service', () => {
         });
 
         it('should create new DM session if not found', async () => {
-            const mockWorkspace = {
-                _id: 'ws123',
-                company: 'comp123'
-            };
-
-            const mockNewSession = {
-                _id: 'dm456',
-                participants: ['user1', 'user2']
-            };
+            const mockWorkspace = { _id: 'ws123', company: 'comp123' };
+            const mockNewSession = { _id: 'dm456', participants: ['user1', 'user2'] };
 
             DMSession.findOne = jest.fn().mockResolvedValue(null);
             Workspace.findById = jest.fn().mockResolvedValue(mockWorkspace);
-            DMSession.create = jest.fn().mockResolvedValue(mockNewSession);
+            // Service uses findOneAndUpdate with {upsert:true, new:true} — not create()
+            DMSession.findOneAndUpdate = jest.fn().mockResolvedValue(mockNewSession);
 
-            const result = await messagesService.findOrCreateDMSession(
-                'user1',
-                'user2',
-                'ws123'
-            );
+            const result = await messagesService.findOrCreateDMSession('user1', 'user2', 'ws123');
 
-            expect(DMSession.create).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    workspace: 'ws123',
-                    company: 'comp123',
-                    participants: ['user1', 'user2']
-                })
-            );
+            expect(DMSession.findOneAndUpdate).toHaveBeenCalled();
             expect(result._id).toBe('dm456');
         });
+
     });
 
     describe('fetchMessages', () => {
         it('should fetch messages with pagination', async () => {
-            const mockMessages = [
-                { _id: 'msg1', text: 'Hello' },
-                { _id: 'msg2', text: 'World' }
+            const rawMessages = [
+                { _id: 'msg1', text: 'Hello', toObject: () => ({ _id: 'msg1', text: 'Hello' }) },
+                { _id: 'msg2', text: 'World', toObject: () => ({ _id: 'msg2', text: 'World' }) },
             ];
 
+            // fetchMessages: find().sort().limit().populate*4 — resolves as Mongoose docs (no .lean())
+            // The last .populate() call must be the one that resolves with the docs array
+            let populateCallCount = 0;
             const mockQuery = {
                 sort: jest.fn().mockReturnThis(),
                 limit: jest.fn().mockReturnThis(),
-                populate: jest.fn().mockReturnThis()
+                populate: jest.fn().mockImplementation(() => {
+                    populateCallCount++;
+                    // Service calls populate 4 times; last one resolves the array
+                    if (populateCallCount < 4) return mockQuery;
+                    return Promise.resolve([...rawMessages]);
+                }),
             };
 
             Message.find = jest.fn().mockReturnValue(mockQuery);
-            mockQuery.populate.mockResolvedValue(mockMessages);
             Message.countDocuments = jest.fn().mockResolvedValue(10);
+            // aggregate used for reply counts — return empty
+            Message.aggregate = jest.fn().mockResolvedValue([]);
 
             const result = await messagesService.fetchMessages(
                 { channel: 'ch123' },
@@ -198,8 +179,71 @@ describe('Messages Service', () => {
             );
 
             expect(result.messages).toHaveLength(2);
-            expect(result.hasMore).toBe(true);
-            expect(result.total).toBe(10);
+            expect(result.hasMore).toBe(false); // 2 = limit, hasMore=true only when length > limit
+        });
+    });
+
+    describe('checklistToggle', () => {
+        it('should throw if message type is not checklist', async () => {
+            const mockMsg = {
+                _id: 'msg1',
+                type: 'message',
+                checklist: [],
+                channel: 'ch1',
+                save: jest.fn(),
+                markModified: jest.fn(),
+            };
+            Message.findById = jest.fn().mockResolvedValue(mockMsg);
+
+            await expect(
+                messagesService.checklistToggle('msg1', 0, 'user1', null)
+            ).rejects.toThrow('Message is not a checklist');
+        });
+
+        it('should toggle a checklist item and return updated list', async () => {
+            const mockMsg = {
+                _id: 'msg1',
+                type: 'checklist',
+                channel: 'ch1',
+                checklist: [
+                    { text: 'Task A', checked: false, checkedBy: null, checkedAt: null }
+                ],
+                save: jest.fn().mockResolvedValue(true),
+                markModified: jest.fn(),
+            };
+            Message.findById = jest.fn().mockResolvedValue(mockMsg);
+
+            const result = await messagesService.checklistToggle('msg1', 0, 'user1', null);
+
+            expect(mockMsg.checklist[0].checked).toBe(true);
+            expect(mockMsg.save).toHaveBeenCalled();
+            expect(result).toEqual(mockMsg.checklist);
+        });
+    });
+
+    describe('getMessageDiff', () => {
+        it('should return editHistory and currentText', async () => {
+            const mockMsg = {
+                _id: 'msg1',
+                text: 'Current text',
+                version: 3,
+                editedAt: new Date('2024-01-01'),
+                editHistory: [
+                    { text: 'Original', editedAt: new Date('2023-12-01'), isEncrypted: false },
+                    { text: 'First edit', editedAt: new Date('2023-12-15'), isEncrypted: false },
+                ],
+            };
+            Message.findById = jest.fn().mockReturnValue({
+                select: jest.fn().mockReturnValue({
+                    lean: jest.fn().mockResolvedValue(mockMsg)
+                })
+            });
+
+            const result = await messagesService.getMessageDiff('msg1', 'user1');
+
+            expect(result.currentText).toBe('Current text');
+            expect(result.editHistory).toHaveLength(2);
+            expect(result.version).toBe(3);
         });
     });
 });

@@ -19,6 +19,18 @@ const mongoose = require('mongoose');
 // Apply authentication to all routes
 router.use(requireAuth);
 
+// ==================== PHASE-8: AI MESSAGING (before :messageId catch-alls) ====================
+// Must be before /:messageId to prevent param collision
+
+router.post('/ai/suggestions',    messagesController.getSmartReplies);
+router.post('/ai/translate',      messagesController.translateMessage);
+router.post('/ai/thread-summary', messagesController.getThreadSummary);
+
+// ==================== PHASE-8: REMINDERS (before /:messageId) ====================
+
+router.get('/reminders',                messagesController.getUserReminders);
+router.delete('/reminders/:reminderId', messagesController.cancelReminder);
+
 // ==================== DIRECT MESSAGES ====================
 
 // Send direct message
@@ -179,5 +191,18 @@ router.post('/:messageId/pin', messagesController.pinMessage);
 // Forward message to multiple targets
 router.post('/forward', messagesController.forwardMessage);
 
-module.exports = router;
+// ==================== PHASE-8: MESSAGE-LEVEL ACTIONS ====================
 
+// Schedule a reminder for a message
+router.post('/:messageId/reminder', messagesController.scheduleReminder);
+
+// Toggle a checklist item (checked/unchecked)
+router.post('/:messageId/checklist/:itemIdx', messagesController.checklistToggle);
+
+// Get edit history / diff for a message
+router.get('/:messageId/diff', messagesController.getMessageDiff);
+
+// Convert a message into a Task
+router.post('/:messageId/convert-task', messagesController.convertToTask);
+
+module.exports = router;

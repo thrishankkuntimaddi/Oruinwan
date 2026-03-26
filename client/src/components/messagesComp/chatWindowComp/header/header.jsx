@@ -119,7 +119,7 @@ export default function Header({
 
   return (
     <>
-      <div className="flex items-center justify-between px-3 py-1.5 bg-white dark:bg-gray-900">
+      <div className="flex items-center justify-between px-4 py-2 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 shrink-0 min-h-[48px]">
         <div className="flex items-center gap-2 min-w-0">
           {/* Channel/DM Avatar with Type Indicators */}
           {chat.type === 'channel' ? (

@@ -5,6 +5,8 @@ const Message = require("../messages/message.model.js");
 const Workspace = require("../../../models/Workspace");
 const Task = require("../../../models/Task");
 const Note = require("../../../models/Note");
+const WorkspaceFile = require("../files/WorkspaceFile");
+const KnowledgePage = require("../knowledge/KnowledgePage");
 const logger = require("../../../utils/logger");
 
 /**
@@ -41,12 +43,14 @@ exports.universalSearch = async (req, res) => {
         logger.debug('🔍 [UNIVERSAL SEARCH] Workspace found:', workspace.name);
 
         // Parallel search across all categories
-        const [channels, contacts, messages, tasks, notes] = await Promise.all([
+        const [channels, contacts, messages, tasks, notes, files, knowledge] = await Promise.all([
             searchChannels(workspaceId, userId, searchRegex),
             searchContacts(workspaceId, userId, searchRegex),
             searchMessages(workspaceId, userId, searchRegex),
             searchTasks(workspaceId, userId, searchRegex),
-            searchNotes(workspaceId, userId, searchRegex)
+            searchNotes(workspaceId, userId, searchRegex),
+            searchFiles(workspaceId, searchRegex),
+            searchKnowledgePages(workspaceId, searchRegex),
         ]);
 
         logger.debug('🔍 [UNIVERSAL SEARCH] Results:', {
@@ -54,7 +58,9 @@ exports.universalSearch = async (req, res) => {
             contacts: contacts.length,
             messages: messages.length,
             tasks: tasks.length,
-            notes: notes.length
+            notes: notes.length,
+            files: files.length,
+            knowledge: knowledge.length,
         });
 
         return res.json({
@@ -63,6 +69,8 @@ exports.universalSearch = async (req, res) => {
             messages,
             tasks,
             notes,
+            files,
+            knowledge,
             query: searchTerm
         });
     } catch (err) {
@@ -452,6 +460,84 @@ async function searchNotes(workspaceId, userId, searchRegex) {
             }));
     } catch (err) {
         logger.error("Search notes error:", err);
+        return [];
+    }
+}
+
+/**
+ * Search workspace files by name, description, and tags
+ */
+async function searchFiles(workspaceId, searchRegex) {
+    try {
+        const files = await WorkspaceFile.find({
+            workspaceId,
+            isDeleted: false,
+            $or: [
+                { name: searchRegex },
+                { description: searchRegex },
+                { tags: searchRegex },
+            ],
+        })
+            .select('name description mimeType size url tags createdBy createdAt')
+            .populate('createdBy', 'username profilePicture')
+            .sort({ createdAt: -1 })
+            .limit(10)
+            .lean();
+
+        return files.map(f => ({
+            id: f._id,
+            type: 'file',
+            name: f.name,
+            description: truncateText(f.description || '', 100),
+            mimeType: f.mimeType,
+            size: f.size,
+            url: f.url,
+            tags: f.tags || [],
+            createdBy: f.createdBy
+                ? { id: f.createdBy._id, name: f.createdBy.username, profilePicture: f.createdBy.profilePicture }
+                : null,
+            createdAt: f.createdAt,
+        }));
+    } catch (err) {
+        logger.error('Search files error:', err);
+        return [];
+    }
+}
+
+/**
+ * Search knowledge pages by title, content, and tags
+ */
+async function searchKnowledgePages(workspaceId, searchRegex) {
+    try {
+        const pages = await KnowledgePage.find({
+            workspaceId,
+            isDeleted: false,
+            $or: [
+                { title: searchRegex },
+                { content: searchRegex },
+                { tags: searchRegex },
+            ],
+        })
+            .select('title icon content tags summary createdBy createdAt')
+            .populate('createdBy', 'username profilePicture')
+            .sort({ createdAt: -1 })
+            .limit(10)
+            .lean();
+
+        return pages.map(p => ({
+            id: p._id,
+            type: 'knowledge',
+            title: p.title,
+            icon: p.icon || '📄',
+            snippet: truncateText((p.summary || p.content || '').replace(/[#*>`_\[\]]/g, ''), 120),
+            tags: p.tags || [],
+            createdBy: p.createdBy
+                ? { id: p.createdBy._id, name: p.createdBy.username, profilePicture: p.createdBy.profilePicture }
+                : null,
+            createdAt: p.createdAt,
+        }));
+    } catch (err) {
+        logger.error('Search knowledge pages error:', err);
         return [];
     }
 }
