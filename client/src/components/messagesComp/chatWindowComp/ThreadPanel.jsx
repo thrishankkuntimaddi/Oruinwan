@@ -7,6 +7,7 @@ import FooterInput from "./footer/footerInput";
 import { API_BASE } from "../../../services/api";
 import { encryptMessageForSending, batchDecryptMessages } from "../../../services/messageEncryptionService";
 import { useThreadFollow } from "../../../hooks/useThreadFollow";
+import { getAvatarUrl } from "../../../utils/avatarUtils";
 
 export default function ThreadPanel({ parentMessage, channelId, conversationType = 'channel', onClose, socket, currentUserId, showHeader = true, className = "" }) {
     const { showToast } = useToast();
@@ -544,27 +545,24 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
                                         replies.map((reply) => {
                                             // Handle different sender structures (backend vs flattened)
                                             const senderName = reply.sender?.username || reply.senderName || reply.senderId?.username || "Unknown";
-                                            const senderPic = reply.sender?.profilePicture || reply.senderAvatar || reply.senderId?.profilePicture || null;
+                                            const senderObj = reply.sender || reply.senderId || { username: senderName };
+                                            const senderPic = getAvatarUrl(senderObj);
                                             const initials = (senderName || 'U').charAt(0).toUpperCase();
 
                                             return (
                                                 <div key={reply._id} className="flex items-start gap-3 group">
-                                                    {/* Avatar: real pic → letter initial fallback */}
-                                                    <div className="h-8 w-8 rounded-full flex-shrink-0 overflow-hidden bg-indigo-500 flex items-center justify-center shadow-sm">
-                                                        {senderPic ? (
-                                                            <img
-                                                                src={senderPic}
-                                                                alt={senderName}
-                                                                className="w-full h-full object-cover"
-                                                                onError={(e) => {
-                                                                    e.target.style.display = 'none';
-                                                                    e.target.parentNode.setAttribute('data-fallback', 'true');
-                                                                    e.target.parentNode.innerHTML = `<span style="color:white;font-weight:700;font-size:13px">${initials}</span>`;
-                                                                }}
-                                                            />
-                                                        ) : (
-                                                            <span className="text-white font-bold text-xs">{initials}</span>
-                                                        )}
+                                                    {/* Avatar: real pic → DiceBear fallback */}
+                                                    <div className="h-8 w-8 rounded-full flex-shrink-0 overflow-hidden flex items-center justify-center shadow-sm">
+                                                        <img
+                                                            src={senderPic}
+                                                            alt={senderName}
+                                                            className="w-full h-full object-cover rounded-full"
+                                                            onError={(e) => {
+                                                                e.target.style.display = 'none';
+                                                                e.target.parentNode.style.backgroundColor = '#6366f1';
+                                                                e.target.parentNode.innerHTML = `<span style="color:white;font-weight:700;font-size:13px">${initials}</span>`;
+                                                            }}
+                                                        />
                                                     </div>
                                                     <div className="flex-1 min-w-0">
                                                         <div className="flex items-baseline gap-2">
