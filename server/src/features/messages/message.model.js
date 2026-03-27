@@ -189,6 +189,8 @@ const MessageSchema = new mongoose.Schema({
   version: { type: Number, default: 1 },           // Increments on each edit
 }, { timestamps: true });
 
+// Search text index
+MessageSchema.index({ text: 'text' });
 MessageSchema.index({ company: 1, channel: 1, createdAt: -1 });
 MessageSchema.index({ company: 1, dm: 1, createdAt: -1 });
 MessageSchema.index({ workspace: 1, createdAt: -1 }); // For dashboard activity queries

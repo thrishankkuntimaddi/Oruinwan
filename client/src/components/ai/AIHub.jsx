@@ -67,17 +67,13 @@ export default function AIHub({ workspaceId: propWsId, token: propToken }) {
     const workspaceId = propWsId || getWorkspaceId();
     const token       = propToken || getToken();
 
-    // Global keyboard shortcuts
+    const closeSearch  = useCallback(() => setSearchOpen(false),  []);
+    const closeCommand = useCallback(() => setCommandOpen(false), []);
+
+    // ⌘/ → open AI command palette
     useEffect(() => {
         const handler = (e) => {
-            // Cmd+K / Ctrl+K → open search
-            if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-                e.preventDefault();
-                setSearchOpen(prev => !prev);
-                setCommandOpen(false);
-            }
-            // Cmd+/ or Ctrl+/ → open command palette
-            if ((e.metaKey || e.ctrlKey) && e.key === '/') {
+            if ((e.metaKey || e.ctrlKey) && e.code === 'Slash') {
                 e.preventDefault();
                 setCommandOpen(prev => !prev);
                 setSearchOpen(false);
@@ -86,9 +82,6 @@ export default function AIHub({ workspaceId: propWsId, token: propToken }) {
         window.addEventListener('keydown', handler);
         return () => window.removeEventListener('keydown', handler);
     }, []);
-
-    const closeSearch  = useCallback(() => setSearchOpen(false),  []);
-    const closeCommand = useCallback(() => setCommandOpen(false), []);
 
     return (
         <>

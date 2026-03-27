@@ -12,6 +12,7 @@ import { UpdatesProvider } from "./contexts/UpdatesContext";
 import { SocketProvider } from "./contexts/SocketContext"; // ✅ Add real-time support
 import { CompanyProvider } from "./contexts/CompanyContext";
 import { DepartmentProvider } from "./contexts/DepartmentContext";
+import { SearchProvider } from "./contexts/SearchContext"; // 🔍 Unified Search
 
 // Layout + Components
 import MainLayout from "./components/layout/MainLayout";
@@ -133,6 +134,9 @@ import AIInsightsDashboard from "./pages/dashboards/AIInsightsDashboard";
 
 // ── AI Intelligence Layer ─────────────────────────────────────────────────────
 import AIHub from "./components/ai/AIHub";
+
+// 🔍 Unified Search
+import SearchResultsPage from "./components/search/SearchResultsPage";
 
 // Protected route wrappers
 import RequireAuth from "./components/RequireAuth";
@@ -489,6 +493,22 @@ function App() {
                                      <MainLayout>
                                        <Updates />
                                      </MainLayout>
+                                   </RequireWorkspace>
+                                 </WorkspaceProvider>
+                               </RequireAuth>
+                             }
+                           />
+
+                           {/* 🔍 Unified Search Results Page */}
+                           <Route
+                             path="/workspace/:workspaceId/search"
+                             element={
+                               <RequireAuth>
+                                 <WorkspaceProvider>
+                                   <RequireWorkspace>
+                                     <SearchProvider>
+                                       <SearchResultsPage />
+                                     </SearchProvider>
                                    </RequireWorkspace>
                                  </WorkspaceProvider>
                                </RequireAuth>

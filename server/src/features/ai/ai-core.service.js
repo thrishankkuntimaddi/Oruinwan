@@ -46,7 +46,7 @@ function _getModel() {
     if (!_model) {
         const { GoogleGenerativeAI } = require('@google/generative-ai');
         const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_KEY || '';
-        _model = new GoogleGenerativeAI(apiKey).getGenerativeModel({ model: 'gemini-1.5-flash' });
+        _model = new GoogleGenerativeAI(apiKey).getGenerativeModel({ model: 'gemini-2.0-flash' });
     }
     return _model;
 }

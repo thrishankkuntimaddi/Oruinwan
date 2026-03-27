@@ -3,10 +3,9 @@ import { useLocation, useNavigate } from "react-router-dom";
 import IconSidebar from "./IconSidebar";
 import ProfileMenu from "../SidebarComp/ProfileSidebar";
 import ChttrixAIChat from "../ai/ChttrixAIChat/ChttrixAIChat";
-import UniversalSearch from "../common/UniversalSearch";
 import { useWorkspace } from "../../contexts/WorkspaceContext";
-import { useUniversalSearch } from "../../hooks/useUniversalSearch";
 import { useNotifications } from "../../contexts/NotificationsContext";
+import SearchInlineBar from "../search/SearchInlineBar";
 import { Bot, BookOpen, Command, Bug, Sparkles, Search, MessageCircle, X, Loader2, Menu, Bell, CircleHelp, AtSign, UserPlus, Check, Trash2, ExternalLink } from "lucide-react";
 
 // Icon map for notification types
@@ -174,6 +173,7 @@ const WorkspaceNotificationPanel = () => {
 };
 
 
+
 const MainLayout = ({ children, sidePanel }) => {
     const { activeWorkspace } = useWorkspace();
     const [showProfile, setShowProfile] = useState(false);
@@ -190,22 +190,16 @@ const MainLayout = ({ children, sidePanel }) => {
         setMobileMenuOpen(false);
     }, [location.pathname]);
 
-    // Universal Search State
-    const [showUniversalSearch, setShowUniversalSearch] = useState(false);
-    const { query, setQuery, results, loading, clearSearch } = useUniversalSearch(activeWorkspace?.id);
-    const searchInputRef = useRef(null);
-
-    // Keyboard shortcut for search (Cmd+K / Ctrl+K)
+    // Cmd+Shift+A → toggle Chttrix AI panel (Cmd+Shift+K conflicts with Chrome on macOS)
     useEffect(() => {
-        const handleKeyDown = (e) => {
-            if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        const fn = (e) => {
+            if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.code === 'KeyA') {
                 e.preventDefault();
-                setShowUniversalSearch(true);
-                searchInputRef.current?.focus();
+                setShowAI(prev => !prev);
             }
         };
-        window.addEventListener('keydown', handleKeyDown);
-        return () => window.removeEventListener('keydown', handleKeyDown);
+        window.addEventListener('keydown', fn);
+        return () => window.removeEventListener('keydown', fn);
     }, []);
 
     // Help State
@@ -408,67 +402,9 @@ const MainLayout = ({ children, sidePanel }) => {
                     </button>
                 </div>
 
-                {/* Center: Search Bar */}
+                {/* Center: Search bar — real input, dropdown below it */}
                 <div className="flex-1 max-w-xl mx-auto relative z-[70]">
-                    <div
-                        className={`w-full flex items-center gap-2 px-3 py-1.5 bg-gray-100 dark:bg-gray-800 rounded text-sm transition-all border ${showUniversalSearch ? 'border-blue-500 ring-2 ring-blue-100 dark:ring-blue-900/30' : 'border-transparent hover:border-blue-500'}`}
-                    >
-                        <Search size={14} className="text-gray-400 flex-shrink-0" />
-                        <input
-                            ref={searchInputRef}
-                            type="text"
-                            value={query}
-                            onChange={(e) => {
-                                setQuery(e.target.value);
-                                if (!showUniversalSearch) setShowUniversalSearch(true);
-                            }}
-                            onFocus={() => setShowUniversalSearch(true)}
-                            placeholder="Search..."
-                            className="flex-1 bg-transparent border-none outline-none text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 min-w-0"
-                        />
-                        {loading && <Loader2 size={14} className="text-blue-500 animate-spin flex-shrink-0" />}
-                        {query && !loading && (
-                            <button
-                                onClick={clearSearch}
-                                className="p-0.5 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full transition-colors"
-                            >
-                                <X size={14} className="text-gray-400" />
-                            </button>
-                        )}
-                        <div className="hidden sm:flex ml-auto items-center gap-1 flex-shrink-0 pointer-events-none">
-                            <kbd className="px-1.5 py-0.5 bg-white dark:bg-gray-900 rounded text-xs font-mono border border-gray-300 dark:border-gray-600">
-                                {navigator.platform.includes('Mac') ? '⌘' : 'Ctrl'}
-                            </kbd>
-                            <kbd className="px-1.5 py-0.5 bg-white dark:bg-gray-900 rounded text-xs font-mono border border-gray-300 dark:border-gray-600">
-                                K
-                            </kbd>
-                        </div>
-                    </div>
-
-                    {/* Universal Search Dropdown */}
-                    {showUniversalSearch && activeWorkspace && (
-                        <>
-                            {/* Backdrop */}
-                            <div
-                                className="fixed inset-0 z-[80]"
-                                onClick={() => {
-                                    setShowUniversalSearch(false);
-                                    clearSearch();
-                                }}
-                            />
-                            <UniversalSearch
-                                workspaceId={activeWorkspace.id}
-                                onClose={() => {
-                                    setShowUniversalSearch(false);
-                                    clearSearch();
-                                }}
-                                results={results}
-                                loading={loading}
-                                query={query}
-                                clearSearch={clearSearch}
-                            />
-                        </>
-                    )}
+                    <SearchInlineBar workspaceId={activeWorkspace?.id || activeWorkspace?._id} />
                 </div>
 
 

@@ -35,7 +35,7 @@ function getGenAI() {
     return _genAI;
 }
 
-function getModel(modelName = 'gemini-1.5-flash') {
+function getModel(modelName = 'gemini-2.0-flash') {
     return getGenAI().getGenerativeModel({ model: modelName });
 }
 
@@ -166,7 +166,7 @@ async function summarizeDocument(text, opts = {}) {
             `\n---\n${truncated}`,
         ].join('');
 
-        const model = getModel('gemini-1.5-flash');
+        const model = getModel('gemini-2.0-flash');
         const result = await model.generateContent(prompt);
         const summary = result.response.text().trim();
 
@@ -255,7 +255,7 @@ async function semanticSearch(query, docs, opts = {}) {
             docList,
         ].join('\n');
 
-        const model = getModel('gemini-1.5-flash');
+        const model = getModel('gemini-2.0-flash');
         const result = await model.generateContent(prompt);
         let rawJson = result.response.text().trim();
 
