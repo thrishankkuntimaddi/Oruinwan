@@ -232,4 +232,36 @@ emitter.on('error', (err) => {
     logger.error('[NotificationEventEmitter] Unhandled error:', err.message);
 });
 
+// ─── Automation Hooks ─────────────────────────────────────────────────────────
+// These are PURELY ADDITIVE — no existing handlers are modified.
+// Lazy-load automationService to avoid circular dependency issues.
+const getAutomationService = () => {
+    try { return require('../automations/automation.service'); } catch { return null; }
+};
+
+emitter.on('task.created', (data) => {
+    const svc = getAutomationService();
+    if (svc && data.workspaceId) svc.processEvent('task.created', data, data.io);
+});
+
+emitter.on('task.completed', (data) => {
+    const svc = getAutomationService();
+    if (svc && data.workspaceId) svc.processEvent('task.completed', data, data.io);
+});
+
+emitter.on('meeting.completed', (data) => {
+    const svc = getAutomationService();
+    if (svc && data.workspaceId) svc.processEvent('meeting.completed', data, data.io);
+});
+
+emitter.on('message.sent', (data) => {
+    const svc = getAutomationService();
+    if (svc && data.workspaceId) svc.processEvent('message.sent', data, data.io);
+});
+
+emitter.on('file.uploaded', (data) => {
+    const svc = getAutomationService();
+    if (svc && data.workspaceId) svc.processEvent('file.uploaded', data, data.io);
+});
+
 module.exports = emitter;

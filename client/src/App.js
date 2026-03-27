@@ -39,6 +39,9 @@ import Updates from "./pages/SidebarComp/Updates";
 import Meetings from "./pages/SidebarComp/Meetings";
 import MeetingDetailPage from "./pages/SidebarComp/MeetingDetailPage";
 import AppsPage from "./pages/apps/AppsPage";
+import AutomationsPage from "./pages/workspace/AutomationsPage";
+import AutomationBuilderPage from "./pages/workspace/AutomationBuilderPage";
+import DeveloperPortalPage from "./pages/developer/DeveloperPortalPage";
 import FileLibrary from "./pages/SidebarComp/FileLibrary";
 import KnowledgePage from "./pages/SidebarComp/KnowledgePage";
 import KnowledgeGraph from "./pages/SidebarComp/KnowledgeGraph";
@@ -131,6 +134,7 @@ import ManagerWorkspacePage from "./components/manager/ManagerWorkspacePage"; //
 import EmployeeDashboard from "./pages/dashboards/EmployeeDashboard";
 import ChttrixAdminDashboard from "./pages/dashboards/ChttrixAdminDashboard";
 import AIInsightsDashboard from "./pages/dashboards/AIInsightsDashboard";
+import InsightsDashboard from "./pages/dashboards/InsightsDashboard";
 
 // ── AI Intelligence Layer ─────────────────────────────────────────────────────
 import AIHub from "./components/ai/AIHub";
@@ -153,6 +157,15 @@ import PasswordUnlockModal from "./components/security/PasswordUnlockModal";
 import { useAuth } from "./contexts/AuthContext";
 import AppErrorBoundary from "./shared/components/ui/AppErrorBoundary";
 
+
+
+// ── Developer Platform Wrapper ─────────────────────────────────────────────────
+// Reads workspaceId from URL params and passes to DeveloperPortalPage
+function DeveloperPortalWrapper() {
+  const { workspaceId } = useParams();
+  return <DeveloperPortalPage workspaceId={workspaceId} />;
+}
+// ─────────────────────────────────────────────────────────────────────────────
 
 function App() {
 
@@ -499,6 +512,66 @@ function App() {
                              }
                            />
 
+                           {/* Apps & Integrations */}
+                           <Route
+                             path="/workspace/:workspaceId/apps"
+                             element={
+                               <RequireAuth>
+                                 <WorkspaceProvider>
+                                   <RequireWorkspace>
+                                     <MainLayout>
+                                       <AppsPage />
+                                     </MainLayout>
+                                   </RequireWorkspace>
+                                 </WorkspaceProvider>
+                               </RequireAuth>
+                             }
+                           />
+
+                           {/* ── WORKFLOW AUTOMATIONS ── */}
+                           <Route
+                             path="/workspace/:workspaceId/automations"
+                             element={
+                               <RequireAuth>
+                                 <WorkspaceProvider>
+                                   <RequireWorkspace>
+                                     <MainLayout>
+                                       <AutomationsPage />
+                                     </MainLayout>
+                                   </RequireWorkspace>
+                                 </WorkspaceProvider>
+                               </RequireAuth>
+                             }
+                           />
+                           <Route
+                             path="/workspace/:workspaceId/automations/new"
+                             element={
+                               <RequireAuth>
+                                 <WorkspaceProvider>
+                                   <RequireWorkspace>
+                                     <MainLayout>
+                                       <AutomationBuilderPage />
+                                     </MainLayout>
+                                   </RequireWorkspace>
+                                 </WorkspaceProvider>
+                               </RequireAuth>
+                             }
+                           />
+                           <Route
+                             path="/workspace/:workspaceId/automations/:id/edit"
+                             element={
+                               <RequireAuth>
+                                 <WorkspaceProvider>
+                                   <RequireWorkspace>
+                                     <MainLayout>
+                                       <AutomationBuilderPage />
+                                     </MainLayout>
+                                   </RequireWorkspace>
+                                 </WorkspaceProvider>
+                               </RequireAuth>
+                             }
+                           />
+
                            {/* 🔍 Unified Search Results Page */}
                            <Route
                              path="/workspace/:workspaceId/search"
@@ -514,6 +587,22 @@ function App() {
                                </RequireAuth>
                              }
                            />
+
+                            {/* ⚡ Developer Platform */}
+                            <Route
+                              path="/workspace/:workspaceId/developer"
+                              element={
+                                <RequireAuth>
+                                  <WorkspaceProvider>
+                                    <RequireWorkspace>
+                                      <MainLayout>
+                                        <DeveloperPortalWrapper />
+                                      </MainLayout>
+                                    </RequireWorkspace>
+                                  </WorkspaceProvider>
+                                </RequireAuth>
+                              }
+                            />
 
                            {/* Apps & Integrations */}
                           <Route
@@ -695,6 +784,7 @@ function App() {
                           >
                             <Route path="/owner/dashboard" element={<OwnerDashboard />} />
                             <Route path="/owner/analytics" element={<OwnerAnalytics />} />
+                            <Route path="/owner/insights" element={<InsightsDashboard />} />
                             <Route path="/owner/billing" element={<OwnerBilling />} />
                             <Route path="/owner/security" element={<OwnerSecurity />} />
 
@@ -732,6 +822,7 @@ function App() {
                           >
                             <Route path="/admin/dashboard" element={<AdminDashboard />} />
                             <Route path="/admin/analytics" element={<Analytics />} />
+                            <Route path="/admin/insights" element={<InsightsDashboard />} />
                             <Route path="/admin/departments" element={<DepartmentManagement />} />
                             <Route path="/admin/workspaces" element={<WorkspacesManagement />} />
                             <Route path="/admin/users" element={<UserManagement />} />

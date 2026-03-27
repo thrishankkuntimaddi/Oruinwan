@@ -167,3 +167,49 @@ export const getCompanyAnalytics = async (companyId, timeRange = '30d') => {
     );
     return response.data;
 };
+
+// ─── NEW PRODUCTIVITY INSIGHTS ENDPOINTS ────────────────────────────────────
+
+/**
+ * Get team activity analytics (messages + tasks per user)
+ */
+export const getTeamActivity = async (period = 30) => {
+    const response = await axios.get(
+        `${API_BASE}/api/analytics/insights/team?period=${period}`,
+        getAuthHeader()
+    );
+    return response.data;
+};
+
+/**
+ * Get workload analysis (overloaded/idle/balanced users)
+ */
+export const getWorkloadAnalysis = async (period = 30) => {
+    const response = await axios.get(
+        `${API_BASE}/api/analytics/insights/workload?period=${period}`,
+        getAuthHeader()
+    );
+    return response.data;
+};
+
+/**
+ * Get communication patterns (hourly distribution, top channels)
+ */
+export const getCommunicationPatterns = async (period = 30) => {
+    const response = await axios.get(
+        `${API_BASE}/api/analytics/insights/communication?period=${period}`,
+        getAuthHeader()
+    );
+    return response.data;
+};
+
+/**
+ * Get all insights in one call (/api/analytics with no type param)
+ */
+export const getAllInsights = async (period = 30) => {
+    const response = await axios.get(
+        `${API_BASE}/api/analytics?period=${period}`,
+        getAuthHeader()
+    );
+    return response.data;
+};

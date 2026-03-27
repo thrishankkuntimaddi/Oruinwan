@@ -15,7 +15,7 @@
  *   - scheduleCreated(io, { recipientIds, workspaceId, title, scheduledMeetingId })
  */
 
-const Notification = require('../models/Notification');
+const Notification = require('../../models/Notification');
 const logger = require('../../utils/logger');
 
 /**

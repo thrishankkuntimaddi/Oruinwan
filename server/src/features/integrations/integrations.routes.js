@@ -74,11 +74,43 @@ router.post('/webhook/:type', async (req, res) => {
       workspaceId
     });
 
+    // ── Automation integration: forward webhook events into the automation engine ──
+    if (workspaceId) {
+      try {
+        const automationService = require('../automations/automation.service');
+        const io = req.app.get('io');
+
+        // Map known provider events to named trigger types
+        const payload = req.body || {};
+        const isMergedPR = type === 'github' && payload.action === 'closed' && payload.pull_request?.merged;
+        if (isMergedPR) {
+          automationService.processEvent('github.pr_merged', {
+            workspaceId,
+            repo:   payload.repository?.name || '',
+            title:  payload.pull_request?.title || '',
+            actor:  payload.pull_request?.merged_by?.login || '',
+            event:  payload
+          }, io);
+        }
+
+        // Always fire generic webhook.received trigger
+        automationService.processEvent('webhook.received', {
+          workspaceId,
+          webhookType: type,
+          event: payload
+        }, io);
+      } catch (autoErr) {
+        // Non-fatal: log and continue
+        require('../../../utils/logger').error('[IntegrationWebhook] Automation processEvent failed:', autoErr.message);
+      }
+    }
+
     res.json(result);
   } catch (err) {
     res.status(err.statusCode || 500).json({ message: err.message });
   }
 });
+
 
 // ── Webhook management ────────────────────────────────────────────────────────
 

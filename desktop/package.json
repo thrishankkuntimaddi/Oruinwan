@@ -1,4 +1,41 @@
 {
   "name": "chttrix-desktop",
-  "private": true
+  "version": "1.0.0",
+  "description": "Chttrix Desktop App — Electron wrapper for the Chttrix web client",
+  "main": "electron/main.js",
+  "private": true,
+  "scripts": {
+    "start": "ELECTRON_IS_DEV=1 electron .",
+    "start:prod": "electron .",
+    "build": "electron-builder --mac --win --linux",
+    "pack": "electron-builder --dir"
+  },
+  "dependencies": {
+    "electron-store": "^8.1.0"
+  },
+  "devDependencies": {
+    "electron": "^28.2.0",
+    "electron-builder": "^24.9.1"
+  },
+  "build": {
+    "appId": "com.chttrix.desktop",
+    "productName": "Chttrix",
+    "directories": {
+      "output": "dist"
+    },
+    "mac": {
+      "category": "public.app-category.productivity",
+      "icon": "assets/icon.icns"
+    },
+    "win": {
+      "icon": "assets/icon.ico"
+    },
+    "linux": {
+      "icon": "assets/icon.png",
+      "category": "Network"
+    }
+  },
+  "keywords": ["chttrix", "electron", "desktop"],
+  "author": "Chttrix Team",
+  "license": "MIT"
 }

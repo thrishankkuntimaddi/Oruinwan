@@ -247,6 +247,10 @@ if (process.env.REDIS_URL) {
 
 app.set("io", io);
 
+// Register IO singleton for use in feature modules (avoids circular deps)
+const { setIO } = require('./src/socket/getIO');
+setIO(io);
+
 // ✅ CRITICAL: Middleware to attach Socket.io to request object for controllers
 app.use((req, res, next) => {
   req.io = io;
@@ -420,6 +424,11 @@ app.use("/api/v2/notes", require("./src/features/notes/notes.routes"));
 app.use("/api/v2/favorites", require("./src/features/favorites/favorites.routes"));
 
 // Phase 1 — Message Bookmarks & Reminders
+// ⚠️  IMPORTANT: app.use("/api", requireAuth, ...) below intercepts ALL /api/* requests.
+// Any routes that do NOT use JWT auth must be registered BEFORE this line.
+// ── DEVELOPER PUBLIC API (No JWT — Uses X-Api-Key) — MUST be before /api requireAuth ──
+app.use('/api/public', require('./src/features/developer/publicApi.routes'));
+// ─────────────────────────────────────────────────────────────────────────────
 app.use("/api/messages", requireAuth, require("./src/features/messages/bookmark.routes"));
 app.use("/api", requireAuth, require("./src/features/reminders/reminders.routes"));
 
@@ -448,12 +457,48 @@ app.use("/api/v2/meetings", require("./src/features/meetings/meetings.routes"));
 app.use("/api/v2/collaboration", require("./src/features/collaboration/collaboration.routes"));
 // ─────────────────────────────────────────────────────────────────────────────
 
+// ── WORKFLOW AUTOMATION SYSTEM ────────────────────────────────────────────────
+// GET/POST/PATCH/DELETE /api/v2/automations
+// GET /api/v2/automations/templates
+app.use("/api/v2/automations", requireAuth, require("./src/features/automations/automation.routes"));
+// ─────────────────────────────────────────────────────────────────────────────
+
 // ── INTEGRATION ECOSYSTEM ────────────────────────────────────────────────────
 // /api/v2/integrations        → connect/disconnect/list integrations
 // /api/v2/integrations/webhooks → webhook registration CRUD
 // /api/v2/integrations/ai-providers → AI provider switching
 // /api/v2/integrations/webhook/:type → inbound webhooks from external services
 app.use("/api/v2/integrations", require("./src/features/integrations/integrations.routes"));
+// ─────────────────────────────────────────────────────────────────────────────
+
+// ── SECURITY & COMPLIANCE LAYER ──────────────────────────────────────────────
+// SSO: GET /api/auth/sso/:provider + GET /api/auth/sso/:provider/callback
+app.use("/api/auth/sso", require("./src/features/security/sso.routes"));
+// 2FA: POST /api/auth/2fa/setup|verify-setup|disable|verify, GET /api/auth/2fa/status
+app.use("/api/auth/2fa", require("./src/features/security/twoFactor.routes"));
+// GDPR/Compliance: export, delete, legal hold, audit logs, retention policy
+app.use("/api/compliance", require("./src/features/security/gdpr.routes"));
+// Encrypted Backup + dev retention trigger
+app.use("/api/security", require("./src/features/security/backup.routes"));
+// ─────────────────────────────────────────────────────────────────────────────
+
+// ── MULTI-PLATFORM — Push Notification Device Token Management ───────────────
+// POST /api/push/register   — register mobile device token
+// POST /api/push/unregister — remove mobile device token
+app.use("/api/push", require("./routes/push.routes"));
+// ─────────────────────────────────────────────────────────────────────────────
+
+// ── DEVELOPER PLATFORM — Authenticated routes (JWT required) ─────────────────
+// Note: /api/public is mounted EARLIER (before the /api requireAuth catch-all)
+// API Key management (user JWT required)
+app.use('/api/developer', require('./src/features/developer/apiKeys.routes'));
+// Bot management
+app.use('/api/developer', require('./src/features/developer/bots.routes'));
+// App marketplace
+app.use('/api/developer', require('./src/features/developer/apps.routes'));
+
+// Seed marketplace apps on startup (idempotent)
+require('./src/features/developer/seedApps').seedApps();
 // ─────────────────────────────────────────────────────────────────────────────
 
 // ============================================================================
@@ -492,40 +537,55 @@ io.use(async (socket, next) => {
 
 io.on("connection", async (socket) => {
   logger.debug("Socket connected:", socket.user.id);
+  const socketUserId = socket.user.id;
 
   // Each user joins their own private room for targeted notifications
-  socket.join(`user:${socket.user.id}`);
+  socket.join(`user:${socketUserId}`);
 
-  // ✅ Set user online status
+  // ── MULTI-PLATFORM: Presence tracking ─────────────────────────────────────
+  const presenceService = require('./src/features/presence/presence.service');
+  let userCompanyId = null;
   try {
-    await User.findByIdAndUpdate(socket.user.id, {
-      isOnline: true,
-      lastLoginAt: new Date()
-    });
-
-    // Broadcast status change to all connected clients
-    io.emit("user-status-changed", {
-      userId: socket.user.id,
-      status: "active"
-    });
+    const dbUser = await User.findById(socketUserId).select('companyId').lean();
+    userCompanyId = dbUser?.companyId?.toString() || null;
+    await presenceService.setOnline(io, socketUserId, socket.id, userCompanyId);
+    // Legacy broadcast for backward compat
+    io.emit("user-status-changed", { userId: socketUserId, status: "active" });
   } catch (err) {
-    logger.error("Error setting user online:", err);
+    logger.error("Error setting user online (presence):", err);
   }
+
+  // ── Idle signal from client ────────────────────────────────────────────────
+  socket.on('user:idle', () => {
+    presenceService.setIdle(io, socketUserId, userCompanyId).catch(() => {});
+  });
+
+  // ── Active signal from client ──────────────────────────────────────────────
+  socket.on('user:active', () => {
+    presenceService.setOnline(io, socketUserId, socket.id, userCompanyId).catch(() => {});
+  });
+
+  // ── Disconnect ─────────────────────────────────────────────────────────────
+  socket.on('disconnect', () => {
+    presenceService.setOffline(io, socketUserId, socket.id, userCompanyId).catch(() => {});
+    logger.debug("Socket disconnected:", socketUserId);
+  });
+  // ──────────────────────────────────────────────────────────────────────────
 
   registerChatHandlers(io, socket);
 
   // ── PLATFORM SUPPORT ROOMS ──────────────────────────────────────────────
   // Every authenticated user auto-joins their own personal support room.
   // This enables ChttrixAdmin to send DMs directly to individual users.
-  socket.join(`user-support:${socket.user.id}`);
-  logger.debug(`[SUPPORT] User ${socket.user.id} joined user-support:${socket.user.id}`);
+  socket.join(`user-support:${socketUserId}`);
+  logger.debug(`[SUPPORT] User ${socketUserId} joined user-support:${socketUserId}`);
 
   // Auto-join platform-admins room for chttrix admins
   try {
-    const dbUser = await User.findById(socket.user.id).select('roles').lean();
+    const dbUser = await User.findById(socketUserId).select('roles').lean();
     if (dbUser?.roles?.includes('platform-admin') || dbUser?.roles?.includes('chttrix_admin')) {
       socket.join('platform-admins');
-      logger.debug(`[SUPPORT] Platform admin ${socket.user.id} joined platform-admins room`);
+      logger.debug(`[SUPPORT] Platform admin ${socketUserId} joined platform-admins room`);
     }
   } catch (err) {
     logger.error('[SUPPORT] Auto platform-admin room join error:', err);
@@ -792,6 +852,15 @@ mongoose
     // Notifications cron — daily digest + task due-soon reminders
     const { startNotificationsCron } = require('./src/features/notifications/notifications.cron');
     startNotificationsCron(io);
+
+    // Security — Message Retention cron (auto-delete expired messages per policy)
+    const { startRetentionCron } = require('./src/features/security/retention.cron');
+    startRetentionCron();
+
+    // Automation — Scheduled automation runner (checks every 60s)
+    const { startAutomationCron } = require('./src/features/automations/automation.cron');
+    startAutomationCron(io);
+
 
 
     httpServer.listen(PORT, () => {

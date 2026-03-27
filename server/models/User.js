@@ -198,7 +198,40 @@ const UserSchema = new mongoose.Schema(
     linkedinId: { type: String, unique: true, sparse: true },
 
     // Auth Provider
-    authProvider: { type: String, enum: ['local', 'google', 'github', 'linkedin'], default: 'local' },
+    authProvider: { type: String, enum: ['local', 'google', 'github', 'linkedin', 'microsoft', 'okta'], default: 'local' },
+
+    // SSO (Single Sign-On) — generic federated identity
+    ssoProvider: { type: String, enum: ['google', 'microsoft', 'okta'], default: null },
+    ssoId: { type: String, default: null }, // Provider's unique user ID
+
+    // Two-Factor Authentication (TOTP)
+    twoFactorEnabled: { type: Boolean, default: false },
+    twoFactorSecret: { type: String, default: null }, // AES-256 encrypted TOTP secret
+
+    // Device Management
+    devices: [{
+      deviceId: { type: String },
+      userAgent: { type: String },
+      ip: { type: String },
+      lastActive: { type: Date, default: Date.now },
+      createdAt: { type: Date, default: Date.now }
+    }],
+
+    // Multi-Platform: Push Notification Tokens (mobile devices)
+    deviceTokens: [{
+      token: { type: String, required: true },        // Expo / FCM / APN push token
+      platform: { type: String, enum: ['ios', 'android', 'web', 'unknown'], default: 'unknown' },
+      registeredAt: { type: Date, default: Date.now }
+    }],
+
+    // Compliance — Legal Hold (prevents data deletion)
+    legalHold: { type: Boolean, default: false },
+    legalHoldReason: { type: String },
+    legalHoldSetBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    legalHoldAt: { type: Date },
+
+    // Compliance — Message Retention Policy (days, null = no policy)
+    retentionDays: { type: Number, default: null },
 
     // Password Set Timestamp (for OAuth users who set a password)
     passwordSetAt: { type: Date, default: null },

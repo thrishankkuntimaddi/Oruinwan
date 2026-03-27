@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from "react";
-import { Search, Puzzle, CheckCircle2, Grid3X3 } from "lucide-react";
+import { Search, Puzzle, CheckCircle2, Grid3X3, Terminal } from "lucide-react";
+import { useParams, useNavigate } from "react-router-dom";
 import { MOCK_INTEGRATIONS, INTEGRATION_CATEGORIES } from "../../components/apps/mock/mockIntegrations";
 import IntegrationCard from "../../components/apps/IntegrationCard";
 import IntegrationDetailsModal from "../../components/apps/IntegrationDetailsModal";
@@ -10,6 +11,8 @@ import IntegrationDetailsModal from "../../components/apps/IntegrationDetailsMod
  * All state is local — no backend calls.
  */
 export default function AppsPage() {
+  const { workspaceId } = useParams();
+  const navigate = useNavigate();
   // Track connected state per integration id
   const [connectedMap, setConnectedMap] = useState(() => {
     const init = {};
@@ -61,12 +64,21 @@ export default function AppsPage() {
                 </p>
               </div>
             </div>
-            {totalInstalled > 0 && (
-              <div className="flex items-center gap-2 text-sm text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-full px-3 py-1.5 font-medium">
-                <CheckCircle2 size={14} />
-                {totalInstalled} connected
-              </div>
-            )}
+            <div className="flex items-center gap-3">
+              {totalInstalled > 0 && (
+                <div className="flex items-center gap-2 text-sm text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-full px-3 py-1.5 font-medium">
+                  <CheckCircle2 size={14} />
+                  {totalInstalled} connected
+                </div>
+              )}
+              <button
+                onClick={() => navigate(`/workspace/${workspaceId}/developer`)}
+                className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 shadow-sm transition-all hover:shadow-md hover:-translate-y-0.5"
+              >
+                <Terminal size={14} />
+                Developer Platform
+              </button>
+            </div>
           </div>
 
           {/* Search */}

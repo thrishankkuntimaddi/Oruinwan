@@ -19,6 +19,8 @@ import SecurityTab from './settingsTabs/SecurityTab';
 import SessionsTab from './settingsTabs/SessionsTab';
 import AdvancedTab from './settingsTabs/AdvancedTab';
 import IntegrationsTab from './settingsTabs/IntegrationsTab';
+import ComplianceTab from './settingsTabs/ComplianceTab';
+
 
 const NAV_SECTIONS = [
     { id: 'profile', label: 'My Profile', icon: User, description: 'Name, photo, bio' },
@@ -29,7 +31,9 @@ const NAV_SECTIONS = [
     { id: 'security', label: 'Security', icon: Shield, description: 'Password & 2FA' },
     { id: 'sessions', label: 'Sessions', icon: Laptop, description: 'Active devices' },
     { id: 'integrations', label: 'Integrations', icon: Plug, description: 'GitHub, Slack, AI & more' },
+    { id: 'compliance', label: 'Compliance & Privacy', icon: Shield, description: 'GDPR, audit logs, retention' },
     { id: 'advanced', label: 'Advanced', icon: SettingsIcon, description: 'Account & data' },
+
 ];
 
 const Settings = () => {
@@ -327,6 +331,8 @@ const Settings = () => {
                             </div>
                         )}
                         {activeSection === 'advanced' && <AdvancedTab />}
+                        {activeSection === 'compliance' && <ComplianceTab user={user} />}
+
                     </div>
                 </div>
             </main>
