@@ -5,16 +5,20 @@
  *
  * GET    /api/notifications?workspaceId=&page=&limit=   — paginated feed
  * GET    /api/notifications/unread-count?workspaceId=   — fast unread count
+ * GET    /api/notifications/preferences?workspaceId=    — get user preferences
+ * PATCH  /api/notifications/preferences?workspaceId=    — update preferences
  * PATCH  /api/notifications/read-all?workspaceId=        — mark all read
- * PATCH  /api/notifications/:id/read                     — mark single read  
+ * PATCH  /api/notifications/:id/read                     — mark single read
  * DELETE /api/notifications/:id                          — dismiss single
  * DELETE /api/notifications?workspaceId=                 — clear all
+ * POST   /api/notifications/test                         — (dev) fire test notification
  */
 
 const express = require('express');
 const router = express.Router();
 const requireAuth = require('../../../middleware/auth');
 const Notification = require('../../models/Notification');
+const prefService = require('./notificationPreferenceService');
 
 // All routes require auth
 router.use(requireAuth);
@@ -130,4 +134,56 @@ router.delete('/', async (req, res) => {
     }
 });
 
+// GET /api/notifications/preferences
+router.get('/preferences', async (req, res) => {
+    try {
+        const { workspaceId } = req.query;
+        if (!workspaceId) return res.status(400).json({ message: 'workspaceId required' });
+
+        const prefs = await prefService.getUserPreferences(req.user.sub, workspaceId);
+        res.json({ preferences: prefs });
+    } catch (err) {
+        res.status(500).json({ message: 'Failed to fetch preferences' });
+    }
+});
+
+// PATCH /api/notifications/preferences
+router.patch('/preferences', async (req, res) => {
+    try {
+        const { workspaceId } = req.query;
+        if (!workspaceId) return res.status(400).json({ message: 'workspaceId required' });
+
+        const prefs = await prefService.updateUserPreferences(req.user.sub, workspaceId, req.body);
+        res.json({ preferences: prefs });
+    } catch (err) {
+        res.status(500).json({ message: 'Failed to update preferences' });
+    }
+});
+
+// POST /api/notifications/test — dev-only trigger
+router.post('/test', async (req, res) => {
+    if (process.env.NODE_ENV === 'production') {
+        return res.status(403).json({ message: 'Not available in production' });
+    }
+    try {
+        const { workspaceId, type = 'mention', title = 'Test Notification', body = 'This is a test' } = req.body;
+        if (!workspaceId) return res.status(400).json({ message: 'workspaceId required' });
+
+        const notifService = require('./notificationService');
+        const notif = await notifService.create(req.app.get('io'), {
+            recipient: req.user.sub,
+            workspaceId,
+            type,
+            title,
+            body,
+            link: null,
+            meta: { source: 'test' },
+        });
+        res.status(201).json({ notification: notif });
+    } catch (err) {
+        res.status(500).json({ message: 'Failed to send test notification' });
+    }
+});
+
 module.exports = router;
+

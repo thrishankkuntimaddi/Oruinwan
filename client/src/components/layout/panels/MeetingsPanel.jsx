@@ -381,6 +381,12 @@ const MeetingsPanel = () => {
                                                         </a>
                                                     )}
                                                     <button
+                                                        onClick={(e) => { e.stopPropagation(); navigate(`/workspace/${workspaceId}/meetings/${m._id}`); }}
+                                                        className="flex items-center gap-1 text-[10px] font-semibold text-indigo-600 dark:text-indigo-400 hover:underline"
+                                                    >
+                                                        View Details &rarr;
+                                                    </button>
+                                                    <button
                                                         onClick={() => handleCancelMeeting(m._id)}
                                                         className="text-[10px] text-gray-400 hover:text-red-500 transition-colors ml-auto opacity-0 group-hover:opacity-100"
                                                     >
@@ -391,6 +397,7 @@ const MeetingsPanel = () => {
                                         </div>
                                     );
                                 })}
+
                             </>
                         )}
 

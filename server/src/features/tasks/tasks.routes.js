@@ -30,6 +30,9 @@ router.use(requireAuth);
 // ROUTES
 // ============================================================================
 
+// GET /api/v2/tasks/workload - Get tasks per user (MUST come before /:id routes)
+router.get('/workload', tasksController.getWorkload);
+
 // GET /api/v2/tasks - Get workspace tasks
 router.get('/', tasksController.getTasks);
 
@@ -83,6 +86,15 @@ router.post('/:id/watchers', tasksController.addWatcher);
 
 // DELETE /api/v2/tasks/:id/watchers - Unwatch a task
 router.delete('/:id/watchers', tasksController.removeWatcher);
+
+// POST /api/v2/tasks/:id/dependency - Add a dependency
+router.post('/:id/dependency', tasksController.addDependency);
+
+// POST /api/v2/tasks/:id/time/start - Start time tracking session
+router.post('/:id/time/start', tasksController.startTimer);
+
+// POST /api/v2/tasks/:id/time/stop - Stop time tracking session
+router.post('/:id/time/stop', tasksController.stopTimer);
 
 // ============================================================================
 // EXPORT

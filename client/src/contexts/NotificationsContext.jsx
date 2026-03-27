@@ -11,6 +11,7 @@ import api from '../services/api';
 import { useSocket } from './SocketContext';
 import { useWorkspace } from './WorkspaceContext';
 import { useAuth } from './AuthContext';
+import { useDesktopNotification } from '../hooks/useDesktopNotification';
 
 const NotificationsContext = createContext(null);
 
@@ -22,6 +23,7 @@ export function NotificationsProvider({ children }) {
     const { addNotificationListener } = useSocket();
     const { activeWorkspace } = useWorkspace();
     const { accessToken } = useAuth();
+    const { triggerDesktopNotification } = useDesktopNotification();
 
     const [notifications, setNotifications] = useState([]);
     const [unreadCount, setUnreadCount] = useState(0);
@@ -73,10 +75,15 @@ export function NotificationsProvider({ children }) {
             if (String(notification.workspaceId) !== String(workspaceId)) return;
             setNotifications(prev => [notification, ...prev]);
             setUnreadCount(c => c + 1);
+            // Fire desktop notification when app is in background
+            triggerDesktopNotification(
+                notification.title,
+                notification.body || 'Chttrix'
+            );
         });
 
         return unsubscribe;
-    }, [addNotificationListener, workspaceId]);
+    }, [addNotificationListener, workspaceId, triggerDesktopNotification]);
 
     // ── Mutations ──────────────────────────────────────────────────────
     const markRead = useCallback(async (notifId) => {

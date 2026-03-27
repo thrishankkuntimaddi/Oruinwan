@@ -3,7 +3,7 @@ import api from '../../../../services/api';
 import {
     Smile, MessageSquare, Share, MoreHorizontal, Pin, Copy, Trash2, Info, Pencil, Check, X,
     Hash, UserCheck, LogOut, UserPlus, UserMinus, Shield, ShieldOff,
-    PenLine, FileText, Lock, PinIcon, Eraser, History, Globe
+    PenLine, FileText, Lock, PinIcon, Eraser, History, Globe, Bookmark, Bell
 } from "lucide-react";
 import TranslatePopover from './TranslatePopover';
 import { getAvatarUrl } from '../../../../utils/avatarUtils';
@@ -671,7 +671,8 @@ function ChannelMessageItem({
                                         : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
                                 }`}
                             >
-                                🔖 {isBookmarked ? 'Remove Bookmark' : 'Save / Bookmark'}
+                                <Bookmark size={14} className={isBookmarked ? 'fill-current' : ''} />
+                                {isBookmarked ? 'Remove Bookmark' : 'Save / Bookmark'}
                             </button>
 
                             {/* Phase 1 — Remind Me */}
@@ -683,7 +684,8 @@ function ChannelMessageItem({
                                     }}
                                     className="w-full text-left px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2 text-gray-700 dark:text-gray-300"
                                 >
-                                    🔔 Remind Me
+                                    <Bell size={14} />
+                                    Remind Me
                                 </button>
                             )}
 
@@ -696,7 +698,8 @@ function ChannelMessageItem({
                                     }}
                                     className="w-full text-left px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2 text-gray-700 dark:text-gray-300"
                                 >
-                                    📜 Edit History
+                                    <History size={14} />
+                                    Edit History
                                 </button>
                             )}
 

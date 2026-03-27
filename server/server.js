@@ -348,11 +348,29 @@ app.use("/api/analytics", require("./src/features/analytics/analytics.routes"));
 app.use("/api/ai", require("./src/features/ai/ai.routes"));
 // Phase 4 — Smart Reply + Auto Translate
 app.use("/api/ai", requireAuth, require("./src/features/ai/smartReply.routes"));
+
+// ── AI INTELLIGENCE LAYER ─────────────────────────────────────────────────────
+// ai-assistant: channel summary, action items, smart replies
+app.use("/api/ai", requireAuth, require("./src/features/ai/assistant/ai-assistant.routes"));
+// ai-knowledge: semantic search, Q&A, meeting query
+app.use("/api/ai", requireAuth, require("./src/features/ai/knowledge/ai-knowledge.routes"));
+// ai-automation: NL commands, task generation
+app.use("/api/ai", requireAuth, require("./src/features/ai/automation/ai-automation.routes"));
+// ai-insights: productivity, collaboration, engagement, anomaly detection
+app.use("/api/ai", requireAuth, require("./src/features/ai/insights/ai-insights.routes"));
+// ─────────────────────────────────────────────────────────────────────────────
 // Unified Activity Stream — workspace feed + personal history
 app.use("/api/activity", require("./src/features/activity/activity.routes"));
 // Notes & Tasks - Direct registration (no proxy needed)
 app.use("/api/notes", require("./src/features/notes/notes.routes")); // Direct routing, Phase 5 E2EE ready
 app.use("/api/tasks", require("./src/features/tasks/tasks.routes")); // Direct routing, simplified architecture
+
+// ── ADVANCED TASK MANAGEMENT EXTENSIONS ──────────────────────────────────────
+app.use("/api/sprints", require("./src/features/sprints/sprints.routes"));
+app.use("/api/milestones", require("./src/features/milestones/milestones.routes"));
+app.use("/api/task-templates", require("./src/features/task-templates/task-templates.routes"));
+// ─────────────────────────────────────────────────────────────────────────────
+
 
 
 // =============================================================
@@ -423,6 +441,19 @@ app.use("/api/v2/uploads", require("./src/modules/uploads/upload.routes"));
 // ── FILE MANAGEMENT + KNOWLEDGE SYSTEM ───────────────────────────────────────
 app.use("/api/v2/files", require("./src/features/files/files.routes"));
 app.use("/api/v2/knowledge", require("./src/features/knowledge/knowledge.routes"));
+// ─────────────────────────────────────────────────────────────────────────────
+
+// ── MEETINGS + COLLABORATION SYSTEM ──────────────────────────────────────────
+app.use("/api/v2/meetings", require("./src/features/meetings/meetings.routes"));
+app.use("/api/v2/collaboration", require("./src/features/collaboration/collaboration.routes"));
+// ─────────────────────────────────────────────────────────────────────────────
+
+// ── INTEGRATION ECOSYSTEM ────────────────────────────────────────────────────
+// /api/v2/integrations        → connect/disconnect/list integrations
+// /api/v2/integrations/webhooks → webhook registration CRUD
+// /api/v2/integrations/ai-providers → AI provider switching
+// /api/v2/integrations/webhook/:type → inbound webhooks from external services
+app.use("/api/v2/integrations", require("./src/features/integrations/integrations.routes"));
 // ─────────────────────────────────────────────────────────────────────────────
 
 // ============================================================================
@@ -753,6 +784,15 @@ mongoose
     // Phase 1 — Start reminders cron (after DB is connected)
     const { startRemindersCron } = require('./src/features/reminders/reminders.cron');
     startRemindersCron(io);
+
+    // ADV — Start recurring tasks cron (after DB is connected)
+    const { startRecurringTasksCron } = require('./src/features/tasks/tasks.cron');
+    startRecurringTasksCron();
+
+    // Notifications cron — daily digest + task due-soon reminders
+    const { startNotificationsCron } = require('./src/features/notifications/notifications.cron');
+    startNotificationsCron(io);
+
 
     httpServer.listen(PORT, () => {
       logger.success(`Server (Express + Socket.IO) running on port ${PORT}`);

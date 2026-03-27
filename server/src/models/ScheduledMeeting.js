@@ -77,6 +77,63 @@ const scheduledMeetingSchema = new mongoose.Schema(
             enum: ['scheduled', 'live', 'completed', 'cancelled'],
             default: 'scheduled',
         },
+
+        // ── Extended Collaboration Fields ──────────────────────────────────
+
+        recordingUrl: {
+            type: String,
+            default: null,
+        },
+
+        transcript: {
+            type: String,
+            default: '',
+        },
+
+        summary: {
+            type: String,
+            default: '',
+        },
+
+        // Realtime shared notes — synced via WebSocket meeting:notes_update
+        sharedNotes: {
+            type: String,
+            default: '',
+        },
+
+        // Agenda items for the meeting
+        agenda: [
+            {
+                _id: { type: mongoose.Schema.Types.ObjectId, auto: true },
+                title: { type: String, required: true, trim: true },
+                notes: { type: String, default: '' },
+                order: { type: Number, default: 0 },
+            },
+        ],
+
+        // Action items extracted from the meeting
+        actionItems: [
+            {
+                _id: { type: mongoose.Schema.Types.ObjectId, auto: true },
+                text: { type: String, required: true, trim: true },
+                assignedTo: {
+                    type: mongoose.Schema.Types.ObjectId,
+                    ref: 'User',
+                    default: null,
+                },
+                // Link to a Task document if the action item is converted to a task
+                taskId: {
+                    type: mongoose.Schema.Types.ObjectId,
+                    ref: 'Task',
+                    default: null,
+                },
+                status: {
+                    type: String,
+                    enum: ['pending', 'in_progress', 'done'],
+                    default: 'pending',
+                },
+            },
+        ],
     },
     { timestamps: true }
 );

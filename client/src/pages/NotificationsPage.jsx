@@ -1,12 +1,13 @@
 import React, { useState, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
-    Bell, AtSign, UserPlus, Check, MessageCircle,
-    Trash2, Filter, RefreshCcw, Loader2, ExternalLink,
-    ChevronDown, X
+    Bell, AtSign, UserPlus, Check, MessageCircle, GitBranch,
+    Trash2, Filter, RefreshCcw, Loader2, ExternalLink, Settings,
+    ChevronDown, X, Calendar, Zap, Brain, AlertTriangle
 } from 'lucide-react';
 import { useNotifications } from '../contexts/NotificationsContext';
 import { useWorkspace } from '../contexts/WorkspaceContext';
+import NotificationPreferences from '../components/shared/NotificationPreferences';
 
 // ── Type metadata ──────────────────────────────────────────────────────────
 const TYPE_META = {
@@ -14,11 +15,17 @@ const TYPE_META = {
     dm: { label: 'Messages', Icon: MessageCircle, color: 'text-sky-600 bg-sky-100 dark:bg-sky-900/40', tabKey: 'messages' },
     task_assigned: { label: 'Task', Icon: Check, color: 'text-emerald-600 bg-emerald-100 dark:bg-emerald-900/40', tabKey: 'tasks' },
     task_comment: { label: 'Task', Icon: MessageCircle, color: 'text-yellow-600 bg-yellow-100 dark:bg-yellow-900/40', tabKey: 'tasks' },
+    task_due_soon: { label: 'Due Soon', Icon: Bell, color: 'text-orange-600 bg-orange-100 dark:bg-orange-900/40', tabKey: 'tasks' },
     member_joined: { label: 'Team', Icon: UserPlus, color: 'text-emerald-600 bg-emerald-100 dark:bg-emerald-900/40', tabKey: 'team' },
     channel_pinned: { label: 'Channel', Icon: Bell, color: 'text-violet-600 bg-violet-100 dark:bg-violet-900/40', tabKey: 'all' },
     huddle_started: { label: 'Huddle', Icon: Bell, color: 'text-red-500 bg-red-100 dark:bg-red-900/40', tabKey: 'all' },
-    schedule_created: { label: 'Meeting', Icon: Bell, color: 'text-orange-600 bg-orange-100 dark:bg-orange-900/40', tabKey: 'all' },
+    schedule_created: { label: 'Meeting', Icon: Calendar, color: 'text-orange-600 bg-orange-100 dark:bg-orange-900/40', tabKey: 'all' },
+    meeting_reminder: { label: 'Meeting', Icon: Calendar, color: 'text-red-500 bg-red-100 dark:bg-red-900/40', tabKey: 'all' },
     reaction: { label: 'Reaction', Icon: Bell, color: 'text-pink-600 bg-pink-100 dark:bg-pink-900/40', tabKey: 'all' },
+    thread_reply: { label: 'Thread', Icon: GitBranch, color: 'text-violet-600 bg-violet-100 dark:bg-violet-900/40', tabKey: 'messages' },
+    integration_alert: { label: 'Integration', Icon: AlertTriangle, color: 'text-amber-600 bg-amber-100 dark:bg-amber-900/40', tabKey: 'all' },
+    ai_suggestion: { label: 'AI', Icon: Brain, color: 'text-indigo-600 bg-indigo-100 dark:bg-indigo-900/40', tabKey: 'all' },
+    digest: { label: 'Digest', Icon: Zap, color: 'text-sky-600 bg-sky-100 dark:bg-sky-900/40', tabKey: 'all' },
 };
 
 const TABS = [
@@ -28,7 +35,9 @@ const TABS = [
     { key: 'messages', label: 'Messages' },
     { key: 'tasks', label: 'Tasks' },
     { key: 'team', label: 'Team' },
+    { key: 'settings', label: '⚙ Settings' },
 ];
+
 
 function timeAgo(dateStr) {
     const diff = Date.now() - new Date(dateStr).getTime();
@@ -227,8 +236,13 @@ export default function NotificationsPage() {
                 </div>
             </div>
 
-            {/* Notification Feed */}
+            {/* Notification Feed or Settings Panel */}
             <div className="flex-1 overflow-y-auto">
+                {activeTab === 'settings' ? (
+                    <div className="max-w-3xl mx-auto px-6 py-8">
+                        <NotificationPreferences workspaceId={workspaceId} />
+                    </div>
+                ) : (
                 <div className="max-w-3xl mx-auto px-6 py-6">
                     {loading && notifications.length === 0 ? (
                         <div className="flex flex-col items-center justify-center py-24 text-gray-400">
@@ -269,6 +283,7 @@ export default function NotificationsPage() {
                         </>
                     )}
                 </div>
+                )}
             </div>
         </div>
     );

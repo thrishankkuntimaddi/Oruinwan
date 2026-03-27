@@ -44,6 +44,7 @@ const { isValidTransition, getAllowedTransitions, validateBlocked } = require('.
 // Feature layers
 const policy = require('./tasks.policy');
 const _validator = require('./tasks.validator');
+const notifEmitter = require('../notifications/notificationEventEmitter');
 
 // ============================================================================
 // SERVICE METHODS
@@ -333,10 +334,9 @@ async function createTask(userId, taskData, io, req) {
         // =========================================================================
         // STUB: Notifications (STEP 3)
         // =========================================================================
-        // TODO: Move to tasks.notifications.js in STEP 3
         try {
             if (task.channel) {
-                // Channel Notification
+                // Channel Notification (keep existing message approach for channel tasks)
                 const msg = new Message({
                     company: task.company,
                     workspace: task.workspace,
@@ -347,27 +347,24 @@ async function createTask(userId, taskData, io, req) {
                 await msg.save();
                 await msg.populate("sender", "username profilePicture");
                 if (io) io.to(`channel:${task.channel}`).emit("new-message", msg);
-            }
-            else if (task.assignedTo.length === 1 && task.assignedTo[0].toString() !== userId) {
-                // Individual DM Notification (E2EE)
-                const assigneeId = task.assignedTo[0];
-                const session = await messagesService.findOrCreateDMSession(
-                    userId,
-                    assigneeId,
-                    workspaceId
-                );
+            } else {
+                // Emit task.assigned for each non-self assignee via centralized emitter
+                const creator = await User.findById(userId).select('username email').lean();
+                const assignerUsername = creator?.username || 'Someone';
 
-                const msg = new Message({
-                    company: task.company,
-                    workspace: task.workspace,
-                    dm: session._id,
-                    sender: userId,
-                    text: `📋 **Assigned Task:** ${task.title} \nDue: ${task.dueDate ? new Date(task.dueDate).toDateString() : "No Date"}`
-                });
-                await msg.save();
-                await msg.populate("sender", "username profilePicture");
-
-                if (io) io.to(`dm_${session._id}`).emit("new-message", msg);
+                for (const assigneeId of task.assignedTo) {
+                    if (assigneeId.toString() === userId.toString()) continue;
+                    const assignee = await User.findById(assigneeId).select('email').lean();
+                    notifEmitter.emit('task.assigned', {
+                        io,
+                        assigneeId: assigneeId.toString(),
+                        assignerUsername,
+                        workspaceId: task.workspace?.toString(),
+                        taskTitle: task.title,
+                        taskId: task._id?.toString(),
+                        assigneeEmail: assignee?.email || null,
+                    });
+                }
             }
         } catch (noteErr) {
             console.error("Notification Error:", noteErr);
@@ -1667,6 +1664,127 @@ async function removeWatcher(userId, taskId) {
 }
 
 // ============================================================================
+// ADV: DEPENDENCY TRACKING
+// ============================================================================
+
+/**
+ * Add a dependency to a task (taskId depends on dependencyTaskId)
+ */
+async function addDependency(userId, taskId, dependencyTaskId) {
+    const mongoose = require('mongoose');
+    if (!mongoose.isValidObjectId(dependencyTaskId)) {
+        const e = new Error('Invalid dependencyTaskId'); e.statusCode = 400; throw e;
+    }
+    if (taskId === dependencyTaskId) {
+        const e = new Error('A task cannot depend on itself'); e.statusCode = 400; throw e;
+    }
+
+    const [task, depTask] = await Promise.all([
+        Task.findById(taskId),
+        Task.findById(dependencyTaskId)
+    ]);
+    if (!task) { const e = new Error('Task not found'); e.statusCode = 404; throw e; }
+    if (!depTask) { const e = new Error('Dependency task not found'); e.statusCode = 404; throw e; }
+
+    // Only creator or assignee can manage dependencies
+    const isAllowed = task.createdBy.toString() === userId ||
+        task.assignedTo.some(id => id.toString() === userId);
+    if (!isAllowed) { const e = new Error('Access denied'); e.statusCode = 403; throw e; }
+
+    const depStr = dependencyTaskId.toString();
+    if (!task.dependencies.map(id => id.toString()).includes(depStr)) {
+        task.dependencies.push(dependencyTaskId);
+        await task.save();
+    }
+    return { dependencies: task.dependencies };
+}
+
+// ============================================================================
+// ADV: TIME TRACKING
+// ============================================================================
+
+/**
+ * Start a new time tracking session on a task.
+ * Prevents multiple open sessions for the same user.
+ */
+async function startTimer(userId, taskId) {
+    const task = await Task.findById(taskId);
+    if (!task) { const e = new Error('Task not found'); e.statusCode = 404; throw e; }
+
+    // Check no open session already exists
+    const hasOpenSession = task.timeTracking.sessions.some(s => s.start && !s.end);
+    if (hasOpenSession) {
+        const e = new Error('A timer session is already running. Stop it first.'); e.statusCode = 400; throw e;
+    }
+
+    task.timeTracking.sessions.push({ start: new Date(), end: null });
+    await task.save();
+    return { message: 'Timer started', timeTracking: task.timeTracking };
+}
+
+/**
+ * Stop the most recent open time tracking session and accumulate totalTime.
+ */
+async function stopTimer(userId, taskId) {
+    const task = await Task.findById(taskId);
+    if (!task) { const e = new Error('Task not found'); e.statusCode = 404; throw e; }
+
+    const openSession = task.timeTracking.sessions
+        .slice().reverse()
+        .find(s => s.start && !s.end);
+
+    if (!openSession) {
+        const e = new Error('No active timer session found'); e.statusCode = 400; throw e;
+    }
+
+    const now = new Date();
+    openSession.end = now;
+    const elapsed = Math.floor((now - new Date(openSession.start)) / 1000); // seconds
+    task.timeTracking.totalTime = (task.timeTracking.totalTime || 0) + elapsed;
+
+    await task.save();
+    return { message: 'Timer stopped', elapsed, timeTracking: task.timeTracking };
+}
+
+// ============================================================================
+// ADV: WORKLOAD AGGREGATE
+// ============================================================================
+
+/**
+ * Aggregate task count per user for a given workspace.
+ * Returns: { workload: [{userId, count, user: {username, profilePicture}}] }
+ */
+async function getWorkload(userId, workspaceId) {
+    if (!workspaceId) {
+        const e = new Error('workspaceId required'); e.statusCode = 400; throw e;
+    }
+    await _validateWorkspaceMember(userId, workspaceId);
+
+    const result = await Task.aggregate([
+        { $match: { workspace: new (require('mongoose').Types.ObjectId)(workspaceId), deleted: false } },
+        { $unwind: '$assignedTo' },
+        { $group: { _id: '$assignedTo', count: { $sum: 1 } } },
+        { $sort: { count: -1 } }
+    ]);
+
+    // Populate user info
+    const userIds = result.map(r => r._id);
+    const users = await User.find({ _id: { $in: userIds } })
+        .select('username profilePicture firstName lastName')
+        .lean();
+    const userMap = {};
+    users.forEach(u => { userMap[u._id.toString()] = u; });
+
+    const workload = result.map(r => ({
+        userId: r._id,
+        count: r.count,
+        user: userMap[r._id.toString()] || null
+    }));
+
+    return { workload };
+}
+
+// ============================================================================
 // EXPORTS
 // ============================================================================
 
@@ -1686,5 +1804,9 @@ module.exports = {
     addLink,
     removeLink,
     addWatcher,
-    removeWatcher
+    removeWatcher,
+    addDependency,
+    startTimer,
+    stopTimer,
+    getWorkload
 };

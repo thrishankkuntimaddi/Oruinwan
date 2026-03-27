@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
     User, Lock, Palette, Bell, Globe, Shield, Laptop, Settings as SettingsIcon,
-    ChevronRight, Search, ArrowLeft, X, Menu
+    ChevronRight, Search, ArrowLeft, X, Menu, Plug
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
@@ -18,6 +18,7 @@ import AppearanceTab from './settingsTabs/AppearanceTab';
 import SecurityTab from './settingsTabs/SecurityTab';
 import SessionsTab from './settingsTabs/SessionsTab';
 import AdvancedTab from './settingsTabs/AdvancedTab';
+import IntegrationsTab from './settingsTabs/IntegrationsTab';
 
 const NAV_SECTIONS = [
     { id: 'profile', label: 'My Profile', icon: User, description: 'Name, photo, bio' },
@@ -27,6 +28,7 @@ const NAV_SECTIONS = [
     { id: 'appearance', label: 'Appearance', icon: Palette, description: 'Theme & font size' },
     { id: 'security', label: 'Security', icon: Shield, description: 'Password & 2FA' },
     { id: 'sessions', label: 'Sessions', icon: Laptop, description: 'Active devices' },
+    { id: 'integrations', label: 'Integrations', icon: Plug, description: 'GitHub, Slack, AI & more' },
     { id: 'advanced', label: 'Advanced', icon: SettingsIcon, description: 'Account & data' },
 ];
 
@@ -42,6 +44,8 @@ const Settings = () => {
     const [loading, setLoading] = useState(false);
     const [sessions, setSessions] = useState([]);
     const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+    const [workspaces, setWorkspaces] = useState([]);
+    const [selectedWorkspaceId, setSelectedWorkspaceId] = useState('');
 
     // ── Shared state lifted to parent so tabs get it ───────────────────────────
     const [notifications, setNotifications] = useState({
@@ -72,6 +76,7 @@ const Settings = () => {
             });
         }
         loadSessions();
+        loadWorkspaces();
     }, [user]);
 
     const loadSessions = async () => {
@@ -79,6 +84,15 @@ const Settings = () => {
             const { data } = await api.get('/api/auth/sessions');
             setSessions(Array.isArray(data) ? data : []);
         } catch { setSessions([]); }
+    };
+
+    const loadWorkspaces = async () => {
+        try {
+            const { data } = await api.get('/api/workspaces/my');
+            const ws = data.workspaces || [];
+            setWorkspaces(ws);
+            if (ws.length > 0 && !selectedWorkspaceId) setSelectedWorkspaceId(ws[0].id);
+        } catch { /* ignore */ }
     };
 
     const handleProfileUpdate = async () => {
@@ -294,6 +308,23 @@ const Settings = () => {
                                 handleLogoutOthers={handleLogoutOthers}
                                 handleLogout={handleLogout}
                             />
+                        )}
+                        {activeSection === 'integrations' && (
+                            <div className="space-y-4">
+                                {workspaces.length > 1 && (
+                                    <div>
+                                        <label className="block text-[12px] font-medium text-gray-700 dark:text-gray-300 mb-1">Workspace</label>
+                                        <select
+                                            value={selectedWorkspaceId}
+                                            onChange={e => setSelectedWorkspaceId(e.target.value)}
+                                            className="px-3 py-2 text-[13px] bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-900 dark:text-gray-100 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                                        >
+                                            {workspaces.map(ws => <option key={ws.id} value={ws.id}>{ws.name}</option>)}
+                                        </select>
+                                    </div>
+                                )}
+                                <IntegrationsTab workspaceId={selectedWorkspaceId} />
+                            </div>
                         )}
                         {activeSection === 'advanced' && <AdvancedTab />}
                     </div>

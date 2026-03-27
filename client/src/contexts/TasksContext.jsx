@@ -30,11 +30,13 @@ export const TasksProvider = ({ children }) => {
     // Map backend status to frontend format
     const mapBackendStatus = useCallback((status) => {
         const statusMap = {
-            'todo': 'To Do',
-            'in-progress': 'In Progress',
-            'review': 'In Progress',
-            'done': 'Completed',
-            'cancelled': 'Cancelled'
+            'backlog':      'To Do',
+            'todo':        'To Do',
+            'in_progress': 'In Progress',
+            'review':      'In Review',
+            'blocked':     'In Progress',
+            'done':        'Completed',
+            'cancelled':   'Cancelled'
         };
         return statusMap[status] || 'To Do';
     }, []);
@@ -42,10 +44,11 @@ export const TasksProvider = ({ children }) => {
     // Map frontend status to backend format
     const mapFrontendStatus = useCallback((status) => {
         const statusMap = {
-            'To Do': 'todo',
-            'In Progress': 'in-progress',
-            'Completed': 'done',
-            'Cancelled': 'cancelled'
+            'To Do':       'todo',
+            'In Progress': 'in_progress',
+            'In Review':   'review',
+            'Completed':   'done',
+            'Cancelled':   'cancelled'
         };
         return statusMap[status] || 'todo';
     }, []);

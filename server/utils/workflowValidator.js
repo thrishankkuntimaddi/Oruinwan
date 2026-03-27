@@ -7,13 +7,13 @@
 
 // Define allowed status transitions
 const WORKFLOW_TRANSITIONS = {
-    backlog: ['todo', 'cancelled'],
-    todo: ['in_progress', 'backlog', 'cancelled'],
-    in_progress: ['review', 'blocked', 'todo', 'cancelled'],
-    review: ['done', 'in_progress', 'blocked'],
-    blocked: ['in_progress', 'todo'],
-    done: [],  // Terminal state - no outgoing transitions
-    cancelled: []  // Terminal state
+    backlog:     ['todo', 'in_progress', 'review', 'cancelled'],
+    todo:        ['in_progress', 'review', 'backlog', 'cancelled'],
+    in_progress: ['review', 'blocked', 'todo', 'backlog', 'done', 'cancelled'],
+    review:      ['done', 'in_progress', 'blocked', 'todo'],
+    blocked:     ['in_progress', 'todo', 'review', 'done'],
+    done:        ['todo', 'in_progress'],  // Allow reopening
+    cancelled:   ['backlog', 'todo']       // Allow un-cancellation
 };
 
 /**

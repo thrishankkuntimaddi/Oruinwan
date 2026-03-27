@@ -36,6 +36,7 @@ import MyTasks from "./pages/SidebarComp/MyTasks";
 import Notes from "./pages/SidebarComp/Notes";
 import Updates from "./pages/SidebarComp/Updates";
 import Meetings from "./pages/SidebarComp/Meetings";
+import MeetingDetailPage from "./pages/SidebarComp/MeetingDetailPage";
 import AppsPage from "./pages/apps/AppsPage";
 import FileLibrary from "./pages/SidebarComp/FileLibrary";
 import KnowledgePage from "./pages/SidebarComp/KnowledgePage";
@@ -128,6 +129,10 @@ import UnassignedMembers from "./components/manager/UnassignedMembers"; // New c
 import ManagerWorkspacePage from "./components/manager/ManagerWorkspacePage"; // My Workspace tab
 import EmployeeDashboard from "./pages/dashboards/EmployeeDashboard";
 import ChttrixAdminDashboard from "./pages/dashboards/ChttrixAdminDashboard";
+import AIInsightsDashboard from "./pages/dashboards/AIInsightsDashboard";
+
+// ── AI Intelligence Layer ─────────────────────────────────────────────────────
+import AIHub from "./components/ai/AIHub";
 
 // Protected route wrappers
 import RequireAuth from "./components/RequireAuth";
@@ -520,6 +525,20 @@ function App() {
                             }
                           />
 
+                          {/* Meeting Detail Page */}
+                          <Route
+                            path="/workspace/:workspaceId/meetings/:meetingId"
+                            element={
+                              <RequireAuth>
+                                <WorkspaceProvider>
+                                  <RequireWorkspace>
+                                    <MeetingDetailWrapper />
+                                  </RequireWorkspace>
+                                </WorkspaceProvider>
+                              </RequireAuth>
+                            }
+                          />
+
                           {/* Notifications Page */}
                           <Route
                             path="/workspace/:workspaceId/notifications"
@@ -746,6 +765,22 @@ function App() {
                             }
                           />
 
+                          {/* ── AI INSIGHTS DASHBOARD ── */}
+                          <Route
+                            path="/workspace/:workspaceId/ai-insights"
+                            element={
+                              <RequireAuth>
+                                <WorkspaceProvider>
+                                  <RequireWorkspace>
+                                    <MainLayout>
+                                      <AIInsightsDashboardWrapper />
+                                    </MainLayout>
+                                  </RequireWorkspace>
+                                </WorkspaceProvider>
+                              </RequireAuth>
+                            }
+                          />
+
                           {/* Chttrix Super Admin - Nested Routes */}
                           <Route
                             path="/chttrix-admin/*"
@@ -761,6 +796,8 @@ function App() {
 
                         {/* 🔐 Global Password Unlock Modal (E2EE) - Renders across all routes */}
                         <GlobalPasswordUnlockModal />
+                        {/* 🤖 Global AI Hub — Cmd+K search, Cmd+/ commands */}
+                        <AIHub />
                       </UpdatesProvider>
                     </TasksProvider>
                   </NotesProvider>
@@ -793,6 +830,25 @@ function HuddleRouteWrapper() {
       </MainLayout>
     </HuddleProvider>
   );
+}
+
+// Meeting Detail Route Wrapper — provides HuddleContext with workspaceId
+function MeetingDetailWrapper() {
+  const { workspaceId } = useParams();
+  return (
+    <HuddleProvider workspaceId={workspaceId}>
+      <MainLayout sidePanel={<MeetingsPanel />}>
+        <MeetingDetailPage />
+      </MainLayout>
+    </HuddleProvider>
+  );
+}
+
+// AI Insights Dashboard Wrapper — reads workspaceId from URL params + token from localStorage
+function AIInsightsDashboardWrapper() {
+  const { workspaceId } = useParams();
+  const token = localStorage.getItem('accessToken') || localStorage.getItem('token') || '';
+  return <AIInsightsDashboard workspaceId={workspaceId} token={token} />;
 }
 
 export default App;

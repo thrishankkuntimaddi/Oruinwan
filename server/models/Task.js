@@ -153,8 +153,40 @@ const TaskSchema = new mongoose.Schema({
     deleted: { type: Boolean, default: false },
     deletedFor: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
     deletedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
-    deletedAt: { type: Date, default: null }
+    deletedAt: { type: Date, default: null },
 
+    // ============ TIME TRACKING (ADV-1) ============
+    timeTracking: {
+        totalTime: { type: Number, default: 0 }, // in seconds
+        sessions: [{
+            start: { type: Date },
+            end: { type: Date }
+        }]
+    },
+
+    // ============ RECURRING TASKS (ADV-2) ============
+    recurring: {
+        isRecurring: { type: Boolean, default: false },
+        pattern: { type: String, enum: ['daily', 'weekly', 'custom'], default: null },
+        interval: { type: Number, default: 1 }, // e.g. every N days
+        nextDue: { type: Date, default: null }
+    },
+
+    // ============ AUTOMATION RULES (ADV-3) ============
+    automationRules: [{
+        trigger: { type: String }, // e.g. 'on_complete', 'on_create'
+        action: { type: String }  // e.g. 'move_to_done', 'assign_creator'
+    }],
+
+    // ============ SPRINT LINK (ADV-4) ============
+    sprintId: { type: mongoose.Schema.Types.ObjectId, ref: "Sprint", default: null },
+
+    // ============ MILESTONE LINK (ADV-5) ============
+    milestoneId: { type: mongoose.Schema.Types.ObjectId, ref: "Milestone", default: null },
+
+    // ============ DEPENDENCIES (ADV-6) ============
+    // Task A depends on these tasks — A cannot start until all dependencies are done
+    dependencies: [{ type: mongoose.Schema.Types.ObjectId, ref: "Task" }]
 
 }, {
     timestamps: true,

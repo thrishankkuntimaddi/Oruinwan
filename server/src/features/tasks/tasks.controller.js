@@ -17,6 +17,15 @@ const tasksService = require('./tasks.service');
 const validator = require('./tasks.validator');
 const activityService = require('../activity/activity.service');
 
+// Integration Ecosystem — fire-and-forget webhook trigger (never blocks responses)
+let webhookTrigger;
+try { webhookTrigger = require('../integrations/webhook.trigger'); }
+catch { webhookTrigger = null; }
+const _fireWebhook = (workspaceId, event, data) => {
+  if (webhookTrigger && workspaceId) webhookTrigger.fire(workspaceId, event, data);
+};
+
+
 // ============================================================================
 // HELPER: Error Response Handler
 // ============================================================================
@@ -117,6 +126,14 @@ async function createTask(req, res) {
             },
         }).catch(() => {});
 
+        // Integration Ecosystem — fire webhook event
+        _fireWebhook(taskData.workspaceId, 'task.created', {
+            taskId: result.task?._id || result._id,
+            title: taskData.title,
+            priority: taskData.priority || 'medium',
+            createdBy: userId
+        });
+
         return res.status(201).json(result);
     } catch (error) {
         console.error('CREATE_TASK ERROR:', error);
@@ -154,6 +171,15 @@ async function updateTask(req, res) {
             workspaceId: updates.workspaceId || null,
             payload: { taskId, title: updates.title, status: updates.status },
         }).catch(() => {});
+
+        // Integration Ecosystem — fire webhook event
+        const webhookEvent = updates.status === 'completed' ? 'task.completed' : 'task.updated';
+        _fireWebhook(updates.workspaceId, webhookEvent, {
+            taskId,
+            title: updates.title,
+            status: updates.status,
+            updatedBy: userId
+        });
 
         return res.json(result);
     } catch (error) {
@@ -382,6 +408,44 @@ async function removeWatcher(req, res) {
 }
 
 // ============================================================================
+// ADV: TIME TRACKING + DEPENDENCY + WORKLOAD CONTROLLERS
+// ============================================================================
+
+/** POST /api/v2/tasks/:id/dependency */
+async function addDependency(req, res) {
+    try {
+        const { dependencyTaskId } = req.body;
+        if (!dependencyTaskId) return res.status(400).json({ message: 'dependencyTaskId required' });
+        const result = await tasksService.addDependency(req.user.sub, req.params.id, dependencyTaskId);
+        return res.json(result);
+    } catch (error) { return handleError(res, error); }
+}
+
+/** POST /api/v2/tasks/:id/time/start */
+async function startTimer(req, res) {
+    try {
+        const result = await tasksService.startTimer(req.user.sub, req.params.id);
+        return res.json(result);
+    } catch (error) { return handleError(res, error); }
+}
+
+/** POST /api/v2/tasks/:id/time/stop */
+async function stopTimer(req, res) {
+    try {
+        const result = await tasksService.stopTimer(req.user.sub, req.params.id);
+        return res.json(result);
+    } catch (error) { return handleError(res, error); }
+}
+
+/** GET /api/v2/tasks/workload */
+async function getWorkload(req, res) {
+    try {
+        const result = await tasksService.getWorkload(req.user.sub, req.query.workspaceId);
+        return res.json(result);
+    } catch (error) { return handleError(res, error); }
+}
+
+// ============================================================================
 // EXPORTS
 // ============================================================================
 
@@ -401,5 +465,9 @@ module.exports = {
     addLink,
     removeLink,
     addWatcher,
-    removeWatcher
+    removeWatcher,
+    addDependency,
+    startTimer,
+    stopTimer,
+    getWorkload
 };

@@ -20,13 +20,18 @@ import {
   ChevronUp, ChevronDown, Minus, Calendar, User, Flag,
   AlertTriangle, Trash2, RotateCcw, Activity, ListTodo,
   LayoutGrid, List, SlidersHorizontal, ChevronRight,
-  BookOpen, Inbox, Send, Eye, Archive, Hash, Bell, Zap
+  BookOpen, Inbox, Send, Eye, Archive, Hash, Bell, Zap,
+  GitBranch, Timer, Users
 } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import TaskModal from '../../components/tasksComp/TaskModal';
 import WorkspaceTaskDetailPanel from '../../components/tasksComp/WorkspaceTaskDetailPanel';
 import TransferRequestModal from '../../components/tasksComp/TransferRequestModal';
 import TaskCompletionModal from '../../components/tasksComp/TaskCompletionModal';
+import KanbanBoard from '../../components/tasksComp/KanbanBoard';
+import SprintBoard from '../../components/tasksComp/SprintBoard';
+import TimelineView from '../../components/tasksComp/TimelineView';
+import WorkloadPanel from '../../components/tasksComp/WorkloadPanel';
 import { useTasks } from '../../contexts/TasksContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useContacts } from '../../contexts/ContactsContext';
@@ -465,8 +470,11 @@ export default function MyTasks() {
   const { tasks, loading, createTask, updateTask, deleteTask, restoreTask, permanentlyDeleteTask, handleTransferResponse } = useTasks();
   const { user } = useAuth();
   const { members, channels } = useContacts();
+  // Extract workspaceId from URL for workload/sprint endpoints
+  const pathMatch = window.location.pathname.match(/\/workspace\/([^/]+)/);
+  const workspaceId = pathMatch ? pathMatch[1] : null;
 
-  const [viewMode, setViewMode] = useState('list'); // list | board
+  const [viewMode, setViewMode] = useState('list'); // list | board | sprint | timeline | workload
   const [search, setSearch] = useState('');
   const [sortOrder, setSortOrder] = useState('priority');
   const [channelFilter, setChannelFilter] = useState('all');
@@ -789,18 +797,29 @@ export default function MyTasks() {
                 )}
               </select>
 
-              {/* View toggle */}
+              {/* View toggle — expanded for new views */}
               <div className="flex rounded-sm overflow-hidden border" style={{ borderColor: '#DFE1E6' }}>
-                <button onClick={() => setViewMode('list')}
-                  className="px-2.5 py-1.5 flex items-center transition-all"
-                  style={{ background: viewMode === 'list' ? '#DEEBFF' : 'white', color: viewMode === 'list' ? JIRA_BLUE : '#42526E' }}>
-                  <List size={14} />
-                </button>
-                <button onClick={() => setViewMode('board')}
-                  className="px-2.5 py-1.5 flex items-center border-l transition-all"
-                  style={{ borderColor: '#DFE1E6', background: viewMode === 'board' ? '#DEEBFF' : 'white', color: viewMode === 'board' ? JIRA_BLUE : '#42526E' }}>
-                  <LayoutGrid size={14} />
-                </button>
+                {[
+                  { key: 'list',      Icon: List,         title: 'List view' },
+                  { key: 'board',     Icon: LayoutGrid,   title: 'Kanban board' },
+                  { key: 'sprint',    Icon: Activity,     title: 'Sprint board' },
+                  { key: 'timeline',  Icon: GitBranch,    title: 'Timeline' },
+                  { key: 'workload',  Icon: Users,        title: 'Workload' },
+                ].map(({ key, Icon, title }, idx) => (
+                  <button
+                    key={key}
+                    onClick={() => setViewMode(key)}
+                    title={title}
+                    className={`px-2.5 py-1.5 flex items-center transition-all ${idx > 0 ? 'border-l' : ''}`}
+                    style={{
+                      borderColor: '#DFE1E6',
+                      background: viewMode === key ? '#DEEBFF' : 'white',
+                      color: viewMode === key ? JIRA_BLUE : '#42526E'
+                    }}
+                  >
+                    <Icon size={14} />
+                  </button>
+                ))}
               </div>
 
               {canCreate && (
@@ -835,7 +854,7 @@ export default function MyTasks() {
 
           {/* ── Content area ── */}
           <div className="flex-1 min-h-0 overflow-hidden">
-            {filtered.length === 0 ? (
+            {filtered.length === 0 && viewMode !== 'workload' ? (
               <div className="flex flex-col items-center justify-center h-full gap-3 opacity-60">
                 <div className="w-14 h-14 rounded-full bg-gray-200 flex items-center justify-center">
                   {isDeleted ? <Trash2 size={24} className="text-gray-400" /> : <CheckCircle2 size={24} className="text-gray-400" />}
@@ -850,21 +869,30 @@ export default function MyTasks() {
                 </div>
               </div>
             ) : viewMode === 'board' ? (
-              /* Board view */
-              <div className="h-full flex gap-2.5 p-3 overflow-x-auto" style={{ background: BOARD_BG }}>
-                {BOARD_COLUMNS.map(col => (
-                  <BoardColumn
-                    key={col.key}
-                    col={col}
-                    tasks={boardGroups[col.key] || []}
-                    view={activeView}
-                    onEdit={handleEdit}
-                    onDelete={handleDelete}
-                  />
-                ))}
-              </div>
+              /* Kanban board view */
+              <KanbanBoard
+                tasks={filtered}
+                onTaskClick={handleEdit}
+                onTasksUpdate={() => {}}
+              />
+            ) : viewMode === 'sprint' ? (
+              /* Sprint board view */
+              <SprintBoard
+                tasks={filtered}
+                workspaceId={workspaceId}
+                onTaskClick={handleEdit}
+              />
+            ) : viewMode === 'timeline' ? (
+              /* Timeline / Gantt view */
+              <TimelineView
+                tasks={filtered}
+                onTaskClick={handleEdit}
+              />
+            ) : viewMode === 'workload' ? (
+              /* Workload panel */
+              <WorkloadPanel workspaceId={workspaceId} />
             ) : (
-              /* List view */
+              /* List view (default) */
               <div className="h-full overflow-y-auto" style={{ background: BOARD_BG }}>
                 {/* Table header */}
                 <div className="sticky top-0 flex items-center gap-4 px-5 py-2 text-[10px] font-bold uppercase tracking-wider bg-white border-b"

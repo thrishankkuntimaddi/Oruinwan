@@ -9,13 +9,15 @@
  *   - task.assignees[]  (populated objects)
  *   - task.assigner / task.assignerId
  */
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
     X, Eye, Activity, Plus, ChevronRight,
     CheckCircle2, Tag, Loader2, AlertTriangle,
-    ArrowRight, User, Edit2, Calendar, Trash2
+    ArrowRight, User, Edit2, Calendar, Trash2,
+    Timer, Link2, PlayCircle, StopCircle
 } from 'lucide-react';
 import api from '../../services/api';
+import { useToast } from '../../contexts/ToastContext';
 
 // ─── Design tokens ─────────────────────────────────────────────────────────────
 const JIRA_BLUE = '#0052CC';
@@ -70,6 +72,16 @@ function fmtDate(d) {
     if (!d) return '—';
     const dt = new Date(d);
     return dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function fmtSeconds(s) {
+    if (!s) return '0m';
+    const h = Math.floor(s / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    const sec = s % 60;
+    if (h > 0) return `${h}h ${m}m`;
+    if (m > 0) return `${m}m ${sec}s`;
+    return `${sec}s`;
 }
 
 // ─── Activity log ─────────────────────────────────────────────────────────────
@@ -149,6 +161,7 @@ function ActivityLog({ taskId }) {
 // ─── Main Panel ────────────────────────────────────────────────────────────────
 
 export default function WorkspaceTaskDetailPanel({ task, members = [], onClose, onUpdate, onDelete }) {
+    const { showToast } = useToast();
     const [tab, setTab] = useState('details');
     const [editTitle, setEditTitle] = useState(false);
     const [title, setTitle] = useState(task.title || '');
@@ -160,6 +173,83 @@ export default function WorkspaceTaskDetailPanel({ task, members = [], onClose, 
     const [localDueDate, setLocalDueDate] = useState(
         task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : ''
     );
+
+    // ── Time Tracking state ──────────────────────────────────────────────────
+    const [timerRunning, setTimerRunning] = useState(false);
+    const [timerElapsed, setTimerElapsed] = useState(0); // seconds since start
+    const [timerLoading, setTimerLoading] = useState(false);
+    const timerRef = useRef(null);
+    const [totalTime, setTotalTime] = useState(task.timeTracking?.totalTime || 0);
+
+    // Check if a session is already open on mount
+    useEffect(() => {
+        const hasOpenSession = task.timeTracking?.sessions?.some(s => s.start && !s.end);
+        if (hasOpenSession) {
+            setTimerRunning(true);
+            const openSession = task.timeTracking.sessions.slice().reverse().find(s => s.start && !s.end);
+            if (openSession) {
+                const elapsed = Math.floor((Date.now() - new Date(openSession.start).getTime()) / 1000);
+                setTimerElapsed(elapsed);
+            }
+        }
+        setTotalTime(task.timeTracking?.totalTime || 0);
+    }, [task.timeTracking]);
+
+    // Live tick when timer is running
+    useEffect(() => {
+        if (timerRunning) {
+            timerRef.current = setInterval(() => setTimerElapsed(e => e + 1), 1000);
+        } else {
+            clearInterval(timerRef.current);
+        }
+        return () => clearInterval(timerRef.current);
+    }, [timerRunning]);
+
+    const startTimer = async () => {
+        setTimerLoading(true);
+        try {
+            await api.post(`/api/tasks/${task.id}/time/start`);
+            setTimerRunning(true);
+            setTimerElapsed(0);
+            showToast('Timer started', 'success');
+        } catch (err) {
+            showToast(err.response?.data?.message || 'Failed to start timer', 'error');
+        } finally { setTimerLoading(false); }
+    };
+
+    const stopTimer = async () => {
+        setTimerLoading(true);
+        try {
+            const res = await api.post(`/api/tasks/${task.id}/time/stop`);
+            setTimerRunning(false);
+            setTimerElapsed(0);
+            setTotalTime(res.data.timeTracking?.totalTime || 0);
+            showToast(`Timer stopped — +${fmtSeconds(res.data.elapsed)}`, 'success');
+        } catch (err) {
+            showToast(err.response?.data?.message || 'Failed to stop timer', 'error');
+        } finally { setTimerLoading(false); }
+    };
+
+    // ── Dependencies state ───────────────────────────────────────────────────
+    const [depInput, setDepInput] = useState('');
+    const [depLoading, setDepLoading] = useState(false);
+    const [localDeps, setLocalDeps] = useState(task.dependencies || []);
+
+    const addDependency = async () => {
+        if (!depInput.trim()) return;
+        setDepLoading(true);
+        try {
+            const res = await api.post(`/api/tasks/${task.id}/dependency`, {
+                dependencyTaskId: depInput.trim()
+            });
+            setLocalDeps(res.data.dependencies || []);
+            setDepInput('');
+            showToast('Dependency added', 'success');
+        } catch (err) {
+            showToast(err.response?.data?.message || 'Failed to add dependency', 'error');
+        } finally { setDepLoading(false); }
+    };
+
 
     // Sync when task prop changes (e.g. after a remote update)
     useEffect(() => {
@@ -501,6 +591,95 @@ export default function WorkspaceTaskDetailPanel({ task, members = [], onClose, 
                                 </div>
                             </div>
                         )}
+
+                        {/* ── TIME TRACKING ────────────────────────────────── */}
+                        <div>
+                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-1">
+                                <Timer size={10} /> Time Tracking
+                            </p>
+
+                            {/* Total logged */}
+                            <div className="flex items-center gap-2 mb-2">
+                                <span className="text-xs text-gray-500">Logged:</span>
+                                <span className="text-xs font-bold" style={{ color: JIRA_BLUE }}>
+                                    {fmtSeconds(totalTime)}
+                                </span>
+                                {timerRunning && (
+                                    <span className="ml-auto text-xs font-mono font-bold text-green-600 animate-pulse">
+                                        +{fmtSeconds(timerElapsed)} ⏱
+                                    </span>
+                                )}
+                            </div>
+
+                            {/* Start / Stop button */}
+                            <button
+                                onClick={timerRunning ? stopTimer : startTimer}
+                                disabled={timerLoading}
+                                className="flex items-center gap-2 text-xs font-semibold px-3 py-1.5 rounded-sm transition-all w-full justify-center"
+                                style={{
+                                    background: timerRunning ? '#FFEBE6' : '#E3FCEF',
+                                    color: timerRunning ? '#FF5630' : '#00875A',
+                                    border: `1px solid ${timerRunning ? '#FF5630' : '#00875A'}30`,
+                                    opacity: timerLoading ? 0.6 : 1
+                                }}
+                            >
+                                {timerLoading ? (
+                                    <Loader2 size={12} className="animate-spin" />
+                                ) : timerRunning ? (
+                                    <><StopCircle size={13} /> Stop Timer</>
+                                ) : (
+                                    <><PlayCircle size={13} /> Start Timer</>
+                                )}
+                            </button>
+                        </div>
+
+                        {/* ── DEPENDENCIES ─────────────────────────────────── */}
+                        <div>
+                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-1">
+                                <Link2 size={10} /> Dependencies
+                            </p>
+
+                            {/* Existing dependencies */}
+                            {localDeps.length > 0 ? (
+                                <div className="space-y-1 mb-2">
+                                    {localDeps.map((dep, i) => {
+                                        const depId = dep._id || dep.toString();
+                                        const depTitle = dep.title || depId.slice(-8);
+                                        return (
+                                            <div key={i} className="flex items-center gap-2 text-xs text-gray-700 bg-gray-50 rounded px-2 py-1.5">
+                                                <Link2 size={9} className="text-gray-400 flex-shrink-0" />
+                                                <span className="flex-1 truncate" title={depId}>{depTitle}</span>
+                                                <span className="text-[9px] font-mono text-gray-400">{depId.slice(-6)}</span>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            ) : (
+                                <p className="text-[11px] text-gray-400 italic mb-2">No dependencies</p>
+                            )}
+
+                            {/* Add dependency input */}
+                            <div className="flex gap-1.5">
+                                <input
+                                    value={depInput}
+                                    onChange={e => setDepInput(e.target.value)}
+                                    placeholder="Paste Task ID…"
+                                    className="flex-1 text-xs border rounded-sm px-2 py-1.5 focus:outline-none min-w-0"
+                                    style={{ borderColor: '#DFE1E6' }}
+                                    onFocus={e => e.target.style.borderColor = JIRA_BLUE}
+                                    onBlur={e => e.target.style.borderColor = '#DFE1E6'}
+                                    onKeyDown={e => e.key === 'Enter' && addDependency()}
+                                />
+                                <button
+                                    onClick={addDependency}
+                                    disabled={!depInput.trim() || depLoading}
+                                    className="px-2.5 py-1.5 text-[10px] font-bold text-white rounded-sm transition-all disabled:opacity-40"
+                                    style={{ background: JIRA_BLUE }}
+                                >
+                                    {depLoading ? <Loader2 size={10} className="animate-spin" /> : 'Add'}
+                                </button>
+                            </div>
+                        </div>
 
                         {/* Channel */}
                         {task.project && (

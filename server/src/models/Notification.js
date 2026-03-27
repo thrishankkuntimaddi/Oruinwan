@@ -6,15 +6,21 @@
 const mongoose = require('mongoose');
 
 const NOTIFICATION_TYPES = [
-    'mention',        // @-mentioned in a channel or DM
-    'dm',             // new direct message
-    'task_assigned',  // task assigned to you
-    'task_comment',   // comment added to your task
-    'member_joined',  // someone joined your workspace
-    'channel_pinned', // message pinned in a channel you're in
-    'huddle_started', // huddle started in your channel
-    'schedule_created', // new meeting scheduled
-    'reaction',       // someone reacted to your message
+    'mention',           // @-mentioned in a channel or DM
+    'dm',                // new direct message
+    'task_assigned',     // task assigned to you
+    'task_comment',      // comment added to your task
+    'task_due_soon',     // task due within 24h
+    'member_joined',     // someone joined your workspace
+    'channel_pinned',    // message pinned in a channel you're in
+    'huddle_started',    // huddle started in your channel
+    'schedule_created',  // new meeting scheduled
+    'meeting_reminder',  // upcoming meeting reminder
+    'reaction',          // someone reacted to your message
+    'thread_reply',      // reply in a followed thread
+    'integration_alert', // webhook failure / sync event
+    'ai_suggestion',     // AI insight or smart reply
+    'digest',            // daily/weekly summary digest
 ];
 
 const notificationSchema = new mongoose.Schema(
@@ -60,6 +66,12 @@ const notificationSchema = new mongoose.Schema(
             type: Boolean,
             default: false,
             index: true,
+        },
+        // Delivery channel used for this notification
+        channel: {
+            type: String,
+            enum: ['in-app', 'email', 'push'],
+            default: 'in-app',
         },
     },
     { timestamps: true }
