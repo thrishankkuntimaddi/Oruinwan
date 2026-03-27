@@ -11,6 +11,12 @@ const { requireCompanyRole } = require('../../shared/utils/companyRole');
 router.get('/', requireAuth, ctrl.listTemplates);
 router.get('/:id', requireAuth, ctrl.getTemplate);
 
+// ── COMMUNITY: Public template marketplace (no auth required) ─────────────────
+router.get('/public', ctrl.listPublicTemplates);
+// Auth required to import a template into your workspace
+router.post('/:id/import', requireAuth, ctrl.importTemplate);
+// ───────────────────────────────────────────────────────────────────────────
+
 // Admin-only mutations (company accounts)
 router.post('/', requireAuth, requireCompanyMember, requireCompanyRole('admin'), ctrl.createTemplate);
 router.put('/:id', requireAuth, requireCompanyMember, requireCompanyRole('admin'), ctrl.updateTemplate);

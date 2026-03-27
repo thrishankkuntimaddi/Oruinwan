@@ -7,6 +7,15 @@ const channelCtrl = require("./channel.controller");
 // create channel
 router.post("/", requireAuth, channelCtrl.createChannel);
 
+// ── COMMUNITY: Public channel endpoints (no-auth) ───────────────────────────
+// List all externally-public channels (accessible without login via share link)
+router.get("/public", channelCtrl.getPublicChannelList);
+// Get single public channel metadata (read-only, no messages)
+router.get("/:id/public", channelCtrl.getPublicChannelById);
+// Toggle a channel's public status (admin only)
+router.patch("/:id/make-public", requireAuth, channelCtrl.togglePublicChannel);
+// ─────────────────────────────────────────────────────────────────────────────
+
 // get my channels
 router.get("/my", requireAuth, channelCtrl.getMyChannels);
 

@@ -501,6 +501,15 @@ app.use('/api/developer', require('./src/features/developer/apps.routes'));
 require('./src/features/developer/seedApps').seedApps();
 // ─────────────────────────────────────────────────────────────────────────────
 
+// ── COMMUNITY & ECOSYSTEM MARKETPLACE ────────────────────────────────────────
+// /api/marketplace/apps          → public app listing with ratings
+// /api/marketplace/install       → install app into workspace (auth)
+// /api/marketplace/review        → submit/update review (auth)
+// /api/marketplace/reviews/:id   → read reviews (no auth)
+// /api/marketplace/integrations/public → public integrations list
+app.use('/api/marketplace', require('./src/features/community/marketplace.routes'));
+// ─────────────────────────────────────────────────────────────────────────────
+
 // ============================================================================
 // 📦 V1 ROUTES (LEGACY - TO BE MIGRATED)
 // ============================================================================

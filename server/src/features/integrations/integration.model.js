@@ -44,6 +44,11 @@ const integrationSchema = new mongoose.Schema({
   connectedBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'
+  },
+  // Community: allow this configured integration to be reused / discovered by other workspaces
+  isPublic: {
+    type: Boolean,
+    default: false
   }
 }, {
   timestamps: true

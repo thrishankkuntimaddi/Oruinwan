@@ -41,6 +41,7 @@ import MeetingDetailPage from "./pages/SidebarComp/MeetingDetailPage";
 import AppsPage from "./pages/apps/AppsPage";
 import AutomationsPage from "./pages/workspace/AutomationsPage";
 import AutomationBuilderPage from "./pages/workspace/AutomationBuilderPage";
+import TemplateMarketplacePage from "./pages/workspace/TemplateMarketplacePage";
 import DeveloperPortalPage from "./pages/developer/DeveloperPortalPage";
 import FileLibrary from "./pages/SidebarComp/FileLibrary";
 import KnowledgePage from "./pages/SidebarComp/KnowledgePage";
@@ -529,6 +530,22 @@ function App() {
                            />
 
                            {/* ── WORKFLOW AUTOMATIONS ── */}
+                            {/* ── TEMPLATE MARKETPLACE ── */}
+                            <Route
+                              path="/workspace/:workspaceId/templates"
+                              element={
+                                <RequireAuth>
+                                  <WorkspaceProvider>
+                                    <RequireWorkspace>
+                                      <MainLayout>
+                                        <TemplateMarketplacePage />
+                                      </MainLayout>
+                                    </RequireWorkspace>
+                                  </WorkspaceProvider>
+                                </RequireAuth>
+                              }
+                            />
+
                            <Route
                              path="/workspace/:workspaceId/automations"
                              element={

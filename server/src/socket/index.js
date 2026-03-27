@@ -6,7 +6,7 @@
  * @module socket
  */
 
-const logger = require('../../utils/logger');
+const logger = require('../../../utils/logger');
 const registerMessageHandlers = require('./handlers/messages.socket');
 const registerMeetingHandlers = require('./handlers/meetings.socket');
 const registerHuddleHandlers = require('./handlers/huddles.socket');

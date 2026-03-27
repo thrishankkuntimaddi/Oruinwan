@@ -13,6 +13,7 @@ const publicApiLimiter = rateLimit({
   keyGenerator: (req) => req.headers['x-api-key'] || req.ip,
   standardHeaders: true,
   legacyHeaders: false,
+  validate: { xForwardedForHeader: false, keyGeneratorIpFallback: false },
   handler: (req, res) => {
     res.status(429).json({ error: 'Rate limit exceeded. Max 100 requests/minute per API key.' });
   }

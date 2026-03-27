@@ -220,6 +220,32 @@ export default function ChannelManagementModal({ channel, onClose, currentUserId
         }
     };
 
+    const handleTogglePublic = async (newIsPublic) => {
+        setLoading(true);
+        try {
+            const token = localStorage.getItem("accessToken");
+            const headers = token ? { Authorization: `Bearer ${token}` } : {};
+            await axios.patch(
+                `${API_BASE}/api/channels/${channel.id}/make-public`,
+                { isPublic: newIsPublic },
+                { headers }
+            );
+            showToast(
+                newIsPublic
+                    ? "Channel is now publicly accessible via link."
+                    : "Public link disabled. Channel is now workspace-only.",
+                "success"
+            );
+            // Update local channel state
+            channel.isPublic = newIsPublic;
+        } catch (err) {
+            console.error("Toggle public failed:", err);
+            showToast(err?.response?.data?.message || "Failed to change public status", "error");
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const handleDeleteChannel = async () => {
         if (deleteVerification !== channel.name) {
             showToast("Please type the channel name correctly to delete it.", "error");
@@ -388,6 +414,7 @@ export default function ChannelManagementModal({ channel, onClose, currentUserId
                                 privacyVerification={privacyVerification}
                                 onPrivacyVerificationChange={setPrivacyVerification}
                                 onTogglePrivacy={handleTogglePrivacy}
+                                onTogglePublic={handleTogglePublic}
                                 deleteVerification={deleteVerification}
                                 onDeleteVerificationChange={setDeleteVerification}
                                 onDeleteChannel={handleDeleteChannel}

@@ -16,7 +16,7 @@
  */
 
 const Notification = require('../../models/Notification');
-const logger = require('../../utils/logger');
+const logger = require('../../../utils/logger');
 
 /**
  * Core create function. Saves to DB and emits via socket.

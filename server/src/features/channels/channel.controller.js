@@ -203,16 +203,116 @@ exports.getMyChannels = async (req, res) => {
 };
 
 /**
- * Get all public channels (for discovery)
+ * ── COMMUNITY: Get all externally-public channels ──────────────────────────
+ * GET /channels/public
+ * No authentication required — channels marked isPublic:true are externally accessible.
+ * Paginated: ?page=1&limit=20
+ */
+exports.getPublicChannelList = async (req, res) => {
+  try {
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(parseInt(req.query.limit) || 20, 100);
+    const skip = (page - 1) * limit;
+
+    const [channels, total] = await Promise.all([
+      Channel.find({ isPublic: true, isArchived: false })
+        .select("_id name description topic workspace createdBy createdAt memberCount")
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      Channel.countDocuments({ isPublic: true, isArchived: false })
+    ]);
+
+    // Add member count to each channel
+    const enriched = channels.map(ch => ({
+      ...ch,
+      memberCount: ch.memberCount || 0
+    }));
+
+    return res.json({ channels: enriched, total, page, totalPages: Math.ceil(total / limit) });
+  } catch (err) {
+    return handleError(res, err, "GET PUBLIC CHANNEL LIST ERROR");
+  }
+};
+
+/**
+ * ── COMMUNITY: Get single public channel (read-only metadata) ──────────────
+ * GET /channels/:id/public
+ * No authentication required. Returns channel info only (no messages).
+ */
+exports.getPublicChannelById = async (req, res) => {
+  try {
+    const channel = await Channel.findById(req.params.id)
+      .select("_id name description topic workspace createdBy createdAt isPublic isArchived")
+      .populate("createdBy", "username")
+      .lean();
+
+    if (!channel) return res.status(404).json({ message: "Channel not found" });
+    if (!channel.isPublic) return res.status(403).json({ message: "This channel is private" });
+
+    return res.json({ channel });
+  } catch (err) {
+    return handleError(res, err, "GET PUBLIC CHANNEL ERROR");
+  }
+};
+
+/**
+ * ── COMMUNITY: Toggle channel public status ─────────────────────────────────
+ * PATCH /channels/:id/make-public
+ * Body: { isPublic: Boolean }
+ * Only channel admins or workspace owners may toggle.
+ */
+exports.togglePublicChannel = async (req, res) => {
+  try {
+    const userId = req.user.sub;
+    const channelId = req.params.id;
+    const { isPublic } = req.body;
+
+    if (typeof isPublic !== "boolean") {
+      return res.status(400).json({ message: "isPublic (boolean) is required" });
+    }
+
+    const channel = await Channel.findById(channelId);
+    if (!channel) return res.status(404).json({ message: "Channel not found" });
+
+    // Only channel admins or workspace owners can change public status
+    if (!channel.isAdmin(userId) && !await isWorkspaceOwner(userId, channel.workspace)) {
+      return res.status(403).json({ message: "Only channel admins or workspace owners can change public status" });
+    }
+
+    // Private channels cannot be made public without first setting isPrivate=false
+    if (isPublic && channel.isPrivate) {
+      return res.status(400).json({ message: "Make the channel non-private before sharing publicly" });
+    }
+
+    channel.isPublic = isPublic;
+    await channel.save();
+
+    const io = req.app?.get("io");
+    if (io) {
+      io.to(`channel:${channelId}`).emit("channel-updated", {
+        channelId,
+        isPublic: channel.isPublic
+      });
+    }
+
+    return res.json({ message: `Channel is now ${isPublic ? "public" : "private"}`, isPublic: channel.isPublic });
+  } catch (err) {
+    return handleError(res, err, "TOGGLE PUBLIC CHANNEL ERROR");
+  }
+};
+
+/**
+ * Get all public channels — LEGACY ALIAS (kept for backward compat)
+ * @deprecated Use getPublicChannelList instead
  */
 exports.getPublicChannels = async (req, res) => {
   try {
-    // Return all public channels
     const channels = await Channel.find({ isPrivate: false })
       .select("_id name description members createdBy createdAt")
       .sort({ createdAt: -1 })
       .lean();
-
     return res.json({ channels });
   } catch (err) {
     return handleError(res, err, "GET PUBLIC CHANNELS ERROR");

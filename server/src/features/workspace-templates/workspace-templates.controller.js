@@ -182,3 +182,117 @@ exports.deleteTemplate = async (req, res) => {
     return handleError(res, err, 'DELETE TEMPLATE ERROR');
   }
 };
+
+// ─────────────────────────────────────────────────────────────────────────────
+// COMMUNITY: Public template marketplace
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * GET /api/workspace-templates/public
+ * No authentication required — returns all platform-level public templates.
+ * Paginated: ?page=1&limit=20
+ */
+exports.listPublicTemplates = async (req, res) => {
+  try {
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(parseInt(req.query.limit) || 20, 100);
+    const skip = (page - 1) * limit;
+    const { category, q } = req.query;
+
+    const query = { isActive: true, isPublic: true };
+    if (category) query.category = category;
+    if (q) query.$text = { $search: q };
+
+    const [templates, total] = await Promise.all([
+      WorkspaceTemplate.find(query)
+        .select('name description icon color category usageCount createdAt')
+        .sort({ usageCount: -1, createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      WorkspaceTemplate.countDocuments(query)
+    ]);
+
+    return res.json({
+      templates,
+      total,
+      page,
+      totalPages: Math.ceil(total / limit)
+    });
+  } catch (err) {
+    return handleError(res, err, 'LIST PUBLIC TEMPLATES ERROR');
+  }
+};
+
+/**
+ * POST /api/workspace-templates/:id/import
+ * Auth required. Clones a public template's channel structure into the caller's target workspace.
+ * Body: { workspaceId }
+ */
+exports.importTemplate = async (req, res) => {
+  try {
+    const userId = req.user?.sub;
+    const { workspaceId } = req.body;
+
+    if (!workspaceId) {
+      return res.status(400).json({ message: 'workspaceId is required' });
+    }
+
+    const template = await WorkspaceTemplate.findById(req.params.id).lean();
+    if (!template || !template.isActive) {
+      return res.status(404).json({ message: 'Template not found' });
+    }
+
+    // Allow import of: platform public templates OR own company templates
+    const companyId = req.user?._dbUser?.companyId || null;
+    const isOwn = template.company && companyId && String(template.company) === String(companyId);
+    if (!template.isPublic && !isOwn) {
+      return res.status(403).json({ message: 'Template is not publicly available' });
+    }
+
+    // Verify caller is a member of the target workspace
+    const Workspace = require('../../../models/Workspace');
+    const ws = await Workspace.findOne({ _id: workspaceId, 'members.user': userId }).lean();
+    if (!ws) return res.status(403).json({ message: 'You are not a member of the target workspace' });
+
+    // Create channels from template's defaultChannels list
+    let createdCount = 0;
+    if (template.defaultChannels && template.defaultChannels.length > 0) {
+      const workspaceCompanyId = ws.company || null;
+      for (const ch of template.defaultChannels) {
+        try {
+          const exists = await Channel.findOne({ workspace: workspaceId, name: ch.name }).lean();
+          if (!exists) {
+            await Channel.create({
+              workspace: workspaceId,
+              company: workspaceCompanyId,
+              name: ch.name,
+              description: ch.description || '',
+              isPrivate: ch.isPrivate || false,
+              isDefault: ch.isDefault || false,
+              isDiscoverable: !ch.isPrivate,
+              createdBy: userId,
+              members: [{ user: userId, joinedAt: new Date() }],
+              admins: [userId]
+            });
+            createdCount++;
+          }
+        } catch (chErr) {
+          // Non-fatal: skip duplicate/error channel
+          console.error('[TEMPLATE IMPORT] Channel create error:', chErr.message);
+        }
+      }
+    }
+
+    // Increment usage count on the template (non-blocking)
+    WorkspaceTemplate.findByIdAndUpdate(template._id, { $inc: { usageCount: 1 } }).catch(() => {});
+
+    return res.json({
+      message: `Template imported. ${createdCount} channel(s) created.`,
+      createdCount
+    });
+  } catch (err) {
+    return handleError(res, err, 'IMPORT TEMPLATE ERROR');
+  }
+};
+

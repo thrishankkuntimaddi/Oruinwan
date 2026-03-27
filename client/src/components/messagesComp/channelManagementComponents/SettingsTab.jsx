@@ -1,5 +1,5 @@
 import React from 'react';
-import { Lock, Unlock, AlertTriangle, Eraser, Trash2 } from 'lucide-react';
+import { Lock, Unlock, AlertTriangle, Eraser, Trash2, Globe, Link } from 'lucide-react';
 
 export default function SettingsTab({
     channel,
@@ -19,6 +19,7 @@ export default function SettingsTab({
     privacyVerification,
     onPrivacyVerificationChange,
     onTogglePrivacy,
+    onTogglePublic,
     deleteVerification,
     onDeleteVerificationChange,
     onDeleteChannel,
@@ -171,6 +172,46 @@ export default function SettingsTab({
                                 Make Private
                             </button>
                         )}
+                    </div>
+                </div>
+            )}
+
+            {/* ── COMMUNITY: External Share Link toggle (public, non-private channels only) */}
+            {!isDefaultChannel && !channel.isPrivate && (
+                <div className="space-y-3">
+                    <h4 className="text-sm font-bold text-gray-900 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2 flex items-center gap-2">
+                        <Globe size={14} className="text-indigo-500" /> Community Sharing
+                    </h4>
+                    <div className="flex items-start justify-between">
+                        <div>
+                            <div className="font-medium text-gray-800 dark:text-gray-200 text-sm flex items-center gap-2">
+                                Share via Public Link
+                            </div>
+                            <p className="text-xs text-gray-500 mt-1 max-w-xs">
+                                {channel.isPublic
+                                    ? "Anyone with the link can view this channel (read-only)."
+                                    : "Allow anyone with a link to view this channel externally."}
+                            </p>
+                            {channel.isPublic && (
+                                <div className="flex items-center gap-1.5 mt-2 text-xs text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 px-2 py-1 rounded-lg w-fit">
+                                    <Link size={10} /> Publicly accessible
+                                </div>
+                            )}
+                        </div>
+                        <button
+                            onClick={() => onTogglePublic?.(!channel.isPublic)}
+                            disabled={loading}
+                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 mt-1 ${
+                                channel.isPublic ? 'bg-indigo-600' : 'bg-gray-200 dark:bg-gray-700'
+                            } disabled:opacity-50`}
+                            role="switch"
+                            aria-checked={channel.isPublic}
+                            title={channel.isPublic ? "Disable public link" : "Enable public link"}
+                        >
+                            <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform ${
+                                channel.isPublic ? 'translate-x-6' : 'translate-x-1'
+                            }`} />
+                        </button>
                     </div>
                 </div>
             )}
