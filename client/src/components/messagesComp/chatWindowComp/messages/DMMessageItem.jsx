@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import api from '../../../../services/api';
-import { Smile, MessageSquare, Share, MoreHorizontal, Pin, Copy, Trash2, Info, Pencil, Check, X } from "lucide-react";
+import { Smile, MessageSquare, Share, MoreHorizontal, Pin, Copy, Trash2, Info, Pencil, Check, X, Globe } from "lucide-react";
+import TranslatePopover from './TranslatePopover';
 import { getAvatarUrl } from '../../../../utils/avatarUtils';
 import ReactionPicker from "./reactionPicker";
 import ReactMarkdown from "react-markdown";
@@ -42,6 +43,10 @@ function DMMessageItem({
     currentUserId,
     onOpenThread,
     threadCounts,
+    // Translation (from useTranslation hook in MessagesContainer)
+    translationState = null,
+    onTranslate,
+    onClearTranslation,
 }) {
     // dmSessionId is baked into msg by MessageEvent — used for E2EE encryption on edit
     const dmSessionId = msg.dmSessionId || null;
@@ -54,6 +59,9 @@ function DMMessageItem({
     const [menuPos, setMenuPos] = useState(null);
     const [reactionPos, setReactionPos] = useState(null);
     const reactionPickerRef = useRef(null);
+    // Translate popover state
+    const [translatePopover, setTranslatePopover] = useState(null);
+    const [lastLangCode, setLastLangCode] = useState(null);
 
     // Edit state
     const [isEditing, setIsEditing] = useState(false);
@@ -373,6 +381,39 @@ function DMMessageItem({
                     </div>
                 )}
 
+                {/* Translation Display Block */}
+                {translationState?.status === 'done' && translationState.translatedText && (
+                    <div className="mt-1.5 max-w-[60%]">
+                        <div className="px-3 py-2 rounded-lg bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800 text-[13px] leading-relaxed text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-words">
+                            {translationState.translatedText}
+                        </div>
+                        <div className="flex items-center gap-2 mt-1">
+                            {translationState.detectedLang && (
+                                <span className="text-[10px] text-gray-400 dark:text-gray-500">
+                                    Detected: {translationState.detectedLang.toUpperCase()}
+                                </span>
+                            )}
+                            <button
+                                onClick={() => onClearTranslation?.(msg._id || msg.id)}
+                                className="text-[11px] text-blue-600 dark:text-blue-400 hover:underline"
+                            >
+                                Show original
+                            </button>
+                        </div>
+                    </div>
+                )}
+                {translationState?.status === 'error' && (
+                    <div className="mt-1 text-[11px] text-red-500 dark:text-red-400">
+                        Translation failed.
+                        <button
+                            onClick={() => onTranslate?.(msg._id || msg.id, msg.text || '', lastLangCode)}
+                            className="ml-1 underline"
+                        >
+                            Retry
+                        </button>
+                    </div>
+                )}
+
                 {/* (edited) badge */}
                 {msg.editedAt && !msg.isDeleted && (
                     <span className="text-xs text-gray-400 italic"> (edited)</span>
@@ -414,7 +455,7 @@ function DMMessageItem({
             </div>
 
             {/* Hover Toolbar */}
-            <div className={`absolute top-0.5 right-24 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-sm rounded p-0.5 flex items-center z-10 ${showToolbar || openMsgMenuId === msg.id || showReactionPicker ? "opacity-100" : "opacity-0 invisible"}`}>
+            <div className={`absolute top-0.5 right-24 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-sm rounded p-0.5 flex items-center z-10 ${showToolbar || openMsgMenuId === msg.id || showReactionPicker || !!translatePopover ? "opacity-100" : "opacity-0 invisible"}`}>
                 {/* Reaction Picker */}
                 <div className="relative" ref={reactionPickerRef}>
                     <button
@@ -499,6 +540,58 @@ function DMMessageItem({
                                 >
                                     <Pencil size={14} /> Edit message
                                 </button>
+                            )}
+
+                            {/* Translate */}
+                            {msg.text && (
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        if (translationState?.status === 'done') {
+                                            onClearTranslation?.(msg._id || msg.id);
+                                            toggleMsgMenu({ stopPropagation: () => {} }, null);
+                                            return;
+                                        }
+                                        const rect = e.currentTarget.getBoundingClientRect();
+                                        const spaceBelow = window.innerHeight - rect.bottom;
+                                        setTranslatePopover({
+                                            pos: {
+                                                right: window.innerWidth - rect.right,
+                                                ...(spaceBelow < 240
+                                                    ? { bottom: window.innerHeight - rect.top + 4 }
+                                                    : { top: rect.bottom + 4 }),
+                                            }
+                                        });
+                                        // Keep menu open — toolbar stays visible
+                                    }}
+                                    className="w-full text-left px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2 text-gray-700 dark:text-gray-300"
+                                >
+                                    <Globe size={14} />
+                                    {translationState?.status === 'done' ? 'Show original' : 'Translate'}
+                                </button>
+                            )}
+                            {translatePopover && (
+                                <TranslatePopover
+                                    pos={translatePopover.pos}
+                                    status={translationState?.status === 'loading' ? 'loading' : translationState?.status === 'error' ? 'error' : null}
+                                    onSelect={(langCode) => {
+                                        setLastLangCode(langCode);
+                                        onTranslate?.(msg._id || msg.id, msg.text || '', langCode);
+                                        setTranslatePopover(null);
+                                        toggleMsgMenu({ stopPropagation: () => {} }, null);
+                                    }}
+                                    onClose={() => {
+                                        setTranslatePopover(null);
+                                        toggleMsgMenu({ stopPropagation: () => {} }, null);
+                                    }}
+                                    onRetry={() => {
+                                        if (lastLangCode) {
+                                            onTranslate?.(msg._id || msg.id, msg.text || '', lastLangCode);
+                                            setTranslatePopover(null);
+                                            toggleMsgMenu({ stopPropagation: () => {} }, null);
+                                        }
+                                    }}
+                                />
                             )}
 
                             <div className="border-t border-gray-100 dark:border-gray-700 my-1"></div>

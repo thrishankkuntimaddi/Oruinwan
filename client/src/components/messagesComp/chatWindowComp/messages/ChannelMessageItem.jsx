@@ -1,10 +1,11 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import api from '../../../../services/api';
 import {
     Smile, MessageSquare, Share, MoreHorizontal, Pin, Copy, Trash2, Info, Pencil, Check, X,
     Hash, UserCheck, LogOut, UserPlus, UserMinus, Shield, ShieldOff,
-    PenLine, FileText, Lock, PinIcon, Eraser, History
+    PenLine, FileText, Lock, PinIcon, Eraser, History, Globe
 } from "lucide-react";
+import TranslatePopover from './TranslatePopover';
 import { getAvatarUrl } from '../../../../utils/avatarUtils';
 import ReactionPicker from "./reactionPicker";
 import ReactMarkdown from "react-markdown";
@@ -53,6 +54,10 @@ function ChannelMessageItem({
     onShowHistory,
     isBookmarked = false,
     onBookmarkToggle,
+    // Translation (from useTranslation hook in MessagesContainer)
+    translationState = null,   // { status, translatedText, language, detectedLang } | null
+    onTranslate,               // (msgId, text, langCode) => void
+    onClearTranslation,        // (msgId) => void
 }) {
     // TEMPORARY FIX: Fallback to msg.replyCount if threadCounts missing
     const count = (threadCounts && threadCounts[msg.id]) || msg.replyCount || 0;
@@ -64,6 +69,9 @@ function ChannelMessageItem({
     const [showToolbar, setShowToolbar] = useState(false);
     const [showReactionPicker, setShowReactionPicker] = useState(false);
     const reactionPickerRef = useRef(null);
+    // Translate popover state
+    const [translatePopover, setTranslatePopover] = useState(null); // { pos } | null
+    const [lastLangCode, setLastLangCode] = useState(null); // for retry
     // Fixed-position tracking for dropdowns — escapes scroll container overflow clipping
     const [menuPos, setMenuPos] = useState(null);      // { top, bottom, right, openUp }
     const [reactionPos, setReactionPos] = useState(null);
@@ -398,6 +406,39 @@ function ChannelMessageItem({
 
                     </div>
                 )}
+
+                {/* Translation Display Block */}
+                {translationState?.status === 'done' && translationState.translatedText && (
+                    <div className="mt-1.5 max-w-[60%]">
+                        <div className="px-3 py-2 rounded-lg bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800 text-[13px] leading-relaxed text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-words">
+                            {translationState.translatedText}
+                        </div>
+                        <div className="flex items-center gap-2 mt-1">
+                            {translationState.detectedLang && (
+                                <span className="text-[10px] text-gray-400 dark:text-gray-500">
+                                    Detected: {translationState.detectedLang.toUpperCase()}
+                                </span>
+                            )}
+                            <button
+                                onClick={() => onClearTranslation?.(msg._id || msg.id)}
+                                className="text-[11px] text-blue-600 dark:text-blue-400 hover:underline"
+                            >
+                                Show original
+                            </button>
+                        </div>
+                    </div>
+                )}
+                {translationState?.status === 'error' && (
+                    <div className="mt-1 text-[11px] text-red-500 dark:text-red-400">
+                        Translation failed.
+                        <button
+                            onClick={() => onTranslate?.(msg._id || msg.id, msg.text || '', lastLangCode)}
+                            className="ml-1 underline"
+                        >
+                            Retry
+                        </button>
+                    </div>
+                )}
                 {/* Edit badge with history popover */}
                 {msg.editedAt && !msg.isDeleted && (
                     <EditedBadge
@@ -482,7 +523,7 @@ function ChannelMessageItem({
             </div>
 
             {/* Minimalist Hover Toolbar — hidden entirely for deleted messages */}
-            <div className={`absolute top-0.5 right-24 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-sm rounded p-0.5 flex items-center z-10 ${!msg.isDeleted && (showToolbar || openMsgMenuId === msg.id || showReactionPicker) ? "opacity-100" : "opacity-0 invisible"}`}>
+            <div className={`absolute top-0.5 right-24 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-sm rounded p-0.5 flex items-center z-10 ${!msg.isDeleted && (showToolbar || openMsgMenuId === msg.id || showReactionPicker || !!translatePopover) ? "opacity-100" : "opacity-0 invisible"}`}>
 
                 {/* Reaction Picker Trigger */}
                 <div className="relative" ref={reactionPickerRef}>
@@ -659,25 +700,60 @@ function ChannelMessageItem({
                                 </button>
                             )}
 
-                            {/* Phase 4 — Auto Translate */}
+                            {/* Translate — opens TranslatePopover */}
                             {msg.text && (
                                 <button
-                                    onClick={async () => {
-                                        toggleMsgMenu({ stopPropagation: () => {} }, null);
-                                        try {
-                                            const res = await api.post('/api/ai/translate', {
-                                                text: msg.text,
-                                                targetLanguage: navigator.language?.split('-')[0] === 'en' ? 'Spanish' : 'English'
-                                            });
-                                            if (res.data.translated) {
-                                                alert(`🌐 Translation:\n\n${res.data.translated}`);
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        // If already translated → clear and close menu
+                                        if (translationState?.status === 'done') {
+                                            onClearTranslation?.(msg._id || msg.id);
+                                            toggleMsgMenu({ stopPropagation: () => {} }, null);
+                                            return;
+                                        }
+                                        const rect = e.currentTarget.getBoundingClientRect();
+                                        const spaceBelow = window.innerHeight - rect.bottom;
+                                        setTranslatePopover({
+                                            pos: {
+                                                right: window.innerWidth - rect.right,
+                                                ...(spaceBelow < 240
+                                                    ? { bottom: window.innerHeight - rect.top + 4 }
+                                                    : { top: rect.bottom + 4 }),
                                             }
-                                        } catch { /* silent */ }
+                                        });
+                                        // Don't close the ⋯ menu — let its own outside-click
+                                        // handler close it when the user interacts with the popover.
+                                        // This keeps openMsgMenuId set, so the toolbar stays visible.
                                     }}
                                     className="w-full text-left px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2 text-gray-700 dark:text-gray-300"
                                 >
-                                    🌐 Translate
+                                    <Globe size={14} />
+                                    {translationState?.status === 'done' ? 'Show original' : 'Translate'}
                                 </button>
+                            )}
+                            {/* TranslatePopover renders into document.body via portal */}
+                            {translatePopover && (
+                                <TranslatePopover
+                                    pos={translatePopover.pos}
+                                    status={translationState?.status === 'loading' ? 'loading' : translationState?.status === 'error' ? 'error' : null}
+                                    onSelect={(langCode) => {
+                                        setLastLangCode(langCode);
+                                        onTranslate?.(msg._id || msg.id, msg.text || '', langCode);
+                                        setTranslatePopover(null);
+                                        toggleMsgMenu({ stopPropagation: () => {} }, null);
+                                    }}
+                                    onClose={() => {
+                                        setTranslatePopover(null);
+                                        toggleMsgMenu({ stopPropagation: () => {} }, null);
+                                    }}
+                                    onRetry={() => {
+                                        if (lastLangCode) {
+                                            onTranslate?.(msg._id || msg.id, msg.text || '', lastLangCode);
+                                            setTranslatePopover(null);
+                                            toggleMsgMenu({ stopPropagation: () => {} }, null);
+                                        }
+                                    }}
+                                />
                             )}
 
                             {/* Delete options */}

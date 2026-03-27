@@ -125,6 +125,7 @@ import ManagerReports from "./components/manager/ManagerReports";
 import ManagerSettings from "./components/manager/ManagerSettings"; // NEW
 import TeamAllocation from "./components/manager/TeamAllocation";
 import UnassignedMembers from "./components/manager/UnassignedMembers"; // New component
+import ManagerWorkspacePage from "./components/manager/ManagerWorkspacePage"; // My Workspace tab
 import EmployeeDashboard from "./pages/dashboards/EmployeeDashboard";
 import ChttrixAdminDashboard from "./pages/dashboards/ChttrixAdminDashboard";
 
@@ -723,7 +724,7 @@ function App() {
                           >
                             <Route index element={<Navigate to="overview" replace />} />
                             <Route path="overview" element={<ManagerOverview />} />
-                            {/* <Route path="workspace" element={<ManagerWorkspaces />} /> */}
+                            <Route path="workspace" element={<ManagerWorkspacePage />} />
                             <Route path="allocation" element={<TeamAllocation />} />
                             <Route path="tasks" element={<ManagerTasks />} />
                             <Route path="reports" element={<ManagerReports />} />

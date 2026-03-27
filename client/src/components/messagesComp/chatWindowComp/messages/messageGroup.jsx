@@ -24,6 +24,10 @@ export default function MessageGroup({
   chatType,
   channelMembers,
   isAdmin = false, // NEW: admin check for pin permissions
+  // Translation
+  translationState,
+  onTranslate,
+  onClearTranslation,
 }) {
   // This component just delegates to MessageItem — kept for future grouping logic
   return (
@@ -49,6 +53,9 @@ export default function MessageGroup({
       chatType={chatType}
       channelMembers={channelMembers}
       isAdmin={isAdmin} // ★ PASS DOWN FOR PIN PERMISSIONS
+      translationState={translationState}
+      onTranslate={onTranslate}
+      onClearTranslation={onClearTranslation}
     />
   );
 }

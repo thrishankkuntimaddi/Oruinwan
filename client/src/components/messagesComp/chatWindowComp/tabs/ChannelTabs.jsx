@@ -50,13 +50,13 @@ export default function ChannelTabs({
     };
 
     return (
-        <div className="flex flex-col bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800">
+        <div className="flex flex-col bg-gray-50 dark:bg-gray-900/60 border-b border-gray-100 dark:border-gray-800">
             {/* Tabs Bar - Modern Underline Layout */}
-            <div className="flex items-center gap-3 px-4 overflow-x-auto no-scrollbar">
+            <div className="flex items-center gap-1 px-3 overflow-x-auto no-scrollbar">
                 {/* Main Chat Tab */}
                 <button
                     onClick={() => onTabChange("chat")}
-                    className={`flex items-center gap-2 py-3 text-sm font-medium transition-all whitespace-nowrap border-b-2 ${activeTab === "chat"
+                    className={`flex items-center gap-1.5 px-2 py-2 text-xs font-medium transition-all whitespace-nowrap border-b-2 ${activeTab === "chat"
                         ? "text-blue-600 dark:text-blue-400 border-blue-600 dark:border-blue-400"
                         : "text-gray-500 dark:text-gray-400 border-transparent hover:text-gray-700 dark:hover:text-gray-200"
                         }`}
@@ -68,7 +68,7 @@ export default function ChannelTabs({
                 {/* Threads Tab */}
                 <button
                     onClick={() => onTabChange("threads")}
-                    className={`flex items-center gap-2 py-3 text-sm font-medium transition-all whitespace-nowrap border-b-2 ${activeTab === "threads"
+                    className={`flex items-center gap-1.5 px-2 py-2 text-xs font-medium transition-all whitespace-nowrap border-b-2 ${activeTab === "threads"
                         ? "text-blue-600 dark:text-blue-400 border-blue-600 dark:border-blue-400"
                         : "text-gray-500 dark:text-gray-400 border-transparent hover:text-gray-700 dark:hover:text-gray-200"
                         }`}
@@ -80,7 +80,7 @@ export default function ChannelTabs({
                 {/* Tasks Tab */}
                 <button
                     onClick={() => onTabChange("tasks")}
-                    className={`flex items-center gap-2 py-3 text-sm font-medium transition-all whitespace-nowrap border-b-2 ${activeTab === "tasks"
+                    className={`flex items-center gap-1.5 px-2 py-2 text-xs font-medium transition-all whitespace-nowrap border-b-2 ${activeTab === "tasks"
                         ? "text-blue-600 dark:text-blue-400 border-blue-600 dark:border-blue-400"
                         : "text-gray-500 dark:text-gray-400 border-transparent hover:text-gray-700 dark:hover:text-gray-200"
                         }`}
@@ -92,7 +92,7 @@ export default function ChannelTabs({
                 {/* Canvas Tab */}
                 <button
                     onClick={() => onTabChange("canvas")}
-                    className={`flex items-center gap-2 py-3 text-sm font-medium transition-all whitespace-nowrap border-b-2 ${activeTab === "canvas"
+                    className={`flex items-center gap-1.5 px-2 py-2 text-xs font-medium transition-all whitespace-nowrap border-b-2 ${activeTab === "canvas"
                         ? "text-blue-600 dark:text-blue-400 border-blue-600 dark:border-blue-400"
                         : "text-gray-500 dark:text-gray-400 border-transparent hover:text-gray-700 dark:hover:text-gray-200"
                         }`}
@@ -105,7 +105,7 @@ export default function ChannelTabs({
                 {tabs.map((tab) => (
                     <div
                         key={tab._id}
-                        className={`group flex items-center gap-2 py-3 text-sm font-medium transition-all whitespace-nowrap border-b-2 cursor-pointer ${activeTab === tab._id
+                        className={`group flex items-center gap-1.5 px-2 py-2 text-xs font-medium transition-all whitespace-nowrap border-b-2 cursor-pointer ${activeTab === tab._id
                             ? "text-blue-600 dark:text-blue-400 border-blue-600 dark:border-blue-400"
                             : "text-gray-500 dark:text-gray-400 border-transparent hover:text-gray-700 dark:hover:text-gray-200"
                             }`}

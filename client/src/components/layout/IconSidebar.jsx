@@ -85,16 +85,16 @@ const IconSidebar = ({ onProfileClick }) => {
     ];
 
     return (
-        <div className="w-[70px] bg-white dark:bg-gray-900 flex flex-col items-center py-4 border-r border-gray-200 dark:border-gray-800 z-50 shadow-sm relative shrink-0">
+        <div className="w-[60px] bg-white dark:bg-gray-900 flex flex-col items-center py-3 border-r border-gray-200 dark:border-gray-800 z-50 shadow-sm relative shrink-0">
             {/* Top Space */}
-            <div className="h-2"></div>
+            <div className="h-1"></div>
 
             {/* Workspace Switcher */}
-            <div className="relative mb-6" ref={menuRef}>
+            <div className="relative mb-3" ref={menuRef}>
                 <button
                     onClick={() => setShowWorkspaceMenu(!showWorkspaceMenu)}
                     style={{ backgroundColor: activeWorkspace?.color || '#2563eb' }}
-                    className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold text-xl cursor-pointer hover:opacity-90 transition-opacity shadow-sm relative"
+                    className="w-9 h-9 rounded-xl flex items-center justify-center text-white font-bold text-xl cursor-pointer hover:opacity-90 transition-opacity shadow-sm relative"
                 >
                     {(() => {
                         // Icon mapping for Lucide components
@@ -175,7 +175,7 @@ const IconSidebar = ({ onProfileClick }) => {
             </div>
 
             {/* Nav Icons */}
-            <div className="flex-1 flex flex-col space-y-4 w-full items-center">
+            <div className="flex-1 flex flex-col space-y-1 w-full items-center overflow-y-auto no-scrollbar">
                 {navItems.map((item) => {
                     const targetPath = item.absolute
                         ? item.path
@@ -187,7 +187,7 @@ const IconSidebar = ({ onProfileClick }) => {
                         <div key={item.path} className="relative group">
                             <button
                                 onClick={() => navigate(targetPath)}
-                                className={`w-10 h-10 rounded-xl flex items-center justify-center text-xl transition-all ${isActive(item.path)
+                                className={`w-9 h-9 rounded-xl flex items-center justify-center text-xl transition-all ${isActive(item.path)
                                     ? "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400"
                                     : "text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-200"
                                     }`}
@@ -195,7 +195,7 @@ const IconSidebar = ({ onProfileClick }) => {
                                 {item.icon}
                             </button>
                             {/* Tooltip */}
-                            <div className="absolute left-14 top-1/2 -translate-y-1/2 bg-gray-800 dark:bg-gray-700 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50 shadow-lg">
+                            <div className="absolute left-12 top-1/2 -translate-y-1/2 bg-gray-800 dark:bg-gray-700 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50 shadow-lg">
                                 {item.label}
                             </div>
                         </div>
@@ -204,17 +204,17 @@ const IconSidebar = ({ onProfileClick }) => {
             </div>
 
             {/* Settings and Profile Icons */}
-            <div className="mt-auto space-y-3">
+            <div className="mt-auto space-y-2 pb-1">
                 {/* Settings Button */}
                 <div className="relative group">
                     <button
                         onClick={() => navigate("/settings", { state: { from: location.pathname } })}
-                        className="w-10 h-10 rounded-xl flex items-center justify-center transition-all text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-200"
+                        className="w-9 h-9 rounded-xl flex items-center justify-center transition-all text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-200"
                     >
                         <Settings size={20} strokeWidth={2} />
                     </button>
                     {/* Tooltip */}
-                    <div className="absolute left-14 top-1/2 -translate-y-1/2 bg-gray-800 dark:bg-gray-700 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50 shadow-lg">
+                    <div className="absolute left-12 top-1/2 -translate-y-1/2 bg-gray-800 dark:bg-gray-700 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50 shadow-lg">
                         Settings
                     </div>
                 </div>

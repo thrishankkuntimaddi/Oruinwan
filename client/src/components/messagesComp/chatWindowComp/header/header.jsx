@@ -119,19 +119,19 @@ export default function Header({
 
   return (
     <>
-      <div className="flex items-center justify-between px-4 py-2 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 shrink-0 min-h-[48px]">
+      <div className="flex items-center justify-between px-4 py-2.5 bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800 shrink-0 min-h-[52px]">
         <div className="flex items-center gap-2 min-w-0">
           {/* Channel/DM Avatar with Type Indicators */}
           {chat.type === 'channel' ? (
             // Channel Icon Logic
             chat.image ? (
-              <img src={chat.image} alt={chat.name} className="w-8 h-8 rounded object-cover shadow-sm bg-gray-50 dark:bg-gray-800" />
+              <img src={chat.image} alt={chat.name} className="w-9 h-9 rounded-lg object-cover shadow-sm bg-gray-50 dark:bg-gray-800" />
             ) : (
               <div
-                className={`w-8 h-8 rounded flex items-center justify-center font-medium text-sm ${chat.name?.toLowerCase().replace(/^#/, '') === 'announcements'
-                  ? 'bg-orange-50 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400'
+                className={`w-9 h-9 rounded-lg flex items-center justify-center font-medium text-sm ${chat.name?.toLowerCase().replace(/^#/, '') === 'announcements'
+                  ? 'bg-orange-100 dark:bg-orange-900/40 text-orange-600 dark:text-orange-400'
                   : chat.isPrivate
-                    ? 'bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400'
+                    ? 'bg-purple-100 dark:bg-purple-900/40 text-purple-600 dark:text-purple-400'
                     : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400'
                   }`}
                 title={chat.description || (chat.isPrivate ? 'Private Channel' : 'Public Channel')}
@@ -160,13 +160,13 @@ export default function Header({
             {/* Debug: Log chat object for DMs */}
 
 
-            <div className="text-sm font-semibold truncate text-gray-800 dark:text-gray-100">
+            <div className="text-[15px] font-semibold truncate text-gray-800 dark:text-gray-100">
               {chat.type === 'channel'
                 ? (chat.name?.replace(/^#/, '') || 'Unnamed Channel')
                 : (chat.name || chat.username || chat.email?.split('@')[0] || 'Unknown User')
               }
             </div>
-            <div className="text-[10px] text-gray-400 dark:text-gray-500 truncate flex items-center gap-1">
+            <div className="text-[11px] text-gray-400 dark:text-gray-500 truncate flex items-center gap-1">
               {/* Show custom status for DMs, member count for channels */}
               {chat.type === 'dm' ? (
                 chat.customStatus || (chat.isOnline || chat.status === 'online' ? 'Active now' : 'Offline')

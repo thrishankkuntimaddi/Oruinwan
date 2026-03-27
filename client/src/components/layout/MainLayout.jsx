@@ -230,8 +230,8 @@ const MainLayout = ({ children, sidePanel }) => {
 
             // Handle SidePanel Resizing (Left Side)
             if (isResizingSidePanelRef.current) {
-                // IconSidebar is 70px wide
-                const newWidth = e.clientX - 70;
+                // IconSidebar is 60px wide
+                const newWidth = e.clientX - 60;
                 // Min: 200px, Max: 400px (Prevent extreme width)
                 if (newWidth > 200 && newWidth < 400) {
                     setSidePanelWidth(newWidth);

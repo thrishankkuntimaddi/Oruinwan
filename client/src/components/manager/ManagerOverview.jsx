@@ -20,25 +20,31 @@ const ManagerOverview = () => {
     const navigate = useNavigate();
 
     const fetchMetrics = useCallback(async () => {
-        if (!selectedDepartment?._id) return;
+        const deptId = selectedDepartment?._id;
+        // Only fire if we have a real MongoDB ObjectId (24-char hex), not 'dummy' or undefined
+        if (!deptId || !/^[a-f\d]{24}$/i.test(String(deptId))) return;
 
         try {
             setLoading(true);
             const response = await axios.get(
-                `${import.meta.env.VITE_BACKEND_URL}/api/manager/dashboard/metrics/${selectedDepartment._id}`,
+                `${import.meta.env.VITE_BACKEND_URL}/api/manager/dashboard/metrics/${deptId}`,
                 { withCredentials: true }
             );
             setMetrics(response.data);
         } catch (error) {
             console.error('Error fetching metrics:', error);
+            // Don't show toast for 403 — it just means user isn't a dept head yet
         } finally {
             setLoading(false);
         }
     }, [selectedDepartment]);
 
     useEffect(() => {
-        if (selectedDepartment) {
+        if (selectedDepartment?._id && /^[a-f\d]{24}$/i.test(String(selectedDepartment._id))) {
             fetchMetrics();
+        } else {
+            // No valid dept yet — stop spinner
+            setLoading(false);
         }
     }, [selectedDepartment, fetchMetrics]);
 
@@ -49,6 +55,21 @@ const ManagerOverview = () => {
         setRefreshing(false);
         showToast("Dashboard refreshed", "success");
     };
+
+    if (!selectedDepartment || !selectedDepartment._id || !/^[a-f\d]{24}$/i.test(String(selectedDepartment._id))) {
+        return (
+            <div className="flex flex-col h-full items-center justify-center bg-gray-50 dark:bg-gray-900 gap-4 p-8 text-center">
+                <div className="w-16 h-16 rounded-full bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center">
+                    <Briefcase className="text-indigo-400 dark:text-indigo-500" size={28} />
+                </div>
+                <h2 className="text-lg font-bold text-slate-800 dark:text-white">No Department Assigned</h2>
+                <p className="text-sm text-slate-500 dark:text-gray-400 max-w-sm">
+                    You haven't been assigned as a department head or manager yet.
+                    Ask your company admin to assign you to a department to see metrics here.
+                </p>
+            </div>
+        );
+    }
 
     if (loading && !metrics) {
         return (

@@ -6,6 +6,7 @@ import { groupByDate } from "../helpers/helpers";
 import MessageGroup from "./messageGroup";
 import JoinMarker from "./JoinMarker";
 import MessageErrorBoundary from "./MessageErrorBoundary";
+import { useTranslation } from "../../../../hooks/useTranslation";
 
 export default function MessagesContainer({
   messages,
@@ -43,6 +44,9 @@ export default function MessagesContainer({
   conversationId, // ← used to reset scroll state when switching channels
 }) {
   const messagesRef = useRef(null);
+
+  // ── Translation — single hook instance for all messages in this conversation
+  const { getTranslation, requestTranslation, clearTranslation } = useTranslation();
 
   /* ---------------------------------------------------------
      AUTO SCROLL TO BOTTOM ON NEW MESSAGES (even optimistic)
@@ -206,6 +210,10 @@ export default function MessagesContainer({
                         chatType={chatType}
                         channelMembers={channelMembersWithJoinDates} // ★ PASS MEMBERS FOR REACTIONS
                         isAdmin={isAdmin} // ★ PASS DOWN FOR PIN PERMISSIONS
+                        // Translation
+                        translationState={getTranslation(msg._id || msg.id)}
+                        onTranslate={requestTranslation}
+                        onClearTranslation={clearTranslation}
                       />
                     </MessageErrorBoundary>
                   </React.Fragment>

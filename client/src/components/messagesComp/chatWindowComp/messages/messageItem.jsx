@@ -12,6 +12,7 @@ export default function MessageItem(props) {
   }
 
   if (chatType === "channel") {
+    // All props (including translationState, onTranslate, onClearTranslation) spread through
     return <ChannelMessageItem {...props} />;
   }
 

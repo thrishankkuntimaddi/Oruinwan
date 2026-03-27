@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const mongoose = require('mongoose');
 const User = require('../../../models/User');
 const Department = require('../../../models/Department');
 const Workspace = require('../../../models/Workspace');
@@ -7,6 +8,12 @@ const Message = require("../messages/message.model.js");
 const Task = require('../../../models/Task');
 const requireAuth = require('../../../middleware/auth');
 const { requireManager } = require('../../../middleware/permissionMiddleware');
+
+/**
+ * Reusable ObjectId validation helper.
+ * Returns true if `id` is a valid 24-char hex MongoDB ObjectId.
+ */
+const isValidObjectId = (id) => mongoose.Types.ObjectId.isValid(id) && /^[a-f\d]{24}$/i.test(String(id));
 
 /**
  * GET /api/manager-dashboard/my-workspaces
@@ -166,17 +173,25 @@ router.get('/dashboard/metrics/:departmentId', requireAuth, requireManager, asyn
         const userId = req.user.sub || req.user._id;
         const { departmentId } = req.params;
 
+        // ✅ Validate ObjectId before any Mongoose query
+        if (!isValidObjectId(departmentId)) {
+            return res.status(400).json({ success: false, message: 'Invalid department ID' });
+        }
+
         // Verify manager has access: either in managedDepartments[] or in Department.managers[]
-        const manager = await User.findById(userId);
-        const dept = await Department.findById(departmentId).populate('head', 'username email').lean();
-        if (!dept) return res.status(404).json({ message: 'Department not found' });
+        const [manager, dept] = await Promise.all([
+            User.findById(userId),
+            Department.findById(departmentId).populate('head', 'username email').lean()
+        ]);
+
+        if (!dept) return res.status(404).json({ success: false, message: 'Department not found' });
 
         const inManagedDepts = (manager.managedDepartments || []).map(d => d.toString()).includes(departmentId);
         const inDeptManagers = (dept.managers || []).map(d => d.toString()).includes(userId.toString());
         const isHead = dept.head && dept.head._id && dept.head._id.toString() === userId.toString();
 
         if (!inManagedDepts && !inDeptManagers && !isHead) {
-            return res.status(403).json({ message: 'Access denied: You do not manage this department' });
+            return res.status(403).json({ success: false, message: 'Access denied: You do not manage this department' });
         }
 
         // Get team metrics
@@ -206,17 +221,17 @@ router.get('/dashboard/metrics/:departmentId', requireAuth, requireManager, asyn
             })
         ]);
 
-        const response = {
+        res.json({
             team: {
                 total: totalMembers,
                 active: activeMembers,
                 pending: pendingMembers,
-                managers: managers
+                managers
             },
             activity: {
                 messagesThisWeek,
                 tasksThisWeek: tasksCompletedThisWeek,
-                meetingsThisWeek: 0 // Placeholder - add when meetings model exists
+                meetingsThisWeek: 0
             },
             department: {
                 name: dept.name,
@@ -224,12 +239,13 @@ router.get('/dashboard/metrics/:departmentId', requireAuth, requireManager, asyn
                 head: dept.head,
                 createdAt: dept.createdAt
             }
-        };
-
-        res.json(response);
+        });
     } catch (error) {
         console.error('Manager Dashboard Metrics Error:', error);
-        res.status(500).json({ message: 'Server error', error: error.message });
+        if (error.name === 'CastError') {
+            return res.status(400).json({ success: false, message: 'Invalid department ID' });
+        }
+        res.status(500).json({ success: false, message: 'Server error', error: error.message });
     }
 });
 
@@ -242,10 +258,15 @@ router.get('/dashboard/team-load/:departmentId', requireAuth, requireManager, as
         const userId = req.user.sub || req.user._id;
         const { departmentId } = req.params;
 
+        // ✅ Validate ObjectId before any Mongoose query
+        if (!isValidObjectId(departmentId)) {
+            return res.status(400).json({ success: false, message: 'Invalid department ID' });
+        }
+
         // Verify manager has access to this department
         const manager = await User.findById(userId);
         if (!manager.managedDepartments || !manager.managedDepartments.map(d => d.toString()).includes(departmentId)) {
-            return res.status(403).json({ message: 'Access denied: You do not manage this department' });
+            return res.status(403).json({ success: false, message: 'Access denied: You do not manage this department' });
         }
 
         // Get department members
@@ -284,7 +305,10 @@ router.get('/dashboard/team-load/:departmentId', requireAuth, requireManager, as
         });
     } catch (error) {
         console.error('Manager Dashboard Team Load Error:', error);
-        res.status(500).json({ message: 'Server error', error: error.message });
+        if (error.name === 'CastError') {
+            return res.status(400).json({ success: false, message: 'Invalid department ID' });
+        }
+        res.status(500).json({ success: false, message: 'Server error', error: error.message });
     }
 });
 
@@ -297,10 +321,15 @@ router.get('/dashboard/unassigned/:departmentId', requireAuth, requireManager, a
         const userId = req.user.sub || req.user._id;
         const { departmentId } = req.params;
 
+        // ✅ Validate ObjectId before any Mongoose query
+        if (!isValidObjectId(departmentId)) {
+            return res.status(400).json({ success: false, message: 'Invalid department ID' });
+        }
+
         // Verify manager has access to this department
         const manager = await User.findById(userId);
         if (!manager.managedDepartments || !manager.managedDepartments.map(d => d.toString()).includes(departmentId)) {
-            return res.status(403).json({ message: 'Access denied: You do not manage this department' });
+            return res.status(403).json({ success: false, message: 'Access denied: You do not manage this department' });
         }
 
         // Get all workspace members
@@ -323,7 +352,10 @@ router.get('/dashboard/unassigned/:departmentId', requireAuth, requireManager, a
         res.json({ unassigned });
     } catch (error) {
         console.error('Manager Dashboard Unassigned Error:', error);
-        res.status(500).json({ message: 'Server error', error: error.message });
+        if (error.name === 'CastError') {
+            return res.status(400).json({ success: false, message: 'Invalid department ID' });
+        }
+        res.status(500).json({ success: false, message: 'Server error', error: error.message });
     }
 });
 
@@ -336,10 +368,15 @@ router.get('/dashboard/reports/:departmentId', requireAuth, requireManager, asyn
         const userId = req.user.sub || req.user._id;
         const { departmentId } = req.params;
 
+        // ✅ Validate ObjectId before any Mongoose query
+        if (!isValidObjectId(departmentId)) {
+            return res.status(400).json({ success: false, message: 'Invalid department ID' });
+        }
+
         // Verify manager has access to this department
         const manager = await User.findById(userId);
         if (!manager.managedDepartments || !manager.managedDepartments.map(d => d.toString()).includes(departmentId)) {
-            return res.status(403).json({ message: 'Access denied: You do not manage this department' });
+            return res.status(403).json({ success: false, message: 'Access denied: You do not manage this department' });
         }
 
         // Get department member IDs
@@ -370,7 +407,10 @@ router.get('/dashboard/reports/:departmentId', requireAuth, requireManager, asyn
         });
     } catch (error) {
         console.error('Manager Dashboard Reports Error:', error);
-        res.status(500).json({ message: 'Server error', error: error.message });
+        if (error.name === 'CastError') {
+            return res.status(400).json({ success: false, message: 'Invalid department ID' });
+        }
+        res.status(500).json({ success: false, message: 'Server error', error: error.message });
     }
 });
 
@@ -382,6 +422,11 @@ router.get('/tasks/:departmentId', requireAuth, requireManager, async (req, res)
     try {
         const { departmentId } = req.params;
         const userId = req.user.sub || req.user._id;
+
+        // ✅ Validate ObjectId before any Mongoose query
+        if (!isValidObjectId(departmentId)) {
+            return res.status(400).json({ success: false, message: 'Invalid department ID' });
+        }
 
         // Get all department member IDs
         const members = await User.find({

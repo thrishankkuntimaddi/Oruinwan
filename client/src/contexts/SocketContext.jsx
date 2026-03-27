@@ -24,6 +24,9 @@ export const useSocket = () => {
 export const SocketProvider = ({ children }) => {
     const socketRef = useRef(null);
     const [isConnected, setIsConnected] = useState(false);
+    // Tracks socket instance identity so event-listener effects rerun only when the
+    // socket itself changes — not on every connect/disconnect toggle.
+    const [socketId, setSocketId] = useState(null);
     const { user } = useAuth();
 
     // Event listeners registry (using refs to avoid stale closures)
@@ -108,10 +111,24 @@ export const SocketProvider = ({ children }) => {
 
         // Store socket instance in ref (synchronous — no async state update race)
         socketRef.current = socketInstance;
+        // Signal event-listener effects that a new socket instance is ready.
+        // Using the socket's internal nonce (Date.now) so we get a stable, unique ID.
+        setSocketId(socketInstance.id ?? Date.now());
+
+        socketInstance.on('connect', () => {
+            console.log('✅ SOCKET CONNECTED', socketInstance.id);
+            setIsConnected(true);
+            setSocketId(socketInstance.id); // refresh on reconnect
+
+            // ✅ Join workspace room to receive workspace-wide events
+            const workspaceId = localStorage.getItem('activeWorkspaceId');
+            if (workspaceId) {
+                socketInstance.emit('join-workspace', { workspaceId });
+            }
+        });
 
         // ⏸️ PHASE 1 ISOLATION: Socket connection disabled during login
-        // Socket should be connected EXPLICITLY after Phase 1 (identity keys) complete
-        // To enable: Call socket.connect() from components AFTER identity initialization
+        // Call connectSocket() from components AFTER Phase 1 (identity keys) complete
 
         return () => {
             if (socketInstance.connected) {
@@ -121,6 +138,7 @@ export const SocketProvider = ({ children }) => {
             setIsConnected(false);
         };
     }, [user]); // Re-initialize socket when user changes (login/logout)
+
 
     // ✅ Explicit socket connection function
     // Call this from components AFTER identity keys are loaded
@@ -253,7 +271,7 @@ export const SocketProvider = ({ children }) => {
             socket.off('tab-deleted');
             // socket.off('channel:user-joined'); // Already disabled
         };
-    }, [isConnected]);
+    }, [socketId]); // Re-run only when socket instance changes, not on every connect/disconnect
 
     // Broadcast message events
     useEffect(() => {
@@ -309,7 +327,7 @@ export const SocketProvider = ({ children }) => {
             socket.off('reaction-removed');
             socket.off('reconnected');
         };
-    }, [isConnected]);
+    }, [socketId]);
 
     // Broadcast workspace events
     useEffect(() => {
@@ -342,7 +360,7 @@ export const SocketProvider = ({ children }) => {
             socket.off('workspace-updated');
             socket.off('workspace-deleted');
         };
-    }, [isConnected]);
+    }, [socketId]);
 
     // Broadcast Task events
     useEffect(() => {
@@ -361,7 +379,7 @@ export const SocketProvider = ({ children }) => {
         return () => {
             events.forEach(event => socket.off(event));
         };
-    }, [isConnected]);
+    }, [socketId]);
 
     // Broadcast Note events
     useEffect(() => {
@@ -380,7 +398,7 @@ export const SocketProvider = ({ children }) => {
         return () => {
             events.forEach(event => socket.off(event));
         };
-    }, [isConnected]);
+    }, [socketId]);
 
     // Broadcast Update events (company:update:* namespace from company-updates service)
     useEffect(() => {
@@ -399,7 +417,7 @@ export const SocketProvider = ({ children }) => {
         return () => {
             events.forEach(event => socket.off(event));
         };
-    }, [isConnected]);
+    }, [socketId]);
 
     // Broadcast Notification events (targeted per-user push)
     useEffect(() => {
@@ -415,7 +433,7 @@ export const SocketProvider = ({ children }) => {
         return () => {
             socket.off('notification:new', onNotification);
         };
-    }, [isConnected]);
+    }, [socketId]);
 
     // Register/unregister listeners (using refs to avoid stale closures)
     const addChannelListener = useCallback((callback) => {

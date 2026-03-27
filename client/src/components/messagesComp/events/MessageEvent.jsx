@@ -6,7 +6,7 @@ import ChannelMessageItem from '../chatWindowComp/messages/ChannelMessageItem';
 import DMMessageItem from '../chatWindowComp/messages/DMMessageItem';
 import { getAvatarUrl } from '../../../utils/avatarUtils';
 import ChecklistMessage from '../ChecklistMessage';
-import TranslateToggle from '../TranslateToggle';
+import { useTranslation } from '../../../hooks/useTranslation';
 
 // Lazy-load diff viewer (only needed when user clicks "edited")
 const MessageDiffViewer = lazy(() => import('../MessageDiffViewer'));
@@ -36,6 +36,8 @@ function MessageEvent({
     threadCounts = {} // ✅ Add threadCounts prop
 }) {
     const [showDiff, setShowDiff] = useState(false);
+    // Per-message translation state — scoped to this one MessageEvent instance
+    const { getTranslation, requestTranslation, clearTranslation } = useTranslation();
     // NEW SCHEMA: event IS the message, event.payload contains text/attachments
     // FALLBACK: Support both new (payload.text) and old (direct text) structures
     // FIX: Handle double-nested payload (event.payload.payload.text)
@@ -272,6 +274,9 @@ function MessageEvent({
                     currentUserId={currentUserId}
                     onOpenThread={handleThreadOpen}
                     threadCounts={threadCounts}
+                    translationState={getTranslation(enrichedMessage._id)}
+                    onTranslate={requestTranslation}
+                    onClearTranslation={clearTranslation}
                 />
                 {renderChecklist && (
                     <div style={{ paddingLeft: 52, paddingRight: 16, paddingBottom: 4 }}>
@@ -279,11 +284,6 @@ function MessageEvent({
                             messageId={enrichedMessage._id}
                             checklist={enrichedMessage.checklist}
                         />
-                    </div>
-                )}
-                {!enrichedMessage.isEncrypted && plainText && (
-                    <div style={{ paddingLeft: 52, paddingRight: 16 }}>
-                        <TranslateToggle messageId={enrichedMessage._id} text={plainText} />
                     </div>
                 )}
                 {showDiff && (
@@ -331,6 +331,9 @@ function MessageEvent({
                         : false
                 }
                 onBookmarkToggle={() => { /* local refresh handled by BookmarksPanel */ }}
+                translationState={getTranslation(enrichedMessage._id)}
+                onTranslate={requestTranslation}
+                onClearTranslation={clearTranslation}
             />
             {renderChecklist && (
                 <div style={{ paddingLeft: 56, paddingRight: 16, paddingBottom: 4 }}>
@@ -338,11 +341,6 @@ function MessageEvent({
                         messageId={enrichedMessage._id}
                         checklist={enrichedMessage.checklist}
                     />
-                </div>
-            )}
-            {!enrichedMessage.isEncrypted && plainText && (
-                <div style={{ paddingLeft: 56, paddingRight: 16 }}>
-                    <TranslateToggle messageId={enrichedMessage._id} text={plainText} />
                 </div>
             )}
             {showDiff && (

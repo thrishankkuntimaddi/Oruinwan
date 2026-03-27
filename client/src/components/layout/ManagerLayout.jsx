@@ -15,9 +15,20 @@ const ManagerLayout = () => {
 
     const showAdminButton = isCompanyOwner() || isCompanyAdmin();
 
-    const selectedDept = company?.departments?.find(d =>
-        d.head?._id === user?._id || d.head === user?._id
-    ) || company?.departments?.[0];
+    // Only pass departments with a real MongoDB ObjectId — prevents "dummy" or
+    // partially-hydrated IDs from triggering API calls in child components.
+    const isValidObjectId = (id) => /^[a-f\d]{24}$/i.test(String(id ?? ''));
+
+    const selectedDept = (() => {
+        const depts = company?.departments ?? [];
+        // Prefer a department the current user heads
+        const managed = depts.find(d =>
+            d.head?._id === user?._id || d.head === user?._id
+        );
+        const candidate = managed ?? depts[0] ?? null;
+        // Discard if the _id is not a valid ObjectId
+        return candidate && isValidObjectId(candidate._id) ? candidate : null;
+    })();
 
 
 
@@ -72,7 +83,7 @@ const ManagerLayout = () => {
                 {/* Main Content Area */}
                 <main className="flex-1 overflow-hidden bg-gray-50 dark:bg-gray-900 transition-colors duration-200 relative">
                     <Outlet context={{
-                        selectedDepartment: selectedDept || { _id: 'dummy', name: 'Loading...' }
+                        selectedDepartment: selectedDept
                     }} />
                 </main>
             </div>
