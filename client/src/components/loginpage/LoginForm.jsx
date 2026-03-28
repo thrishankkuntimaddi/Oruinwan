@@ -5,7 +5,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { AuthContext } from "../../contexts/AuthContext";
 import { useToast } from "../../contexts/ToastContext";
 import { useGoogleLogin } from "@react-oauth/google";
-import axios from "axios";
+import api from '../../services/api';
 import { Eye, EyeOff } from "lucide-react";
 import { Button, Input } from "../../shared/components/ui";
 
@@ -144,10 +144,8 @@ const LoginForm = ({ onSwitch, initialEmail = "" }) => {
   const googleLogin = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
       try {
-        const res = await axios.post(
-          `${import.meta.env.VITE_BACKEND_URL}/api/auth/google-login`,
-          { accessToken: tokenResponse.access_token },
-          { withCredentials: true }
+        const res = await api.post('/api/auth/google-login',
+          { accessToken: tokenResponse.access_token }
         );
 
         // Save to localStorage first

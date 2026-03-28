@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { Lock, Eye, EyeOff, Check, AlertCircle } from 'lucide-react';
 import { useToast } from '../../contexts/ToastContext';
-import axios from 'axios';
+import api from '../../services/api';
 
 const FirstLoginPasswordModal = ({ isOpen, onContinue, companyName }) => {
     const { showToast } = useToast();
@@ -31,9 +31,9 @@ const FirstLoginPasswordModal = ({ isOpen, onContinue, companyName }) => {
         setLoading(true);
 
         try {
-            await axios.post('/api/auth/change-password', {
+            await api.post('/api/auth/change-password', {
                 newPassword
-            }, { withCredentials: true });
+            });
 
             showToast('Password changed successfully!', 'success');
 

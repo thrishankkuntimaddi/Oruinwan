@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Lock, Eye, EyeOff, Check, Shield, ArrowRight } from 'lucide-react';
 import { useToast } from '../../contexts/ToastContext';
-import axios from 'axios';
+import api from '../../services/api';
 
 const OAuthPasswordSetup = () => {
     const { showToast } = useToast();
@@ -48,18 +48,7 @@ const OAuthPasswordSetup = () => {
         setLoading(true);
 
         try {
-            const token = localStorage.getItem("accessToken");
-
-            await axios.post(
-                `${import.meta.env.VITE_BACKEND_URL}/api/auth/oauth/set-password`,
-                { password },
-                {
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    },
-                    withCredentials: true
-                }
-            );
+            await api.post('/api/auth/oauth/set-password', { password });
 
             showToast('Password set successfully! You can now login with email & password.', 'success');
 

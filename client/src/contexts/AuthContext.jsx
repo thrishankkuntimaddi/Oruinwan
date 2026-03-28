@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
 import { setOnTokenRefreshed, API_BASE } from "../services/api";
-import axios from 'axios';
+import api from '../services/api';
 import { getDeviceMetadata, clearDeviceId } from '../utils/deviceId';
 
 export const AuthContext = createContext(null);
@@ -294,16 +294,12 @@ export const AuthProvider = ({ children }) => {
       // PHASE 3: Get device metadata
       const deviceMetadata = getDeviceMetadata();
 
-      const response = await axios.post(
-        `${API_BASE}/api/auth/login`,
+      const response = await api.post(
+        '/api/auth/login',
         {
           email,
           password,
           ...deviceMetadata  // Include device info
-        },
-        {
-          headers: { "Content-Type": "application/json" },
-          withCredentials: true,
         }
       );
 
@@ -393,14 +389,7 @@ export const AuthProvider = ({ children }) => {
   // ------------------------------------------------------------
   const logout = useCallback(async () => {
     try {
-      await axios.post(
-        `${API_BASE}/api/auth/logout`,
-        {},
-        {
-          headers: { "Content-Type": "application/json" },
-          withCredentials: true,
-        }
-      );
+      await api.post('/api/auth/logout', {});
     } catch (err) {
       console.error("Logout error:", err);
     }
