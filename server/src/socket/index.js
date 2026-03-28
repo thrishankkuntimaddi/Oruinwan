@@ -1,10 +1,24 @@
 /**
- * Socket Layer - Main Entry Point
- * 
- * Registers all socket event handlers in a modular, domain-driven structure
- * 
- * @module socket
+ * ⚠️  TOMBSTONE — DO NOT ACTIVATE (Phase 1 Audit)
+ *
+ * This file is only importable via server/socket.js, which is itself NEVER
+ * required by any active module (server.js uses server/socket/index.js instead).
+ * Therefore, this entire module tree is DORMANT in production.
+ *
+ * Activating this file (by requiring it from server.js or socket/index.js) would
+ * register DUPLICATE handlers alongside the active server/socket/index.js for:
+ *   - messages (send-message, chat:join, join-dm, chat:message, chat:typing)
+ *   - polls (poll:created, poll:voted, poll:closed, poll:deleted)
+ *   - presence (user:status_change, workspace:join, disconnect)
+ *   - admin (admin:join, admin:dm:send, company:join, audit:new, etc.)
+ *
+ * The only file from this tree that IS active is huddles.socket.js, which is
+ * directly imported by server/socket/index.js (not via this file).
+ *
+ * @status DORMANT — never executed in production
+ * @audit  Phase 1 — Duplicate Execution Elimination (2026-03-28)
  */
+
 
 const logger = require('../../../utils/logger');
 const registerMessageHandlers = require('./handlers/messages.socket');

@@ -834,24 +834,17 @@ module.exports = async function registerChatHandlers(io, socket) {
     });
   });
 
-  /* ----------------------------------------------------
-     DISCONNECT
-  ---------------------------------------------------- */
-  socket.on("disconnect", async () => {
-    // ✅ Set user offline status
-    try {
-      await User.findByIdAndUpdate(userId, {
-        isOnline: false,
-        lastActivityAt: new Date()
-      });
-
-      // Broadcast status change to all connected clients
-      io.emit("user-status-changed", {
-        userId: userId,
-        status: "offline"
-      });
-    } catch (err) {
-      logger.error("Error setting user offline:", err);
-    }
-  });
+  // DUPLICATE ELIMINATED (Phase 1):
+  // The 'disconnect' event is exclusively handled by presenceService.setOffline()
+  // in server.js (line 578). That handler:
+  //   1. Updates User.isOnline: false in MongoDB (via presenceService.setOffline L89)
+  //   2. Only marks offline when the user's LAST socket disconnects (multi-tab safe)
+  //   3. Broadcasts user:offline to the company room
+  //
+  // The handler that was here previously caused:
+  //   - DOUBLE DB WRITE to User.isOnline on every disconnect
+  //   - Global io.emit("user-status-changed") that fired even for multi-tab users
+  //     who still had other active connections
+  //
+  // DO NOT re-add a 'disconnect' handler here.
 };

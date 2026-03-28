@@ -1,13 +1,29 @@
 // server/socket.js
 /**
- * Socket.io Main Handler
- * 
- * This file delegates to the modular socket architecture in src/socket/
- * Legacy events are kept here for backward compatibility during migration.
- * 
- * @status migrating
- * @target server/src/socket/
+ * ⚠️  TOMBSTONE — DO NOT ACTIVATE (Phase 1 Audit)
+ *
+ * This file is NEVER imported by server.js or any active module.
+ * It is dead code. Its entire handler tree (via src/socket/index.js) is DORMANT.
+ *
+ * If you require() this file from server.js, it will register DUPLICATE handlers
+ * for the following events (which are already handled in server/socket/index.js):
+ *   - admin:join, admin:dm:send, company:join
+ *   - audit:new, health:update, ticket:created, ticket:updated
+ *   - broadcast:sent, company:registered
+ *   - chat:message, chat:typing
+ *   - poll:created, poll:voted, poll:deleted, poll:closed
+ *   - disconnect (ALSO a duplicate — it has been removed from socket/index.js)
+ *
+ * DO NOT add a require('./socket.js') or require('./socket') anywhere that would
+ * activate this file.
+ *
+ * TO KEEP as a migration reference until src/socket/handlers/ is pruned.
+ * THEN: delete this file entirely.
+ *
+ * @status DORMANT — never executed in production
+ * @audit  Phase 1 — Duplicate Execution Elimination (2026-03-28)
  */
+
 
 const AuditLog = require('./models/AuditLog');
 const User = require('./models/User');
