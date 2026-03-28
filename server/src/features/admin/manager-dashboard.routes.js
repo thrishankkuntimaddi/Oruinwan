@@ -6,8 +6,8 @@ const Department = require('../../../models/Department');
 const Workspace = require('../../../models/Workspace');
 const Message = require("../messages/message.model.js");
 const Task = require('../../../models/Task');
-const requireAuth = require('../../../middleware/auth');
-const { requireManager } = require('../../../middleware/permissionMiddleware');
+const requireAuth = require('../../shared/middleware/auth');
+const { requireManager } = require('../../shared/middleware/permissionMiddleware');
 
 /**
  * Reusable ObjectId validation helper.

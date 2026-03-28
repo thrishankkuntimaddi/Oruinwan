@@ -1,7 +1,7 @@
 // server/src/features/milestones/milestones.routes.js
 const express = require('express');
 const router = express.Router();
-const requireAuth = require('../../../middleware/auth');
+const requireAuth = require('../../shared/middleware/auth');
 const service = require('./milestones.service');
 
 router.use(requireAuth);

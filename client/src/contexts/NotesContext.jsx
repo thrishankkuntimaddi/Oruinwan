@@ -33,7 +33,7 @@ export const NotesProvider = ({ children }) => {
     const loadVersions = useCallback(async (noteId) => {
         if (!noteId) return;
         try {
-            const res = await api.get(`/api/notes/${noteId}/versions`);
+            const res = await api.get(`/api/v2/notes/${noteId}/versions`);
             const versions = res.data.versions || [];
             setNoteVersions(prev => ({ ...prev, [noteId]: versions }));
         } catch (e) {
@@ -52,7 +52,7 @@ export const NotesProvider = ({ children }) => {
         if (versionSaveTimer.current[noteId]) clearTimeout(versionSaveTimer.current[noteId]);
         versionSaveTimer.current[noteId] = setTimeout(async () => {
             try {
-                await api.post(`/api/notes/${noteId}/versions`, {
+                await api.post(`/api/v2/notes/${noteId}/versions`, {
                     title: snapshot.title || '',
                     content: snapshot.content || '',
                 });
@@ -79,7 +79,7 @@ export const NotesProvider = ({ children }) => {
                 return;
             }
             setLoading(true);
-            const response = await api.get(`/api/notes?workspaceId=${wsId}`);
+            const response = await api.get(`/api/v2/notes?workspaceId=${wsId}`);
 
             const mapNote = (note) => ({
                 id: note._id,
@@ -175,7 +175,7 @@ export const NotesProvider = ({ children }) => {
             const wsId = getWorkspaceId();
             if (!wsId) { showToast("Please select a workspace first", "error"); return null; }
 
-            const response = await api.post("/api/notes", {
+            const response = await api.post("/api/v2/notes", {
                 title: noteTitle,
                 content: "",
                 workspaceId: wsId,
@@ -217,7 +217,7 @@ export const NotesProvider = ({ children }) => {
         if (saveTimerRef.current[id]) clearTimeout(saveTimerRef.current[id]);
         saveTimerRef.current[id] = setTimeout(async () => {
             try {
-                await api.put(`/api/notes/${id}`, updates);
+                await api.put(`/api/v2/notes/${id}`, updates);
             } catch (error) {
                 console.error("Failed to update note:", error);
                 showToast("Failed to save changes", "error");
@@ -231,7 +231,7 @@ export const NotesProvider = ({ children }) => {
     // Delete note (soft delete → archive)
     const deleteNote = useCallback(async (id) => {
         try {
-            await api.delete(`/api/notes/${id}`);
+            await api.delete(`/api/v2/notes/${id}`);
             setNotes(prev => prev.filter(n => n.id !== id));
             const wsId = getWorkspaceId();
             if (wsId) navigate(`/workspace/${wsId}/notes`);
@@ -268,7 +268,7 @@ export const NotesProvider = ({ children }) => {
     // Share note
     const shareNote = useCallback(async (id, userIds) => {
         try {
-            await api.post(`/api/notes/${id}/share`, { userIds });
+            await api.post(`/api/v2/notes/${id}/share`, { userIds });
             await loadNotes();
             showToast("Note shared successfully", "success");
         } catch (error) {

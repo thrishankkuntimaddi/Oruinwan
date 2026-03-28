@@ -9,8 +9,8 @@ const Message = require("../messages/message.model.js");
 const UserSession = require('../../../models/UserSession');
 const Invoice = require('../../../models/Invoice');
 const AuditLog = require('../../../models/AuditLog');
-const requireAuth = require('../../../middleware/auth');
-const { requireOwner } = require('../../../middleware/permissionMiddleware');
+const requireAuth = require('../../shared/middleware/auth');
+const { requireOwner } = require('../../shared/middleware/permissionMiddleware');
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 function sinceDate(timeRange) {

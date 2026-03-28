@@ -15,7 +15,7 @@ const router = express.Router();
 const tasksController = require('../src/features/tasks/tasks.controller');
 const notesController = require('../src/features/notes/notes.controller');
 const favoritesController = require('../src/features/favorites/favorites.controller');
-const requireAuth = require('../middleware/auth');
+const requireAuth = require('../src/shared/middleware/auth');
 
 // ============================================================================
 // TASKS PROXY - /api/tasks → /api/v2/tasks

@@ -11,7 +11,7 @@
 
 const express = require('express');
 const router = express.Router();
-const auth = require('../../../middleware/auth');
+const auth = require('../../shared/middleware/auth');
 const activityController = require('./activity.controller');
 
 // All activity routes require authentication

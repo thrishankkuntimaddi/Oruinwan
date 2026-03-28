@@ -3,7 +3,7 @@
 
 const express = require('express');
 const router = express.Router();
-const requireAuth = require('../../../middleware/auth');
+const requireAuth = require('../../shared/middleware/auth');
 const internalMessagingController = require('./messaging.controller');
 
 /**

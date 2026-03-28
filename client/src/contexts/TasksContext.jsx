@@ -88,7 +88,7 @@ export const TasksProvider = ({ children }) => {
             }
 
             setLoading(true);
-            const response = await api.get(`/api/tasks?workspaceId=${workspaceId}`);
+            const response = await api.get(`/api/v2/tasks?workspaceId=${workspaceId}`);
 
             // Map backend tasks to frontend format
             const mappedTasks = response.data.tasks.map(task => {
@@ -288,7 +288,7 @@ export const TasksProvider = ({ children }) => {
             }
 
 
-            const response = await api.post('/api/tasks', backendPayload);
+            const response = await api.post('/api/v2/tasks', backendPayload);
 
             // Handle both single task and array of tasks (for split individual assignments)
             const backendTasks = response.data.tasks || [response.data.task];
@@ -374,7 +374,7 @@ export const TasksProvider = ({ children }) => {
                 backendUpdates.assignedTo = [updates.assigneeId];
             }
 
-            const response = await api.put(`/api/tasks/${id}`, backendUpdates);
+            const response = await api.put(`/api/v2/tasks/${id}`, backendUpdates);
             const updatedBackendTask = response.data.task;
 
             // Map backend task to frontend format
@@ -430,7 +430,7 @@ export const TasksProvider = ({ children }) => {
     // Delete task (soft delete)
     const deleteTask = useCallback(async (id) => {
         try {
-            await api.delete(`/api/tasks/${id}`);
+            await api.delete(`/api/v2/tasks/${id}`);
 
             setTasks(prev => prev.map(task =>
                 task.id === id ? { ...task, deleted: true } : task
@@ -448,7 +448,7 @@ export const TasksProvider = ({ children }) => {
     // Permanently delete task
     const permanentlyDeleteTask = useCallback(async (id) => {
         try {
-            await api.delete(`/api/tasks/${id}/permanent`);
+            await api.delete(`/api/v2/tasks/${id}/permanent`);
             setTasks(prev => prev.filter(task => task.id !== id));
             showToast("Task permanently deleted", "success");
         } catch (error) {
@@ -460,7 +460,7 @@ export const TasksProvider = ({ children }) => {
     // Restore task
     const restoreTask = useCallback(async (id) => {
         try {
-            await api.put(`/api/tasks/${id}/restore`);
+            await api.put(`/api/v2/tasks/${id}/restore`);
             setTasks(prev => prev.map(task =>
                 task.id === id ? { ...task, deleted: false } : task
             ));
@@ -474,7 +474,7 @@ export const TasksProvider = ({ children }) => {
     // Handle Transfer Request (Approve/Reject)
     const handleTransferResponse = useCallback(async (taskId, action) => {
         try {
-            const response = await api.post(`/api/tasks/${taskId}/transfer-request/${action}`);
+            const response = await api.post(`/api/v2/tasks/${taskId}/transfer-request/${action}`);
 
             if (action === 'approve') {
                 const updatedBackendTask = response.data.task;

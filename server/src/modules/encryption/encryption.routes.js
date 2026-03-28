@@ -9,7 +9,7 @@
 const express = require('express');
 const router = express.Router();
 const encryptionController = require('./encryption.controller');
-const requireAuth = require('../../../middleware/auth');
+const requireAuth = require('../../shared/middleware/auth');
 
 // Apply authentication to all routes
 router.use(requireAuth);

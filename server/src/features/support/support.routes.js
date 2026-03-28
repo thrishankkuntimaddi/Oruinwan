@@ -4,7 +4,7 @@ const SupportTicket = require('../../../models/SupportTicket');
 const logger = require('../../../utils/logger');
 
 // Middleware to ensure user is logged in
-const requireAuth = require('../../../middleware/auth');
+const requireAuth = require('../../shared/middleware/auth');
 
 router.use(requireAuth);
 

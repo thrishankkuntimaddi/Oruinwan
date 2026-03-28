@@ -7,7 +7,7 @@ const ctrl = require('./permissions.controller');
 const requireAuth = require('../../shared/middleware/auth');
 const requireCompanyMember = require('../../shared/middleware/requireCompanyMember');
 const requireWorkspaceMember = require('../../shared/middleware/requireWorkspaceMember');
-const { requireAdmin } = require('../../../middleware/permissionMiddleware');
+const { requireAdmin } = require('../../shared/middleware/permissionMiddleware');
 
 // Role × Module permission matrix (company-level)
 // GET  /api/permissions/matrix?companyId=

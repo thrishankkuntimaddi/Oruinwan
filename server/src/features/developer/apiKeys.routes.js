@@ -3,7 +3,7 @@
 const express = require('express');
 const router = express.Router();
 const ApiKey = require('./apiKey.model');
-const requireAuth = require('../../../middleware/auth');
+const requireAuth = require('../../shared/middleware/auth');
 const logger = require('../../../utils/logger');
 
 router.use(requireAuth);

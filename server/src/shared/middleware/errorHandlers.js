@@ -1,8 +1,8 @@
-// server/middleware/errorHandlers.js
+// server/src/shared/middleware/errorHandlers.js
 // 404 + Global error handler middleware
-// Extracted from server.js (Phase 4 cleanup)
+// Phase 5: moved from server/middleware/errorHandlers.js to canonical location
 
-const logger = require('../utils/logger');
+const logger = require('../../../utils/logger');
 const isProduction = process.env.NODE_ENV === 'production';
 
 /**
@@ -60,7 +60,6 @@ function globalErrorHandler(err, req, res, next) {
   // Add stack trace in development only
   if (!isProduction) {
     errorResponse.stack = err.stack;
-    // NOTE: err.details may expose internals - omit sensitive fields in non-prod too
   }
 
   res.status(statusCode).json(errorResponse);

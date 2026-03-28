@@ -152,7 +152,7 @@ export default function KanbanBoard({ tasks = [], onTaskClick }) {
 
     setUpdating(true);
     try {
-      await api.put(`/api/tasks/${draggingTask.id}`, { status: targetCol.backendKey });
+      await api.put(`/api/v2/tasks/${draggingTask.id}`, { status: targetCol.backendKey });
       await refreshTasks();
       showToast(`Moved to ${targetCol.label}`, 'success');
     } catch (err) {

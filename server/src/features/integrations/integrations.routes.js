@@ -1,6 +1,6 @@
 // server/src/features/integrations/integrations.routes.js
 const router = require('express').Router();
-const requireAuth = require('../../../middleware/auth');
+const requireAuth = require('../../shared/middleware/auth');
 const integrationService = require('./integration.service');
 const aiProviderService = require('./ai-provider.service');
 const Webhook = require('./webhook.model');

@@ -97,8 +97,8 @@ export default function WorkloadPanel({ workspaceId }) {
     setLoading(true);
     setError(null);
     try {
-      // Route is /api/tasks/workload (tasks registered under /api/tasks)
-      const res = await api.get(`/api/tasks/workload?workspaceId=${workspaceId}`);
+      // Route is /api/v2/tasks/workload (tasks registered under /api/v2/tasks)
+      const res = await api.get(`/api/v2/tasks/workload?workspaceId=${workspaceId}`);
       setWorkload(res.data.workload || []);
     } catch (err) {
       const msg = err.response?.data?.message || 'Failed to load workload data.';

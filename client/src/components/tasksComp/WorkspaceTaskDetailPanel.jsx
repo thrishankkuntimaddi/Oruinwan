@@ -96,12 +96,7 @@ function ActivityLog({ taskId }) {
         // Try v2 endpoint first, fallback gracefully
         api.get(`/api/v2/tasks/${taskId}/activity`)
             .then(r => setLog(r.data.activities || r.data.activity || []))
-            .catch(() => {
-                // Try the legacy task endpoint
-                api.get(`/api/tasks/${taskId}/activity`)
-                    .then(r => setLog(r.data.activities || r.data.activity || []))
-                    .catch(() => setLog([]));
-            })
+            .catch(() => setLog([]))
             .finally(() => setLoading(false));
     }, [taskId]);
 
@@ -208,7 +203,7 @@ export default function WorkspaceTaskDetailPanel({ task, members = [], onClose, 
     const startTimer = async () => {
         setTimerLoading(true);
         try {
-            await api.post(`/api/tasks/${task.id}/time/start`);
+            await api.post(`/api/v2/tasks/${task.id}/time/start`);
             setTimerRunning(true);
             setTimerElapsed(0);
             showToast('Timer started', 'success');
@@ -220,7 +215,7 @@ export default function WorkspaceTaskDetailPanel({ task, members = [], onClose, 
     const stopTimer = async () => {
         setTimerLoading(true);
         try {
-            const res = await api.post(`/api/tasks/${task.id}/time/stop`);
+            const res = await api.post(`/api/v2/tasks/${task.id}/time/stop`);
             setTimerRunning(false);
             setTimerElapsed(0);
             setTotalTime(res.data.timeTracking?.totalTime || 0);
@@ -239,7 +234,7 @@ export default function WorkspaceTaskDetailPanel({ task, members = [], onClose, 
         if (!depInput.trim()) return;
         setDepLoading(true);
         try {
-            const res = await api.post(`/api/tasks/${task.id}/dependency`, {
+            const res = await api.post(`/api/v2/tasks/${task.id}/dependency`, {
                 dependencyTaskId: depInput.trim()
             });
             setLocalDeps(res.data.dependencies || []);

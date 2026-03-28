@@ -1,4 +1,6 @@
-// server/middleware/auth.js
+// server/src/shared/middleware/auth.js
+// CANONICAL auth middleware — Phase 5: merged from legacy server/middleware/auth.js
+// Contains: device session revocation (Phase 3) + error differentiation (legacy security fix)
 const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
 const User = require("../../../models/User");
@@ -57,7 +59,13 @@ module.exports = async function requireAuth(req, res, next) {
 
         return next();
       } catch (err) {
-        // access token expired → fall through to cookie
+        // Only fall through to refresh cookie on token expiry.
+        // All other JWT errors (invalid signature, tampered) → reject immediately.
+        // (S-LEGACY: prevents retry loops when token is invalid rather than expired)
+        if (err.name !== 'TokenExpiredError') {
+          return res.status(401).json({ message: 'Invalid access token' });
+        }
+        // TokenExpiredError: fall through to refresh cookie path
       }
     }
 
@@ -96,13 +104,27 @@ module.exports = async function requireAuth(req, res, next) {
         // Attach new access token to req.user
         req.user = jwt.verify(newAccess, process.env.ACCESS_TOKEN_SECRET);
 
-        // Send new access token to frontend (optional)
+        // Send new access token to frontend
         res.setHeader("x-access-token", newAccess);
 
         return next();
 
       } catch (err) {
-        return res.status(401).json({ message: "Token expired, please login again" });
+        // Differentiate error types so the client interceptor doesn't retry
+        // on non-expiry errors (which would create retry loops or mass logouts).
+        if (err.name === 'TokenExpiredError') {
+          // Refresh token itself expired → legitimate re-login
+          return res.status(401).json({ message: 'Refresh token expired' });
+        }
+        if (err.name === 'JsonWebTokenError') {
+          // Tampered token or wrong REFRESH_TOKEN_SECRET (e.g. after redeploy).
+          // Return 403 so Axios interceptor does NOT retry → no retry loop.
+          return res.status(403).json({ message: 'Invalid token signature' });
+        }
+        // DB error, Mongoose error, or unknown — log and return 500.
+        // 500 is not caught by the Axios 401-interceptor → no retry loop.
+        console.error('AUTH MIDDLEWARE CATCH (refresh path):', err);
+        return res.status(500).json({ message: 'Server error during authentication' });
       }
     }
 

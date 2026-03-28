@@ -4,8 +4,8 @@ const User = require('../../../models/User');
 const Department = require('../../../models/Department');
 const Workspace = require('../../../models/Workspace');
 const AuditLog = require('../../../models/AuditLog');
-const requireAuth = require('../../../middleware/auth');
-const { requireAdmin } = require('../../../middleware/permissionMiddleware');
+const requireAuth = require('../../shared/middleware/auth');
+const { requireAdmin } = require('../../shared/middleware/permissionMiddleware');
 
 /**
  * GET /api/admin-dashboard/users-access

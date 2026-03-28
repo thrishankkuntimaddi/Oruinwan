@@ -13,7 +13,7 @@
 const express = require('express');
 const router = express.Router();
 const notesController = require('./notes.controller');
-const requireAuth = require('../../../middleware/auth');
+const requireAuth = require('../../shared/middleware/auth');
 // NOTE: requireCompanyMember intentionally NOT applied at router level.
 // Notes are scoped to BOTH personal and company workspaces.
 // Personal accounts have no companyId — requireCompanyMember would block them.

@@ -46,7 +46,7 @@ export const uploadNoteAttachment = async (file, workspaceId, noteId = null, onP
 export const downloadNoteAttachment = async (noteId, attachmentId, filename) => {
     try {
         const response = await api.get(
-            `/api/notes/${noteId}/attachments/${attachmentId}/download`,
+            `/api/v2/notes/${noteId}/attachments/${attachmentId}/download`,
             { responseType: 'blob' }
         );
 
@@ -72,7 +72,7 @@ export const downloadNoteAttachment = async (noteId, attachmentId, filename) => 
  */
 export const deleteNoteAttachment = async (noteId, attachmentId) => {
     try {
-        await api.delete(`/api/notes/${noteId}/attachments/${attachmentId}`);
+        await api.delete(`/api/v2/notes/${noteId}/attachments/${attachmentId}`);
     } catch (error) {
         console.error('Delete error:', error);
         throw error;

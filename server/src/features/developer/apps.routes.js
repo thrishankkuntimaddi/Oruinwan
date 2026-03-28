@@ -3,7 +3,7 @@
 const express = require('express');
 const router = express.Router();
 const App = require('./app.model');
-const requireAuth = require('../../../middleware/auth');
+const requireAuth = require('../../shared/middleware/auth');
 const logger = require('../../../utils/logger');
 
 router.use(requireAuth);

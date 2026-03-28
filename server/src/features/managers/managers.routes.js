@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const managerController = require('./managers.controller');
-const requireAuth = require('../../../middleware/auth');
+const requireAuth = require('../../shared/middleware/auth');
 
 // Middleware to ensure user is essentially a manager
 // (We could add stricter middleware here if needed, but the controller filters by user ID anyway)

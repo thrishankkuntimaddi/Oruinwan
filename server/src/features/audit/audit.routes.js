@@ -13,7 +13,7 @@
 const express = require('express');
 const router = express.Router();
 const auditController = require('./audit.controller');
-const requireAuth = require('../../../middleware/auth');
+const requireAuth = require('../../shared/middleware/auth');
 
 // ============================================================================
 // MIDDLEWARE

@@ -5,7 +5,7 @@
 
 const express = require('express');
 const router = express.Router();
-const requireAuth = require('../../../middleware/auth');
+const requireAuth = require('../../shared/middleware/auth');
 const { upload, uploadFile } = require('./upload.controller');
 const { streamGCSFile } = require('./upload.service');
 

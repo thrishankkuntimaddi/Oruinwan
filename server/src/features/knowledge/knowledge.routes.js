@@ -1,7 +1,7 @@
 // server/src/features/knowledge/knowledge.routes.js
 const express = require('express');
 const router = express.Router();
-const requireAuth = require('../../../middleware/auth');
+const requireAuth = require('../../shared/middleware/auth');
 const ctrl = require('./knowledge.controller');
 
 router.use(requireAuth);

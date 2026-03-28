@@ -5,7 +5,7 @@ const express = require('express');
 const router = express.Router();
 const ctrl = require('./compliance.controller');
 const requireAuth = require('../../shared/middleware/auth');
-const { requireAdmin } = require('../../../middleware/permissionMiddleware');
+const { requireAdmin } = require('../../shared/middleware/permissionMiddleware');
 
 // GET /api/compliance-logs — paginated list (admin only)
 router.get('/', requireAuth, requireAdmin, ctrl.getComplianceLogs);

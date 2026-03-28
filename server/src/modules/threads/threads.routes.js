@@ -1,7 +1,7 @@
 // server/src/modules/threads/threads.routes.js
 const express = require('express');
 const router = express.Router();
-const requireAuth = require('../../../middleware/auth');
+const requireAuth = require('../../shared/middleware/auth');
 const threadController = require('./threads.controller');
 
 // Get all threads for a channel (parent messages with replyCount > 0)

@@ -7,7 +7,7 @@
 
 const express = require('express');
 const router = express.Router();
-const requireAuth = require('../../../middleware/auth');
+const requireAuth = require('../../shared/middleware/auth');
 const repairController = require('./conversationKeys.repair.controller');
 
 /**

@@ -8,7 +8,7 @@
 const express = require('express');
 const router = express.Router();
 const conversationKeysController = require('./conversationKeys.controller');
-const requireAuth = require('../../../middleware/auth');
+const requireAuth = require('../../shared/middleware/auth');
 
 // Apply authentication to all routes
 router.use(requireAuth);

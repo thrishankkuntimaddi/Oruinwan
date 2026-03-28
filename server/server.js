@@ -54,8 +54,8 @@ const { generateAuditDigest } = require('./src/services/auditDigestService');
 // Socket modules (Phase 4: extracted from server.js)
 const registerSocketAuth = require('./src/socket/socketAuth');
 const registerSocketConnection = require('./src/socket/socketConnection');
-// Error handling middleware (Phase 4: extracted from server.js)
-const { notFoundHandler, globalErrorHandler } = require('./middleware/errorHandlers');
+// Error handling middleware — Phase 5: canonical location
+const { notFoundHandler, globalErrorHandler } = require('./src/shared/middleware/errorHandlers');
 // ——————————————————————————————————————————————————————————————————
 
 
@@ -104,7 +104,7 @@ app.use(
 
 // Input sanitization - CRITICAL SECURITY
 // Prevents MongoDB injection attacks by removing $ operators
-const { sanitizeInput } = require('./middleware/validate');
+const { sanitizeInput } = require('./src/shared/middleware/validate');
 app.use(sanitizeInput);
 console.log('🛡️ Input sanitization enabled');
 
@@ -153,11 +153,12 @@ app.use('/api/health', require('./src/shared/routes/health.routes'));
 app.use(express.static(path.join(__dirname, "../dist")));
 
 // Serve uploaded files with authentication check
-const requireAuth = require("./middleware/auth");
+// Phase 5: canonical shared middleware
+const requireAuth = require("./src/shared/middleware/auth");
 // SECURITY FIX (H-2): Import role middleware for dashboard mount-level guards.
 // Defence-in-depth: role is enforced here so any new route added to these files
 // is automatically protected, even if the developer forgets to add per-route middleware.
-const { requireOwner, requireAdmin, requireManager } = require("./middleware/permissionMiddleware");
+const { requireOwner, requireAdmin, requireManager } = require("./src/shared/middleware/permissionMiddleware");
 // GAP 1 FIX: Serve local upload fallback files publicly so browser can load
 // file preview URLs (e.g. <img src="/uploads/files/uuid.png">) without auth headers.
 // UUIDs in filenames prevent enumeration; no sensitive data is exposed.
@@ -227,7 +228,7 @@ app.use((req, res, next) => {
 
 // Routes
 app.use("/api/auth", require("./src/features/auth/auth.routes"));
-app.use("/api/admin", require("./middleware/auth"), require("./src/features/admin/admin.routes"));
+app.use("/api/admin", require("./src/shared/middleware/auth"), require("./src/features/admin/admin.routes"));
 // Employee Onboarding — STABILIZED (Phase 1 middleware applied within route file)
 // Old: app.use("/api/admin", ..legacy middleware.., onboarding.routes)  ← bypassed Phase 1
 // New: /api/company/onboarding — requireAuth + requireCompanyMember + requireCompanyRole('admin')

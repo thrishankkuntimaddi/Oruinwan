@@ -35,6 +35,7 @@ import WorkloadPanel from '../../components/tasksComp/WorkloadPanel';
 import { useTasks } from '../../contexts/TasksContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useContacts } from '../../contexts/ContactsContext';
+import api from '../../services/api';
 
 // ─── Design tokens (Jira Atlas palette) ─────────────────────────────────────-
 
@@ -977,11 +978,7 @@ export default function MyTasks() {
           onClose={() => setTransferTask(null)}
           onConfirm={async (newAssigneeId, note) => {
             try {
-              await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tasks/${transferTask.id}/transfer-request`, {
-                method: 'POST', credentials: 'include',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ newAssigneeId, note }),
-              });
+              await api.post(`/api/v2/tasks/${transferTask.id}/transfer-request`, { newAssigneeId, note });
               setTransferTask(null);
             } catch (e) { console.error(e); }
           }}

@@ -2,8 +2,8 @@
 const express = require('express');
 const router = express.Router();
 const analyticsController = require('./analytics.controller');
-const requireAuth = require('../../../middleware/auth');
-const { requireAdmin } = require('../../../middleware/permissionMiddleware');
+const requireAuth = require('../../shared/middleware/auth');
+const { requireAdmin } = require('../../shared/middleware/permissionMiddleware');
 const analyticsService = require('./analytics.service');
 const User = require('../../../models/User');
 

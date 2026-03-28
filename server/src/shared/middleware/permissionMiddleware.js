@@ -1,4 +1,7 @@
-// server/middleware/permissionMiddleware.js
+// server/src/shared/middleware/permissionMiddleware.js
+// CANONICAL permission middleware — Phase 5: security fixes back-ported from legacy
+// S-05 FIX: Uses scoped coOwnerOf comparison instead of global isCoOwner flag
+// S-14 FIX: Logs user._id instead of email (GDPR/SOC2 compliance)
 const Company = require('../../../models/Company');
 const User = require('../../../models/User');
 
@@ -38,13 +41,19 @@ const requireOwner = async (req, res, next) => {
                 console.error('[REQUIRE_OWNER] User not found:', userId);
                 return res.status(401).json({ message: "User not found" });
             }
-            // Update req.user with full DB object
             req.user = fullUser;
         }
 
-        console.log('[REQUIRE_OWNER] Checking owner role for user:', req.user.email, 'Role:', req.user.companyRole);
+        // S-14 SECURITY FIX: Use _id instead of email in logs — email is PII and must not
+        // appear in operational log streams (GDPR / SOC2 compliance).
+        console.log('[REQUIRE_OWNER] Checking owner role for user:', req.user._id || req.user.sub, 'Role:', req.user.companyRole);
 
-        if (req.user.companyRole === 'owner' || req.user.isCoOwner) {
+        // S-05 SECURITY FIX: Only scoped coOwner check — global isCoOwner flag removed.
+        // A global boolean is unsafe in multi-tenant: one flag would grant owner access
+        // across ALL companies. Only match coOwnerOf to THIS request's companyId.
+        const isCoOwnerHere = req.user.coOwnerOf && req.user.companyId &&
+            req.user.coOwnerOf.toString() === req.user.companyId.toString();
+        if (req.user.companyRole === 'owner' || isCoOwnerHere) {
             console.log('[REQUIRE_OWNER] Access granted');
             next();
         } else {
@@ -65,8 +74,6 @@ const requireOwner = async (req, res, next) => {
  */
 const requireAdmin = async (req, res, next) => {
     try {
-        // Fetch full user if not already fully populated
-        // We check for companyRole because JWT payload doesn't have it
         if (!req.user.companyRole || !req.user.companyId) {
             const userId = req.user.sub || req.user._id;
             const fullUser = await User.findById(userId);
@@ -74,12 +81,14 @@ const requireAdmin = async (req, res, next) => {
             if (!fullUser) {
                 return res.status(401).json({ message: "User not found" });
             }
-            // Update req.user with full DB object
             req.user = fullUser;
         }
 
         const adminRoles = ['owner', 'admin'];
-        if (adminRoles.includes(req.user.companyRole) || req.user.isCoOwner) {
+        // S-05 SECURITY FIX: Scoped coOwner check only — global isCoOwner flag removed.
+        const isCoOwnerHere = req.user.coOwnerOf && req.user.companyId &&
+            req.user.coOwnerOf.toString() === req.user.companyId.toString();
+        if (adminRoles.includes(req.user.companyRole) || isCoOwnerHere) {
             next();
         } else {
             res.status(403).json({ message: "Access denied: Admin privileges required" });
@@ -91,7 +100,7 @@ const requireAdmin = async (req, res, next) => {
 };
 
 /**
- * Check if user is a Manager of the specific department
+ * Check if user is a Manager of a specific department
  * Expects departmentId in req.params.id or req.params.departmentId
  */
 const requireDepartmentManager = async (req, res, next) => {
@@ -99,16 +108,17 @@ const requireDepartmentManager = async (req, res, next) => {
         const departmentId = req.params.id || req.params.departmentId;
 
         // Owners and Admins explicitly have access to all departments
-        if (['owner', 'admin'].includes(req.user.companyRole) || req.user.isCoOwner) {
+        // S-05 SECURITY FIX: Scoped coOwner check only — global isCoOwner flag removed.
+        const isCoOwnerHere = req.user.coOwnerOf && req.user.companyId &&
+            req.user.coOwnerOf.toString() === req.user.companyId.toString();
+        if (['owner', 'admin'].includes(req.user.companyRole) || isCoOwnerHere) {
             return next();
         }
 
-        // Check if user is a manager
         if (req.user.companyRole !== 'manager') {
             return res.status(403).json({ message: "Access denied: Manager role required" });
         }
 
-        // Check if user manages THIS specific department
         const managesDepartment = req.user.managedDepartments &&
             req.user.managedDepartments.map(id => id.toString()).includes(departmentId);
 
@@ -125,23 +135,21 @@ const requireDepartmentManager = async (req, res, next) => {
 
 /**
  * Check if user has permission to create workspace
- * - Admins/Owners: Always yes
- * - Managers: Yes, within their department
- * - Members: Yes, ONLY if allowMemberWorkspaceCreation setting is true
+ * Members: Only if allowMemberWorkspaceCreation setting is true
  */
 const canCreateWorkspace = async (req, res, next) => {
     try {
-        // 1. Owner/Admin -> Always allow
-        if (['owner', 'admin'].includes(req.user.companyRole) || req.user.isCoOwner) {
+        // S-05 SECURITY FIX: Scoped coOwner check only — global isCoOwner flag removed.
+        const isCoOwnerHere = req.user.coOwnerOf && req.user.companyId &&
+            req.user.coOwnerOf.toString() === req.user.companyId.toString();
+        if (['owner', 'admin'].includes(req.user.companyRole) || isCoOwnerHere) {
             return next();
         }
 
-        // 2. Manager -> Allow (will be scoped to department in controller)
         if (req.user.companyRole === 'manager') {
             return next();
         }
 
-        // 3. Member -> Check Company Settings
         const company = await Company.findById(req.user.companyId);
         if (company && company.settings.allowMemberWorkspaceCreation) {
             return next();
@@ -163,7 +171,6 @@ const canCreateWorkspace = async (req, res, next) => {
  */
 const requireManager = async (req, res, next) => {
     try {
-        // Fetch full user if needed
         if (!req.user.companyRole || !req.user.companyId) {
             const userId = req.user.sub || req.user._id;
             const fullUser = await User.findById(userId);
@@ -175,7 +182,10 @@ const requireManager = async (req, res, next) => {
         }
 
         const managerRoles = ['owner', 'admin', 'manager'];
-        if (managerRoles.includes(req.user.companyRole) || req.user.isCoOwner) {
+        // S-05 SECURITY FIX: Scoped coOwner check only — global isCoOwner flag removed.
+        const isCoOwnerHere = req.user.coOwnerOf && req.user.companyId &&
+            req.user.coOwnerOf.toString() === req.user.companyId.toString();
+        if (managerRoles.includes(req.user.companyRole) || isCoOwnerHere) {
             next();
         } else {
             res.status(403).json({ message: "Access denied: Manager privileges required" });

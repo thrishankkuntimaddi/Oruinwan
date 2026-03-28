@@ -12,7 +12,7 @@ const router = express.Router();
 const User = require('../models/User');
 
 // Middleware: require authenticated user (matches server.js pattern)
-const requireAuth = require('../middleware/auth');
+const requireAuth = require('../src/shared/middleware/auth');
 
 /**
  * POST /api/push/register

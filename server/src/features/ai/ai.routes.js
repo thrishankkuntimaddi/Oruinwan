@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const aiController = require('./ai.controller');
-const auth = require('../../../middleware/auth');
+const auth = require('../../shared/middleware/auth');
 
 // Debug Middleware
 router.use((req, res, next) => {
