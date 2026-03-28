@@ -1,13 +1,17 @@
 // server/src/modules/encryption/encryption.controller.js
 /**
- * Encryption Controller - E2EE HTTP Endpoints
+ * Encryption Controller — E2EE HTTP Endpoints
  * Handles encryption key management API requests
- * 
+ *
  * @module encryption/controller
  */
 
+'use strict';
+
 const encryptionService = require('./encryption.service');
 const { handleError } = require('../../../utils/responseHelpers');
+const Workspace = require('../../../models/Workspace');
+const logger = require('../../shared/utils/logger');
 
 /**
  * Get all workspace keys for authenticated user
@@ -80,28 +84,38 @@ exports.enrollUser = async (req, res) => {
 exports.revokeAccess = async (req, res) => {
     try {
         const { userId, workspaceId } = req.body;
-        const _requesterId = req.user.sub;
-
-        // TODO: Add authorization check (only workspace admins can revoke)
+        const requesterId = req.user.sub;
 
         if (!userId || !workspaceId) {
             return res.status(400).json({
-                message: 'Missing required fields: userId, workspaceId'
+                message: 'Missing required fields: userId, workspaceId',
+            });
+        }
+
+        // Authorization: only workspace owners / admins may revoke access
+        const workspace = await Workspace.findById(workspaceId);
+        if (!workspace) {
+            return res.status(404).json({ message: 'Workspace not found' });
+        }
+        if (!workspace.isAdminOrOwner(requesterId)) {
+            logger.warn({ requesterId, workspaceId, targetUserId: userId }, 'Unauthorized revoke attempt blocked');
+            return res.status(403).json({
+                message: 'Only workspace administrators can revoke encryption access',
             });
         }
 
         const revoked = await encryptionService.revokeUserAccess(userId, workspaceId);
 
         if (!revoked) {
-            return res.status(404).json({
-                message: 'User access not found'
-            });
+            return res.status(404).json({ message: 'User access not found' });
         }
+
+        logger.info({ requesterId, workspaceId, targetUserId: userId }, 'Encryption access revoked');
 
         return res.json({
             message: 'Access revoked successfully',
             userId,
-            workspaceId
+            workspaceId,
         });
     } catch (err) {
         return handleError(res, err, 'REVOKE ACCESS ERROR');

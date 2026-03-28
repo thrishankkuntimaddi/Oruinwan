@@ -1,13 +1,16 @@
 // server/controllers/channelController.js
-const Channel = require("./channel.model.js");
-const User = require("../../../models/User");
-const Workspace = require("../../../models/Workspace");
-const Message = require("../messages/message.model.js");
-const { saveWithRetry } = require("../../../utils/mongooseRetry");
-const { handleError, _notFound, badRequest, forbidden } = require("../../../utils/responseHelpers");
-const { _extractMemberId, isMember, normalizeMemberFormat } = require("../../../utils/memberHelpers");
-const { _emitToWorkspace, _emitToChannel, _emitToUser, _emitToUsers } = require("../../../utils/socketHelpers");
-const conversationKeysService = require("../../modules/conversations/conversationKeys.service");
+'use strict';
+
+const Channel = require('./channel.model.js');
+const User = require('../../../models/User');
+const Workspace = require('../../../models/Workspace');
+const Message = require('../messages/message.model.js');
+const { saveWithRetry } = require('../../../utils/mongooseRetry');
+const { handleError, _notFound, badRequest, forbidden } = require('../../../utils/responseHelpers');
+const { _extractMemberId, isMember, normalizeMemberFormat } = require('../../../utils/memberHelpers');
+const { _emitToWorkspace, _emitToChannel, _emitToUser, _emitToUsers } = require('../../../utils/socketHelpers');
+const conversationKeysService = require('../../modules/conversations/conversationKeys.service');
+const logger = require('../../shared/utils/logger');
 
 /**
  * Check if a user is the owner of the workspace that contains a channel.
@@ -33,7 +36,7 @@ async function isWorkspaceOwner(userId, workspaceId) {
  * Creator becomes createdBy and is added to members.
  */
 exports.createChannel = async (req, res) => {
-  console.log('🔄 [CHANNEL:MODULAR] Function invoked: createChannel');
+  logger.debug('createChannel invoked');
   try {
     const userId = req.user.sub;
     const { name, description = "", isPrivate = false, isDiscoverable = true, memberIds = [], workspaceId } = req.body;
@@ -70,25 +73,18 @@ exports.createChannel = async (req, res) => {
       isDiscoverable: isPrivate ? false : isDiscoverable, // Private channels cannot be discoverable
     });
 
-    // 🔐 PHASE 5: Generate conversation key immediately at channel birth
-    // This ensures every channel is encrypted BEFORE any member can join or send messages
     try {
-      console.log(`🔐 [PHASE 5] Channel created, generating conversation key...`);
-
-      // Generate conversation key server-side (PHASE 5)
-      // Pass ALL initial member IDs for encryption (Phase 5 invariant)
+      logger.debug({ channelId: channel._id, channelName: channel.name }, '[PHASE 5] Generating conversation key');
       await conversationKeysService.generateConversationKeyServerSide(
         channel._id.toString(),
         'channel',
         workspaceId,
-        distinctMemberIds,  // ALL initial members
-        userId  // Creator ID for validation
+        distinctMemberIds,
+        userId
       );
-
-      console.log(`✅ [PHASE 5] Conversation key created for channel: ${channel.name}`);
-
+      logger.info({ channelId: channel._id, channelName: channel.name }, '[PHASE 5] Conversation key created');
     } catch (keyError) {
-      console.error(`❌ [PHASE 5] Failed to generate conversation key:`, keyError);
+      logger.error({ err: keyError, channelId: channel._id }, '[PHASE 5] Failed to generate conversation key');
 
       // Rollback channel creation
       await Channel.findByIdAndDelete(channel._id);
@@ -150,10 +146,9 @@ exports.createChannel = async (req, res) => {
       if (io) {
         io.to(`channel:${channel._id}`).emit('new-message', systemMsg);
       }
-      console.log(`📢 [SYSTEM] channel_created event emitted for #${channel.name}`);
+      logger.debug({ channelName: channel.name }, '[SYSTEM] channel_created event emitted');
     } catch (sysErr) {
-      // Non-fatal: channel was created successfully, log and continue
-      console.error('[SYSTEM MSG] Failed to create channel_created system message:', sysErr);
+      logger.error({ err: sysErr }, '[SYSTEM MSG] Failed to create channel_created system message');
     }
     // ─────────────────────────────────────────────────────────────────────
 
@@ -325,7 +320,7 @@ exports.getPublicChannels = async (req, res) => {
  * Only channel members (or createdBy) can invite (simple rule).
  */
 exports.inviteToChannel = async (req, res) => {
-  console.log('🔄 [CHANNEL:MODULAR] Function invoked: inviteToChannel');
+  logger.debug('inviteToChannel invoked');
   try {
     const userId = req.user.sub;
     const channelId = req.params.id;
@@ -386,14 +381,13 @@ exports.inviteToChannel = async (req, res) => {
         );
 
         if (distributed) {
-          console.log(`✅ [PHASE 4] Distributed conversation key for #${channel.name} to user ${inviteeId}`);
+          logger.info({ channelName: channel.name, userId: inviteeId }, '[PHASE 4] Conversation key distributed');
         } else {
-          console.warn(`⚠️ [PHASE 4] Could not distribute key for #${channel.name} to user ${inviteeId}`);
+          logger.warn({ channelName: channel.name, userId: inviteeId }, '[PHASE 4] Could not distribute key — client-side handling required');
         }
       }
     } catch (keyError) {
-      // Non-blocking: log error but don't fail the invite
-      console.error(`❌ [PHASE 4] Key distribution failed for #${channel.name}:`, keyError.message);
+      logger.error({ err: keyError.message, channelName: channel.name }, '[PHASE 4] Key distribution failed (non-blocking)');
     }
 
     // optional: emit socket event to channel room or to invitee
@@ -431,7 +425,7 @@ exports.inviteToChannel = async (req, res) => {
 
       if (io) io.to(`channel:${channelId}`).emit('new-message', systemMsg);
     } catch (sysErr) {
-      console.error('[SYSTEM MSG] member_invited failed:', sysErr);
+      logger.error({ err: sysErr }, '[SYSTEM MSG] member_invited failed');
     }
     // ────────────────────────────────────────────────────────────────────
 
@@ -484,8 +478,8 @@ exports.removeChannelMember = async (req, res) => {
 
     return res.json({ channelId, userId: victimId });
   } catch (err) {
-    console.error("REMOVE MEMBER ERROR:", err);
-    return res.status(500).json({ message: "Server error" });
+    logger.error({ err }, 'REMOVE MEMBER ERROR');
+    return res.status(500).json({ message: 'Server error' });
   }
 };
 
@@ -494,7 +488,7 @@ exports.removeChannelMember = async (req, res) => {
  * POST /channels/:id/join
  */
 exports.joinChannel = async (req, res) => {
-  console.log('🔄 [CHANNEL:MODULAR] Function invoked: joinChannel');
+  logger.debug('joinChannel invoked');
   try {
     const userId = req.user.sub;
     const channelId = req.params.id;
@@ -539,14 +533,13 @@ exports.joinChannel = async (req, res) => {
         );
 
         if (distributed) {
-          console.log(`🔐 [E2EE] Distributed conversation key to ${userId}`);
+          logger.info({ userId }, '[E2EE] Conversation key distributed to joining member');
         } else {
-          console.warn(`⚠️ [E2EE] Could not auto-distribute key to ${userId} - client-side handling required`);
+          logger.warn({ userId }, '[E2EE] Could not auto-distribute key — client-side handling required');
         }
       }
     } catch (keyError) {
-      // Non-blocking: log error but don't fail the join
-      console.error('[E2EE] Key distribution failed (non-blocking):', keyError.message);
+      logger.error({ err: keyError.message }, '[E2EE] Key distribution failed (non-blocking)');
     }
 
     // optional socket: join user to room on server side handled by socket connection when client emits join-channel
@@ -574,7 +567,7 @@ exports.joinChannel = async (req, res) => {
       const ioInst = req.app?.get('io');
       if (ioInst) ioInst.to(`channel:${channelId}`).emit('new-message', systemMsg);
     } catch (sysErr) {
-      console.error('[SYSTEM MSG] member_joined (joinChannel) failed:', sysErr);
+      logger.error({ err: sysErr }, '[SYSTEM MSG] member_joined (joinChannel) failed');
     }
     // ────────────────────────────────────────────────────────────────────
 
@@ -590,7 +583,7 @@ exports.joinChannel = async (req, res) => {
  * Body: { name?, description?, isPrivate? }
  */
 exports.updateChannel = async (req, res) => {
-  console.log('🔄 [CHANNEL:MODULAR] Function invoked: updateChannel');
+  logger.debug('updateChannel invoked');
   try {
     const userId = req.user.sub;
     const channelId = req.params.id;
@@ -671,7 +664,7 @@ exports.getChannelMembers = async (req, res) => {
  * Members can exit unless they're the only admin
  */
 exports.exitChannel = async (req, res) => {
-  console.log('🔄 [CHANNEL:MODULAR] Function invoked: exitChannel');
+  logger.debug('exitChannel invoked');
   try {
     const userId = req.user.sub;
     const channelId = req.params.id;

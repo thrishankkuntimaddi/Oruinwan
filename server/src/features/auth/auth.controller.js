@@ -1,20 +1,23 @@
 // server/controllers/authController.js
 
-const crypto = require("crypto");
-const jwt = require("jsonwebtoken");
-const bcrypt = require("bcryptjs");
-const User = require("../../../models/User");
-const sendEmail = require("../../../utils/sendEmail");
-const { passwordResetTemplate } = require("../../../utils/emailTemplates");
-const { OAuth2Client } = require("google-auth-library");
-const axios = require("axios");
+'use strict';
+
+const crypto = require('crypto');
+const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
+const User = require('../../../models/User');
+const sendEmail = require('../../../utils/sendEmail');
+const { passwordResetTemplate } = require('../../../utils/emailTemplates');
+const { OAuth2Client } = require('google-auth-library');
+const axios = require('axios');
 
 // Production hardening utilities
-const { saveWithRetry } = require("../../../utils/mongooseRetry");
-const { setRefreshTokenCookie, clearRefreshTokenCookie } = require("../../../utils/cookieHelper");
-const { _TIME } = require("../../../constants");
-const { sha256 } = require("../../../utils/hashUtils");
-const { handleError } = require("../../../utils/responseHelpers");
+const { saveWithRetry } = require('../../../utils/mongooseRetry');
+const { setRefreshTokenCookie, clearRefreshTokenCookie } = require('../../../utils/cookieHelper');
+const { _TIME } = require('../../../constants');
+const { sha256 } = require('../../../utils/hashUtils');
+const { handleError } = require('../../../utils/responseHelpers');
+const logger = require('../../shared/utils/logger');
 
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
@@ -52,7 +55,7 @@ function generateRefreshToken(user) {
 // SIGNUP (with Company Assignment Logic)
 // ----------------------------------------------------
 exports.signup = async (req, res) => {
-  console.log('🔄 [MODULAR AUTH] Function invoked: signup');
+  logger.debug('signup invoked');
   try {
     const { username, email, password, phone, phoneCode, inviteToken } = req.body;
 
@@ -368,18 +371,10 @@ exports.signup = async (req, res) => {
           </html>
         `
       });
-      console.log(`✅ Verification email sent successfully to ${email}`);
+      logger.info({ email }, 'Verification email sent');
     } catch (_emailError) {
-      // Log the actual error
-      console.error("❌ SMTP Error:", _emailError.message);
-
-      // If SMTP not configured, log the link to console (for development)
-      console.log("\n" + "=".repeat(80));
-      console.log("📧 EMAIL VERIFICATION LINK (SMTP not configured)");
-      console.log("=".repeat(80));
-      console.log(`User: ${email}`);
-      console.log(`Verification Link: ${verifyUrl}`);
-      console.log("=".repeat(80) + "\n");
+      logger.warn({ err: _emailError.message }, 'SMTP error — logging verification link');
+      logger.info({ email, verifyUrl }, 'EMAIL VERIFICATION LINK (SMTP not configured)');
     }
 
     return res.status(201).json({
@@ -397,7 +392,7 @@ exports.signup = async (req, res) => {
 // VERIFY EMAIL
 // ----------------------------------------------------
 exports.verifyEmail = async (req, res) => {
-  console.log('🔄 [MODULAR AUTH] Function invoked: verifyEmail');
+  logger.debug('verifyEmail invoked');
   try {
     const { token, email } = req.query;
 
@@ -425,8 +420,8 @@ exports.verifyEmail = async (req, res) => {
 
     return res.json({ message: "Email verified" });
   } catch (_err) {
-    console.error("❌ [VERIFY EMAIL] ERROR:", _err);
-    res.status(500).json({ message: "Server error" });
+    logger.error({ err: _err }, '[VERIFY EMAIL] failed');
+    res.status(500).json({ message: 'Server error' });
   }
 };
 
@@ -434,7 +429,7 @@ exports.verifyEmail = async (req, res) => {
 // LOGIN
 // ----------------------------------------------------
 exports.login = async (req, res) => {
-  console.log('🔄 [MODULAR AUTH] Function invoked: login');
+  logger.debug('login invoked');
   try {
     const { email, password } = req.body;
 
@@ -496,7 +491,7 @@ exports.login = async (req, res) => {
       if (user.failedLoginAttempts >= 5) {
         user.lockedUntil = new Date(Date.now() + 15 * 60 * 1000);
         user.failedLoginAttempts = 0;
-        console.warn(`🔒 [LOGIN] Account locked for ${user.email} after 5 failed attempts`);
+        logger.warn({ email: user.email }, '[LOGIN] Account locked after 5 failed attempts');
       }
 
       await user.save();
@@ -543,7 +538,7 @@ exports.login = async (req, res) => {
       });
 
       await user.save();
-      console.log(`✅ OTP saved for deactivated user ${email}: ${otpCode}`);
+      logger.info({ email }, '[LOGIN] OTP saved for deactivated user reactivation');
 
       // Send OTP email
       try {
@@ -585,7 +580,7 @@ exports.login = async (req, res) => {
           `
         });
       } catch (emailErr) {
-        console.error("Failed to send reactivation OTP email:", emailErr);
+        logger.error({ err: emailErr }, 'Failed to send reactivation OTP email');
       }
 
       return res.status(403).json({
@@ -779,7 +774,7 @@ exports.login = async (req, res) => {
 // REFRESH TOKEN
 // ----------------------------------------------------
 exports.refresh = async (req, res) => {
-  console.log('🔄 [MODULAR AUTH] Function invoked: refresh');
+  logger.debug('refresh invoked');
   const MAX_RETRIES = 3;
   let attempts = 0;
 
@@ -789,12 +784,12 @@ exports.refresh = async (req, res) => {
       const refreshToken = req.cookies?.jwt || req.body?.refreshToken;
 
       if (!refreshToken) {
-        console.log('⚠️ [REFRESH] No refresh token found (cookie or body)');
-        return res.status(401).json({ message: "No refresh token" });
+        logger.warn('[REFRESH] No refresh token found (cookie or body)');
+        return res.status(401).json({ message: 'No refresh token' });
       }
 
       const isCookieToken = !!req.cookies?.jwt;
-      console.log(`🔍 [REFRESH] Token source: ${isCookieToken ? 'cookie' : 'request body (cross-origin fallback)'}`);
+      logger.debug({ source: isCookieToken ? 'cookie' : 'body' }, '[REFRESH] Token source');
 
       const refreshHash = sha256(refreshToken);
 
@@ -803,41 +798,37 @@ exports.refresh = async (req, res) => {
       });
 
       if (!user) {
-        console.error('❌ [REFRESH] Invalid refresh token - no user found');
-        return res.status(403).json({ message: "Invalid refresh token" });
+        logger.warn('[REFRESH] Invalid refresh token — no user found');
+        return res.status(403).json({ message: 'Invalid refresh token' });
       }
 
-      console.log(`✅ [REFRESH] User found: ${user.email}`);
+      logger.debug({ email: user.email }, '[REFRESH] User found');
 
       // Verify JWT signature
       try {
         jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET);
-        console.log('✅ [REFRESH] JWT signature valid');
+        logger.debug('[REFRESH] JWT signature valid');
       } catch (_err) {
-        console.error('❌ [REFRESH] Invalid JWT signature:', _err.message);
-        return res.status(403).json({ message: "Invalid refresh token signature" });
+        logger.warn({ err: _err.message }, '[REFRESH] Invalid JWT signature');
+        return res.status(403).json({ message: 'Invalid refresh token signature' });
       }
 
       const newAccess = generateAccessToken(user);
       const newRefresh = generateRefreshToken(user);
 
-      console.log('✅ [REFRESH] Generated new tokens');
+      logger.debug('[REFRESH] New tokens generated');
 
       const oldTokenIndex = user.refreshTokens.findIndex(t => t.tokenHash === refreshHash);
 
       if (oldTokenIndex !== -1) {
-        // 30s grace period (was 10s) — production network latency between
-        // Vercel frontend → Cloud Run backend means concurrent refresh calls
-        // (proactive timer + Axios interceptor) can race within a tight window.
-        // 30s gives a second concurrent call enough time to still validate.
         user.refreshTokens[oldTokenIndex].expiresAt = new Date(Date.now() + 30000);
-        console.log('🕐 [REFRESH] Old token marked for grace period expiry (30s)');
+        logger.debug('[REFRESH] Old token marked for 30s grace period');
       }
 
       user.refreshTokens.push({
         tokenHash: sha256(newRefresh),
         expiresAt: new Date(Date.now() + REFRESH_DAYS * 86400000),
-        deviceInfo: req.get("User-Agent") || "Unknown"
+        deviceInfo: req.get('User-Agent') || 'Unknown'
       });
 
       // Clean up truly expired tokens
@@ -847,34 +838,28 @@ exports.refresh = async (req, res) => {
       );
 
       if (beforeCleanup !== user.refreshTokens.length) {
-        console.log(`🗑️ [REFRESH] Cleaned up ${beforeCleanup - user.refreshTokens.length} expired tokens`);
+        logger.debug({ cleaned: beforeCleanup - user.refreshTokens.length }, '[REFRESH] Expired tokens cleaned up');
       }
 
       await user.save();
-      console.log('💾 [REFRESH] User tokens saved to database');
+      logger.debug('[REFRESH] User tokens persisted');
 
       // Always set the cookie (works for same-origin)
       setRefreshTokenCookie(res, newRefresh);
 
-      console.log('✅ [REFRESH] Token refresh completed successfully');
-      // SECURITY FIX (BUG-1): refreshToken intentionally excluded from JSON body.
-      // It is already set securely via HttpOnly cookie by setRefreshTokenCookie() above.
-      // Returning it in the response body would expose it to XSS attacks — any script
-      // running on the page could read response.data.refreshToken and exfiltrate it.
+      logger.debug('[REFRESH] Token refresh completed successfully');
       return res.json({ accessToken: newAccess });
 
     } catch (_err) {
       if (_err.name === 'VersionError' && attempts < MAX_RETRIES - 1) {
-        console.warn(`⚠️ [REFRESH] VersionError (attempt ${attempts + 1}/${MAX_RETRIES}), retrying...`);
+        logger.warn({ attempt: attempts + 1, max: MAX_RETRIES }, '[REFRESH] VersionError — retrying');
         attempts++;
-        // Small delay to reduce contention
         await new Promise(resolve => setTimeout(resolve, 50));
         continue;
       }
 
-      console.error("❌ [REFRESH] ERROR:", _err);
-      // Only return 500 if we exhausted retries or hit another error
-      return res.status(500).json({ message: "Server error" });
+      logger.error({ err: _err }, '[REFRESH] ERROR');
+      return res.status(500).json({ message: 'Server error' });
     }
   }
 };

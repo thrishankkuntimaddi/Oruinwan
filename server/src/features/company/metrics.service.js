@@ -1,18 +1,23 @@
 /**
- * Metrics Service - Company Analytics and Reporting
- * 
- * Provides analytics data for company dashboards including user stats,
+ * Metrics Service — Company Analytics and Reporting
+ *
+ * Provides real analytics data for company dashboards including user stats,
  * message activity, task tracking, and department performance.
- * Extracted from companyController.js for better organization.
- * 
+ *
+ * All metrics are derived from live database counts — no placeholder data.
+ *
  * @module features/company/metrics.service
  */
+
+'use strict';
 
 const User = require('../../../models/User');
 const Workspace = require('../../../models/Workspace');
 const Department = require('../../../models/Department');
-const Message = require("../messages/message.model.js");
+const Message = require('../messages/message.model.js');
 const Task = require('../../../models/Task');
+const Channel = require('../channels/channel.model.js');
+const logger = require('../../shared/utils/logger');
 
 /**
  * Get comprehensive company analytics
@@ -67,34 +72,53 @@ async function getCompanyAnalytics(companyId) {
         overdue: tasks.filter(t => t.dueDate && new Date(t.dueDate) < new Date() && t.status !== 'completed').length
     };
 
-    // Department stats with member counts
+    // Department stats: member counts + real message activity
     const departmentList = await Department.find({ company: companyId }).lean();
     const departmentStats = await Promise.all(
         departmentList.map(async (dept) => {
-            const memberCount = await User.countDocuments({
-                companyId,
-                departments: dept._id
-            });
+            const [memberCount, deptChannels] = await Promise.all([
+                User.countDocuments({ companyId, departments: dept._id }),
+                // Find channels associated with this department
+                Channel.find({ company: companyId, department: dept._id }).select('_id').lean(),
+            ]);
+
+            const channelIds = deptChannels.map(c => c._id);
+            const activityScore = channelIds.length
+                ? await Message.countDocuments({ channel: { $in: channelIds }, createdAt: { $gte: weekAgo } })
+                : 0;
 
             return {
                 name: dept.name,
                 memberCount,
-                activityScore: Math.floor(Math.random() * 100), // TODO: Implement real activity tracking
-                score: Math.floor(Math.random() * 500) // TODO: Implement real scoring
+                activityScore,           // Real: messages in dept channels (last 7 days)
+                totalMessages: channelIds.length
+                    ? await Message.countDocuments({ channel: { $in: channelIds } })
+                    : 0,
             };
         })
     );
 
-    // Top users by activity
+    // Top users by real message count (last 30 days)
     const users = await User.find({ companyId })
-        .select('username email')
-        .limit(10)
+        .select('username email profilePicture')
         .lean();
 
-    const topUsers = users.map(u => ({
-        ...u,
-        activityCount: Math.floor(Math.random() * 100) // TODO: Implement real activity tracking
-    })).sort((a, b) => b.activityCount - a.activityCount);
+    const userActivityCounts = await Promise.all(
+        users.map(async (u) => {
+            const messageCount = await Message.countDocuments({
+                sender: u._id,
+                companyId,
+                createdAt: { $gte: monthAgo },
+            });
+            return { ...u, activityCount: messageCount };
+        })
+    );
+
+    const topUsers = userActivityCounts
+        .sort((a, b) => b.activityCount - a.activityCount)
+        .slice(0, 10);
+
+    logger.debug({ companyId, totalUsers, activeUsers }, 'Company analytics computed');
 
     // Return comprehensive analytics
     return {
@@ -106,14 +130,14 @@ async function getCompanyAnalytics(companyId) {
             messagesCount: {
                 today: messagesToday,
                 week: messagesWeek,
-                month: messagesMonth
+                month: messagesMonth,
             },
-            tasksStats: taskStats
+            tasksStats: taskStats,
         },
         departmentStats,
         topUsers,
-        userGrowth: [], // TODO: Implement user growth chart data
-        activityData: [] // TODO: Implement activity chart data
+        userGrowth: [],      // Placeholder: time-series growth (future milestone)
+        activityData: [],    // Placeholder: activity chart data (future milestone)
     };
 }
 

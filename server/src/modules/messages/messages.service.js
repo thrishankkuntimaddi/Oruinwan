@@ -1,17 +1,20 @@
 // server/src/modules/messages/messages.service.js
 /**
- * Messages Service - Business Logic Layer
+ * Messages Service — Business Logic Layer
  * Handles all message-related business logic including E2EE
- * 
+ *
  * @module messages/service
  */
 
-const Message = require("../../features/messages/message.model.js");
+'use strict';
+
+const Message = require('../../features/messages/message.model.js');
 const DMSession = require('../../../models/DMSession');
-const _Channel = require("../../features/channels/channel.model.js");
+const _Channel = require('../../features/channels/channel.model.js');
 const Workspace = require('../../../models/Workspace');
 const { _isMember } = require('../../../utils/memberHelpers');
 const conversationKeysService = require('../conversations/conversationKeys.service');
+const logger = require('../../shared/utils/logger');
 
 // ==================== MESSAGE CREATION ====================
 
@@ -83,7 +86,7 @@ async function createMessage(messageData, io = null) {
     if (meeting) messageDoc.meeting = meeting;
     if (linkPreview) messageDoc.linkPreview = linkPreview;
 
-    console.log(`📨 Creating message [type=${type}]${type === 'message' ? ' 🔐' : ''}`);
+    logger.debug({ type }, `Creating message${type === 'message' ? ' 🔐' : ''}`);
 
     // ============================================================
     // DB WRITE FIRST (CRITICAL: Prevent race conditions)
@@ -113,7 +116,7 @@ async function createMessage(messageData, io = null) {
                 $inc: { messageCount: 1 },
                 $set: { lastMessageAt: message.createdAt }
             }
-        ).catch(err => console.error('[createMessage] Failed to update channel counters:', err));
+        ).catch(err => logger.error({ err, channel }, '[createMessage] Failed to update channel counters'));
     }
 
     // ============================================================
@@ -199,15 +202,15 @@ async function createMessage(messageData, io = null) {
                         )
                     );
 
-                    console.log(`[createMessage] 📣 Mention notifications sent to ${mentionedUserIds.length} user(s)`);
+                    logger.debug({ count: mentionedUserIds.length }, '[createMessage] Mention notifications dispatched');
                 }
 
                 // @here / @channel — log for now, bulk notify in a future phase
                 if (isHere || isChannel) {
-                    console.log(`[createMessage] 📢 @${isHere ? 'here' : 'channel'} detected — bulk notify not yet implemented`);
+                    logger.warn({ isHere, isChannel }, '[createMessage] @here/@channel detected — bulk notify not yet implemented');
                 }
             } catch (mentionErr) {
-                console.error('[createMessage] Mention processing error (non-fatal):', mentionErr.message);
+                logger.error({ err: mentionErr }, '[createMessage] Mention processing error (non-fatal)');
             }
         })();
     }
@@ -383,7 +386,7 @@ async function findOrCreateDMSession(userId1, userId2, workspaceId) {
         // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
         // DM E2EE: Bootstrap conversation key at creation (same as channels)
         // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-        console.log(`🔐 [DM][E2EE] Bootstrapping conversation key for new DM session ${dmSession._id}`);
+        logger.info({ dmSessionId: dmSession._id }, '[DM][E2EE] Bootstrapping conversation key for new DM session');
 
         try {
             await conversationKeysService.bootstrapConversationKey({
@@ -392,13 +395,13 @@ async function findOrCreateDMSession(userId1, userId2, workspaceId) {
                 workspaceId: workspaceId,
                 members: sortedParticipants
             });
-            console.log(`✅ [DM][E2EE] Conversation key created for DM ${dmSession._id}`);
+            logger.info({ dmSessionId: dmSession._id }, '[DM][E2EE] Conversation key created');
         } catch (keyError) {
             // If key already exists (idempotent), that's fine — log and continue
             if (keyError.message && keyError.message.includes('already exists')) {
-                console.log(`ℹ️ [DM][E2EE] Conversation key already exists for DM ${dmSession._id}`);
+                logger.debug({ dmSessionId: dmSession._id }, '[DM][E2EE] Conversation key already exists (idempotent)');
             } else {
-                console.error(`❌ [DM][E2EE] Failed to create conversation key for DM ${dmSession._id}:`, keyError);
+                logger.error({ err: keyError, dmSessionId: dmSession._id }, '[DM][E2EE] Failed to create conversation key');
                 throw new Error('Failed to initialize DM encryption: ' + keyError.message);
             }
         }
