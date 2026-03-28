@@ -1,13 +1,8 @@
 // client/src/services/analyticsService.js
+// refactor(consistency): replace raw axios with canonical api.js client
+// All auth token injection and 401 handling are now managed by api.js interceptors.
 
-import axios from 'axios';
-import { API_BASE } from './api';
-
-const getAuthHeader = () => ({
-    headers: {
-        Authorization: `Bearer ${localStorage.getItem('accessToken')}`
-    }
-});
+import api, { API_BASE } from './api';
 
 /**
  * Get analytics summary
@@ -15,10 +10,7 @@ const getAuthHeader = () => ({
  * @returns {Promise} Analytics summary data
  */
 export const getAnalyticsSummary = async (period = 30) => {
-    const response = await axios.get(
-        `${API_BASE}/api/dashboard/analytics/summary?period=${period}`,
-        getAuthHeader()
-    );
+    const response = await api.get(`/api/dashboard/analytics/summary?period=${period}`);
     return response.data;
 };
 
@@ -28,10 +20,7 @@ export const getAnalyticsSummary = async (period = 30) => {
  * @returns {Promise} User activity data
  */
 export const getUserActivityAnalytics = async (period = 30) => {
-    const response = await axios.get(
-        `${API_BASE}/api/dashboard/analytics/users?period=${period}`,
-        getAuthHeader()
-    );
+    const response = await api.get(`/api/dashboard/analytics/users?period=${period}`);
     return response.data;
 };
 
@@ -40,10 +29,7 @@ export const getUserActivityAnalytics = async (period = 30) => {
  * @returns {Promise} Workspace analytics data
  */
 export const getWorkspaceAnalytics = async () => {
-    const response = await axios.get(
-        `${API_BASE}/api/dashboard/analytics/workspaces`,
-        getAuthHeader()
-    );
+    const response = await api.get('/api/dashboard/analytics/workspaces');
     return response.data;
 };
 
@@ -52,10 +38,7 @@ export const getWorkspaceAnalytics = async () => {
  * @returns {Promise} Channel engagement data
  */
 export const getChannelEngagementAnalytics = async () => {
-    const response = await axios.get(
-        `${API_BASE}/api/dashboard/analytics/channels`,
-        getAuthHeader()
-    );
+    const response = await api.get('/api/dashboard/analytics/channels');
     return response.data;
 };
 
@@ -65,10 +48,7 @@ export const getChannelEngagementAnalytics = async () => {
  * @returns {Promise} Task analytics data
  */
 export const getTaskAnalytics = async (period = 30) => {
-    const response = await axios.get(
-        `${API_BASE}/api/dashboard/analytics/tasks?period=${period}`,
-        getAuthHeader()
-    );
+    const response = await api.get(`/api/dashboard/analytics/tasks?period=${period}`);
     return response.data;
 };
 
@@ -78,10 +58,7 @@ export const getTaskAnalytics = async (period = 30) => {
  * @returns {Promise} Message volume data
  */
 export const getMessageVolumeAnalytics = async (period = 30) => {
-    const response = await axios.get(
-        `${API_BASE}/api/dashboard/analytics/messages?period=${period}`,
-        getAuthHeader()
-    );
+    const response = await api.get(`/api/dashboard/analytics/messages?period=${period}`);
     return response.data;
 };
 
@@ -91,10 +68,7 @@ export const getMessageVolumeAnalytics = async (period = 30) => {
  * @returns {Promise} Engagement trends data
  */
 export const getEngagementTrends = async (period = 30) => {
-    const response = await axios.get(
-        `${API_BASE}/api/dashboard/analytics/engagement?period=${period}`,
-        getAuthHeader()
-    );
+    const response = await api.get(`/api/dashboard/analytics/engagement?period=${period}`);
     return response.data;
 };
 
@@ -155,16 +129,13 @@ const convertToCSV = (data) => {
 };
 
 /**
- * Get comprehensive analytics for company  
- * @param {string} companyId 
+ * Get comprehensive analytics for company
+ * @param {string} companyId
  * @param {string} timeRange - '7d', '30d', or '90d'
  * @returns {Promise}
  */
 export const getCompanyAnalytics = async (companyId, timeRange = '30d') => {
-    const response = await axios.get(
-        `${API_BASE}/api/analytics/company/${companyId}?timeRange=${timeRange}`,
-        getAuthHeader()
-    );
+    const response = await api.get(`/api/analytics/company/${companyId}?timeRange=${timeRange}`);
     return response.data;
 };
 
@@ -174,10 +145,7 @@ export const getCompanyAnalytics = async (companyId, timeRange = '30d') => {
  * Get team activity analytics (messages + tasks per user)
  */
 export const getTeamActivity = async (period = 30) => {
-    const response = await axios.get(
-        `${API_BASE}/api/analytics/insights/team?period=${period}`,
-        getAuthHeader()
-    );
+    const response = await api.get(`/api/analytics/insights/team?period=${period}`);
     return response.data;
 };
 
@@ -185,10 +153,7 @@ export const getTeamActivity = async (period = 30) => {
  * Get workload analysis (overloaded/idle/balanced users)
  */
 export const getWorkloadAnalysis = async (period = 30) => {
-    const response = await axios.get(
-        `${API_BASE}/api/analytics/insights/workload?period=${period}`,
-        getAuthHeader()
-    );
+    const response = await api.get(`/api/analytics/insights/workload?period=${period}`);
     return response.data;
 };
 
@@ -196,10 +161,7 @@ export const getWorkloadAnalysis = async (period = 30) => {
  * Get communication patterns (hourly distribution, top channels)
  */
 export const getCommunicationPatterns = async (period = 30) => {
-    const response = await axios.get(
-        `${API_BASE}/api/analytics/insights/communication?period=${period}`,
-        getAuthHeader()
-    );
+    const response = await api.get(`/api/analytics/insights/communication?period=${period}`);
     return response.data;
 };
 
@@ -207,9 +169,6 @@ export const getCommunicationPatterns = async (period = 30) => {
  * Get all insights in one call (/api/analytics with no type param)
  */
 export const getAllInsights = async (period = 30) => {
-    const response = await axios.get(
-        `${API_BASE}/api/analytics?period=${period}`,
-        getAuthHeader()
-    );
+    const response = await api.get(`/api/analytics?period=${period}`);
     return response.data;
 };

@@ -1,33 +1,34 @@
 /**
  * automationsService.js
- *
- * Axios wrapper for the /api/v2/automations endpoints.
+ * refactor(consistency): replace raw axios with canonical api.js client.
+ * Auth token injection, withCredentials, and 401 handling now
+ * managed by api.js interceptors — no need to pass withCredentials per-call.
  */
 
-import axios from 'axios';
+import api from './api';
 
 const API_BASE = '/api/v2/automations';
 
 // List automations for a workspace
 export const getAutomations = (workspaceId, params = {}) =>
-    axios.get(API_BASE, { params: { workspaceId, ...params }, withCredentials: true });
+    api.get(API_BASE, { params: { workspaceId, ...params } });
 
 // Get a single automation
 export const getAutomation = (id, workspaceId) =>
-    axios.get(`${API_BASE}/${id}`, { params: { workspaceId }, withCredentials: true });
+    api.get(`${API_BASE}/${id}`, { params: { workspaceId } });
 
 // Fetch predefined templates
 export const getTemplates = () =>
-    axios.get(`${API_BASE}/templates`, { withCredentials: true });
+    api.get(`${API_BASE}/templates`);
 
 // Create a new automation
 export const createAutomation = (data) =>
-    axios.post(API_BASE, data, { withCredentials: true });
+    api.post(API_BASE, data);
 
 // Update an automation (including toggling isActive)
 export const updateAutomation = (id, data) =>
-    axios.patch(`${API_BASE}/${id}`, data, { withCredentials: true });
+    api.patch(`${API_BASE}/${id}`, data);
 
 // Delete an automation
 export const deleteAutomation = (id, workspaceId) =>
-    axios.delete(`${API_BASE}/${id}`, { params: { workspaceId }, withCredentials: true });
+    api.delete(`${API_BASE}/${id}`, { params: { workspaceId } });

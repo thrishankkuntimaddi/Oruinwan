@@ -1,11 +1,8 @@
 // client/src/services/auditService.js
+// refactor(consistency): replace raw axios with canonical api.js client
+// Auth token injection and 401 handling now managed by api.js interceptors.
 
-import axios from 'axios';
-import { API_BASE } from './api';
-
-const getAuthHeaders = () => ({
-    Authorization: `Bearer ${localStorage.getItem('accessToken')}`
-});
+import api from './api';
 
 // Get audit logs with filters
 export const getAuditLogs = async (companyId, filters = {}) => {
@@ -18,21 +15,16 @@ export const getAuditLogs = async (companyId, filters = {}) => {
     if (filters.page) params.append('page', filters.page);
     if (filters.limit) params.append('limit', filters.limit);
 
-    const response = await axios.get(
-        `${API_BASE}/api/audit/${companyId}?${params.toString()}`,
-        { headers: getAuthHeaders() }
-    );
+    const response = await api.get(`/api/audit/${companyId}?${params.toString()}`);
     return response.data;
 };
 
 // Export audit logs as CSV
+// NOTE: responseType 'blob' is preserved — api.js supports axios config options
 export const exportAuditLogs = async (companyId, format = 'csv') => {
-    const response = await axios.get(
-        `${API_BASE}/api/audit/${companyId}/export?format=${format}`,
-        {
-            headers: getAuthHeaders(),
-            responseType: 'blob'
-        }
+    const response = await api.get(
+        `/api/audit/${companyId}/export?format=${format}`,
+        { responseType: 'blob' }
     );
     return response.data;
 };
