@@ -2,7 +2,7 @@ import React, { useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
-import axios from 'axios';
+import api from '../../services/api';
 import {
     Users, Mail, CheckCircle, ArrowRight, ArrowLeft, Upload,
     Clock, Plus, X, Zap, Download, FileSpreadsheet, Image,
@@ -128,9 +128,9 @@ const CompanySetup = () => {
 
     const downloadTemplate = async () => {
         try {
-            const res = await axios.get(
-                `${import.meta.env.VITE_BACKEND_URL}/api/companies/${companyId}/setup/template`,
-                { withCredentials: true, responseType: 'blob' }
+            const res = await api.get(
+                `/api/companies/${companyId}/setup/template`,
+                { responseType: 'blob' }
             );
             const url = URL.createObjectURL(res.data);
             const a = document.createElement('a');
@@ -168,10 +168,9 @@ const CompanySetup = () => {
                 formData.append('data', JSON.stringify({}));
             }
 
-            const res = await axios.put(
-                `${import.meta.env.VITE_BACKEND_URL}/api/companies/${companyId}/setup`,
-                formData,
-                { withCredentials: true }
+            const res = await api.put(
+                `/api/companies/${companyId}/setup`,
+                formData
             );
 
             if (step === 3) {

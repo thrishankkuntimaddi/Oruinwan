@@ -8,7 +8,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { MOCK_INTEGRATIONS, INTEGRATION_CATEGORIES } from "../../components/apps/mock/mockIntegrations";
 import IntegrationCard from "../../components/apps/IntegrationCard";
 import IntegrationDetailsModal from "../../components/apps/IntegrationDetailsModal";
-import axios from "axios";
+import api from '../../../services/api';
 
 // ── Star rating display ──────────────────────────────────────────────────────
 function StarRating({ rating, size = 12 }) {
@@ -42,10 +42,9 @@ function ReviewModal({ app, onClose, onSubmitted }) {
     setError("");
     try {
       const token = localStorage.getItem("accessToken");
-      await axios.post(
+      await api.post(
         "/api/marketplace/review",
-        { appId: app._id, rating, comment },
-        { headers: { Authorization: `Bearer ${token}` } }
+        { appId: app._id, rating, comment }
       );
       onSubmitted?.();
       onClose();
@@ -133,8 +132,7 @@ const CATEGORY_COLORS = {
   communication: "from-emerald-500 to-teal-600",
   developer:     "from-violet-500 to-purple-600",
   automation:    "from-amber-500 to-orange-600",
-  analytics:     "from-pink-500 to-rose-600",
-};
+  analytics:     "from-pink-500 to-rose-600" };
 
 function MarketplaceAppCard({ app, workspaceId, onReview, onInstalled }) {
   const [installing, setInstalling] = useState(false);
@@ -145,10 +143,9 @@ function MarketplaceAppCard({ app, workspaceId, onReview, onInstalled }) {
     setInstalling(true);
     try {
       const token = localStorage.getItem("accessToken");
-      await axios.post(
+      await api.post(
         "/api/marketplace/install",
-        { appId: app._id, workspaceId },
-        { headers: { Authorization: `Bearer ${token}` } }
+        { appId: app._id, workspaceId }
       );
       setInstalled(true);
       onInstalled?.();
@@ -296,7 +293,7 @@ export default function AppsPage() {
       const params = { page: mktPage, limit: 18 };
       if (mktCategory !== "all") params.category = mktCategory;
       if (mktSearch.trim()) params.q = mktSearch.trim();
-      const res = await axios.get("/api/marketplace/apps", { params });
+      const res = await api.get("/api/marketplace/apps", { params });
       setMktApps(res.data.apps || []);
       setMktTotalPages(res.data.totalPages || 1);
     } catch {

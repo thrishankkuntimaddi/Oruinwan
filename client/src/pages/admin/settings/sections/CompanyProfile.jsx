@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Building, MapPin, Globe as GlobeIcon, Users, Save, Loader } from 'lucide-react';
 import { useCompany } from '../../../../contexts/CompanyContext';
 import { useToast } from '../../../../contexts/ToastContext';
-import axios from 'axios';
+import api from '../../../../../services/api';
 
 const CompanyProfile = () => {
     const { company, refreshCompany } = useCompany();
@@ -47,10 +47,9 @@ const CompanyProfile = () => {
         setSaving(true);
 
         try {
-            await axios.put(
-                `${import.meta.env.VITE_BACKEND_URL}/api/companies/${company.id}/settings/profile`,
-                formData,
-                { withCredentials: true }
+            await api.put(
+                `/api/companies/${company.id}/settings/profile`,
+                formData
             );
 
             await refreshCompany();

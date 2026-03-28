@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useToast } from "../contexts/ToastContext";
 import { useTheme } from "../contexts/ThemeContext";
 import OTPModal from "../components/shared/OTPModal";
-import axios from "axios";
+import api from '../../services/api';
 
 // Import extracted components
 import RegisterLayout from "./register/layout/RegisterLayout";
@@ -83,7 +83,7 @@ const RegisterCompany = () => {
             if (formData.companyName && formData.companyName.trim().length >= 2) {
                 setValidationStatus(prev => ({ ...prev, companyName: 'checking' }));
                 try {
-                    const res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/companies/check-name`, {
+                    const res = await api.post(`/api/companies/check-name`, {
                         name: formData.companyName
                     });
                     if (res.data.exists) {
@@ -109,7 +109,7 @@ const RegisterCompany = () => {
             if (formData.companyDomain && formData.companyDomain.trim().length >= 3) {
                 setValidationStatus(prev => ({ ...prev, companyDomain: 'checking' }));
                 try {
-                    const res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/companies/check-domain`, {
+                    const res = await api.post(`/api/companies/check-domain`, {
                         domain: formData.companyDomain
                     });
                     if (res.data.exists) {
@@ -135,7 +135,7 @@ const RegisterCompany = () => {
             if (formData.personalEmail && /\S+@\S+\.\S+/.test(formData.personalEmail)) {
                 setValidationStatus(prev => ({ ...prev, personalEmail: 'checking' }));
                 try {
-                    const res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/companies/check-email`, {
+                    const res = await api.post(`/api/companies/check-email`, {
                         email: formData.personalEmail
                     });
                     if (res.data.exists) {
@@ -165,7 +165,7 @@ const RegisterCompany = () => {
                 setValidationStatus(prev => ({ ...prev, phone: 'checking' }));
                 try {
                     const fullPhone = `${formData.phoneCode}${phoneDigits}`;
-                    const res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/companies/check-phone`, {
+                    const res = await api.post(`/api/companies/check-phone`, {
                         phone: fullPhone
                     });
                     if (res.data.exists) {
@@ -207,7 +207,7 @@ const RegisterCompany = () => {
         const newErrors = {};
         if (!formData.companyName.trim()) newErrors.companyName = "Company Name is required";
         if (!formData.companyDomain.trim()) newErrors.companyDomain = "Domain is required";
-        else if (!/^[a-zA-Z0-9-]+\.[a-zA-Z]{2,}$/.test(formData.companyDomain)) newErrors.companyDomain = "Invalid domain format (e.g. acme.com)";
+        else if (!/^[a-zA-Z0-9-]+\.[a-zA-Z]{2 }$/.test(formData.companyDomain)) newErrors.companyDomain = "Invalid domain format (e.g. acme.com)";
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
     };
@@ -301,7 +301,7 @@ const RegisterCompany = () => {
                 ? `${formData.phoneCode}${target}`
                 : target;
 
-            await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/companies/otp/send`, {
+            await api.post(`/api/companies/otp/send`, {
                 target: targetValue,
                 type: field === 'personalEmail' ? 'email' : 'phone'
             });
@@ -323,7 +323,7 @@ const RegisterCompany = () => {
 
     const handleOTPVerify = async (otp) => {
         try {
-            await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/companies/otp/verify`, {
+            await api.post(`/api/companies/otp/verify`, {
                 target: otpModal.target,
                 otp
             });
@@ -339,7 +339,7 @@ const RegisterCompany = () => {
 
     const handleOTPResend = async () => {
         try {
-            await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/companies/otp/send`, {
+            await api.post(`/api/companies/otp/send`, {
                 target: otpModal.target,
                 type: otpModal.targetType
             });
@@ -396,8 +396,8 @@ const RegisterCompany = () => {
                 documents: documentData ? [documentData] : []
             };
 
-            await axios.post(
-                `${import.meta.env.VITE_BACKEND_URL}/api/companies/register`,
+            await api.post(
+                `/api/companies/register`,
                 payload
             );
 

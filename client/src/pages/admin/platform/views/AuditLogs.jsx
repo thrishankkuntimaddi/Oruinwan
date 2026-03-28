@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import axios from 'axios';
+import api from '../../../../../services/api';
 import { Search, Download, User, Activity, AlertCircle, RefreshCw } from 'lucide-react';
 
 const AuditLogs = () => {
@@ -71,9 +71,7 @@ const AuditLogs = () => {
 
     const fetchLogs = async () => {
         try {
-            const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/admin/audit-logs`, {
-                withCredentials: true
-            });
+            const res = await api.get(`/api/admin/audit-logs`);
             setLogs(res.data);
             setLoading(false);
         } catch (err) {

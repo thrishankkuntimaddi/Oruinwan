@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../../../../../services/api';
 import { Activity, Cpu, Database, HardDrive, Zap, AlertTriangle, CheckCircle, Clock } from 'lucide-react';
 
 const SystemHealth = () => {
@@ -33,9 +33,7 @@ const SystemHealth = () => {
 
     const fetchMetrics = async () => {
         try {
-            const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/admin/health/metrics`, {
-                withCredentials: true
-            });
+            const res = await api.get(`/api/admin/health/metrics`);
             setMetrics(res.data);
             setLoading(false);
         } catch (err) {

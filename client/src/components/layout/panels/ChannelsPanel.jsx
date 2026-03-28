@@ -457,9 +457,37 @@ const ChannelsPanel = ({ title }) => {
                     sortedChannels.map(channel => (
                         <Item key={channel.id} item={channel} />
                     ))
+                ) : searchQuery ? (
+                    <div className="px-4 py-8 text-center">
+                        <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center mx-auto mb-3">
+                            <Search size={18} className="text-gray-400 dark:text-gray-500" />
+                        </div>
+                        <p className="text-sm font-semibold text-gray-600 dark:text-gray-400">No results for &ldquo;{searchQuery}&rdquo;</p>
+                        <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Try a different search term</p>
+                    </div>
                 ) : (
-                    <div className="px-4 py-8 text-center text-sm text-gray-500 dark:text-gray-400">
-                        No channels found
+                    <div className="px-4 py-10 text-center">
+                        <div className="w-12 h-12 rounded-2xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center mx-auto mb-4 shadow-sm">
+                            <Hash size={22} className="text-blue-500 dark:text-blue-400" />
+                        </div>
+                        <p className="text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">No channels yet</p>
+                        <p className="text-xs text-gray-400 dark:text-gray-500 mb-4 leading-relaxed">
+                            Create a channel to start collaborating with your team
+                        </p>
+                        {(() => {
+                            const userRole = activeWorkspace?.role?.toLowerCase() || '';
+                            const isAdmin = userRole === 'admin' || userRole === 'owner';
+                            const canCreate = isAdmin || activeWorkspace?.settings?.allowMemberChannelCreation !== false;
+                            return canCreate ? (
+                                <button
+                                    onClick={() => setShowCreateChannelModal(true)}
+                                    className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-xl transition-colors shadow-sm"
+                                >
+                                    <Plus size={14} />
+                                    Create Channel
+                                </button>
+                            ) : null;
+                        })()}
                     </div>
                 )}
             </div>

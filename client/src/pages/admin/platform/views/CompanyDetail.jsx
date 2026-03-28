@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../../../../../services/api';
 import { ArrowLeft, Shield, AlertTriangle, Save, Trash2, Globe, Mail } from 'lucide-react';
 import { useToast } from '../../../../contexts/ToastContext';
 
@@ -25,7 +25,7 @@ const CompanyDetail = ({ companyId, onBack }) => {
             // Let's rely on the parent ActiveCompanies passing the data OR fetch fresh. 
             // I'll assume endpoint GET /api/admin/company/:id needs to be created or I use the existing list approach.
             // Let's try to fetch active-companies and find.
-            const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/admin/active-companies`, { withCredentials: true });
+            const res = await api.get(`/api/admin/active-companies`);
             const found = res.data.find(c => c._id === companyId);
             if (found) {
                 setCompany(found);
@@ -43,7 +43,7 @@ const CompanyDetail = ({ companyId, onBack }) => {
         try {
             // Need endpoint to update company plan/status. 
             // Mocking for UI demo or adding to backend if I have time.
-            // await axios.put(...)
+            // await api.put(...)
             showToast("Company updated successfully (Mock)", "success");
         } catch (err) {
             showToast("Failed to update", "error");

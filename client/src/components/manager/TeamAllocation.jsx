@@ -5,7 +5,7 @@ import {
     Search, Briefcase, BarChart2,
     CheckCircle2, Clock, ArrowRightLeft
 } from 'lucide-react';
-import axios from 'axios';
+import api from '../../services/api';
 
 const TeamAllocation = () => {
     const { selectedDepartment } = useOutletContext();
@@ -17,10 +17,7 @@ const TeamAllocation = () => {
         const fetchTeam = async () => {
             try {
                 setLoading(true);
-                const response = await axios.get(
-                    `${import.meta.env.VITE_BACKEND_URL}/api/manager-dashboard/team-load`,
-                    { withCredentials: true }
-                );
+                const response = await api.get(`/api/manager-dashboard/team-load`);
 
                 // Enhance data with mock workload details if not present
                 const enhancedMembers = (response.data.teamMembers || []).map(member => ({

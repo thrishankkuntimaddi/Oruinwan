@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import axios from 'axios';
+import api from '../../../../../services/api';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Send, Search, Circle, MessageSquare, ArrowLeft, CheckCheck, Building2 } from 'lucide-react';
 import { useToast } from '../../../../contexts/ToastContext';
@@ -21,9 +21,7 @@ const PlatformChat = () => {
     // Fetch users list with last message + unread count
     const fetchUsers = useCallback(async () => {
         try {
-            const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/admin/dm-users`, {
-                withCredentials: true
-            });
+            const res = await api.get(`/api/admin/dm-users`);
             setUsers(res.data || []);
         } catch (err) {
             console.error('Failed to fetch DM users:', err);
@@ -34,9 +32,7 @@ const PlatformChat = () => {
     // Fetch messages for a specific user
     const fetchMessages = useCallback(async (uid) => {
         try {
-            const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/admin/dm/user/${uid}`, {
-                withCredentials: true
-            });
+            const res = await api.get(`/api/admin/dm/user/${uid}`);
             setMessages(Array.isArray(res.data) ? res.data : []);
         } catch (err) {
             console.error('Failed to fetch messages:', err);
@@ -45,7 +41,7 @@ const PlatformChat = () => {
 
     // Setup socket — listen for platform-message events from all users
     useEffect(() => {
-        socketRef.current = io(import.meta.env.VITE_BACKEND_URL, { withCredentials: true });
+        socketRef.current = io(import.meta.env.VITE_BACKEND_URL);
 
         socketRef.current.on('platform-message', (message) => {
             // Append if it's for the currently selected user (sender or receiver matches)
@@ -96,10 +92,9 @@ const PlatformChat = () => {
 
         setSending(true);
         try {
-            const res = await axios.post(
-                `${import.meta.env.VITE_BACKEND_URL}/api/admin/dm/user/${selectedUser._id}`,
-                { message: input },
-                { withCredentials: true }
+            const res = await api.post(
+                `/api/admin/dm/user/${selectedUser._id}`,
+                { message: input }
             );
             setMessages(prev => [...prev, res.data]);
             setInput('');
@@ -129,8 +124,7 @@ const PlatformChat = () => {
     const roleColors = {
         owner: 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400',
         admin: 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400',
-        manager: 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400',
-    };
+        manager: 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400' };
 
     return (
         <div className="h-[calc(100vh-140px)] flex gap-6">

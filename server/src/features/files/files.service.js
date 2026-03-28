@@ -39,8 +39,11 @@ async function uploadStorage(multerFile, folder) {
     const filePath = path.join(localDir, fileName);
     fs.writeFileSync(filePath, multerFile.buffer);
 
+    // Prefix with BACKEND_URL if set so cross-origin clients receive an absolute URL.
+    // Falls back to relative path for local-only dev environments.
+    const baseUrl = process.env.BACKEND_URL || '';
     return {
-        url: `/uploads/files/${fileName}`,
+        url: `${baseUrl}/uploads/files/${fileName}`,
         name: multerFile.originalname,
         size: multerFile.size,
         mimeType: multerFile.mimetype,

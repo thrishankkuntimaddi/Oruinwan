@@ -1,7 +1,7 @@
 // client/src/components/manager/ManagerTasks.jsx
 import React, { useState, useEffect, useCallback } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import axios from 'axios';
+import api from '../../services/api';
 import {
     Plus, CheckCircle2, Clock, AlertCircle, MoreVertical,
     User, X
@@ -20,10 +20,7 @@ const ManagerTasks = () => {
         if (!selectedDepartment?._id) return;
         try {
             setLoading(true);
-            const response = await axios.get(
-                `${import.meta.env.VITE_BACKEND_URL}/api/manager/tasks/${selectedDepartment._id}`,
-                { withCredentials: true }
-            );
+            const response = await api.get(`/api/manager/tasks/${selectedDepartment._id}`);
             setTasks(response.data.tasks);
         } catch (error) {
             console.error('Error fetching tasks:', error);
@@ -42,11 +39,7 @@ const ManagerTasks = () => {
     const handleCreateTask = async (e) => {
         e.preventDefault();
         try {
-            await axios.post(
-                `${import.meta.env.VITE_BACKEND_URL}/api/manager/tasks/${selectedDepartment._id}`,
-                newTask,
-                { withCredentials: true }
-            );
+            await api.post(`/api/manager/tasks/${selectedDepartment._id}`, newTask);
             setIsCreateModalOpen(false);
             setNewTask({ title: '', description: '', priority: 'medium', dueDate: '' });
             fetchTasks(); // Refresh list
@@ -57,11 +50,7 @@ const ManagerTasks = () => {
 
     const handleStatusChange = async (taskId, newStatus) => {
         try {
-            await axios.patch(
-                `${import.meta.env.VITE_BACKEND_URL}/api/manager/tasks/${taskId}/status`,
-                { status: newStatus },
-                { withCredentials: true }
-            );
+            await api.patch(`/api/manager/tasks/${taskId}/status`, { status: newStatus });
             fetchTasks(); // Refresh to move task to correct column
         } catch (error) {
             console.error('Error updating task status:', error);

@@ -3,7 +3,7 @@ import { MessageSquare, Ticket, Send, Paperclip, Clock, Search } from 'lucide-re
 import { useAuth } from '../../contexts/AuthContext';
 import { useCompany } from '../../contexts/CompanyContext';
 import { useToast } from '../../contexts/ToastContext';
-import axios from 'axios';
+import api from '../../../services/api';
 import io from 'socket.io-client';
 
 const ContactAdmin = () => {
@@ -33,9 +33,7 @@ const ContactAdmin = () => {
     // Initialize Socket.io for real-time chat
     useEffect(() => {
         if (user && activeTab === 'chat') {
-            socketRef.current = io(import.meta.env.VITE_BACKEND_URL, {
-                withCredentials: true
-            });
+            socketRef.current = io(import.meta.env.VITE_BACKEND_URL);
 
             // Platform admin replies arrive via user-support:{userId} room
             // The server auto-joins every user to this room on connect — no manual join needed
@@ -59,9 +57,8 @@ const ContactAdmin = () => {
         try {
             if (showLoading) setLoadingMessages(true);
             // Fetch only MY messages — each user has their own 1:1 with platform admin
-            const response = await axios.get(
-                `${import.meta.env.VITE_BACKEND_URL}/api/platform/support/messages/me`,
-                { withCredentials: true }
+            const response = await api.get(
+                `/api/platform/support/messages/me`
             );
             setMessages(response.data.messages || []);
         } catch (error) {
@@ -75,9 +72,8 @@ const ContactAdmin = () => {
         if (!company?._id) return;
         try {
             setLoadingTickets(true);
-            const response = await axios.get(
-                `${import.meta.env.VITE_BACKEND_URL}/api/platform/support/tickets/${company._id}`,
-                { withCredentials: true }
+            const response = await api.get(
+                `/api/platform/support/tickets/${company._id}`
             );
             setTickets(response.data.tickets || []);
         } catch (error) {
@@ -115,13 +111,12 @@ const ContactAdmin = () => {
         if (!newMessage.trim()) return;
 
         try {
-            const response = await axios.post(
-                `${import.meta.env.VITE_BACKEND_URL}/api/platform/support/messages`,
+            const response = await api.post(
+                `/api/platform/support/messages`,
                 {
                     companyId: company._id,
                     content: newMessage
-                },
-                { withCredentials: true }
+                }
             );
 
             setMessages(prev => [...prev, response.data.message]);
@@ -136,13 +131,12 @@ const ContactAdmin = () => {
         e.preventDefault();
 
         try {
-            const response = await axios.post(
-                `${import.meta.env.VITE_BACKEND_URL}/api/platform/support/tickets`,
+            const response = await api.post(
+                `/api/platform/support/tickets`,
                 {
                     companyId: company._id,
                     ...newTicket
-                },
-                { withCredentials: true }
+                }
             );
 
             setTickets(prev => [response.data.ticket, ...prev]);

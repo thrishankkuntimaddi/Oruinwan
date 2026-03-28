@@ -1,6 +1,6 @@
 import { useEffect, useState, useContext } from "react";
 import { useParams } from "react-router-dom";
-import axios from "axios";
+import api from '../../services/api';
 import { AuthContext } from "../../contexts/AuthContext";
 import { API_BASE } from "../../services/api";
 import { getErrorMessage } from "../../utils/apiHelpers";
@@ -38,17 +38,13 @@ export default function NewDMModal({ onClose, onStart }) {
         let res;
 
         if (debouncedQuery.trim()) {
-          res = await axios.get(`${API_BASE}/api/search/contacts`, {
+          res = await api.get(`/api/search/contacts`, {
             params: { workspaceId, query: debouncedQuery },
-            headers,
-            withCredentials: true
-          });
+            headers});
           setUsers(res.data.contacts || []);
         } else if (workspaceId) {
-          res = await axios.get(`${API_BASE}/api/workspaces/${workspaceId}/members`, {
-            headers,
-            withCredentials: true
-          });
+          res = await api.get(`/api/workspaces/${workspaceId}/members`, {
+            headers});
           const membersList = res.data.members || [];
           const mapped = membersList.map(m => ({
             _id: m._id,
@@ -58,8 +54,7 @@ export default function NewDMModal({ onClose, onStart }) {
             profilePicture: m.profilePicture || null,
             status: m.status || "offline",
             userStatus: m.userStatus || null,
-            role: m.role || "member",
-          }));
+            role: m.role || "member" }));
           setUsers(mapped);
         } else {
           setUsers([]);

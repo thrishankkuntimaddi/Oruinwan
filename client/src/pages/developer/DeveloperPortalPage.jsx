@@ -1,6 +1,6 @@
 // client/src/pages/developer/DeveloperPortalPage.jsx
 import React, { useState, useEffect, useCallback } from 'react';
-import axios from 'axios';
+import api from '../../../services/api';
 import './DeveloperPortalPage.css';
 
 const API = import.meta.env?.VITE_API_URL || '';
@@ -46,7 +46,7 @@ function ApiKeysTab({ workspaceId }) {
   const loadKeys = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await axios.get(`${API}/api/developer/api-keys?workspaceId=${workspaceId}`, { withCredentials: true });
+      const res = await api.get(`/api/developer/api-keys?workspaceId=${workspaceId}`);
       setKeys(res.data.keys || []);
     } catch {
       // silent
@@ -62,7 +62,7 @@ function ApiKeysTab({ workspaceId }) {
     if (!newKeyName.trim()) return;
     setCreating(true);
     try {
-      const res = await axios.post(`${API}/api/developer/api-keys`, { workspaceId, name: newKeyName }, { withCredentials: true });
+      const res = await api.post(`/api/developer/api-keys`, { workspaceId, name: newKeyName });
       setGeneratedKey(res.data.rawKey);
       setNewKeyName('');
       loadKeys();
@@ -76,7 +76,7 @@ function ApiKeysTab({ workspaceId }) {
   const revokeKey = async (id) => {
     if (!window.confirm('Revoke this API key? This cannot be undone.')) return;
     try {
-      await axios.delete(`${API}/api/developer/api-keys/${id}`, { withCredentials: true });
+      await api.delete(`/api/developer/api-keys/${id}`);
       loadKeys();
     } catch {
       alert('Failed to revoke key');
@@ -161,7 +161,7 @@ function WebhooksTab({ workspaceId }) {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await axios.get(`${API}/api/v2/integrations/webhooks?workspaceId=${workspaceId}`, { withCredentials: true });
+      const res = await api.get(`/api/v2/integrations/webhooks?workspaceId=${workspaceId}`);
       setHooks(res.data.webhooks || res.data || []);
     } catch {
       setHooks([]);
@@ -184,7 +184,7 @@ function WebhooksTab({ workspaceId }) {
     if (!form.url || !form.events.length) return;
     setCreating(true);
     try {
-      await axios.post(`${API}/api/v2/integrations/webhooks`, { workspaceId, ...form }, { withCredentials: true });
+      await api.post(`/api/v2/integrations/webhooks`, { workspaceId, ...form });
       setShowCreate(false);
       setForm({ url: '', events: ['message.sent'] });
       load();
@@ -198,7 +198,7 @@ function WebhooksTab({ workspaceId }) {
   const deleteHook = async (id) => {
     if (!window.confirm('Delete this webhook?')) return;
     try {
-      await axios.delete(`${API}/api/v2/integrations/webhooks/${id}`, { withCredentials: true });
+      await api.delete(`/api/v2/integrations/webhooks/${id}`);
       load();
     } catch {
       alert('Failed to delete webhook');
@@ -275,7 +275,7 @@ function BotsTab({ workspaceId }) {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await axios.get(`${API}/api/developer/bots?workspaceId=${workspaceId}`, { withCredentials: true });
+      const res = await api.get(`/api/developer/bots?workspaceId=${workspaceId}`);
       setBots(res.data.bots || []);
     } catch { setBots([]); } finally { setLoading(false); }
   }, [workspaceId]);
@@ -287,7 +287,7 @@ function BotsTab({ workspaceId }) {
     if (!form.name.trim()) return;
     setCreating(true);
     try {
-      const res = await axios.post(`${API}/api/developer/bots`, { workspaceId, ...form }, { withCredentials: true });
+      const res = await api.post(`/api/developer/bots`, { workspaceId, ...form });
       setGeneratedToken(res.data.rawToken);
       setShowCreate(false);
       setForm({ name: '', description: '' });
@@ -300,7 +300,7 @@ function BotsTab({ workspaceId }) {
   const sendTestMsg = async (botId) => {
     if (!testMsg.text || !testMsg.channelId) return alert('Enter text and channel ID');
     try {
-      await axios.post(`${API}/api/developer/bots/${botId}/message`, { channelId: testMsg.channelId, text: testMsg.text }, { withCredentials: true });
+      await api.post(`/api/developer/bots/${botId}/message`, { channelId: testMsg.channelId, text: testMsg.text });
       setTestMsg({ botId: null, text: '', channelId: '' });
       alert('Message sent!');
     } catch (err) {
@@ -311,7 +311,7 @@ function BotsTab({ workspaceId }) {
   const deleteBot = async (id) => {
     if (!window.confirm('Deactivate this bot?')) return;
     try {
-      await axios.delete(`${API}/api/developer/bots/${id}`, { withCredentials: true });
+      await api.delete(`/api/developer/bots/${id}`);
       load();
     } catch { alert('Failed to deactivate bot'); }
   };
@@ -404,7 +404,7 @@ function AppsTab({ workspaceId }) {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await axios.get(`${API}/api/developer/apps?workspaceId=${workspaceId}`, { withCredentials: true });
+      const res = await api.get(`/api/developer/apps?workspaceId=${workspaceId}`);
       setApps(res.data.apps || []);
     } catch { setApps([]); } finally { setLoading(false); }
   }, [workspaceId]);
@@ -415,9 +415,9 @@ function AppsTab({ workspaceId }) {
     setActionLoading(l => ({...l, [app._id]: true}));
     try {
       if (app.installed) {
-        await axios.delete(`${API}/api/developer/apps/${app._id}/uninstall`, { data: { workspaceId }, withCredentials: true });
+        await api.delete(`/api/developer/apps/${app._id}/uninstall`, { data: { workspaceId } });
       } else {
-        await axios.post(`${API}/api/developer/apps/${app._id}/install`, { workspaceId }, { withCredentials: true });
+        await api.post(`/api/developer/apps/${app._id}/install`, { workspaceId });
       }
       load();
     } catch (err) {

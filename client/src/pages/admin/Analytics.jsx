@@ -6,7 +6,8 @@ import {
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import axios from 'axios';
+// refactor(consistency): use canonical api.js client (handles auth tokens + 401 refresh)
+import api from '../../services/api';
 
 const Analytics = () => {
     const { user } = useAuth();
@@ -23,14 +24,8 @@ const Analytics = () => {
                 : user.companyId;
 
             const [analyticsRes, activityRes] = await Promise.all([
-                axios.get(
-                    `${import.meta.env.VITE_BACKEND_URL}/api/company/analytics/overview?timeRange=30d`,
-                    { withCredentials: true }
-                ),
-                axios.get(
-                    `${import.meta.env.VITE_BACKEND_URL}/api/company/analytics/activity`,
-                    { withCredentials: true }
-                ),
+                api.get('/api/company/analytics/overview?timeRange=30d'),
+                api.get('/api/company/analytics/activity'),
             ]);
 
             setAnalytics(analyticsRes.data.analytics);
@@ -41,10 +36,7 @@ const Analytics = () => {
                 const companyId = typeof user.companyId === 'object'
                     ? user.companyId?._id || user.companyId?.id
                     : user.companyId;
-                const response = await axios.get(
-                    `${import.meta.env.VITE_BACKEND_URL}/api/companies/${companyId}/analytics`,
-                    { withCredentials: true }
-                );
+                const response = await api.get(`/api/companies/${companyId}/analytics`);
                 setAnalytics(response.data);
             } catch (fallbackErr) {
                 console.error('Error fetching analytics:', fallbackErr);

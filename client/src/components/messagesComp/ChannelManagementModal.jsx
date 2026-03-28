@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useParams } from "react-router-dom";
-import axios from "axios";
+import api from '../../services/api';
 import { useToast } from "../../contexts/ToastContext";
 import { API_BASE } from "../../services/api";
 import ConfirmationModal from "../../shared/components/ui/ConfirmationModal";
@@ -58,7 +58,7 @@ export default function ChannelManagementModal({ channel, onClose, currentUserId
         try {
             const token = localStorage.getItem("accessToken");
             const headers = token ? { Authorization: `Bearer ${token}` } : {};
-            const res = await axios.get(`${API_BASE}/api/channels/${channel.id}/members`, { headers });
+            const res = await api.get(`/api/channels/${channel.id}/members`);
             setMembers(res.data.members || []);
         } catch (err) {
             console.error("Load members failed:", err);
@@ -70,7 +70,7 @@ export default function ChannelManagementModal({ channel, onClose, currentUserId
         try {
             const token = localStorage.getItem("accessToken");
             const headers = token ? { Authorization: `Bearer ${token}` } : {};
-            const res = await axios.get(`${API_BASE}/api/workspaces/${channel.workspaceId}/all-members`, { headers });
+            const res = await api.get(`/api/workspaces/${channel.workspaceId}/all-members`);
             setAllUsers(res.data.members || []);
         } catch (err) {
             console.error("❌ Load workspace members failed:", err);
@@ -101,7 +101,7 @@ export default function ChannelManagementModal({ channel, onClose, currentUserId
         try {
             const token = localStorage.getItem("accessToken");
             const headers = token ? { Authorization: `Bearer ${token}` } : {};
-            await axios.post(`${API_BASE}/api/channels/${channel.id}/invite`, { userId }, { headers });
+            await api.post(`/api/channels/${channel.id}/invite`, { userId });
             loadMembers();
         } catch (err) {
             console.error("Invite failed:", err);
@@ -121,10 +121,7 @@ export default function ChannelManagementModal({ channel, onClose, currentUserId
         try {
             const token = localStorage.getItem("accessToken");
             const headers = token ? { Authorization: `Bearer ${token}` } : {};
-            await axios.post(`${API_BASE}/api/channels/${channel.id}/remove-member`,
-                { userId: memberToRemove },
-                { headers }
-            );
+            await api.post(`/api/channels/${channel.id}/remove-member`, { userId: memberToRemove });
             showToast("Member removed successfully", "success");
             setMemberToRemove(null);
             loadMembers();
@@ -146,10 +143,7 @@ export default function ChannelManagementModal({ channel, onClose, currentUserId
         try {
             const token = localStorage.getItem("accessToken");
             const headers = token ? { Authorization: `Bearer ${token}` } : {};
-            await axios.post(`${API_BASE}/api/channels/${channel.id}/assign-admin`,
-                { userId: memberToPromote },
-                { headers }
-            );
+            await api.post(`/api/channels/${channel.id}/assign-admin`, { userId: memberToPromote });
             showToast("Member promoted to admin successfully", "success");
             setMemberToPromote(null);
             await loadMembers();
@@ -171,10 +165,7 @@ export default function ChannelManagementModal({ channel, onClose, currentUserId
         try {
             const token = localStorage.getItem("accessToken");
             const headers = token ? { Authorization: `Bearer ${token}` } : {};
-            await axios.post(`${API_BASE}/api/channels/${channel.id}/demote-admin`,
-                { userId: memberToDemote },
-                { headers }
-            );
+            await api.post(`/api/channels/${channel.id}/demote-admin`, { userId: memberToDemote });
             const isSelf = String(memberToDemote) === String(currentUserId);
             showToast(isSelf ? "You have withdrawn as admin" : "Admin demoted to member successfully", "success");
             setMemberToDemote(null);
@@ -200,11 +191,7 @@ export default function ChannelManagementModal({ channel, onClose, currentUserId
             const token = localStorage.getItem("accessToken");
             const headers = token ? { Authorization: `Bearer ${token}` } : {};
             const newPrivacy = !channel.isPrivate;
-            await axios.patch(
-                `${API_BASE}/api/channels/${channel.id}/privacy`,
-                { isPrivate: newPrivacy },
-                { headers }
-            );
+            await api.patch(`/api/channels/${channel.id}/privacy`, { isPrivate: newPrivacy });
             showToast(
                 `Channel is now ${newPrivacy ? "Private" : "Public"}. ${newPrivacy ? "Only invited members can see it." : "Everyone in workspace can access it."}`,
                 "success"
@@ -225,11 +212,7 @@ export default function ChannelManagementModal({ channel, onClose, currentUserId
         try {
             const token = localStorage.getItem("accessToken");
             const headers = token ? { Authorization: `Bearer ${token}` } : {};
-            await axios.patch(
-                `${API_BASE}/api/channels/${channel.id}/make-public`,
-                { isPublic: newIsPublic },
-                { headers }
-            );
+            await api.patch(`/api/channels/${channel.id}/make-public`, { isPublic: newIsPublic });
             showToast(
                 newIsPublic
                     ? "Channel is now publicly accessible via link."
@@ -256,7 +239,7 @@ export default function ChannelManagementModal({ channel, onClose, currentUserId
         try {
             const token = localStorage.getItem("accessToken");
             const headers = token ? { Authorization: `Bearer ${token}` } : {};
-            await axios.delete(`${API_BASE}/api/channels/${channel.id}`, { headers });
+            await api.delete(`/api/channels/${channel.id}`);
             showToast(`Channel ${channel.name} has been permanently deleted`, "success");
             setTimeout(() => {
                 window.location.href = `/workspace/${workspaceId}/home`;
@@ -278,7 +261,7 @@ export default function ChannelManagementModal({ channel, onClose, currentUserId
         try {
             const token = localStorage.getItem("accessToken");
             const headers = token ? { Authorization: `Bearer ${token}` } : {};
-            await axios.delete(`${API_BASE}/api/channels/${channel.id}/messages`, { headers });
+            await api.delete(`/api/channels/${channel.id}/messages`);
             showToast("All messages have been cleared from this channel", "success");
             setShowClearMessagesConfirm(false);
             // 'messages-cleared' socket event empties the chat window reactively
@@ -304,10 +287,7 @@ export default function ChannelManagementModal({ channel, onClose, currentUserId
         try {
             const token = localStorage.getItem("accessToken");
             const headers = token ? { Authorization: `Bearer ${token}` } : {};
-            await axios.patch(`${API_BASE}/api/channels/${channel.id}/name`,
-                { name: editedName },
-                { headers }
-            );
+            await api.patch(`/api/channels/${channel.id}/name`, { name: editedName });
             showToast("Channel name updated successfully", "success");
             setIsEditingName(false);
             setEditedName(editedName.trim().toLowerCase());
@@ -330,10 +310,7 @@ export default function ChannelManagementModal({ channel, onClose, currentUserId
         try {
             const token = localStorage.getItem("accessToken");
             const headers = token ? { Authorization: `Bearer ${token}` } : {};
-            await axios.patch(`${API_BASE}/api/channels/${channel.id}/description`,
-                { description: editedDescription },
-                { headers }
-            );
+            await api.patch(`/api/channels/${channel.id}/description`, { description: editedDescription });
             showToast("Channel description updated successfully", "success");
             setIsEditingDescription(false);
             channel.description = editedDescription;

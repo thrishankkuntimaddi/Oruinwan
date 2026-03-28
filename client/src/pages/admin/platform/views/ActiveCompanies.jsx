@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../../../../../services/api';
 import { Globe, MessageSquare, Search } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -15,7 +15,7 @@ const ActiveCompanies = () => {
 
     const fetchCompanies = async () => {
         try {
-            const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/admin/active-companies`, { withCredentials: true });
+            const res = await api.get(`/api/admin/active-companies`);
             setCompanies(res.data);
             setLoading(false);
         } catch (err) {

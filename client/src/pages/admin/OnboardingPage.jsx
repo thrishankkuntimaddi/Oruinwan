@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
-import axios from 'axios';
+import api from '../../../services/api';
 import OnboardingWizard from '../../components/admin/onboarding/OnboardingWizard';
 
 // ─── Bulk Import Modal ────────────────────────────────────────────────────────
@@ -32,9 +32,8 @@ const BulkImportModal = ({ onClose }) => {
     // ── Fetch company domain on mount ──────────────────────────────────────────
     useEffect(() => {
         if (!companyId) return;
-        axios.get(
-            `${import.meta.env.VITE_BACKEND_URL}/api/companies/${companyId}`,
-            { withCredentials: true }
+        api.get(
+            `/api/companies/${companyId}`
         ).then(res => {
             const domain = res.data?.company?.domain || res.data?.domain || '';
             setCompanyDomain(domain.toLowerCase().replace(/^@/, ''));
@@ -44,9 +43,9 @@ const BulkImportModal = ({ onClose }) => {
     // ── template download ──────────────────────────────────────────────────────
     const downloadTemplate = async () => {
         try {
-            const res = await axios.get(
-                `${import.meta.env.VITE_BACKEND_URL}/api/companies/${companyId}/setup/template`,
-                { withCredentials: true, responseType: 'blob' }
+            const res = await api.get(
+                `/api/companies/${companyId}/setup/template`,
+                { responseType: 'blob' }
             );
             const url = URL.createObjectURL(res.data);
             Object.assign(document.createElement('a'), { href: url, download: 'chttrix_team_template.xlsx' }).click();
@@ -95,8 +94,7 @@ const BulkImportModal = ({ onClose }) => {
                         personalEmail:'',
                         phone:        String(r[2] || '').trim(),
                         role:         String(r[3] || 'member').trim().toLowerCase(),
-                        department:   String(r[4] || '').trim(),
-                    };
+                        department:   String(r[4] || '').trim() };
                 })
                 .filter(e => e.companyEmail);
 
@@ -131,10 +129,9 @@ const BulkImportModal = ({ onClose }) => {
             formData.append('employeeFile', excelFile);
 
             // FIX-4: POST to new endpoint — receives { jobId } immediately (HTTP 202)
-            const res = await axios.post(
-                `${import.meta.env.VITE_BACKEND_URL}/api/company/onboarding/bulk`,
-                formData,
-                { withCredentials: true }
+            const res = await api.post(
+                `/api/company/onboarding/bulk`,
+                formData
             );
 
             const { jobId, total } = res.data;
@@ -143,9 +140,8 @@ const BulkImportModal = ({ onClose }) => {
             // Poll for job completion
             const interval = setInterval(async () => {
                 try {
-                    const statusRes = await axios.get(
-                        `${import.meta.env.VITE_BACKEND_URL}/api/company/onboarding/status/${jobId}`,
-                        { withCredentials: true }
+                    const statusRes = await api.get(
+                        `/api/company/onboarding/status/${jobId}`
                     );
                     const job = statusRes.data.job;
                     // DB model fields: processedRows / totalRows / createdCount / skippedCount / errorCount
@@ -156,8 +152,7 @@ const BulkImportModal = ({ onClose }) => {
                         setResult({
                             created: job.createdCount ?? 0,
                             skipped: job.skippedCount ?? 0,
-                            errors:  job.results?.filter(r => r.status === 'error') || [],
-                        });
+                            errors:  job.results?.filter(r => r.status === 'error') || [] });
                         setPhase('done');
                     }
                 } catch { /* poll failures are non-fatal */ }
@@ -178,8 +173,7 @@ const BulkImportModal = ({ onClose }) => {
         const map = {
             admin: 'bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400',
             manager: 'bg-amber-50 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400',
-            member: 'bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400',
-        };
+            member: 'bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400' };
         return map[role] || map.member;
     };
 

@@ -1,7 +1,7 @@
 // client/src/components/messagesComp/ChecklistMessage.jsx
 // Phase-8: Interactive checklist inside a message bubble
 import React, { useState, useCallback } from 'react';
-import axios from 'axios';
+import api from '../../services/api';
 
 const API = import.meta.env.VITE_API_URL || '';
 
@@ -24,11 +24,7 @@ export default function ChecklistMessage({ messageId, checklist: initialChecklis
     setItems(optimistic);
     setLoading(idx);
     try {
-      const res = await axios.post(
-        `${API}/api/v2/messages/${messageId}/checklist/${idx}`,
-        {},
-        { withCredentials: true }
-      );
+      const res = await api.post(`/api/v2/messages/${messageId}/checklist/${idx}`, {});
       // Server returns updated checklist
       if (res.data?.checklist) setItems(res.data.checklist);
     } catch {

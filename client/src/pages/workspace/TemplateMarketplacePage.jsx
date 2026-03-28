@@ -5,15 +5,14 @@ import {
   Layers, Code, BarChart2, Zap, MessageSquare, CheckCircle2,
   RefreshCw, ArrowLeft
 } from "lucide-react";
-import axios from "axios";
+import api from '../../../services/api';
 
 const CATEGORY_ICONS = {
   general:      { icon: Layers,        label: "General",     color: "from-blue-500 to-blue-600" },
   engineering:  { icon: Code,          label: "Engineering", color: "from-violet-500 to-purple-600" },
   marketing:    { icon: BarChart2,     label: "Marketing",   color: "from-pink-500 to-rose-600" },
   automation:   { icon: Zap,           label: "Automation",  color: "from-amber-500 to-orange-600" },
-  communication:{ icon: MessageSquare, label: "Team Comms",  color: "from-emerald-500 to-teal-600" },
-};
+  communication:{ icon: MessageSquare, label: "Team Comms",  color: "from-emerald-500 to-teal-600" } };
 
 const ALL_CATEGORIES = [
   { id: "all", label: "All Templates" },
@@ -95,7 +94,7 @@ export default function TemplateMarketplacePage() {
       const params = { page, limit: 18 };
       if (activeCategory !== "all") params.category = activeCategory;
       if (search.trim()) params.q = search.trim();
-      const res = await axios.get("/api/workspace-templates/public", { params });
+      const res = await api.get("/api/workspace-templates/public", { params });
       setTemplates(res.data.templates || []);
       setTotalPages(res.data.totalPages || 1);
     } catch (err) {
@@ -115,10 +114,9 @@ export default function TemplateMarketplacePage() {
     setImporting(template._id);
     try {
       const token = localStorage.getItem("accessToken");
-      await axios.post(
+      await api.post(
         `/api/workspace-templates/${template._id}/import`,
-        { workspaceId },
-        { headers: { Authorization: `Bearer ${token}` } }
+        { workspaceId }
       );
       showToast(`"${template.name}" imported successfully!`);
     } catch (err) {

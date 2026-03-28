@@ -1,7 +1,7 @@
 // client/src/components/messagesComp/MessageDiffViewer.jsx
 // Phase-8: Modal showing edit history with diff highlighting
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../../services/api';
 
 const API = import.meta.env.VITE_API_URL || '';
 
@@ -38,7 +38,7 @@ export default function MessageDiffViewer({ messageId, currentText, onClose }) {
 
   useEffect(() => {
     if (!messageId) return;
-    axios.get(`${API}/api/v2/messages/${messageId}/diff`, { withCredentials: true })
+    api.get(`/api/v2/messages/${messageId}/diff`)
       .then(res => {
         setHistory(res.data?.editHistory || []);
         setLoading(false);

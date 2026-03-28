@@ -1,7 +1,8 @@
 // client/src/components/messagesComp/chatWindowComp/VoiceRecorder.jsx
 // Phase-8: Voice message recorder using MediaRecorder API
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import axios from 'axios';
+// refactor(consistency): use canonical api.js (handles auth tokens + 401 refresh; FormData uploads still work)
+import api from '../../../services/api';
 
 const API = import.meta.env.VITE_API_URL || '';
 
@@ -79,8 +80,7 @@ export default function VoiceRecorder({ onSend, onCancel }) {
       formData.append('file', blobRef.current, `voice-message.${ext}`);
       formData.append('category', 'voice');
 
-      const res = await axios.post(`${API}/api/v2/uploads`, formData, {
-        withCredentials: true,
+      const res = await api.post('/api/v2/uploads', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
 

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Lock, Mail, KeyRound } from 'lucide-react';
-import axios from 'axios';
+import api from '../../services/api';
 
 const ReactivationFlow = () => {
     const navigate = useNavigate();
@@ -31,10 +31,9 @@ const ReactivationFlow = () => {
         setError('');
 
         try {
-            const response = await axios.post(
-                `${import.meta.env.VITE_BACKEND_URL}/api/auth/reactivate/verify-otp`,
-                { email, otpCode, password },
-                { withCredentials: true }
+            const response = await api.post(
+                `/api/auth/reactivate/verify-otp`,
+                { email, otpCode, password }
             );
 
             // Save access token

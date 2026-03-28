@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext } from "react";
-import axios from "axios";
+import api from '../../services/api';
 import { AuthContext } from "../../contexts/AuthContext";
 import { useToast } from "../../contexts/ToastContext";
 import { Search, X, Send, Users, Check } from "lucide-react";
@@ -20,7 +20,7 @@ export default function BroadcastView() {
             try {
                 const token = accessToken || localStorage.getItem("accessToken");
                 const headers = token ? { Authorization: `Bearer ${token}` } : {};
-                const res = await axios.get(`${API_BASE}/api/chat/contacts`, { headers });
+                const res = await api.get(`/api/chat/contacts`);
                 setUsers(res.data.contacts || []);
                 setLoading(false);
             } catch (err) {

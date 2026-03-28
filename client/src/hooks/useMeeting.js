@@ -1,6 +1,6 @@
 // client/src/hooks/useMeeting.js
 import { useState, useEffect, useCallback, useRef } from 'react';
-import axios from 'axios';
+import api from '../../services/api';
 import { useSocket } from '../contexts/SocketContext';
 
 const API = '/api/v2/meetings';
@@ -22,7 +22,7 @@ export function useMeeting(meetingId, workspaceId) {
         if (!meetingId) return;
         setLoading(true);
         try {
-            const { data } = await axios.get(`${API}/${meetingId}`, { withCredentials: true });
+            const { data } = await api.get(`${API}/${meetingId}`);
             setMeeting(data.meeting);
         } catch (err) {
             setError(err?.response?.data?.message || 'Failed to load meeting');
@@ -35,47 +35,43 @@ export function useMeeting(meetingId, workspaceId) {
 
     // ── Join ─────────────────────────────────────────────────────────────────
     const joinMeeting = useCallback(async () => {
-        const { data } = await axios.post(`${API}/${meetingId}/join`, {}, { withCredentials: true });
+        const { data } = await api.post(`${API}/${meetingId}/join`, {});
         setMeeting(data.meeting);
         socket?.emit('meeting:join', { meetingId });
     }, [meetingId, socket]);
 
     // ── End ──────────────────────────────────────────────────────────────────
     const endMeeting = useCallback(async (recordingUrl) => {
-        const { data } = await axios.patch(
+        const { data } = await api.patch(
             `${API}/${meetingId}/end`,
-            { recordingUrl },
-            { withCredentials: true }
+            { recordingUrl }
         );
         setMeeting(data.meeting);
     }, [meetingId]);
 
     // ── Agenda ───────────────────────────────────────────────────────────────
     const updateAgenda = useCallback(async (agenda) => {
-        const { data } = await axios.patch(
+        const { data } = await api.patch(
             `${API}/${meetingId}/agenda`,
-            { agenda },
-            { withCredentials: true }
+            { agenda }
         );
         setMeeting(data.meeting);
     }, [meetingId]);
 
     // ── Transcript ───────────────────────────────────────────────────────────
     const updateTranscript = useCallback(async (transcript) => {
-        const { data } = await axios.patch(
+        const { data } = await api.patch(
             `${API}/${meetingId}/transcript`,
-            { transcript },
-            { withCredentials: true }
+            { transcript }
         );
         setMeeting(data.meeting);
     }, [meetingId]);
 
     // ── AI Summary ───────────────────────────────────────────────────────────
     const generateSummary = useCallback(async () => {
-        const { data } = await axios.post(
+        const { data } = await api.post(
             `${API}/${meetingId}/summarize`,
-            {},
-            { withCredentials: true }
+            {}
         );
         setMeeting(prev => prev ? { ...prev, summary: data.summary } : prev);
         return data.summary;
@@ -83,29 +79,26 @@ export function useMeeting(meetingId, workspaceId) {
 
     // ── Action Items ─────────────────────────────────────────────────────────
     const addActionItem = useCallback(async ({ text, assignedTo, status }) => {
-        const { data } = await axios.post(
+        const { data } = await api.post(
             `${API}/${meetingId}/action-items`,
-            { text, assignedTo, status },
-            { withCredentials: true }
+            { text, assignedTo, status }
         );
         setMeeting(data.meeting);
     }, [meetingId]);
 
     const updateActionItem = useCallback(async (aid, updates) => {
-        const { data } = await axios.patch(
+        const { data } = await api.patch(
             `${API}/${meetingId}/action-items/${aid}`,
-            updates,
-            { withCredentials: true }
+            updates
         );
         setMeeting(data.meeting);
     }, [meetingId]);
 
     // ── Suggest Time ─────────────────────────────────────────────────────────
     const suggestTime = useCallback(async (participantIds = [], durationMinutes = 30) => {
-        const { data } = await axios.post(
+        const { data } = await api.post(
             `${API}/suggest-time`,
-            { participantIds, durationMinutes },
-            { withCredentials: true }
+            { participantIds, durationMinutes }
         );
         return data;
     }, []);
@@ -139,8 +132,7 @@ export function useMeeting(meetingId, workspaceId) {
         addActionItem,
         updateActionItem,
         suggestTime,
-        setMeeting,
-    };
+        setMeeting };
 }
 
 /**

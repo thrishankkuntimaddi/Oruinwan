@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
+import api from '../../../../../services/api';
 import { Check, X, Globe, ExternalLink } from "lucide-react";
 import { useToast } from "../../../../contexts/ToastContext";
 
@@ -16,7 +16,7 @@ const PendingRequests = () => {
     const fetchPending = async () => {
         try {
 
-            const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/admin/pending-companies`, { withCredentials: true });
+            const res = await api.get(`/api/admin/pending-companies`);
 
             setCompanies(res.data);
         } catch (err) {
@@ -26,7 +26,7 @@ const PendingRequests = () => {
 
     const handleApprove = async (id) => {
         try {
-            await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/admin/approve-company/${id}`, { message: reason }, { withCredentials: true });
+            await api.post(`/api/admin/approve-company/${id}`, { message: reason });
             showToast("Company Approved! Email sent.", "success");
             setCompanies(prev => prev.filter(c => c._id !== id));
             setSelectedCompany(null);
@@ -42,7 +42,7 @@ const PendingRequests = () => {
             return;
         }
         try {
-            await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/admin/reject-company/${id}`, { message: reason }, { withCredentials: true });
+            await api.post(`/api/admin/reject-company/${id}`, { message: reason });
             showToast("Company Rejected", "info");
             setCompanies(prev => prev.filter(c => c._id !== id));
             setSelectedCompany(null);

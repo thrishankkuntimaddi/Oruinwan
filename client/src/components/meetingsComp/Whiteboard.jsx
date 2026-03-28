@@ -1,7 +1,7 @@
 // client/src/components/meetingsComp/Whiteboard.jsx
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { Pen, Eraser, Trash2, Palette } from 'lucide-react';
-import axios from 'axios';
+import api from '../../../services/api';
 import { useSocket } from '../../contexts/SocketContext';
 
 const COLORS = ['#FFFFFF', '#F87171', '#FBBF24', '#34D399', '#60A5FA', '#A78BFA', '#F472B6', '#000000'];
@@ -24,7 +24,7 @@ const Whiteboard = ({ meetingId, workspaceId }) => {
     // ── Load persisted strokes ─────────────────────────────────────────────────
     useEffect(() => {
         if (!meetingId) return;
-        axios.get(`/api/v2/collaboration/whiteboard/${meetingId}`, { withCredentials: true })
+        api.get(`/api/v2/collaboration/whiteboard/${meetingId}`)
             .then(({ data }) => {
                 if (data.strokes?.length) {
                     setStrokes(data.strokes);
@@ -83,8 +83,7 @@ const Whiteboard = ({ meetingId, workspaceId }) => {
         const clientY = e.touches ? e.touches[0].clientY : e.clientY;
         return {
             x: (clientX - rect.left) * scaleX,
-            y: (clientY - rect.top) * scaleY,
-        };
+            y: (clientY - rect.top) * scaleY };
     };
 
     const onPointerDown = (e) => {
@@ -137,10 +136,9 @@ const Whiteboard = ({ meetingId, workspaceId }) => {
     const handleSave = async () => {
         setSaving(true);
         try {
-            await axios.post(
+            await api.post(
                 `/api/v2/collaboration/whiteboard/${meetingId}`,
-                { workspaceId, strokes },
-                { withCredentials: true }
+                { workspaceId, strokes }
             );
         } finally {
             setSaving(false);

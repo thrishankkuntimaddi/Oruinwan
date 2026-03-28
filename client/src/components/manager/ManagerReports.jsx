@@ -4,7 +4,7 @@
 import React, { useState, useEffect } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { Users, Building, Shield, Eye, EyeOff, AlertCircle } from 'lucide-react';
-import axios from 'axios';
+import api from '../../services/api';
 
 const ManagerReports = () => {
     const { selectedDepartment } = useOutletContext();
@@ -17,10 +17,7 @@ const ManagerReports = () => {
 
             try {
                 setLoading(true);
-                const response = await axios.get(
-                    `${import.meta.env.VITE_BACKEND_URL}/api/manager/dashboard/metrics/${selectedDepartment._id}`,
-                    { withCredentials: true }
-                );
+                const response = await api.get(`/api/manager/dashboard/metrics/${selectedDepartment._id}`);
                 setDeptInfo(response.data);
             } catch (error) {
                 console.error('Error fetching department info:', error);

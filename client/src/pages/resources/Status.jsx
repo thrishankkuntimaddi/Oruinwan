@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, CheckCircle2, Server, AlertCircle, Clock } from 'lucide-react';
-import axios from 'axios';
+import api from '../../../services/api';
 
 const Status = () => {
     const navigate = useNavigate();
@@ -11,7 +11,7 @@ const Status = () => {
 
     const fetchHealthStatus = async () => {
         try {
-            const response = await axios.get('/api/status/health');
+            const response = await api.get('/api/status/health');
             setHealthData(response.data);
             setLastUpdated(new Date());
             setLoading(false);

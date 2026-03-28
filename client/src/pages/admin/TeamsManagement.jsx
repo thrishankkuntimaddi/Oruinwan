@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import axios from 'axios';
+import api from '../../../services/api';
 import { API_BASE } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -132,8 +132,7 @@ function TeamFormModal({ initial, departments, employees, onSave, onClose, savin
     icon: initial?.icon || '👥',
     color: initial?.color || '#6366f1',
     departmentId: initial?.department?._id || initial?.department || '',
-    leadId: initial?.lead?._id || initial?.lead || '',
-  }));
+    leadId: initial?.lead?._id || initial?.lead || '' }));
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -262,10 +261,10 @@ function MembersModal({ team, employees, onClose, onSaved }) {
       const toRemove = [...currentIds].filter(id => !newIds.has(id));
 
       if (toAdd.length > 0) {
-        await axios.patch(`${API_BASE}/api/teams/${team._id}/members`, { userIds: toAdd, action: 'add' }, { withCredentials: true });
+        await api.patch(`/api/teams/${team._id}/members`, { userIds: toAdd, action: 'add' });
       }
       if (toRemove.length > 0) {
-        await axios.patch(`${API_BASE}/api/teams/${team._id}/members`, { userIds: toRemove, action: 'remove' }, { withCredentials: true });
+        await api.patch(`/api/teams/${team._id}/members`, { userIds: toRemove, action: 'remove' });
       }
       onSaved();
       onClose();
@@ -381,7 +380,7 @@ export default function TeamsManagement() {
     try {
       setLoading(true);
       const params = filterDept ? `?departmentId=${filterDept}` : '';
-      const { data } = await axios.get(`${API_BASE}/api/teams${params}`, { withCredentials: true });
+      const { data } = await api.get(`/api/teams${params}`);
       setTeams(data.teams || []);
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to load teams');
@@ -392,7 +391,7 @@ export default function TeamsManagement() {
 
   const fetchDepts = useCallback(async () => {
     try {
-      const { data } = await axios.get(`${API_BASE}/api/departments`, { withCredentials: true });
+      const { data } = await api.get(`/api/departments`);
       setDepartments(data.departments || data || []);
     } catch { /* non-fatal */ }
   }, []);
@@ -400,7 +399,7 @@ export default function TeamsManagement() {
   const fetchEmployees = useCallback(async () => {
     if (!companyId) return;
     try {
-      const { data } = await axios.get(`${API_BASE}/api/companies/${companyId}/employees?limit=200`, { withCredentials: true });
+      const { data } = await api.get(`/api/companies/${companyId}/employees?limit=200`);
       setEmployees(data.employees || []);
     } catch { /* non-fatal */ }
   }, [companyId]);
@@ -411,7 +410,7 @@ export default function TeamsManagement() {
   const handleCreate = async (form) => {
     setSaving(true);
     try {
-      await axios.post(`${API_BASE}/api/teams`, form, { withCredentials: true });
+      await api.post(`/api/teams`, form);
       setShowCreate(false);
       fetchTeams();
     } catch (err) { alert(err.response?.data?.error || 'Failed to create team'); }
@@ -421,7 +420,7 @@ export default function TeamsManagement() {
   const handleEdit = async (form) => {
     setSaving(true);
     try {
-      await axios.patch(`${API_BASE}/api/teams/${editTeam._id}`, form, { withCredentials: true });
+      await api.patch(`/api/teams/${editTeam._id}`, form);
       setEditTeam(null);
       fetchTeams();
     } catch (err) { alert(err.response?.data?.error || 'Failed to update team'); }
@@ -431,7 +430,7 @@ export default function TeamsManagement() {
   const handleDelete = async (teamId, name) => {
     if (!window.confirm(`Delete team "${name}"? This cannot be undone.`)) return;
     try {
-      await axios.delete(`${API_BASE}/api/teams/${teamId}`, { withCredentials: true });
+      await api.delete(`/api/teams/${teamId}`);
       fetchTeams();
     } catch (err) { alert(err.response?.data?.error || 'Failed to delete team'); }
   };

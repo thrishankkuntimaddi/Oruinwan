@@ -1,7 +1,7 @@
 // client/src/components/messagesComp/SmartReplyBar.jsx
 // Phase-8: AI-generated quick reply chip suggestions
 import React, { useState, useEffect, useRef } from 'react';
-import axios from 'axios';
+import api from '../../services/api';
 
 const API = import.meta.env.VITE_API_URL || '';
 
@@ -27,10 +27,10 @@ export default function SmartReplyBar({ messageId, messageText, onSelectReply, o
     const ctrl = new AbortController();
     abortRef.current = ctrl;
 
-    axios.post(
-      `${API}/api/v2/messages/ai/suggestions`,
+    api.post(
+      `/api/v2/messages/ai/suggestions`,
       { messageText, messageId },
-      { withCredentials: true, signal: ctrl.signal }
+      { signal: ctrl.signal }
     )
       .then(res => setSuggestions(res.data?.suggestions || []))
       .catch(() => {}) // silently fail — AI is optional
@@ -44,8 +44,7 @@ export default function SmartReplyBar({ messageId, messageText, onSelectReply, o
   return (
     <div style={{
       display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap',
-      padding: '4px 0 6px', fontFamily: 'Inter, sans-serif',
-    }}>
+      padding: '4px 0 6px', fontFamily: 'Inter, sans-serif' }}>
       <span style={{ fontSize: 11, color: '#6b7280', flexShrink: 0 }}>💡 Quick reply:</span>
 
       {loading && (
@@ -65,8 +64,7 @@ export default function SmartReplyBar({ messageId, messageText, onSelectReply, o
             fontSize: 12,
             cursor: 'pointer',
             transition: 'background 0.15s, border-color 0.15s',
-            whiteSpace: 'nowrap',
-          }}
+            whiteSpace: 'nowrap' }}
           onMouseEnter={e => { e.target.style.background = '#5865f220'; e.target.style.borderColor = '#5865f2'; }}
           onMouseLeave={e => { e.target.style.background = '#2d3035'; e.target.style.borderColor = '#3a3d42'; }}
         >
@@ -78,8 +76,7 @@ export default function SmartReplyBar({ messageId, messageText, onSelectReply, o
         onClick={() => { setVisible(false); onDismiss?.(); }}
         style={{
           background: 'none', border: 'none', color: '#6b7280',
-          cursor: 'pointer', fontSize: 12, padding: '2px 6px',
-        }}
+          cursor: 'pointer', fontSize: 12, padding: '2px 6px' }}
       >
         ✕
       </button>

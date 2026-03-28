@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import axios from 'axios';
+import api from '../../../services/api';
 import { API_BASE } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -82,7 +82,7 @@ export default function WorkspacePermissions({ workspaceId: propWorkspaceId }) {
     if (!wsId) { setError('No workspace selected'); setLoading(false); return; }
     try {
       setLoading(true);
-      const { data } = await axios.get(`${API_BASE}/api/workspaces/${wsId}/permissions`, { withCredentials: true });
+      const { data } = await api.get(`/api/workspaces/${wsId}/permissions`);
       setPermissions(data.permissions);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to load permissions');
@@ -96,7 +96,7 @@ export default function WorkspacePermissions({ workspaceId: propWorkspaceId }) {
     const updated = { ...permissions.featureToggles, [key]: value };
     setPermissions(p => ({ ...p, featureToggles: updated }));
     try {
-      await axios.put(`${API_BASE}/api/workspaces/${wsId}/features`, { featureToggles: updated }, { withCredentials: true });
+      await api.put(`/api/workspaces/${wsId}/features`, { featureToggles: updated });
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     } catch { fetchPermissions(); }
@@ -106,10 +106,10 @@ export default function WorkspacePermissions({ workspaceId: propWorkspaceId }) {
     if (!permissions) return;
     setSaving(true);
     try {
-      await axios.put(`${API_BASE}/api/workspaces/${wsId}/permissions`, {
+      await api.put(`/api/workspaces/${wsId}/permissions`, {
         invitePermission: permissions.invitePermission,
         channelCreationPermission: permissions.channelCreationPermission
-      }, { withCredentials: true });
+      });
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     } catch (err) { alert(err.response?.data?.message || 'Save failed'); }

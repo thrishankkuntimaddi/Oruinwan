@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import axios from 'axios';
+import api from '../../services/api';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -33,10 +33,9 @@ const CompanyConfirmation = () => {
         if (!accepted || !companyId) return;
         setIsLoading(true);
         try {
-            await axios.post(
-                `${import.meta.env.VITE_BACKEND_URL}/api/companies/${companyId}/start-setup`,
-                { acceptedTerms: true },
-                { withCredentials: true }
+            await api.post(
+                `/api/companies/${companyId}/start-setup`,
+                { acceptedTerms: true }
             );
             navigate('/company/setup');
         } catch (err) {

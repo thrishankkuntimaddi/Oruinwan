@@ -765,22 +765,44 @@ exports.getWorkspaceChannels = async (req, res) => {
       .sort({ isDefault: -1, createdAt: 1 }) // Default channels first, then by creation time
       .lean();
 
-    // Populate systemEvents user names
+    // Populate systemEvents user names — batch query to avoid N+1
     const User = require('../../../models/User');
-    for (const channel of allChannels) {
-      // Add creator name
-      if (channel.createdBy) {
-        channel.creatorName = `${channel.createdBy.firstName || ''} ${channel.createdBy.lastName || ''}`.trim() || 'Unknown';
-      }
 
-      //Populate systemEvents with user names (only if not already set)
+    // Collect all unique userIds referenced in systemEvents across all channels
+    const eventUserIds = new Set();
+    for (const channel of allChannels) {
       if (channel.systemEvents && channel.systemEvents.length > 0) {
         for (const event of channel.systemEvents) {
           if (event.userId && !event.userName) {
-            const user = await User.findById(event.userId).select('firstName lastName username').lean();
-            if (user) {
-              event.userName = user.username || `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Unknown';
-            }
+            eventUserIds.add(event.userId.toString());
+          }
+        }
+      }
+    }
+
+    // Single batch query for all referenced users
+    let userMap = new Map();
+    if (eventUserIds.size > 0) {
+      const eventUsers = await User.find(
+        { _id: { $in: Array.from(eventUserIds) } },
+        { firstName: 1, lastName: 1, username: 1 }
+      ).lean();
+      eventUsers.forEach(u => {
+        userMap.set(u._id.toString(),
+          u.username || `${u.firstName || ''} ${u.lastName || ''}`.trim() || 'Unknown'
+        );
+      });
+    }
+
+    // Apply creator names and resolved event usernames in-memory (no more per-event DB calls)
+    for (const channel of allChannels) {
+      if (channel.createdBy) {
+        channel.creatorName = `${channel.createdBy.firstName || ''} ${channel.createdBy.lastName || ''}`.trim() || 'Unknown';
+      }
+      if (channel.systemEvents && channel.systemEvents.length > 0) {
+        for (const event of channel.systemEvents) {
+          if (event.userId && !event.userName) {
+            event.userName = userMap.get(event.userId.toString()) || 'Unknown';
           }
         }
       }

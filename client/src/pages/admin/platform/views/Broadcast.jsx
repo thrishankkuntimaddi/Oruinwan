@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../../../../../services/api';
 import { Megaphone, Send, Calendar, Users, Check } from 'lucide-react';
 import { useToast } from '../../../../contexts/ToastContext';
 
@@ -28,9 +28,7 @@ const Broadcast = () => {
 
     const fetchCompanies = async () => {
         try {
-            const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/admin/active-companies`, {
-                withCredentials: true
-            });
+            const res = await api.get(`/api/admin/active-companies`);
             setCompanies(res.data);
         } catch (err) {
             console.error('Failed to fetch companies:', err);
@@ -39,9 +37,7 @@ const Broadcast = () => {
 
     const fetchHistory = async () => {
         try {
-            const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/admin/broadcast/history`, {
-                withCredentials: true
-            });
+            const res = await api.get(`/api/admin/broadcast/history`);
             setBroadcastHistory(res.data);
         } catch (err) {
             console.error('Failed to fetch broadcast history:', err);
@@ -70,9 +66,7 @@ const Broadcast = () => {
 
         setSending(true);
         try {
-            await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/admin/broadcast/send`, formData, {
-                withCredentials: true
-            });
+            await api.post(`/api/admin/broadcast/send`, formData);
             showToast('Broadcast sent successfully!', 'success');
             setFormData({
                 subject: '',

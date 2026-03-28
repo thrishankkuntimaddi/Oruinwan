@@ -6,7 +6,7 @@
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
-import axios from 'axios';
+import api from '../../../services/api';
 import { API_BASE } from '../../services/api';
 import {
     Activity, Users, MessageSquare, CheckSquare, TrendingUp,
@@ -216,16 +216,16 @@ const InsightsDashboard = () => {
             const base = `${API_BASE}/api`;
 
             const [sum, ua, ws, ch, tk, msg, eng, ta, wl, cp] = await Promise.allSettled([
-                axios.get(`${base}/dashboard/analytics/summary?${p}`, authHeader()),
-                axios.get(`${base}/dashboard/analytics/users?${p}`, authHeader()),
-                axios.get(`${base}/dashboard/analytics/workspaces?${p}`, authHeader()),
-                axios.get(`${base}/dashboard/analytics/channels?${p}`, authHeader()),
-                axios.get(`${base}/dashboard/analytics/tasks?${p}`, authHeader()),
-                axios.get(`${base}/dashboard/analytics/messages?${p}`, authHeader()),
-                axios.get(`${base}/dashboard/analytics/engagement?${p}`, authHeader()),
-                axios.get(`${base}/analytics/insights/team?${p}`, authHeader()),
-                axios.get(`${base}/analytics/insights/workload?${p}`, authHeader()),
-                axios.get(`${base}/analytics/insights/communication?${p}`, authHeader()),
+                api.get(`${base}/dashboard/analytics/summary?${p}`, authHeader()),
+                api.get(`${base}/dashboard/analytics/users?${p}`, authHeader()),
+                api.get(`${base}/dashboard/analytics/workspaces?${p}`, authHeader()),
+                api.get(`${base}/dashboard/analytics/channels?${p}`, authHeader()),
+                api.get(`${base}/dashboard/analytics/tasks?${p}`, authHeader()),
+                api.get(`${base}/dashboard/analytics/messages?${p}`, authHeader()),
+                api.get(`${base}/dashboard/analytics/engagement?${p}`, authHeader()),
+                api.get(`${base}/analytics/insights/team?${p}`, authHeader()),
+                api.get(`${base}/analytics/insights/workload?${p}`, authHeader()),
+                api.get(`${base}/analytics/insights/communication?${p}`, authHeader()),
             ]);
 
             if (sum.status === 'fulfilled') setSummary(sum.value.data);

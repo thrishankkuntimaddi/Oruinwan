@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import axios from "axios";
+import api from '../../../services/api';
 import { formatTime as fmtTime } from "./helpers/helpers";
 import { useToast } from "../../../contexts/ToastContext";
 import { Smile, X, Bell, BellOff } from "lucide-react";
@@ -52,7 +52,7 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
             // Use _id as primary, id as fallback
             const messageId = parentMessage._id || parentMessage.id;
 
-            const res = await axios.get(`${API_BASE}/api/v2/messages/thread/${messageId}`, { headers });
+            const res = await api.get(`/api/v2/messages/thread/${messageId}`);
 
             // ✅ Use channelId from props
             console.log(`[THREAD][FETCH][DECRYPT] Loaded ${res.data.replies?.length || 0} replies for thread ${messageId}`);
@@ -320,16 +320,12 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
             setReplies((prev) => [...prev, optimisticReply]);
 
             // Send encrypted payload to backend
-            const res = await axios.post(
-                `${API_BASE}/api/v2/messages/thread/${messageId}`,
-                {
+            const res = await api.post(`/api/v2/messages/thread/${messageId}`, {
                     ciphertext: encryptedPayload.ciphertext,
                     messageIv: encryptedPayload.messageIv,
                     attachments: [],
                     clientTempId: tempId
-                },
-                { headers }
-            );
+                });
 
             console.log(`[THREAD][SEND][E2EE] Reply created successfully: ${res.data.reply._id}`);
 

@@ -1,6 +1,10 @@
 // client/src/hooks/useChannels.js
+//
+// Canonical channel hook — fetches from /api/workspaces/:id/channels
+// (same endpoint as ChannelsPanel) so both consumers share the same
+// data shape and membership info without a secondary request.
 import { useState, useEffect, useCallback } from 'react';
-import { channelService } from '../services/channelService';
+import api from '../services/api';
 
 export const useChannels = (workspaceId) => {
     const [channels, setChannels] = useState([]);
@@ -18,18 +22,21 @@ export const useChannels = (workspaceId) => {
             setLoading(true);
             setError(null);
 
-            const response = await channelService.getMyChannels(workspaceId);
+            // ✅ UNIFIED: same endpoint + shape as ChannelsPanel
+            const response = await api.get(`/api/workspaces/${workspaceId}/channels`);
 
-            // Transform to expected format
-            const formattedChannels = response.data.channels.map(channel => ({
+            const formattedChannels = (response.data.channels || []).map(channel => ({
                 id: channel._id,
                 type: 'channel',
                 label: channel.name,
-                path: `/channels/${channel._id}`,
-                isFavorite: false, // Can add favorite logic later
-                isPrivate: channel.isPrivate,
-                description: channel.description,
-                memberCount: channel.members?.length || 0
+                path: `/workspace/${workspaceId}/channel/${channel._id}`,
+                isFavorite: channel.isDefault || false,
+                isPrivate: channel.isPrivate || false,
+                isDefault: channel.isDefault || false,
+                isDiscoverable: channel.isDiscoverable ?? true,
+                isMember: channel.isMember ?? true,
+                description: channel.description || '',
+                memberCount: channel.members?.length || 0,
             }));
 
             setChannels(formattedChannels);
@@ -47,14 +54,18 @@ export const useChannels = (workspaceId) => {
 
     const createChannel = async (channelData) => {
         try {
-            const response = await channelService.createChannel(channelData);
+            const response = await api.post('/api/channels', channelData);
             const newChannel = {
                 id: response.data.channel._id,
                 type: 'channel',
                 label: response.data.channel.name,
-                path: `/channels/${response.data.channel._id}`,
+                path: `/workspace/${workspaceId}/channel/${response.data.channel._id}`,
                 isFavorite: false,
-                isPrivate: response.data.channel.isPrivate
+                isPrivate: response.data.channel.isPrivate || false,
+                isDefault: false,
+                isDiscoverable: response.data.channel.isDiscoverable ?? true,
+                isMember: true, // creator is always a member
+                description: response.data.channel.description || '',
             };
             setChannels(prev => [...prev, newChannel]);
             return newChannel;
@@ -65,7 +76,7 @@ export const useChannels = (workspaceId) => {
 
     const joinChannel = async (channelId) => {
         try {
-            await channelService.joinChannel(channelId);
+            await api.post(`/api/channels/${channelId}/join`);
             await loadChannels(); // Refresh list
         } catch (err) {
             throw new Error(err.response?.data?.message || 'Failed to join channel');
@@ -74,18 +85,19 @@ export const useChannels = (workspaceId) => {
 
     // Join a discoverable public channel — optimistic update, no full refetch
     const joinDiscoverableChannel = async (channelId) => {
-        const response = await channelService.joinDiscoverableChannel(channelId);
+        const response = await api.post(`/api/channels/${channelId}/join-discoverable`);
         const { channelId: id, channelName } = response.data;
         const joined = {
             id: id || channelId,
             type: 'channel',
             label: channelName || channelId,
-            path: `/channels/${id || channelId}`,
+            path: `/workspace/${workspaceId}/channel/${id || channelId}`,
             isFavorite: false,
             isPrivate: false,
+            isDiscoverable: true,
+            isMember: true,
         };
         setChannels(prev => {
-            // Guard against duplicate if socket already added it
             if (prev.some(ch => ch.id === joined.id)) return prev;
             return [...prev, joined];
         });
@@ -94,13 +106,11 @@ export const useChannels = (workspaceId) => {
 
     // Leave (exit) a channel — optimistic removal so sidebar updates instantly
     const exitChannel = async (channelId) => {
-        // Remove from state immediately
         setChannels(prev => prev.filter(ch => ch.id !== channelId));
         try {
-            await channelService.exitChannel(channelId);
+            await api.post(`/api/channels/${channelId}/exit`);
         } catch (err) {
-            // Rollback: re-fetch if API failed
-            await loadChannels();
+            await loadChannels(); // Rollback: re-fetch if API failed
             throw new Error(err.response?.data?.message || 'Failed to leave channel');
         }
     };

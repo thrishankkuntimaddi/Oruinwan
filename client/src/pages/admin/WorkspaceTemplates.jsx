@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import axios from 'axios';
+import api from '../../../services/api';
 import { API_BASE } from '../../services/api';
 
 const CATEGORIES = ['general','engineering','design','marketing','sales','hr','finance','support','product','custom'];
@@ -19,7 +19,7 @@ export default function WorkspaceTemplates() {
   const fetchTemplates = useCallback(async () => {
     try {
       setLoading(true);
-      const { data } = await axios.get(`${API_BASE}/api/workspace-templates`, { withCredentials: true });
+      const { data } = await api.get(`/api/workspace-templates`);
       setTemplates(data.templates || []);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to load templates');
@@ -32,7 +32,7 @@ export default function WorkspaceTemplates() {
     e.preventDefault();
     setSaving(true);
     try {
-      await axios.post(`${API_BASE}/api/workspace-templates`, form, { withCredentials: true });
+      await api.post(`/api/workspace-templates`, form);
       setShowCreate(false);
       setForm(defaultForm);
       fetchTemplates();
@@ -43,7 +43,7 @@ export default function WorkspaceTemplates() {
   const handleDelete = async (id, name) => {
     if (!window.confirm(`Delete template "${name}"?`)) return;
     try {
-      await axios.delete(`${API_BASE}/api/workspace-templates/${id}`, { withCredentials: true });
+      await api.delete(`/api/workspace-templates/${id}`);
       fetchTemplates();
     } catch (err) { alert(err.response?.data?.message || 'Failed to delete'); }
   };

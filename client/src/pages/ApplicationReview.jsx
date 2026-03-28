@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Clock, CheckCircle, XCircle, RefreshCw, Mail, LogOut } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import axios from 'axios';
+import api from '../../services/api';
 
 const ApplicationReview = () => {
     const navigate = useNavigate();
@@ -20,13 +20,8 @@ const ApplicationReview = () => {
 
         try {
             setRefreshing(true);
-            const res = await axios.get(
-                `${import.meta.env.VITE_BACKEND_URL}/api/companies/${user.companyId}`,
-                {
-                    headers: {
-                        Authorization: `Bearer ${localStorage.getItem('token')}`
-                    }
-                }
+            const res = await api.get(
+                `/api/companies/${user.companyId}`
             );
 
             setCompanyStatus({

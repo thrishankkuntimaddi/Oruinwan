@@ -1,7 +1,7 @@
 // client/src/components/messagesComp/PinnedMessagesPanel.jsx
 // Phase-8: Side drawer showing pinned messages for the current channel/DM
 import React, { useState, useEffect, useCallback } from 'react';
-import axios from 'axios';
+import api from '../../services/api';
 
 const API = import.meta.env.VITE_API_URL || '';
 
@@ -15,16 +15,16 @@ export default function PinnedMessagesPanel({ channelId, dmSessionId, currentUse
     setError(null);
     try {
       const endpoint = channelId
-        ? `${API}/api/v2/messages/channel/${channelId}?pinned=true`
-        : `${API}/api/v2/messages/dm/${dmSessionId}?pinned=true`;
+        ? `/api/v2/messages/channel/${channelId}?pinned=true`
+        : `/api/v2/messages/dm/${dmSessionId}?pinned=true`;
 
       // Fallback: fetch all messages and filter pinned client-side
       // since the backend filter is a query param convenience
-      const res = await axios.get(
+      const res = await api.get(
         channelId
-          ? `${API}/api/v2/messages/channel/${channelId}`
-          : `${API}/api/v2/messages/workspace/x/dm/${dmSessionId}`,
-        { withCredentials: true, params: { limit: 200 } }
+          ? `/api/v2/messages/channel/${channelId}`
+          : `/api/v2/messages/workspace/x/dm/${dmSessionId}`,
+        { params: { limit: 200 } }
       );
       const all = res.data?.messages || [];
       setMessages(all.filter(m => m.isPinned && !m.isDeletedUniversally));
@@ -39,7 +39,7 @@ export default function PinnedMessagesPanel({ channelId, dmSessionId, currentUse
 
   const handleUnpin = async (messageId) => {
     try {
-      await axios.post(`${API}/api/v2/messages/${messageId}/pin`, { pin: false }, { withCredentials: true });
+      await api.post(`/api/v2/messages/${messageId}/pin`, { pin: false });
       setMessages(prev => prev.filter(m => m._id !== messageId));
       onUnpin?.(messageId);
     } catch { /* safe to ignore */ }
@@ -53,14 +53,12 @@ export default function PinnedMessagesPanel({ channelId, dmSessionId, currentUse
         borderLeft: '1px solid var(--border, #2d3035)',
         display: 'flex', flexDirection: 'column',
         zIndex: 900, boxShadow: '-4px 0 24px rgba(0,0,0,0.4)',
-        fontFamily: 'Inter, sans-serif',
-      }}
+        fontFamily: 'Inter, sans-serif' }}
     >
       {/* Header */}
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '16px 20px', borderBottom: '1px solid var(--border, #2d3035)',
-      }}>
+        padding: '16px 20px', borderBottom: '1px solid var(--border, #2d3035)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <span style={{ fontSize: 18 }}>📌</span>
           <h2 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: '#fff' }}>
@@ -69,14 +67,12 @@ export default function PinnedMessagesPanel({ channelId, dmSessionId, currentUse
           {!loading && (
             <span style={{
               background: '#5865f2', color: '#fff', borderRadius: 10,
-              fontSize: 11, padding: '1px 7px', fontWeight: 600,
-            }}>{messages.length}</span>
+              fontSize: 11, padding: '1px 7px', fontWeight: 600 }}>{messages.length}</span>
           )}
         </div>
         <button onClick={onClose} style={{
           background: 'none', border: 'none', color: '#a0a5b0',
-          cursor: 'pointer', fontSize: 20, lineHeight: 1, padding: 4, borderRadius: 4,
-        }}>✕</button>
+          cursor: 'pointer', fontSize: 20, lineHeight: 1, padding: 4, borderRadius: 4 }}>✕</button>
       </div>
 
       {/* Body */}
@@ -115,8 +111,7 @@ function PinnedMessageCard({ msg, currentUserId, onUnpin }) {
   const sender = msg.sender?.username || 'Unknown';
   const text = msg.text || msg.decryptedContent || (msg.payload?.isEncrypted ? '🔒 Encrypted message' : '');
   const time = new Date(msg.pinnedAt || msg.createdAt).toLocaleDateString('en-US', {
-    month: 'short', day: 'numeric',
-  });
+    month: 'short', day: 'numeric' });
   const isSender = String(msg.sender?._id || msg.sender) === String(currentUserId);
 
   return (
@@ -124,8 +119,7 @@ function PinnedMessageCard({ msg, currentUserId, onUnpin }) {
       margin: '4px 12px', borderRadius: 8, padding: '12px 14px',
       background: 'var(--bg-tertiary, #2b2d31)',
       border: '1px solid var(--border, #3a3d42)',
-      transition: 'background 0.15s',
-    }}
+      transition: 'background 0.15s' }}
       onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover, #35363a)'}
       onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-tertiary, #2b2d31)'}
     >
@@ -145,8 +139,7 @@ function PinnedMessageCard({ msg, currentUserId, onUnpin }) {
           style={{
             marginTop: 8, background: 'none', border: '1px solid #ed4245',
             color: '#ed4245', borderRadius: 4, padding: '3px 10px', fontSize: 11,
-            cursor: 'pointer', fontWeight: 600,
-          }}>
+            cursor: 'pointer', fontWeight: 600 }}>
           Unpin
         </button>
       )}

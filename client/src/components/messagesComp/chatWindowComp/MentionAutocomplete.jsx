@@ -1,7 +1,7 @@
 // client/src/components/messagesComp/chatWindowComp/MentionAutocomplete.jsx
 // Phase-8: @mention autocomplete dropdown for the chat composer
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import axios from 'axios';
+import api from '../../../services/api';
 
 const API = import.meta.env.VITE_API_URL || '';
 
@@ -31,11 +31,8 @@ export default function MentionAutocomplete({ query = '', workspaceId, onSelect,
     const ctrl = new AbortController();
     abortRef.current = ctrl;
 
-    axios.get(`${API}/api/v2/messages/workspace-members`, {
-      params: { workspaceId, search: query, limit: 8 },
-      withCredentials: true,
-      signal: ctrl.signal,
-    })
+    api.get(`/api/v2/messages/workspace-members`, {
+      params: { workspaceId, search: query, limit: 8 },signal: ctrl.signal })
       .then(res => {
         setResults(res.data?.members || []);
         setHighlighted(0);
@@ -89,8 +86,7 @@ export default function MentionAutocomplete({ query = '', workspaceId, onSelect,
         overflow: 'hidden',
         zIndex: 1000,
         fontFamily: 'Inter, sans-serif',
-        marginBottom: 4,
-      }}
+        marginBottom: 4 }}
     >
       {loading && (
         <div style={{ padding: '10px 14px', color: '#6b7280', fontSize: 12 }}>Searching…</div>
@@ -105,8 +101,7 @@ export default function MentionAutocomplete({ query = '', workspaceId, onSelect,
               display: 'flex', alignItems: 'center', gap: 10,
               padding: '8px 12px', cursor: 'pointer',
               background: idx === highlighted ? '#2d3035' : 'transparent',
-              transition: 'background 0.1s',
-            }}
+              transition: 'background 0.1s' }}
           >
             {user.profilePicture ? (
               <img src={user.profilePicture} alt={user.username}
@@ -116,8 +111,7 @@ export default function MentionAutocomplete({ query = '', workspaceId, onSelect,
                 width: 28, height: 28, borderRadius: '50%',
                 background: '#5865f2',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 12, color: '#fff', fontWeight: 600, flexShrink: 0,
-              }}>
+                fontSize: 12, color: '#fff', fontWeight: 600, flexShrink: 0 }}>
                 {(user.username?.[0] || '?').toUpperCase()}
               </div>
             )}

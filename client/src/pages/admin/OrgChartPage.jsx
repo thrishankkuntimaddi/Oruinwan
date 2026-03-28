@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import axios from 'axios';
+import api from '../../../services/api';
 import { API_BASE } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -67,9 +67,8 @@ export default function OrgChartPage() {
     try {
       setLoading(true);
       setError(null);
-      const { data: orgData } = await axios.get(
-        `${API_BASE}/api/companies/${companyId}/org-chart`,
-        { withCredentials: true }
+      const { data: orgData } = await api.get(
+        `/api/companies/${companyId}/org-chart`
       );
       setData(orgData);
     } catch (err) {

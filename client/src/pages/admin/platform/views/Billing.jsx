@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../../../../../services/api';
 import { DollarSign, TrendingUp, CreditCard, Calendar, Download, Search } from 'lucide-react';
 
 const Billing = () => {
@@ -22,15 +22,11 @@ const Billing = () => {
     const fetchBillingData = async () => {
         try {
             // Fetch overview stats
-            const statsRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/admin/billing/overview`, {
-                withCredentials: true
-            });
+            const statsRes = await api.get(`/api/admin/billing/overview`);
             setStats(statsRes.data);
 
             // Fetch company billing data
-            const billingRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/admin/billing/companies`, {
-                withCredentials: true
-            });
+            const billingRes = await api.get(`/api/admin/billing/companies`);
             setBillingData(billingRes.data);
 
             setLoading(false);

@@ -8,7 +8,7 @@ import {
     MessageSquare, Calendar, LayoutGrid, RefreshCw, Shield,
     Briefcase, AlertCircle
 } from 'lucide-react';
-import axios from 'axios';
+import api from '../../services/api';
 import { useToast } from '../../contexts/ToastContext';
 
 const ManagerOverview = () => {
@@ -26,10 +26,7 @@ const ManagerOverview = () => {
 
         try {
             setLoading(true);
-            const response = await axios.get(
-                `${import.meta.env.VITE_BACKEND_URL}/api/manager/dashboard/metrics/${deptId}`,
-                { withCredentials: true }
-            );
+            const response = await api.get(`/api/manager/dashboard/metrics/${deptId}`);
             setMetrics(response.data);
         } catch (error) {
             console.error('Error fetching metrics:', error);

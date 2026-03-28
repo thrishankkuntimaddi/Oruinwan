@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../../services/api';
 import { FolderKanban, ExternalLink, Users, Activity, CheckCircle, Clock } from 'lucide-react';
 import { useCompany } from '../../contexts/CompanyContext';
 
@@ -13,10 +13,7 @@ const ManagerProjects = () => {
     useEffect(() => {
         const fetchWorkspaces = async () => {
             try {
-                const res = await axios.get(
-                    `${import.meta.env.VITE_BACKEND_URL}/api/manager-dashboard/my-workspaces`,
-                    { withCredentials: true }
-                );
+                const res = await api.get(`/api/manager-dashboard/my-workspaces`);
                 setWorkspaces(res.data?.workspaces || []);
             } catch (err) {
                 console.error('ManagerProjects fetch error:', err);

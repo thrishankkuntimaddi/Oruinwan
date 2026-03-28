@@ -7,7 +7,7 @@ import {
     Briefcase, Users, CheckCircle2, MessageSquare,
     LayoutGrid, ArrowRight, Globe, RefreshCw, AlertCircle
 } from 'lucide-react';
-import axios from 'axios';
+import api from '../../services/api';
 
 const ManagerWorkspacePage = () => {
     const navigate = useNavigate();
@@ -19,10 +19,7 @@ const ManagerWorkspacePage = () => {
     const fetchWorkspaces = async () => {
         try {
             setError(null);
-            const res = await axios.get(
-                `${import.meta.env.VITE_BACKEND_URL}/api/manager-dashboard/my-workspaces`,
-                { withCredentials: true }
-            );
+            const res = await api.get(`/api/manager-dashboard/my-workspaces`);
             setWorkspaces(res.data?.workspaces || []);
         } catch (err) {
             console.error('ManagerWorkspacePage: fetch error', err);

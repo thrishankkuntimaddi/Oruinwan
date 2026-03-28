@@ -1,6 +1,6 @@
 // client/src/components/messagesComp/MessageList.jsx
 import { useContext, useEffect, useState, useRef, useCallback } from "react";
-import axios from "axios";
+import api from '../../services/api';
 import { io } from "socket.io-client";
 import { Search, Plus, Archive, Users, Hash, Lock, MessageCircle, MoreVertical, CheckCheck, X } from "lucide-react";
 import { useParams, useNavigate } from "react-router-dom";
@@ -52,7 +52,7 @@ export default function MessageList({ onSelectChat }) {
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
       // Fetch existing chats (DMs & Channels with history)
-      const chatsRes = await axios.get(`${API_BASE}/api/chat/list`, { headers });
+      const chatsRes = await api.get(`/api/chat/list`);
       const existingChats = chatsRes.data.chats || [];
 
       // Fetch joined channels via canonical endpoint
@@ -62,7 +62,7 @@ export default function MessageList({ onSelectChat }) {
       const myChannels = channelsRes.data.channels || [];
 
       // Fetch all users in workspace
-      const usersRes = await axios.get(`${API_BASE}/api/auth/users`, { headers });
+      const usersRes = await api.get(`/api/auth/users`);
       const allUsers = usersRes.data.users || [];
 
       // 1. Process Channels
@@ -475,10 +475,10 @@ export default function MessageList({ onSelectChat }) {
             try {
               const token = localStorage.getItem("accessToken");
               const headers = token ? { Authorization: `Bearer ${token}` } : {};
-              await axios.post(`${API_BASE}/api/chat/reset-unread`, {
+              await api.post(`/api/chat/reset-unread`, {
                 type: item.type,
                 id: item.id
-              }, { headers });
+              });
             } catch (err) {
               console.error("reset unread failed:", err);
             }

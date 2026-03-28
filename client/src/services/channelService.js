@@ -2,9 +2,13 @@
 import api from './api';
 
 export const channelService = {
-    // Get user's channels for a specific workspace
-    // Single canonical fetch — use this everywhere, not /api/workspaces/:id/channels
-    getMyChannels: (workspaceId) => api.get(`/api/channels/my?workspaceId=${workspaceId}`),
+    // ─── Canonical channel list ───────────────────────────────────────────────
+    // Gets channels for a workspace including membership flags (isMember, isDiscoverable).
+    // ChannelsPanel and useChannels both call this same endpoint.
+    getWorkspaceChannels: (workspaceId) => api.get(`/api/workspaces/${workspaceId}/channels`),
+
+    // Backward-compat alias — points to the same richer workspace endpoint.
+    getMyChannels: (workspaceId) => api.get(`/api/workspaces/${workspaceId}/channels`),
 
     // Create new channel
     createChannel: (data) => api.post('/api/channels', data),

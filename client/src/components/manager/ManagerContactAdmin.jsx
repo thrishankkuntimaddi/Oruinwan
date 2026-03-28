@@ -6,7 +6,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useCompany } from '../../contexts/CompanyContext';
 import { useToast } from '../../contexts/ToastContext';
 import { Send, Paperclip, User, MessageSquare } from 'lucide-react';
-import axios from 'axios';
+import api from '../../services/api';
 import io from 'socket.io-client';
 
 const ManagerContactAdmin = () => {
@@ -25,10 +25,7 @@ const ManagerContactAdmin = () => {
     useEffect(() => {
         const fetchAdmin = async () => {
             try {
-                const response = await axios.get(
-                    `${import.meta.env.VITE_BACKEND_URL}/api/companies/${company._id}/members`,
-                    { withCredentials: true }
-                );
+                const response = await api.get(`/api/companies/${company._id}/members`);
 
                 const members = response.data.members || [];
                 const companyAdmin = members.find(m => ['owner', 'admin'].includes(m.companyRole));
@@ -50,10 +47,7 @@ const ManagerContactAdmin = () => {
 
             try {
                 setLoading(true);
-                const response = await axios.get(
-                    `${import.meta.env.VITE_BACKEND_URL}/api/internal/messages/conversation/${admin._id}`,
-                    { withCredentials: true }
-                );
+                const response = await api.get(`/api/internal/messages/conversation/${admin._id}`);
                 setMessages(response.data.messages || []);
             } catch (error) {
                 console.error('Error fetching messages:', error);
@@ -108,14 +102,10 @@ const ManagerContactAdmin = () => {
         if (!newMessage.trim() || !admin?._id) return;
 
         try {
-            const response = await axios.post(
-                `${import.meta.env.VITE_BACKEND_URL}/api/internal/messages`,
-                {
+            const response = await api.post(`/api/internal/messages`, {
                     recipientId: admin._id,
                     content: newMessage.trim()
-                },
-                { withCredentials: true }
-            );
+                });
 
             setMessages(prev => [...prev, response.data.message]);
             setNewMessage('');

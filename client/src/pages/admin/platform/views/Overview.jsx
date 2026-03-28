@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../../../../../services/api';
 import { useNavigate } from 'react-router-dom';
 import {
     Building2, Users, Ticket, DollarSign, TrendingUp, TrendingDown,
@@ -26,15 +26,11 @@ const Overview = () => {
     const fetchOverviewData = async () => {
         try {
             // Fetch stats
-            const statsRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/admin/overview/stats`, {
-                withCredentials: true
-            });
+            const statsRes = await api.get(`/api/admin/overview/stats`);
             setStats(statsRes.data);
 
             // Fetch recent activities
-            const activitiesRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/admin/overview/activities`, {
-                withCredentials: true
-            });
+            const activitiesRes = await api.get(`/api/admin/overview/activities`);
             setActivities(activitiesRes.data);
 
             setLoading(false);

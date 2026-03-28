@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../../../../../services/api';
 import { MessageCircle, X } from 'lucide-react';
 import { useToast } from '../../../../contexts/ToastContext';
 
@@ -16,7 +16,7 @@ const SupportTickets = ({ navigateToChat }) => {
 
     const fetchTickets = async () => {
         try {
-            const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/admin/tickets`, { withCredentials: true });
+            const res = await api.get(`/api/admin/tickets`);
             setTickets(res.data);
             setLoading(false);
         } catch (err) {
@@ -28,7 +28,7 @@ const SupportTickets = ({ navigateToChat }) => {
     const handleUpdateStatus = async (status) => {
         if (!selectedTicket) return;
         try {
-            const res = await axios.put(`${import.meta.env.VITE_BACKEND_URL}/api/admin/tickets/${selectedTicket._id}`, { status }, { withCredentials: true });
+            const res = await api.put(`/api/admin/tickets/${selectedTicket._id}`, { status });
             setTickets(prev => prev.map(t => t._id === selectedTicket._id ? res.data : t));
             setSelectedTicket(res.data);
             showToast(`Status updated to ${status}`, "success");
@@ -40,7 +40,7 @@ const SupportTickets = ({ navigateToChat }) => {
     const handleReply = async () => {
         if (!reply.trim() || !selectedTicket) return;
         try {
-            const res = await axios.put(`${import.meta.env.VITE_BACKEND_URL}/api/admin/tickets/${selectedTicket._id}`, { message: reply }, { withCredentials: true });
+            const res = await api.put(`/api/admin/tickets/${selectedTicket._id}`, { message: reply });
             setTickets(prev => prev.map(t => t._id === selectedTicket._id ? res.data : t));
             setSelectedTicket(res.data);
             setReply("");

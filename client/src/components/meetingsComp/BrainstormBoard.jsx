@@ -1,7 +1,7 @@
 // client/src/components/meetingsComp/BrainstormBoard.jsx
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Plus, X } from 'lucide-react';
-import axios from 'axios';
+import api from '../../../services/api';
 import { useSocket } from '../../contexts/SocketContext';
 
 const NOTE_COLORS = ['#FBBF24', '#34D399', '#60A5FA', '#F9A8D4', '#C4B5FD', '#FCA5A5', '#6EE7B7'];
@@ -23,7 +23,7 @@ const BrainstormBoard = ({ meetingId, workspaceId }) => {
     // ── Load items ─────────────────────────────────────────────────────────────
     useEffect(() => {
         if (!meetingId) return;
-        axios.get(`/api/v2/collaboration/brainstorm/${meetingId}`, { withCredentials: true })
+        api.get(`/api/v2/collaboration/brainstorm/${meetingId}`)
             .then(({ data }) => setItems(data.items || []))
             .catch(() => { })
             .finally(() => setLoading(false));
@@ -53,10 +53,9 @@ const BrainstormBoard = ({ meetingId, workspaceId }) => {
     const handleAdd = useCallback(async () => {
         if (!newText.trim()) return;
         try {
-            const { data } = await axios.post(
+            const { data } = await api.post(
                 `/api/v2/collaboration/brainstorm/${meetingId}`,
-                { workspaceId, text: newText.trim(), color: newColor, position: { x: 50 + Math.random() * 200, y: 50 + Math.random() * 200 } },
-                { withCredentials: true }
+                { workspaceId, text: newText.trim(), color: newColor, position: { x: 50 + Math.random() * 200, y: 50 + Math.random() * 200 } }
             );
             setItems(prev => {
                 const exists = prev.find(i => i._id === data.item._id);
@@ -70,7 +69,7 @@ const BrainstormBoard = ({ meetingId, workspaceId }) => {
     const handleDelete = useCallback(async (itemId) => {
         setItems(prev => prev.filter(i => i._id !== itemId));
         try {
-            await axios.delete(`/api/v2/collaboration/brainstorm/${meetingId}/${itemId}`, { withCredentials: true });
+            await api.delete(`/api/v2/collaboration/brainstorm/${meetingId}/${itemId}`);
         } catch { /* ignore */ }
     }, [meetingId]);
 
@@ -100,10 +99,9 @@ const BrainstormBoard = ({ meetingId, workspaceId }) => {
         dragging.current = null;
 
         try {
-            await axios.patch(
+            await api.patch(
                 `/api/v2/collaboration/brainstorm/${meetingId}/${itemId}`,
-                { position: { x: newX, y: newY } },
-                { withCredentials: true }
+                { position: { x: newX, y: newY } }
             );
         } catch { /* ignore */ }
     }, [meetingId]);
@@ -174,8 +172,7 @@ const BrainstormBoard = ({ meetingId, workspaceId }) => {
                             cursor: 'grab',
                             minWidth: 120,
                             maxWidth: 200,
-                            userSelect: 'none',
-                        }}
+                            userSelect: 'none' }}
                         className="rounded-xl shadow-lg p-3 group"
                         onMouseDown={(e) => onMouseDown(e, item._id, item.position?.x || 50, item.position?.y || 50)}
                     >
