@@ -4,7 +4,7 @@
 
 const User = require('../../models/User');
 const logger = require('../../utils/logger');
-const registerChatHandlers = require('../../socket/index');
+const registerChatHandlers = require('./chatHandlers'); // Phase 5: canonical location
 const presenceService = require('../features/presence/presence.service');
 
 /**

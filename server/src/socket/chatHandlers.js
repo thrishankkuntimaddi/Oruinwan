@@ -1,18 +1,19 @@
-// server/socket/index.js
+// server/src/socket/chatHandlers.js
+// CANONICAL chat socket handler — Phase 5: moved from server/socket/index.js
 
-const Message = require("../src/features/messages/message.model");
-const Channel = require("../src/features/channels/channel.model");
-const DMSession = require("../models/DMSession");
-const Workspace = require("../models/Workspace");
-const User = require("../models/User");
-const logger = require("../utils/logger");
-const messagesService = require("../src/modules/messages/messages.service");
-const ROOMS = require("../src/shared/utils/rooms");
+const Message = require("../features/messages/message.model");
+const Channel = require("../features/channels/channel.model");
+const DMSession = require("../../models/DMSession");
+const Workspace = require("../../models/Workspace");
+const User = require("../../models/User");
+const logger = require("../../utils/logger");
+const messagesService = require("../modules/messages/messages.service");
+const ROOMS = require("../shared/utils/rooms");
 // Phase 7.7 — Huddle signaling
-const registerHuddleHandlers = require("../src/socket/handlers/huddles.socket");
+const registerHuddleHandlers = require("./handlers/huddles.socket");
 // Unified Activity Stream — fire-and-forget side effects
-const activityService = require("../src/features/activity/activity.service");
-const { ACTIVITY_TYPES, ACTIVITY_SUBTYPES } = require("../../platform/sdk/events/activityEvents");
+const activityService = require("../features/activity/activity.service");
+const { ACTIVITY_TYPES, ACTIVITY_SUBTYPES } = require("../../../platform/sdk/events/activityEvents");
 
 module.exports = async function registerChatHandlers(io, socket) {
   const userId = socket.user.id; // extracted from JWT
