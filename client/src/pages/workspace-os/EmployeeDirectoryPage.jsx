@@ -82,7 +82,11 @@ const EmployeeRow = ({ emp }) => {
 
 export default function EmployeeDirectoryPage({ companyId: propCompanyId }) {
     const { user } = useAuth();
-    const companyId = propCompanyId || user?.companyId;
+    // Resolve companyId — may be an ObjectId object or a plain string
+    const rawCompanyId = propCompanyId || user?.companyId;
+    const companyId = typeof rawCompanyId === 'object' && rawCompanyId !== null
+        ? (rawCompanyId._id || rawCompanyId.id || String(rawCompanyId))
+        : rawCompanyId;
 
     const [employees, setEmployees] = useState([]);
     const [departments, setDepartments] = useState([]);

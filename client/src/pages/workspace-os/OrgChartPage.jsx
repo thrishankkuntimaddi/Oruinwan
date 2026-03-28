@@ -115,7 +115,11 @@ const DepartmentNode = ({ dept, isRoot = false }) => {
 
 export default function OrgChartPage({ companyId }) {
     const { user } = useAuth();
-    const resolvedCompanyId = companyId || user?.companyId;
+    const rawCompanyId = companyId || user?.companyId;
+    // Safely extract string ID — user.companyId may be a Mongoose ObjectId object
+    const resolvedCompanyId = typeof rawCompanyId === 'object' && rawCompanyId !== null
+        ? (rawCompanyId._id || rawCompanyId.id || String(rawCompanyId))
+        : rawCompanyId;
 
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
