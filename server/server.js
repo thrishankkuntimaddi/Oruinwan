@@ -46,13 +46,16 @@ const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
 const http = require("http");
 const { Server } = require("socket.io");
-const registerChatHandlers = require("./socket/index");
 const logger = require("./utils/logger");
 const passport = require("./config/passport");
-const User = require("./models/User"); // ✅ Add User model import
 
 // ——————————————————————————————————————————————————————————————————
 const { generateAuditDigest } = require('./src/services/auditDigestService');
+// Socket modules (Phase 4: extracted from server.js)
+const registerSocketAuth = require('./src/socket/socketAuth');
+const registerSocketConnection = require('./src/socket/socketConnection');
+// Error handling middleware (Phase 4: extracted from server.js)
+const { notFoundHandler, globalErrorHandler } = require('./middleware/errorHandlers');
 // ——————————————————————————————————————————————————————————————————
 
 
@@ -144,42 +147,7 @@ const refreshLimiter = rateLimit({
 app.use("/api/auth", refreshLimiter);
 
 // Health check endpoint for production monitoring
-app.get('/api/health', async (req, res) => {
-  try {
-    // Check MongoDB connection status
-    const dbStatus = mongoose.connection.readyState;
-    const dbStatusMap = {
-      0: 'disconnected',
-      1: 'connected',
-      2: 'connecting',
-      3: 'disconnecting'
-    };
-
-    if (dbStatus !== 1) {
-      return res.status(503).json({
-        status: 'unhealthy',
-        mongodb: dbStatusMap[dbStatus] || 'unknown',
-        uptime: process.uptime(),
-        timestamp: new Date().toISOString()
-      });
-    }
-
-    res.json({
-      status: 'healthy',
-      mongodb: 'connected',
-      uptime: process.uptime(),
-      environment: process.env.NODE_ENV || 'development',
-      timestamp: new Date().toISOString()
-    });
-  } catch (err) {
-    logger.error('Health check failed:', err);
-    res.status(503).json({
-      status: 'unhealthy',
-      error: err.message,
-      timestamp: new Date().toISOString()
-    });
-  }
-});
+app.use('/api/health', require('./src/shared/routes/health.routes'));
 
 // Serve uploaded files as static files (with authentication for uploads)
 app.use(express.static(path.join(__dirname, "../dist")));
@@ -288,8 +256,21 @@ app.use("/api/company", integrationRouter);  // S-20: mounts /api/company/scim/.
 // even if a developer forgets to add middleware to a new route handler.
 app.use("/api/admin-dashboard", requireAuth, requireAdmin, require("./src/features/admin/admin-dashboard.routes"));
 app.use("/api/owner-dashboard", requireAuth, requireOwner, require("./src/features/admin/owner-dashboard.routes"));
+// AREA 4 — ROUTE STANDARDIZATION NOTE (Phase 3 consistency audit):
+// The same manager-dashboard router is intentionally mounted at TWO paths.
+// Both are actively consumed by different client modules:
+//
+//   /api/manager-dashboard  ← used by: ManagerWorkspacePage, ManagerProjects, TeamAllocation,
+//                                        managerDashboardService.js (my-workspaces, team-load)
+//   /api/manager            ← used by: ManagerReports, ManagerTasks, ManagerOverview
+//                                        (dashboard/metrics/:id, tasks/:id)
+//
+// ⚠️  DO NOT remove either mount until ALL client callers are migrated to a single path.
+// Canonical target: /api/manager-dashboard (matches domain semantics).
+// TODO: Migrate ManagerReports, ManagerTasks, ManagerOverview to /api/manager-dashboard
+//       then remove the /api/manager mount.
 app.use("/api/manager-dashboard", requireAuth, requireManager, require("./src/features/admin/manager-dashboard.routes"));
-app.use("/api/manager", requireAuth, requireManager, require("./src/features/admin/manager-dashboard.routes"));
+app.use("/api/manager",           requireAuth, requireManager, require("./src/features/admin/manager-dashboard.routes"));
 
 app.use("/api/polls", requireAuth, require("./src/features/polls/poll.routes")); // SECURITY FIX (BUG-2): requireAuth added at mount level
 // S-10 SECURITY FIX: requireAuth added at /api/chat mount level.
@@ -365,9 +346,14 @@ app.use("/api/ai", requireAuth, require("./src/features/ai/insights/ai-insights.
 // ─────────────────────────────────────────────────────────────────────────────
 // Unified Activity Stream — workspace feed + personal history
 app.use("/api/activity", require("./src/features/activity/activity.routes"));
-// Notes & Tasks - Direct registration (no proxy needed)
-app.use("/api/notes", require("./src/features/notes/notes.routes")); // Direct routing, Phase 5 E2EE ready
-app.use("/api/tasks", require("./src/features/tasks/tasks.routes")); // Direct routing, simplified architecture
+// AREA 1 — API VERSION MIGRATION COMPLETE (Phase 3):
+// Legacy /api/notes and /api/tasks mounts have been removed.
+// All frontend callers have been confirmed on canonical /api/v2 paths:
+//   NotesContext.jsx, uploadHelpers.js          → /api/v2/notes
+//   TasksContext.jsx, KanbanBoard.jsx,
+//   WorkspaceTaskDetailPanel.jsx, WorkloadPanel.jsx,
+//   MyTasks.jsx                                 → /api/v2/tasks
+// Canonical routes are at lines below: /api/v2/tasks and /api/v2/notes.
 
 // ── ADVANCED TASK MANAGEMENT EXTENSIONS ──────────────────────────────────────
 app.use("/api/sprints", require("./src/features/sprints/sprints.routes"));
@@ -414,10 +400,10 @@ app.use("/api/v2/security", require("./src/features/security/security.routes"));
 // Notifications (user inbox)
 app.use('/api/notifications', require('./src/features/notifications/notifications.routes'));
 
-// Tasks (Migrated from legacy)
+// Tasks — canonical v2 endpoint (sole active mount)
 app.use("/api/v2/tasks", require("./src/features/tasks/tasks.routes"));
 
-// Notes (Migrated from legacy)
+// Notes — canonical v2 endpoint (sole active mount)
 app.use("/api/v2/notes", require("./src/features/notes/notes.routes"));
 
 // Favorites (Migrated from legacy)
@@ -519,326 +505,23 @@ app.use('/api/marketplace', require('./src/features/community/marketplace.routes
 // - Gradual migration in progress
 // =============================================================
 
-// SOCKET AUTH (using Access Token)
-const jwt = require("jsonwebtoken");
-
-io.use(async (socket, next) => {
-  try {
-    const token = socket.handshake.auth?.token;
-    if (!token) {
-      console.log('❌ Socket auth: No token provided');
-      return next(new Error("No token"));
-    }
-
-    console.log('🔐 Socket auth: Verifying token...');
-    const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
-    console.log('✅ Socket auth: Token valid for user:', decoded.sub);
-    socket.user = { id: decoded.sub };
-    next();
-  } catch (err) {
-    console.error('❌ Socket auth error:', err.name, '-', err.message);
-    if (err.name === 'TokenExpiredError') {
-      console.log('⏰ Token expired at:', err.expiredAt);
-    }
-    next(new Error("Authentication failed"));
-  }
-});
-
-io.on("connection", async (socket) => {
-  logger.debug("Socket connected:", socket.user.id);
-  const socketUserId = socket.user.id;
-
-  // Each user joins their own private room for targeted notifications
-  socket.join(`user:${socketUserId}`);
-
-  // ── MULTI-PLATFORM: Presence tracking ─────────────────────────────────────
-  const presenceService = require('./src/features/presence/presence.service');
-  let userCompanyId = null;
-  try {
-    const dbUser = await User.findById(socketUserId).select('companyId').lean();
-    userCompanyId = dbUser?.companyId?.toString() || null;
-    await presenceService.setOnline(io, socketUserId, socket.id, userCompanyId);
-    // Legacy broadcast for backward compat
-    io.emit("user-status-changed", { userId: socketUserId, status: "active" });
-  } catch (err) {
-    logger.error("Error setting user online (presence):", err);
-  }
-
-  // ── Idle signal from client ────────────────────────────────────────────────
-  socket.on('user:idle', () => {
-    presenceService.setIdle(io, socketUserId, userCompanyId).catch(() => {});
-  });
-
-  // ── Active signal from client ──────────────────────────────────────────────
-  socket.on('user:active', () => {
-    presenceService.setOnline(io, socketUserId, socket.id, userCompanyId).catch(() => {});
-  });
-
-  // ── Disconnect ─────────────────────────────────────────────────────────────
-  socket.on('disconnect', () => {
-    presenceService.setOffline(io, socketUserId, socket.id, userCompanyId).catch(() => {});
-    logger.debug("Socket disconnected:", socketUserId);
-  });
-  // ──────────────────────────────────────────────────────────────────────────
-
-  registerChatHandlers(io, socket);
-
-  // ── PLATFORM SUPPORT ROOMS ──────────────────────────────────────────────
-  // Every authenticated user auto-joins their own personal support room.
-  // This enables ChttrixAdmin to send DMs directly to individual users.
-  socket.join(`user-support:${socketUserId}`);
-  logger.debug(`[SUPPORT] User ${socketUserId} joined user-support:${socketUserId}`);
-
-  // Auto-join platform-admins room for chttrix admins
-  try {
-    const dbUser = await User.findById(socketUserId).select('roles').lean();
-    if (dbUser?.roles?.includes('platform-admin') || dbUser?.roles?.includes('chttrix_admin')) {
-      socket.join('platform-admins');
-      logger.debug(`[SUPPORT] Platform admin ${socketUserId} joined platform-admins room`);
-    }
-  } catch (err) {
-    logger.error('[SUPPORT] Auto platform-admin room join error:', err);
-  }
-});
+// ---------------------------------------------------------
+// SOCKET.IO AUTH + CONNECTION (Phase 4: extracted to feature modules)
+// ---------------------------------------------------------
+registerSocketAuth(io);       // JWT verification middleware → src/socket/socketAuth.js
+registerSocketConnection(io); // Connection handler → src/socket/socketConnection.js
 
 // ---------------------------------------------------------
-// SCHEDULED MEETINGS API (inline — lightweight, no separate router file)
+// SCHEDULED MEETINGS ROUTES (Phase 4: moved to feature module)
 // ---------------------------------------------------------
-const ScheduledMeeting = require('./src/models/ScheduledMeeting');
-
-// GET /api/scheduled-meetings?workspaceId=xxx  — upcoming meetings
-// S-02 + personal account fix:
-// - Company accounts: companyId resolved from DB, workspace ownership validated (cross-tenant guard).
-// - Personal accounts: no companyId — query scoped to workspaceId only.
-//   Tenant isolation for personal accounts comes from requireWorkspaceMember (caller owns workspace).
-app.get('/api/scheduled-meetings', requireAuth, async (req, res) => {
-  try {
-    const { workspaceId, limit = 10 } = req.query;
-    if (!workspaceId) return res.status(400).json({ message: 'workspaceId required' });
-
-    const User = require('./models/User');
-    const dbUser = await User.findById(req.user.sub).select('companyId').lean();
-    if (!dbUser) return res.status(401).json({ message: 'User not found' });
-
-    const now = new Date();
-    let query = { workspaceId, startTime: { $gte: now }, status: { $in: ['scheduled', 'live'] } };
-
-    const WorkspaceModel = require('./models/Workspace');
-
-    // For both company and personal accounts, verify the requesting user is a member of the workspace.
-    // 'members.user' is the correct subdocument field (members: [{ user: ObjectId, role, status }]).
-    // Company workspaces implicitly enforce tenant isolation since only company members are added.
-    const ws = await WorkspaceModel.findOne({
-      _id: workspaceId,
-      'members.user': req.user.sub
-    }).select('_id company').lean();
-    if (!ws) return res.status(403).json({ message: 'Access denied' });
-
-    // For company accounts: additionally scope the meetings query to their company's tenant
-    if (dbUser.companyId) {
-      query.companyId = dbUser.companyId;
-    }
-
-    const meetings = await ScheduledMeeting.find(query)
-      .sort({ startTime: 1 })
-      .limit(Number(limit))
-      .populate('createdBy', 'username firstName lastName avatarUrl')
-      .lean();
-
-    res.json({ meetings });
-  } catch (err) {
-    logger.error('GET /api/scheduled-meetings error:', err);
-    res.status(500).json({ message: 'Failed to fetch meetings' });
-  }
-});
-
-// POST /api/scheduled-meetings  — create a new scheduled meeting
-// PERSONAL ACCOUNT FIX: companyId is optional — personal accounts don't have one.
-// Security is enforced via workspace membership check (must be member of the workspace).
-// When companyId is available (company accounts), it is stored for S-02 tenant isolation.
-app.post('/api/scheduled-meetings', requireAuth, async (req, res) => {
-  try {
-    const { workspaceId, channelId, dmSessionId, title, startTime, duration, meetingLink, participants } = req.body;
-    if (!workspaceId || !title || !startTime) {
-      return res.status(400).json({ message: 'workspaceId, title, and startTime are required' });
-    }
-
-    // Resolve caller's companyId (may be null for personal accounts)
-    const User = require('./models/User');
-    const dbUser = await User.findById(req.user.sub).select('companyId').lean();
-    if (!dbUser) return res.status(401).json({ message: 'User not found' });
-    const companyId = dbUser.companyId || null;
-
-    // Verify caller is a member of the workspace (primary access control)
-    const WorkspaceModel = require('./src/features/workspaces/workspace.model');
-    let wsQuery = { _id: workspaceId, 'members.user': req.user.sub };
-    // For company accounts: additionally scope to their company to prevent cross-tenant access
-    if (companyId) wsQuery.company = companyId;
-
-    const ws = await WorkspaceModel.findOne(wsQuery).select('_id members').lean();
-    if (!ws) return res.status(403).json({ message: 'Access denied' });
-
-    const meeting = await ScheduledMeeting.create({
-      companyId,          // null for personal accounts, ObjectId for company accounts
-      workspaceId,
-      channelId: channelId || null,
-      dmSessionId: dmSessionId || null,
-      createdBy: req.user.sub,
-      title: title.trim(),
-      startTime: new Date(startTime),
-      duration: duration || 30,
-      meetingLink: meetingLink || null,
-      participants: participants || [],
-      status: 'scheduled',
-    });
-
-    const populated = await meeting.populate('createdBy', 'username firstName lastName avatarUrl');
-
-    // Broadcast to workspace so all HomePanel sidebars refresh
-    req.io.to(`workspace:${workspaceId}`).emit('schedule:created', { meeting: populated });
-
-    // Create notifications for all workspace members
-    try {
-      const notifService = require('./src/features/notifications/notificationService');
-      if (ws && ws.members) {
-        const recipientIds = ws.members
-          .map(m => (m.user || m).toString())
-          .filter(id => id !== req.user.sub.toString());
-        await notifService.scheduleCreated(req.io, {
-          recipientIds,
-          workspaceId,
-          title: meeting.title,
-          scheduledMeetingId: meeting._id,
-        });
-      }
-    } catch (notifErr) {
-      logger.error('Notification error on schedule create:', notifErr.message);
-    }
-
-    res.status(201).json({ meeting: populated });
-  } catch (err) {
-    logger.error('POST /api/scheduled-meetings error:', err);
-    res.status(500).json({ message: 'Failed to create meeting' });
-  }
-});
-
-// PATCH /api/scheduled-meetings/:id  — update status (cancel/complete/live)
-// S-02 SECURITY FIX: meeting.companyId checked before allowing update.
-app.patch('/api/scheduled-meetings/:id', requireAuth, async (req, res) => {
-  try {
-    const { status } = req.body;
-    const VALID_STATUSES = ['scheduled', 'live', 'completed', 'cancelled'];
-    if (!VALID_STATUSES.includes(status)) {
-      return res.status(400).json({ message: 'Invalid status' });
-    }
-
-    // S-02: Load meeting first to verify tenant ownership
-    const meeting = await ScheduledMeeting.findById(req.params.id);
-    if (!meeting) return res.status(404).json({ message: 'Meeting not found' });
-
-    // S-02: Check caller's companyId matches meeting's companyId
-    const User = require('./models/User');
-    const dbUser = await User.findById(req.user.sub).select('companyId').lean();
-    if (!dbUser || !meeting.companyId || dbUser.companyId.toString() !== meeting.companyId.toString()) {
-      return res.status(403).json({ message: 'Access denied' });
-    }
-
-    meeting.status = status;
-    await meeting.save();
-    await meeting.populate('createdBy', 'username firstName lastName avatarUrl');
-
-    req.io.to(`workspace:${meeting.workspaceId}`).emit('schedule:updated', { meeting });
-
-    res.json({ meeting });
-  } catch (err) {
-    logger.error('PATCH /api/scheduled-meetings/:id error:', err);
-    res.status(500).json({ message: 'Failed to update meeting' });
-  }
-});
-
-// DELETE /api/scheduled-meetings/:id
-// S-02 SECURITY FIX: meeting.companyId checked before allowing deletion.
-app.delete('/api/scheduled-meetings/:id', requireAuth, async (req, res) => {
-  try {
-    // S-02: Load meeting first to verify tenant ownership before deleting
-    const meeting = await ScheduledMeeting.findById(req.params.id);
-    if (!meeting) return res.status(404).json({ message: 'Meeting not found' });
-
-    const User = require('./models/User');
-    const dbUser = await User.findById(req.user.sub).select('companyId').lean();
-    if (!dbUser || !meeting.companyId || dbUser.companyId.toString() !== meeting.companyId.toString()) {
-      return res.status(403).json({ message: 'Access denied' });
-    }
-
-    await meeting.deleteOne();
-
-    req.io.to(`workspace:${meeting.workspaceId}`).emit('schedule:deleted', { meetingId: meeting._id });
-
-    res.json({ message: 'Meeting deleted' });
-  } catch (err) {
-    logger.error('DELETE /api/scheduled-meetings/:id error:', err);
-    res.status(500).json({ message: 'Failed to delete meeting' });
-  }
-});
+app.use('/api/scheduled-meetings', requireAuth, require('./src/features/meetings/scheduled-meetings.routes'));
 
 // ---------------------------------------------------------
 // ERROR HANDLERS (MUST BE AFTER ALL ROUTES)
+// Phase 4: extracted to middleware/errorHandlers.js
 // ---------------------------------------------------------
-
-// 404 Handler - catch routes that don't exist
-// S-15 SECURITY FIX: In production, do NOT echo back method/path.
-// Path reflection acts as a route-enumeration oracle for attackers.
-app.use((req, res) => {
-  if (!isProduction) {
-    // Dev: verbose 404 for debugging convenience
-    console.log('❌ [404] Route not found:', {
-      method: req.method,
-      path: req.path,
-      originalUrl: req.originalUrl,
-      headers: req.headers['authorization'] ? 'Has Auth' : 'No Auth'
-    });
-    return res.status(404).json({
-      error: 'Not Found',
-      message: `Cannot ${req.method} ${req.path}`,
-      suggestion: 'Check the API documentation for available endpoints'
-    });
-  }
-  // Production: generic response, no path/method reflected
-  res.status(404).json({ error: 'Not Found' });
-});
-
-// Global Error Handler - catches all unhandled errors
-app.use((err, req, res, next) => {
-  // Log error with context for debugging
-  logger.error('Global error handler:', {
-    error: err.message,
-    stack: err.stack,
-    path: req.path,
-    method: req.method,
-    user: req.user?.sub,
-    // ⚠️ SECURITY: Never log req.body - may contain passwords or tokens
-    timestamp: new Date().toISOString()
-  });
-
-  // Determine status code
-  const statusCode = err.statusCode || err.status || 500;
-
-  // Construct error response
-  const errorResponse = {
-    error: statusCode === 500 ? 'Internal Server Error' : (err.name || 'Error'),
-    message: isProduction && statusCode === 500
-      ? 'An unexpected error occurred. Please try again later.'
-      : err.message
-  };
-
-  // Add stack trace in development only
-  if (!isProduction) {
-    errorResponse.stack = err.stack;
-    // NOTE: err.details may expose internals - omit sensitive fields in non-prod too
-  }
-
-  res.status(statusCode).json(errorResponse);
-});
+app.use(notFoundHandler);    // 404 — no path reflection in production (S-15)
+app.use(globalErrorHandler); // Global error handler with structured logging
 
 // ---------------------------------------------------------
 // START SERVER (ONLY AFTER MONGO CONNECTS)
