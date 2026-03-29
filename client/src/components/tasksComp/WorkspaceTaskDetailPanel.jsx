@@ -16,7 +16,7 @@ import {
     ArrowRight, User, Edit2, Calendar, Trash2,
     Timer, Link2, PlayCircle, StopCircle
 } from 'lucide-react';
-import api from '../../services/api';
+import api from '@services/api';
 import { useToast } from '../../contexts/ToastContext';
 
 // ─── Design tokens ─────────────────────────────────────────────────────────────

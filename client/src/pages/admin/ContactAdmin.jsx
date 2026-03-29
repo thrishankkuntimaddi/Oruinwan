@@ -3,7 +3,7 @@ import { MessageSquare, Ticket, Send, Paperclip, Clock, Search } from 'lucide-re
 import { useAuth } from '../../contexts/AuthContext';
 import { useCompany } from '../../contexts/CompanyContext';
 import { useToast } from '../../contexts/ToastContext';
-import api from '../../../services/api';
+import api from '@services/api';
 import io from 'socket.io-client';
 
 const ContactAdmin = () => {

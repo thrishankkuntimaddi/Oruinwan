@@ -11,7 +11,7 @@
  */
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { BarChart2, Users, Clock, Lock, CheckCircle, Circle, Loader2, ChevronDown, ChevronUp } from 'lucide-react';
-import api from '../../../../../services/api';
+import api from '@services/api';
 
 function formatDate(dateStr) {
     if (!dateStr) return null;

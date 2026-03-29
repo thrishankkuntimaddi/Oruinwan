@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useWorkspace } from '../../../../contexts/WorkspaceContext';
 import { useToast } from '../../../../contexts/ToastContext';
-import api from '../../../../services/api';
+import api from '@services/api';
 
 // Import extracted tab components
 import InvitationsTab from '../../../workspace/settings/InvitationsTab';

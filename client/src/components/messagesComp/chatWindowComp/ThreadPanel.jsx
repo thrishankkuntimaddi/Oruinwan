@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import api from '../../../services/api';
+import api from '@services/api';
 import { formatTime as fmtTime } from "./helpers/helpers";
 import { useToast } from "../../../contexts/ToastContext";
 import { Smile, X, Bell, BellOff } from "lucide-react";
 import FooterInput from "./footer/footerInput";
-import { API_BASE } from "../../../services/api";
+import { API_BASE } from '@services/api';
 import { encryptMessageForSending, batchDecryptMessages } from "../../../services/messageEncryptionService";
 import { useThreadFollow } from "../../../hooks/useThreadFollow";
 import { getAvatarUrl } from "../../../utils/avatarUtils";

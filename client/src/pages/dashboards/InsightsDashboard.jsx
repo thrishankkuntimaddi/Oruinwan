@@ -6,8 +6,8 @@
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
-import api from '../../../services/api';
-import { API_BASE } from '../../services/api';
+import api from '@services/api';
+import { API_BASE } from '@services/api';
 import {
     Activity, Users, MessageSquare, CheckSquare, TrendingUp,
     AlertTriangle, Coffee, BarChart2, Zap, Clock, RefreshCw,

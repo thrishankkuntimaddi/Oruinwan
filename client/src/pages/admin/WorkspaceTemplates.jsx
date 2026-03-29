@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import api from '../../../services/api';
-import { API_BASE } from '../../services/api';
+import api from '@services/api';
+import { API_BASE } from '@services/api';
 
 const CATEGORIES = ['general','engineering','design','marketing','sales','hr','finance','support','product','custom'];
 const CATEGORY_COLORS = { engineering:'#3b82f6', design:'#ec4899', marketing:'#f59e0b', sales:'#10b981', hr:'#8b5cf6', finance:'#6366f1', support:'#14b8a6', product:'#f97316', general:'#6b7280', custom:'#a855f7' };

@@ -1,7 +1,7 @@
 // client/src/pages/workspace-os/PermissionMatrixPage.jsx
 // Role × Module permission matrix — visual toggle table for admins.
 import React, { useState, useEffect, useCallback } from 'react';
-import api from '../../services/api';
+import api from '@services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import { Shield, RefreshCw, Save, CheckCircle2, XCircle, AlertTriangle } from 'lucide-react';
 

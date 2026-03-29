@@ -8,7 +8,7 @@
  *   const { preview, clearPreview } = useLinkPreview(messageText);
  */
 import { useState, useEffect, useRef, useCallback } from 'react';
-import api from '../../../../services/api';
+import api from '@services/api';
 
 // Regex to find the first http(s) URL in a string
 const URL_REGEX = /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_+.~#?&//=]*)/;

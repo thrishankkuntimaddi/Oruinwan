@@ -7,7 +7,7 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { useTheme } from '../contexts/ThemeContext';
-import api from '../services/api';
+import api from '@services/api';
 
 // Import tab components
 import ProfileTab from './settingsTabs/ProfileTab';

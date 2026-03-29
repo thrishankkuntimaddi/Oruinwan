@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { Lock, Eye, EyeOff, Check, AlertCircle } from 'lucide-react';
 import { useToast } from '../../contexts/ToastContext';
-import api from '../../services/api';
+import api from '@services/api';
 
 const FirstLoginPasswordModal = ({ isOpen, onContinue, companyName }) => {
     const { showToast } = useToast();

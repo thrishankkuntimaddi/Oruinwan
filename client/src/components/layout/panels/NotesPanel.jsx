@@ -9,7 +9,7 @@ import {
     FolderKanban, Cpu, Megaphone, StickyNote,
     Check, X
 } from "lucide-react";
-import api from "../../../services/api";
+import api from '@services/api';
 import { useNotes } from "../../../contexts/NotesContext";
 import NoteTemplateModal from "../../../pages/SidebarComp/notesComponents/ui/NoteTemplateModal";
 

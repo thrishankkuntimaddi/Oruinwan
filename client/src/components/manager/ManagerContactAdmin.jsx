@@ -6,7 +6,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useCompany } from '../../contexts/CompanyContext';
 import { useToast } from '../../contexts/ToastContext';
 import { Send, Paperclip, User, MessageSquare } from 'lucide-react';
-import api from '../../services/api';
+import api from '@services/api';
 import io from 'socket.io-client';
 
 const ManagerContactAdmin = () => {

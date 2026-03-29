@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Mail, Phone, Info, X } from "lucide-react";
-import api from "../../../../services/api";
+import api from '@services/api';
 
 export default function ContactInfoModal({ chat, onClose }) {
   const [userData, setUserData] = useState(null);

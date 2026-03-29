@@ -16,7 +16,7 @@ import { useAuth } from '../../../contexts/AuthContext';
 import { useSocket } from '../../../contexts/SocketContext';
 import { useContacts } from '../../../contexts/ContactsContext';
 import { useWorkspace } from '../../../contexts/WorkspaceContext';
-import api from '../../../services/api';
+import api from '@services/api';
 import { useToast } from '../../../contexts/ToastContext';
 
 // Extracted view components

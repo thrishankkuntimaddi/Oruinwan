@@ -1,6 +1,6 @@
 // client/src/hooks/useMeeting.js
 import { useState, useEffect, useCallback, useRef } from 'react';
-import api from '../../services/api';
+import api from '@services/api';
 import { useSocket } from '../contexts/SocketContext';
 
 const API = '/api/v2/meetings';

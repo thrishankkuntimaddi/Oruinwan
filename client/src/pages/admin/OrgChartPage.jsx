@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import api from '../../../services/api';
-import { API_BASE } from '../../services/api';
+import api from '@services/api';
+import { API_BASE } from '@services/api';
 import { useAuth } from '../../contexts/AuthContext';
 
 const DEPT_COLORS = ['#6366f1','#8b5cf6','#ec4899','#f59e0b','#10b981','#3b82f6','#ef4444','#14b8a6'];

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import api from '../../../../../services/api';
+import api from '@services/api';
 import { ArrowLeft, Shield, AlertTriangle, Save, Trash2, Globe, Mail } from 'lucide-react';
 import { useToast } from '../../../../contexts/ToastContext';
 

@@ -1,7 +1,7 @@
 // client/src/components/meetingsComp/Whiteboard.jsx
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { Pen, Eraser, Trash2, Palette } from 'lucide-react';
-import api from '../../../services/api';
+import api from '@services/api';
 import { useSocket } from '../../contexts/SocketContext';
 
 const COLORS = ['#FFFFFF', '#F87171', '#FBBF24', '#34D399', '#60A5FA', '#A78BFA', '#F472B6', '#000000'];

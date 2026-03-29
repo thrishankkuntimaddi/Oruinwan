@@ -8,7 +8,7 @@
  */
 import React, { useState, useEffect, useCallback } from 'react';
 import { Bell, MessageCircle, GitBranch, CheckSquare, Calendar, Mail, Monitor, Save, Loader2 } from 'lucide-react';
-import api from '../../services/api';
+import api from '@services/api';
 
 const PREF_ITEMS = [
     {

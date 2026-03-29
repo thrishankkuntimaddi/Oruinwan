@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Building, MapPin, Globe as GlobeIcon, Users, Save, Loader } from 'lucide-react';
 import { useCompany } from '../../../../contexts/CompanyContext';
 import { useToast } from '../../../../contexts/ToastContext';
-import api from '../../../../../services/api';
+import api from '@services/api';
 
 const CompanyProfile = () => {
     const { company, refreshCompany } = useCompany();

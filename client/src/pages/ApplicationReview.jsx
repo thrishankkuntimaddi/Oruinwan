@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Clock, CheckCircle, XCircle, RefreshCw, Mail, LogOut } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import api from '../../services/api';
+import api from '@services/api';
 
 const ApplicationReview = () => {
     const navigate = useNavigate();

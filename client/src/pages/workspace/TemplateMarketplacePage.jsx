@@ -5,7 +5,7 @@ import {
   Layers, Code, BarChart2, Zap, MessageSquare, CheckCircle2,
   RefreshCw, ArrowLeft
 } from "lucide-react";
-import api from '../../../services/api';
+import api from '@services/api';
 
 const CATEGORY_ICONS = {
   general:      { icon: Layers,        label: "General",     color: "from-blue-500 to-blue-600" },

@@ -35,7 +35,7 @@ import WorkloadPanel from '../../components/tasksComp/WorkloadPanel';
 import { useTasks } from '../../contexts/TasksContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useContacts } from '../../contexts/ContactsContext';
-import api from '../../services/api';
+import api from '@services/api';
 
 // ─── Design tokens (Jira Atlas palette) ─────────────────────────────────────-
 

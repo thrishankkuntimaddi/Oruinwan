@@ -4,7 +4,7 @@
 import { useCallback, useRef, useEffect } from 'react';
 import { useSocket } from '../contexts/SocketContext';
 import { useAuth } from '../contexts/AuthContext'; // ✅ FIX 6: Import useAuth
-import api from '../services/api';
+import api from '@services/api';
 import { encryptMessageForSending } from '../services/messageEncryptionService';
 
 /**

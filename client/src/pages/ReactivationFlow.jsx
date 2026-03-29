@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Lock, Mail, KeyRound } from 'lucide-react';
-import api from '../../services/api';
+import api from '@services/api';
 
 const ReactivationFlow = () => {
     const navigate = useNavigate();

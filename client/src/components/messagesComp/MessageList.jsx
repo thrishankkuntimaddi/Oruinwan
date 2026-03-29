@@ -1,6 +1,6 @@
 // client/src/components/messagesComp/MessageList.jsx
 import { useContext, useEffect, useState, useRef, useCallback } from "react";
-import api from '../../services/api';
+import api from '@services/api';
 import { io } from "socket.io-client";
 import { Search, Plus, Archive, Users, Hash, Lock, MessageCircle, MoreVertical, CheckCheck, X } from "lucide-react";
 import { useParams, useNavigate } from "react-router-dom";
@@ -9,7 +9,7 @@ import JoinChannelModal from "./JoinChannelModal";
 import NewDMModal from "./NewDMModal";
 import { AuthContext } from "../../contexts/AuthContext";
 import { SocketContext } from "../../contexts/SocketContext";
-import { API_BASE } from "../../services/api";
+import { API_BASE } from '@services/api';
 import { channelService } from "../../services/channelService";
 
 

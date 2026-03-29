@@ -1,7 +1,7 @@
 // client/src/components/messagesComp/PinnedMessagesPanel.jsx
 // Phase-8: Side drawer showing pinned messages for the current channel/DM
 import React, { useState, useEffect, useCallback } from 'react';
-import api from '../../services/api';
+import api from '@services/api';
 
 const API = import.meta.env.VITE_API_URL || '';
 

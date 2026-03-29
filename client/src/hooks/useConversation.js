@@ -4,7 +4,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom'; // Added for redirect handling
 import { useAuth } from '../contexts/AuthContext'; // ✅ FIX 4: Import useAuth
-import api from '../services/api';
+import api from '@services/api';
 import { batchDecryptMessages } from '../services/messageEncryptionService';
 
 /**

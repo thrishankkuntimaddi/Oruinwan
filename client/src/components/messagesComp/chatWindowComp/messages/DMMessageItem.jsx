@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import api from '../../../../services/api';
+import api from '@services/api';
 import { Smile, MessageSquare, Share, MoreHorizontal, Pin, Copy, Trash2, Info, Pencil, Check, X, Globe, Bookmark, Bell } from "lucide-react";
 import TranslatePopover from './TranslatePopover';
 import { getAvatarUrl } from '../../../../utils/avatarUtils';

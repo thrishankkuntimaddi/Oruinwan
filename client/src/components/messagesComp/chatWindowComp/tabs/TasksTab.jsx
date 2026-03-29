@@ -19,7 +19,7 @@ import {
     BookOpen, ArrowRight, RotateCcw, Tag, Flag, Bug,
     ListTodo, Eye, Activity, ChevronRight, Zap, Link2
 } from 'lucide-react';
-import api from '../../../../services/api';
+import api from '@services/api';
 import { useWorkspace } from '../../../../contexts/WorkspaceContext';
 
 // ─── Workflow State Machine (mirrors backend workflowValidator.js) ─────────────

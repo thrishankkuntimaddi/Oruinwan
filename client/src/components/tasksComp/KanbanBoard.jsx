@@ -6,7 +6,7 @@
  * then calls refreshTasks() from TasksContext to sync state.
  */
 import React, { useState } from 'react';
-import api from '../../services/api';
+import api from '@services/api';
 import { useTasks } from '../../contexts/TasksContext';
 import { useToast } from '../../contexts/ToastContext';
 

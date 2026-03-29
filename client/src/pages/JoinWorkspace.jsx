@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import * as Icons from "lucide-react";
-import api from "../services/api";
+import api from '@services/api';
 import { useTheme } from "../contexts/ThemeContext";
 
 const JoinWorkspace = () => {

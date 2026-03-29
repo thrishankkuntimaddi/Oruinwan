@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { CheckCircle, AlertCircle, ArrowRight, Loader } from "lucide-react";
-import { API_BASE } from '../services/api';
+import { API_BASE } from '@services/api';
 
 /**
  * AcceptInvite Page

@@ -17,7 +17,7 @@
  */
 import React, { useRef, useState } from "react";
 import { Image, FileText, User, BarChart2, Video, Loader2, Mic, Calendar } from "lucide-react";
-import api from "../../../../services/api";
+import api from '@services/api';
 import CreateGitHubIssueModal from "../../../../components/apps/modals/CreateGitHubIssueModal";
 import CreateJiraTicketModal from "../../../../components/apps/modals/CreateJiraTicketModal";
 

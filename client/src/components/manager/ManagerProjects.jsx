@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import api from '../../services/api';
+import api from '@services/api';
 import { FolderKanban, ExternalLink, Users, Activity, CheckCircle, Clock } from 'lucide-react';
 import { useCompany } from '../../contexts/CompanyContext';
 

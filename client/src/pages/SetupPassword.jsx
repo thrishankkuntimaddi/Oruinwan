@@ -18,7 +18,7 @@ import {
 import { useToast } from '../contexts/ToastContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
-import api from '../services/api';
+import api from '@services/api';
 
 // ─── Password strength requirement component ────────────────────────────────
 const Req = ({ met, label }) => (

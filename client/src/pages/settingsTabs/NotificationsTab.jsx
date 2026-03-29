@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import Card from './Card';
-import api from '../../services/api';
+import api from '@services/api';
 import Button from '../../shared/components/ui/Button';
 import { Check, Bell, MessageSquare, AtSign, Layers, Volume2, Mail, Shield } from 'lucide-react';
 import { useToast } from '../../contexts/ToastContext';

@@ -8,7 +8,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { MOCK_INTEGRATIONS, INTEGRATION_CATEGORIES } from "../../components/apps/mock/mockIntegrations";
 import IntegrationCard from "../../components/apps/IntegrationCard";
 import IntegrationDetailsModal from "../../components/apps/IntegrationDetailsModal";
-import api from '../../../services/api';
+import api from '@services/api';
 
 // ── Star rating display ──────────────────────────────────────────────────────
 function StarRating({ rating, size = 12 }) {

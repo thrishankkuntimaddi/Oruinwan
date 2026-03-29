@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { Smartphone, Monitor, LogOut, RefreshCw, MapPin, Clock, Globe, AlertCircle } from 'lucide-react';
 import Card from './Card';
-import api from '../../services/api';
+import api from '@services/api';
 import { useToast } from '../../contexts/ToastContext';
 
 const SessionsTab = ({ sessions: initialSessions, handleLogoutSession, handleLogoutOthers, handleLogout }) => {

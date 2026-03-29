@@ -5,7 +5,7 @@ import {
     Search, Briefcase, BarChart2,
     CheckCircle2, Clock, ArrowRightLeft
 } from 'lucide-react';
-import api from '../../services/api';
+import api from '@services/api';
 
 const TeamAllocation = () => {
     const { selectedDepartment } = useOutletContext();

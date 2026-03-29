@@ -3,7 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { Plus, Hash, Search, Trash2, X, CheckSquare, Settings2, Lock, Megaphone, UserPlus } from 'lucide-react';
 import { useWorkspace } from "../../../contexts/WorkspaceContext";
 import { useToast } from "../../../contexts/ToastContext";
-import api from "../../../services/api";
+import api from '@services/api';
 import ConfirmationModal from "../../../shared/components/ui/ConfirmationModal";
 import { useSocket } from "../../../contexts/SocketContext"; // ✅ Use global socket
 import CreateChannelModal from "../../messagesComp/CreateChannelModal";

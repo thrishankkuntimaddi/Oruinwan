@@ -1,7 +1,7 @@
 // client/src/components/messagesComp/chatWindowComp/MentionAutocomplete.jsx
 // Phase-8: @mention autocomplete dropdown for the chat composer
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import api from '../../../services/api';
+import api from '@services/api';
 
 const API = import.meta.env.VITE_API_URL || '';
 

@@ -11,7 +11,7 @@
  */
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { Mic, Square, Send, Trash2, Loader2 } from 'lucide-react';
-import api from '../../../../services/api';
+import api from '@services/api';
 
 // Format seconds → mm:ss
 function fmt(s) {

@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { channelService } from "../services/channelService";
 import { messageService } from "../services/messageService";
-import api from "../services/api";
+import api from '@services/api';
 import { useSocket } from "./SocketContext";
 
 const ContactsContext = createContext();

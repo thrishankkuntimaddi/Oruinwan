@@ -2,7 +2,7 @@
 // Interactive org chart tree visualization.
 // Pure CSS/flex tree — no external dependency required.
 import React, { useState, useEffect, useCallback } from 'react';
-import api from '../../services/api';
+import api from '@services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import {
     Building2, Users, ChevronDown, ChevronRight,

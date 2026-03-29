@@ -5,7 +5,7 @@ import {
     Shield, TrendingUp, Lightbulb, Flame, Target, Trophy
 } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
-import api from "../services/api";
+import api from '@services/api';
 import ProfileQuickSettings from "../components/workspace/ProfileQuickSettings";
 import ChttrixAIChat from "../components/ai/ChttrixAIChat/ChttrixAIChat";
 import { WorkspaceProvider } from "../contexts/WorkspaceContext";

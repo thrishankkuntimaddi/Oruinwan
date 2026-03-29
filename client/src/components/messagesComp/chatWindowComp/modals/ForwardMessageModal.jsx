@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Search, X, User, Hash } from "lucide-react";
 import { useContacts } from "../../../../contexts/ContactsContext";
 import { useWorkspace } from "../../../../contexts/WorkspaceContext";
-import api from "../../../../services/api";
+import api from '@services/api';
 
 export default function ForwardMessageModal({ onClose, onForward, currentChatId, currentChatType }) {
     const { channels } = useContacts();

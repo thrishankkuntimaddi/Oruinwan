@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import api from '../../../services/api';
-import { API_BASE } from '../../services/api';
+import api from '@services/api';
+import { API_BASE } from '@services/api';
 import { useAuth } from '../../contexts/AuthContext';
 
 const TEAM_COLORS = [

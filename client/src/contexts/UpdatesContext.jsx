@@ -16,7 +16,7 @@
 //   company:update:reacted  → reactions refreshed on matching update
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
-import api from "../services/api";
+import api from '@services/api';
 import { useSocket } from "./SocketContext";
 import { useAuth } from "./AuthContext";
 

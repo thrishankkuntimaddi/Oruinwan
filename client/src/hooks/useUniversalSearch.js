@@ -1,6 +1,6 @@
 // client/src/hooks/useUniversalSearch.js
 import { useState, useEffect, useCallback } from 'react';
-import api from '../services/api';
+import api from '@services/api';
 
 const EMPTY = { channels: [], contacts: [], messages: [], tasks: [], notes: [], files: [], knowledge: [] };
 

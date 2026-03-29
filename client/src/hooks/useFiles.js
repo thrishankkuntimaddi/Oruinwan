@@ -1,6 +1,6 @@
 // client/src/hooks/useFiles.js
 import { useState, useCallback } from 'react';
-import api from '../services/api';
+import api from '@services/api';
 
 const API = '/api/v2/files';
 

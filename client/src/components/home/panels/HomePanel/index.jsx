@@ -6,7 +6,7 @@ import { useContacts } from "../../../../contexts/ContactsContext";
 import { useAuth } from "../../../../contexts/AuthContext";
 import { useToast } from "../../../../contexts/ToastContext";
 import { useWorkspace } from "../../../../contexts/WorkspaceContext";
-import api, { API_BASE } from "../../../../services/api";
+import api, { API_BASE } from '@services/api';
 import { io } from "socket.io-client";
 import { useScheduledMeetings } from "../../../../hooks/useScheduledMeetings";
 

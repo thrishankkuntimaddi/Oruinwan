@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useAuth } from './AuthContext';
-import api from '../services/api';
+import api from '@services/api';
 
 const ThemeContext = createContext();
 

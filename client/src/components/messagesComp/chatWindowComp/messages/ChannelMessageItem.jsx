@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
-import api from '../../../../services/api';
+import api from '@services/api';
 import {
     Smile, MessageSquare, Share, MoreHorizontal, Pin, Copy, Trash2, Info, Pencil, Check, X,
     Hash, UserCheck, LogOut, UserPlus, UserMinus, Shield, ShieldOff,

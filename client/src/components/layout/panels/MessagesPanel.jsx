@@ -8,7 +8,7 @@ import { messageService } from "../../../services/messageService";
 import NewDMModal from "../../messagesComp/NewDMModal";
 import BroadcastModal from "../../messagesComp/BroadcastModal";
 import ConfirmationModal from "../../../shared/components/ui/ConfirmationModal";
-import api from "../../../services/api";
+import api from '@services/api';
 
 const MessagesPanel = ({ title }) => {
     const navigate = useNavigate();

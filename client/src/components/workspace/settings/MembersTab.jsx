@@ -1,6 +1,6 @@
 import React from 'react';
 import { Crown, Shield, UserCheck, Pause, Play, Trash2, MoreVertical, Search } from 'lucide-react';
-import api from '../../../services/api';
+import api from '@services/api';
 import { useToast } from '../../../contexts/ToastContext';
 
 /**

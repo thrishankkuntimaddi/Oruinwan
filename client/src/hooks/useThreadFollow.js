@@ -5,7 +5,7 @@
 // then provides a toggle() that calls POST or DELETE against the thread follow API.
 
 import { useState, useCallback } from 'react';
-import api from '../services/api';
+import api from '@services/api';
 
 /**
  * @param {string} messageId    The parent message _id

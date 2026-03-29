@@ -5,7 +5,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { AuthContext } from "../../contexts/AuthContext";
 import { useToast } from "../../contexts/ToastContext";
 import { useGoogleLogin } from "@react-oauth/google";
-import api from '../../services/api';
+import api from '@services/api';
 import { Eye, EyeOff } from "lucide-react";
 import { Button, Input } from "../../shared/components/ui";
 

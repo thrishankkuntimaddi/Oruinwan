@@ -1,7 +1,7 @@
 // client/src/components/messagesComp/SmartReplyBar.jsx
 // Phase-8: AI-generated quick reply chip suggestions
 import React, { useState, useEffect, useRef } from 'react';
-import api from '../../services/api';
+import api from '@services/api';
 
 const API = import.meta.env.VITE_API_URL || '';
 

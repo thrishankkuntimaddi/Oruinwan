@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { X, Mail, Loader } from "lucide-react";
-import { API_BASE } from "../../services/api";
+import { API_BASE } from '@services/api';
 import { useToast } from "../../contexts/ToastContext";
 
 const InviteUserModal = ({ isOpen, onClose, companyId, workspaces = [] }) => {

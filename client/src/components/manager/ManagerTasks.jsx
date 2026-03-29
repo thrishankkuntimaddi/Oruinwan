@@ -1,7 +1,7 @@
 // client/src/components/manager/ManagerTasks.jsx
 import React, { useState, useEffect, useCallback } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import api from '../../services/api';
+import api from '@services/api';
 import {
     Plus, CheckCircle2, Clock, AlertCircle, MoreVertical,
     User, X

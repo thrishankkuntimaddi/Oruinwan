@@ -4,7 +4,7 @@
 // passed down — no global context, no unnecessary re-renders.
 
 import { useReducer, useRef, useCallback } from 'react';
-import api from '../services/api';
+import api from '@services/api';
 
 // ── State shape ────────────────────────────────────────────────────────────
 // translationMap: Map<string, TranslationEntry>

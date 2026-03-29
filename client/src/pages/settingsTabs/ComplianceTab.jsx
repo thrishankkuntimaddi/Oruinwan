@@ -8,7 +8,7 @@ import {
     ChevronLeft, ChevronRight, Loader, Check, Lock
 } from 'lucide-react';
 import Card from './Card';
-import api from '../../services/api';
+import api from '@services/api';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const fmtDate = (d) => d ? new Date(d).toLocaleString() : '—';

@@ -2,7 +2,7 @@
 // Phase-8: Screen recording capture and upload
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 // refactor(consistency): use canonical api.js (handles auth tokens + 401 refresh; FormData uploads still work)
-import api from '../../../services/api';
+import api from '@services/api';
 
 const API = import.meta.env.VITE_API_URL || '';
 

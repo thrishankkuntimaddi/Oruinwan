@@ -4,7 +4,7 @@
 import React, { useState, useEffect } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { Users, Building, Shield, Eye, EyeOff, AlertCircle } from 'lucide-react';
-import api from '../../services/api';
+import api from '@services/api';
 
 const ManagerReports = () => {
     const { selectedDepartment } = useOutletContext();

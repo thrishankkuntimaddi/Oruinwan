@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate, useLocation, useParams } from "react-router-dom";
-import api from "../services/api";
+import api from '@services/api';
 import { useToast } from "./ToastContext";
 import { useSocket } from "./SocketContext";
 

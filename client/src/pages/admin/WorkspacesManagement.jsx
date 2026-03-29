@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Globe, Users, Calendar, MoreVertical, Plus, Search, Filter, Rocket, Briefcase, Zap, Palette, Trophy, Target, Flame, Microscope, Shield, Lightbulb, Sparkles, UserPlus, X, EyeOff } from 'lucide-react';
 import { useToast } from '../../contexts/ToastContext';
 import { useAuth } from '../../contexts/AuthContext';
-import api from '../../services/api';
+import api from '@services/api';
 import CreateWorkspaceModal from '../workspaceSelectComponents/CreateWorkspaceModal';
 import WorkspaceMembersModal from './WorkspaceMembersModal';
 import { usePermissions } from '../../hooks/usePermissions';

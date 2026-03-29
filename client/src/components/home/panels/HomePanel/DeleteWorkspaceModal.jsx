@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useToast } from "../../../../contexts/ToastContext";
-import api from '../../../../services/api';
+import api from '@services/api';
 
 const DeleteWorkspaceModal = ({
     showDeleteConfirm,

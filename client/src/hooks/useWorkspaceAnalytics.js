@@ -1,7 +1,7 @@
 // client/src/hooks/useWorkspaceAnalytics.js
 // Hook for fetching workspace analytics data
 import { useState, useEffect, useCallback } from 'react';
-import api from '../services/api';
+import api from '@services/api';
 
 export function useWorkspaceAnalytics(workspaceId, range = 30) {
     const [data, setData] = useState(null);

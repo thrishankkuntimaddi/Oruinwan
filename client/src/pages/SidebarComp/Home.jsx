@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import ChatWindowV2 from "../../components/messagesComp/chatWindowComp/ChatWindowV2";
 import { useWorkspace } from "../../contexts/WorkspaceContext";
-import api from "../../services/api";
+import api from '@services/api';
 import { useSocket } from "../../contexts/SocketContext";
 import EmptyState from "./states/EmptyState";
 

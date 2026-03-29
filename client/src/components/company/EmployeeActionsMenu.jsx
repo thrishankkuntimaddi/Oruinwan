@@ -3,7 +3,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import ReactDOM from 'react-dom';
 import { MoreVertical, UserX, UserCheck, Trash2, Building, Award } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import api from '../../services/api';
+import api from '@services/api';
 
 // viewerRole: the companyRole of the currently logged-in user
 const EmployeeActionsMenu = ({ employee, departments = [], onUpdate, viewerRole = 'member' }) => {

@@ -9,7 +9,7 @@ import {
 import { useCompany } from '../../contexts/CompanyContext';
 import { useToast } from '../../contexts/ToastContext';
 import { getSecurityRisk } from '../../services/ownerDashboardService';
-import api from '../../services/api';
+import api from '@services/api';
 
 const OwnerSecurity = () => {
     const { isCompanyOwner } = useCompany();

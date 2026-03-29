@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useToast } from "../contexts/ToastContext";
 import { useTheme } from "../contexts/ThemeContext";
 import OTPModal from "../components/shared/OTPModal";
-import api from '../../services/api';
+import api from '@services/api';
 
 // Import extracted components
 import RegisterLayout from "./register/layout/RegisterLayout";

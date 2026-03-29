@@ -3,7 +3,7 @@
 
 import React, { useState, useCallback } from "react";
 import { BarChart3, CheckCircle, Circle, Users } from "lucide-react";
-import api from "../../../../services/api";
+import api from '@services/api';
 
 /**
  * @param {object} props

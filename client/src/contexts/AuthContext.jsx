@@ -1,8 +1,8 @@
 // client/src/contexts/AuthContext.jsx
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
-import { setOnTokenRefreshed, API_BASE } from "../services/api";
-import api from '../services/api';
+import { setOnTokenRefreshed, API_BASE } from '@services/api';
+import api from '@services/api';
 import { getDeviceMetadata, clearDeviceId } from '../utils/deviceId';
 
 export const AuthContext = createContext(null);

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Rocket, Briefcase, Zap, Palette, FlaskConical, Globe, ShieldCheck, TrendingUp, Lightbulb, Flame, Target, Trophy, Shield } from 'lucide-react';
-import api from '../../../services/api';
+import api from '@services/api';
 import { useToast } from '../../../contexts/ToastContext';
 
 // Icon options for workspace customization

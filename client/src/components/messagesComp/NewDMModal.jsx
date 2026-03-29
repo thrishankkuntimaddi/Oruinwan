@@ -1,8 +1,8 @@
 import { useEffect, useState, useContext } from "react";
 import { useParams } from "react-router-dom";
-import api from '../../services/api';
+import api from '@services/api';
 import { AuthContext } from "../../contexts/AuthContext";
-import { API_BASE } from "../../services/api";
+import { API_BASE } from '@services/api';
 import { getErrorMessage } from "../../utils/apiHelpers";
 import { getAvatarUrl } from "../../utils/avatarUtils";
 

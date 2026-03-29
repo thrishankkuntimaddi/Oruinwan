@@ -8,7 +8,7 @@ import {
   Minus, ArrowDown, Clock, Zap, Tag, MoreHorizontal,
   Edit3, Eye, Shield, Check, Loader2
 } from "lucide-react";
-import api from "../../services/api";
+import api from '@services/api';
 
 const priorities = ["Emergency", "High", "Medium", "Low"];
 

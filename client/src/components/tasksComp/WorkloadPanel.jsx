@@ -6,7 +6,7 @@
  */
 import React, { useState, useEffect } from 'react';
 import { Users, RefreshCw } from 'lucide-react';
-import api from '../../services/api';
+import api from '@services/api';
 import { useToast } from '../../contexts/ToastContext';
 
 function initials(user) {

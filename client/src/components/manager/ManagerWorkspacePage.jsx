@@ -7,7 +7,7 @@ import {
     Briefcase, Users, CheckCircle2, MessageSquare,
     LayoutGrid, ArrowRight, Globe, RefreshCw, AlertCircle
 } from 'lucide-react';
-import api from '../../services/api';
+import api from '@services/api';
 
 const ManagerWorkspacePage = () => {
     const navigate = useNavigate();

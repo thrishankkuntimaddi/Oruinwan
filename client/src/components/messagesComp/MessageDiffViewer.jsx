@@ -1,7 +1,7 @@
 // client/src/components/messagesComp/MessageDiffViewer.jsx
 // Phase-8: Modal showing edit history with diff highlighting
 import React, { useState, useEffect } from 'react';
-import api from '../../services/api';
+import api from '@services/api';
 
 const API = import.meta.env.VITE_API_URL || '';
 

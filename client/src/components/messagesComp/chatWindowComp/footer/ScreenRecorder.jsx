@@ -3,7 +3,7 @@
 
 import React, { useState, useRef } from "react";
 import { Monitor, Square, Send, Trash2 } from "lucide-react";
-import api from "../../../../services/api";
+import api from '@services/api';
 
 /**
  * @param {function} props.onSend - Called with { type:'video', url, name, size, mimeType, duration }

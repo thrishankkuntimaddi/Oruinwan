@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import api from '../../../../../services/api';
+import api from '@services/api';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Send, Search, Circle, MessageSquare, ArrowLeft, CheckCheck, Building2 } from 'lucide-react';
 import { useToast } from '../../../../contexts/ToastContext';

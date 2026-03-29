@@ -3,7 +3,7 @@
 
 import React, { useState } from "react";
 import IntegrationActionModal from "../../../../components/apps/modals/IntegrationActionModal";
-import api from "../../../../services/api";
+import api from '@services/api';
 
 const EMOJI_SHORTCUTS = ["👍", "❤️", "😂", "😊", "🔥", "🙏"];
 

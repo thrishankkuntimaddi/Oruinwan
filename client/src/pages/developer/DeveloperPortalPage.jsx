@@ -1,6 +1,6 @@
 // client/src/pages/developer/DeveloperPortalPage.jsx
 import React, { useState, useEffect, useCallback } from 'react';
-import api from '../../../services/api';
+import api from '@services/api';
 import './DeveloperPortalPage.css';
 
 const API = import.meta.env?.VITE_API_URL || '';

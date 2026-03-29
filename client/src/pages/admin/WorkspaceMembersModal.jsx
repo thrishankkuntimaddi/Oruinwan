@@ -4,7 +4,7 @@ import {
     X, Users, UserPlus, Search, Shield, Crown,
     UserMinus, ChevronDown, Check, Loader2, Circle
 } from 'lucide-react';
-import api from '../../services/api';
+import api from '@services/api';
 import { useToast } from '../../contexts/ToastContext';
 
 // ── Role badge ────────────────────────────────────────────────────────────────

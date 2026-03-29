@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Lock, Eye, EyeOff, Check, Shield, ArrowRight } from 'lucide-react';
 import { useToast } from '../../contexts/ToastContext';
-import api from '../../services/api';
+import api from '@services/api';
 
 const OAuthPasswordSetup = () => {
     const { showToast } = useToast();

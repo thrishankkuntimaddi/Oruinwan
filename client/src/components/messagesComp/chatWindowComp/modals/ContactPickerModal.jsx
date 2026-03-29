@@ -13,7 +13,7 @@
  */
 import React, { useEffect, useState, useMemo } from 'react';
 import { X, Search, User, Loader2, AlertCircle } from 'lucide-react';
-import api from '../../../../services/api';
+import api from '@services/api';
 
 export default function ContactPickerModal({ isOpen, onClose, onSelect, workspaceId }) {
     const [members, setMembers] = useState([]);

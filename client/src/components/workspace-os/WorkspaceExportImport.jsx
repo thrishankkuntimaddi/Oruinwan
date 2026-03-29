@@ -1,7 +1,7 @@
 // client/src/components/workspace-os/WorkspaceExportImport.jsx
 // Export a workspace as JSON and import from JSON file.
 import React, { useState, useRef } from 'react';
-import api from '../../services/api';
+import api from '@services/api';
 import { Download, Upload, FileJson, CheckCircle2, AlertTriangle, RefreshCw } from 'lucide-react';
 
 export default function WorkspaceExportImport({ workspaceId, workspaceName, onImported }) {

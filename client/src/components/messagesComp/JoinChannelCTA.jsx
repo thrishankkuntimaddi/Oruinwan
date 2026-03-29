@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { UserPlus, Hash, AlertCircle, Loader2 } from 'lucide-react';
-import api from '../../../services/api';
+import api from '@services/api';
 import { useToast } from '../../../contexts/ToastContext';
 
 /**

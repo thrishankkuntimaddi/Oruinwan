@@ -1,7 +1,7 @@
 // client/src/components/meetingsComp/BrainstormBoard.jsx
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Plus, X } from 'lucide-react';
-import api from '../../../services/api';
+import api from '@services/api';
 import { useSocket } from '../../contexts/SocketContext';
 
 const NOTE_COLORS = ['#FBBF24', '#34D399', '#60A5FA', '#F9A8D4', '#C4B5FD', '#FCA5A5', '#6EE7B7'];

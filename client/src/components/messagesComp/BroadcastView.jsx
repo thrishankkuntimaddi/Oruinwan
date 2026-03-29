@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useContext } from "react";
-import api from '../../services/api';
+import api from '@services/api';
 import { AuthContext } from "../../contexts/AuthContext";
 import { useToast } from "../../contexts/ToastContext";
 import { Search, X, Send, Users, Check } from "lucide-react";
-import { API_BASE } from "../../services/api";
+import { API_BASE } from '@services/api';
 
 export default function BroadcastView() {
     const [users, setUsers] = useState([]);

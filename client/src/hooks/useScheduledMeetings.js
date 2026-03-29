@@ -9,7 +9,7 @@
  *   const { meetings, loading, createMeeting, cancelMeeting } = useScheduledMeetings(workspaceId);
  */
 import { useState, useEffect, useCallback } from 'react';
-import api from '../services/api';
+import api from '@services/api';
 import { useSocket } from '../contexts/SocketContext';
 
 export function useScheduledMeetings(workspaceId) {

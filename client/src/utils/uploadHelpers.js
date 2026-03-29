@@ -1,5 +1,5 @@
 // client/src/utils/uploadHelpers.js
-import api from '../services/api';
+import api from '@services/api';
 
 /**
  * Upload a file for note attachment

@@ -3,7 +3,7 @@
 
 import React, { useState } from "react";
 import { X, Bell, Clock } from "lucide-react";
-import api from "../../../../services/api";
+import api from '@services/api';
 
 const PRESETS = [
     { label: "In 20 minutes", delta: 20 * 60 * 1000 },

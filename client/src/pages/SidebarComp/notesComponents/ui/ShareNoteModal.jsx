@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Search, Users, Check, UserPlus, Globe, Lock } from 'lucide-react';
-import api from '../../../../services/api';
+import api from '@services/api';
 
 const ShareNoteModal = ({ note, workspaceId, onClose, onShare }) => {
     const [members, setMembers] = useState([]);

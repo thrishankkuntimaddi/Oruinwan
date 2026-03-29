@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Briefcase, Building, ChevronDown, Check } from 'lucide-react';
-import { API_BASE } from "../../services/api";
+import { API_BASE } from '@services/api';
 
 const ScopeSelector = ({ onScopeChange, onLoad }) => {
     const [scope, setScope] = useState(null); // { type: 'department'|'workspace', id, name }

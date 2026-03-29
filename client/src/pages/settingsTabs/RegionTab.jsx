@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Card from './Card';
-import api from '../../services/api';
+import api from '@services/api';
 import { Check, Globe2 } from 'lucide-react';
 import { useToast } from '../../contexts/ToastContext';
 

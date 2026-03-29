@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Search, X, Send, Users, Hash, MessageSquare } from "lucide-react";
-import api from "../../services/api";
+import api from '@services/api';
 
 export default function BroadcastModal({ workspaceId, onClose, onSendBroadcast }) {
     const [activeTab, setActiveTab] = useState('dms'); // 'dms', 'channels', 'members'

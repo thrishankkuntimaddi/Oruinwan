@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import { Zap, X } from "lucide-react";
-import api from "../../../../services/api";
+import api from '@services/api';
 
 /**
  * @param {object} props

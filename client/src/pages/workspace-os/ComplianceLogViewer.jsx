@@ -2,7 +2,7 @@
 // Read-only immutable compliance log viewer for admins.
 // Shows SHA-256 hash integrity verification.
 import React, { useState, useEffect, useCallback } from 'react';
-import api from '../../services/api';
+import api from '@services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import {
     Lock, RefreshCw, ChevronLeft, ChevronRight,

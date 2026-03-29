@@ -4,7 +4,7 @@ import { useToast } from "../../contexts/ToastContext";
 import { getErrorMessage } from "../../utils/apiHelpers";
 import { useChannels } from "../../hooks/useChannels";
 import { useWorkspace } from "../../contexts/WorkspaceContext";
-import api from "../../services/api";
+import api from '@services/api';
 
 export default function JoinChannelModal({ onClose, onJoined, currentUserId }) {
     const { showToast } = useToast();

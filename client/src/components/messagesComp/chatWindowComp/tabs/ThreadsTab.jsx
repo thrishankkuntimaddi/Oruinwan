@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { MessageSquare, ArrowRight, Search, ListFilter, X } from 'lucide-react';
 import ThreadPanel from '../ThreadPanel';
-import api from '../../../../services/api';
+import api from '@services/api';
 import { formatTime } from '../helpers/helpers';
 import { batchDecryptMessages } from '../../../../services/messageEncryptionService';
 import { getAvatarUrl } from '../../../../utils/avatarUtils';

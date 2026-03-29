@@ -6,7 +6,7 @@
  */
 import React, { useState, useEffect, useRef } from 'react';
 import { ChevronDown, Activity, Calendar, Clock } from 'lucide-react';
-import api from '../../services/api';
+import api from '@services/api';
 import { useToast } from '../../contexts/ToastContext';
 
 const JIRA_BLUE = '#0052CC';

@@ -4,7 +4,7 @@
 // (same endpoint as ChannelsPanel) so both consumers share the same
 // data shape and membership info without a secondary request.
 import { useState, useEffect, useCallback } from 'react';
-import api from '../services/api';
+import api from '@services/api';
 
 export const useChannels = (workspaceId) => {
     const [channels, setChannels] = useState([]);

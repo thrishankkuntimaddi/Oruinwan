@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useAuth } from './AuthContext';
-import api, { API_BASE } from '../services/api';
+import api, { API_BASE } from '@services/api';
 
 const CompanyContext = createContext();
 

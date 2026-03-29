@@ -2,7 +2,7 @@ import React, { useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
-import api from '../../services/api';
+import api from '@services/api';
 import {
     Users, Mail, CheckCircle, ArrowRight, ArrowLeft, Upload,
     Clock, Plus, X, Zap, Download, FileSpreadsheet, Image,

@@ -2,7 +2,7 @@ import React, { useState, useRef, useCallback, useMemo } from 'react';
 import { ImagePlus, X, Loader2, Sparkles, CheckCircle2, Trash2, Upload } from 'lucide-react';
 import Card from './Card';
 import ImageCropEditor from './ImageCropEditor';
-import api from '../../services/api';
+import api from '@services/api';
 import { useToast } from '../../contexts/ToastContext';
 
 

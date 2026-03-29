@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Shield, CheckCircle, AlertCircle, RefreshCw, Trash2, Loader } from "lucide-react";
 import { useToast } from "../../contexts/ToastContext";
-import { API_BASE } from "../../services/api";
+import { API_BASE } from '@services/api';
 
 const DomainSettings = ({ companyId }) => {
     const { showToast } = useToast();

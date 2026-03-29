@@ -4,7 +4,7 @@ import {
     Check, ChevronRight, Smartphone, CheckCircle2, X
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import api from '../../../services/api';
+import api from '@services/api';
 import { useCompany } from '../../../contexts/CompanyContext';
 import { getDepartments } from '../../../services/departmentService';
 

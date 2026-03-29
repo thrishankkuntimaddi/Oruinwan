@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import api from '../../../../services/api';
+import api from '@services/api';
 
 /**
  * Custom hook for header action handlers

@@ -1,7 +1,7 @@
 // client/src/pages/workspace-os/AuditLogViewer.jsx
 // Paginated, filterable audit log viewer for admins.
 import React, { useState, useEffect, useCallback } from 'react';
-import api from '../../services/api';
+import api from '@services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import {
     ClipboardList, Search, Filter, RefreshCw,

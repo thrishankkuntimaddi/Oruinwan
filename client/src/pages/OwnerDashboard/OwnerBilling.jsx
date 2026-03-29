@@ -8,7 +8,7 @@ import {
 import { useCompany } from '../../contexts/CompanyContext';
 import { useToast } from '../../contexts/ToastContext';
 import { getBillingSummary } from '../../services/ownerDashboardService';
-import api from '../../services/api';
+import api from '@services/api';
 
 const OwnerBilling = () => {
     const { isCompanyOwner } = useCompany();

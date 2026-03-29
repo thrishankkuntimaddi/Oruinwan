@@ -7,7 +7,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 // refactor(consistency): use canonical api.js client (handles auth tokens + 401 refresh)
-import api from '../../services/api';
+import api from '@services/api';
 
 const Analytics = () => {
     const { user } = useAuth();

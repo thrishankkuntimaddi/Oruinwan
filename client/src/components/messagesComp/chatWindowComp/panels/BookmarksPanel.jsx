@@ -3,7 +3,7 @@
 
 import React, { useEffect, useState, useCallback } from "react";
 import { X, Bookmark, Hash, MessageCircle, Loader2, ExternalLink } from "lucide-react";
-import api from "../../../../services/api";
+import api from '@services/api';
 import ReactMarkdown from "react-markdown";
 
 function fmtDate(ts) {

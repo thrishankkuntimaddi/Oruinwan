@@ -4,7 +4,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Eye, EyeOff, Shield, ShieldCheck, ShieldOff, Check, X, AlertCircle, Key, Loader, QrCode, Copy } from 'lucide-react';
 import Card from './Card';
-import api from '../../services/api';
+import api from '@services/api';
 
 // ── Password strength calculator ─────────────────────────────────────────────
 const calculatePasswordStrength = (password) => {

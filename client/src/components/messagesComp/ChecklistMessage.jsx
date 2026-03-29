@@ -1,7 +1,7 @@
 // client/src/components/messagesComp/ChecklistMessage.jsx
 // Phase-8: Interactive checklist inside a message bubble
 import React, { useState, useCallback } from 'react';
-import api from '../../services/api';
+import api from '@services/api';
 
 const API = import.meta.env.VITE_API_URL || '';
 

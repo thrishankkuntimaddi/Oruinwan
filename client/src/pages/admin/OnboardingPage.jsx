@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
-import api from '../../../services/api';
+import api from '@services/api';
 import OnboardingWizard from '../../components/admin/onboarding/OnboardingWizard';
 
 // ─── Bulk Import Modal ────────────────────────────────────────────────────────

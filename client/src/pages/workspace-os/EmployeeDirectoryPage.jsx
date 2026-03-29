@@ -1,7 +1,7 @@
 // client/src/pages/workspace-os/EmployeeDirectoryPage.jsx
 // Paginated employee directory with search, dept/role filtering.
 import React, { useState, useEffect, useCallback } from 'react';
-import api from '../../services/api';
+import api from '@services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import {
     Search, Filter, Users, ChevronLeft, ChevronRight,

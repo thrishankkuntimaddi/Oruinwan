@@ -4,7 +4,7 @@ import { Lock, Eye, EyeOff, Check, AlertCircle, Shield, Key, CheckCircle2, Sun, 
 import { useToast } from '../contexts/ToastContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
-import api from '../services/api';
+import api from '@services/api';
 
 const SetPassword = () => {
     const navigate = useNavigate();

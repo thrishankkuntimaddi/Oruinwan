@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import api from '../../../../../services/api';
+import api from '@services/api';
 import { Search, Download, User, Activity, AlertCircle, RefreshCw } from 'lucide-react';
 
 const AuditLogs = () => {
