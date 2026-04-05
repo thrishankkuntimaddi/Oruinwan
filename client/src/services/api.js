@@ -15,9 +15,10 @@ export const API_BASE = import.meta.env.VITE_BACKEND_URL || 'http://localhost:80
 
 const api = axios.create({
     baseURL: API_BASE,
-    headers: {
-        'Content-Type': 'application/json'
-    },
+    // Do NOT set a default Content-Type here.
+    // Axios will set 'application/json' automatically for plain objects,
+    // and 'multipart/form-data' (with the correct boundary) for FormData.
+    // A hardcoded default would override the boundary and break file uploads.
     withCredentials: true // Important for cookies
 });
 
@@ -51,6 +52,12 @@ api.interceptors.request.use((config) => {
     const token = localStorage.getItem('accessToken');
     if (token) {
         config.headers.Authorization = `Bearer ${token}`;
+    }
+    // If the payload is FormData, remove any lingering Content-Type so that
+    // Axios (and the browser) can set 'multipart/form-data; boundary=...' itself.
+    // Without this, multer on the server won't see the file part.
+    if (config.data instanceof FormData) {
+        delete config.headers['Content-Type'];
     }
     return config;
 }, (error) => {
