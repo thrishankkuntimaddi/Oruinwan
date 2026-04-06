@@ -29,8 +29,8 @@ const VerifyBtn = ({ status, onClick }) => {
     const verified = status === 'verified';
     return (
         <button type="button" onClick={onClick} disabled={verified}
-            style={{
-                padding: '10px 16px', border: 'none', flexShrink: 0,
+        style={{
+                padding: '10px 16px', flexShrink: 0,
                 background: verified ? 'rgba(90,186,138,0.1)' : '#b8956a',
                 color: verified ? '#5aba8a' : '#0c0c0c',
                 fontSize: '12px', fontWeight: 700, cursor: verified ? 'default' : 'pointer',

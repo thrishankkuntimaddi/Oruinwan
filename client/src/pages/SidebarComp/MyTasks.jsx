@@ -862,7 +862,7 @@ export default function MyTasks() {
                       key={key}
                       onClick={() => setViewMode(key)}
                       title={title}
-                      style={{ padding: '5px 8px', display: 'flex', alignItems: 'center', background: viewMode === key ? 'rgba(184,149,106,0.15)' : 'transparent', color: viewMode === key ? JIRA_BLUE : TEXT_MUTED, borderLeft: idx > 0 ? `1px solid ${BORDER_COLOR}` : 'none', cursor: 'pointer', border: 'none', borderLeft: idx > 0 ? `1px solid ${BORDER_COLOR}` : 'none' }}
+                      style={{ padding: '5px 8px', display: 'flex', alignItems: 'center', background: viewMode === key ? 'rgba(184,149,106,0.15)' : 'transparent', color: viewMode === key ? JIRA_BLUE : TEXT_MUTED, borderLeft: idx > 0 ? `1px solid ${BORDER_COLOR}` : 'none', cursor: 'pointer', border: 'none' }}
                     >
                       <Icon size={14} />
                     </button>
