@@ -87,7 +87,7 @@ export default function PublicPageShell({ children, title }) {
     const [scrolled, setScrolled]         = useState(false);
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const width = useWindowWidth();
-    const isMobile = width <= 680;
+    const isMobile = width <= 860;
 
     useEffect(() => {
         document.documentElement.classList.add('public-scroll');
@@ -149,10 +149,10 @@ export default function PublicPageShell({ children, title }) {
                     {/* ── DESKTOP: nav links + CTA ── */}
                     {!isMobile && (
                         <>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '24px', flex: 1, justifyContent: 'center' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flex: 1, justifyContent: 'center' }}>
                                 {NAV_LINKS.map(l => <NavBtn key={l.label} {...l} />)}
                             </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
                                 <button
                                     onClick={() => navigate('/login')}
                                     style={{ fontSize: '13px', fontWeight: 600, color: 'rgba(228,228,228,0.5)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', transition: 'color 150ms ease', whiteSpace: 'nowrap' }}
