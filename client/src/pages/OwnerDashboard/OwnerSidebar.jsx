@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
-const OwnerSidebar = () => {
+const OwnerSidebar = ({ onNavigate }) => {
     const navigate = useNavigate();
     const location = useLocation();
     const { user, logout } = useAuth();
@@ -149,7 +149,7 @@ const OwnerSidebar = () => {
                                             key={item.path}
                                             item={item}
                                             active={active}
-                                            onClick={() => navigate(item.path)}
+                                            onClick={() => { navigate(item.path); onNavigate?.(); }}
                                         />
                                     );
                                 })}
