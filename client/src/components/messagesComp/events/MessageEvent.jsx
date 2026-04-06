@@ -277,6 +277,10 @@ function MessageEvent({
                     translationState={getTranslation(enrichedMessage._id)}
                     onTranslate={requestTranslation}
                     onClearTranslation={clearTranslation}
+                    onRemind={actions.onRemind}
+                    onConvertToTask={actions.onConvertToTask}
+                    isBookmarked={Array.isArray(enrichedMessage.bookmarkedBy) ? enrichedMessage.bookmarkedBy.some(id => String(id?._id || id) === String(currentUserId)) : false}
+                    onBookmarkToggle={() => {}}
                 />
                 {renderChecklist && (
                     <div style={{ paddingLeft: 52, paddingRight: 16, paddingBottom: 4 }}>
@@ -331,6 +335,7 @@ function MessageEvent({
                         : false
                 }
                 onBookmarkToggle={() => { /* local refresh handled by BookmarksPanel */ }}
+                onConvertToTask={actions.onConvertToTask}
                 translationState={getTranslation(enrichedMessage._id)}
                 onTranslate={requestTranslation}
                 onClearTranslation={clearTranslation}

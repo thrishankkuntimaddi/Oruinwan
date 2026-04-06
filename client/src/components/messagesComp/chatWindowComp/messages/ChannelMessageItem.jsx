@@ -3,7 +3,7 @@ import api from '@services/api';
 import {
     Smile, MessageSquare, Share, MoreHorizontal, Pin, Copy, Trash2, Info, Pencil, Check, X,
     Hash, UserCheck, LogOut, UserPlus, UserMinus, Shield, ShieldOff,
-    PenLine, FileText, Lock, PinIcon, Eraser, History, Globe, Bookmark, Bell
+    PenLine, FileText, Lock, PinIcon, Eraser, History, Globe, Bookmark, Bell, CheckSquare, Sparkles
 } from "lucide-react";
 import TranslatePopover from './TranslatePopover';
 import { getAvatarUrl } from '../../../../utils/avatarUtils';
@@ -54,6 +54,7 @@ function ChannelMessageItem({
     onShowHistory,
     isBookmarked = false,
     onBookmarkToggle,
+    onConvertToTask,           // (msgId) => void — convert message to in-app Task
     // Translation (from useTranslation hook in MessagesContainer)
     translationState = null,   // { status, translatedText, language, detectedLang } | null
     onTranslate,               // (msgId, text, langCode) => void
@@ -592,10 +593,12 @@ function ChannelMessageItem({
                             {menuItem(
                                 isBookmarked ? 'Remove Bookmark' : 'Save / Bookmark',
                                 <Bookmark size={13} style={{ fill: isBookmarked ? 'currentColor' : 'none' }} />,
-                                async () => { try { await api.post(`/api/messages/${msg._id || msg.id}/bookmark`); onBookmarkToggle?.(msg._id || msg.id); } catch {} toggleMsgMenu({ stopPropagation: () => {} }, null); },
+                                async () => { try { await api.post(`/api/v2/messages/${msg._id || msg.id}/bookmark`); onBookmarkToggle?.(msg._id || msg.id); } catch {} toggleMsgMenu({ stopPropagation: () => {} }, null); },
                                 isBookmarked
                             )}
                             {onRemind && menuItem('Remind Me', <Bell size={13} />, () => { onRemind(msg._id || msg.id); toggleMsgMenu({ stopPropagation: () => {} }, null); })}
+                            {onConvertToTask && menuItem('Convert to Task', <CheckSquare size={13} />, async () => { await onConvertToTask(msg._id || msg.id); toggleMsgMenu({ stopPropagation: () => {} }, null); })}
+                            {(msg.replyCount > 0 || (threadCounts && threadCounts[msg.id] > 0)) && menuItem('Summarize Thread', <Sparkles size={13} />, async () => { toggleMsgMenu({ stopPropagation: () => {} }, null); })}
                             {onShowHistory && msg.editHistory?.length > 0 && menuItem('Edit History', <History size={13} />, () => { onShowHistory(msg); toggleMsgMenu({ stopPropagation: () => {} }, null); })}
                             {msg.text && menuItem(translationState?.status === 'done' ? 'Show original' : 'Translate', <Globe size={13} />, (e) => {
                                 if (translationState?.status === 'done') { onClearTranslation?.(msg._id || msg.id); toggleMsgMenu({ stopPropagation: () => {} }, null); return; }

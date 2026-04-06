@@ -1096,7 +1096,16 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
         onRemind: (messageId) => setReminderMsgId(messageId),
         // Phase 1 — Edit History: open EditHistoryModal for this message
         onShowHistory: (msg) => setHistoryMsg(msg),
-    }), [actions, handleSend]); // eslint-disable-line react-hooks/exhaustive-deps
+        // Convert message to in-app Task
+        onConvertToTask: async (messageId) => {
+            try {
+                await api.post(`/api/v2/messages/${messageId}/convert-task`);
+                showToast('Task created from message!', 'success');
+            } catch (err) {
+                showToast(err?.response?.data?.message || 'Failed to create task', 'error');
+            }
+        },
+    }), [actions, handleSend, showToast]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // Handle confirmed forward: re-encrypt the plaintext per target and post as a new message
     const handleForward = useCallback(async (targets) => {
@@ -1377,6 +1386,18 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
                 onCreatePoll={handleCreatePoll}
                 channelName={chat?.name || ''}
             />
+            {/* Phase 1 — Bookmarks Panel (slide-in from right) */}
+            <BookmarksPanel
+                open={showBookmarks}
+                onClose={() => setShowBookmarks(false)}
+            />
+            {/* Phase 1 — Reminder Picker modal */}
+            {reminderMsgId && (
+                <ReminderPicker
+                    messageId={reminderMsgId}
+                    onClose={() => setReminderMsgId(null)}
+                />
+            )}
             {/* Phase 7.4 — Workspace Contact Picker */}
             <ContactPickerModal
                 isOpen={showContactModal}
@@ -1406,19 +1427,32 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
             )}
             {/* Huddle join announcement banner */}
             {chat?.type === 'channel' && huddle.huddleAnnouncement && !huddle.active && (
-                <div className="fixed bottom-4 right-4 z-50 flex items-center gap-3 bg-gray-900 text-white px-4 py-3 rounded-2xl shadow-2xl border border-white/10 animate-fade-in">
-                    <span className="text-green-400 animate-pulse">●</span>
-                    <div className="text-sm">
-                        <span className="font-semibold">{huddle.huddleAnnouncement.startedBy?.username || 'Someone'}</span>
+                <div style={{
+                    position: 'fixed', bottom: '16px', right: '16px', zIndex: 50,
+                    display: 'flex', alignItems: 'center', gap: '12px',
+                    backgroundColor: 'var(--bg-surface)', color: 'var(--text-primary)',
+                    padding: '12px 16px', borderRadius: '2px',
+                    boxShadow: '0 8px 32px rgba(0,0,0,0.45)',
+                    border: '1px solid var(--border-accent)',
+                    fontFamily: 'Inter, system-ui, sans-serif',
+                    animation: 'fadeIn 200ms ease',
+                }}>
+                    <span style={{ color: '#34d399' }}>●</span>
+                    <div style={{ fontSize: '13px' }}>
+                        <span style={{ fontWeight: 600 }}>{huddle.huddleAnnouncement.startedBy?.username || 'Someone'}</span>
                         {' '}started a huddle
                     </div>
                     <button
                         onClick={() => { huddle.joinHuddle(huddle.huddleAnnouncement.huddleId); huddle.dismissAnnouncement(); }}
-                        className="text-xs bg-green-600 hover:bg-green-700 px-3 py-1.5 rounded-lg font-medium transition-colors"
+                        style={{ fontSize: '12px', backgroundColor: '#16a34a', color: '#fff', padding: '4px 12px', borderRadius: '2px', fontWeight: 600, border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}
+                        onMouseEnter={e => e.currentTarget.style.backgroundColor = '#15803d'}
+                        onMouseLeave={e => e.currentTarget.style.backgroundColor = '#16a34a'}
                     >Join</button>
                     <button
                         onClick={huddle.dismissAnnouncement}
-                        className="text-xs text-white/50 hover:text-white px-2 py-1 rounded transition-colors"
+                        style={{ fontSize: '12px', color: 'var(--text-muted)', padding: '4px 8px', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}
+                        onMouseEnter={e => e.currentTarget.style.color = 'var(--text-primary)'}
+                        onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
                     >✕</button>
                 </div>
             )}

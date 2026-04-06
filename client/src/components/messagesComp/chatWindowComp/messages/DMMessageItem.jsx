@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import api from '@services/api';
-import { Smile, MessageSquare, Share, MoreHorizontal, Pin, Copy, Trash2, Info, Pencil, Check, X, Globe, Bookmark, Bell } from "lucide-react";
+import { Smile, MessageSquare, Share, MoreHorizontal, Pin, Copy, Trash2, Info, Pencil, Check, X, Globe, Bookmark, Bell, CheckSquare } from "lucide-react";
 import TranslatePopover from './TranslatePopover';
 import { getAvatarUrl } from '../../../../utils/avatarUtils';
 import ReactionPicker from "./reactionPicker";
@@ -47,6 +47,11 @@ function DMMessageItem({
     translationState = null,
     onTranslate,
     onClearTranslation,
+    // Phase 1 — Bookmarks, Reminders, Convert to Task
+    onRemind,
+    onConvertToTask,
+    isBookmarked = false,
+    onBookmarkToggle,
 }) {
     // dmSessionId is baked into msg by MessageEvent — used for E2EE encryption on edit
     const dmSessionId = msg.dmSessionId || null;
@@ -521,6 +526,14 @@ function DMMessageItem({
                                     onRetry={() => { if (lastLangCode) { onTranslate?.(msg._id || msg.id, msg.text || '', lastLangCode); setTranslatePopover(null); toggleMsgMenu({ stopPropagation: () => {} }, null); } }}
                                 />
                             )}
+                            {menuItem(
+                                isBookmarked ? 'Remove Bookmark' : 'Save / Bookmark',
+                                <Bookmark size={13} style={{ fill: isBookmarked ? 'currentColor' : 'none' }} />,
+                                async () => { try { await api.post(`/api/v2/messages/${msg._id || msg.id}/bookmark`); onBookmarkToggle?.(msg._id || msg.id); } catch {} toggleMsgMenu({ stopPropagation: () => {} }, null); },
+                                isBookmarked
+                            )}
+                            {onRemind && menuItem('Remind Me', <Bell size={13} />, () => { onRemind(msg._id || msg.id); toggleMsgMenu({ stopPropagation: () => {} }, null); })}
+                            {onConvertToTask && menuItem('Convert to Task', <CheckSquare size={13} />, async () => { await onConvertToTask(msg._id || msg.id); toggleMsgMenu({ stopPropagation: () => {} }, null); })}
                             <div style={{ height: '1px', backgroundColor: 'var(--border-subtle)', margin: '4px 0' }} />
                             {menuItem('Delete for me',       <Trash2 size={13} />, () => { deleteMessage(msg._id || msg.id, 'me'); toggleMsgMenu({ stopPropagation: () => {} }, null); }, false, true)}
                             {isMe && menuItem('Delete for everyone', <Trash2 size={13} />, () => { deleteMessage(msg._id || msg.id, 'everyone'); toggleMsgMenu({ stopPropagation: () => {} }, null); }, false, true)}
