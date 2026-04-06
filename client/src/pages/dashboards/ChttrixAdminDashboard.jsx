@@ -1,9 +1,9 @@
-import React, { useState } from "react";
-import { Routes, Route, NavLink, Navigate, useNavigate } from "react-router-dom";
+import React, { useState, useEffect, useCallback } from "react";
+import { Routes, Route, NavLink, Navigate, useNavigate, useLocation } from "react-router-dom";
 import {
     Shield, Home, Users, FileText, MessageSquare, Activity,
     Settings, LogOut, CheckSquare, Megaphone, DollarSign,
-    ChevronUp
+    ChevronUp, Menu, X
 } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
 
@@ -50,7 +50,26 @@ const navGroups = [
 const ChttrixAdminDashboard = () => {
     const { user, logout } = useAuth();
     const navigate = useNavigate();
+    const location = useLocation();
     const [showUserMenu, setShowUserMenu] = useState(false);
+    const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
+    const [sidebarOpen, setSidebarOpen] = useState(false);
+
+    useEffect(() => {
+        const onResize = () => {
+            const mobile = window.innerWidth < 768;
+            setIsMobile(mobile);
+            if (!mobile) setSidebarOpen(false);
+        };
+        window.addEventListener('resize', onResize);
+        return () => window.removeEventListener('resize', onResize);
+    }, []);
+
+    useEffect(() => {
+        if (isMobile) setSidebarOpen(false);
+    }, [location.pathname, isMobile]);
+
+    const closeSidebar = useCallback(() => setSidebarOpen(false), []);
 
     const handleLogout = async () => {
         await logout();
@@ -63,8 +82,21 @@ const ChttrixAdminDashboard = () => {
             height: '100vh',
             background: 'var(--bg-base)',
             fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
-            overflow: 'hidden'
+            overflow: 'hidden',
+            position: 'relative',
         }}>
+            {/* Mobile Backdrop */}
+            {isMobile && sidebarOpen && (
+                <div
+                    onClick={closeSidebar}
+                    style={{
+                        position: 'fixed', inset: 0, zIndex: 35,
+                        background: 'rgba(0,0,0,0.65)',
+                        backdropFilter: 'blur(2px)',
+                    }}
+                />
+            )}
+
             {/* Sidebar */}
             <aside style={{
                 width: '240px',
@@ -73,10 +105,15 @@ const ChttrixAdminDashboard = () => {
                 display: 'flex',
                 flexDirection: 'column',
                 height: '100vh',
-                position: 'sticky',
-                top: 0,
-                zIndex: 20,
-                flexShrink: 0
+                flexShrink: 0,
+                ...(isMobile ? {
+                    position: 'fixed', top: 0, left: 0, zIndex: 40,
+                    transform: sidebarOpen ? 'translateX(0)' : 'translateX(-100%)',
+                    transition: 'transform 280ms cubic-bezier(0.16,1,0.3,1)',
+                    boxShadow: sidebarOpen ? '4px 0 32px rgba(0,0,0,0.5)' : 'none',
+                } : {
+                    position: 'sticky', top: 0, zIndex: 20,
+                })
             }}>
                 {/* Header */}
                 <div style={{
@@ -122,7 +159,7 @@ const ChttrixAdminDashboard = () => {
                                 </h3>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
                                     {group.items.map(item => (
-                                        <SidebarNavLink key={item.path} item={item} />
+                                        <SidebarNavLink key={item.path} item={item} onClose={closeSidebar} />
                                     ))}
                                 </div>
                             </div>
@@ -167,9 +204,37 @@ const ChttrixAdminDashboard = () => {
                 flex: 1,
                 height: '100vh',
                 overflowY: 'auto',
-                background: 'var(--bg-base)'
+                background: 'var(--bg-base)',
+                display: 'flex', flexDirection: 'column',
             }} className="custom-scrollbar">
-                <div style={{ padding: '32px', paddingBottom: '80px' }}>
+                {/* Mobile Top Bar */}
+                {isMobile && (
+                    <div style={{
+                        height: '52px', flexShrink: 0,
+                        display: 'flex', alignItems: 'center', gap: '12px',
+                        padding: '0 16px',
+                        background: 'var(--bg-surface)',
+                        borderBottom: '1px solid var(--border-subtle)',
+                        position: 'sticky', top: 0, zIndex: 10,
+                    }}>
+                        <button
+                            onClick={() => setSidebarOpen(o => !o)}
+                            style={{
+                                padding: '6px', background: 'none', border: 'none',
+                                cursor: 'pointer', color: 'var(--text-secondary)',
+                                display: 'flex', alignItems: 'center',
+                            }}
+                            aria-label="Toggle sidebar"
+                        >
+                            {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
+                        </button>
+                        <div>
+                            <p style={{ fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.15em', color: 'var(--text-muted)', margin: 0 }}>Platform Admin</p>
+                            <p style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.02em' }}>Chttrix Console</p>
+                        </div>
+                    </div>
+                )}
+                <div style={{ padding: isMobile ? '20px 16px 80px' : '32px', paddingBottom: '80px', flex: 1 }}>
                     <Routes>
                         <Route index element={<Overview />} />
                         <Route path="pending" element={<PendingRequests />} />
@@ -190,10 +255,11 @@ const ChttrixAdminDashboard = () => {
     );
 };
 
-const SidebarNavLink = ({ item }) => (
+const SidebarNavLink = ({ item, onClose }) => (
     <NavLink
         to={`/chttrix-admin/${item.path}`}
         end={item.path === ""}
+        onClick={onClose}
         style={({ isActive }) => ({
             display: 'flex',
             alignItems: 'center',

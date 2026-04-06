@@ -34,7 +34,7 @@ const NAV_GROUPS = [
     }
 ];
 
-export default function ManagerSidebar() {
+export default function ManagerSidebar({ onNavigate }) {
     const navigate = useNavigate();
     const location = useLocation();
     const { logout, user } = useAuth();
@@ -76,7 +76,7 @@ export default function ManagerSidebar() {
                         {grp.items.map(item => {
                             const active = isActive(item.path);
                             return (
-                                <NavItem key={item.path} active={active} icon={item.icon} label={item.label} onClick={() => navigate(item.path)} />
+                                <NavItem key={item.path} active={active} icon={item.icon} label={item.label} onClick={() => { navigate(item.path); onNavigate?.(); }} />
                             );
                         })}
                     </div>
